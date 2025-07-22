@@ -1,0 +1,130 @@
+from sqlalchemy import Column, String, Boolean, Float, DateTime, Integer
+from backend.db.database import Base
+
+class ClienteModel(Base):
+    __tablename__ = "tb_cadastro_cliente"
+
+    id = Column(Integer, primary_key=True, index=True)
+    codigo_da_empresa = Column(String)
+    ativo = Column(Boolean)
+    tipo_cliente = Column(String)
+    tipo_venda = Column(String)
+    tipo_compra = Column(String)
+    limite_credito = Column(Float)
+    nome_cliente = Column(String)
+    nome_fantasia = Column(String)
+    cnpj = Column(String)
+    inscricao_estadual = Column(String)
+    cpf = Column(String)
+    situacao = Column(String)
+    indicacao_cliente = Column(String)
+    ramo_de_atividade = Column(String)
+    atividade_principal = Column(String)
+
+    nome_responsavel = Column(String)
+    celular_responsavel = Column(String)
+    email_resposavel = Column(String)
+    data_nascimento_resposavel = Column(DateTime)
+    observacoes_responsavel = Column(String)
+    filial_resposavel = Column(String)
+
+    endereco_faturamento = Column(String)
+    bairro_faturamento = Column(String)
+    cep_faturamento = Column(String)
+    localizacao_faturamento = Column(String)
+    municipio_faturamento = Column(String)
+    estado_faturamento = Column(String)
+    email_danfe_faturamento = Column(String)
+
+    nome_RepresentanteLegal = Column(String)
+    celular_RepresentanteLegal = Column(String)
+    email_RepresentanteLegal = Column(String)
+    data_nascimento_RepresentanteLegal = Column(DateTime)
+    observacoes_RepresentanteLegal = Column(String)
+
+    endereco_EnderecoEntrega = Column(String)
+    bairro_EnderecoEntrega = Column(String)
+    cep_EnderecoEntrega = Column(String)
+    localizacao_EnderecoEntrega = Column(String)
+    municipio_EnderecoEntrega = Column(String)
+    estado_EnderecoEntrega = Column(String)
+    rota_principal_EnderecoEntrega = Column(String)
+    rota_de_aproximacao_EnderecoEntrega = Column(String)
+    observacao_motorista_EnderecoEntrega = Column(String)
+
+    nome_ResponsavelRecebimento = Column(String)
+    celular_ResponsavelRecebimento = Column(String)
+    email_ResponsavelRecebimento = Column(String)
+    data_nascimento_ResponsavelRecebimento = Column(DateTime)
+    observacoes_ResponsavelRecebimento = Column(String)
+
+    endereco_EnderecoCobranca = Column(String)
+    bairro_EnderecoCobranca = Column(String)
+    cep_EnderecoCobranca = Column(String)
+    localizacao_EnderecoCobranca = Column(String)
+    municipio_EnderecoCobranca = Column(String)
+    estado_EnderecoCobranca = Column(String)
+
+    nome_ResponsavelCobranca = Column(String)
+    celular_ResponsavelCobranca = Column(String)
+    email_ResponsavelCobranca = Column(String)
+    data_nascimento_ResponsavelCobranca = Column(DateTime)
+    observacoes_ResponsavelCobranca = Column(String)
+
+    numero_danfe_Compras = Column(String)
+    emissao_Compras = Column(String)
+    valor_total_Compras = Column(Float)
+    valor_frete_Compras = Column(Float)
+    valor_frete_padrao_Compras = Column(Float)
+    valor_ultimo_frete_to_Compras = Column(Float)
+    lista_tabela_Compras = Column(String)
+    condicoes_pagamento_Compras = Column(String)
+    cliente_calcula_st_Compras = Column(String)
+    prazo_medio_compra_Compras = Column(String)
+    previsao_proxima_compra_Compras = Column(String)
+
+    observacoes_Compras = Column(String)
+
+    classificacao_ElaboracaoCadastro = Column(String)
+    tipo_venda_prazo_ou_vista_ElaboracaoCadastro = Column(String)
+    limite_credito_ElaboracaoCadastro = Column(Float)
+    data_vencimento_ElaboracaoCadastro = Column(DateTime)
+
+    codigo_ElaboracaoCadastro = Column(String)
+    nome_empresarial_ElaboracaoCadastro = Column(String)
+
+    empresa_ElaboracaoCadastro = Column(String)
+    cidade_ElaboracaoCadastro = Column(String)
+    telefone_ElaboracaoCadastro = Column(String)
+    contato_ElaboracaoCadastro = Column(String)
+
+    banco_ElaboracaoCadastro = Column(String)
+    agencia_ElaboracaoCadastro = Column(String)
+    conta_corrente_ElaboracaoCadastro = Column(String)
+
+    imovel_ElaboracaoCadastro = Column(String)
+    localizacao_ElaboracaoCadastro = Column(String)
+    area_ElaboracaoCadastro = Column(String)
+    valor_ElaboracaoCadastro = Column(Float)
+    hipotecado_ElaboracaoCadastro = Column(String)
+
+    marca_ElaboracaoCadastro = Column(String)
+    modelo_ElaboracaoCadastro = Column(String)
+    alienado_ElaboracaoCadastro = Column(String)
+
+    especie_ElaboracaoCadastro = Column(String)
+    numero_de_animais_ElaboracaoCadastro = Column(String)
+    consumo_diario_ElaboracaoCadastro = Column(Float)
+    consumo_mensal_ElaboracaoCadastro = Column(Float)
+
+    codigo_insumo_ElaboracaoCadastro = Column(String)
+    nome_insumos_ElaboracaoCadastro = Column(String)
+    codigo_pet_ElaboracaoCadastro = Column(String)
+    nome_pet_ElaboracaoCadastro = Column(String)
+
+    insumos_ElaboracaoCadastro = Column(String)
+    pet_ElaboracaoCadastro = Column(String)
+    observacoes_ElaboracaoCadastro = Column(String)
+
+    data_criacao = Column(DateTime)
+    data_atualizacao = Column(DateTime)

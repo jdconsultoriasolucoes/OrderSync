@@ -1,0 +1,654 @@
+
+<!DOCTYPE html>
+
+<html lang="pt-br">
+<head>
+<meta charset="utf-8"/>
+<title>Cadastro de Cliente - OrderSync</title>
+<link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet"/>
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+<script src="https://unpkg.com/axios/dist/axios.min.js"></script>
+<script src="https://unpkg.com/imask"></script>
+<style>
+		.subtitulo {
+		  font-weight: bold;
+		  font-size: 20px;
+		  margin-top: 20px;
+		}
+	  </style>
+</head>
+<body class="p-4">
+<h2>Cadastro de Cliente</h2>
+<form id="formCliente">
+<input id="id" name="id" type="hidden"/>
+<ul class="nav nav-tabs" id="tabAbas" role="tablist">
+<li class="nav-item" role="presentation">
+<button class="nav-link active" data-bs-target="#aba1" data-bs-toggle="tab" id="tab-1" role="tab" type="button">
+			  Parte 1 - Cadastro de Clientes
+			</button>
+</li>
+<li class="nav-item" role="presentation">
+<button class="nav-link" data-bs-target="#aba2" data-bs-toggle="tab" id="tab-2" role="tab" type="button">
+			  Parte 2 - Endereço de Faturamento
+			</button>
+</li>
+<li class="nav-item" role="presentation">
+<button class="nav-link" data-bs-target="#aba3" data-bs-toggle="tab" id="tab-3" role="tab" type="button">
+			  Parte 3 - Endereço de Entrega
+			</button>
+</li>
+<li class="nav-item" role="presentation">
+<button class="nav-link" data-bs-target="#aba4" data-bs-toggle="tab" id="tab-4" role="tab" type="button">
+			  Parte 4 - Endereço de Cobrança
+			</button>
+</li>
+<li class="nav-item" role="presentation">
+<button class="nav-link" data-bs-target="#aba5" data-bs-toggle="tab" id="tab-5" role="tab" type="button">
+			  Parte 5 - Compras
+			</button>
+</li>
+<li class="nav-item" role="presentation">
+<button class="nav-link" data-bs-target="#aba6" data-bs-toggle="tab" id="tab-6" role="tab" type="button">
+			  Parte 6 - Elaboração do Cadastro
+			</button>
+</li>
+</ul>
+<div class="tab-content border border-top-0 p-3" id="conteudoAbas">
+<div class="tab-pane fade show active" id="aba1" role="tabpanel">
+<div class="mb-2">
+<label class="form-label" for="código_da_empresa">Código da Empresa:</label>
+<input class="form-control" id="código_da_empresa" name="código_da_empresa" type="text"/>
+</div>
+<div class="mb-2">
+<label>Ativo:</label>
+<input checked="" id="ativo" name="ativo" type="checkbox"/><br/><br/>
+
+</div>
+<div class="mb-2">
+<label class="form-label" for="tipo">Tipo:</label>
+<select class="form-select" id="tipo" name="tipo">
+<option value="">Selecione</option>
+<!-- opções devem ser definidas no backend futuramente -->
+</select>
+</div>
+<div class="mb-2">
+<label class="form-label" for="tipo_de_venda">Tipo de Venda:</label>
+<select class="form-select" id="tipo_de_venda" name="tipo_de_venda">
+<option value="">Selecione</option>
+<!-- opções devem ser definidas no backend futuramente -->
+</select>
+</div>
+<div class="mb-2">
+<label class="form-label" for="tipo_de_compra">Tipo de Compra:</label>
+<select class="form-select" id="tipo_de_compra" name="tipo_de_compra">
+<option value="">Selecione</option>
+<!-- opções devem ser definidas no backend futuramente -->
+</select>
+</div>
+<div class="mb-2">
+<label class="form-label" for="limite_de_credito">Limite de Credito:</label>
+<input class="form-control" id="limite_de_credito" name="limite_de_credito" type="text">
+</input></div>
+<div class="mb-2">
+<label class="form-label" for="nome">Nome:</label>
+<input class="form-control" id="nome" name="nome" type="text"/>
+</div>
+<div class="mb-2">
+<label class="form-label" for="fantasia">Fantasia:</label>
+<input class="form-control" id="fantasia" name="fantasia" type="text"/>
+</div>
+<div class="mb-2">
+<label class="form-label" for="cnpj">CNPJ:</label>
+<input class="form-control" id="cnpj" name="cnpj" type="text"/>
+</div>
+<div class="mb-2">
+<label class="form-label" for="inscrição_estadual">Inscrição Estadual:</label>
+<input class="form-control" id="inscrição_estadual" name="inscrição_estadual" type="text"/>
+</div>
+<div class="mb-2">
+<label class="form-label" for="cpf">CPF:</label>
+<input class="form-control" id="cpf" name="cpf" type="text"/>
+</div>
+<div class="mb-2">
+<label class="form-label" for="situação">Situação:</label>
+<input class="form-control" id="situação" name="situação" type="text"/>
+</div>
+<div class="mb-2">
+<label class="form-label" for="indicação_cliente">Indicação Cliente:</label>
+<input class="form-control" id="indicação_cliente" name="indicação_cliente" type="text"/>
+</div>
+<div class="mb-2">
+<label class="form-label" for="ramo_de_atividade">Ramo de Atividade:</label>
+<select class="form-select" id="ramo_de_atividade" name="ramo_de_atividade">
+<option value="">Selecione</option>
+<!-- opções devem ser definidas no backend futuramente -->
+</select>
+</div>
+<div class="mb-2">
+<label class="form-label" for="atividade_principal">Atividade Principal:</label>
+<select class="form-select" id="atividade_principal" name="atividade_principal">
+<option value="">Selecione</option>
+<!-- opções devem ser definidas no backend futuramente -->
+</select>
+</div>
+<div class="subtitulo">Responsável por Compras:</div>
+<div class="mb-2">
+<label class="form-label" for="nome">Nome:</label>
+<input class="form-control" id="nome" name="nome" type="text"/>
+</div>
+<div class="mb-2">
+<label class="form-label" for="celular">Celular:</label>
+<input class="form-control" id="celular" name="celular" type="text"/>
+</div>
+<div class="mb-2">
+<label class="form-label" for="e_mail">E-mail:</label>
+<input class="form-control" id="e_mail" name="e_mail" type="text"/>
+</div>
+<div class="mb-2">
+<label class="form-label" for="data_de_nascimento">Data de Nascimento:</label>
+<input class="form-control" id="data_de_nascimento" name="data_de_nascimento" type="text"/>
+</div>
+<div class="mb-2">
+<label class="form-label" for="observações">Observações:</label>
+<input class="form-control" id="observações" name="observações" type="text"/>
+</div>
+<div class="mb-2">
+<label class="form-label" for="filial">Filial:</label>
+<input class="form-control" id="filial" name="filial" type="text"/>
+</div>
+</div>
+<div class="tab-pane fade" id="aba2" role="tabpanel">
+<div class="subtitulo">Endereço de Faturamento:</div>
+<div class="mb-2">
+<label class="form-label" for="endereco">Endereço:</label>
+<input class="form-control" id="endereco" name="endereco" type="text"/>
+</div>
+<div class="mb-2">
+<label class="form-label" for="bairro">Bairro:</label>
+<input class="form-control" id="bairro" name="bairro" type="text"/>
+</div>
+<div class="mb-2">
+<label class="form-label" for="cep">Cep:</label>
+<input class="form-control" id="cep" name="cep" type="text"/>
+</div>
+<div class="mb-2">
+<label class="form-label" for="localizacao">Localização:</label>
+<input class="form-control" id="localizacao" name="localizacao" type="text"/>
+</div>
+<div class="mb-2">
+<label class="form-label" for="município">Município:</label>
+<input class="form-control" id="município" name="município" type="text"/>
+</div>
+<div class="mb-2">
+<label class="form-label" for="estado">Estado:</label>
+<input class="form-control" id="estado" name="estado" type="text"/>
+</div>
+<div class="mb-2">
+<label class="form-label" for="e_mail_para_recebimento_da_danfe">E-mail para recebimento da Danfe:</label>
+<input class="form-control" id="e_mail_para_recebimento_da_danfe" name="e_mail_para_recebimento_da_danfe" type="text"/>
+</div>
+<div class="subtitulo">Representante Legal:</div>
+<div class="mb-2">
+<label class="form-label" for="nome">Nome:</label>
+<input class="form-control" id="nome" name="nome" type="text"/>
+</div>
+<div class="mb-2">
+<label class="form-label" for="celular">Celular:</label>
+<input class="form-control" id="celular" name="celular" type="text"/>
+</div>
+<div class="mb-2">
+<label class="form-label" for="e_mail">E-mail:</label>
+<input class="form-control" id="e_mail" name="e_mail" type="text"/>
+</div>
+<div class="mb-2">
+<label class="form-label" for="data_de_nascimento">Data de Nascimento:</label>
+<input class="form-control" id="data_de_nascimento" name="data_de_nascimento" type="text"/>
+</div>
+<div class="mb-2">
+<label class="form-label" for="observacões">Observações:</label>
+<input class="form-control" id="observacões" name="observacões" type="text"/>
+</div>
+</div>
+<div class="tab-pane fade" id="aba3" role="tabpanel">
+<div class="mb-2">
+<label class="form-label" for="endereço">Endereço:</label>
+<input class="form-control" id="endereço" name="endereço" type="text"/>
+</div>
+<div class="mb-2">
+<label class="form-label" for="bairro">Bairro:</label>
+<input class="form-control" id="bairro" name="bairro" type="text"/>
+</div>
+<div class="mb-2">
+<label class="form-label" for="cep">Cep:</label>
+<input class="form-control" id="cep" name="cep" type="text"/>
+</div>
+<div class="mb-2">
+<label class="form-label" for="localização">Localização:</label>
+<input class="form-control" id="localização" name="localização" type="text"/>
+</div>
+<div class="mb-2">
+<label class="form-label" for="município">Município:</label>
+<input class="form-control" id="município" name="município" type="text"/>
+</div>
+<div class="mb-2">
+<label class="form-label" for="estado">Estado:</label>
+<input class="form-control" id="estado" name="estado" type="text"/>
+</div>
+<div class="mb-2">
+<label class="form-label" for="rota_principal">Rota Principal:</label>
+<select class="form-select" id="rota_principal" name="rota_principal">
+<option value="">Selecione</option>
+<!-- opções devem ser definidas no backend futuramente -->
+</select>
+</div>
+<div class="mb-2">
+<label class="form-label" for="rota_de_aproximação">Rota de Aproximação:</label>
+<input class="form-control" id="rota_de_aproximação" name="rota_de_aproximação" type="text"/>
+</div>
+<div class="mb-2">
+<label class="form-label" for="observação_para_o_motorista">Observação para o Motorista:</label>
+<input class="form-control" id="observação_para_o_motorista" name="observação_para_o_motorista" type="text"/>
+</div>
+<div class="subtitulo">Responsável pelo Recebimento:</div>
+<div class="mb-2">
+<label class="form-label" for="nome">Nome:</label>
+<input class="form-control" id="nome" name="nome" type="text"/>
+</div>
+<div class="mb-2">
+<label class="form-label" for="celular">Celular:</label>
+<input class="form-control" id="celular" name="celular" type="text"/>
+</div>
+<div class="mb-2">
+<label class="form-label" for="e_mail">E-mail:</label>
+<input class="form-control" id="e_mail" name="e_mail" type="text"/>
+</div>
+<div class="mb-2">
+<label class="form-label" for="data_de_nascimento">Data de Nascimento:</label>
+<input class="form-control" id="data_de_nascimento" name="data_de_nascimento" type="text"/>
+</div>
+<div class="mb-2">
+<label class="form-label" for="observações">Observações:</label>
+<input class="form-control" id="observações" name="observações" type="text"/>
+</div>
+</div>
+<div class="tab-pane fade" id="aba4" role="tabpanel">
+<div class="mb-2">
+<label class="form-label" for="endereço">Endereço:</label>
+<input class="form-control" id="endereço" name="endereço" type="text"/>
+</div>
+<div class="mb-2">
+<label class="form-label" for="bairro">Bairro:</label>
+<input class="form-control" id="bairro" name="bairro" type="text"/>
+</div>
+<div class="mb-2">
+<label class="form-label" for="cep">Cep:</label>
+<input class="form-control" id="cep" name="cep" type="text"/>
+</div>
+<div class="mb-2">
+<label class="form-label" for="localização">Localização:</label>
+<input class="form-control" id="localização" name="localização" type="text"/>
+</div>
+<div class="mb-2">
+<label class="form-label" for="município">Município:</label>
+<input class="form-control" id="município" name="município" type="text"/>
+</div>
+<div class="mb-2">
+<label class="form-label" for="estado">Estado:</label>
+<input class="form-control" id="estado" name="estado" type="text"/>
+</div>
+<div class="subtitulo">Responsável pela Cobrança:</div>
+<div class="mb-2">
+<label class="form-label" for="nome">Nome:</label>
+<input class="form-control" id="nome" name="nome" type="text"/>
+</div>
+<div class="mb-2">
+<label class="form-label" for="celular">Celular:</label>
+<input class="form-control" id="celular" name="celular" type="text"/>
+</div>
+<div class="mb-2">
+<label class="form-label" for="e_mail">E-mail:</label>
+<input class="form-control" id="e_mail" name="e_mail" type="text"/>
+</div>
+<div class="mb-2">
+<label class="form-label" for="data_de_nascimento">Data de Nascimento:</label>
+<input class="form-control" id="data_de_nascimento" name="data_de_nascimento" type="text"/>
+</div>
+<div class="mb-2">
+<label class="form-label" for="observações">Observações:</label>
+<input class="form-control" id="observações" name="observações" type="text"/>
+</div>
+</div>
+<div class="tab-pane fade" id="aba5" role="tabpanel">
+<div class="subtitulo">Dados das ultimas Compras:</div>
+<div class="mb-2">
+<label class="form-label" for="nº_danfe">nº Danfe:</label>
+<input class="form-control" id="nº_danfe" name="nº_danfe" type="text"/>
+</div>
+<div class="mb-2">
+<label class="form-label" for="emissao">Emissão:</label>
+<input class="form-control" id="emissao" name="emissao" type="text"/>
+</div>
+<div class="mb-2">
+<label class="form-label" for="valor_total">Valor Total:</label>
+<input class="form-control" id="valor_total" name="valor_total" type="text"/>
+</div>
+<div class="mb-2">
+<label class="form-label" for="valor_frete">Valor/Frete:</label>
+<input class="form-control" id="valor_frete" name="valor_frete" type="text"/>
+</div>
+<div class="mb-2">
+<label class="form-label" for="valor_frete_padrao">Valor frete padrão:</label>
+<input class="form-control" id="valor_frete_padrao" name="valor_frete_padrao" type="text"/>
+</div>
+<div class="mb-2">
+<label class="form-label" for="valor_ultimo_frete_to">Valor ultimo Frete (TO):</label>
+<input class="form-control" id="valor_ultimo_frete_to" name="valor_ultimo_frete_to" type="text"/>
+</div>
+<div class="mb-2">
+<label class="form-label" for="lista___tabela">Lista / Tabela:</label>
+<input class="form-control" id="lista___tabela" name="lista___tabela" type="text"/>
+</div>
+<div class="mb-2">
+<label class="form-label" for="condicões_de_pagamento">Condições de Pagamento:</label>
+<input class="form-control" id="condicões_de_pagamento" name="condicões_de_pagamento" type="text"/>
+</div>
+<div class="mb-2">
+<label class="form-label" for="cliente_calcula_st">Cliente calcula ST:</label>
+<select class="form-select" id="cliente_calcula_st" name="cliente_calcula_st">
+<option value="">Selecione</option>
+<option value="Sim">Sim</option>
+<option value="Não">Não</option>
+</select>
+</div>
+<div class="mb-2">
+<label class="form-label" for="prazo_médio_de_compra">Prazo médio de compra:</label>
+<input class="form-control" id="prazo_médio_de_compra" name="prazo_médio_de_compra" type="text"/>
+</div>
+<div class="mb-2">
+<label class="form-label" for="previsao_da_próxima_compra">Previsão da próxima compra:</label>
+<input class="form-control" id="previsao_da_próxima_compra" name="previsao_da_próxima_compra" type="text"/>
+</div>
+<div class="subtitulo">Observações pela não compra:</div>
+<div class="mb-2">
+<label class="form-label" for="observacões">Observações:</label>
+<input class="form-control" id="observacões" name="observacões" type="text"/>
+</div>
+</div>
+<div class="tab-pane fade" id="aba6" role="tabpanel">
+<div class="mb-2">
+<label class="form-label" for="classificação">Classificação:</label>
+<input class="form-control" id="classificação" name="classificação" type="text"/>
+</div>
+<div class="mb-2">
+<label class="form-label" for="tipo_da_venda_a_prazo___a_vista">Tipo da venda (a prazo / a vista):</label>
+<input class="form-control" id="tipo_da_venda_a_prazo___a_vista" name="tipo_da_venda_a_prazo___a_vista" type="text"/>
+</div>
+<div class="mb-2">
+<label class="form-label" for="limite_de_credito">Limite de Credito:</label>
+<input class="form-control" id="limite_de_credito" name="limite_de_credito" type="text"/>
+</div>
+<div class="mb-2">
+<label class="form-label" for="data_de_vencimento">Data de vencimento:</label>
+<input class="form-control" id="data_de_vencimento" name="data_de_vencimento" type="text"/>
+</div>
+<div class="subtitulo">Grupo econômico amarrado ao cliente:</div>
+<div class="mb-2">
+<label class="form-label" for="código">Código:</label>
+<input class="form-control" id="código" name="código" type="text"/>
+</div>
+<div class="mb-2">
+<label class="form-label" for="nome_empresarial">Nome Empresarial:</label>
+<input class="form-control" id="nome_empresarial" name="nome_empresarial" type="text"/>
+</div>
+<div class="subtitulo">Referencias Comerciais:</div>
+<div class="mb-2">
+<label class="form-label" for="empresa">Empresa:</label>
+<input class="form-control" id="empresa" name="empresa" type="text"/>
+</div>
+<div class="mb-2">
+<label class="form-label" for="cidade">Cidade:</label>
+<input class="form-control" id="cidade" name="cidade" type="text"/>
+</div>
+<div class="mb-2">
+<label class="form-label" for="telefone">Telefone:</label>
+<input class="form-control" id="telefone" name="telefone" type="text"/>
+</div>
+<div class="mb-2">
+<label class="form-label" for="contato">Contato:</label>
+<input class="form-control" id="contato" name="contato" type="text"/>
+</div>
+<div class="subtitulo">Referencias Bancárias:</div>
+<div class="mb-2">
+<label class="form-label" for="banco">Banco:</label>
+<input class="form-control" id="banco" name="banco" type="text"/>
+</div>
+<div class="mb-2">
+<label class="form-label" for="agência">Agência:</label>
+<input class="form-control" id="agência" name="agência" type="text"/>
+</div>
+<div class="mb-2">
+<label class="form-label" for="conta_corrente">Conta Corrente:</label>
+<input class="form-control" id="conta_corrente" name="conta_corrente" type="text"/>
+</div>
+<div class="subtitulo">Bens Imóveis:</div>
+<div class="mb-2">
+<label class="form-label" for="imóvel">Imóvel:</label>
+<input class="form-control" id="imóvel" name="imóvel" type="text"/>
+</div>
+<div class="mb-2">
+<label class="form-label" for="localização">Localização:</label>
+<input class="form-control" id="localização" name="localização" type="text"/>
+</div>
+<div class="mb-2">
+<label class="form-label" for="área">Área:</label>
+<input class="form-control" id="área" name="área" type="text"/>
+</div>
+<div class="mb-2">
+<label class="form-label" for="valor">Valor:</label>
+<input class="form-control" id="valor" name="valor" type="text"/>
+</div>
+<div class="mb-2">
+<label class="form-label" for="hipotecado">Hipotecado:</label>
+<input class="form-control" id="hipotecado" name="hipotecado" type="text"/>
+</div>
+<div class="subtitulo">Bens Móveis:</div>
+<div class="mb-2">
+<label class="form-label" for="marca">Marca:</label>
+<input class="form-control" id="marca" name="marca" type="text"/>
+</div>
+<div class="mb-2">
+<label class="form-label" for="modelo">Modelo:</label>
+<input class="form-control" id="modelo" name="modelo" type="text"/>
+</div>
+<div class="mb-2">
+<label class="form-label" for="alienado">Alienado:</label>
+<input class="form-control" id="alienado" name="alienado" type="text"/>
+</div>
+<div class="subtitulo">Plantel de Animais:</div>
+<div class="mb-2">
+<label class="form-label" for="espécie">Espécie:</label>
+<input class="form-control" id="espécie" name="espécie" type="text"/>
+</div>
+<div class="mb-2">
+<label class="form-label" for="nº_de_animais">Nº de Animais:</label>
+<input class="form-control" id="nº_de_animais" name="nº_de_animais" type="text"/>
+</div>
+<div class="mb-2">
+<label class="form-label" for="consumo_médio_diário">Consumo Médio Diário:</label>
+<input class="form-control" id="consumo_médio_diário" name="consumo_médio_diário" type="text"/>
+</div>
+<div class="mb-2">
+<label class="form-label" for="consumo_médio_mensal">Consumo Médio Mensal:</label>
+<input class="form-control" id="consumo_médio_mensal" name="consumo_médio_mensal" type="text"/>
+</div>
+<div class="subtitulo">Supervisores:</div>
+<div class="mb-2">
+<label class="form-label" for="código_insumo">Código Insumo:</label>
+<input class="form-control" id="código_insumo" name="código_insumo" type="text"/>
+</div>
+<div class="mb-2">
+<label class="form-label" for="nome_insumos">Nome Insumos:</label>
+<input class="form-control" id="nome_insumos" name="nome_insumos" type="text"/>
+</div>
+<div class="mb-2">
+<label class="form-label" for="código_pet">Código Pet:</label>
+<input class="form-control" id="código_pet" name="código_pet" type="text"/>
+</div>
+<div class="mb-2">
+<label class="form-label" for="nome_pet">Nome Pet:</label>
+<input class="form-control" id="nome_pet" name="nome_pet" type="text"/>
+</div>
+<div class="subtitulo">Comissão Dispet:</div>
+<div class="mb-2">
+<label class="form-label" for="insumos">Insumos:</label>
+<input class="form-control" id="insumos" name="insumos" type="text"/>
+</div>
+<div class="mb-2">
+<label class="form-label" for="pet">Pet:</label>
+<input class="form-control" id="pet" name="pet" type="text"/>
+</div>
+<div class="mb-2">
+<label class="form-label" for="observações">Observações:</label>
+<input class="form-control" id="observações" name="observações" type="text"/>
+</div>
+</div>
+</div>
+<div class="mt-4">
+<button class="btn btn-warning" id="btn-editar" onclick="editarCliente()" type="button">Editar</button>
+<button class="btn btn-secondary d-none" id="btn-cancelar" onclick="cancelarEdicao()" type="button">Cancelar</button>
+<button class="btn btn-success d-none" id="btn-salvar" onclick="salvarCliente()" type="button">Salvar</button>
+<button class="btn btn-danger" onclick="excluirCliente()" type="button">Excluir</button>
+<button class="btn btn-primary" onclick="listarClientes()" type="button">Listar Clientes</button>
+</div>
+</form>
+<script>
+		 // Máscaras
+    IMask(document.getElementById('cpf'), { mask: '000.000.000-00' });
+    IMask(document.getElementById('cnpj'), { mask: '00.000.000/0000-00' });
+    IMask(document.getElementById('telefone'), { mask: '(00) 0000-0000' });
+    IMask(document.getElementById('celular'), { mask: '(00) 00000-0000' });
+
+    function novoCliente() {
+      document.getElementById("formCliente").reset();
+      document.getElementById("id").value = "";
+      document.getElementById("ativo").checked = true;
+    }
+
+    function salvarCliente() {
+	  const id = document.getElementById("id").value;
+      const cliente = obterDadosFormulario();
+      
+	  if (id) {
+          cliente.id = parseInt(id);  // ⚠️ Garantir que vai como inteiro
+	  }
+	  const url = id ? `http://127.0.0.1:8000/cliente/${id}` : "http://127.0.0.1:8000/cliente";
+      const metodo = id ? 'put' : 'post';
+	  
+      axios[metodo](url, cliente)
+        .then(() => {
+          alert("Cliente salvo com sucesso!");
+          novoCliente();
+        })
+        .catch(erro => {
+          console.error(erro);
+          alert("Erro ao salvar cliente.");
+        });
+    }
+
+    function excluirCliente() {
+      const id = document.getElementById("id").value;
+      if (!id) {
+        alert("Selecione um cliente primeiro.");
+        return;
+      }
+
+      if (!confirm("Tem certeza que deseja excluir este cliente?")) return;
+
+      axios.delete(`http://127.0.0.1:8000/cliente/${id}`)
+        .then(() => {
+          alert("Cliente excluído com sucesso!");
+          novoCliente();
+        })
+        .catch(erro => {
+          console.error(erro);
+          alert("Erro ao excluir cliente.");
+        });
+    }
+
+    function listarClientes() {
+      window.open("modal_clientes.html", "popup", "width=800,height=600");
+    }
+
+    function obterDadosFormulario() {
+      return {
+        tipo_cliente: document.getElementById("tipo_cliente").value,
+        tipo_venda: document.getElementById("tipo_venda").value,
+        tipo_compra: document.getElementById("tipo_compra").value,
+        limite_credito: parseFloat(document.getElementById("limite_credito").value || 0),
+        cnpj: document.getElementById("cnpj").value,
+        inscricao_estadual: document.getElementById("inscricao_estadual").value,
+        cpf: document.getElementById("cpf").value,
+        nome: document.getElementById("nome").value,
+        nome_fantasia: document.getElementById("nome_fantasia").value,
+        telefone: document.getElementById("telefone").value,
+        celular: document.getElementById("celular").value,
+        email: document.getElementById("email").value,
+        observacoes: document.getElementById("observacoes").value,
+        ativo: document.getElementById("ativo").checked,
+        endereco_entrega: {
+          cep: document.getElementById("cep_entrega").value,
+          endereco: document.getElementById("endereco_entrega").value,
+          complemento: document.getElementById("complemento_entrega").value,
+          bairro: document.getElementById("bairro_entrega").value,
+          cidade: document.getElementById("cidade_entrega").value,
+          estado: document.getElementById("estado_entrega").value,
+        },
+        endereco_cobranca: {
+          cep: document.getElementById("cep_cobranca").value,
+          endereco: document.getElementById("endereco_cobranca").value,
+          complemento: document.getElementById("complemento_cobranca").value,
+          bairro: document.getElementById("bairro_cobranca").value,
+          cidade: document.getElementById("cidade_cobranca").value,
+          estado: document.getElementById("estado_cobranca").value,
+        }
+      };
+    }
+
+    function preencherFormularioCliente(cliente) {
+      document.getElementById("id").value = cliente.id || "";
+      document.getElementById("tipo_cliente").value = cliente.tipo_cliente;
+      document.getElementById("tipo_venda").value = cliente.tipo_venda;
+      document.getElementById("tipo_compra").value = cliente.tipo_compra;
+      document.getElementById("limite_credito").value = cliente.limite_credito;
+      document.getElementById("cnpj").value = cliente.cnpj;
+      document.getElementById("inscricao_estadual").value = cliente.inscricao_estadual;
+      document.getElementById("cpf").value = cliente.cpf;
+      document.getElementById("nome").value = cliente.nome;
+      document.getElementById("nome_fantasia").value = cliente.nome_fantasia;
+      document.getElementById("telefone").value = cliente.telefone;
+      document.getElementById("celular").value = cliente.celular;
+      document.getElementById("email").value = cliente.email;
+
+      document.getElementById("cep_entrega").value = cliente.endereco_entrega?.cep || "";
+      document.getElementById("endereco_entrega").value = cliente.endereco_entrega?.endereco || "";
+      document.getElementById("complemento_entrega").value = cliente.endereco_entrega?.complemento || "";
+      document.getElementById("bairro_entrega").value = cliente.endereco_entrega?.bairro || "";
+      document.getElementById("cidade_entrega").value = cliente.endereco_entrega?.cidade || "";
+      document.getElementById("estado_entrega").value = cliente.endereco_entrega?.estado || "";
+
+      document.getElementById("cep_cobranca").value = cliente.endereco_cobranca?.cep || "";
+      document.getElementById("endereco_cobranca").value = cliente.endereco_cobranca?.endereco || "";
+      document.getElementById("complemento_cobranca").value = cliente.endereco_cobranca?.complemento || "";
+      document.getElementById("bairro_cobranca").value = cliente.endereco_cobranca?.bairro || "";
+      document.getElementById("cidade_cobranca").value = cliente.endereco_cobranca?.cidade || "";
+      document.getElementById("estado_cobranca").value = cliente.endereco_cobranca?.estado || "";
+
+      document.getElementById("observacoes").value = cliente.observacoes || "";
+      document.getElementById("ativo").checked = cliente.ativo ?? true;
+    }
+
+    // Disponibiliza para o modal chamar
+    window.preencherFormulario = preencherFormularioCliente;
+	  <script src="js/script.js"></script>
+</body>
+</html>
