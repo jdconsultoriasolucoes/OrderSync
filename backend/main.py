@@ -7,7 +7,7 @@ from routers import cliente
 
 app = FastAPI()
 
-from backend.db import fake_db  # Força a execução de fake_db e popula a lista
+from db import fake_db  # Força a execução de fake_db e popula a lista
 
 # Middleware de CORS para permitir acesso do frontend
 app.add_middleware(
