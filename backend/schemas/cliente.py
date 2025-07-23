@@ -1,17 +1,18 @@
-from pydantic import BaseModel, Field, field_validator, model_validator, FieldValidationInfo, model_validator
+from pydantic import BaseModel #, Field, field_validator, model_validator, FieldValidationInfo, model_validator
 from typing import Optional, List
 from datetime import datetime
-from backend.utils.validators import (
-validar_cpf_valido,
-    validar_cnpj_valido,
-    validar_email,
-    validar_documento_por_tipo_pessoa,
-    validar_data_nascimento,
-    validar_data_vencimento,
-    validar_emissao,
-    validar_valor_positivo,
-    validar_consumo_coerente
-)
+
+#from backend.utils.validators import (
+#validar_cpf_valido,
+#    validar_cnpj_valido,
+#    validar_email,
+#    validar_documento_por_tipo_pessoa,
+#    validar_data_nascimento,
+#    validar_data_vencimento,
+#    validar_emissao,
+#    validar_valor_positivo,
+#    validar_consumo_coerente
+#)
 
 # Classes de Cadastro de Clientes
 
@@ -33,24 +34,24 @@ class CadastroCliente(BaseModel):
     ramo_de_atividade: Optional[str]
     atividade_principal: Optional[str]
 
-    @field_validator("cpf")
-    def cpf_valido(cls, v):
-        if v and not validar_cpf_valido(v):
-            raise ValueError("CPF inválido")
-        return v
+#    @field_validator("cpf")
+#    def cpf_valido(cls, v):
+#        if v and not validar_cpf_valido(v):
+#            raise ValueError("CPF inválido")
+#        return v
 
-    @field_validator("cnpj")
-    def cnpj_valido(cls, v):
-        if v and not validar_cnpj_valido(v):
-            raise ValueError("CNPJ inválido")
-        return v
+#    @field_validator("cnpj")
+#    def cnpj_valido(cls, v):
+#        if v and not validar_cnpj_valido(v):
+#            raise ValueError("CNPJ inválido")
+#        return v
     
     # Validação cruzada: CPF ou CNPJ obrigatório conforme tipo
-    @model_validator(mode="after")
-    def validar_documento(self):
-        if not validar_documento_por_tipo_pessoa(self.tipo_cliente, self.cpf, self.cnpj):
-            raise ValueError("CPF ou CNPJ obrigatório conforme tipo de cliente")
-        return self
+#    @model_validator(mode="after")
+#    def validar_documento(self):
+#        if not validar_documento_por_tipo_pessoa(self.tipo_cliente, self.cpf, self.cnpj):
+#            raise ValueError("CPF ou CNPJ obrigatório conforme tipo de cliente")
+#        return self
 
 class ResponsavelCompras(BaseModel):
     nome_responsavel: Optional[str]
@@ -60,17 +61,17 @@ class ResponsavelCompras(BaseModel):
     observacoes_responsavel: Optional[str]
     filial_resposavel: Optional[str]
 
-    @field_validator("email_resposavel")
-    def email_valido(cls, v):
-        if v and not validar_email(v):
-            raise ValueError("Email inválido")
-        return v
+#    @field_validator("email_resposavel")
+#    def email_valido(cls, v):
+#        if v and not validar_email(v):
+#            raise ValueError("Email inválido")
+#        return v
 
-    @field_validator("data_nascimento_resposavel")
-    def nascimento_valido(cls, v):
-        if v and not validar_data_nascimento(v):
-            raise ValueError("Data de nascimento inválida")
-        return v
+#    @field_validator("data_nascimento_resposavel")
+#    def nascimento_valido(cls, v):
+#        if v and not validar_data_nascimento(v):
+#            raise ValueError("Data de nascimento inválida")
+#        return v
 
 # Classes de Endereço de Faturamento
 
@@ -83,11 +84,11 @@ class EnderecoFaturamento(BaseModel):
     estado_faturamento: Optional[str]
     email_danfe_faturamento: Optional[str]
 
-    @field_validator("email_danfe_faturamento")
-    def email_valido(cls, v):
-        if v and not validar_email(v):
-            raise ValueError("Email inválido")
-        return v
+#    @field_validator("email_danfe_faturamento")
+#    def email_valido(cls, v):
+#        if v and not validar_email(v):
+#            raise ValueError("Email inválido")
+#        return v
 
 class RepresentanteLegal(BaseModel):
     nome_RepresentanteLegal: Optional[str]
@@ -96,17 +97,17 @@ class RepresentanteLegal(BaseModel):
     data_nascimento_RepresentanteLegal: Optional[str]
     observacoes_RepresentanteLegal: Optional[str]
     
-    @field_validator("email_RepresentanteLegal")
-    def email_valido(cls, v):
-        if v and not validar_email(v):
-            raise ValueError("Email inválido")
-        return v
+#    @field_validator("email_RepresentanteLegal")
+#    def email_valido(cls, v):
+#        if v and not validar_email(v):
+#            raise ValueError("Email inválido")
+#        return v
 
-    @field_validator("data_nascimento_RepresentanteLegal")
-    def nascimento_valido(cls, v):
-        if v and not validar_data_nascimento(v):
-            raise ValueError("Data de nascimento inválida")
-        return v
+#    @field_validator("data_nascimento_RepresentanteLegal")
+#    def nascimento_valido(cls, v):
+#        if v and not validar_data_nascimento(v):
+#            raise ValueError("Data de nascimento inválida")
+#        return v
 
 # Classes de Endereço de Entrega
 
@@ -129,17 +130,17 @@ class ResponsavelRecebimento(BaseModel):
     observacoes_ResponsavelRecebimento: Optional[str]
 
 
-    @field_validator("email_ResponsavelRecebimento")
-    def email_valido(cls, v):
-        if v and not validar_email(v):
-            raise ValueError("Email inválido")
-        return v
+#    @field_validator("email_ResponsavelRecebimento")
+#    def email_valido(cls, v):
+#        if v and not validar_email(v):
+#            raise ValueError("Email inválido")
+#        return v
 
-    @field_validator("data_nascimento_ResponsavelRecebimento")
-    def nascimento_valido(cls, v):
-        if v and not validar_data_nascimento(v):
-            raise ValueError("Data de nascimento inválida")
-        return v
+#    @field_validator("data_nascimento_ResponsavelRecebimento")
+#    def nascimento_valido(cls, v):
+#        if v and not validar_data_nascimento(v):
+#            raise ValueError("Data de nascimento inválida")
+#        return v
 
 
 
@@ -161,17 +162,17 @@ class ResponsavelCobranca(BaseModel):
     observacoes_ResponsavelCobranca: Optional[str]
 
 
-    @field_validator("email_ResponsavelCobranca")
-    def email_valido(cls, v):
-        if v and not validar_email(v):
-            raise ValueError("Email inválido")
-        return v
+#    @field_validator("email_ResponsavelCobranca")
+#    def email_valido(cls, v):
+#        if v and not validar_email(v):
+#            raise ValueError("Email inválido")
+#        return v
 
-    @field_validator("data_nascimento_ResponsavelCobranca")
-    def nascimento_valido(cls, v):
-        if v and not validar_data_nascimento(v):
-            raise ValueError("Data de nascimento inválida")
-        return v
+#    @field_validator("data_nascimento_ResponsavelCobranca")
+#    def nascimento_valido(cls, v):
+#        if v and not validar_data_nascimento(v):
+#            raise ValueError("Data de nascimento inválida")
+#        return v
 
 # Classes de Compras
 
@@ -188,22 +189,22 @@ class DadosUltimasCompras(BaseModel):
     prazo_medio_compra_Compras: Optional[str]
     previsao_proxima_compra_Compras: Optional[str]
 
-    @field_validator("emissao_Compras")
-    def data_emissao_valida(cls, v):
-        if v and not validar_emissao(v):
-            raise ValueError("Data de emissão inválida (futura)")
-        return v
+#    @field_validator("emissao_Compras")
+#    def data_emissao_valida(cls, v):
+#        if v and not validar_emissao(v):
+#            raise ValueError("Data de emissão inválida (futura)")
+#        return v
 
-    @field_validator(
-        "valor_total_Compras",
-        "valor_frete_Compras",
-        "valor_frete_padrao_Compras",
-        "valor_ultimo_frete_to_Compras"
-    )
-    def valores_positivos(cls, v):
-        if v is not None and not validar_valor_positivo(v):
-            raise ValueError("Valor não pode ser negativo")
-        return v
+#    @field_validator(
+#        "valor_total_Compras",
+#        "valor_frete_Compras",
+#        "valor_frete_padrao_Compras",
+#        "valor_ultimo_frete_to_Compras"
+#    )
+#    def valores_positivos(cls, v):
+#        if v is not None and not validar_valor_positivo(v):
+#            raise ValueError("Valor não pode ser negativo")
+#        return v
 
 class ObservacoesNaoCompra(BaseModel):
     observacoes_Compras: Optional[str]
@@ -216,17 +217,17 @@ class DadosElaboracaoCadastro(BaseModel):
     limite_credito_ElaboracaoCadastro: Optional[float]
     data_vencimento_ElaboracaoCadastro: Optional[str]
 
-    @field_validator("data_vencimento_ElaboracaoCadastro")
-    def vencimento_valido(cls, v):
-        if v and not validar_data_vencimento(v):
-            raise ValueError("Data de vencimento inválida (no passado)")
-        return v
+#    @field_validator("data_vencimento_ElaboracaoCadastro")
+#    def vencimento_valido(cls, v):
+#        if v and not validar_data_vencimento(v):
+#            raise ValueError("Data de vencimento inválida (no passado)")
+#        return v
 
-    @field_validator("limite_credito_ElaboracaoCadastro")
-    def limite_credito_valido(cls, v):
-        if v is not None and not validar_valor_positivo(v):
-            raise ValueError("Limite de crédito não pode ser negativo")
-        return v
+#    @field_validator("limite_credito_ElaboracaoCadastro")
+#    def limite_credito_valido(cls, v):
+#        if v is not None and not validar_valor_positivo(v):
+#            raise ValueError("Limite de crédito não pode ser negativo")
+#        return v
 
 class GrupoEconomico(BaseModel):
     codigo_ElaboracaoCadastro: Optional[str]
@@ -261,10 +262,10 @@ class PlantelAnimal(BaseModel):
     consumo_diario_ElaboracaoCadastro: Optional[float]
     consumo_mensal_ElaboracaoCadastro: Optional[float]    
 
-@model_validator(mode="after")
-def validar_consumo_animal(cls, values):
+#@model_validator(mode="after")
+#def validar_consumo_animal(cls, values):
     # lógica permanece a mesma
-    return values
+#    return values
 
 class Supervisores(BaseModel):
     codigo_insumo_ElaboracaoCadastro: Optional[str]
