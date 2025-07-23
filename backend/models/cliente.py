@@ -1,5 +1,5 @@
 from sqlalchemy import Column, String, Boolean, Float, DateTime, Integer
-from backend.db.database import Base
+from db.database import Base
 
 class ClienteModel(Base):
     __tablename__ = "tb_cadastro_cliente"

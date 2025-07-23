@@ -3,7 +3,7 @@ import os #Linha temporaria
 sys.path.append(os.path.dirname(os.path.abspath(__file__))) #Linha temporaria
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-from backend.routers import cliente
+from routers import cliente
 
 app = FastAPI()
 

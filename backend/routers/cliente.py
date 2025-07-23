@@ -1,7 +1,7 @@
 from fastapi import APIRouter, HTTPException
 from typing import List
-from backend.schemas.cliente import ClienteCompleto, ClienteResumo
-from backend.services.cliente import (
+from schemas.cliente import ClienteCompleto, ClienteResumo
+from services.cliente import (
     listar_clientes,
     obter_cliente,
     criar_cliente,

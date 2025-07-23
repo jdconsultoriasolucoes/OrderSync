@@ -1,6 +1,6 @@
 from typing import List, Optional
 from datetime import datetime
-from backend.db.fake_db import clientes_db
+from db.fake_db import clientes_db
 
 def listar_clientes() -> List[dict]:
     """
