@@ -10,12 +10,20 @@
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600&display=swap" rel="stylesheet">
 </head>
 <body>
-  <header>
-    <div class="navbar">
-      <button class="menu-btn">&#9776;</button>
-      <img src="logo.png" alt="Logo OrderSync" class="logo">
-    </div>
+  <header class="menu-superior">
+    <div class="menu-toggle" onclick="toggleMenu()">☰</div>
+    <img src="logo.png" alt="Logo" class="logo">
   </header>
+
+  <nav class="menu-lateral" id="menuLateral">
+    <ul>
+      <li><a href="clientes/cliente.html">Cadastrar Cliente</a></li>
+      <li><a href="#">Atualizar Catálogo</a></li>
+      <li><a href="#">Registrar Pedido</a></li>
+      <li><a href="#">Exportar Relatórios</a></li>
+    </ul>
+  </nav>
+
 
   <main>
     <a href="/clientes/cliente.html" class="card card-cliente">
@@ -39,5 +47,14 @@
       <img src="icons/relatorio.png" alt="Ícone Relatório">
     </section>
   </main>
+
+  <script>
+    function toggleMenu() {
+      const menu = document.getElementById('menuLateral');
+      menu.style.left = menu.style.left === '0px' ? '-250px' : '0px';
+    }
+  </script>
+
+
 </body>
 </html>

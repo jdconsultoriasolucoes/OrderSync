@@ -4,6 +4,72 @@ body {
   background-color: #fff;
 }
 
+.page-container {
+  max-width: 2000px;
+  width: 100%;
+  margin: 0 auto;
+  padding: 0 40px;
+  box-sizing: border-box;
+}
+
+.menu-container {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 30px;
+  justify-content: center;
+  padding: 40px;
+  max-width: 900px;
+  margin: 0 auto;
+}
+
+.menu-superior {
+  background-color: #111;
+  color: white;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 10px 30px;
+}
+
+.menu-toggle {
+  font-size: 24px;
+  cursor: pointer;
+}
+
+.menu-lateral {
+  width: 250px;
+  background-color: #333;
+  color: white;
+  position: fixed;
+  height: 100%;
+  top: 0;
+  left: -250px;
+  transition: left 0.3s ease;
+  z-index: 1000;
+  padding-top: 60px;
+}
+
+.menu-lateral ul {
+  list-style: none;
+  padding: 0;
+}
+
+.menu-lateral ul li a {
+  color: white;
+  text-decoration: none;
+  padding: 15px 20px;
+  display: block;
+}
+
+.menu-lateral ul li a:hover {
+  background-color: #444;
+}
+
+.logo {
+  height: 40px;
+}
+
+
 header {
   background-color: #0D0D0D;
   padding: 1rem;
@@ -15,7 +81,8 @@ header {
 .navbar {
   display: flex;
   align-items: center;
-  width: 100%;
+  justify-content: space-between; /* 🔥 joga menu pra esquerda e logo pra direita */
+  padding: 0 20px;
 }
 
 .menu-btn {
@@ -23,14 +90,13 @@ header {
   background: none;
   border: none;
   color: white;
-  margin-right: 1rem;
 }
 
 .logo {
   height: 85px;
-  margin-left: auto;
-  margin-right: auto;
+  margin: 0; /* 🔥 tira a centralização */
 }
+
 
 main {
   display: grid;

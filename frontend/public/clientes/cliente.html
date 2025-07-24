@@ -15,11 +15,21 @@
 <body>
 
   <header>
-    <div class="page-container">
-      <button class="menu-btn">&#9776;</button>
-      <img src="logo.png" alt="OrderSync Logo" class="logo">
+    <div class="navbar">
+      <button class="menu-btn" id="menu-button">&#9776;</button>
+      <img src="logo.png" alt="Logo" class="logo" />
     </div>
   </header>
+
+  <nav class="sidebar" id="sidebar">
+    <ul>
+      <li><a href="/clientes/cliente.html">Cadastrar Cliente</a></li>
+      <li><a href="#">Atualizar Catálogo</a></li>
+      <li><a href="#">Registrar Pedido</a></li>
+      <li><a href="#">Exportar Relatórios</a></li>
+    </ul>
+  </nav>
+
 
   <div class="page-container">  
       
@@ -43,7 +53,7 @@
           <label for="codigo_da_empresa">Código da Empresa:</label>
           <input type="text" id="codigo_da_empresa" name="codigo_da_empresa" />
         </div>
-        <div>
+        <div class="checkbox-container">
           <label for="ativo">Ativo:</label>
           <input type="checkbox" id="ativo" name="ativo" />
         </div>
@@ -802,6 +812,15 @@
         window.preencherFormulario = preencherFormularioCliente;
 </script>	
     <script src="/js/script.js"></script>
+
+  <script>
+    const menuButton = document.getElementById("menu-button");
+    const sidebar = document.getElementById("sidebar");
+
+    menuButton.addEventListener("click", () => {
+      sidebar.classList.toggle("active");
+    });
+  </script>
 
 </body>
 </html>
