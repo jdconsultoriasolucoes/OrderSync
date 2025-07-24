@@ -378,6 +378,20 @@ function listarClientes() {
   window.open("modal_clientes.html", "popup", "width=800,height=600");
 }
 
+function openTab(event, tabName) {
+  const tabs = document.querySelectorAll('.tab-content');
+  tabs.forEach(tab => tab.style.display = 'none');
+
+  const buttons = document.querySelectorAll('.tab');
+  buttons.forEach(btn => btn.classList.remove('active'));
+
+  const selectedTab = document.getElementById(tabName);
+  if (selectedTab) selectedTab.style.display = 'block';
+
+  event.currentTarget.classList.add('active');
+}
+
+
 // Disponibiliza globalmente para o modal chamar
 window.preencherFormulario = preencherFormularioCliente;
 window.salvarCliente = salvarCliente;
