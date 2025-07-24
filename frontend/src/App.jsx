@@ -1,5 +1,14 @@
-import React from 'react'
+import { Routes, Route } from 'react-router-dom'
+import Login from './pages/Login'
+import Cliente from './pages/Cliente'
 
-export default function App() {
-  return <h1>Olá, Dé! Frontend funcionando!</h1>
+function App() {
+  return (
+    <Routes>
+      <Route path="/" element={<Login />} />
+      <Route path="/cliente" element={<Cliente />} />
+    </Routes>
+  )
 }
+
+export default App
