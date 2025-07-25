@@ -3,9 +3,16 @@ import os #Linha temporaria
 sys.path.append(os.path.dirname(os.path.abspath(__file__))) #Linha temporaria
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-from routers import cliente
+from routers import cliente, listas
+
 
 app = FastAPI()
+
+# Incluir os routers
+app.include_router(cliente.router, prefix="/cliente", tags=["Cliente"])
+
+#Deletar biblioteca abaixo apos conexão com o banco, para listagem de itens para o frontend.
+app.include_router(listas.router, prefix="/listas", tags=["Listas"])
 
 from db import fake_db  # Força a execução de fake_db e popula a lista
 
@@ -18,13 +25,10 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# Incluir os routers
-app.include_router(cliente.router, prefix="/cliente", tags=["Cliente"])
+
 
 if __name__ == "__main__":
     import uvicorn
     uvicorn.run("backend.main:app", host="127.0.0.1", port=8000, reload=False)
 
-#Deletar biblioteca abaixo apos conexão com o banco, para listagem de itens para o frontend.
-from routers import listas
-app.include_router(listas.router, prefix="/listas", tags=["Listas"])
+
