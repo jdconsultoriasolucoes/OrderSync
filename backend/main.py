@@ -24,3 +24,7 @@ app.include_router(cliente.router, prefix="/cliente", tags=["Cliente"])
 if __name__ == "__main__":
     import uvicorn
     uvicorn.run("backend.main:app", host="127.0.0.1", port=8000, reload=False)
+
+#Deletar biblioteca abaixo apos conexão com o banco, para listagem de itens para o frontend.
+from routers import listas
+app.include_router(listas.router, prefix="/listas", tags=["Listas"])

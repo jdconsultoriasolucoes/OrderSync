@@ -1,0 +1,32 @@
+from fastapi import APIRouter
+from listas import SITUAÇÃO, RETIRA, TIPO_PESSOA, TIPOS_CLIENTE, SUPERVISOR, ATIVIDADE_PRINCIPAL, ROTA
+
+router = APIRouter()
+
+@router.get("/situacao")
+def get_situacao():
+    return SITUAÇÃO
+
+@router.get("/retira")
+def get_retira():
+    return RETIRA
+
+@router.get("/tipo_pessoa")
+def get_tipo_pessoa():
+    return TIPO_PESSOA
+
+@router.get("/tipos_cliente")
+def get_tipos_cliente():
+    return TIPOS_CLIENTE
+
+@router.get("/supervisor")
+def get_supervisor():
+    return SUPERVISOR
+
+@router.get("/atividade_principal")
+def get_atividade_principal():
+    return ATIVIDADE_PRINCIPAL
+
+@router.get("/rota")
+def get_rota():
+    return ROTA
