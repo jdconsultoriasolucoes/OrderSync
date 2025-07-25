@@ -1,5 +1,5 @@
 from fastapi import APIRouter
-from listas import SITUAÇÃO, RETIRA, TIPO_PESSOA, TIPOS_CLIENTE, SUPERVISOR, ATIVIDADE_PRINCIPAL, ROTA
+from listas import SITUAÇÃO, RETIRA, TIPO_PESSOA, TIPOS_CLIENTE, SUPERVISOR, ATIVIDADE_PRINCIPAL, ROTA, tipo_venda, tipo_compra, ramo_de_atividade
 
 router = APIRouter()
 
@@ -30,3 +30,15 @@ def get_atividade_principal():
 @router.get("/rota")
 def get_rota():
     return ROTA
+
+@router.get("/tipo_venda")
+def get_tipo_venda():
+    return TIPO_VENDA
+
+@router.get("/tipo_compra")
+def get_tipo_compra():
+    return TIPO_COMPRA
+
+@router.get("/ramo_de_atividade")
+def get_ramo_de_atividade():
+    return RAMO_DE_ATIVIDADE
