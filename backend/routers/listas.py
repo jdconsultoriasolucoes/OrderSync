@@ -1,5 +1,5 @@
 from fastapi import APIRouter
-from data.listas import SITUAÇÃO, RETIRA, TIPO_PESSOA, TIPOS_CLIENTE, SUPERVISOR, ATIVIDADE_PRINCIPAL, ROTA, tipo_venda, tipo_compra, ramo_de_atividade
+from data.listas import SITUAÇÃO, RETIRA, TIPO_PESSOA, TIPOS_CLIENTE, SUPERVISOR, ATIVIDADE_PRINCIPAL, ROTA, TIPO_VENDA, TIPO_COMPRA, RAMO_DE_ATIVIDADE
 
 router = APIRouter()
 
