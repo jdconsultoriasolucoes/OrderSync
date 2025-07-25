@@ -1,7 +1,6 @@
-/* Tamanho padrão mais compacto */
 body {
   font-size: 14px;
-  zoom: 90%; /* ajusta o tamanho geral da tela */
+  zoom: 100%; /* ajusta o tamanho geral da tela */
 }
 
 /* Caixa do formulário */
@@ -17,10 +16,10 @@ body {
 
 
 .page-container {
-  max-width: 1200px; /* ou 1400px, por exemplo */
+  max-width: 2000px;
   width: 100%;
   margin: 0 auto;
-  padding: 0 20px;
+  padding: 30px 40px;
   box-sizing: border-box;
 }
 
@@ -41,12 +40,6 @@ input, select {
   font-size: 13px;
   padding: 6px 14px;
   margin-right: 8px;
-}
-
-
-header {
-    background-color: #0D0D0D;
-    padding: 1rem;
 }
 
 
@@ -185,70 +178,3 @@ input[type="text"], select {
   opacity: 0.85;
 }
 
-.navbar {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  background-color: #111;
-  padding: 10px 20px;
-}
-
-.menu-btn {
-  font-size: 28px;
-  background: none;
-  border: none;
-  color: white;
-  cursor: pointer;
-}
-
-.logo {
-  height: 65px;
-}
-
-/* Sidebar do menu */
-.sidebar {
-  position: fixed;
-  top: 0;
-  left: -250px;
-  width: 250px;
-  height: 100%;
-  background-color: #111;
-  padding-top: 60px;
-  transition: 0.3s;
-  z-index: 999;
-}
-
-.sidebar ul {
-  list-style-type: none;
-  padding: 0;
-  margin: 0;
-}
-
-.sidebar ul li {
-  padding: 15px 20px;
-}
-
-.sidebar ul li a {
-  color: #fff;
-  text-decoration: none;
-  display: block;
-  font-size: 18px;
-}
-
-.sidebar ul li a:hover {
-  background-color: #575757;
-  border-radius: 5px;
-}
-
-.sidebar.active {
-  left: 0;
-}
-
-/* Adaptar a tela */
-.page-container {
-  max-width: 2000px;
-  width: 100%;
-  margin: 0 auto;
-  padding: 0 40px;
-  box-sizing: border-box;
-}

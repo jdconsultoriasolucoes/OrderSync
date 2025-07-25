@@ -5,7 +5,7 @@ body {
 }
 
 .page-container {
-  max-width: 2000px;
+  max-width: 1200px;
   width: 100%;
   margin: 0 auto;
   padding: 0 40px;
@@ -22,14 +22,7 @@ body {
   margin: 0 auto;
 }
 
-.menu-superior {
-  background-color: #111;
-  color: white;
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  padding: 10px 30px;
-}
+
 
 .menu-toggle {
   font-size: 24px;
@@ -65,88 +58,68 @@ body {
   background-color: #444;
 }
 
-.logo {
-  height: 40px;
-}
-
-
-header {
-  background-color: #0D0D0D;
-  padding: 1rem;
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-}
-
-.navbar {
-  display: flex;
-  align-items: center;
-  justify-content: space-between; /* 🔥 joga menu pra esquerda e logo pra direita */
-  padding: 0 20px;
-}
-
-.menu-btn {
-  font-size: 1.5rem;
-  background: none;
-  border: none;
-  color: white;
-}
-
-.logo {
-  height: 85px;
-  margin: 0; /* 🔥 tira a centralização */
-}
-
-
 main {
   display: grid;
   grid-template-columns: repeat(2, 220px);
   gap: 24px;
   justify-content: center;
   margin: 40px auto;
-}
-
-.card {
-  display: flex;
-  flex-direction: column;
-  justify-content: center;
-  align-items: center;
-  color: white;
-  border-radius: 10px;
-  padding: 1.2rem;
-  height: 150px;
-  width: 220px;
-  text-align: center;
-  box-shadow: 0 4px 8px rgba(0,0,0,0.1);
-  transition: transform 0.2s ease;
-}
-
-.card:hover {
-  transform: scale(1.05);
-}
-
-.card img {
-  width: 40px;
-  height: 40px;
-}
-
-.card-cliente {
-  background-color: #5E90F2;
-}
-
-.card-catalogo {
-  background-color: #05DBF2;
-}
-
-.card-pedido {
-  background-color: #05F2F2;
-}
-
-.card-relatorios {
-  background-color: #BE44F2;
+  margin-top: 1.5rem;
 }
 
 .card-text {
   font-size: 1.2rem;
   font-weight: 600;
 }
+
+.cards-container {
+  display: flex;
+  justify-content: center;
+  align-items: flex-start;
+  padding: 3rem 1rem;
+  background-color: #f9f9f9;
+  min-height: calc(100vh - 60px); /* menor altura mínima */
+}
+
+.cards-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr); /* fixo em duas colunas */
+  gap: 2rem;
+  max-width: 600px;
+  width: 100%;
+}
+
+
+.card {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  height: 180px;
+  border-radius: 12px;
+  color: white;
+  font-weight: bold;
+  font-size: 1.1rem;
+  text-align: center;
+  text-decoration: none;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+  transition: transform 0.2s ease;
+}
+
+.card img {
+  width: 40px;
+  height: 40px;
+  margin-top: 1rem;
+}
+
+.card:hover {
+  filter: brightness(0.95);
+  transform: translateY(-4px);
+}
+
+
+.card-cliente     { background-color: #4f46e5; }
+.card-catalogo    { background-color: #06b6d4; }
+.card-pedido      { background-color: #0ea5e9; }
+.card-relatorios  { background-color: #a855f7; }
+
