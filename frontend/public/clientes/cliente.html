@@ -833,7 +833,7 @@
 
 <script>
   function preencherSelect(endpoint, selectId) {
-    fetch(`https://ordersync-y7kg.onrender.com/listas/${encodeURIComponent(endpoint)}`)
+    fetch(`https://ordersync-y7kg.onrender.com/listas/${(endpoint)}`)
       .then(resp => resp.json())
       .then(lista => {
         const select = document.getElementById(selectId);
