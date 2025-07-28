@@ -8,6 +8,10 @@ from routers import cliente, listas
 
 app = FastAPI()
 
+@app.get("/")
+def root():
+    return {"mensagem": "API do OrderSync está rodando"}
+
 # Incluir os routers
 app.include_router(cliente.router, prefix="/cliente", tags=["Cliente"])
 
@@ -27,8 +31,8 @@ app.add_middleware(
 
 
 
-if __name__ == "__main__":
-    import uvicorn
-    uvicorn.run("backend.main:app", host="127.0.0.1", port=8000, reload=False)
+#if __name__ == "__main__":
+#    import uvicorn
+#    uvicorn.run("backend.main:app", host="127.0.0.1", port=8000, reload=False)
 
 
