@@ -832,34 +832,36 @@
 </script>
 
 <script>
-  function preencherSelect(endpoint, selectId) {
-    fetch(`https://ordersync-y7kg.onrender.com/listas/${(endpoint)}`)
-      .then(resp => resp.json())
-      .then(lista => {
-        const select = document.getElementById(selectId);
-        select.innerHTML = '<option value="">Selecione</option>';
-        lista.forEach(item => {
-          const option = document.createElement('option');
-          option.value = item;
-          option.textContent = item;
-          select.appendChild(option);
-        });
-      })
-      .catch(erro => console.error(`Erro ao carregar ${selectId}:`, erro));
-  }
+  // Função genérica para preencher selects
+function preencherSelect(endpoint, idElemento) {
+  fetch(`https://ordersync-backend-edjq.onrender.com/listas/${endpoint}`)
+    .then((response) => response.json())
+    .then((data) => {
+      const select = document.getElementById(idElemento);
+      if (!select) return;
+
+      data.forEach((item) => {
+        const option = document.createElement("option");
+        option.value = item;
+        option.text = item;
+        select.appendChild(option);
+      });
+    })
+    .catch((error) => {
+      console.error(`Erro ao carregar lista ${endpoint}:`, error);
+    });
+}
 
 // Chamada ao carregar a página
-  window.onload = () => {
-    preencherSelect('tipo_pessoa', 'tipo_pessoa');
-    preencherSelect('tipo_cliente', 'tipo_cliente');
-    preencherSelect('tipo_venda', 'tipo_venda');
-    preencherSelect('tipo_compra', 'tipo_compra');
-    preencherSelect('situacao', 'situacao');
-    preencherSelect('ramo_atividade', 'ramo_atividade');
-    preencherSelect('atividade_principal', 'atividade_principal');
-    preencherSelect('rota', 'rota_principal_EnderecoEntrega');
-    };
-
+window.onload = () => {
+  preencherSelect("situacao", "situacao");
+  preencherSelect("tipo_cliente", "tipo_cliente");
+  preencherSelect("atividade_principal", "atividade_principal");
+  preencherSelect("rota", "rota_principal_EnderecoEntrega");
+  preencherSelect("tipo_venda", "tipo_venda");
+  preencherSelect("tipo_compra", "tipo_compra");
+  preencherSelect("ramo_de_atividade", "ramo_de_atividade");
+};
 
 </script>
 
