@@ -2,10 +2,7 @@ services:
   - type: web
     name: ordersync-backend
     rootDir: backend
-    buildCommand: |
-      echo "📦 Exibindo requirements.txt antes da instalação:"
-      python show_reqs.py
-      pip install -r requirements.txt
+    buildCommand: pip install -r requirements.txt
     startCommand: uvicorn main:app --host 0.0.0.0 --port 10000
     env: python
     plan: free
@@ -13,3 +10,4 @@ services:
     envVars:
       - key: PYTHON_VERSION
         value: 3.11.9
+
