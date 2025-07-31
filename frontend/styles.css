@@ -83,7 +83,7 @@ main {
 
 .cards-grid {
   display: grid;
-  grid-template-columns: repeat(2, 1fr); /* fixo em duas colunas */
+  grid-template-columns: repeat(3, 1fr); /* fixo em 3 colunas */
   gap: 2rem;
   max-width: 600px;
   width: 100%;
@@ -122,4 +122,5 @@ main {
 .card-catalogo    { background-color: #06b6d4; }
 .card-pedido      { background-color: #0ea5e9; }
 .card-relatorios  { background-color: #a855f7; }
+.card-precos      { background-color: #f755ea; }
 

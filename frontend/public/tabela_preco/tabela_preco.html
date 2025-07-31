@@ -1,0 +1,129 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+  <meta charset="UTF-8">
+  <title>Nova Tabela de Preços</title>
+  <link rel="stylesheet" href="tabela_preco.css">
+  <link rel="stylesheet" href="navbar.css">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600&display=swap" rel="stylesheet">
+  <script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js"></script>
+</head>
+<body>
+
+  <!-- NAVBAR TOPO -->
+  <header>
+    <div class="navbar">
+      <button class="menu-btn" id="menu-button">&#9776;</button>
+      <img src="logo.png" alt="Logo" class="logo" />
+    </div>
+  </header>
+
+  <!-- MENU LATERAL -->
+  <nav class="sidebar" id="sidebar">
+    <ul>
+      <li><a href="/clientes/cliente.html">Cadastrar Cliente</a></li>
+      <li><a href="#">Atualizar Catálogo</a></li>
+      <li><a href="#">Registrar Pedido</a></li>
+      <li><a href="/tabela_preco/tabela_preco.html">Tabela de Preços</a></li>
+      <li><a href="#">Exportar Relatórios</a></li>
+    </ul>
+  </nav>
+  <div id="overlay"></div>
+
+  <main class="page-container">
+    <h1>Criar Nova Tabela de Preços</h1>
+
+    <form class="form-container">
+      <div class="form-grid-2col">
+        <label>
+          Nome da Tabela:
+          <input type="text" id="nome_tabela" />
+        </label>
+        <label>
+          Cliente:
+          <input type="text" id="cliente" placeholder="Buscar cliente..." />
+        </label>
+        <label>
+          Fornecedor:
+          <input type="text" id="fornecedor" />
+        </label>
+        <label>
+          Data Início:
+          <input type="date" id="validade_inicio" />
+        </label>
+        <label>
+          Data Fim:
+          <input type="date" id="validade_fim" />
+        </label>
+        <label>
+          Grupo (Marca):
+          <input type="text" id="grupo" />
+        </label>
+        <label>
+          Plano de Pagamento:
+          <select id="plano_pagamento">
+            <option value="">Selecione</option>
+            <option value="921">921</option>
+            <option value="950">950</option>
+          </select>
+        </label>
+        <label>
+          Fator de Comissão:
+          <select id="fator_comissao">
+            <option value="0.0861">Comissão 7</option>
+            <option value="0.05">Comissão 5</option>
+          </select>
+        </label>
+        <label>
+          Frete por KG:
+          <input type="number" id="frete_kg" step="0.01" />
+        </label>
+      </div>
+
+      <button type="button" class="btn btn-listar" onclick="carregarProdutos()">Buscar Produtos</button>
+    </form>
+
+    <section class="produtos-container">
+      <h2 class="subtitulo">Produtos Disponíveis</h2>
+      <table id="tabela_produtos" class="table table-bordered">
+        <thead>
+          <tr>
+            <th>Selecionar</th>
+            <th>Código</th>
+            <th>Descrição</th>
+            <th>Embalagem</th>
+            <th>Peso Líquido</th>
+            <th>Valor</th>
+            <th>Desconto</th>
+            <th>Acréscimo</th>
+            <th>Valor Líquido</th>
+          </tr>
+        </thead>
+        <tbody>
+          <!-- preenchido via JS -->
+        </tbody>
+      </table>
+    </section>
+
+    <div class="mt-4">
+      <button class="btn btn-salvar" onclick="salvarTabela()">Salvar Tabela de Preço</button>
+    </div>
+  </main>
+
+  <script>
+    const menuButton = document.getElementById("menu-button");
+    const sidebar = document.getElementById("sidebar");
+    const overlay = document.getElementById("overlay");
+
+    menuButton.addEventListener("click", () => {
+      sidebar.classList.toggle("active");
+      overlay.style.display = sidebar.classList.contains("active") ? "block" : "none";
+    });
+
+    overlay.addEventListener("click", () => {
+      sidebar.classList.remove("active");
+      overlay.style.display = "none";
+    });
+  </script>
+</body>
+</html>

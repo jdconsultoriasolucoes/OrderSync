@@ -3,8 +3,7 @@ import os #Linha temporaria
 sys.path.append(os.path.dirname(os.path.abspath(__file__))) #Linha temporaria
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-from routers import cliente, listas, teste
-
+from routers import cliente, listas, tabela_preco
 
 app = FastAPI()
 
@@ -19,7 +18,9 @@ app.include_router(cliente.router, prefix="/cliente", tags=["Cliente"])
 app.include_router(listas.router, prefix="/listas", tags=["Listas"])
 
 #Teste de conexão com o banco
-app.include_router(teste.router)
+#app.include_router(teste.router)
+
+app.include_router(tabela_preco.router, prefix="/tabela_preco", tags=["Tabela de Preço"])
 
 from db import fake_db  # Força a execução de fake_db e popula a lista
 
