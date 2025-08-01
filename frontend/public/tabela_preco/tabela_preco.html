@@ -15,6 +15,7 @@
     <div class="navbar">
       <button class="menu-btn" id="menu-button">&#9776;</button>
       <img src="logo.png" alt="Logo" class="logo" />
+      
     </div>
   </header>
 
@@ -48,6 +49,10 @@
           <input type="text" id="fornecedor" />
         </label>
         <label>
+          Grupo (Marca):
+          <input type="text" id="grupo" />
+        </label>
+        <label>
           Data Início:
           <input type="date" id="validade_inicio" />
         </label>
@@ -55,28 +60,14 @@
           Data Fim:
           <input type="date" id="validade_fim" />
         </label>
+        
         <label>
-          Grupo (Marca):
-          <input type="text" id="grupo" />
-        </label>
-        <label>
-          Plano de Pagamento:
+          Condições de Pagamento:
           <select id="plano_pagamento">
             <option value="">Selecione</option>
             <option value="921">921</option>
             <option value="950">950</option>
           </select>
-        </label>
-        <label>
-          Fator de Comissão:
-          <select id="fator_comissao">
-            <option value="0.0861">Comissão 7</option>
-            <option value="0.05">Comissão 5</option>
-          </select>
-        </label>
-        <label>
-          Frete por KG:
-          <input type="number" id="frete_kg" step="0.01" />
         </label>
       </div>
 
@@ -99,8 +90,8 @@
             <th>Valor Líquido</th>
           </tr>
         </thead>
-        <tbody>
-          <!-- preenchido via JS -->
+        <tbody id="tabela-produtos-body">
+        <!-- produtos serão inseridos aqui -->
         </tbody>
       </table>
     </section>
@@ -109,7 +100,7 @@
       <button class="btn btn-salvar" onclick="salvarTabela()">Salvar Tabela de Preço</button>
     </div>
   </main>
-
+  <script src="tabela_preco.js"></script>
   <script>
     const menuButton = document.getElementById("menu-button");
     const sidebar = document.getElementById("sidebar");

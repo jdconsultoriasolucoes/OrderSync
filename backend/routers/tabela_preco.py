@@ -86,17 +86,20 @@ def filtrar_produtos_para_tabela_preco(
                 :fornecedor AS fornecedor
             FROM t_cadastro_produto p
             LEFT JOIN t_familia_produtos f ON p.familia = f.id
-            LEFT JOIN t_condicoes_pagamento cp ON cp.codigo_prazo = :plano_pagamento
+            LEFT JOIN t_condicoes_pagamento cp 
+            ON cp.codigo_prazo = CASE WHEN :plano_pagamento = 0 THEN NULL ELSE :plano_pagamento END
+
             WHERE (:grupo IS NULL OR p.marca = :grupo)
         """)
 
         params = {
-            "grupo": grupo,
-            "plano_pagamento": plano_pagamento,
-            "frete_kg": frete_kg,
-            "fator_comissao": fator_comissao,
-            "fornecedor": fornecedor
+            "grupo": grupo or None,
+            "plano_pagamento": plano_pagamento or 0,
+            "frete_kg": frete_kg or 0.0,
+            "fator_comissao": fator_comissao or 0.0,
+            "fornecedor": fornecedor or ""
         }
+
 
         result = db.execute(query, params)
         rows = [dict(row) for row in result]
