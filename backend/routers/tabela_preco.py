@@ -23,7 +23,7 @@ def listar_tabelas_preco():
 
 
 @router.get("/{tabela_id}", response_model=TabelaPreco)
-def obter_tabela_preco(tabela_id: int):
+def obter_tabela_preco(tabela_id: Optional [int]):
     for tabela in tabelas_de_preco_db:
         if tabela.id == tabela_id:
             return tabela
@@ -31,7 +31,7 @@ def obter_tabela_preco(tabela_id: int):
 
 
 @router.put("/{tabela_id}", response_model=TabelaPreco)
-def atualizar_tabela_preco(tabela_id: int, tabela_atualizada: TabelaPreco):
+def atualizar_tabela_preco(tabela_id: Optional [int], tabela_atualizada: TabelaPreco):
     for idx, tabela in enumerate(tabelas_de_preco_db):
         if tabela.id == tabela_id:
             tabela_atualizada.id = tabela_id
@@ -41,7 +41,7 @@ def atualizar_tabela_preco(tabela_id: int, tabela_atualizada: TabelaPreco):
 
 
 @router.delete("/{tabela_id}")
-def deletar_tabela_preco(tabela_id: int):
+def deletar_tabela_preco(tabela_id: Optional [int]):
     for idx, tabela in enumerate(tabelas_de_preco_db):
         if tabela.id == tabela_id:
             del tabelas_de_preco_db[idx]
