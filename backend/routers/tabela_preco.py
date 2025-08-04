@@ -122,9 +122,9 @@ def listar_descontos():
 def condicoes_pagamento():
     try:
         db = SessionLocal()
-        query = text("select codigo_prazo, prazo from t_condicoes_pagamento order by codigo_prazo")
+        query = text("select codigo_prazo, prazo, custo as desconto from t_condicoes_pagamento order by codigo_prazo")
         resultado = db.execute(query).fetchall()
-        return [{"codigo": row.codigo_prazo, "descricao": row.prazo} for row in resultado]
+        return [{"codigo": row.codigo_prazo, "descricao": row.prazo, "desconto": row.custo} for row in resultado]
     finally:
         db.close()
 
