@@ -79,7 +79,7 @@ def filtrar_produtos_para_tabela_preco(
                 :fator_comissao AS fator_comissao,
                 cp.custo AS custo_condicao_pagamento,
                 :frete_kg AS frete_kg,
-                p.ipi,
+                p.ipi as ipi,
                 p.iva_st AS icms_st,
                 cast(p.preco_lista_supra * (1 + cp.custo) as DECIMAL(12,2)) AS valor_base,  -- sem desconto
                 p.marca AS grupo,
@@ -101,7 +101,7 @@ def filtrar_produtos_para_tabela_preco(
 
 
         result = db.execute(query, params)
-        rows = [dict(row) for row in result]
+        rows = result.mappings().all()
         db.close()
         return rows
 
