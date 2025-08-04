@@ -1,3 +1,8 @@
+const API_BASE = "https://ordersync-backend-edjq.onrender.com";
+
+
+
+
 document.addEventListener("DOMContentLoaded", function () {
   carregarProdutos();
 
@@ -13,7 +18,7 @@ function carregarProdutos() {
   const fator_comissao = 0.0;
 
   // Se grupo estiver vazio, não envie o parâmetro
-  const url = new URL("/tabela_preco/produtos_filtro", window.location.origin);
+  const url = new URL(`${API_BASE}/tabela_preco/produtos_filtro`);
   if (grupo) url.searchParams.append("grupo", grupo);
   url.searchParams.append("plano_pagamento", plano_pagamento);
   url.searchParams.append("frete_kg", frete_kg);
@@ -76,7 +81,7 @@ function atualizarLinhaPorDesconto(select, index, valorBase) {
 let mapaDescontos = {};
 
 async function carregarDescontos() {
-    const response = await fetch("/tabela_preco/descontos");
+    const response = await fetch(`${API_BASE}/tabela_preco/descontos`);
     const dados = await response.json();
 
     dados.forEach(item => {

@@ -81,7 +81,7 @@ def filtrar_produtos_para_tabela_preco(
                 :frete_kg AS frete_kg,
                 p.ipi,
                 p.iva_st AS icms_st,
-                ROUND(p.preco_lista_supra * (1 + cp.custo), 2) AS valor_base,  -- sem desconto
+                cast(p.preco_lista_supra * (1 + cp.custo) as DECIMAL(12,2)) AS valor_base,  -- sem desconto
                 p.marca AS grupo,
                 f.familia AS departamento,
                 :fornecedor AS fornecedor
