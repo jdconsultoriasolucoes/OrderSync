@@ -117,3 +117,23 @@ def listar_descontos():
         return [{"codigo": row.id_desconto, "percentual": row.fator_comissao} for row in resultado]
     finally:
         db.close()
+
+@router.get("/condicoes_pagamento")
+def condicoes_pagamento():
+    try:
+        db = SessionLocal()
+        query = text("select codigo_prazo, prazo from t_condicoes_pagamento order by codigo_prazo")
+        resultado = db.execute(query).fetchall()
+        return [{"codigo": row.codigo_prazo, "descricao": row.prazo} for row in resultado]
+    finally:
+        db.close()
+
+@router.get("/filtro_grupo_produto")
+def filtro_grupo_produto():
+    try:
+        db = SessionLocal()
+        query = text("select distinct marca as grupo from  t_cadastro_produto order by marca")
+        resultado = db.execute(query).fetchall()
+        return [{"grupo": row.grupo} for row in resultado]
+    finally:
+        db.close()
