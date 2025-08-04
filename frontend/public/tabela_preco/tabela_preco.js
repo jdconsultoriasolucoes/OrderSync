@@ -87,7 +87,8 @@ async function carregarGrupos() {
 
     selectGrupo.innerHTML = "<option value=''>Todos os grupos</option>";
 
-    grupos.forEach(grupo => {
+    grupos.forEach(item => {
+      const grupo = item.grupo || item;  // cobre os dois casos: objeto ou string simples
       const option = document.createElement("option");
       option.value = grupo;
       option.textContent = grupo;
@@ -98,22 +99,26 @@ async function carregarGrupos() {
   }
 }
 
+let mapaCondicoesPagamento = {};
+
 async function carregarCondicoesPagamento() {
   try {
     const response = await fetch(`${API_BASE}/tabela_preco/condicoes_pagamento`);
-    if (!response.ok) throw new Error("Erro ao buscar condições de pagamento");
-
     const condicoes = await response.json();
-    const select = document.getElementById("plano_pagamento");
 
+    const select = document.getElementById("plano_pagamento");
     select.innerHTML = "<option value=''>Selecione</option>";
 
     condicoes.forEach(cond => {
+      mapaCondicoesPagamento[cond.codigo] = cond.acrescimo_pagamento;
       const option = document.createElement("option");
       option.value = cond.codigo;
-      option.textContent = `${cond.codigo} - ${cond.descricao || cond.percentual}`;
+      option.textContent = `${cond.codigo} - ${cond.descricao}`;
       select.appendChild(option);
     });
+
+    // Evento de mudança para atualizar os valores na tabela
+    select.addEventListener("change", atualizarTabelaComCondicaoPagamento);
   } catch (error) {
     console.error("Erro ao carregar condições de pagamento:", error);
   }
@@ -141,6 +146,37 @@ function atualizarValorLiquido(select, index, valorBase) {
     const valor = calcularValorLiquido(valorBase, idDesconto);
     document.getElementById(`valor_liquido_${index}`).textContent = valor;
 }
+
+function atualizarTabelaComCondicaoPagamento() {
+  const select = document.getElementById("plano_pagamento");
+  const acrescimo = mapaCondicoesPagamento[select.value] || 0;
+
+  const linhas = document.querySelectorAll("#tabela-produtos-body tr");
+
+  linhas.forEach((linha, index) => {
+    const valorBase = parseFloat(linha.querySelector(`#valor_liquido-${index}`)?.textContent) || 0;
+
+    const selectDesconto = linha.querySelector("select");
+    const idDesconto = selectDesconto?.value || "0";
+    const fatorDesconto = mapaDescontos[idDesconto] || 0;
+
+    const frete_kg = parseFloat(document.getElementById("frete_kg").value) || 0;
+
+    const acrescimoValor = valorBase * acrescimo;
+    const descontoValor = valorBase * fatorDesconto;
+    const freteValor = valorBase * frete_kg; //Alterar calculo do frete, Correto valor do (frete/1000) * Peso por produto. (Falta criar o peso total do pedido)
+
+    const valorFinal = valorBase + acrescimoValor + freteValor - descontoValor;
+
+    linha.querySelector(`#acrescimo-${index}`).innerText = acrescimoValor.toFixed(4);
+    linha.querySelector(`#desconto-${index}`).innerText = descontoValor.toFixed(4);
+    linha.querySelector(`#valor_liquido-${index}`).innerText = valorFinal.toFixed(2);
+  });
+}
+
+
+
+
 
 
 window.onload = async function() {
