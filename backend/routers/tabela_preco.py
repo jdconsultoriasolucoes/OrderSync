@@ -7,7 +7,7 @@ from database import SessionLocal
 router = APIRouter()
 
 # Simula um banco de dados em memória
-tabelas_de_preco_db: List[TabelaPreco] = []
+#tabelas_de_preco_db: List[TabelaPreco] = []
 
 
 @router.post("/", response_model=TabelaPreco)
@@ -53,9 +53,13 @@ def filtrar_produtos_para_tabela_preco(
     grupo: Optional[str] = Query(None),
     plano_pagamento: Optional[str] = Query(None),
     frete_kg: Optional[float] = Query(0.0),
-    fornecedor: Optional[str] = Query(None)
+    fornecedor: Optional[str] = Query(None),
+    fator_comissao: Optional[float] = Query(0.0)
+
 ):
     try:
+        print(f"grupo={grupo}, plano_pagamento={plano_pagamento}, frete_kg={frete_kg}, fator_comissao={fator_comissao}")
+
         db = SessionLocal()
 
         query = text("""
@@ -104,8 +108,12 @@ def filtrar_produtos_para_tabela_preco(
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Erro ao buscar produtos: {str(e)}")
     
-    @router.get("/descontos")
-    def listar_descontos(db: Session = Depends(get_db)):
+@router.get("/descontos")
+def listar_descontos():
+    try:
+        db = SessionLocal()
         query = text("SELECT id_desconto, fator_comissao FROM t_desconto ORDER BY id_desconto")
         resultado = db.execute(query).fetchall()
         return [{"codigo": row.id_desconto, "percentual": row.fator_comissao} for row in resultado]
+    finally:
+        db.close()
