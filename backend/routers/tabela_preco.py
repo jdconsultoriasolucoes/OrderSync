@@ -124,7 +124,7 @@ def condicoes_pagamento():
         db = SessionLocal()
         query = text("select codigo_prazo, prazo, custo as desconto from t_condicoes_pagamento order by codigo_prazo")
         resultado = db.execute(query).fetchall()
-        return [{"codigo": row.codigo_prazo, "descricao": row.prazo, "desconto": row.custo} for row in resultado]
+        return [{"codigo": row.codigo_prazo, "descricao": row.prazo, "desconto": row.desconto} for row in resultado]
     finally:
         db.close()
 
