@@ -10,19 +10,19 @@ router = APIRouter()
 tabelas_de_preco_db: List[TabelaPreco] = []
 
 
-@router.post("/", response_model=TabelaPreco)
+@router.post("/TabelaPreco", response_model=TabelaPreco)
 def criar_tabela_preco(tabela: TabelaPreco):
     tabela.id = len(tabelas_de_preco_db) + 1
     tabelas_de_preco_db.append(tabela)
     return tabela
 
 
-@router.get("/", response_model=List[TabelaPreco])
+@router.get("/TabelaPreco", response_model=List[TabelaPreco])
 def listar_tabelas_preco():
     return tabelas_de_preco_db
 
 
-@router.get("/{tabela_id}", response_model=TabelaPreco)
+@router.get("/TabelaPreco", response_model=TabelaPreco)
 def obter_tabela_preco(tabela_id: Optional [int]):
     for tabela in tabelas_de_preco_db:
         if tabela.id == tabela_id:
@@ -30,7 +30,7 @@ def obter_tabela_preco(tabela_id: Optional [int]):
     raise HTTPException(status_code=404, detail="Tabela de preço não encontrada")
 
 
-@router.put("/{tabela_id}", response_model=TabelaPreco)
+@router.put("/TabelaPreco", response_model=TabelaPreco)
 def atualizar_tabela_preco(tabela_id: Optional [int], tabela_atualizada: TabelaPreco):
     for idx, tabela in enumerate(tabelas_de_preco_db):
         if tabela.id == tabela_id:
@@ -40,7 +40,7 @@ def atualizar_tabela_preco(tabela_id: Optional [int], tabela_atualizada: TabelaP
     raise HTTPException(status_code=404, detail="Tabela de preço não encontrada")
 
 
-@router.delete("/{tabela_id}")
+@router.delete("/TabelaPreco")
 def deletar_tabela_preco(tabela_id: Optional [int]):
     for idx, tabela in enumerate(tabelas_de_preco_db):
         if tabela.id == tabela_id:
@@ -88,7 +88,7 @@ def filtrar_produtos_para_tabela_preco(
             FROM t_cadastro_produto p
             LEFT JOIN t_familia_produtos f ON CAST(p.familia AS INT) = CAST(f.id AS INT)
             LEFT JOIN t_condicoes_pagamento cp ON cp.codigo_prazo = :plano_pagamento
-            WHERE (:grupo IS NULL OR p.marca = :grupo)
+            --WHERE (:grupo IS NULL OR p.marca = :grupo)
         """)
 
         params = {
