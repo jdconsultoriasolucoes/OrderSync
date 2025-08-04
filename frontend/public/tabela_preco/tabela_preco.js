@@ -68,7 +68,7 @@ function atualizarLinhaPorDesconto(select, index, valorBase) {
   const fator = mapaDescontos[idDesconto] || 0;
 
   const frete_kg = parseFloat(document.getElementById("frete_kg").value) || 0;
-  const acrescimo = valorBase * frete_kg;
+  const acrescimo = valorBase * frete_kg; //Alterar calculo do frete, Correto valor do (frete/1000) * Peso por produto. (Falta criar o peso total do pedido)
   const desconto = valorBase * fator;
   const valor_liquido = valorBase + acrescimo - desconto;
 
@@ -117,8 +117,9 @@ async function carregarCondicoesPagamento() {
       select.appendChild(option);
     });
 
-    // Evento de mudança para atualizar os valores na tabela
-    select.addEventListener("change", atualizarTabelaComCondicaoPagamento);
+    // ⬇️ Quando mudar o valor do select, recarrega os produtos
+    select.addEventListener("change", carregarProdutos);
+
   } catch (error) {
     console.error("Erro ao carregar condições de pagamento:", error);
   }
@@ -146,38 +147,6 @@ function atualizarValorLiquido(select, index, valorBase) {
     const valor = calcularValorLiquido(valorBase, idDesconto);
     document.getElementById(`valor_liquido_${index}`).textContent = valor;
 }
-
-function atualizarTabelaComCondicaoPagamento() {
-  const select = document.getElementById("plano_pagamento");
-  const acrescimo = mapaCondicoesPagamento[select.value] || 0;
-
-  const linhas = document.querySelectorAll("#tabela-produtos-body tr");
-
-  linhas.forEach((linha, index) => {
-    const valorBase = parseFloat(linha.querySelector(`#valor_liquido-${index}`)?.textContent) || 0;
-
-    const selectDesconto = linha.querySelector("select");
-    const idDesconto = selectDesconto?.value || "0";
-    const fatorDesconto = mapaDescontos[idDesconto] || 0;
-
-    const frete_kg = parseFloat(document.getElementById("frete_kg").value) || 0;
-
-    const acrescimoValor = valorBase * acrescimo;
-    const descontoValor = valorBase * fatorDesconto;
-    const freteValor = valorBase * frete_kg; //Alterar calculo do frete, Correto valor do (frete/1000) * Peso por produto. (Falta criar o peso total do pedido)
-
-    const valorFinal = valorBase + acrescimoValor + freteValor - descontoValor;
-
-    linha.querySelector(`#acrescimo-${index}`).innerText = acrescimoValor.toFixed(4);
-    linha.querySelector(`#desconto-${index}`).innerText = descontoValor.toFixed(4);
-    linha.querySelector(`#valor_liquido-${index}`).innerText = valorFinal.toFixed(2);
-  });
-}
-
-
-
-
-
 
 window.onload = async function() {
     await carregarDescontos();
