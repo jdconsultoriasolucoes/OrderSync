@@ -60,6 +60,11 @@
           Data Fim:
           <input type="date" id="validade_fim" />
         </label>
+        <label>
+          Frete por KG:
+          <input type="number" step="0.01" id="frete_kg" value="0.0" />
+        </label>
+
         
         <label>
           Condições de Pagamento:
@@ -116,5 +121,10 @@
       overlay.style.display = "none";
     });
   </script>
+  <script>
+    document.addEventListener("DOMContentLoaded", function () {
+        carregarDescontos();
+    });
+</script>
 </body>
 </html>

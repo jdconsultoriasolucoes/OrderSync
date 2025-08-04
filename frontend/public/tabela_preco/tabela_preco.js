@@ -29,26 +29,64 @@ function preencherTabela(produtos) {
       <td>${p.descricao}</td>
       <td>${p.embalagem}</td>
       <td>${p.peso_liquido ?? ""}</td>
-      <td>${p.valor.toFixed(2)}</td>
-      <td><input type="number" step="0.0001" value="${p.fator_comissao}" onchange="atualizarLinha(${index}, this.value)"></td>
-      <td id="acrescimo-${index}">${p.acrescimo?.toFixed(4) ?? "0.0000"}</td>
-      <td id="desconto-${index}">${p.desconto?.toFixed(4) ?? "0.0000"}</td>
-      <td id="valor_liquido-${index}">${p.valor_liquido?.toFixed(2) ?? "0.00"}</td>
-    `;
+      <td>${p.valor_base.toFixed(2)}</td>
+      <td>
+        <select onchange="atualizarLinhaPorDesconto(this, ${index}, ${p.valor_base})">
+            ${Object.entries(mapaDescontos).map(([codigo, percentual]) => `
+              <option value="${codigo}">${codigo} - ${percentual}</option>
+            `).join('')}
+        </select>
+      </td>
+      <td id="acrescimo-${index}">0.0000</td>
+      <td id="desconto-${index}">0.0000</td>
+      <td id="valor_liquido-${index}">${p.valor_base.toFixed(2)}</td>
+    </tr>`;
     tbody.appendChild(tr);
   });
 }
 
-function atualizarLinha(index, novoFator) {
-  const valor = parseFloat(document.querySelectorAll("#tabela-produtos-body tr")[index].children[5].innerText);
-  const planoPercentual = parseFloat(document.getElementById("frete_kg").value) || 0;
-  const fator = parseFloat(novoFator) || 0;
 
-  const acrescimo = valor * planoPercentual;
-  const desconto = valor * fator;
-  const valor_liquido = valor + acrescimo - desconto;
+function atualizarLinhaPorDesconto(select, index, valorBase) {
+  const idDesconto = select.value;
+  const fator = mapaDescontos[idDesconto] || 0;
+
+  const frete_kg = parseFloat(document.getElementById("frete_kg").value) || 0;
+  const acrescimo = valorBase * frete_kg;
+  const desconto = valorBase * fator;
+  const valor_liquido = valorBase + acrescimo - desconto;
 
   document.getElementById(`acrescimo-${index}`).innerText = acrescimo.toFixed(4);
   document.getElementById(`desconto-${index}`).innerText = desconto.toFixed(4);
   document.getElementById(`valor_liquido-${index}`).innerText = valor_liquido.toFixed(2);
 }
+
+
+let mapaDescontos = {};
+
+async function carregarDescontos() {
+    const response = await fetch("http://localhost:8000/tabela_preco/descontos");
+    const dados = await response.json();
+
+    dados.forEach(item => {
+        mapaDescontos[item.codigo] = item.percentual;
+    });
+}
+
+function calcularValorLiquido(valorBase, idDesconto) {
+    const fator = mapaDescontos[idDesconto] || 0;
+    const desconto = valorBase * fator;
+    return (valorBase - desconto).toFixed(2);
+}
+
+function atualizarValorLiquido(select, index, valorBase) {
+    const idDesconto = parseInt(select.value);
+    const valor = calcularValorLiquido(valorBase, idDesconto);
+    document.getElementById(`valor_liquido_${index}`).textContent = valor;
+}
+
+
+window.onload = async function() {
+    await carregarDescontos();
+    await carregarProdutos(); // se tiver outra função para carregar os produtos
+};
+

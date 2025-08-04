@@ -53,13 +53,13 @@ def filtrar_produtos_para_tabela_preco(
     grupo: Optional[str] = Query(None),
     plano_pagamento: Optional[str] = Query(None),
     frete_kg: Optional[float] = Query(0.0),
-    fator_comissao: Optional[float] = Query(0.0),
     fornecedor: Optional[str] = Query(None)
 ):
     try:
         db = SessionLocal()
 
         query = text("""
+                      
             SELECT 
                 p.codigo_supra AS codigo_tabela,
                 p.nome_produto AS descricao,
@@ -72,23 +72,18 @@ def filtrar_produtos_para_tabela_preco(
                 p.peso AS peso_liquido,
                 p.peso AS peso_bruto,
                 p.preco_lista_supra AS valor,
-                ROUND(p.preco_lista_supra * (1 + cp.custo), 4) AS acrescimo,
-                ROUND(p.preco_lista_supra * :fator_comissao, 4) AS desconto,
                 :fator_comissao AS fator_comissao,
-                cp.codigo_prazo AS plano_pagamento,
-                cp.custo AS frete_percentual,
+                cp.custo AS custo_condicao_pagamento,
                 :frete_kg AS frete_kg,
                 p.ipi,
                 p.iva_st AS icms_st,
-                ROUND(p.preco_lista_supra * (1 + cp.custo) - (p.preco_lista_supra * :fator_comissao), 2) AS valor_liquido,
+                ROUND(p.preco_lista_supra * (1 + cp.custo), 2) AS valor_base,  -- sem desconto
                 p.marca AS grupo,
                 f.familia AS departamento,
                 :fornecedor AS fornecedor
             FROM t_cadastro_produto p
-            LEFT JOIN t_familia_produtos f ON p.familia = f.id
-            LEFT JOIN t_condicoes_pagamento cp 
-            ON cp.codigo_prazo = CASE WHEN :plano_pagamento = 0 THEN NULL ELSE :plano_pagamento END
-
+            LEFT JOIN t_familia_produtos f ON CAST(p.familia AS INT) = CAST(f.id AS INT)
+            LEFT JOIN t_condicoes_pagamento cp ON cp.codigo_prazo = :plano_pagamento
             WHERE (:grupo IS NULL OR p.marca = :grupo)
         """)
 
@@ -108,3 +103,9 @@ def filtrar_produtos_para_tabela_preco(
 
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Erro ao buscar produtos: {str(e)}")
+    
+    @router.get("/descontos")
+    def listar_descontos(db: Session = Depends(get_db)):
+        query = text("SELECT id_desconto, fator_comissao FROM t_desconto ORDER BY id_desconto")
+        resultado = db.execute(query).fetchall()
+        return [{"codigo": row.id_desconto, "percentual": row.fator_comissao} for row in resultado]
