@@ -77,6 +77,47 @@ function atualizarLinhaPorDesconto(select, index, valorBase) {
   document.getElementById(`valor_liquido-${index}`).innerText = valor_liquido.toFixed(2);
 }
 
+async function carregarGrupos() {
+  try {
+    const response = await fetch(`${API_BASE}/tabela_preco/filtro_grupo_produto`);
+    if (!response.ok) throw new Error("Erro ao buscar grupos");
+
+    const grupos = await response.json();
+    const selectGrupo = document.getElementById("grupo");
+
+    selectGrupo.innerHTML = "<option value=''>Todos os grupos</option>";
+
+    grupos.forEach(grupo => {
+      const option = document.createElement("option");
+      option.value = grupo;
+      option.textContent = grupo;
+      selectGrupo.appendChild(option);
+    });
+  } catch (error) {
+    console.error("Erro ao carregar grupos:", error);
+  }
+}
+
+async function carregarCondicoesPagamento() {
+  try {
+    const response = await fetch(`${API_BASE}/tabela_preco/condicoes_pagamento`);
+    if (!response.ok) throw new Error("Erro ao buscar condições de pagamento");
+
+    const condicoes = await response.json();
+    const select = document.getElementById("plano_pagamento");
+
+    select.innerHTML = "<option value=''>Selecione</option>";
+
+    condicoes.forEach(cond => {
+      const option = document.createElement("option");
+      option.value = cond.codigo;
+      option.textContent = `${cond.codigo} - ${cond.descricao || cond.percentual}`;
+      select.appendChild(option);
+    });
+  } catch (error) {
+    console.error("Erro ao carregar condições de pagamento:", error);
+  }
+}
 
 let mapaDescontos = {};
 
@@ -105,5 +146,7 @@ function atualizarValorLiquido(select, index, valorBase) {
 window.onload = async function() {
     await carregarDescontos();
     await carregarProdutos(); // se tiver outra função para carregar os produtos
-};
+    await carregarGrupos(); 
+    await carregarCondicoesPagamento();
+  };
 
