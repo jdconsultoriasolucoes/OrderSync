@@ -7,7 +7,7 @@ from database import SessionLocal
 router = APIRouter()
 
 # Simula um banco de dados em memória
-#tabelas_de_preco_db: List[TabelaPreco] = []
+tabelas_de_preco_db: List[TabelaPreco] = []
 
 
 @router.post("/", response_model=TabelaPreco)
