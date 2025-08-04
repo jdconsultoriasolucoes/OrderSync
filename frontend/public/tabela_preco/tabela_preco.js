@@ -7,15 +7,27 @@ document.addEventListener("DOMContentLoaded", function () {
 });
 
 function carregarProdutos() {
-  const grupo = document.getElementById("grupo").value || null;
+  let grupo = document.getElementById("grupo").value;
   const plano_pagamento = document.getElementById("plano_pagamento").value || "000";
   const frete_kg = parseFloat(document.getElementById("frete_kg").value) || 0.0;
-  const fator_comissao = 0.0; // valor padrão ao carregar
+  const fator_comissao = 0.0;
 
-  fetch(`/tabela_preco/produtos_filtro?grupo=${grupo}&plano_pagamento=${plano_pagamento}&frete_kg=${frete_kg}&fator_comissao=${fator_comissao}`)
-    .then((response) => response.json())
-    .then((data) => preencherTabela(data));
+  // Se grupo estiver vazio, não envie o parâmetro
+  const url = new URL("/tabela_preco/produtos_filtro", window.location.origin);
+  if (grupo) url.searchParams.append("grupo", grupo);
+  url.searchParams.append("plano_pagamento", plano_pagamento);
+  url.searchParams.append("frete_kg", frete_kg);
+  url.searchParams.append("fator_comissao", fator_comissao);
+
+  fetch(url)
+    .then((response) => {
+      if (!response.ok) throw new Error("Erro ao buscar produtos");
+      return response.json();
+    })
+    .then((data) => preencherTabela(data))
+    .catch((err) => console.error("Erro ao carregar produtos:", err));
 }
+
 
 function preencherTabela(produtos) {
   const tbody = document.getElementById("tabela-produtos-body");
@@ -64,7 +76,7 @@ function atualizarLinhaPorDesconto(select, index, valorBase) {
 let mapaDescontos = {};
 
 async function carregarDescontos() {
-    const response = await fetch("http://localhost:8000/tabela_preco/descontos");
+    const response = await fetch("/tabela_preco/descontos");
     const dados = await response.json();
 
     dados.forEach(item => {
