@@ -95,7 +95,7 @@ function atualizarLinhaPorDesconto(select, index, valorBase, peso_liquido = 0) {
   const planoSelecionado = document.getElementById("plano_pagamento").value;
   const acrescimoCondicao = mapaCondicoesPagamento[planoSelecionado] || 0;
 
-  const acrescimoFrete = (frete_kg / 1000) * (peso || 0);
+  const acrescimoFrete = (frete_kg / 1000) * (peso_liquido || 0);
   const acrescimoCond = valorBase * acrescimoCondicao;
   const desconto = valorBase * fator;
 
