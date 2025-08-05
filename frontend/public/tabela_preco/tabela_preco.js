@@ -86,6 +86,7 @@ function preencherTabela(produtos) {
 //}
 
 function atualizarLinhaPorDesconto(select, index, valorBase) {
+  try{
   const idDesconto = select.value;
   const fator = mapaDescontos[idDesconto] || 0;
 
@@ -94,7 +95,7 @@ function atualizarLinhaPorDesconto(select, index, valorBase) {
   const planoSelecionado = document.getElementById("plano_pagamento").value;
   const acrescimoCondicao = mapaCondicoesPagamento[planoSelecionado] || 0;
 
-  const acrescimoFrete = valorBase * frete_kg;
+  const acrescimoFrete = (frete_kg / 1000) * (p.peso_liquido || 0);
   const acrescimoCond = valorBase * acrescimoCondicao;
   const desconto = valorBase * fator;
 
@@ -103,6 +104,9 @@ function atualizarLinhaPorDesconto(select, index, valorBase) {
   document.getElementById(`acrescimo-${index}`).innerText = (acrescimoFrete + acrescimoCond).toFixed(4);
   document.getElementById(`desconto-${index}`).innerText = desconto.toFixed(4);
   document.getElementById(`valor_liquido-${index}`).innerText = valor_liquido.toFixed(2);
+  } catch (error) {
+    console.error("Erro ao calcular linha:", error);
+  }
 }
 
 
@@ -181,5 +185,5 @@ window.onload = async function() {
     await carregarDescontos();
     await carregarCondicoesPagamento();
     await carregarGrupos(); 
-    await carregarProdutos(); // se tiver outra função para carregar os produtos
+   // await carregarProdutos(); // se tiver outra função para carregar os produtos
   };
