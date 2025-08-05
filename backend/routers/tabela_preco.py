@@ -87,7 +87,7 @@ def filtrar_produtos_para_tabela_preco(
                 :fornecedor AS fornecedor
             FROM t_cadastro_produto p
             LEFT JOIN t_familia_produtos f ON CAST(p.familia AS INT) = CAST(f.id AS INT)
-            LEFT JOIN t_condicoes_pagamento cp ON concat(cp.codigo_prazo,' - ',cp.descricao) = :plano_pagamento
+            LEFT JOIN t_condicoes_pagamento cp ON concat(cp.codigo_prazo,' - ',cp.prazo) = :plano_pagamento
             WHERE (:grupo IS NULL OR p.marca = :grupo)
         """)
 

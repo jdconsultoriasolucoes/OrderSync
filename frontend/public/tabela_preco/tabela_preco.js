@@ -46,7 +46,7 @@ function preencherTabela(produtos) {
       <td>${p.descricao}</td>
       <td>${p.embalagem}</td>
       <td>${p.peso_liquido ?? ""}</td>
-      <td>${p.valor_base.toFixed(2)}</td>
+      <td>${(p.valor_base ?? 0).toFixed(2)}</td>
       <td>
         <select onchange="atualizarLinhaPorDesconto(this, ${index}, ${p.valor_base})">
             ${Object.entries(mapaDescontos).map(([codigo, percentual]) => `
@@ -56,7 +56,7 @@ function preencherTabela(produtos) {
       </td>
       <td id="acrescimo-${index}">0.0000</td>
       <td id="desconto-${index}">0.0000</td>
-      <td id="valor_liquido-${index}">${p.valor_base.toFixed(2)}</td>
+      <td id="valor_liquido-${index}">${(p.valor_base ?? 0).toFixed(2)}</td>
     </tr>`;
     tbody.appendChild(tr);
   });
