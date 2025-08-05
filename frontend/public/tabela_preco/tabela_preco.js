@@ -31,6 +31,14 @@ function carregarProdutos() {
     })
     .then((data) => preencherTabela(data))
     .catch((err) => console.error("Erro ao carregar produtos:", err));
+   
+  document.querySelectorAll("#tabela-produtos-body tr").forEach((linha, index) => {
+  const valorBase = parseFloat(linha.querySelector(`#valor_liquido-${index}`)?.textContent) || 0;
+  const selectDesconto = linha.querySelector("select");
+  if (selectDesconto) {
+    atualizarLinhaPorDesconto(selectDesconto, index, valorBase);
+  }
+  });
 }
 
 
