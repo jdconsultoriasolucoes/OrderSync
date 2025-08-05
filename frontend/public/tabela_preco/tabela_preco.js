@@ -29,17 +29,17 @@ function carregarProdutos() {
       if (!response.ok) throw new Error("Erro ao buscar produtos");
       return response.json();
     })
-    .then((data) => preencherTabela(data))
-    .catch((err) => console.error("Erro ao carregar produtos:", err));
-   
-  document.querySelectorAll("#tabela-produtos-body tr").forEach((linha, index) => {
-  const valorBase = parseFloat(linha.querySelector(`#valor_liquido-${index}`)?.textContent) || 0;
-  const selectDesconto = linha.querySelector("select");
-  if (selectDesconto) {
-    atualizarLinhaPorDesconto(selectDesconto, index, valorBase);
-  }
+    .then((data) => {
+  preencherTabela(data);
+
+  // 🔁 Após preencher a tabela, aplicamos os cálculos linha por linha
+  data.forEach((p, index) => {
+    const selectDesconto = document.querySelector(`#tabela-produtos-body tr:nth-child(${index + 1}) select`);
+    if (selectDesconto) {
+      atualizarLinhaPorDesconto(selectDesconto, index, p.valor_base);
+    }
   });
-}
+})}
 
 
 function preencherTabela(produtos) {
@@ -71,19 +71,40 @@ function preencherTabela(produtos) {
 }
 
 
+//function atualizarLinhaPorDesconto(select, index, valorBase) {
+//  const idDesconto = select.value;
+//  const fator = mapaDescontos[idDesconto] || 0;
+
+//  const frete_kg = parseFloat(document.getElementById("frete_kg").value) || 0;
+//  const acrescimo = valorBase * frete_kg; //Alterar calculo do frete, Correto valor do (frete/1000) * Peso por produto. (Falta criar o peso total do pedido)
+//  const desconto = valorBase * fator;
+//  const valor_liquido = valorBase + acrescimo - desconto;
+
+//  document.getElementById(`acrescimo-${index}`).innerText = acrescimo.toFixed(4);
+//  document.getElementById(`desconto-${index}`).innerText = desconto.toFixed(4);
+//  document.getElementById(`valor_liquido-${index}`).innerText = valor_liquido.toFixed(2);
+//}
+
 function atualizarLinhaPorDesconto(select, index, valorBase) {
   const idDesconto = select.value;
   const fator = mapaDescontos[idDesconto] || 0;
 
   const frete_kg = parseFloat(document.getElementById("frete_kg").value) || 0;
-  const acrescimo = valorBase * frete_kg; //Alterar calculo do frete, Correto valor do (frete/1000) * Peso por produto. (Falta criar o peso total do pedido)
-  const desconto = valorBase * fator;
-  const valor_liquido = valorBase + acrescimo - desconto;
 
-  document.getElementById(`acrescimo-${index}`).innerText = acrescimo.toFixed(4);
+  const planoSelecionado = document.getElementById("plano_pagamento").value;
+  const acrescimoCondicao = mapaCondicoesPagamento[planoSelecionado] || 0;
+
+  const acrescimoFrete = valorBase * frete_kg;
+  const acrescimoCond = valorBase * acrescimoCondicao;
+  const desconto = valorBase * fator;
+
+  const valor_liquido = valorBase + acrescimoFrete + acrescimoCond - desconto;
+
+  document.getElementById(`acrescimo-${index}`).innerText = (acrescimoFrete + acrescimoCond).toFixed(4);
   document.getElementById(`desconto-${index}`).innerText = desconto.toFixed(4);
   document.getElementById(`valor_liquido-${index}`).innerText = valor_liquido.toFixed(2);
 }
+
 
 async function carregarGrupos() {
   try {
@@ -162,4 +183,3 @@ window.onload = async function() {
     await carregarGrupos(); 
     await carregarProdutos(); // se tiver outra função para carregar os produtos
   };
-
