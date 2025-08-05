@@ -158,8 +158,8 @@ function atualizarValorLiquido(select, index, valorBase) {
 
 window.onload = async function() {
     await carregarDescontos();
-    await carregarProdutos(); // se tiver outra função para carregar os produtos
-    await carregarGrupos(); 
     await carregarCondicoesPagamento();
+    await carregarGrupos(); 
+    await carregarProdutos(); // se tiver outra função para carregar os produtos
   };
 
