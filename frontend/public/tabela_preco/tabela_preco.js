@@ -36,7 +36,7 @@ function carregarProdutos() {
   data.forEach((p, index) => {
     const selectDesconto = document.querySelector(`#tabela-produtos-body tr:nth-child(${index + 1}) select`);
     if (selectDesconto) {
-      atualizarLinhaPorDesconto(selectDesconto, index, p.valor_base);
+      atualizarLinhaPorDesconto(selectDesconto, index, p.valor_base, p.peso_liquido);
     }
   });
 })}
@@ -56,7 +56,7 @@ function preencherTabela(produtos) {
       <td>${p.peso_liquido ?? ""}</td>
       <td>${(p.valor_base ?? 0).toFixed(2)}</td>
       <td>
-        <select onchange="atualizarLinhaPorDesconto(this, ${index}, ${p.valor_base})">
+        <select onchange="atualizarLinhaPorDesconto(this, ${index}, ${p.valor_base}, ${p.peso_liquido || 0})">
             ${Object.entries(mapaDescontos).map(([codigo, percentual]) => `
               <option value="${codigo}">${codigo} - ${percentual}</option>
             `).join('')}
@@ -85,7 +85,7 @@ function preencherTabela(produtos) {
 //  document.getElementById(`valor_liquido-${index}`).innerText = valor_liquido.toFixed(2);
 //}
 
-function atualizarLinhaPorDesconto(select, index, valorBase) {
+function atualizarLinhaPorDesconto(select, index, valorBase, peso_liquido = 0) {
   try{
   const idDesconto = select.value;
   const fator = mapaDescontos[idDesconto] || 0;
@@ -95,7 +95,7 @@ function atualizarLinhaPorDesconto(select, index, valorBase) {
   const planoSelecionado = document.getElementById("plano_pagamento").value;
   const acrescimoCondicao = mapaCondicoesPagamento[planoSelecionado] || 0;
 
-  const acrescimoFrete = (frete_kg / 1000) * (p.peso_liquido || 0);
+  const acrescimoFrete = (frete_kg / 1000) * (peso || 0);
   const acrescimoCond = valorBase * acrescimoCondicao;
   const desconto = valorBase * fator;
 
