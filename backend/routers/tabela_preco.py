@@ -1,9 +1,11 @@
 from fastapi import APIRouter, HTTPException, Query
+from services.tabela_preco import calcular_valores_dos_produtos
 from schemas.tabela_preco import TabelaPreco, TabelaPrecoCompleta
 from typing import List, Optional
 from sqlalchemy import text
 from database import SessionLocal
 from models.tabela_preco import TabelaPreco as TabelaPrecoModel
+
 
 router = APIRouter()
 
@@ -52,14 +54,15 @@ def deletar_tabela_preco(tabela_id: Optional [int]):
 @router.get("/produtos_filtro")
 def filtrar_produtos_para_tabela_preco(
     grupo: Optional[str] = Query(None),
-    plano_pagamento: Optional[str] = Query(None),
-    frete_kg: Optional[float] = Query(0.0),
+    #plano_pagamento: Optional[str] = Query(None),
+    #frete_kg: Optional[float] = Query(0.0),
     fornecedor: Optional[str] = Query(None),
-    fator_comissao: Optional[float] = Query(0.0)
+    #fator_comissao: Optional[float] = Query(0.0)
 
 ):
     try:
-        print(f"grupo={grupo}, plano_pagamento={plano_pagamento}, frete_kg={frete_kg}, fator_comissao={fator_comissao}")
+        print(f"grupo={grupo} --,plano_pagamento={plano_pagamento}, frete_kg={frete_kg}, fator_comissao={fator_comissao}"
+              )
 
         db = SessionLocal()
 
@@ -186,3 +189,8 @@ def desativar_produto(id: int):
 
     db.commit()
     return {"mensagem": "Produto desativado com sucesso"}
+
+
+@router.post("/calcular_valores", response_model=List[ProdutoCalculado])
+def calcular_valores(payload: ParametrosCalculo):
+    return calcular_valores_dos_produtos(payload)
