@@ -25,7 +25,7 @@ def listar_tabelas_preco():
     return tabelas_de_preco_db
 
 
-@router.get("/TabelaPreco", response_model=TabelaPreco)
+@router.get("/TabelaPreco/{tabela_id}", response_model=TabelaPreco)
 def obter_tabela_preco(tabela_id: Optional [int]):
     for tabela in tabelas_de_preco_db:
         if tabela.id == tabela_id:
@@ -33,7 +33,7 @@ def obter_tabela_preco(tabela_id: Optional [int]):
     raise HTTPException(status_code=404, detail="Tabela de preço não encontrada")
 
 
-@router.put("/TabelaPreco", response_model=TabelaPreco)
+@router.put("/TabelaPreco/{tabela_id}", response_model=TabelaPreco)
 def atualizar_tabela_preco(tabela_id: Optional [int], tabela_atualizada: TabelaPreco):
     for idx, tabela in enumerate(tabelas_de_preco_db):
         if tabela.id == tabela_id:
@@ -43,7 +43,7 @@ def atualizar_tabela_preco(tabela_id: Optional [int], tabela_atualizada: TabelaP
     raise HTTPException(status_code=404, detail="Tabela de preço não encontrada")
 
 
-@router.delete("/TabelaPreco")
+@router.delete("/TabelaPreco/{tabela_id}")
 def deletar_tabela_preco(tabela_id: Optional [int]):
     for idx, tabela in enumerate(tabelas_de_preco_db):
         if tabela.id == tabela_id:
