@@ -1,8 +1,9 @@
 from fastapi import APIRouter, HTTPException, Query
-from schemas.tabela_preco import TabelaPreco
+from schemas.tabela_preco import TabelaPreco, TabelaPrecoCompleta
 from typing import List, Optional
 from sqlalchemy import text
 from database import SessionLocal
+from models.tabela_preco import TabelaPreco as TabelaPrecoModel
 
 router = APIRouter()
 
@@ -76,15 +77,15 @@ def filtrar_produtos_para_tabela_preco(
                 p.peso AS peso_liquido,
                 p.peso AS peso_bruto,
                 p.preco_lista_supra AS valor,
-                :fator_comissao AS fator_comissao,
+               -- :fator_comissao AS fator_comissao,
                 cp.custo AS custo_condicao_pagamento,
-                :frete_kg AS frete_kg,
+              --  :frete_kg AS frete_kg,
                 p.ipi as ipi,
                 p.iva_st AS icms_st,
-                cast(p.preco_lista_supra * (1 + cp.custo) as DECIMAL(12,2)) AS valor_base,  -- sem desconto
+               -- cast(p.preco_lista_supra * (1 + cp.custo) as DECIMAL(12,2)) AS valor_base,  -- sem desconto
                 p.marca AS grupo,
                 f.familia AS departamento,
-                :fornecedor AS fornecedor
+               -- :fornecedor AS fornecedor
             FROM t_cadastro_produto p
             LEFT JOIN t_familia_produtos f ON CAST(p.familia AS INT) = CAST(f.id AS INT)
             LEFT JOIN t_condicoes_pagamento cp ON concat(cp.codigo_prazo,' - ',cp.prazo) = :plano_pagamento
@@ -93,9 +94,9 @@ def filtrar_produtos_para_tabela_preco(
 
         params = {
             "grupo": grupo or None,
-            "plano_pagamento": plano_pagamento or 0,
-            "frete_kg": frete_kg or 0.0,
-            "fator_comissao": fator_comissao or 0.0,
+           # "plano_pagamento": plano_pagamento or 0,
+           # "frete_kg": frete_kg or 0.0,
+           # "fator_comissao": fator_comissao or 0.0,
             "fornecedor": fornecedor or ""
         }
 
@@ -137,3 +138,51 @@ def filtro_grupo_produto():
         return [{"grupo": row.grupo} for row in resultado]
     finally:
         db.close()
+
+@router.post("/tabela_preco/salvar")
+def salvar_tabela_preco(payload: TabelaPrecoCompleta):
+    db = SessionLocal()
+    try:
+        for produto in payload.produtos:
+            registro = TabelaPrecoModel(
+                nome_tabela=payload.nome_tabela,
+                validade_inicio=payload.validade_inicio,
+                validade_fim=payload.validade_fim,
+                cliente=payload.cliente,
+                fornecedor=payload.fornecedor,
+                **produto.dict()
+            )
+            db.add(registro)
+
+        db.commit()
+        return {"mensagem": "Tabela salva com sucesso", "qtd_produtos": len(payload.produtos)}
+    finally:
+        db.close()
+
+
+@router.put("/tabela_preco/{id}")
+def editar_produto(id: int, novo_produto: TabelaPreco):
+    db = SessionLocal()
+    produto = db.query(TabelaPrecoModel).get(id)
+    if not produto:
+        raise HTTPException(status_code=404, detail="Produto não encontrado")
+
+    for campo, valor in novo_produto.dict().items():
+        setattr(produto, campo, valor)
+
+    db.commit()
+    return {"mensagem": "Produto atualizado com sucesso"}
+
+
+@router.delete("/tabela_preco/{id}")
+def desativar_produto(id: int):
+    db = SessionLocal()
+    produto = db.query(TabelaPrecoModel).get(id)
+    if not produto:
+        raise HTTPException(status_code=404, detail="Produto não encontrado")
+
+    produto.ativo = False
+    produto.deletado_em = datetime.utcnow()
+
+    db.commit()
+    return {"mensagem": "Produto desativado com sucesso"}

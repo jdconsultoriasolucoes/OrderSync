@@ -1,5 +1,5 @@
 from pydantic import BaseModel, Field, validator
-from typing import Optional
+from typing import Optional, List
 from datetime import date
 
 
@@ -41,3 +41,30 @@ class TabelaPreco(BaseModel):
     
     class Config:
             orm_mode = True
+
+class ProdutoCalculo(BaseModel):
+    codigo_tabela: str
+    descricao: str
+    valor: float
+    peso_liquido: Optional[float] = 0.0
+
+class ParametrosCalculo(BaseModel):
+    produtos: List[ProdutoCalculo]
+    frete_unitario : float
+    fator_comissao: float
+    acrescimo_pagamento: float
+
+class ProdutoCalculado(ProdutoCalculo):
+    frete_kg: float
+    comissao_aplicada: float
+    ajuste_pagamento: float
+    valor_liquido: float          
+
+
+class TabelaPrecoCompleta(BaseModel):
+    nome_tabela: str
+    validade_inicio: date
+    validade_fim: date
+    cliente: str
+    fornecedor: str
+    produtos: List[TabelaPreco]
