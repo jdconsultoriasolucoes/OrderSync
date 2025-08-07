@@ -61,8 +61,7 @@ def filtrar_produtos_para_tabela_preco(
 
 ):
     try:
-        print(f"grupo={grupo} --,plano_pagamento={plano_pagamento}, frete_kg={frete_kg}, fator_comissao={fator_comissao}"
-              )
+        print(f"grupo={grupo}, fornecedor={fornecedor}")
 
         db = SessionLocal()
 
@@ -81,7 +80,7 @@ def filtrar_produtos_para_tabela_preco(
                 p.peso AS peso_bruto,
                 p.preco_lista_supra AS valor,
                -- :fator_comissao AS fator_comissao,
-                cp.custo AS custo_condicao_pagamento,
+               -- cp.custo AS custo_condicao_pagamento,
               --  :frete_kg AS frete_kg,
                 p.ipi as ipi,
                 p.iva_st AS icms_st,
@@ -91,7 +90,7 @@ def filtrar_produtos_para_tabela_preco(
                -- :fornecedor AS fornecedor
             FROM t_cadastro_produto p
             LEFT JOIN t_familia_produtos f ON CAST(p.familia AS INT) = CAST(f.id AS INT)
-            LEFT JOIN t_condicoes_pagamento cp ON concat(cp.codigo_prazo,' - ',cp.prazo) = :plano_pagamento
+          --  LEFT JOIN t_condicoes_pagamento cp ON concat(cp.codigo_prazo,' - ',cp.prazo) = :plano_pagamento
             WHERE (:grupo IS NULL OR p.marca = :grupo)
         """)
 
