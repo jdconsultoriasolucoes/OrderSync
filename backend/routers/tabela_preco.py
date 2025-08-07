@@ -5,7 +5,7 @@ from typing import List, Optional
 from sqlalchemy import text
 from database import SessionLocal
 from models.tabela_preco import TabelaPreco as TabelaPrecoModel
-
+from datetime import datetime
 
 router = APIRouter()
 
@@ -54,12 +54,8 @@ def deletar_tabela_preco(tabela_id: Optional [int]):
 @router.get("/produtos_filtro")
 def filtrar_produtos_para_tabela_preco(
     grupo: Optional[str] = Query(None),
-    #plano_pagamento: Optional[str] = Query(None),
-    #frete_kg: Optional[float] = Query(0.0),
-    fornecedor: Optional[str] = Query(None),
-    #fator_comissao: Optional[float] = Query(0.0)
-
-):
+    fornecedor: Optional[str] = Query(None)
+    ):
     try:
         print(f"grupo={grupo}, fornecedor={fornecedor}")
 
@@ -79,26 +75,17 @@ def filtrar_produtos_para_tabela_preco(
                 p.peso AS peso_liquido,
                 p.peso AS peso_bruto,
                 p.preco_lista_supra AS valor,
-               -- :fator_comissao AS fator_comissao,
-               -- cp.custo AS custo_condicao_pagamento,
-              --  :frete_kg AS frete_kg,
                 p.ipi as ipi,
                 p.iva_st AS icms_st,
-               -- cast(p.preco_lista_supra * (1 + cp.custo) as DECIMAL(12,2)) AS valor_base,  -- sem desconto
                 p.marca AS grupo,
-                f.familia AS departamento,
-               -- :fornecedor AS fornecedor
-            FROM t_cadastro_produto p
+                f.familia AS departamento
+                FROM t_cadastro_produto p
             LEFT JOIN t_familia_produtos f ON CAST(p.familia AS INT) = CAST(f.id AS INT)
-          --  LEFT JOIN t_condicoes_pagamento cp ON concat(cp.codigo_prazo,' - ',cp.prazo) = :plano_pagamento
             WHERE (:grupo IS NULL OR p.marca = :grupo)
         """)
 
         params = {
             "grupo": grupo or None,
-           # "plano_pagamento": plano_pagamento or 0,
-           # "frete_kg": frete_kg or 0.0,
-           # "fator_comissao": fator_comissao or 0.0,
             "fornecedor": fornecedor or ""
         }
 
