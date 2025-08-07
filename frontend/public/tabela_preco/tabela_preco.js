@@ -4,8 +4,7 @@ const API_BASE = "https://ordersync-backend-edjq.onrender.com";
 
 
 document.addEventListener("DOMContentLoaded", function () {
-  carregarProdutos();
-
+  
   document.getElementById("grupo").addEventListener("change", carregarProdutos);
   document.getElementById("plano_pagamento").addEventListener("change", carregarProdutos);
   document.getElementById("frete_kg").addEventListener("change", carregarProdutos);
@@ -36,7 +35,7 @@ function carregarProdutos() {
   data.forEach((p, index) => {
     const selectDesconto = document.querySelector(`#tabela-produtos-body tr:nth-child(${index + 1}) select`);
     if (selectDesconto) {
-      atualizarLinhaPorDesconto(selectDesconto, index, p.valor_base, p.peso_liquido);
+      atualizarLinhaPorDesconto(selectDesconto, index, p.valor, p.peso_liquido);
     }
   });
 })}
@@ -54,9 +53,9 @@ function preencherTabela(produtos) {
       <td>${p.descricao}</td>
       <td>${p.embalagem}</td>
       <td>${p.peso_liquido ?? ""}</td>
-      <td>${(p.valor_base ?? 0).toFixed(2)}</td>
+      <td>${(p.valor ?? 0).toFixed(2)}</td>
       <td>
-        <select onchange="atualizarLinhaPorDesconto(this, ${index}, ${p.valor_base}, ${p.peso_liquido || 0})">
+        <select onchange="atualizarLinhaPorDesconto(this, ${index}, ${p.valor}, ${p.peso_liquido || 0})">
             ${Object.entries(mapaDescontos).map(([codigo, percentual]) => `
               <option value="${codigo}">${codigo} - ${percentual}</option>
             `).join('')}
@@ -64,7 +63,7 @@ function preencherTabela(produtos) {
       </td>
       <td id="acrescimo-${index}">0.0000</td>
       <td id="desconto-${index}">0.0000</td>
-      <td id="valor_liquido-${index}">${(p.valor_base ?? 0).toFixed(2)}</td>
+      <td id="valor_liquido-${index}">${(p.valor ?? 0).toFixed(2)}</td>
     </tr>`;
     tbody.appendChild(tr);
   });

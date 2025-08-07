@@ -42,10 +42,17 @@
         <!-- linhas serão inseridas aqui via JS -->
       </tbody>
     </table>
+  
+  <div class="acoes-gerais" style="margin-top: 20px;">
+  <button id="btn-editar" onclick="selecionarTabela()" disabled>Editar Tabela</button>
+  <button id="btn-excluir" onclick="deletarTabela()" disabled>Excluir Tabela</button>
+  <button onclick="voltar()">Voltar</button>
+</div>
+</div>
   </main>
   <div id="modal-confirmar-delete" style="display:none; position: fixed; top: 0; left: 0; 
   width: 100%; height: 100%; background-color: rgba(0,0,0,0.5); 
-  display: flex; align-items: center; justify-content: center; z-index: 999;">
+  align-items: center; justify-content: center; z-index: 999;">
   
   <div style="background-color: white; padding: 20px; border-radius: 6px; text-align: center;">
     <p>Tem certeza que deseja deletar esta tabela?</p>

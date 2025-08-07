@@ -19,16 +19,24 @@ async function carregarTabelas() {
       tr.dataset.id = tabela.id;
 
       tr.innerHTML = `
-        <td>${tabela.nome_tabela}</td>
-        <td>${tabela.cliente}</td>
-        <td>${tabela.fornecedor}</td>
-        <td>${formatarData(tabela.validade_inicio)} → ${formatarData(tabela.validade_fim)}</td>
+      <td>${tabela.nome_tabela}</td>
+      <td>${tabela.cliente}</td>
+      <td>${tabela.fornecedor}</td>
+      <td>${formatarData(tabela.validade_inicio)} → ${formatarData(tabela.validade_fim)}</td>
+      <td>
+        <button onclick="window.location.href='tabela_preco.html?id=${tabela.id}'">Editar</button>
+        <button onclick="abrirModalDelecao(${tabela.id})">Excluir</button>
+      </td>
       `;
 
       tr.addEventListener("click", () => {
         document.querySelectorAll("#lista-tabelas-body tr").forEach(row => row.classList.remove("selected"));
         tr.classList.add("selected");
         tabelaSelecionadaId = tabela.id;
+
+          // ✅ Habilita os botões
+        document.getElementById("btn-editar").disabled = false;
+        document.getElementById("btn-excluir").disabled = false;
       });
 
       tbody.appendChild(tr);
@@ -85,4 +93,10 @@ async function confirmarDelecao(confirmado) {
 
 function voltar() {
   window.location.href = "tabela_preco.html";
+}
+
+function abrirModalDelecao(id) {
+  tabelaSelecionadaId = id;
+  const modal = document.getElementById("modal-confirmar-delete");
+  modal.style.display = "flex";
 }
