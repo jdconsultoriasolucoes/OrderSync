@@ -34,7 +34,11 @@
   <main class="page-container">
     <h1>Criar Nova Tabela de Preços</h1>
 
-    <form class="form-container">
+  <div style="display: flex; justify-content: flex-end; margin-bottom: 10px;">
+    <a href="listar_tabelas.html" class="btn btn-secundario">Ver Tabelas</a>
+  </div>
+    
+  <form class="form-container">
       <div class="form-grid-2col">
         <label>
           Nome da Tabela:
@@ -101,7 +105,7 @@
     </section>
 
     <div class="mt-4">
-      <button class="btn btn-salvar" onclick="salvarTabela()">Salvar Tabela de Preço</button>
+      <button class="btn btn-salvar" id="btn-salvar-principal" onclick="salvarTabela()">Salvar Tabela de Preço</button>
     </div>
   </main>
   <script src="tabela_preco.js"></script>
@@ -120,10 +124,5 @@
       overlay.style.display = "none";
     });
   </script>
-  <script>
-    document.addEventListener("DOMContentLoaded", function () {
-        carregarDescontos();
-    });
-</script>
-</body>
+ </body>
 </html>

@@ -1,0 +1,58 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+  <meta charset="UTF-8">
+  <title>Listar Tabelas de Preço</title>
+  <link rel="stylesheet" href="tabela_preco.css">
+  <link rel="stylesheet" href="navbar.css">
+  <script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js"></script>
+</head>
+<body>
+
+  <header>
+    <div class="navbar">
+      <button class="menu-btn" id="menu-button">&#9776;</button>
+      <img src="logo.png" alt="Logo" class="logo" />
+    </div>
+  </header>
+
+  <nav class="sidebar" id="sidebar">
+    <ul>
+      <li><a href="/clientes/cliente.html">Cadastrar Cliente</a></li>
+      <li><a href="/tabela_preco/tabela_preco.html">Nova Tabela de Preço</a></li>
+      <li><a href="/tabela_preco/listar_tabelas.html">Listar Tabelas</a></li>
+    </ul>
+  </nav>
+  <div id="overlay"></div>
+
+  <main class="page-container">
+    <h1>Tabelas de Preço Registradas</h1>
+
+    <table class="table">
+      <thead>
+        <tr>
+          <th>Nome da Tabela</th>
+          <th>Cliente</th>
+          <th>Fornecedor</th>
+          <th>Validade</th>
+          <th>Ações</th>
+        </tr>
+      </thead>
+      <tbody id="lista-tabelas-body">
+        <!-- linhas serão inseridas aqui via JS -->
+      </tbody>
+    </table>
+  </main>
+  <div id="modal-confirmar-delete" style="display:none; position: fixed; top: 0; left: 0; 
+  width: 100%; height: 100%; background-color: rgba(0,0,0,0.5); 
+  display: flex; align-items: center; justify-content: center; z-index: 999;">
+  
+  <div style="background-color: white; padding: 20px; border-radius: 6px; text-align: center;">
+    <p>Tem certeza que deseja deletar esta tabela?</p>
+    <button onclick="confirmarDelecao(true)">Sim</button>
+    <button onclick="confirmarDelecao(false)">Não</button>
+  </div>
+</div>
+  <script src="listar_tabelas.js"></script>
+</body>
+</html>

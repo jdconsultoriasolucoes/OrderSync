@@ -70,21 +70,6 @@ function preencherTabela(produtos) {
   });
 }
 
-
-//function atualizarLinhaPorDesconto(select, index, valorBase) {
-//  const idDesconto = select.value;
-//  const fator = mapaDescontos[idDesconto] || 0;
-
-//  const frete_kg = parseFloat(document.getElementById("frete_kg").value) || 0;
-//  const acrescimo = valorBase * frete_kg; //Alterar calculo do frete, Correto valor do (frete/1000) * Peso por produto. (Falta criar o peso total do pedido)
-//  const desconto = valorBase * fator;
-//  const valor_liquido = valorBase + acrescimo - desconto;
-
-//  document.getElementById(`acrescimo-${index}`).innerText = acrescimo.toFixed(4);
-//  document.getElementById(`desconto-${index}`).innerText = desconto.toFixed(4);
-//  document.getElementById(`valor_liquido-${index}`).innerText = valor_liquido.toFixed(2);
-//}
-
 function atualizarLinhaPorDesconto(select, index, valorBase, peso_liquido = 0) {
   try{
   const idDesconto = select.value;
@@ -169,21 +154,369 @@ async function carregarDescontos() {
     });
 }
 
-function calcularValorLiquido(valorBase, idDesconto) {
-    const fator = mapaDescontos[idDesconto] || 0;
-    const desconto = valorBase * fator;
-    return (valorBase - desconto).toFixed(2);
+async function salvarTabela() {
+  try {
+    const nome_tabela = document.getElementById("nome_tabela").value.trim();
+    const cliente = document.getElementById("cliente").value.trim();
+    const fornecedor = document.getElementById("fornecedor").value.trim();
+    const validade_inicio = document.getElementById("validade_inicio").value;
+    const validade_fim = document.getElementById("validade_fim").value;
+    const plano_pagamento = document.getElementById("plano_pagamento").value || null;
+    const frete_kg = parseFloat(document.getElementById("frete_kg").value) || 0;
+
+    const linhas = document.querySelectorAll("#tabela-produtos-body tr");
+    const produtosSelecionados = [];
+
+    linhas.forEach((linha, index) => {
+      const checkbox = linha.querySelector(".produto-checkbox");
+      if (checkbox && checkbox.checked) {
+        const codigo_tabela = linha.children[1].innerText;
+        const descricao = linha.children[2].innerText;
+        const embalagem = linha.children[3].innerText;
+        const peso_liquido = parseFloat(linha.children[4].innerText) || 0;
+        const valor = parseFloat(linha.children[5].innerText) || 0;
+        const selectDesconto = linha.children[6].querySelector("select");
+        const desconto_id = selectDesconto.value;
+        const desconto_percentual = mapaDescontos[desconto_id] || 0;
+        const acrescimo = parseFloat(document.getElementById(`acrescimo-${index}`).innerText) || 0;
+        const valor_liquido = parseFloat(document.getElementById(`valor_liquido-${index}`).innerText) || 0;
+
+        const produto = {
+          nome_tabela,
+          validade_inicio,
+          validade_fim,
+          cliente,
+          fornecedor,
+
+          codigo_tabela,
+          descricao,
+          embalagem,
+          peso_liquido,
+          peso_bruto: peso_liquido, // por enquanto igual
+          valor,
+          desconto: parseFloat((valor * desconto_percentual).toFixed(4)),
+          acrescimo: parseFloat(acrescimo.toFixed(4)),
+          fator_comissao: 0,
+          plano_pagamento,
+          frete_kg,
+          frete_percentual: null,
+          ipi: false,
+          icms_st: false,
+          valor_liquido,
+          grupo: null,
+          departamento: null
+        };
+
+        produtosSelecionados.push(produto);
+      }
+    });
+
+    if (produtosSelecionados.length === 0) {
+      alert("Selecione ao menos um produto para salvar.");
+      return;
+    }
+
+    const payload = {
+      nome_tabela,
+      validade_inicio,
+      validade_fim,
+      cliente,
+      fornecedor,
+      produtos: produtosSelecionados
+    };
+
+    const response = await fetch(`${API_BASE}/tabela_preco/salvar`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json"
+      },
+      body: JSON.stringify(payload)
+    });
+
+    if (!response.ok) {
+      const erro = await response.json();
+      throw new Error(erro.detail || "Erro ao salvar a tabela de preços.");
+    }
+
+    const resultado = await response.json();
+    alert(`✅ Tabela salva com sucesso! ${resultado.qtd_produtos} produtos incluídos.`);
+
+    // Opcional: redirecionar ou limpar o formulário
+    // window.location.href = "/tabela_preco/listar.html";
+
+  } catch (error) {
+    console.error("Erro ao salvar a tabela:", error);
+    alert(`❌ Erro ao salvar a tabela: ${error.message}`);
+  }
 }
 
-function atualizarValorLiquido(select, index, valorBase) {
-    const idDesconto = parseInt(select.value);
-    const valor = calcularValorLiquido(valorBase, idDesconto);
-    document.getElementById(`valor_liquido_${index}`).textContent = valor;
+
+async function desativarTabela(id) {
+  if (!confirm("Tem certeza que deseja desativar esta tabela?")) return;
+
+  try {
+    const response = await fetch(`${API_BASE}/tabela_preco/${id}`, {
+      method: "DELETE"
+    });
+
+    if (!response.ok) throw new Error("Erro ao desativar.");
+
+    alert("Tabela desativada com sucesso.");
+    carregarTabelas();
+  } catch (error) {
+    console.error("Erro ao desativar:", error);
+    alert("Erro ao desativar a tabela.");
+  }
 }
+
+async function carregarTabelaSelecionada(id) {
+  try {
+    const response = await fetch(`${API_BASE}/tabela_preco/${id}`);
+    if (!response.ok) throw new Error("Tabela não encontrada.");
+
+    const tabela = await response.json();
+    
+    // Preenche os dados principais
+    document.getElementById("nome_tabela").value = tabela.nome_tabela;
+    document.getElementById("cliente").value = tabela.cliente;
+    document.getElementById("fornecedor").value = tabela.fornecedor;
+    document.getElementById("validade_inicio").value = tabela.validade_inicio;
+    document.getElementById("validade_fim").value = tabela.validade_fim;
+    document.getElementById("frete_kg").value = tabela.frete_kg || 0;
+
+    // TODO: carregar produtos salvos (depois)
+    preencherTabelaSalva(tabela.produtos || []);
+
+    bloquearCampos();
+    mostrarBotoesAcao();
+  } catch (error) {
+    console.error("Erro ao carregar tabela selecionada:", error);
+    alert("Erro ao carregar tabela selecionada.");
+  }
+}
+
+function bloquearCampos() {
+  const inputs = document.querySelectorAll("input, select, textarea");
+  inputs.forEach(el => el.disabled = true);
+}
+
+function desbloquearCampos() {
+  const inputs = document.querySelectorAll("input, select, textarea");
+  inputs.forEach(el => el.disabled = false);
+}
+
+// Mostra botões "Editar" e "Duplicar"
+function mostrarBotoesAcao() {
+  const container = document.createElement("div");
+  container.id = "acoes-container";
+  container.style.marginTop = "20px";
+
+ const btnEditar = document.createElement("button");
+btnEditar.innerText = "Editar";
+btnEditar.className = "btn btn-editar";
+btnEditar.onclick = () => {
+  desbloquearCampos();
+  mostrarBotoesSalvarCancelar();
+};
+
+
+  const btnDuplicar = document.createElement("button");
+  btnDuplicar.innerText = "Duplicar";
+  btnDuplicar.className = "btn btn-duplicar";
+  btnDuplicar.onclick = () => {
+    desbloquearCampos();
+    document.getElementById("nome_tabela").value = "";
+  };
+
+  const btnDeletar = document.createElement("button");
+  btnDeletar.innerText = "Excluir";
+  btnDeletar.className = "btn btn-excluir";
+  btnDeletar.style.marginLeft = "10px";
+  btnDeletar.onclick = () => {
+    const urlParams = new URLSearchParams(window.location.search);
+    const id = urlParams.get("id");
+    if (id) desativarTabela(id);
+  };
+
+  container.appendChild(btnEditar);
+  container.appendChild(btnDuplicar);
+  container.appendChild(btnDeletar);
+
+  const main = document.querySelector("main");
+  main.appendChild(container);
+}
+
+function preencherTabelaSalva(produtos) {
+  const tbody = document.getElementById("tabela-produtos-body");
+  tbody.innerHTML = "";
+
+  produtos.forEach((p, index) => {
+    const tr = document.createElement("tr");
+
+    tr.innerHTML = `
+      <td><input type="checkbox" class="produto-checkbox" checked></td>
+      <td>${p.codigo_tabela}</td>
+      <td>${p.descricao}</td>
+      <td>${p.embalagem ?? ""}</td>
+      <td>${p.peso_liquido ?? ""}</td>
+     <td>${(p.valor && p.valor > 0) ? p.valor.toFixed(2) : "<span style='color:red'>Produto sem valor</span>"}</td>
+      <td>
+        <select onchange="atualizarLinhaPorDesconto(this, ${index}, ${p.valor}, ${p.peso_liquido || 0})">
+          ${Object.entries(mapaDescontos).map(([codigo, percentual]) => `
+            <option value="${codigo}" ${p.desconto && parseFloat(p.desconto / p.valor).toFixed(4) == percentual ? "selected" : ""}>
+              ${codigo} - ${percentual}
+            </option>
+          `).join('')}
+        </select>
+      </td>
+      <td id="acrescimo-${index}">${(p.acrescimo ?? 0).toFixed(4)}</td>
+      <td id="desconto-${index}">${(p.desconto ?? 0).toFixed(4)}</td>
+      <td id="valor_liquido-${index}"> ${(p.valor_liquido && p.valor_liquido > 0)? p.valor_liquido.toFixed(2): "<span style='color:red'>Produto sem valor</span>"}</td>
+    `;
+
+    tbody.appendChild(tr);
+  });
+}
+
+
+function mostrarBotoesSalvarCancelar() {
+  const container = document.getElementById("acoes-container");
+  container.innerHTML = ""; // limpa botões anteriores
+
+  const btnSalvar = document.createElement("button");
+  btnSalvar.innerText = "Salvar Alterações";
+  btnSalvar.className = "btn btn-salvar";
+  btnSalvar.onclick = () => salvarEdicao();
+
+  const btnCancelar = document.createElement("button");
+  btnCancelar.innerText = "Cancelar";
+  btnCancelar.className = "btn btn-cancelar";
+  btnCancelar.style.marginLeft = "10px";
+  btnCancelar.onclick = async () => {
+    const urlParams = new URLSearchParams(window.location.search);
+    const id = urlParams.get("id");
+    if (id) {
+      await carregarTabelaSelecionada(id);
+    }
+  };
+
+  container.appendChild(btnSalvar);
+  container.appendChild(btnCancelar);
+}
+
+async function salvarEdicao() {
+  try {
+    const urlParams = new URLSearchParams(window.location.search);
+    const id = urlParams.get("id");
+    if (!id) {
+      alert("ID da tabela não encontrado.");
+      return;
+    }
+
+    const nome_tabela = document.getElementById("nome_tabela").value.trim();
+    const cliente = document.getElementById("cliente").value.trim();
+    const fornecedor = document.getElementById("fornecedor").value.trim();
+    const validade_inicio = document.getElementById("validade_inicio").value;
+    const validade_fim = document.getElementById("validade_fim").value;
+    const plano_pagamento = document.getElementById("plano_pagamento").value || null;
+    const frete_kg = parseFloat(document.getElementById("frete_kg").value) || 0;
+
+    const linhas = document.querySelectorAll("#tabela-produtos-body tr");
+    const produtosSelecionados = [];
+
+    linhas.forEach((linha, index) => {
+      const checkbox = linha.querySelector(".produto-checkbox");
+      if (checkbox && checkbox.checked) {
+        const codigo_tabela = linha.children[1].innerText;
+        const descricao = linha.children[2].innerText;
+        const embalagem = linha.children[3].innerText;
+        const peso_liquido = parseFloat(linha.children[4].innerText) || 0;
+        const valor = parseFloat(linha.children[5].innerText) || 0;
+        const selectDesconto = linha.children[6].querySelector("select");
+        const desconto_id = selectDesconto.value;
+        const desconto_percentual = mapaDescontos[desconto_id] || 0;
+        const acrescimo = parseFloat(document.getElementById(`acrescimo-${index}`).innerText) || 0;
+        const valor_liquido = parseFloat(document.getElementById(`valor_liquido-${index}`).innerText) || 0;
+
+        const produto = {
+          nome_tabela,
+          validade_inicio,
+          validade_fim,
+          cliente,
+          fornecedor,
+
+          codigo_tabela,
+          descricao,
+          embalagem,
+          peso_liquido,
+          peso_bruto: peso_liquido,
+          valor,
+          desconto: parseFloat((valor * desconto_percentual).toFixed(4)),
+          acrescimo: parseFloat(acrescimo.toFixed(4)),
+          fator_comissao: 0,
+          plano_pagamento,
+          frete_kg,
+          frete_percentual: null,
+          ipi: false,
+          icms_st: false,
+          valor_liquido,
+          grupo: null,
+          departamento: null
+        };
+
+        produtosSelecionados.push(produto);
+      }
+    });
+
+    if (produtosSelecionados.length === 0) {
+      alert("Selecione ao menos um produto para salvar.");
+      return;
+    }
+
+    const payload = {
+      nome_tabela,
+      validade_inicio,
+      validade_fim,
+      cliente,
+      fornecedor,
+      produtos: produtosSelecionados
+    };
+
+    const response = await fetch(`${API_BASE}/tabela_preco/${id}`, {
+      method: "PUT",
+      headers: {
+        "Content-Type": "application/json"
+      },
+      body: JSON.stringify(payload)
+    });
+
+    if (!response.ok) {
+      const erro = await response.json();
+      throw new Error(erro.detail || "Erro ao atualizar a tabela.");
+    }
+
+    alert("✅ Tabela atualizada com sucesso!");
+    window.location.href = "listar_tabelas.html";
+  } catch (error) {
+    console.error("Erro ao salvar edição:", error);
+    alert(`❌ Erro ao salvar alterações: ${error.message}`);
+  }
+}
+
 
 window.onload = async function() {
     await carregarDescontos();
     await carregarCondicoesPagamento();
     await carregarGrupos(); 
-   // await carregarProdutos(); // se tiver outra função para carregar os produtos
-  };
+   
+  const urlParams = new URLSearchParams(window.location.search);
+  const id = urlParams.get("id");
+  if (id) {
+    await carregarTabelaSelecionada(id);
+  }
+  
+  if (id) {
+  document.getElementById("btn-salvar-principal").style.display = "none";
+  }
+
+    };
