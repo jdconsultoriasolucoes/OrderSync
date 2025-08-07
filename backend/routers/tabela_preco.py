@@ -1,6 +1,6 @@
 from fastapi import APIRouter, HTTPException, Query
 from services.tabela_preco import calcular_valores_dos_produtos
-from schemas.tabela_preco import TabelaPreco, TabelaPrecoCompleta
+from schemas.tabela_preco import TabelaPreco, TabelaPrecoCompleta, ProdutoCalculado, ParametrosCalculo 
 from typing import List, Optional
 from sqlalchemy import text
 from database import SessionLocal
