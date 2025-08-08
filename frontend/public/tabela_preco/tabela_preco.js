@@ -1,27 +1,47 @@
 const API_BASE = "https://ordersync-backend-edjq.onrender.com";
 
-
-
+let currentPage = 1;
+let pageSize = 25;
+let totalPages = null; 
 
 document.addEventListener("DOMContentLoaded", function () {
-  
-  document.getElementById("grupo").addEventListener("change", carregarProdutos);
-  document.getElementById("plano_pagamento").addEventListener("change", carregarProdutos);
-  document.getElementById("frete_kg").addEventListener("change", carregarProdutos);
+  // 1) Filtro que MUDA a lista -> refaz fetch (vai no backend de novo)
+  document.getElementById("grupo").addEventListener("change", () => {
+    currentPage = 1;
+    carregarProdutos();
+  });
+
+  // 2) Filtros que NÃO mudam a lista -> só recalculam a página atual (sem backend)
+  document.getElementById("plano_pagamento").addEventListener("change", recalcTabelaAtual);
+  document.getElementById("frete_kg").addEventListener("change", recalcTabelaAtual);
+
+  // 3) Itens por página -> refaz fetch com novo page_size
+  const ps = document.getElementById("page_size");
+  if (ps) {
+    pageSize = parseInt(ps.value, 10) || 25;
+    ps.addEventListener("change", () => {
+      pageSize = parseInt(ps.value, 10) || 25;
+      currentPage = 1;
+      carregarProdutos();
+    });
+  }
 });
 
-function carregarProdutos() {
-  let grupo = document.getElementById("grupo").value;
+
+function carregarProdutos(page = currentPage) {
+  currentPage = page;
+
+  const grupo = document.getElementById("grupo").value;
   const plano_pagamento = document.getElementById("plano_pagamento").value || "000";
   const frete_kg = parseFloat(document.getElementById("frete_kg").value) || 0.0;
   const fator_comissao = 0.0;
 
-  // Se grupo estiver vazio, não envie o parâmetro
   const url = new URL(`${API_BASE}/tabela_preco/produtos_filtro`);
   if (grupo) url.searchParams.append("grupo", grupo);
-  url.searchParams.append("plano_pagamento", plano_pagamento);
-  url.searchParams.append("frete_kg", frete_kg);
-  url.searchParams.append("fator_comissao", fator_comissao);
+  
+  // paginação no servidor
+  url.searchParams.append("page", currentPage);
+  url.searchParams.append("page_size", pageSize);
 
   fetch(url)
     .then((response) => {
@@ -29,16 +49,27 @@ function carregarProdutos() {
       return response.json();
     })
     .then((data) => {
-  preencherTabela(data);
+      // Suporta dois formatos: array direto OU { items, total, page, page_size }
+      const items = Array.isArray(data) ? data : (data.items || []);
+      const total = Array.isArray(data) ? null : (data.total ?? null);
 
-  // 🔁 Após preencher a tabela, aplicamos os cálculos linha por linha
-  data.forEach((p, index) => {
-    const selectDesconto = document.querySelector(`#tabela-produtos-body tr:nth-child(${index + 1}) select`);
-    if (selectDesconto) {
-      atualizarLinhaPorDesconto(selectDesconto, index, p.valor, p.peso_liquido);
-    }
-  });
-})}
+      preencherTabela(items);
+
+      // aplica cálculos linha a linha
+      items.forEach((p, index) => {
+        const selectDesconto = document.querySelector(
+          `#tabela-produtos-body tr:nth-child(${index + 1}) select`
+        );
+        if (selectDesconto) {
+          atualizarLinhaPorDesconto(selectDesconto, index, p.valor, p.peso_liquido);
+        }
+      });
+
+      atualizarPaginacaoUI(total);
+    })
+    .catch((e) => console.error(e));
+}
+
 
 
 function preencherTabela(produtos) {
@@ -77,10 +108,10 @@ function atualizarLinhaPorDesconto(select, index, valorBase, peso_liquido = 0) {
   const frete_kg = parseFloat(document.getElementById("frete_kg").value) || 0;
 
   const planoSelecionado = document.getElementById("plano_pagamento").value;
-  const acrescimoCondicao = mapaCondicoesPagamento[planoSelecionado] || 0;
+  const taxaCondicao = parseFloat(mapaCondicoesPagamento[planoSelecionado]) || 0;
 
   const acrescimoFrete = (frete_kg / 1000) * (peso_liquido || 0);
-  const acrescimoCond = valorBase * acrescimoCondicao;
+  const acrescimoCond = valorBase * taxaCondicao;
   const desconto = valorBase * fator;
 
   const valor_liquido = valorBase + acrescimoFrete + acrescimoCond - desconto;
@@ -126,22 +157,36 @@ async function carregarCondicoesPagamento() {
     const select = document.getElementById("plano_pagamento");
     select.innerHTML = "<option value=''>Selecione</option>";
 
+    mapaCondicoesPagamento = {};
     condicoes.forEach(cond => {
-      mapaCondicoesPagamento[cond.codigo] = cond.acrescimo_pagamento;
-      const option = document.createElement("option");
+      // 🔹 usa o nome correto do backend:
+      mapaCondicoesPagamento[cond.codigo] = parseFloat(cond.taxa_condicao) || 0;
+
+    const option = document.createElement("option");
       option.value = cond.codigo;
       option.textContent = `${cond.codigo} - ${cond.descricao}`;
       select.appendChild(option);
     });
 
     // ⬇️ Quando mudar o valor do select, recarrega os produtos
-    select.addEventListener("change", carregarProdutos);
+    select.addEventListener("change", recalcTabelaAtual);
 
   } catch (error) {
     console.error("Erro ao carregar condições de pagamento:", error);
   }
 }
 
+function recalcTabelaAtual() {
+  const linhas = document.querySelectorAll("#tabela-produtos-body tr");
+  linhas.forEach((linha, index) => {
+    const selectDesconto = linha.querySelector("select");
+    if (!selectDesconto) return;
+
+    const valor = parseFloat(linha.children[5].innerText) || 0; // coluna Valor
+    const peso  = parseFloat(linha.children[4].innerText) || 0; // coluna Peso Líquido
+    atualizarLinhaPorDesconto(selectDesconto, index, valor, peso);
+  });
+}
 let mapaDescontos = {};
 
 async function carregarDescontos() {
@@ -502,13 +547,54 @@ async function salvarEdicao() {
   }
 }
 
+function atualizarPaginacaoUI(total) {
+  const info = document.getElementById("pagina-info");
+  const btnPrev = document.getElementById("btn-prev");
+  const btnNext = document.getElementById("btn-next");
+
+  if (!info) return;
+
+  if (total == null) {
+    // backend não retornou total: não dá pra saber os limites
+    totalPages = null;
+    info.textContent = "";
+    if (btnPrev) btnPrev.disabled = (currentPage <= 1);
+    if (btnNext) btnNext.disabled = false; // sem total, não limitamos "Próxima"
+    return;
+  }
+
+  totalPages = Math.max(1, Math.ceil(total / pageSize));
+  info.textContent = `Página ${currentPage} de ${totalPages}`;
+
+  if (btnPrev) btnPrev.disabled = (currentPage <= 1);
+  if (btnNext) btnNext.disabled = (currentPage >= totalPages);
+}
+
+function gotoPrevPage() {
+  if (currentPage > 1) {
+    carregarProdutos(currentPage - 1);
+  }
+}
+
+function gotoNextPage() {
+  // Se conhecemos o total, respeita o limite
+  if (totalPages != null && currentPage >= totalPages) return;
+  carregarProdutos(currentPage + 1);
+}
+
 
 window.onload = async function() {
     await carregarDescontos();
     await carregarCondicoesPagamento();
     await carregarGrupos(); 
+    const selectGrupo = document.getElementById("grupo");
+const DEFAULT = "AVES"; // <- mude aqui o grupo a ser iniciado.
+const opt = Array.from(selectGrupo.options).find(o => o.value === DEFAULT);
+if (opt) selectGrupo.value = DEFAULT;
    
-  const urlParams = new URLSearchParams(window.location.search);
+  carregarProdutos();
+  
+    const urlParams = new URLSearchParams(window.location.search);
   const id = urlParams.get("id");
   if (id) {
     await carregarTabelaSelecionada(id);

@@ -51,18 +51,22 @@ def deletar_tabela_preco(tabela_id: Optional [int]):
             return {"message": "Tabela de preço deletada com sucesso"}
     raise HTTPException(status_code=404, detail="Tabela de preço não encontrada")
 
+from typing import Optional
+from fastapi import Query, HTTPException
+from sqlalchemy import text
+from db import SessionLocal  # ajuste se o import for outro
+
 @router.get("/produtos_filtro")
 def filtrar_produtos_para_tabela_preco(
     grupo: Optional[str] = Query(None),
-    fornecedor: Optional[str] = Query(None)
-    ):
+    fornecedor: Optional[str] = Query(None),   # se não for usar, remova do signature
+    page: int = Query(1, ge=1),
+    page_size: int = Query(25, ge=1, le=100),
+):
     try:
-        print(f"grupo={grupo}, fornecedor={fornecedor}")
+        print(f"grupo={grupo}, fornecedor={fornecedor}, page={page}, page_size={page_size}")
 
-        db = SessionLocal()
-
-        query = text("""
-                      
+        base_sql = """
             SELECT 
                 p.codigo_supra AS codigo_tabela,
                 p.nome_produto AS descricao,
@@ -75,29 +79,49 @@ def filtrar_produtos_para_tabela_preco(
                 p.peso AS peso_liquido,
                 p.peso AS peso_bruto,
                 p.preco_lista_supra AS valor,
-                p.ipi as ipi,
+                p.ipi AS ipi,
                 p.iva_st AS icms_st,
                 p.marca AS grupo,
                 f.familia AS departamento
-                FROM t_cadastro_produto p
-            LEFT JOIN t_familia_produtos f ON CAST(p.familia AS INT) = CAST(f.id AS INT)
+            FROM t_cadastro_produto p
+            LEFT JOIN t_familia_produtos f 
+                ON CAST(p.familia AS INT) = CAST(f.id AS INT)
             WHERE (:grupo IS NULL OR p.marca = :grupo)
-        """)
+              -- AND (:fornecedor IS NULL OR p.fornecedor = :fornecedor)  -- descomente se existir essa coluna
+        """
 
+        # mesmos params para count e paginação
         params = {
             "grupo": grupo or None,
-            "fornecedor": fornecedor or ""
+            "fornecedor": fornecedor or None,
         }
 
+        with SessionLocal() as db:
+            # total
+            count_sql = f"SELECT COUNT(*) AS total FROM ({base_sql}) sub"
+            total = db.execute(text(count_sql), params).scalar() or 0
 
-        result = db.execute(query, params)
-        rows = result.mappings().all()
-        db.close()
-        return rows
+            # paginação + ordenação determinística
+            offset = (page - 1) * page_size
+            paginated_sql = f"""
+                {base_sql}
+                ORDER BY p.nome_produto ASC
+                LIMIT :limit OFFSET :offset
+            """
+            params_lim = {**params, "limit": int(page_size), "offset": int(offset)}
+
+            rows = db.execute(text(paginated_sql), params_lim).mappings().all()
+
+        return {
+            "items": rows,
+            "total": total,
+            "page": page,
+            "page_size": page_size,
+        }
 
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Erro ao buscar produtos: {str(e)}")
-    
+
 @router.get("/descontos")
 def listar_descontos():
     try:

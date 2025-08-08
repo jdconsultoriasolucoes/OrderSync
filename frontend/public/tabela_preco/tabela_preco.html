@@ -104,6 +104,21 @@
       </table>
     </section>
 
+      <!-- CONTROLES DE PAGINAÇÃO -->
+<div class="paginacao" style="display:flex; gap:12px; align-items:center; margin-top:10px;">
+  <label>Itens por página:
+    <select id="page_size">
+      <option>10</option>
+      <option selected>20</option>
+      <option>30</option>
+      <option>60</option>
+    </select>
+  </label>
+
+ <button type="button" class="btn" id="btn-prev" onclick="gotoPrevPage()">◀ Anterior</button>
+ <span id="pagina-info"></span>
+ <button type="button" class="btn" id="btn-next" onclick="gotoNextPage()">Próxima ▶</button>
+</div>
     <div class="mt-4">
       <button class="btn btn-salvar" id="btn-salvar-principal" onclick="salvarTabela()">Salvar Tabela de Preço</button>
     </div>
