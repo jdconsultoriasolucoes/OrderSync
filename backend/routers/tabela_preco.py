@@ -5,6 +5,7 @@ from typing import List, Optional
 from sqlalchemy import text
 from models.tabela_preco import TabelaPreco as TabelaPrecoModel
 from datetime import datetime
+from database import SessionLocal
 
 router = APIRouter()
 
