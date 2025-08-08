@@ -3,7 +3,6 @@ from services.tabela_preco import calcular_valores_dos_produtos
 from schemas.tabela_preco import TabelaPreco, TabelaPrecoCompleta, ProdutoCalculado, ParametrosCalculo 
 from typing import List, Optional
 from sqlalchemy import text
-#from database import SessionLocal
 from models.tabela_preco import TabelaPreco as TabelaPrecoModel
 from datetime import datetime
 
@@ -50,11 +49,6 @@ def deletar_tabela_preco(tabela_id: Optional [int]):
             del tabelas_de_preco_db[idx]
             return {"message": "Tabela de preço deletada com sucesso"}
     raise HTTPException(status_code=404, detail="Tabela de preço não encontrada")
-
-from typing import Optional
-from fastapi import Query, HTTPException
-from sqlalchemy import text
-from db import SessionLocal  # ajuste se o import for outro
 
 @router.get("/produtos_filtro")
 def filtrar_produtos_para_tabela_preco(
