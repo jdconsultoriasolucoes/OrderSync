@@ -4,6 +4,8 @@ let currentPage = 1;
 let pageSize = 25;
 let totalPages = null; 
 
+let cacheListaCompleta = null; // fallback para paginação no cliente
+
 document.addEventListener("DOMContentLoaded", function () {
   // 1) Filtro que MUDA a lista -> refaz fetch (vai no backend de novo)
   document.getElementById("grupo").addEventListener("change", () => {
@@ -49,11 +51,15 @@ function carregarProdutos(page = currentPage) {
       return response.json();
     })
     .then((data) => {
-      // Suporta dois formatos: array direto OU { items, total, page, page_size }
-      const items = Array.isArray(data) ? data : (data.items || []);
-      const total = Array.isArray(data) ? null : (data.total ?? null);
+  // Suporta dois formatos: array direto OU { items, total, page, page_size }
+  if (Array.isArray(data)) {
+    // backend NÃO paginou -> paginamos no cliente
+    cacheListaCompleta = data.slice(); // guarda tudo
+    const start = (currentPage - 1) * pageSize;
+    const end   = start + pageSize;
+    const paginaRenderizada = cacheListaCompleta.slice(start, end);
 
-      preencherTabela(items);
+    preencherTabela(paginaRenderizada);
 
       // aplica cálculos linha a linha
       items.forEach((p, index) => {
@@ -582,17 +588,7 @@ function gotoNextPage() {
   carregarProdutos(currentPage + 1);
 }
 
-
-window.onload = async function() {
-    await carregarDescontos();
-    await carregarCondicoesPagamento();
-    await carregarGrupos(); 
-    const selectGrupo = document.getElementById("grupo");
-const DEFAULT = "AVES"; // <- mude aqui o grupo a ser iniciado.
-const opt = Array.from(selectGrupo.options).find(o => o.value === DEFAULT);
-if (opt) selectGrupo.value = DEFAULT;
-   
-  carregarProdutos();
+carregarProdutos();
   
     const urlParams = new URLSearchParams(window.location.search);
   const id = urlParams.get("id");
@@ -604,4 +600,132 @@ if (opt) selectGrupo.value = DEFAULT;
   document.getElementById("btn-salvar-principal").style.display = "none";
   }
 
-    };
+  
+
+function coletarEstadoTela() {
+  const estado = {
+    campos: {
+      nome_tabela: document.getElementById("nome_tabela")?.value || "",
+      cliente: document.getElementById("cliente")?.value || "",
+      fornecedor: document.getElementById("fornecedor")?.value || "",
+      grupo: document.getElementById("grupo")?.value || "",
+      validade_inicio: document.getElementById("validade_inicio")?.value || "",
+      validade_fim: document.getElementById("validade_fim")?.value || "",
+      frete_kg: document.getElementById("frete_kg")?.value || "0",
+      plano_pagamento: document.getElementById("plano_pagamento")?.value || ""
+    },
+    // guarda produtos selecionados e o desconto escolhido por produto (chave = codigo)
+    selecionados: Array.from(document.querySelectorAll("#tabela-produtos-body tr"))
+      .map(linha => {
+        const chk = linha.querySelector(".produto-checkbox");
+        if (!chk || !chk.checked) return null;
+        const codigo = linha.children[1].innerText;
+        const descontoId = linha.children[6].querySelector("select")?.value || null;
+        return { codigo, descontoId };
+      })
+      .filter(Boolean)
+  };
+  return estado;
+}
+
+function salvarEstadoTela() {
+  try {
+    const estado = coletarEstadoTela();
+    sessionStorage.setItem("tabela_preco_state", JSON.stringify(estado));
+  } catch (e) {
+    console.warn("Não foi possível salvar o estado:", e);
+  }
+}
+
+async function restaurarEstadoTela() {
+  try {
+    const raw = sessionStorage.getItem("tabela_preco_state");
+    if (!raw) return;
+    const estado = JSON.parse(raw);
+
+    // 1) Restaura campos
+    for (const [k, v] of Object.entries(estado.campos || {})) {
+      const el = document.getElementById(k);
+      if (el) el.value = v;
+    }
+
+    // 2) Se mudou o grupo, recarrega produtos dessa lista antes de aplicar seleções
+    //    (se já chamou carregarProdutos() antes, chame de novo com currentPage=1)
+    currentPage = 1;
+    await carregarProdutos();
+
+    // 3) Reaplica seleções de produtos e descontos
+    const mapSel = new Map((estado.selecionados || []).map(s => [s.codigo, s.descontoId]));
+    const linhas = document.querySelectorAll("#tabela-produtos-body tr");
+    linhas.forEach((linha, idx) => {
+      const codigo = linha.children[1].innerText;
+      if (mapSel.has(codigo)) {
+        // marcar checkbox
+        const chk = linha.querySelector(".produto-checkbox");
+        if (chk) chk.checked = true;
+
+        // selecionar desconto salvo
+        const descontoId = mapSel.get(codigo);
+        const selectDesconto = linha.children[6].querySelector("select");
+        if (selectDesconto && descontoId) {
+          selectDesconto.value = descontoId;
+          // recalcular a linha com o desconto reaplicado
+          const valor = parseFloat(linha.children[5].innerText) || 0;
+          const peso  = parseFloat(linha.children[4].innerText) || 0;
+          atualizarLinhaPorDesconto(selectDesconto, idx, valor, peso);
+        }
+      }
+    });
+  } catch (e) {
+    console.warn("Não foi possível restaurar o estado:", e);
+  }
+}
+
+
+window.addEventListener("beforeunload", salvarEstadoTela);
+
+window.onload = async function() {
+    await carregarDescontos();
+    await carregarCondicoesPagamento();
+    await carregarGrupos(); 
+    const selectGrupo = document.getElementById("grupo");
+const DEFAULT = "AVES"; // <- mude aqui o grupo a ser iniciado.
+const opt = Array.from(selectGrupo.options).find(o => o.value === DEFAULT);
+if (opt) selectGrupo.value = DEFAULT;
+
+const linkVer = document.getElementById("link-ver-tabelas");
+if (linkVer) {
+  linkVer.addEventListener("click", () => {
+    salvarEstadoTela();
+  });
+}
+
+// Se quiser manter um default, aplique só se não houver estado salvo.
+  const estadoSalvo = sessionStorage.getItem("tabela_preco_state");
+  if (!estadoSalvo) {
+    const selectGrupo = document.getElementById("grupo");
+    const DEFAULT = "AVES";
+    const opt = Array.from(selectGrupo.options).find(o => o.value === DEFAULT);
+    if (opt) selectGrupo.value = DEFAULT;
+    carregarProdutos();
+  } else {
+    await restaurarEstadoTela(); // isto já chama carregarProdutos internamente
+  }
+
+  // Se estiver carregando uma tabela por id, mantém tua lógica:
+  const urlParams = new URLSearchParams(window.location.search);
+  const id = urlParams.get("id");
+  if (id) {
+    await carregarTabelaSelecionada(id);
+    document.getElementById("btn-salvar-principal").style.display = "none";
+  }
+
+  // Salvar ao clicar em "Ver Tabelas"
+  const linkVer = document.getElementById("link-ver-tabelas");
+  if (linkVer) {
+    linkVer.addEventListener("click", () => {
+      salvarEstadoTela();
+    });
+  }
+
+};
