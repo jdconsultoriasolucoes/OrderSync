@@ -3,7 +3,7 @@ from services.tabela_preco import calcular_valores_dos_produtos
 from schemas.tabela_preco import TabelaPreco, TabelaPrecoCompleta, ProdutoCalculado, ParametrosCalculo 
 from typing import List, Optional
 from sqlalchemy import text
-from database import SessionLocal
+#from database import SessionLocal
 from models.tabela_preco import TabelaPreco as TabelaPrecoModel
 from datetime import datetime
 

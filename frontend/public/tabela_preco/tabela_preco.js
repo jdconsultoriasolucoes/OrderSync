@@ -720,12 +720,4 @@ if (linkVer) {
     document.getElementById("btn-salvar-principal").style.display = "none";
   }
 
-  // Salvar ao clicar em "Ver Tabelas"
-  const linkVer = document.getElementById("link-ver-tabelas");
-  if (linkVer) {
-    linkVer.addEventListener("click", () => {
-      salvarEstadoTela();
-    });
-  }
-
 };
