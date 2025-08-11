@@ -589,17 +589,7 @@ function gotoNextPage() {
   carregarProdutos(currentPage + 1);
 }
 
-carregarProdutos();
-  
-    const urlParams = new URLSearchParams(window.location.search);
-  const id = urlParams.get("id");
-  if (id) {
-    await carregarTabelaSelecionada(id);
-  }
-  
-  if (id) {
-  document.getElementById("btn-salvar-principal").style.display = "none";
-  }
+
 
   
 
@@ -720,5 +710,5 @@ if (linkVer) {
     await carregarTabelaSelecionada(id);
     document.getElementById("btn-salvar-principal").style.display = "none";
   }
-
+ 
 };
