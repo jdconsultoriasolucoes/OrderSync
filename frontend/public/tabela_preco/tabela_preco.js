@@ -72,6 +72,7 @@ function carregarProdutos(page = currentPage) {
       });
 
       atualizarPaginacaoUI(total);
+    }
     })
     .catch((e) => console.error(e));
 }
