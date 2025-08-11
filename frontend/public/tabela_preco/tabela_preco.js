@@ -34,14 +34,9 @@ function carregarProdutos(page = currentPage) {
   currentPage = page;
 
   const grupo = document.getElementById("grupo").value;
-  const plano_pagamento = document.getElementById("plano_pagamento").value || "000";
-  const frete_kg = parseFloat(document.getElementById("frete_kg").value) || 0.0;
-  const fator_comissao = 0.0;
 
   const url = new URL(`${API_BASE}/tabela_preco/produtos_filtro`);
   if (grupo) url.searchParams.append("grupo", grupo);
-  
-  // paginação no servidor
   url.searchParams.append("page", currentPage);
   url.searchParams.append("page_size", pageSize);
 
@@ -51,32 +46,43 @@ function carregarProdutos(page = currentPage) {
       return response.json();
     })
     .then((data) => {
-  // Suporta dois formatos: array direto OU { items, total, page, page_size }
-  if (Array.isArray(data)) {
-    // backend NÃO paginou -> paginamos no cliente
-    cacheListaCompleta = data.slice(); // guarda tudo
-    const start = (currentPage - 1) * pageSize;
-    const end   = start + pageSize;
-    const paginaRenderizada = cacheListaCompleta.slice(start, end);
+      let items = [];
+      let total = null;
 
-    preencherTabela(paginaRenderizada);
+      if (Array.isArray(data)) {
+        // Backend sem paginação: pagina no cliente
+        cacheListaCompleta = data.slice();
+        const start = (currentPage - 1) * pageSize;
+        const end = start + pageSize;
+        items = cacheListaCompleta.slice(start, end);
+        total = cacheListaCompleta.length;
+      } else if (data && Array.isArray(data.items)) {
+        // Backend paginado: usa dados do server
+        items = data.items;
+        total = typeof data.total === "number" ? data.total : data.items.length;
+      } else {
+        items = [];
+        total = 0;
+      }
 
-      // aplica cálculos linha a linha
+      preencherTabela(items);
+
+      // Aplica o cálculo linha a linha depois de renderizar
       items.forEach((p, index) => {
         const selectDesconto = document.querySelector(
           `#tabela-produtos-body tr:nth-child(${index + 1}) select`
         );
         if (selectDesconto) {
-          atualizarLinhaPorDesconto(selectDesconto, index, p.valor, p.peso_liquido);
+          const valor = Number(p.valor) || 0;
+          const peso  = Number(p.peso_liquido) || 0;
+          atualizarLinhaPorDesconto(selectDesconto, index, valor, peso);
         }
       });
 
       atualizarPaginacaoUI(total);
-    }
     })
-    .catch((e) => console.error(e));
+    .catch((e) => console.error("Erro em carregarProdutos:", e));
 }
-
 
 
 function preencherTabela(produtos) {
@@ -306,14 +312,12 @@ async function desativarTabela(id) {
   if (!confirm("Tem certeza que deseja desativar esta tabela?")) return;
 
   try {
-    const response = await fetch(`${API_BASE}/tabela_preco/${id}`, {
-      method: "DELETE"
-    });
-
+    const response = await fetch(`${API_BASE}/tabela_preco/${id}`, { method: "DELETE" });
     if (!response.ok) throw new Error("Erro ao desativar.");
 
     alert("Tabela desativada com sucesso.");
-    carregarTabelas();
+    // nesta página não existe carregarTabelas(); redireciona para a lista
+    window.location.href = "listar_tabelas.html";
   } catch (error) {
     console.error("Erro ao desativar:", error);
     alert("Erro ao desativar a tabela.");
@@ -710,5 +714,6 @@ if (linkVer) {
     await carregarTabelaSelecionada(id);
     document.getElementById("btn-salvar-principal").style.display = "none";
   }
- 
+
+
 };
