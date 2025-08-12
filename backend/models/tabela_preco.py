@@ -24,8 +24,6 @@ class TabelaPreco(Base):
     plano_pagamento = Column(String, nullable=True)
     frete_percentual = Column(Float, nullable=True)
     frete_kg = Column(Float, nullable=True)
-    ipi = Column(Boolean, nullable=True)
-    icms_st = Column(Boolean, nullable=True)
     valor_liquido = Column(Float, nullable=True)
     grupo = Column(String, nullable=True)
     departamento = Column(String, nullable=True)

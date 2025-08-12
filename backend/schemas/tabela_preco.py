@@ -26,14 +26,12 @@ class TabelaPreco(BaseModel):
     plano_pagamento: Optional[str] = None
     frete_percentual: Optional[float] = None
     frete_kg: Optional[float] = None
-    ipi: Optional[bool] = None
-    icms_st: Optional[bool] = None
     valor_liquido: Optional[float] = None
     grupo: Optional[str] = None
     departamento: Optional[str] = None
 
     @validator("peso_liquido", "peso_bruto", "valor", "desconto", "acrescimo", "fator_comissao",
-               "frete_percentual", "frete_kg", "ipi", "icms_st", "valor_liquido")
+               "frete_percentual", "frete_kg", "valor_liquido")
     def valida_positivos(cls, v, field):
         if v is not None and v < 0:
             raise ValueError(f"{field.name} deve ser um valor positivo.")
