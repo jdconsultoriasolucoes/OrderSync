@@ -81,28 +81,28 @@
       <button type="button" class="btn btn-listar" onclick="carregarProdutos()">Buscar Produtos</button>
     </form>
 
-    <section class="produtos-container">
+    <div class="table-wrap">
       <h2 class="subtitulo">Produtos Disponíveis</h2>
-      <table id="tabela_produtos" class="table table-bordered">
+      <table id="tabela_produtos" class="data-table">
         <thead>
           <tr>
-            <th>Selecionar</th>
-            <th>Código</th>
-            <th>Descrição</th>
-            <th>Embalagem</th>
-            <th>Peso Líquido</th>
-            <th>Valor</th>
-            <th>Desconto</th>
-            <th>Acrscimo</th>
-            <th>Desconto Aplicado</th>
-            <th>Valor Líquido</th>
+              <th class="center" style="width:72px">Selecionar</th>
+              <th style="min-width:110px">Código</th>
+              <th style="min-width:320px">Descrição</th>
+              <th style="min-width:120px">Embalagem</th>
+              <th class="num" style="min-width:120px">Peso Líquido</th>
+              <th class="num" style="min-width:110px">Valor</th>
+              <th style="min-width:160px">Desconto</th>
+              <th class="num" style="min-width:140px">Acréscimo</th>
+              <th class="num" style="min-width:170px">Desconto Aplicado</th>
+              <th class="num" style="min-width:140px">Valor Líquido</th>
           </tr>
         </thead>
         <tbody id="tabela-produtos-body">
         <!-- produtos serão inseridos aqui -->
         </tbody>
       </table>
-    </section>
+    </div>
 
       <!-- CONTROLES DE PAGINAÇÃO -->
 <div class="paginacao" style="display:flex; gap:12px; align-items:center; margin-top:10px;">

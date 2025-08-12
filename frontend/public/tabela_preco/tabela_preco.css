@@ -193,3 +193,43 @@ input[type="text"], select {
 .btn-secundario:hover {
   background-color: #d5d5d5;
 }
+
+.table-wrap{
+  overflow-x: auto;           /* scroll limpo no horizontal em telas menores */
+}
+
+/* Cabeçalho alinhado à esquerda */
+.data-table thead th {
+  text-align: left;
+  font-weight: 600;
+  padding: 12px 14px;
+  border-bottom: 2px solid var(--line); /* Linha mais evidente no header */
+  background: var(--head-bg);
+}
+
+/* Corpo com linhas suaves */
+.data-table tbody td {
+  padding: 12px 14px;
+  border-bottom: 1px solid #ddd; /* Linha cinza clara */
+}
+
+/* Zebra */
+.data-table tbody tr:nth-child(odd) {
+  background: #fafafa;
+}
+
+/* Hover mais visível */
+.data-table tbody tr:hover {
+  background: #f0f4f8;
+}
+
+/* Números alinhados e sempre com duas casas decimais */
+.data-table .num {
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+
+/* Força valores numéricos a terem duas casas */
+.data-table .num::after {
+  content: "";
+}

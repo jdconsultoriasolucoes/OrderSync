@@ -96,18 +96,20 @@ function preencherTabela(produtos) {
       <td>${p.codigo_tabela}</td>
       <td>${p.descricao}</td>
       <td>${p.embalagem}</td>
-      <td>${p.peso_liquido ?? ""}</td>
-      <td>${(p.valor ?? 0).toFixed(2)}</td>
+      <td class="num">${(p.peso_liquido ?? 0).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</td>
+      <td class="num">${(p.valor ?? 0).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</td>
       <td>
         <select onchange="atualizarLinhaPorDesconto(this, ${index}, ${p.valor}, ${p.peso_liquido || 0})">
             ${Object.entries(mapaDescontos).map(([codigo, percentual]) => `
-              <option value="${codigo}">${codigo} - ${percentual}</option>
+              <option value="${codigo}" ${codigo == '15' ? 'selected' : ''}>
+              ${codigo} - ${percentual}
+              </option>
             `).join('')}
         </select>
       </td>
       <td id="acrescimo-${index}">0.0000</td>
       <td id="desconto-${index}">0.0000</td>
-      <td id="valor_liquido-${index}">${(p.valor ?? 0).toFixed(2)}</td>
+      <td id="valor_liquido-${index}" class="num">${(p.valor_liquido ?? 0).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</td>
     </tr>`;
     tbody.appendChild(tr);
   });
@@ -129,9 +131,9 @@ function atualizarLinhaPorDesconto(select, index, valorBase, peso_liquido = 0) {
 
   const valor_liquido = valorBase + acrescimoFrete + acrescimoCond - desconto;
 
-  document.getElementById(`acrescimo-${index}`).innerText = (acrescimoFrete + acrescimoCond).toFixed(4);
-  document.getElementById(`desconto-${index}`).innerText = desconto.toFixed(4);
-  document.getElementById(`valor_liquido-${index}`).innerText = valor_liquido.toFixed(2);
+  document.getElementById(`acrescimo-${index}`).innerText = (acrescimoFrete + acrescimoCond).toLocaleString('pt-BR', { minimumFractionDigits: 4, maximumFractionDigits: 4 });
+  document.getElementById(`desconto-${index}`).innerText = desconto.toLocaleString('pt-BR', { minimumFractionDigits: 4, maximumFractionDigits: 4 });
+  document.getElementById(`valor_liquido-${index}`).innerText = valor_liquido.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
   } catch (error) {
     console.error("Erro ao calcular linha:", error);
   }
@@ -418,9 +420,14 @@ function preencherTabelaSalva(produtos) {
       <td>
         <select onchange="atualizarLinhaPorDesconto(this, ${index}, ${p.valor}, ${p.peso_liquido || 0})">
           ${Object.entries(mapaDescontos).map(([codigo, percentual]) => `
-            <option value="${codigo}" ${p.desconto && parseFloat(p.desconto / p.valor).toFixed(4) == percentual ? "selected" : ""}>
+            <option value="${codigo}" ${
+              (p.desconto && parseFloat(p.desconto / p.valor).toFixed(4) == percentual)
+                ? "selected"
+                : (!p.desconto && codigo == '15' ? 'selected' : '')
+            }>
               ${codigo} - ${percentual}
             </option>
+
           `).join('')}
         </select>
       </td>
@@ -592,10 +599,7 @@ function gotoNextPage() {
   if (totalPages != null && currentPage >= totalPages) return;
   carregarProdutos(currentPage + 1);
 }
-
-
-
-  
+ 
 
 function coletarEstadoTela() {
   const estado = {
