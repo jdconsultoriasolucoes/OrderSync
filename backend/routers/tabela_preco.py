@@ -147,7 +147,7 @@ def filtro_grupo_produto():
     finally:
         db.close()
 
-@router.post("/tabela_preco/salvar")
+@router.post("/salvar")
 def salvar_tabela_preco(payload: TabelaPrecoCompleta):
     db = SessionLocal()
     try:
@@ -168,7 +168,7 @@ def salvar_tabela_preco(payload: TabelaPrecoCompleta):
         db.close()
 
 
-@router.put("/tabela_preco/{id}")
+@router.put("/{id}")
 def editar_produto(id: int, novo_produto: TabelaPreco):
     db = SessionLocal()
     produto = db.query(TabelaPrecoModel).get(id)
@@ -182,7 +182,7 @@ def editar_produto(id: int, novo_produto: TabelaPreco):
     return {"mensagem": "Produto atualizado com sucesso"}
 
 
-@router.delete("/tabela_preco/{id}")
+@router.delete("/{id}")
 def desativar_produto(id: int):
     db = SessionLocal()
     produto = db.query(TabelaPrecoModel).get(id)
