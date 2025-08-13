@@ -147,18 +147,38 @@ def filtro_grupo_produto():
     finally:
         db.close()
 
-@router.post("/salvar")
+@router.post("/salvar") 
 def salvar_tabela_preco(payload: TabelaPrecoCompleta):
     db = SessionLocal()
     try:
         for produto in payload.produtos:
             registro = TabelaPrecoModel(
+                # Cabeçalho
                 nome_tabela=payload.nome_tabela,
                 validade_inicio=payload.validade_inicio,
                 validade_fim=payload.validade_fim,
                 cliente=payload.cliente,
                 fornecedor=payload.fornecedor,
-                **produto.dict()
+
+                # Produto
+                codigo_tabela=produto.codigo_tabela,
+                descricao=produto.descricao,
+                embalagem=produto.embalagem,
+                peso_liquido=produto.peso_liquido,
+                peso_bruto=produto.peso_bruto,
+                valor=produto.valor,
+
+                # Mapeamentos corretos (no payload são desconto/acrescimo)
+                comissao_aplicada=(produto.desconto or 0.0),
+                ajuste_pagamento=(produto.acrescimo or 0.0),
+
+                fator_comissao=produto.fator_comissao,
+                plano_pagamento=produto.plano_pagamento,
+                frete_percentual=produto.frete_percentual,
+                frete_kg=produto.frete_kg,
+                valor_liquido=produto.valor_liquido,
+                grupo=produto.grupo,
+                departamento=produto.departamento,
             )
             db.add(registro)
 
