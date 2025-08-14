@@ -12,44 +12,43 @@ router = APIRouter()
 # Simula um banco de dados em memória
 tabelas_de_preco_db: List[TabelaPreco] = []
 
-
-@router.post("/TabelaPreco", response_model=TabelaPreco)
-def criar_tabela_preco(tabela: TabelaPreco):
-    tabela.id = len(tabelas_de_preco_db) + 1
-    tabelas_de_preco_db.append(tabela)
-    return tabela
-
-
-@router.get("/TabelaPreco", response_model=List[TabelaPreco])
-def listar_tabelas_preco():
-    return tabelas_de_preco_db
-
-
-@router.get("/TabelaPreco/{tabela_id}", response_model=TabelaPreco)
-def obter_tabela_preco(tabela_id: Optional [int]):
-    for tabela in tabelas_de_preco_db:
-        if tabela.id == tabela_id:
-            return tabela
-    raise HTTPException(status_code=404, detail="Tabela de preço não encontrada")
-
-
-@router.put("/TabelaPreco/{tabela_id}", response_model=TabelaPreco)
-def atualizar_tabela_preco(tabela_id: Optional [int], tabela_atualizada: TabelaPreco):
-    for idx, tabela in enumerate(tabelas_de_preco_db):
-        if tabela.id == tabela_id:
-            tabela_atualizada.id = tabela_id
-            tabelas_de_preco_db[idx] = tabela_atualizada
-            return tabela_atualizada
-    raise HTTPException(status_code=404, detail="Tabela de preço não encontrada")
-
-
-@router.delete("/TabelaPreco/{tabela_id}")
-def deletar_tabela_preco(tabela_id: Optional [int]):
-    for idx, tabela in enumerate(tabelas_de_preco_db):
-        if tabela.id == tabela_id:
-            del tabelas_de_preco_db[idx]
-            return {"message": "Tabela de preço deletada com sucesso"}
-    raise HTTPException(status_code=404, detail="Tabela de preço não encontrada")
+#@router.post("/TabelaPreco", response_model=TabelaPreco)
+#def criar_tabela_preco(tabela: TabelaPreco):
+#    tabela.id = len(tabelas_de_preco_db) + 1
+#    tabelas_de_preco_db.append(tabela)
+#    return tabela
+#
+#
+#@router.get("/TabelaPreco", response_model=List[TabelaPreco])
+#def listar_tabelas_preco():
+#    return tabelas_de_preco_db
+#
+#
+#@router.get("/TabelaPreco/{tabela_id}", response_model=TabelaPreco)
+#def obter_tabela_preco(tabela_id: Optional [int]):
+#    for tabela in tabelas_de_preco_db:
+#        if tabela.id == tabela_id:
+#            return tabela
+#    raise HTTPException(status_code=404, detail="Tabela de preço não encontrada")
+#
+#
+#@router.put("/TabelaPreco/{tabela_id}", response_model=TabelaPreco)
+#def atualizar_tabela_preco(tabela_id: Optional [int], tabela_atualizada: TabelaPreco):
+#    for idx, tabela in enumerate(tabelas_de_preco_db):
+#        if tabela.id == tabela_id:
+#            tabela_atualizada.id = tabela_id
+#            tabelas_de_preco_db[idx] = tabela_atualizada
+#            return tabela_atualizada
+#    raise HTTPException(status_code=404, detail="Tabela de preço não encontrada")
+#
+#
+#@router.delete("/TabelaPreco/{tabela_id}")
+#def deletar_tabela_preco(tabela_id: Optional [int]):
+#    for idx, tabela in enumerate(tabelas_de_preco_db):
+#        if tabela.id == tabela_id:
+#            del tabelas_de_preco_db[idx]
+#            return {"message": "Tabela de preço deletada com sucesso"}
+#    raise HTTPException(status_code=404, detail="Tabela de preço não encontrada")
 
 @router.get("/produtos_filtro")
 def filtrar_produtos_para_tabela_preco(
@@ -151,9 +150,12 @@ def filtro_grupo_produto():
 def salvar_tabela_preco(payload: TabelaPrecoCompleta):
     db = SessionLocal()
     try:
+        max_tid = db.execute(text("SELECT COALESCE(MAX(id_tabela), 0) FROM tb_tabela_preco")).scalar() or 0
+        id_tabela = int(max_tid) + 1
         for produto in payload.produtos:
             registro = TabelaPrecoModel(
                 # Cabeçalho
+                id_tabela=id_tabela,
                 nome_tabela=payload.nome_tabela,
                 validade_inicio=payload.validade_inicio,
                 validade_fim=payload.validade_fim,
@@ -188,34 +190,117 @@ def salvar_tabela_preco(payload: TabelaPrecoCompleta):
         db.close()
 
 
-@router.put("/{id}")
-def editar_produto(id: int, novo_produto: TabelaPreco):
-    db = SessionLocal()
-    produto = db.query(TabelaPrecoModel).get(id)
-    if not produto:
+@router.put("/{id_linha}")
+def editar_produto(id_linha: int, novo_produto: TabelaPreco):
+    with SessionLocal() as db:
+     produto = db.query(TabelaPrecoModel).get(id_linha)
+     if not produto:
         raise HTTPException(status_code=404, detail="Produto não encontrado")
 
-    for campo, valor in novo_produto.dict().items():
+     # Converte para dicionário
+     dados = novo_produto.dict()
+
+     # Bloqueia campos de identificador
+     dados.pop("id_linha", None)
+     dados.pop("id_tabela", None)
+
+     # Mapeia campos do schema para o model
+     if "desconto" in dados:
+        produto.comissao_aplicada = dados.pop("desconto") or 0.0
+
+     if "acrescimo" in dados:
+        produto.ajuste_pagamento = dados.pop("acrescimo") or 0.0
+
+     # Aplica os demais campos
+     for campo, valor in dados.items():
         setattr(produto, campo, valor)
 
-    db.commit()
-    return {"mensagem": "Produto atualizado com sucesso"}
+     db.commit()
+     return {"mensagem": "Produto atualizado com sucesso"}
 
 
-@router.delete("/{id}")
-def desativar_produto(id: int):
-    db = SessionLocal()
-    produto = db.query(TabelaPrecoModel).get(id)
-    if not produto:
-        raise HTTPException(status_code=404, detail="Produto não encontrado")
+@router.delete("/{id_tabela}")
+def desativar_tabela(id_tabela: int):
+    with SessionLocal() as db:
+        linhas = db.query(TabelaPrecoModel).filter_by(id_tabela=id_tabela, ativo=True).all()
+        if not linhas:
+            raise HTTPException(status_code=404, detail="Tabela não encontrada")
 
-    produto.ativo = False
-    produto.deletado_em = datetime.utcnow()
+        for r in linhas:
+            r.ativo = False
+            r.deletado_em = datetime.utcnow()
 
-    db.commit()
-    return {"mensagem": "Produto desativado com sucesso"}
-
+        db.commit()
+        return {"mensagem": "Tabela desativada com sucesso", "linhas_afetadas": len(linhas)}
 
 @router.post("/calcular_valores", response_model=List[ProdutoCalculado])
 def calcular_valores(payload: ParametrosCalculo):
     return calcular_valores_dos_produtos(payload)
+
+@router.get("/{id_tabela}")
+def listar_tabelas():
+    with SessionLocal() as db:
+        rows = db.execute(text("""
+            SELECT
+              id_tabela,
+              MIN(id_linha) AS any_row_id,
+              nome_tabela,
+              cliente,
+              fornecedor,
+              validade_inicio,
+              validade_fim,
+              MAX(criado_em) AS criado_em
+            FROM tb_tabela_preco
+            WHERE ativo = 1
+            GROUP BY id_tabela, nome_tabela, cliente, fornecedor, validade_inicio, validade_fim
+            ORDER BY criado_em DESC
+        """)).mappings().all()
+
+        # O front usa "tabela.id" para abrir/editar; devolvemos id = id_tabela
+        return [
+            {
+                "id": int(r["id_tabela"]),
+                "nome_tabela": r["nome_tabela"],
+                "cliente": r["cliente"],
+                "fornecedor": r["fornecedor"],
+                "validade_inicio": r["validade_inicio"],
+                "validade_fim": r["validade_fim"],
+            }
+            for r in rows
+        ]
+@router.get("/{id_tabela}")
+def obter_tabela(id_tabela: int):
+    with SessionLocal() as db:
+        cab = db.query(TabelaPrecoModel).filter_by(id_tabela=id_tabela, ativo=True).first()
+        if not cab:
+            raise HTTPException(status_code=404, detail="Tabela não encontrada")
+
+        itens = db.query(TabelaPrecoModel).filter_by(id_tabela=id_tabela, ativo=True).all()
+
+        return {
+            "id": id_tabela,
+            "nome_tabela": cab.nome_tabela,
+            "cliente": cab.cliente,
+            "fornecedor": cab.fornecedor,
+            "validade_inicio": cab.validade_inicio,
+            "validade_fim": cab.validade_fim,
+            "produtos": [
+                {
+                    "codigo_tabela": p.codigo_tabela,
+                    "descricao": p.descricao,
+                    "embalagem": p.embalagem,
+                    "peso_liquido": p.peso_liquido,
+                    "peso_bruto": p.peso_bruto,
+                    "valor": p.valor,
+                    "desconto": p.comissao_aplicada,
+                    "acrescimo": p.ajuste_pagamento,
+                    "fator_comissao": p.fator_comissao,
+                    "plano_pagamento": p.plano_pagamento,
+                    "frete_percentual": p.frete_percentual,
+                    "frete_kg": p.frete_kg,
+                    "valor_liquido": p.valor_liquido,
+                    "grupo": p.grupo,
+                    "departamento": p.departamento,
+                } for p in itens
+            ]
+        }

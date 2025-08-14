@@ -4,7 +4,8 @@ from datetime import date
 
 
 class TabelaPreco(BaseModel):
-    id: Optional[int] = Field(None, description="ID interno da tabela de preço")
+    id_tabela: Optional[int] = Field(None, description="ID da tabela de preço")
+    id_linha: Optional[int] = Field(None, description="ID interno da tabela de preço")
 
     # Dados principais
     nome_tabela: str = Field(..., description="Nome da tabela de preços")

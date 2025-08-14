@@ -259,8 +259,6 @@ async function salvarTabela() {
           plano_pagamento,
           frete_kg,
           frete_percentual: null,
-          ipi: false,
-          icms_st: false,
           valor_liquido,
           grupo: null,
           departamento: null
@@ -544,7 +542,7 @@ async function salvarEdicao() {
       produtos: produtosSelecionados
     };
 
-    const response = await fetch(`${API_BASE}/tabela_preco/${id}`, {
+    const response = await fetch(`${API_BASE}/tabela_preco/${id_linha}`, {
       method: "PUT",
       headers: {
         "Content-Type": "application/json"
