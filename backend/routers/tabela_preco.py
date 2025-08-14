@@ -251,7 +251,7 @@ def listar_tabelas():
               validade_fim,
               MAX(criado_em) AS criado_em
             FROM tb_tabela_preco
-            WHERE ativo = 1
+            WHERE ativo is TRUE
             GROUP BY id_tabela, nome_tabela, cliente, fornecedor, validade_inicio, validade_fim
             ORDER BY criado_em DESC
         """)).mappings().all()
