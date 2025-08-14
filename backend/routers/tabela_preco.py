@@ -237,7 +237,7 @@ def desativar_tabela(id_tabela: int):
 def calcular_valores(payload: ParametrosCalculo):
     return calcular_valores_dos_produtos(payload)
 
-@router.get("/{id_tabela}")
+@router.get("/")
 def listar_tabelas():
     with SessionLocal() as db:
         rows = db.execute(text("""
