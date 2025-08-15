@@ -719,3 +719,56 @@ if (linkVer) {
 
 
 };
+
+(() => {
+  const root = document.getElementById('tabela_preco');
+  if (!root) return; // só roda nesta página
+
+  const globalSel = root.querySelector('#tp_desconto_global');
+  const globalBtn = root.querySelector('#tp_btn_desconto_global');
+
+  // Preenche o select global copiando as opções do primeiro select de desconto da tabela
+  function preencherSelectGlobal() {
+    const primeiro = root.querySelector('select.desconto-select');
+    if (!primeiro || !globalSel) return;
+    if (globalSel.dataset.filled === '1') return; // evita duplicar
+    globalSel.innerHTML = primeiro.innerHTML;
+    globalSel.dataset.filled = '1';
+  }
+
+  // Marca a linha como personalizada e (se existir) recalcula valores da linha
+  root.addEventListener('change', (e) => {
+    if (e.target.matches('select.desconto-select')) {
+      e.target.dataset.custom = '1'; // esta linha não será sobrescrita pelo global
+      const tr = e.target.closest('tr');
+      if (typeof atualizarLinhaValorLiquido === 'function' && tr) {
+        atualizarLinhaValorLiquido(tr);
+      }
+    }
+  });
+
+  // Aplica o desconto global em todas as linhas (sem sobrescrever personalizadas)
+  function aplicarGlobal() {
+    if (!globalSel || !globalSel.value) return;
+    root.querySelectorAll('select.desconto-select').forEach((sel) => {
+      if (sel.dataset.custom === '1') return; // respeita edição manual
+      sel.value = globalSel.value;
+      sel.dispatchEvent(new Event('change', { bubbles: true })); // dispara seu recálculo
+    });
+  }
+
+  globalBtn?.addEventListener('click', aplicarGlobal);
+
+  // Observa a renderização da tabela e inicializa quando surgirem as linhas
+  const obs = new MutationObserver(() => {
+    if (root.querySelector('select.desconto-select')) preencherSelectGlobal();
+  });
+  obs.observe(root, { childList: true, subtree: true });
+
+  // Também tenta preencher já no carregamento (caso a tabela já esteja montada)
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', preencherSelectGlobal);
+  } else {
+    preencherSelectGlobal();
+  }
+})();
