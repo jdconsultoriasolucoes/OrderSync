@@ -1,0 +1,114 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Criação de Tabela de Preço</title>
+  <!-- Visual totalmente externo -->
+  <link rel="stylesheet" href="criacao_tabela_preco.css" />
+</head>
+<body>
+  <header class="container">
+    <h1>Criação de Tabela de Preço <span class="subtle">(etapa de conferência)</span></h1>
+    <div class="toolbar">
+      <button id="btn-buscar" class="btn btn-primary">Buscar Produtos</button>
+      <button id="btn-remover-selecionados" class="btn btn-danger">Remover selecionados</button>
+      <button id="btn-salvar" class="btn btn-green">Salvar Tabela</button>
+    </div>
+  </header>
+
+  <main class="container">
+    <!-- TOPO: Cabeçalho e parâmetros globais -->
+    <section class="card pad" aria-labelledby="sec-topo">
+      <h2 id="sec-topo" class="section-title">Dados principais</h2>
+      <div class="grid grid-4 grid-gap">
+        <div class="field">
+          <label for="nome_tabela">Nome da Tabela</label>
+          <input id="nome_tabela" type="text" placeholder="Ex.: Tabela Promocional Set/25" />
+        </div>
+        <div class="field">
+          <label for="cliente">Cliente</label>
+          <input id="cliente" type="text" placeholder="Código ou nome do cliente" />
+        </div>
+        <div class="field">
+          <label for="validade_inicio">Data Início</label>
+          <input id="validade_inicio" type="date" />
+        </div>
+        <div class="field">
+          <label for="validade_fim">Data Fim</label>
+          <input id="validade_fim" type="date" />
+        </div>
+      </div>
+
+      <div class="grid grid-3 grid-gap">
+        <div class="field">
+          <label for="frete_kg">Frete por KG <span class="hint">(aplica-se por linha)</span></label>
+          <input id="frete_kg" type="number" step="0.01" min="0" value="0" />
+        </div>
+        <div class="field">
+          <label for="plano_pagamento">Condição de Pagamento</label>
+          <select id="plano_pagamento"></select>
+          <div class="hint" id="hint-condicao">Carregando condições…</div>
+        </div>
+        <div class="field">
+          <label for="desconto_global">Desconto / Fator de Comissão</label>
+          <div class="inline">
+            <select id="desconto_global" class="grow"></select>
+            <input id="fator_global" type="number" step="0.0001" min="0" max="1" placeholder="Fator (ex.: 0.1500)" />
+          </div>
+          <div class="hint">Selecione um desconto ou informe um fator (0–1). Você pode <b>aplicar a todos</b> abaixo.</div>
+          <div class="toolbar left-gap">
+            <button class="btn" id="btn-aplicar-todos">Aplicar fator a todos</button>
+            <span class="pill"><span>Taxa Condição:</span><strong id="pill-taxa">—</strong></span>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <div class="divider"></div>
+
+    <!-- BASE: Tabela de itens selecionados -->
+    <section class="card pad" aria-labelledby="sec-itens">
+      <h2 id="sec-itens" class="section-title">Produtos selecionados</h2>
+      <div class="hint">Origem: sessionStorage <code>criacao_tabela_preco_produtos</code> (array de itens). Alternativamente, chame esta página com <code>?id=</code> para carregar de <code>/tabela_preco/{id}</code>.</div>
+
+      <div class="table-wrap">
+        <table id="tabela-itens">
+          <thead>
+            <tr>
+              <th><input id="chk-all" type="checkbox" /></th>
+              <th>Código</th>
+              <th>Descrição</th>
+              <th>Embalagem</th>
+              <th class="right">Peso Líq.</th>
+              <th class="right">Valor</th>
+              <th class="right">Fator Comissão</th>
+              <th>Desconto</th>
+              <th class="right">Cond. Pagto (R$)</th>
+              <th class="right">Frete (R$)</th>
+              <th class="right">Desc. aplicado (R$)</th>
+              <th>Grupo / Depto.</th>
+              <th class="right">Valor Final (R$)</th>
+            </tr>
+          </thead>
+          <tbody id="tbody-itens"></tbody>
+        </table>
+      </div>
+    </section>
+  </main>
+
+<div class="toolbar">
+  <button id="btn-listar" class="btn">Listar Tabelas</button>
+  <button id="btn-buscar" class="btn btn-primary">Buscar Produtos</button>
+  
+  <!-- aparecem quando entrar em modo visualização (?id=) -->
+  <button id="btn-editar" class="btn hidden">Editar</button>
+  <button id="btn-duplicar" class="btn hidden">Duplicar</button>
+
+  <button id="btn-remover-selecionados" class="btn btn-danger">Remover selecionados</button>
+  <button id="btn-salvar" class="btn btn-green">Salvar Tabela</button>
+</div>
+  <!-- Lógica totalmente externa -->
+  <script src="criacao_tabela_preco.js"></script>
+</body>
+</html>

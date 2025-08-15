@@ -24,7 +24,7 @@ async function carregarTabelas() {
       <td>${tabela.fornecedor}</td>
       <td>${formatarData(tabela.validade_inicio)} → ${formatarData(tabela.validade_fim)}</td>
       <td>
-        <button onclick="window.location.href='tabela_preco.html?id=${tabela.id}'">Editar</button>
+        <button onclick="window.location.href='criacao_tabela_preco.html?id=${tabela.id}'">Editar</button>
         <button onclick="abrirModalDelecao(${tabela.id})">Excluir</button>
       </td>
       `;
@@ -56,7 +56,7 @@ function selecionarTabela() {
     alert("Selecione uma tabela para continuar.");
     return;
   }
-  window.location.href = `tabela_preco.html?id=${tabelaSelecionadaId}`;
+  window.location.href = `criacao_tabela_preco.html?id=${tabelaSelecionadaId}`;
 }
 
 function deletarTabela() {
@@ -92,7 +92,7 @@ async function confirmarDelecao(confirmado) {
 }
 
 function voltar() {
-  window.location.href = "tabela_preco.html";
+  window.location.href = "criacao_tabela_preco.html";
 }
 
 function abrirModalDelecao(id) {
