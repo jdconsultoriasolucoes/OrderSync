@@ -722,53 +722,80 @@ if (linkVer) {
 
 (() => {
   const root = document.getElementById('tabela_preco');
-  if (!root) return; // só roda nesta página
+  if (!root) return;
 
+  const API = '/api/descontos/listar'; // ajuste para seu endpoint real
   const globalSel = root.querySelector('#tp_desconto_global');
   const globalBtn = root.querySelector('#tp_btn_desconto_global');
 
-  // Preenche o select global copiando as opções do primeiro select de desconto da tabela
-  function preencherSelectGlobal() {
-    const primeiro = root.querySelector('select.desconto-select');
-    if (!primeiro || !globalSel) return;
-    if (globalSel.dataset.filled === '1') return; // evita duplicar
-    globalSel.innerHTML = primeiro.innerHTML;
-    globalSel.dataset.filled = '1';
+  let descontos = [];
+  let valorGlobal = '';
+
+  async function carregarDescontos() {
+    const r = await fetch(API);
+    const data = await r.json();
+    descontos = (Array.isArray(data) ? data : data.itens || []).map(d => ({
+      value: String(d.id), text: d.nome
+    }));
   }
 
-  // Marca a linha como personalizada e (se existir) recalcula valores da linha
-  root.addEventListener('change', (e) => {
-    if (e.target.matches('select.desconto-select')) {
-      e.target.dataset.custom = '1'; // esta linha não será sobrescrita pelo global
-      const tr = e.target.closest('tr');
+  function preencherSelect(select, manterValor = false) {
+    if (!select) return;
+    const atual = manterValor ? select.value : '';
+    select.innerHTML = descontos.map(d => `<option value="${d.value}">${d.text}</option>`).join('');
+    if (manterValor && atual && [...select.options].some(o => o.value === atual)) {
+      select.value = atual;
+    }
+  }
+
+  function initLinhas(aplicarDefault = false) {
+    root.querySelectorAll('select.desconto-select').forEach(sel => {
+      preencherSelect(sel, true);
+      if (aplicarDefault && !sel.dataset.custom && valorGlobal) {
+        if ([...sel.options].some(o => o.value === valorGlobal)) sel.value = valorGlobal;
+      }
+      const tr = sel.closest('tr');
       if (typeof atualizarLinhaValorLiquido === 'function' && tr) {
+        sel.dispatchEvent(new Event('change', { bubbles: true }));
+        sel.dispatchEvent(new Event('input', { bubbles: true }));
         atualizarLinhaValorLiquido(tr);
       }
-    }
-  });
-
-  // Aplica o desconto global em todas as linhas (sem sobrescrever personalizadas)
-  function aplicarGlobal() {
-    if (!globalSel || !globalSel.value) return;
-    root.querySelectorAll('select.desconto-select').forEach((sel) => {
-      if (sel.dataset.custom === '1') return; // respeita edição manual
-      sel.value = globalSel.value;
-      sel.dispatchEvent(new Event('change', { bubbles: true })); // dispara seu recálculo
     });
   }
 
+  root.addEventListener('change', (e) => {
+    if (e.target.matches('select.desconto-select')) {
+      e.target.dataset.custom = '1';
+      const tr = e.target.closest('tr');
+      if (typeof atualizarLinhaValorLiquido === 'function' && tr) atualizarLinhaValorLiquido(tr);
+    }
+  });
+
+  function aplicarGlobal() {
+    if (!globalSel) return;
+    valorGlobal = globalSel.value;
+    root.querySelectorAll('select.desconto-select').forEach(sel => {
+      if (sel.dataset.custom === '1') return;
+      if ([...sel.options].some(o => o.value === valorGlobal)) {
+        sel.value = valorGlobal;
+        sel.dispatchEvent(new Event('change', { bubbles: true }));
+        sel.dispatchEvent(new Event('input', { bubbles: true }));
+      }
+    });
+  }
+
+  globalSel?.addEventListener('change', aplicarGlobal);
   globalBtn?.addEventListener('click', aplicarGlobal);
 
-  // Observa a renderização da tabela e inicializa quando surgirem as linhas
-  const obs = new MutationObserver(() => {
-    if (root.querySelector('select.desconto-select')) preencherSelectGlobal();
-  });
+  const obs = new MutationObserver(() => descontos.length && initLinhas(true));
   obs.observe(root, { childList: true, subtree: true });
 
-  // Também tenta preencher já no carregamento (caso a tabela já esteja montada)
-  if (document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', preencherSelectGlobal);
-  } else {
-    preencherSelectGlobal();
-  }
+  (async function init() {
+    await carregarDescontos();
+    if (globalSel) {
+      preencherSelect(globalSel);
+      valorGlobal = globalSel.value || '';
+    }
+    initLinhas(true);
+  })();
 })();
