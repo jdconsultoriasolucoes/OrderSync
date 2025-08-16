@@ -312,9 +312,9 @@ async function salvarTabela() {
 // === Bootstrap ===
 document.addEventListener('DOMContentLoaded', () => {
   // Eventos globais
-  document.getElementById('btn-aplicar-todos').addEventListener('click', aplicarFatorGlobal);
-  document.getElementById('btn-remover-selecionados').addEventListener('click', removerSelecionados);
-  document.getElementById('btn-salvar').addEventListener('click', salvarTabela);
+  document.getElementById('btn-aplicar-todos')?.addEventListener('click', aplicarFatorGlobal);
+  document.getElementById('btn-remover-selecionados')?.addEventListener('click', removerSelecionados);
+  document.getElementById('btn-salvar')?.addEventListener('click', salvarTabela);
   
   const btnBuscar = document.getElementById('btn-buscar');
   if (btnBuscar) btnBuscar.addEventListener('click', () => { window.location.href = 'tabela_preco.html'; });
@@ -327,13 +327,13 @@ document.addEventListener('DOMContentLoaded', () => {
 
   const btnDuplicar = document.getElementById('btn-duplicar');
   if (btnDuplicar) btnDuplicar.addEventListener('click', onDuplicar);
-  });
-
-  document.getElementById('plano_pagamento').addEventListener('change', () => { atualizarPillTaxa(); recalcTudo(); });
+ 
+  document.getElementById('plano_pagamento').addEventListener('change', () => { atualizarPillTaxa(); recalcTudo(); 
+    });
   document.getElementById('frete_kg').addEventListener('input', recalcTudo);
   document.getElementById('chk-all').addEventListener('change', (e) => {
   document.querySelectorAll('#tbody-itens .chk-linha').forEach(ch => ch.checked = e.target.checked);
-    
+    });
 
   // Init
   (async function init(){
