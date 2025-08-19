@@ -233,3 +233,33 @@ input[type="text"], select {
 .data-table .num::after {
   content: "";
 }
+
+/* Toolbar em linha, podendo quebrar */
+.toolbar{
+  display:flex;
+  align-items:flex-end;
+  gap:12px;
+  flex-wrap:wrap;
+}
+
+/* Campos */
+.toolbar .field{ display:flex; flex-direction:column; gap:4px; }
+.toolbar select,
+.toolbar input[type="text"]{ height:36px; padding:6px 10px; border:1px solid #ccc; border-radius:8px; }
+
+/* 🔧 Busca não ocupa tudo: largura dinâmica controlada */
+.toolbar .grow{ flex:0 1 auto; }                                 /* não “estica” a linha inteira */
+.toolbar .grow input{ width:clamp(240px, 40vw, 520px); }          /* min 240px, cresce até 40vw, máx 520px */
+
+/* Botão alinhado pela base e perto do input */
+.toolbar .btn{ height:36px; padding:0 14px; border-radius:8px; }
+
+.toolbar .grow { 
+  flex: 0 0 auto;
+}
+
+/* Define uma largura fixa só para o input de busca */
+#filtro-palavra {
+  height: 25px;          /* deixe igual aos selects ou no tamanho que preferir */
+  max-height: 180px;      /* garante que não passe disso */
+}

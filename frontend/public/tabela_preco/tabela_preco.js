@@ -2,23 +2,37 @@ const API_BASE = "https://ordersync-backend-edjq.onrender.com";
 
 let currentPage = 1;
 let pageSize = 25;
-let totalPages = null; 
+let totalPages = null;
+let preSelecionadosCodigos = new Set(); // para pré-marcar checkboxes (enviado pelo pai)
 
-let cacheListaCompleta = null; // fallback para paginação no cliente
+/* ========================
+   Bootstrap
+======================== */
 
-document.addEventListener("DOMContentLoaded", function () {
-  // 1) Filtro que MUDA a lista -> refaz fetch (vai no backend de novo)
-  document.getElementById("grupo").addEventListener("change", () => {
+document.addEventListener("DOMContentLoaded", () => {
+  const selGrupo      = document.getElementById("grupo");
+  const selFornecedor = document.getElementById("filtro-fornecedor");
+  const btnFiltrar    = document.getElementById("btn-filtrar");
+  const btnLimpar     = document.getElementById("btn-limpar");
+  const ps            = document.getElementById("page_size");
+  const inpPalavra    = document.getElementById("filtro-palavra");
+
+  // Filtros
+  selGrupo?.addEventListener("change",      () => { currentPage = 1; carregarProdutos(); });
+  selFornecedor?.addEventListener("change", () => { currentPage = 1; carregarProdutos(); });
+
+  // Botões da toolbar
+  btnFiltrar?.addEventListener("click", () => { currentPage = 1; carregarProdutos(); });
+  btnLimpar?.addEventListener("click", () => {
+    if (selGrupo) selGrupo.value = "";
+    if (selFornecedor) selFornecedor.value = "";
+    if (inpPalavra) inpPalavra.value = "";   // limpa a palavra
+    fornecedoresMap.clear();                 // limpa cache de fornecedores
     currentPage = 1;
     carregarProdutos();
   });
 
-  // 2) Filtros que NÃO mudam a lista -> só recalculam a página atual (sem backend)
-  document.getElementById("plano_pagamento").addEventListener("change", recalcTabelaAtual);
-  document.getElementById("frete_kg").addEventListener("change", recalcTabelaAtual);
-
-  // 3) Itens por página -> refaz fetch com novo page_size
-  const ps = document.getElementById("page_size");
+  // Itens por página
   if (ps) {
     pageSize = parseInt(ps.value, 10) || 25;
     ps.addEventListener("change", () => {
@@ -27,555 +41,224 @@ document.addEventListener("DOMContentLoaded", function () {
       carregarProdutos();
     });
   }
+
+  // Busca por palavra
+  inpPalavra?.addEventListener("keydown", (e) => {
+    if (e.key === "Enter") {
+      e.preventDefault();
+      currentPage = 1;
+      carregarProdutos();
+    }
+  });
+  inpPalavra?.addEventListener("input", debounce(() => {
+    currentPage = 1;
+    carregarProdutos();
+  }, 300));
+
+  // Botões do rodapé
+  document.getElementById("btn-adicionar-selecionados")
+    ?.addEventListener("click", enviarSelecionados);
+  document.getElementById("btn-cancelar")
+    ?.addEventListener("click", () => window.parent?.postMessage({ type: "CLOSE_DIALOG" }, "*"));
 });
 
+
+// fora do DOMContentLoaded
+const fornecedoresMap = new Map(); 
+// chave = nome normalizado; valor = nome original para exibir
+function norm(s) { return String(s || "").trim().toUpperCase(); }
+
+function normText(s) {
+  return String(s || '')
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '') // remove diacríticos
+    .toLowerCase()
+    .trim();
+}
+
+// Verifica se o produto combina com o termo
+function matchesTerm(p, termN) {
+  if (!termN) return true;
+  return [
+    p.codigo_tabela,
+    p.descricao,
+    p.marca,
+    p.grupo,
+    p.embalagem
+  ].some(v => normText(v).includes(termN));
+}
+
+// Debounce pra não fazer requisição a cada tecla
+function debounce(fn, wait = 300) {
+  let t;
+  return (...args) => {
+    clearTimeout(t);
+    t = setTimeout(() => fn.apply(null, args), wait);
+  };
+}
+
+
+// Recebe do pai o estado atual para pré‑marcar
+window.addEventListener("message", (evt) => {
+  if (!evt.data || !evt.data.type) return;
+  if (evt.data.type === "INIT_STATE") {
+    preSelecionadosCodigos = new Set((evt.data.payload || []).map(p => p.codigo || p.codigo_tabela));
+    // se já houver lista, re-render para aplicar a marcação
+    marcarPreSelecionados();
+  }
+});
+
+window.onload = async function () {
+  await carregarGrupos();
+  await carregarProdutos();
+};
+
+/* ========================
+   Fetch & Render
+======================== */
+async function carregarGrupos() {
+  try {
+    const r = await fetch(`${API_BASE}/tabela_preco/filtro_grupo_produto`);
+    if (!r.ok) throw new Error("Erro ao buscar grupos");
+    const grupos = await r.json();
+
+    const selectGrupo = document.getElementById("grupo");
+    selectGrupo.innerHTML = "<option value=''>Todos os grupos</option>";
+
+    grupos.forEach(item => {
+      const grupo = item.grupo || item;
+      const opt = document.createElement("option");
+      opt.value = grupo;
+      opt.textContent = grupo;
+      selectGrupo.appendChild(opt);
+    });
+  } catch (e) {
+    console.error(e);
+  }
+}
+
+function coletarFornecedores(lista) {
+  (lista || []).forEach(p => {
+    const show = p.fornecedor;
+    const key = norm(show);
+    if (show && key && !fornecedoresMap.has(key)) {
+      fornecedoresMap.set(key, show); // guarda o “bonitinho” pra exibir
+    }
+  });
+}
+
+function renderFornecedoresDropdown() {
+  const sel = document.getElementById("filtro-fornecedor");
+  if (!sel) return;
+
+  const selecionado = sel.value;
+  sel.innerHTML = "<option value=''>Todos</option>";
+
+  // ordena alfabeticamente pelo valor exibido
+  const valores = Array.from(fornecedoresMap.values()).sort((a,b) =>
+    a.localeCompare(b, 'pt-BR', { sensitivity: 'base' })
+  );
+
+  for (const f of valores) {
+    const o = document.createElement("option");
+    o.value = f; o.textContent = f;
+    sel.appendChild(o);
+  }
+
+  if ([...sel.options].some(o => o.value === selecionado)) {
+    sel.value = selecionado; // mantém a seleção do usuário
+  }
+}
 
 function carregarProdutos(page = currentPage) {
   currentPage = page;
 
-  const grupo = document.getElementById("grupo").value;
+  const grupo      = document.getElementById("grupo")?.value || "";
+  const fornecedor = document.getElementById("filtro-fornecedor")?.value || "";
+  const termo      = document.getElementById("filtro-palavra")?.value?.trim() || "";
+  const termoN     = normText(termo);
 
   const url = new URL(`${API_BASE}/tabela_preco/produtos_filtro`);
-  if (grupo) url.searchParams.append("grupo", grupo);
+  if (grupo)      url.searchParams.append("grupo", grupo);
+  if (fornecedor) url.searchParams.append("fornecedor", fornecedor);
+  if (termo)      url.searchParams.append("q", termo); // ajuste se o nome do param for outro
   url.searchParams.append("page", currentPage);
   url.searchParams.append("page_size", pageSize);
 
   fetch(url)
-    .then((response) => {
-      if (!response.ok) throw new Error("Erro ao buscar produtos");
-      return response.json();
-    })
-    .then((data) => {
-      let items = [];
-      let total = null;
+    .then(r => { if (!r.ok) throw new Error("Erro ao buscar produtos"); return r.json(); })
+    .then(data => {
+      const lista = Array.isArray(data) ? data
+                  : (Array.isArray(data.items) ? data.items : []);
 
+      // dropdown de fornecedor (distinct)
+      coletarFornecedores(lista);
+      renderFornecedoresDropdown();
+
+      // aplica filtros locais (garante mesmo se o backend não filtrar)
+      let base = lista;
+      if (fornecedor) base = base.filter(p => p.fornecedor === fornecedor);
+      if (termoN)     base = base.filter(p => matchesTerm(p, termoN));
+
+      let items = [], total = 0;
       if (Array.isArray(data)) {
-        // Backend sem paginação: pagina no cliente
-        cacheListaCompleta = data.slice();
         const start = (currentPage - 1) * pageSize;
-        const end = start + pageSize;
-        items = cacheListaCompleta.slice(start, end);
-        total = cacheListaCompleta.length;
-      } else if (data && Array.isArray(data.items)) {
-        // Backend paginado: usa dados do server
-        items = data.items;
-        total = typeof data.total === "number" ? data.total : data.items.length;
+        const end   = start + pageSize;
+        items = base.slice(start, end);
+        total = base.length;
       } else {
-        items = [];
-        total = 0;
+        items = base;
+        total = typeof data.total === "number" ? data.total : base.length;
       }
 
       preencherTabela(items);
-
-      // Aplica o cálculo linha a linha depois de renderizar
-      items.forEach((p, index) => {
-        const selectDesconto = document.querySelector(
-          `#tabela-produtos-body tr:nth-child(${index + 1}) select`
-        );
-        if (selectDesconto) {
-          const valor = Number(p.valor) || 0;
-          const peso  = Number(p.peso_liquido) || 0;
-          atualizarLinhaPorDesconto(selectDesconto, index, valor, peso);
-        }
-      });
-
       atualizarPaginacaoUI(total);
+      if (typeof marcarPreSelecionados === "function") marcarPreSelecionados();
     })
-    .catch((e) => console.error("Erro em carregarProdutos:", e));
+    .catch(e => console.error("Erro em carregarProdutos:", e));
 }
-
 
 function preencherTabela(produtos) {
   const tbody = document.getElementById("tabela-produtos-body");
   tbody.innerHTML = "";
 
-  produtos.forEach((p, index) => {
+  produtos.forEach(p => {
     const tr = document.createElement("tr");
     tr.innerHTML = `
-      <td><input type="checkbox" class="produto-checkbox"></td>
-      <td>${p.codigo_tabela}</td>
-      <td>${p.descricao}</td>
-      <td>${p.embalagem}</td>
-      <td class="num">${(p.peso_liquido ?? 0).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</td>
-      <td class="num">${(p.valor ?? 0).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</td>
-      <td>
-        <select onchange="atualizarLinhaPorDesconto(this, ${index}, ${p.valor}, ${p.peso_liquido || 0})">
-            ${Object.entries(mapaDescontos).map(([codigo, percentual]) => `
-              <option value="${codigo}" ${codigo == '15' ? 'selected' : ''}>
-              ${codigo} - ${percentual}
-              </option>
-            `).join('')}
-        </select>
-      </td>
-      <td id="acrescimo-${index}">0.0000</td>
-      <td id="desconto-${index}">0.0000</td>
-      <td id="valor_liquido-${index}" class="num">${(p.valor_liquido ?? 0).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</td>
-    </tr>`;
-    tbody.appendChild(tr);
-  });
-}
-
-function atualizarLinhaPorDesconto(select, index, valorBase, peso_liquido = 0) {
-  try{
-  const idDesconto = select.value;
-  const fator = mapaDescontos[idDesconto] || 0;
-
-  const frete_kg = parseFloat(document.getElementById("frete_kg").value) || 0;
-
-  const planoSelecionado = document.getElementById("plano_pagamento").value;
-  const taxaCondicao = parseFloat(mapaCondicoesPagamento[planoSelecionado]) || 0;
-
-  const acrescimoFrete = (frete_kg / 1000) * (peso_liquido || 0);
-  const acrescimoCond = valorBase * taxaCondicao;
-  const desconto = valorBase * fator;
-
-  const valor_liquido = valorBase + acrescimoFrete + acrescimoCond - desconto;
-
-  document.getElementById(`acrescimo-${index}`).innerText = (acrescimoFrete + acrescimoCond).toLocaleString('pt-BR', { minimumFractionDigits: 4, maximumFractionDigits: 4 });
-  document.getElementById(`desconto-${index}`).innerText = desconto.toLocaleString('pt-BR', { minimumFractionDigits: 4, maximumFractionDigits: 4 });
-  document.getElementById(`valor_liquido-${index}`).innerText = valor_liquido.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
-  } catch (error) {
-    console.error("Erro ao calcular linha:", error);
-  }
-}
-
-
-async function carregarGrupos() {
-  try {
-    const response = await fetch(`${API_BASE}/tabela_preco/filtro_grupo_produto`);
-    if (!response.ok) throw new Error("Erro ao buscar grupos");
-
-    const grupos = await response.json();
-    const selectGrupo = document.getElementById("grupo");
-
-    selectGrupo.innerHTML = "<option value=''>Todos os grupos</option>";
-
-    grupos.forEach(item => {
-      const grupo = item.grupo || item;  // cobre os dois casos: objeto ou string simples
-      const option = document.createElement("option");
-      option.value = grupo;
-      option.textContent = grupo;
-      selectGrupo.appendChild(option);
-    });
-  } catch (error) {
-    console.error("Erro ao carregar grupos:", error);
-  }
-}
-
-let mapaCondicoesPagamento = {};
-
-async function carregarCondicoesPagamento() {
-  try {
-    const response = await fetch(`${API_BASE}/tabela_preco/condicoes_pagamento`);
-    const condicoes = await response.json();
-
-    const select = document.getElementById("plano_pagamento");
-    select.innerHTML = "<option value=''>Selecione</option>";
-
-    mapaCondicoesPagamento = {};
-    condicoes.forEach(cond => {
-      // 🔹 usa o nome correto do backend:
-      mapaCondicoesPagamento[cond.codigo] = parseFloat(cond.taxa_condicao) || 0;
-
-    const option = document.createElement("option");
-      option.value = cond.codigo;
-      option.textContent = `${cond.codigo} - ${cond.descricao}`;
-      select.appendChild(option);
-    });
-
-    // ⬇️ Quando mudar o valor do select, recarrega os produtos
-    select.addEventListener("change", recalcTabelaAtual);
-
-  } catch (error) {
-    console.error("Erro ao carregar condições de pagamento:", error);
-  }
-}
-
-function recalcTabelaAtual() {
-  const linhas = document.querySelectorAll("#tabela-produtos-body tr");
-  linhas.forEach((linha, index) => {
-    const selectDesconto = linha.querySelector("select");
-    if (!selectDesconto) return;
-
-    const valor = parseFloat(linha.children[5].innerText) || 0; // coluna Valor
-    const peso  = parseFloat(linha.children[4].innerText) || 0; // coluna Peso Líquido
-    atualizarLinhaPorDesconto(selectDesconto, index, valor, peso);
-  });
-}
-let mapaDescontos = {};
-
-async function carregarDescontos() {
-    const response = await fetch(`${API_BASE}/tabela_preco/descontos`);
-    const dados = await response.json();
-
-    dados.forEach(item => {
-        mapaDescontos[item.codigo] = item.percentual;
-    });
-}
-
-async function salvarTabela() {
-  try {
-    const nome_tabela = document.getElementById("nome_tabela").value.trim();
-    const cliente = document.getElementById("cliente").value.trim();
-    const fornecedor = document.getElementById("fornecedor").value.trim();
-    const validade_inicio = document.getElementById("validade_inicio").value;
-    const validade_fim = document.getElementById("validade_fim").value;
-    const plano_pagamento = document.getElementById("plano_pagamento").value || null;
-    const frete_kg = parseFloat(document.getElementById("frete_kg").value) || 0;
-
-    const linhas = document.querySelectorAll("#tabela-produtos-body tr");
-    const produtosSelecionados = [];
-
-    linhas.forEach((linha, index) => {
-      const checkbox = linha.querySelector(".produto-checkbox");
-      if (checkbox && checkbox.checked) {
-        const codigo_tabela = linha.children[1].innerText;
-        const descricao = linha.children[2].innerText;
-        const embalagem = linha.children[3].innerText;
-        const peso_liquido = parseFloat(linha.children[4].innerText) || 0;
-        const valor = parseFloat(linha.children[5].innerText) || 0;
-        const selectDesconto = linha.children[6].querySelector("select");
-        const desconto_id = selectDesconto.value;
-        const desconto_percentual = mapaDescontos[desconto_id] || 0;
-        const acrescimo = parseFloat(document.getElementById(`acrescimo-${index}`).innerText) || 0;
-        const valor_liquido = parseFloat(document.getElementById(`valor_liquido-${index}`).innerText) || 0;
-
-        const produto = {
-          nome_tabela,
-          validade_inicio,
-          validade_fim,
-          cliente,
-          fornecedor,
-
-          codigo_tabela,
-          descricao,
-          embalagem,
-          peso_liquido,
-          peso_bruto: peso_liquido, // por enquanto igual
-          valor,
-          desconto: parseFloat((valor * desconto_percentual).toFixed(4)),
-          acrescimo: parseFloat(acrescimo.toFixed(4)),
-          fator_comissao: 0,
-          plano_pagamento,
-          frete_kg,
-          frete_percentual: null,
-          valor_liquido,
-          grupo: null,
-          departamento: null
-        };
-
-        produtosSelecionados.push(produto);
-      }
-    });
-
-    if (produtosSelecionados.length === 0) {
-      alert("Selecione ao menos um produto para salvar.");
-      return;
-    }
-
-    const payload = {
-      nome_tabela,
-      validade_inicio,
-      validade_fim,
-      cliente,
-      fornecedor,
-      produtos: produtosSelecionados
-    };
-
-    const response = await fetch(`${API_BASE}/tabela_preco/salvar`, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json"
-      },
-      body: JSON.stringify(payload)
-    });
-
-    if (!response.ok) {
-      const erro = await response.json();
-      throw new Error(erro.detail || "Erro ao salvar a tabela de preços.");
-    }
-
-    const resultado = await response.json();
-    alert(`✅ Tabela salva com sucesso! ${resultado.qtd_produtos} produtos incluídos.`);
-
-    // Opcional: redirecionar ou limpar o formulário
-    // window.location.href = "/tabela_preco/listar.html";
-
-  } catch (error) {
-    console.error("Erro ao salvar a tabela:", error);
-    alert(`❌ Erro ao salvar a tabela: ${error.message}`);
-  }
-}
-
-
-async function desativarTabela(id) {
-  if (!confirm("Tem certeza que deseja desativar esta tabela?")) return;
-
-  try {
-    const response = await fetch(`${API_BASE}/tabela_preco/${id}`, { method: "DELETE" });
-    if (!response.ok) throw new Error("Erro ao desativar.");
-
-    alert("Tabela desativada com sucesso.");
-    // nesta página não existe carregarTabelas(); redireciona para a lista
-    window.location.href = "listar_tabelas.html";
-  } catch (error) {
-    console.error("Erro ao desativar:", error);
-    alert("Erro ao desativar a tabela.");
-  }
-}
-
-async function carregarTabelaSelecionada(id) {
-  try {
-    const response = await fetch(`${API_BASE}/tabela_preco/${id}`);
-    if (!response.ok) throw new Error("Tabela não encontrada.");
-
-    const tabela = await response.json();
-    
-    // Preenche os dados principais
-    document.getElementById("nome_tabela").value = tabela.nome_tabela;
-    document.getElementById("cliente").value = tabela.cliente;
-    document.getElementById("fornecedor").value = tabela.fornecedor;
-    document.getElementById("validade_inicio").value = tabela.validade_inicio;
-    document.getElementById("validade_fim").value = tabela.validade_fim;
-    document.getElementById("frete_kg").value = tabela.frete_kg || 0;
-
-    // TODO: carregar produtos salvos (depois)
-    preencherTabelaSalva(tabela.produtos || []);
-
-    bloquearCampos();
-    mostrarBotoesAcao();
-  } catch (error) {
-    console.error("Erro ao carregar tabela selecionada:", error);
-    alert("Erro ao carregar tabela selecionada.");
-  }
-}
-
-function bloquearCampos() {
-  const inputs = document.querySelectorAll("input, select, textarea");
-  inputs.forEach(el => el.disabled = true);
-}
-
-function desbloquearCampos() {
-  const inputs = document.querySelectorAll("input, select, textarea");
-  inputs.forEach(el => el.disabled = false);
-}
-
-// Mostra botões "Editar" e "Duplicar"
-function mostrarBotoesAcao() {
-  const container = document.createElement("div");
-  container.id = "acoes-container";
-  container.style.marginTop = "20px";
-
- const btnEditar = document.createElement("button");
-btnEditar.innerText = "Editar";
-btnEditar.className = "btn btn-editar";
-btnEditar.onclick = () => {
-  desbloquearCampos();
-  mostrarBotoesSalvarCancelar();
-};
-
-
-  const btnDuplicar = document.createElement("button");
-  btnDuplicar.innerText = "Duplicar";
-  btnDuplicar.className = "btn btn-duplicar";
-  btnDuplicar.onclick = () => {
-    desbloquearCampos();
-    document.getElementById("nome_tabela").value = "";
-  };
-
-  const btnDeletar = document.createElement("button");
-  btnDeletar.innerText = "Excluir";
-  btnDeletar.className = "btn btn-excluir";
-  btnDeletar.style.marginLeft = "10px";
-  btnDeletar.onclick = () => {
-    const urlParams = new URLSearchParams(window.location.search);
-    const id = urlParams.get("id");
-    if (id) desativarTabela(id);
-  };
-
-  container.appendChild(btnEditar);
-  container.appendChild(btnDuplicar);
-  container.appendChild(btnDeletar);
-
-  const main = document.querySelector("main");
-  main.appendChild(container);
-}
-
-function preencherTabelaSalva(produtos) {
-  const tbody = document.getElementById("tabela-produtos-body");
-  tbody.innerHTML = "";
-
-  produtos.forEach((p, index) => {
-    const tr = document.createElement("tr");
-
-    tr.innerHTML = `
-      <td><input type="checkbox" class="produto-checkbox" checked></td>
+      <td><input type="checkbox" class="produto-checkbox" data-codigo="${p.codigo_tabela}"></td>
       <td>${p.codigo_tabela}</td>
       <td>${p.descricao}</td>
       <td>${p.embalagem ?? ""}</td>
-      <td>${p.peso_liquido ?? ""}</td>
-     <td>${(p.valor && p.valor > 0) ? p.valor.toFixed(2) : "<span style='color:red'>Produto sem valor</span>"}</td>
-      <td>
-        <select onchange="atualizarLinhaPorDesconto(this, ${index}, ${p.valor}, ${p.peso_liquido || 0})">
-          ${Object.entries(mapaDescontos).map(([codigo, percentual]) => `
-            <option value="${codigo}" ${
-              (p.desconto && parseFloat(p.desconto / p.valor).toFixed(4) == percentual)
-                ? "selected"
-                : (!p.desconto && codigo == '15' ? 'selected' : '')
-            }>
-              ${codigo} - ${percentual}
-            </option>
-
-          `).join('')}
-        </select>
-      </td>
-      <td id="acrescimo-${index}">${(p.acrescimo ?? 0).toFixed(4)}</td>
-      <td id="desconto-${index}">${(p.desconto ?? 0).toFixed(4)}</td>
-      <td id="valor_liquido-${index}"> ${(p.valor_liquido && p.valor_liquido > 0)? p.valor_liquido.toFixed(2): "<span style='color:red'>Produto sem valor</span>"}</td>
+      <td class="num">${(p.peso_liquido ?? 0).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</td>
+      <td class="num">${(p.valor ?? 0).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</td>
     `;
-
+    // anexa o objeto completo na linha para facilitar coleta
+    tr.dataset.produto = JSON.stringify(p);
     tbody.appendChild(tr);
   });
 }
 
-
-function mostrarBotoesSalvarCancelar() {
-  const container = document.getElementById("acoes-container");
-  container.innerHTML = ""; // limpa botões anteriores
-
-  const btnSalvar = document.createElement("button");
-  btnSalvar.innerText = "Salvar Alterações";
-  btnSalvar.className = "btn btn-salvar";
-  btnSalvar.onclick = () => salvarEdicao();
-
-  const btnCancelar = document.createElement("button");
-  btnCancelar.innerText = "Cancelar";
-  btnCancelar.className = "btn btn-cancelar";
-  btnCancelar.style.marginLeft = "10px";
-  btnCancelar.onclick = async () => {
-    const urlParams = new URLSearchParams(window.location.search);
-    const id = urlParams.get("id");
-    if (id) {
-      await carregarTabelaSelecionada(id);
-    }
-  };
-
-  container.appendChild(btnSalvar);
-  container.appendChild(btnCancelar);
+function marcarPreSelecionados() {
+  if (!preSelecionadosCodigos.size) return;
+  document.querySelectorAll("#tabela-produtos-body .produto-checkbox").forEach(chk => {
+    const codigo = chk.dataset.codigo;
+    if (preSelecionadosCodigos.has(codigo)) chk.checked = true;
+  });
 }
 
-async function salvarEdicao() {
-  try {
-    const urlParams = new URLSearchParams(window.location.search);
-    const id = urlParams.get("id");
-    if (!id) {
-      alert("ID da tabela não encontrado.");
-      return;
-    }
-
-    const nome_tabela = document.getElementById("nome_tabela").value.trim();
-    const cliente = document.getElementById("cliente").value.trim();
-    const fornecedor = document.getElementById("fornecedor").value.trim();
-    const validade_inicio = document.getElementById("validade_inicio").value;
-    const validade_fim = document.getElementById("validade_fim").value;
-    const plano_pagamento = document.getElementById("plano_pagamento").value || null;
-    const frete_kg = parseFloat(document.getElementById("frete_kg").value) || 0;
-
-    const linhas = document.querySelectorAll("#tabela-produtos-body tr");
-    const produtosSelecionados = [];
-
-    linhas.forEach((linha, index) => {
-      const checkbox = linha.querySelector(".produto-checkbox");
-      if (checkbox && checkbox.checked) {
-        const codigo_tabela = linha.children[1].innerText;
-        const descricao = linha.children[2].innerText;
-        const embalagem = linha.children[3].innerText;
-        const peso_liquido = parseFloat(linha.children[4].innerText) || 0;
-        const valor = parseFloat(linha.children[5].innerText) || 0;
-        const selectDesconto = linha.children[6].querySelector("select");
-        const desconto_id = selectDesconto.value;
-        const desconto_percentual = mapaDescontos[desconto_id] || 0;
-        const acrescimo = parseFloat(document.getElementById(`acrescimo-${index}`).innerText) || 0;
-        const valor_liquido = parseFloat(document.getElementById(`valor_liquido-${index}`).innerText) || 0;
-
-        const produto = {
-          nome_tabela,
-          validade_inicio,
-          validade_fim,
-          cliente,
-          fornecedor,
-
-          codigo_tabela,
-          descricao,
-          embalagem,
-          peso_liquido,
-          peso_bruto: peso_liquido,
-          valor,
-          desconto: parseFloat((valor * desconto_percentual).toFixed(4)),
-          acrescimo: parseFloat(acrescimo.toFixed(4)),
-          fator_comissao: 0,
-          plano_pagamento,
-          frete_kg,
-          frete_percentual: null,
-          ipi: false,
-          icms_st: false,
-          valor_liquido,
-          grupo: null,
-          departamento: null
-        };
-
-        produtosSelecionados.push(produto);
-      }
-    });
-
-    if (produtosSelecionados.length === 0) {
-      alert("Selecione ao menos um produto para salvar.");
-      return;
-    }
-
-    const payload = {
-      nome_tabela,
-      validade_inicio,
-      validade_fim,
-      cliente,
-      fornecedor,
-      produtos: produtosSelecionados
-    };
-
-    const response = await fetch(`${API_BASE}/tabela_preco/${id_linha}`, {
-      method: "PUT",
-      headers: {
-        "Content-Type": "application/json"
-      },
-      body: JSON.stringify(payload)
-    });
-
-    if (!response.ok) {
-      const erro = await response.json();
-      throw new Error(erro.detail || "Erro ao atualizar a tabela.");
-    }
-
-    alert("✅ Tabela atualizada com sucesso!");
-    window.location.href = "listar_tabelas.html";
-  } catch (error) {
-    console.error("Erro ao salvar edição:", error);
-    alert(`❌ Erro ao salvar alterações: ${error.message}`);
-  }
-}
-
+/* ========================
+   Paginação
+======================== */
 function atualizarPaginacaoUI(total) {
   const info = document.getElementById("pagina-info");
   const btnPrev = document.getElementById("btn-prev");
   const btnNext = document.getElementById("btn-next");
 
-  if (!info) return;
-
   if (total == null) {
-    // backend não retornou total: não dá pra saber os limites
     totalPages = null;
     info.textContent = "";
     if (btnPrev) btnPrev.disabled = (currentPage <= 1);
-    if (btnNext) btnNext.disabled = false; // sem total, não limitamos "Próxima"
+    if (btnNext) btnNext.disabled = false;
     return;
   }
 
@@ -587,215 +270,44 @@ function atualizarPaginacaoUI(total) {
 }
 
 function gotoPrevPage() {
-  if (currentPage > 1) {
-    carregarProdutos(currentPage - 1);
-  }
+  if (currentPage > 1) carregarProdutos(currentPage - 1);
 }
-
 function gotoNextPage() {
-  // Se conhecemos o total, respeita o limite
   if (totalPages != null && currentPage >= totalPages) return;
   carregarProdutos(currentPage + 1);
 }
- 
 
-function coletarEstadoTela() {
-  const estado = {
-    campos: {
-      nome_tabela: document.getElementById("nome_tabela")?.value || "",
-      cliente: document.getElementById("cliente")?.value || "",
-      fornecedor: document.getElementById("fornecedor")?.value || "",
-      grupo: document.getElementById("grupo")?.value || "",
-      validade_inicio: document.getElementById("validade_inicio")?.value || "",
-      validade_fim: document.getElementById("validade_fim")?.value || "",
-      frete_kg: document.getElementById("frete_kg")?.value || "0",
-      plano_pagamento: document.getElementById("plano_pagamento")?.value || ""
-    },
-    // guarda produtos selecionados e o desconto escolhido por produto (chave = codigo)
-    selecionados: Array.from(document.querySelectorAll("#tabela-produtos-body tr"))
-      .map(linha => {
-        const chk = linha.querySelector(".produto-checkbox");
-        if (!chk || !chk.checked) return null;
-        const codigo = linha.children[1].innerText;
-        const descontoId = linha.children[6].querySelector("select")?.value || null;
-        return { codigo, descontoId };
-      })
-      .filter(Boolean)
-  };
-  return estado;
-}
+/* ========================
+   Enviar selecionados ao PAI
+======================== */
+function enviarSelecionados() {
+  const selecionados = [];
+  document.querySelectorAll("#tabela-produtos-body tr").forEach(tr => {
+    const chk = tr.querySelector(".produto-checkbox");
+    if (!chk || !chk.checked) return;
 
-function salvarEstadoTela() {
-  try {
-    const estado = coletarEstadoTela();
-    sessionStorage.setItem("tabela_preco_state", JSON.stringify(estado));
-  } catch (e) {
-    console.warn("Não foi possível salvar o estado:", e);
-  }
-}
-
-async function restaurarEstadoTela() {
-  try {
-    const raw = sessionStorage.getItem("tabela_preco_state");
-    if (!raw) return;
-    const estado = JSON.parse(raw);
-
-    // 1) Restaura campos
-    for (const [k, v] of Object.entries(estado.campos || {})) {
-      const el = document.getElementById(k);
-      if (el) el.value = v;
-    }
-
-    // 2) Se mudou o grupo, recarrega produtos dessa lista antes de aplicar seleções
-    //    (se já chamou carregarProdutos() antes, chame de novo com currentPage=1)
-    currentPage = 1;
-    await carregarProdutos();
-
-    // 3) Reaplica seleções de produtos e descontos
-    const mapSel = new Map((estado.selecionados || []).map(s => [s.codigo, s.descontoId]));
-    const linhas = document.querySelectorAll("#tabela-produtos-body tr");
-    linhas.forEach((linha, idx) => {
-      const codigo = linha.children[1].innerText;
-      if (mapSel.has(codigo)) {
-        // marcar checkbox
-        const chk = linha.querySelector(".produto-checkbox");
-        if (chk) chk.checked = true;
-
-        // selecionar desconto salvo
-        const descontoId = mapSel.get(codigo);
-        const selectDesconto = linha.children[6].querySelector("select");
-        if (selectDesconto && descontoId) {
-          selectDesconto.value = descontoId;
-          // recalcular a linha com o desconto reaplicado
-          const valor = parseFloat(linha.children[5].innerText) || 0;
-          const peso  = parseFloat(linha.children[4].innerText) || 0;
-          atualizarLinhaPorDesconto(selectDesconto, idx, valor, peso);
-        }
-      }
+    const p = JSON.parse(tr.dataset.produto || "{}");
+    selecionados.push({
+      // chaves que o pai vai usar para merge/render
+      id: p.codigo_tabela,              // usando código como ID estável
+      codigo: p.codigo_tabela,
+      nome: p.descricao,
+      grupo: p.grupo || null,
+      marca: p.marca || null,
+      embalagem: p.embalagem || null,
+      peso_liquido: p.peso_liquido || 0,
+      preco_base: p.valor || 0,
+      desconto: 0                      // pai pode editar depois, se necessário
     });
-  } catch (e) {
-    console.warn("Não foi possível restaurar o estado:", e);
-  }
-}
-
-
-window.addEventListener("beforeunload", salvarEstadoTela);
-
-window.onload = async function() {
-    await carregarDescontos();
-    await carregarCondicoesPagamento();
-    await carregarGrupos(); 
-    const selectGrupo = document.getElementById("grupo");
-const DEFAULT = "AVES"; // <- mude aqui o grupo a ser iniciado.
-const opt = Array.from(selectGrupo.options).find(o => o.value === DEFAULT);
-if (opt) selectGrupo.value = DEFAULT;
-
-const linkVer = document.getElementById("link-ver-tabelas");
-if (linkVer) {
-  linkVer.addEventListener("click", () => {
-    salvarEstadoTela();
-  });
-}
-
-// Se quiser manter um default, aplique só se não houver estado salvo.
-  const estadoSalvo = sessionStorage.getItem("tabela_preco_state");
-  if (!estadoSalvo) {
-    const selectGrupo = document.getElementById("grupo");
-    const DEFAULT = "AVES";
-    const opt = Array.from(selectGrupo.options).find(o => o.value === DEFAULT);
-    if (opt) selectGrupo.value = DEFAULT;
-    carregarProdutos();
-  } else {
-    await restaurarEstadoTela(); // isto já chama carregarProdutos internamente
-  }
-
-  // Se estiver carregando uma tabela por id, mantém tua lógica:
-  const urlParams = new URLSearchParams(window.location.search);
-  const id = urlParams.get("id");
-  if (id) {
-    await carregarTabelaSelecionada(id);
-    document.getElementById("btn-salvar-principal").style.display = "none";
-  }
-
-
-};
-
-(() => {
-  const root = document.getElementById('tabela_preco');
-  if (!root) return;
-
-  const API = '/api/descontos/listar'; // ajuste para seu endpoint real
-  const globalSel = root.querySelector('#tp_desconto_global');
-  const globalBtn = root.querySelector('#tp_btn_desconto_global');
-
-  let descontos = [];
-  let valorGlobal = '';
-
-  async function carregarDescontos() {
-    const r = await fetch(API);
-    const data = await r.json();
-    descontos = (Array.isArray(data) ? data : data.itens || []).map(d => ({
-      value: String(d.id), text: d.nome
-    }));
-  }
-
-  function preencherSelect(select, manterValor = false) {
-    if (!select) return;
-    const atual = manterValor ? select.value : '';
-    select.innerHTML = descontos.map(d => `<option value="${d.value}">${d.text}</option>`).join('');
-    if (manterValor && atual && [...select.options].some(o => o.value === atual)) {
-      select.value = atual;
-    }
-  }
-
-  function initLinhas(aplicarDefault = false) {
-    root.querySelectorAll('select.desconto-select').forEach(sel => {
-      preencherSelect(sel, true);
-      if (aplicarDefault && !sel.dataset.custom && valorGlobal) {
-        if ([...sel.options].some(o => o.value === valorGlobal)) sel.value = valorGlobal;
-      }
-      const tr = sel.closest('tr');
-      if (typeof atualizarLinhaValorLiquido === 'function' && tr) {
-        sel.dispatchEvent(new Event('change', { bubbles: true }));
-        sel.dispatchEvent(new Event('input', { bubbles: true }));
-        atualizarLinhaValorLiquido(tr);
-      }
-    });
-  }
-
-  root.addEventListener('change', (e) => {
-    if (e.target.matches('select.desconto-select')) {
-      e.target.dataset.custom = '1';
-      const tr = e.target.closest('tr');
-      if (typeof atualizarLinhaValorLiquido === 'function' && tr) atualizarLinhaValorLiquido(tr);
-    }
   });
 
-  function aplicarGlobal() {
-    if (!globalSel) return;
-    valorGlobal = globalSel.value;
-    root.querySelectorAll('select.desconto-select').forEach(sel => {
-      if (sel.dataset.custom === '1') return;
-      if ([...sel.options].some(o => o.value === valorGlobal)) {
-        sel.value = valorGlobal;
-        sel.dispatchEvent(new Event('change', { bubbles: true }));
-        sel.dispatchEvent(new Event('input', { bubbles: true }));
-      }
-    });
+  if (selecionados.length === 0) {
+    alert("Selecione ao menos um produto.");
+    return;
   }
 
-  globalSel?.addEventListener('change', aplicarGlobal);
-  globalBtn?.addEventListener('click', aplicarGlobal);
-
-  const obs = new MutationObserver(() => descontos.length && initLinhas(true));
-  obs.observe(root, { childList: true, subtree: true });
-
-  (async function init() {
-    await carregarDescontos();
-    if (globalSel) {
-      preencherSelect(globalSel);
-      valorGlobal = globalSel.value || '';
-    }
-    initLinhas(true);
-  })();
-})();
+  window.parent?.postMessage({
+    type: "PRODUCTS_SELECTED",
+    payload: selecionados
+  }, "*");
+}

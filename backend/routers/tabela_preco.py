@@ -53,12 +53,11 @@ tabelas_de_preco_db: List[TabelaPreco] = []
 @router.get("/produtos_filtro")
 def filtrar_produtos_para_tabela_preco(
     grupo: Optional[str] = Query(None),
-    fornecedor: Optional[str] = Query(None),   # se não for usar, remova do signature
     page: int = Query(1, ge=1),
     page_size: int = Query(25, ge=1, le=100),
 ):
     try:
-        print(f"grupo={grupo}, fornecedor={fornecedor}, page={page}, page_size={page_size}")
+        print(f"grupo={grupo}, page={page}, page_size={page_size}")
 
         base_sql = """
             SELECT 
@@ -76,19 +75,19 @@ def filtrar_produtos_para_tabela_preco(
                 p.ipi AS ipi,
                 p.iva_st AS icms_st,
                 p.marca AS grupo,
-                f.familia AS departamento
+                f.familia AS departamento,
+                p.fornecedor
             FROM t_cadastro_produto p
             LEFT JOIN t_familia_produtos f 
                 ON CAST(p.familia AS INT) = CAST(f.id AS INT)
             WHERE (:grupo IS NULL OR p.marca = :grupo)
-              -- AND (:fornecedor IS NULL OR p.fornecedor = :fornecedor)  -- descomente se existir essa coluna
+              
         """
 
         # mesmos params para count e paginação
         params = {
             "grupo": grupo or None,
-            "fornecedor": fornecedor or None,
-        }
+                  }
 
         with SessionLocal() as db:
             # total
