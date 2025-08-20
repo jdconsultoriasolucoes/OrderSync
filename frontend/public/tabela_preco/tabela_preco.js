@@ -59,7 +59,7 @@ document.addEventListener("DOMContentLoaded", () => {
   document.getElementById("btn-adicionar-selecionados")
     ?.addEventListener("click", enviarSelecionados);
   document.getElementById("btn-cancelar")
-    ?.addEventListener("click", () => window.parent?.postMessage({ type: "CLOSE_DIALOG" }, "*"));
+  ?.addEventListener("click", () => window.location.href = 'criacao_tabela_preco.html');
 });
 
 
@@ -98,20 +98,7 @@ function debounce(fn, wait = 300) {
 }
 
 
-// Recebe do pai o estado atual para pré‑marcar
-window.addEventListener("message", (evt) => {
-  if (!evt.data || !evt.data.type) return;
-  if (evt.data.type === "INIT_STATE") {
-    preSelecionadosCodigos = new Set((evt.data.payload || []).map(p => p.codigo || p.codigo_tabela));
-    // se já houver lista, re-render para aplicar a marcação
-    marcarPreSelecionados();
-  }
-});
 
-window.onload = async function () {
-  await carregarGrupos();
-  await carregarProdutos();
-};
 
 /* ========================
    Fetch & Render
@@ -285,19 +272,20 @@ function enviarSelecionados() {
   document.querySelectorAll("#tabela-produtos-body tr").forEach(tr => {
     const chk = tr.querySelector(".produto-checkbox");
     if (!chk || !chk.checked) return;
-
     const p = JSON.parse(tr.dataset.produto || "{}");
+
+    // payload mínimo que o pai espera (bate com criarLinha/renderTabela do pai)
     selecionados.push({
-      // chaves que o pai vai usar para merge/render
-      id: p.codigo_tabela,              // usando código como ID estável
-      codigo: p.codigo_tabela,
-      nome: p.descricao,
-      grupo: p.grupo || null,
-      marca: p.marca || null,
-      embalagem: p.embalagem || null,
+      codigo_tabela: p.codigo_tabela,
+      descricao: p.descricao,
+      embalagem: p.embalagem || "",
       peso_liquido: p.peso_liquido || 0,
-      preco_base: p.valor || 0,
-      desconto: 0                      // pai pode editar depois, se necessário
+      valor: p.valor || 0,
+      grupo: p.grupo || null,
+      departamento: p.departamento || null,
+      fornecedor: p.fornecedor || "",
+      // campos editáveis no pai com defaults
+      fator_comissao: 0
     });
   });
 
@@ -306,8 +294,28 @@ function enviarSelecionados() {
     return;
   }
 
-  window.parent?.postMessage({
-    type: "PRODUCTS_SELECTED",
-    payload: selecionados
-  }, "*");
+  // merge com o que já estava salvo na sessão
+  let prev = [];
+  try { prev = JSON.parse(sessionStorage.getItem('criacao_tabela_preco_produtos') || '[]'); } catch {}
+  const map = new Map(prev.map(x => [x.codigo_tabela, x]));
+  for (const p of selecionados) {
+    map.set(p.codigo_tabela, { ...(map.get(p.codigo_tabela) || {}), ...p });
+  }
+  sessionStorage.setItem('criacao_tabela_preco_produtos', JSON.stringify(Array.from(map.values())));
+
+  // voltar para a tela pai
+  window.location.href = 'criacao_tabela_preco.html'; // ajuste o caminho se for diferente
 }
+function carregarPreSelecionadosDaSessao() {
+  try {
+    const arr = JSON.parse(sessionStorage.getItem('criacao_tabela_preco_produtos') || '[]');
+    preSelecionadosCodigos = new Set(arr.map(p => p.codigo_tabela || p.codigo));
+  } catch { preSelecionadosCodigos = new Set(); }
+}
+
+// No onload do filho:
+window.onload = async function () {
+  carregarPreSelecionadosDaSessao();
+  await carregarGrupos();
+  await carregarProdutos();
+};
