@@ -51,13 +51,13 @@ function toggleToolbarByMode() {
   const isEditLike  = currentMode === 'edit' || currentMode === 'duplicate' || currentMode === 'new';
   const isEditOrDup = currentMode === 'edit' || currentMode === 'duplicate';
 
-  // Sempre pode listar
-  show('btn-listar', true);
+  // Listar: só quando NÃO há id carregado (estado "novo")
+  show('btn-listar', !hasId);
 
-  // Buscar: só quando mexendo (new/edit/duplicate)
+  // Buscar: só quando estamos mexendo (new/edit/duplicate)
   show('btn-buscar', isEditLike);
 
-  // Editar/Duplicar: só quando em VIEW de uma tabela existente
+  // Editar/Duplicar: apenas em VIEW com id
   show('btn-editar',   isView && hasId);
   show('btn-duplicar', isView && hasId);
 
@@ -65,8 +65,10 @@ function toggleToolbarByMode() {
   show('btn-remover-selecionados', isEditLike);
   show('btn-salvar',               isEditLike);
 
-  // Cancelar: apenas em edit e duplicate (NÃO em new)
-  show('btn-cancelar', isEditOrDup);
+  // Cancelar:
+  // - visível em edit/duplicate
+  // - e também em VIEW com id (atua como "voltar para lista")
+  show('btn-cancelar', isEditOrDup || (isView && hasId));
 }
 
 // Atalhos
@@ -322,24 +324,38 @@ async function salvarTabela() {
 
 // === Toolbar NOVA (acima da tabela) ===
 function onCancelar() {
-  // Comportamento pedido: no modo NEW, limpa campos e permanece na tela
   if (currentMode === 'new') {
-    limparFormularioCabecalho(); // implemente se ainda não existir
-    limparGradeProdutos();       // já existe no seu projeto? se não, crie uma versão simples que esvazie o tbody
-    // opcional: limpar qualquer buffer de seleção em sessionStorage
-    try { sessionStorage.removeItem('criacao_tabela_preco_produtos'); } catch(e) {}
-    // continua em NEW
+    limparFormularioCabecalho();
+    limparGradeProdutos();
     setMode('new');
+    toggleToolbarByMode();
+    refreshToolbarEnablement();
     return;
   }
 
-  // Em edit/duplicate, volta para visualização “travada” da mesma tabela (se houver id)
-  if (currentMode === 'edit' || currentMode === 'duplicate') {
-    if (currentTabelaId) {
-      setMode('view');
+  if (currentMode === 'edit') {
+    setMode('view');
+    toggleToolbarByMode();
+    refreshToolbarEnablement();
+    return;
+  }
+
+  if (currentMode === 'duplicate') {
+    if (typeof sourceTabelaId === 'string' || typeof sourceTabelaId === 'number') {
+      // volta para a VIEW da tabela original
+      window.location.search = `?id=${encodeURIComponent(sourceTabelaId)}`;
       return;
     }
     setMode('view');
+    toggleToolbarByMode();
+    refreshToolbarEnablement();
+    return;
+  }
+
+  // NOVO: em VIEW com id, Cancelar = voltar para a lista
+  if (currentMode === 'view' && currentTabelaId) {
+    goToListarTabelas(); // já existente no seu JS
+    return;
   }
 }
 
