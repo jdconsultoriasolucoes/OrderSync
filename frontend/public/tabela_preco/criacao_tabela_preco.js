@@ -343,12 +343,27 @@ function onCancelar() {
   }
 }
 
+function validarCabecalhoMinimo() {
+  const nome   = document.getElementById('nome_tabela')?.value?.trim();
+  const cliente = document.getElementById('cliente')?.value?.trim();
+  const ini    = document.getElementById('validade_inicio')?.value;
+  const fim    = document.getElementById('validade_fim')?.value;
+
+  if (!nome || !cliente || !ini || !fim) return false;
+
+  // valida ordem das datas (se ambos presentes)
+  const dIni = new Date(ini);
+  const dFim = new Date(fim);
+  if (isFinite(dIni) && isFinite(dFim) && dFim < dIni) return false;
+
+  return true;
+}
 
 // Habilitar/desabilitar (Salvar e Remover) conforme conteúdo
 function refreshToolbarEnablement() {
   const temLinhas = document.querySelectorAll('#tbody-itens tr').length > 0;
   const algumaMarcada = document.querySelectorAll('#tbody-itens .chk-linha:checked').length > 0;
-  const cabecalhoOk = validarCabecalhoMinimo ? validarCabecalhoMinimo() : true; // se não existir, assume true
+  const cabecalhoOk = validarCabecalhoMinimo();
 
   const btnSalvar = document.getElementById('btn-salvar');
   const btnRemover = document.getElementById('btn-remover-selecionados');
