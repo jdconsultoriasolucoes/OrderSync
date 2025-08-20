@@ -333,30 +333,6 @@ function onCancelar() {
   }
 }
 
-// Mostra/oculta botões da barra nova conforme o modo
-function toggleToolbarByMode() {
-  const show = (id, visible) => {
-    const el = document.getElementById(id);
-    if (!el) return;
-    el.classList.toggle('hidden', !visible);
-  };
-
-  const isView = currentMode === 'view';
-  const isEditing = currentMode === 'edit' || currentMode === 'duplicate' || currentMode === 'new';
-
-  // Listar: sempre visível
-  show('btn-listar', true);
-
-  // Nesta tela, buscamos produtos quando estamos criando/editando/duplicando
-  show('btn-buscar', isEditing);
-
-  // Remover e Salvar só fazem sentido quando editando/duplicando/novo
-  show('btn-remover-selecionados', isEditing);
-  show('btn-salvar', isEditing);
-
-  // Cancelar visível também em NEW (pedido seu) e em edit/duplicate
-  show('btn-cancelar', isEditing);
-}
 
 // Habilitar/desabilitar (Salvar e Remover) conforme conteúdo
 function refreshToolbarEnablement() {
