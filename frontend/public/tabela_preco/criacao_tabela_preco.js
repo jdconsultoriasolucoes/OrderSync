@@ -482,7 +482,8 @@ document.addEventListener('DOMContentLoaded', () => {
 
   document.getElementById('btn-editar')?.addEventListener('click', onEditar);
   document.getElementById('btn-duplicar')?.addEventListener('click', onDuplicar); 
-
+  //setMode('new');            
+  //toggleToolbarByMode();     
   // Init
   (async function init(){
     await Promise.all([carregarCondicoes(), carregarDescontos()]);
