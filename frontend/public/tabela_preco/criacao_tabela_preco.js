@@ -46,17 +46,27 @@ function toggleToolbarByMode() {
     el.classList.toggle('hidden', !visible);
   };
 
-  // Visuais
-  const isView = currentMode === 'view';
-  const isEditing = currentMode === 'edit' || currentMode === 'duplicate' || currentMode === 'new';
-  const isEditOrDup = currentMode === 'edit' || currentMode === 'duplicate'; 
-  show('btn-listar', isView);
-  show('btn-buscar', !isView);                   // em view, usualmente não “busca produtos”
-  show('btn-editar', isView);
-  show('btn-duplicar', isView);
-  show('btn-remover-selecionados', isEditing);   // só em edição/duplicação
-  show('btn-salvar', isEditing);                 // só em edição/duplicação
-  show('btn-cancelar', isEditOrDup);               
+  const hasId       = !!currentTabelaId;
+  const isView      = currentMode === 'view';
+  const isEditLike  = currentMode === 'edit' || currentMode === 'duplicate' || currentMode === 'new';
+  const isEditOrDup = currentMode === 'edit' || currentMode === 'duplicate';
+
+  // Sempre pode listar
+  show('btn-listar', true);
+
+  // Buscar: só quando mexendo (new/edit/duplicate)
+  show('btn-buscar', isEditLike);
+
+  // Editar/Duplicar: só quando em VIEW de uma tabela existente
+  show('btn-editar',   isView && hasId);
+  show('btn-duplicar', isView && hasId);
+
+  // Remover/Salvar: só quando mexendo
+  show('btn-remover-selecionados', isEditLike);
+  show('btn-salvar',               isEditLike);
+
+  // Cancelar: apenas em edit e duplicate (NÃO em new)
+  show('btn-cancelar', isEditOrDup);
 }
 
 // Atalhos
@@ -411,6 +421,7 @@ function onCancelar() {
 // === Bootstrap ===
 document.addEventListener('DOMContentLoaded', () => {
   // Eventos globais
+  
   document.getElementById('btn-listar')?.addEventListener('click', () => { goToListarTabelas(); });
   
   document.getElementById('btn-aplicar-todos')?.addEventListener('click', aplicarFatorGlobal);
@@ -435,17 +446,27 @@ document.addEventListener('DOMContentLoaded', () => {
     refreshToolbarEnablement();
   });
 
-    document.getElementById('btn-salvar')?.addEventListener('click', async () => {
+  document.getElementById('btn-salvar')?.addEventListener('click', async () => {
+  try {
     await salvarTabela();
-    // Depois do salvar, normalmente travamos a tela em VIEW
     setMode('view');
+  } catch (e) {
+    console.error(e);
+    alert(e.message || 'Erro ao salvar a tabela.');
+    // NÃO mude de modo; apenas re-sincronize a barra
+  } finally {
+    toggleToolbarByMode();
     refreshToolbarEnablement();
-  });
+  }
+});
   
   document.getElementById('btn-cancelar')?.addEventListener('click', () => {
     onCancelar();
     refreshToolbarEnablement();
   });
+
+  document.getElementById('btn-editar')?.addEventListener('click', onEditar);
+  document.getElementById('btn-duplicar')?.addEventListener('click', onDuplicar); 
 
   // Init
   (async function init(){
