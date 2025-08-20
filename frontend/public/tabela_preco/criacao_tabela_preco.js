@@ -48,14 +48,15 @@ function toggleToolbarByMode() {
 
   // Visuais
   const isView = currentMode === 'view';
-  const isEditing = currentMode === 'edit' || currentMode === 'duplicate';
-
-  show('btn-listar', true);
+  const isEditing = currentMode === 'edit' || currentMode === 'duplicate' || currentMode === 'new';
+  const isEditOrDup = currentMode === 'edit' || currentMode === 'duplicate'; 
+  show('btn-listar', isView);
   show('btn-buscar', !isView);                   // em view, usualmente não “busca produtos”
   show('btn-editar', isView);
   show('btn-duplicar', isView);
   show('btn-remover-selecionados', isEditing);   // só em edição/duplicação
   show('btn-salvar', isEditing);                 // só em edição/duplicação
+  show('btn-cancelar', isEditOrDup);               
 }
 
 // Atalhos
@@ -222,6 +223,7 @@ function renderTabela() {
   tbody.innerHTML = '';
   itens.forEach((it, i) => tbody.appendChild(criarLinha(it, i)));
   recalcTudo();
+  if (typeof refreshToolbarEnablement === 'function') refreshToolbarEnablement();
 }
 
 function recalcLinha(tr) {
@@ -308,36 +310,172 @@ async function salvarTabela() {
   }
 }
 
+// === Toolbar NOVA (acima da tabela) ===
+function onCancelar() {
+  // Comportamento pedido: no modo NEW, limpa campos e permanece na tela
+  if (currentMode === 'new') {
+    limparFormularioCabecalho(); // implemente se ainda não existir
+    limparGradeProdutos();       // já existe no seu projeto? se não, crie uma versão simples que esvazie o tbody
+    // opcional: limpar qualquer buffer de seleção em sessionStorage
+    try { sessionStorage.removeItem('criacao_tabela_preco_produtos'); } catch(e) {}
+    // continua em NEW
+    setMode('new');
+    return;
+  }
+
+  // Em edit/duplicate, volta para visualização “travada” da mesma tabela (se houver id)
+  if (currentMode === 'edit' || currentMode === 'duplicate') {
+    if (currentTabelaId) {
+      setMode('view');
+      return;
+    }
+    setMode('view');
+  }
+}
+
+// Mostra/oculta botões da barra nova conforme o modo
+function toggleToolbarByMode() {
+  const show = (id, visible) => {
+    const el = document.getElementById(id);
+    if (!el) return;
+    el.classList.toggle('hidden', !visible);
+  };
+
+  const isView = currentMode === 'view';
+  const isEditing = currentMode === 'edit' || currentMode === 'duplicate' || currentMode === 'new';
+
+  // Listar: sempre visível
+  show('btn-listar', true);
+
+  // Nesta tela, buscamos produtos quando estamos criando/editando/duplicando
+  show('btn-buscar', isEditing);
+
+  // Remover e Salvar só fazem sentido quando editando/duplicando/novo
+  show('btn-remover-selecionados', isEditing);
+  show('btn-salvar', isEditing);
+
+  // Cancelar visível também em NEW (pedido seu) e em edit/duplicate
+  show('btn-cancelar', isEditing);
+}
+
+// Habilitar/desabilitar (Salvar e Remover) conforme conteúdo
+function refreshToolbarEnablement() {
+  const temLinhas = document.querySelectorAll('#tbody-itens tr').length > 0;
+  const algumaMarcada = document.querySelectorAll('#tbody-itens .chk-linha:checked').length > 0;
+  const cabecalhoOk = validarCabecalhoMinimo ? validarCabecalhoMinimo() : true; // se não existir, assume true
+
+  const btnSalvar = document.getElementById('btn-salvar');
+  const btnRemover = document.getElementById('btn-remover-selecionados');
+
+  if (btnSalvar)  btnSalvar.disabled  = !(temLinhas && cabecalhoOk);
+  if (btnRemover) btnRemover.disabled = !algumaMarcada;
+}
+function limparFormularioCabecalho() {
+  // Campos principais
+  document.getElementById('nome_tabela').value = '';
+  document.getElementById('cliente').value = '';
+  document.getElementById('validade_inicio').value = '';
+  document.getElementById('validade_fim').value = '';
+
+  // Parâmetros globais
+  const frete = document.getElementById('frete_kg');
+  if (frete) frete.value = 0;
+
+  const cond = document.getElementById('plano_pagamento');
+  if (cond) cond.value = '';
+
+  const descGlobal = document.getElementById('desconto_global');
+  if (descGlobal) descGlobal.value = '';
+
+  const fatorGlobal = document.getElementById('fator_global');
+  if (fatorGlobal) fatorGlobal.value = '';
+
+  // Pill de taxa
+  const pill = document.getElementById('pill-taxa');
+  if (pill) pill.textContent = '—';
+
+  // Recalcula estado/habilitação
+  if (typeof recalcTudo === 'function') recalcTudo();
+  if (typeof refreshToolbarEnablement === 'function') refreshToolbarEnablement();
+}
+
+function limparGradeProdutos() {
+  try { sessionStorage.removeItem('criacao_tabela_preco_produtos'); } catch (e) {}
+
+  // Zera fonte de dados e DOM
+  if (Array.isArray(itens)) itens = [];
+  const tbody = document.getElementById('tbody-itens');
+  if (tbody) tbody.innerHTML = '';
+
+  // Desmarca “selecionar todos”
+  const chkAll = document.getElementById('chk-all');
+  if (chkAll) chkAll.checked = false;
+
+  // Recalcula estado/habilitação
+  if (typeof recalcTudo === 'function') recalcTudo();
+  if (typeof refreshToolbarEnablement === 'function') refreshToolbarEnablement();
+}
+
+function onCancelar() {
+  if (currentMode === 'new') {
+    limparFormularioCabecalho();
+    limparGradeProdutos();
+    setMode('new'); // permanece em NEW
+    if (typeof refreshToolbarEnablement === 'function') refreshToolbarEnablement();
+    return;
+  }
+
+  // Em edit/duplicate, volta para a visualização travada
+  if (currentMode === 'edit' || currentMode === 'duplicate') {
+    setMode('view');
+    if (typeof refreshToolbarEnablement === 'function') refreshToolbarEnablement();
+  }
+}
 
 // === Bootstrap ===
 document.addEventListener('DOMContentLoaded', () => {
   // Eventos globais
-  document.getElementById('btn-aplicar-todos')?.addEventListener('click', aplicarFatorGlobal);
-  document.getElementById('btn-remover-selecionados')?.addEventListener('click', removerSelecionados);
-  document.getElementById('btn-salvar')?.addEventListener('click', salvarTabela);
+  document.getElementById('btn-listar')?.addEventListener('click', () => { goToListarTabelas(); });
   
-  const btnBuscar = document.getElementById('btn-buscar');
-  if (btnBuscar) btnBuscar.addEventListener('click', () => { window.location.href = 'tabela_preco.html'; });
-
-  const btnListar = document.getElementById('btn-listar');
-  if (btnListar) btnListar.addEventListener('click', goToListarTabelas);
-
-  const btnEditar = document.getElementById('btn-editar');
-  if (btnEditar) btnEditar.addEventListener('click', onEditar);
-
-  const btnDuplicar = document.getElementById('btn-duplicar');
-  if (btnDuplicar) btnDuplicar.addEventListener('click', onDuplicar);
- 
-  document.getElementById('plano_pagamento').addEventListener('change', () => { atualizarPillTaxa(); recalcTudo(); 
+  document.getElementById('btn-aplicar-todos')?.addEventListener('click', aplicarFatorGlobal);
+  
+  document.getElementById('plano_pagamento')?.addEventListener('change', () => { atualizarPillTaxa(); recalcTudo(); refreshToolbarEnablement();
     });
-  document.getElementById('frete_kg').addEventListener('input', recalcTudo);
-  document.getElementById('chk-all').addEventListener('change', (e) => {
-  document.querySelectorAll('#tbody-itens .chk-linha').forEach(ch => ch.checked = e.target.checked);
+  document.getElementById('frete_kg')?.addEventListener('input', () => {
+    recalcTudo();
+    refreshToolbarEnablement();        // <— ADICIONE ESTA LINHA
+  });
+  document.getElementById('chk-all')?.addEventListener('change', (e) => {
+  document.querySelectorAll('#tbody-itens .chk-linha').forEach(ch => ch.checked = e.target.checked);refreshToolbarEnablement();
     });
+
+  document.getElementById('btn-buscar')?.addEventListener('click', () => {
+    // Se você já tem a navegação pronta pro buscador, mantém:
+    window.location.href = 'tabela_preco.html';
+  });
+
+  document.getElementById('btn-remover-selecionados')?.addEventListener('click', () => {
+    removerSelecionados();
+    refreshToolbarEnablement();
+  });
+
+    document.getElementById('btn-salvar')?.addEventListener('click', async () => {
+    await salvarTabela();
+    // Depois do salvar, normalmente travamos a tela em VIEW
+    setMode('view');
+    refreshToolbarEnablement();
+  });
+  
+  document.getElementById('btn-cancelar')?.addEventListener('click', () => {
+    onCancelar();
+    refreshToolbarEnablement();
+  });
 
   // Init
   (async function init(){
     await Promise.all([carregarCondicoes(), carregarDescontos()]);
     await carregarItens();
+    toggleToolbarByMode();
+refreshToolbarEnablement();
   })();
 });

@@ -10,11 +10,6 @@
 <body>
   <header class="container">
     <h1>Criação de Tabela de Preço <span class="subtle">(etapa de conferência)</span></h1>
-    <div class="toolbar">
-      <button id="btn-buscar" class="btn btn-primary">Buscar Produtos</button>
-      <button id="btn-remover-selecionados" class="btn btn-danger">Remover selecionados</button>
-      <button id="btn-salvar" class="btn btn-green">Salvar Tabela</button>
-    </div>
   </header>
 
   <main class="container">
@@ -71,6 +66,14 @@
     <section class="card pad" aria-labelledby="sec-itens">
       <h2 id="sec-itens" class="section-title">Produtos selecionados</h2>
       
+      <div class="toolbar" id="toolbar-acoes">
+        <button id="btn-listar" class="btn">Listar Tabelas</button>
+        <button id="btn-buscar" class="btn btn-primary">Buscar Produtos</button>
+        <button id="btn-remover-selecionados" class="btn btn-danger">Remover selecionados</button>
+        <button id="btn-salvar" class="btn btn-green">Salvar Tabela</button>
+        <button id="btn-cancelar" class="btn">Cancelar</button>
+      </div>
+
       <div class="table-wrap">
         <table id="tabela-itens">
           <thead>
@@ -96,17 +99,7 @@
     </section>
   </main>
 
-<div class="toolbar">
-  <button id="btn-listar" class="btn">Listar Tabelas</button>
-  <button id="btn-buscar" class="btn btn-primary">Buscar Produtos</button>
-  
-  <!-- aparecem quando entrar em modo visualização (?id=) -->
-  <button id="btn-editar" class="btn hidden">Editar</button>
-  <button id="btn-duplicar" class="btn hidden">Duplicar</button>
 
-  <button id="btn-remover-selecionados" class="btn btn-danger">Remover selecionados</button>
-  <button id="btn-salvar" class="btn btn-green">Salvar Tabela</button>
-</div>
   <!-- Lógica totalmente externa -->
   <script src="criacao_tabela_preco.js"></script>
 </body>
