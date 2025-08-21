@@ -29,10 +29,14 @@ function goToListarTabelas() {
 }
 
 function onDuplicar() {
-  setMode('duplicate');        // libera campos
-  currentTabelaId = null;      // garante criação de uma NOVA na hora de salvar
+  // guarda a tabela de ORIGEM para poder voltar na hora do Cancelar
+  sourceTabelaId = currentTabelaId ? String(currentTabelaId) : null;
+
+  // entra em duplicação: libera campos e garante que será POST
+  setMode(MODE.DUP);
+  currentTabelaId = null;      // POST
   const nome = document.getElementById('nome_tabela');
-  if (nome) nome.value = '';   // limpa nome para forçar novo cadastro
+  if (nome) nome.value = '';   // força novo cadastro com outro nome
 }
 
 // MOSTRAR/OCULTAR botões corretamente em todos os modos
@@ -400,28 +404,76 @@ function limparGradeProdutos() {
   if (typeof refreshToolbarEnablement === 'function') refreshToolbarEnablement();
 }
 
-function onCancelar() {
+// CANCELAR — EDIT->VIEW(mesma) | DUP->VIEW(origem) | VIEW->NEW(limpo) | NEW->NEW(limpo)
+async function onCancelar(e) {
+  if (e) e.preventDefault?.();
+
+  // NEW → mantém NEW zerado
   if (currentMode === MODE.NEW) {
-    limparFormularioCabecalho();
-    limparGradeProdutos();
+    if (typeof limparFormularioCabecalho === 'function') limparFormularioCabecalho();
+    if (typeof limparGradeProdutos === 'function') limparGradeProdutos();
     setMode(MODE.NEW);
     return;
   }
+
+  // EDIT → VIEW (mesma tabela, travada)
   if (currentMode === MODE.EDIT) {
     setMode(MODE.VIEW);
+    if (typeof setFormDisabled === 'function') setFormDisabled(true);
+    if (typeof toggleToolbarByMode === 'function') toggleToolbarByMode();
+    if (typeof refreshToolbarEnablement === 'function') refreshToolbarEnablement();
     return;
   }
+
+  // DUP → VIEW (tabela ORIGEM, travada) — sem navegar
   if (currentMode === MODE.DUP) {
     if (sourceTabelaId) {
-      window.location.search = `?id=${encodeURIComponent(sourceTabelaId)}`;
-      return;
+      try {
+        const r = await fetch(`${API_BASE}/tabela_preco/${encodeURIComponent(sourceTabelaId)}`);
+        if (r.ok) {
+          const t = await r.json();
+
+          // repõe cabeçalho
+          document.getElementById('nome_tabela')?.value     = t.nome_tabela || '';
+          document.getElementById('cliente')?.value         = t.cliente || '';
+          document.getElementById('validade_inicio')?.value = t.validade_inicio || '';
+          document.getElementById('validade_fim')?.value    = t.validade_fim || '';
+
+          // repõe itens e re-renderiza grade
+          itens = Array.isArray(t.produtos) ? t.produtos.map(p => ({ ...p })) : [];
+          if (typeof renderTabela === 'function') renderTabela();
+
+          // volta a “apontar” para a origem
+          currentTabelaId = String(sourceTabelaId);
+        } else {
+          console.warn('Cancelar DUP: não consegui recarregar a origem, mantendo tela atual.');
+        }
+      } catch (err) {
+        console.warn('Cancelar DUP: erro ao recarregar a origem:', err);
+      }
     }
+    // sai do estado de duplicação
+    sourceTabelaId = null;
+
+    // trava e mostra botões de decisão (Editar/Duplicar)
     setMode(MODE.VIEW);
+    if (typeof setFormDisabled === 'function') setFormDisabled(true);
+    if (typeof toggleToolbarByMode === 'function') toggleToolbarByMode();
+    if (typeof refreshToolbarEnablement === 'function') refreshToolbarEnablement();
     return;
   }
-  // VIEW com id: voltar para a lista
-  if (currentMode === MODE.VIEW && currentTabelaId) {
-    goToListarTabelas();
+
+  // VIEW (momento de decisão) → NEW (limpo) — sem navegar
+  if (currentMode === MODE.VIEW) {
+    if (typeof limparFormularioCabecalho === 'function') limparFormularioCabecalho();
+    if (typeof limparGradeProdutos === 'function') limparGradeProdutos();
+    currentTabelaId = null;
+    sourceTabelaId  = null;
+    setMode(MODE.NEW);
+    if (typeof setFormDisabled === 'function') setFormDisabled(false);
+    if (typeof toggleToolbarByMode === 'function') toggleToolbarByMode();
+    if (typeof refreshToolbarEnablement === 'function') refreshToolbarEnablement();
+    return;
   }
 }
 
