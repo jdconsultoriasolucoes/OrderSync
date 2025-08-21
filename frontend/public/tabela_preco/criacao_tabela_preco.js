@@ -2,12 +2,13 @@
 const API_BASE = "https://ordersync-backend-edjq.onrender.com";
 
 // === Estado ===
+const MODE = { NEW:'new', VIEW:'view', EDIT:'edit', DUP:'duplicate' };
 let mapaCondicoes = {}; // { codigo: taxa }
 let mapaDescontos = {}; // { codigo: fator }
 let itens = []; // itens carregados
 let currentMode = 'new';       // 'new' | 'view' | 'edit' | 'duplicate'
 let currentTabelaId = null;
-
+let sourceTabelaId  = null;
 // Habilita/desabilita todos os campos e a grade
 function setFormDisabled(disabled) {
   // topo
@@ -27,10 +28,6 @@ function goToListarTabelas() {
   window.location.href = 'listar_tabelas.html';
 }
 
-function onEditar() {
-  setMode('edit'); // libera campos e mostra Salvar/Remover
-}
-
 function onDuplicar() {
   setMode('duplicate');        // libera campos
   currentTabelaId = null;      // garante criação de uma NOVA na hora de salvar
@@ -38,7 +35,7 @@ function onDuplicar() {
   if (nome) nome.value = '';   // limpa nome para forçar novo cadastro
 }
 
-// Mostra/oculta botões conforme o modo
+// MOSTRAR/OCULTAR botões corretamente em todos os modos
 function toggleToolbarByMode() {
   const show = (id, visible) => {
     const el = document.getElementById(id);
@@ -47,28 +44,33 @@ function toggleToolbarByMode() {
   };
 
   const hasId       = !!currentTabelaId;
-  const isView      = currentMode === 'view';
-  const isEditLike  = currentMode === 'edit' || currentMode === 'duplicate' || currentMode === 'new';
-  const isEditOrDup = currentMode === 'edit' || currentMode === 'duplicate';
+  const isView      = currentMode === MODE.VIEW;
+  const isEditLike  = currentMode === MODE.EDIT || currentMode === MODE.DUP || currentMode === MODE.NEW;
+  const isEditOrDup = currentMode === MODE.EDIT || currentMode === MODE.DUP;
 
-  // Listar: só quando NÃO há id carregado (estado "novo")
-  show('btn-listar', !hasId);
+  // Listar: APENAS quando NÃO há id (tela nova)
+  show('btn-listar', currentMode === MODE.NEW);
 
-  // Buscar: só quando estamos mexendo (new/edit/duplicate)
+  // Buscar: em NEW/EDIT/DUP (quando mexendo)
   show('btn-buscar', isEditLike);
 
   // Editar/Duplicar: apenas em VIEW com id
   show('btn-editar',   isView && hasId);
   show('btn-duplicar', isView && hasId);
 
-  // Remover/Salvar: só quando mexendo
+  // Remover/Salvar: em NEW/EDIT/DUP
   show('btn-remover-selecionados', isEditLike);
   show('btn-salvar',               isEditLike);
 
   // Cancelar:
-  // - visível em edit/duplicate
-  // - e também em VIEW com id (atua como "voltar para lista")
+  //  - visível em EDIT/DUP
+  //  - e também em VIEW com id (atua como voltar pra lista)
   show('btn-cancelar', isEditOrDup || (isView && hasId));
+}
+
+// AÇÕES DE BOTÃO
+function onEditar(){
+  setMode(MODE.EDIT);
 }
 
 // Atalhos
@@ -322,42 +324,7 @@ async function salvarTabela() {
   }
 }
 
-// === Toolbar NOVA (acima da tabela) ===
-function onCancelar() {
-  if (currentMode === 'new') {
-    limparFormularioCabecalho();
-    limparGradeProdutos();
-    setMode('new');
-    toggleToolbarByMode();
-    refreshToolbarEnablement();
-    return;
-  }
 
-  if (currentMode === 'edit') {
-    setMode('view');
-    toggleToolbarByMode();
-    refreshToolbarEnablement();
-    return;
-  }
-
-  if (currentMode === 'duplicate') {
-    if (typeof sourceTabelaId === 'string' || typeof sourceTabelaId === 'number') {
-      // volta para a VIEW da tabela original
-      window.location.search = `?id=${encodeURIComponent(sourceTabelaId)}`;
-      return;
-    }
-    setMode('view');
-    toggleToolbarByMode();
-    refreshToolbarEnablement();
-    return;
-  }
-
-  // NOVO: em VIEW com id, Cancelar = voltar para a lista
-  if (currentMode === 'view' && currentTabelaId) {
-    goToListarTabelas(); // já existente no seu JS
-    return;
-  }
-}
 
 function validarCabecalhoMinimo() {
   const nome   = document.getElementById('nome_tabela')?.value?.trim();
@@ -434,25 +401,34 @@ function limparGradeProdutos() {
 }
 
 function onCancelar() {
-  if (currentMode === 'new') {
+  if (currentMode === MODE.NEW) {
     limparFormularioCabecalho();
     limparGradeProdutos();
-    setMode('new'); // permanece em NEW
-    if (typeof refreshToolbarEnablement === 'function') refreshToolbarEnablement();
+    setMode(MODE.NEW);
     return;
   }
-
-  // Em edit/duplicate, volta para a visualização travada
-  if (currentMode === 'edit' || currentMode === 'duplicate') {
-    setMode('view');
-    if (typeof refreshToolbarEnablement === 'function') refreshToolbarEnablement();
+  if (currentMode === MODE.EDIT) {
+    setMode(MODE.VIEW);
+    return;
+  }
+  if (currentMode === MODE.DUP) {
+    if (sourceTabelaId) {
+      window.location.search = `?id=${encodeURIComponent(sourceTabelaId)}`;
+      return;
+    }
+    setMode(MODE.VIEW);
+    return;
+  }
+  // VIEW com id: voltar para a lista
+  if (currentMode === MODE.VIEW && currentTabelaId) {
+    goToListarTabelas();
   }
 }
 
 // === Bootstrap ===
 document.addEventListener('DOMContentLoaded', () => {
   // Eventos globais
-  
+  setMode(MODE.NEW);
   document.getElementById('btn-listar')?.addEventListener('click', () => { goToListarTabelas(); });
   
   document.getElementById('btn-aplicar-todos')?.addEventListener('click', aplicarFatorGlobal);
@@ -491,20 +467,25 @@ document.addEventListener('DOMContentLoaded', () => {
   }
 });
   
-  document.getElementById('btn-cancelar')?.addEventListener('click', () => {
-    onCancelar();
-    refreshToolbarEnablement();
-  });
-
+  document.getElementById('btn-cancelar')?.addEventListener('click', onCancelar);
   document.getElementById('btn-editar')?.addEventListener('click', onEditar);
   document.getElementById('btn-duplicar')?.addEventListener('click', onDuplicar); 
-  //setMode('new');            
-  //toggleToolbarByMode();     
+  
   // Init
   (async function init(){
     await Promise.all([carregarCondicoes(), carregarDescontos()]);
     await carregarItens();
-    toggleToolbarByMode();
-refreshToolbarEnablement();
+   // Se vier com ação na URL (?action=edit|duplicate), respeitar:
+    const q = new URLSearchParams(location.search);
+    const action = q.get('action') || q.get('mode') || q.get('modo');
+    if (currentTabelaId) {
+      if (action === 'edit') setMode(MODE.EDIT);
+      else if (action === 'duplicate') onDuplicar(); // usa o fluxo que guarda a origem
+      else setMode(MODE.VIEW);
+    } else {
+      setMode(MODE.NEW);
+    }
+
+    refreshToolbarEnablement();
   })();
 });
