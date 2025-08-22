@@ -17,6 +17,23 @@ document.addEventListener("DOMContentLoaded", () => {
   const ps            = document.getElementById("page_size");
   const inpPalavra    = document.getElementById("filtro-palavra");
 
+// === Contexto com o Pai ===
+function getCtxId() {
+  return sessionStorage.getItem('TP_CTX_ID') || 'new';
+}
+function loadPreselectionFromParent() {
+  const ctx = getCtxId();
+  try {
+    const arr = JSON.parse(sessionStorage.getItem(`TP_ATUAL:${ctx}`) || '[]');
+    preSelecionadosCodigos = new Set((arr || []).map(p => p.codigo_tabela || p.codigo));
+  } catch { preSelecionadosCodigos = new Set(); }
+}
+function sendBufferBackToParent(selecionados) {
+  const ctx = getCtxId();
+  sessionStorage.setItem(`TP_BUFFER:${ctx}`, JSON.stringify(selecionados || []));
+}
+
+
   // Filtros
   selGrupo?.addEventListener("change",      () => { currentPage = 1; carregarProdutos(); });
   selFornecedor?.addEventListener("change", () => { currentPage = 1; carregarProdutos(); });
@@ -273,8 +290,6 @@ function enviarSelecionados() {
     const chk = tr.querySelector(".produto-checkbox");
     if (!chk || !chk.checked) return;
     const p = JSON.parse(tr.dataset.produto || "{}");
-
-    // payload mínimo que o pai espera (bate com criarLinha/renderTabela do pai)
     selecionados.push({
       codigo_tabela: p.codigo_tabela,
       descricao: p.descricao,
@@ -284,7 +299,6 @@ function enviarSelecionados() {
       grupo: p.grupo || null,
       departamento: p.departamento || null,
       fornecedor: p.fornecedor || "",
-      // campos editáveis no pai com defaults
       fator_comissao: 0
     });
   });
@@ -294,18 +308,13 @@ function enviarSelecionados() {
     return;
   }
 
-  // merge com o que já estava salvo na sessão
-  let prev = [];
-  try { prev = JSON.parse(sessionStorage.getItem('criacao_tabela_preco_produtos') || '[]'); } catch {}
-  const map = new Map(prev.map(x => [x.codigo_tabela, x]));
-  for (const p of selecionados) {
-    map.set(p.codigo_tabela, { ...(map.get(p.codigo_tabela) || {}), ...p });
-  }
-  sessionStorage.setItem('criacao_tabela_preco_produtos', JSON.stringify(Array.from(map.values())));
+  // devolve para o pai no buffer do contexto
+  sendBufferBackToParent(selecionados);
 
-  // voltar para a tela pai
-  window.location.href = 'criacao_tabela_preco.html'; // ajuste o caminho se for diferente
+  // volta para o pai
+  window.location.href = 'criacao_tabela_preco.html';
 }
+
 function carregarPreSelecionadosDaSessao() {
   try {
     const arr = JSON.parse(sessionStorage.getItem('criacao_tabela_preco_produtos') || '[]');
@@ -315,7 +324,7 @@ function carregarPreSelecionadosDaSessao() {
 
 // No onload do filho:
 window.onload = async function () {
-  carregarPreSelecionadosDaSessao();
+  loadPreselectionFromParent();
   await carregarGrupos();
   await carregarProdutos();
 };

@@ -9,6 +9,89 @@ let itens = []; // itens carregados
 let currentMode = 'new';       // 'new' | 'view' | 'edit' | 'duplicate'
 let currentTabelaId = null;
 let sourceTabelaId  = null;
+
+// === Contexto e Snapshot de Cabeçalho ===
+function getCtxId() {
+  return currentTabelaId ? String(currentTabelaId) : 'new';
+}
+
+function getHeaderSnapshot() {
+  return {
+    nome_tabela: document.getElementById('nome_tabela')?.value || '',
+    cliente: document.getElementById('cliente')?.value || '',
+    validade_inicio: document.getElementById('validade_inicio')?.value || '',
+    validade_fim: document.getElementById('validade_fim')?.value || '',
+    frete_kg: document.getElementById('frete_kg')?.value || '0',
+    plano_pagamento: document.getElementById('plano_pagamento')?.value || '',
+    desconto_global: document.getElementById('desconto_global')?.value || '',
+    fator_global: document.getElementById('fator_global')?.value || ''
+  };
+}
+
+function saveHeaderSnapshot() {
+  const ctx = getCtxId();
+  sessionStorage.setItem(`TP_HEADER_SNAPSHOT:${ctx}`, JSON.stringify(getHeaderSnapshot()));
+}
+
+function restoreHeaderSnapshotIfNew() {
+  // Só restaura em NEW (sem id na URL) para não sujar edição/visualização
+  if (currentTabelaId) return;
+  const ctx = getCtxId();
+  const raw = sessionStorage.getItem(`TP_HEADER_SNAPSHOT:${ctx}`);
+  if (!raw) return;
+  try {
+    const snap = JSON.parse(raw);
+    const set = (id, v) => { const el = document.getElementById(id); if (el && v != null) el.value = v; };
+    set('nome_tabela', snap.nome_tabela);
+    set('cliente', snap.cliente);
+    set('validade_inicio', snap.validade_inicio);
+    set('validade_fim', snap.validade_fim);
+    set('frete_kg', snap.frete_kg);
+    set('plano_pagamento', snap.plano_pagamento);
+    // selects precisam existir antes
+    atualizarPillTaxa();
+    set('desconto_global', '');              // não reimpõe desconto global
+    set('fator_global', snap.fator_global);  // mantém fator como pista do usuário
+    recalcTudo();
+    refreshToolbarEnablement();
+  } catch {}
+}
+
+
+// === Ponte Pai–Filho (contexto de itens) ===
+function clearPickerBridgeFor(ctx) {
+  try { sessionStorage.removeItem(`TP_ATUAL:${ctx}`); } catch {}
+  try { sessionStorage.removeItem(`TP_BUFFER:${ctx}`); } catch {}
+}
+
+function preparePickerBridgeBeforeNavigate() {
+  const ctx = getCtxId();
+  sessionStorage.setItem('TP_CTX_ID', ctx);
+  // salva itens atuais do pai para pré‑marcação no picker
+  sessionStorage.setItem(`TP_ATUAL:${ctx}`, JSON.stringify(itens || []));
+}
+
+function mergeBufferFromPickerIfAny() {
+  const ctx = getCtxId();
+  const raw = sessionStorage.getItem(`TP_BUFFER:${ctx}`);
+  if (!raw) return;
+  try {
+    const recebidos = JSON.parse(raw) || [];
+    const map = new Map((itens || []).map(x => [x.codigo_tabela, x]));
+    for (const p of recebidos) {
+      map.set(p.codigo_tabela, { ...(map.get(p.codigo_tabela) || {}), ...p });
+    }
+    itens = Array.from(map.values());
+    renderTabela();
+  } catch {}
+  finally {
+    try { sessionStorage.removeItem(`TP_BUFFER:${ctx}`); } catch {}
+  }
+}
+
+
+
+
 // Habilita/desabilita todos os campos e a grade
 function setFormDisabled(disabled) {
   // topo
@@ -173,18 +256,44 @@ async function carregarItens() {
       document.getElementById('cliente').value = t.cliente || '';
       document.getElementById('validade_inicio').value = t.validade_inicio || '';
       document.getElementById('validade_fim').value = t.validade_fim || '';
+
+      // >>> NOVO: preencher frete/condição (se existirem) e inferir do item[0] se faltar
+      const first = (Array.isArray(t.produtos) && t.produtos.length) ? t.produtos[0] : null;
+      const freteInput = document.getElementById('frete_kg');
+      const planoSel   = document.getElementById('plano_pagamento');
+
+      if (freteInput) {
+        const freteVal = t.frete_kg ?? first?.frete_kg ?? 0;
+        freteInput.value = String(freteVal || 0);
+      }
+      if (planoSel) {
+        const planoVal = t.plano_pagamento ?? first?.plano_pagamento ?? '';
+        planoSel.value = planoVal || '';
+      }
+
       itens = (t.produtos || []).map(p => ({...p}));
       renderTabela();
 
-      // >>> AQUI: entrar em modo “visualização”
-      currentTabelaId = id;
-      setMode('view');                // trava tudo e mostra Editar/Duplicar
+      // Atualiza a pill e recálculo
+      atualizarPillTaxa();
+      recalcTudo();
 
+      // >>> NOVO: fator global (se todos iguais)
+      const fatores = Array.from(new Set((itens || []).map(x => Number(x.fator_comissao || 0))));
+      const fatorGlobal = (fatores.length === 1) ? fatores[0] : null;
+      const fg = document.getElementById('fator_global');
+      const dg = document.getElementById('desconto_global');
+      if (fg) fg.value = (fatorGlobal != null) ? String(fatorGlobal) : '';
+      if (dg) dg.value = ''; // deixa desconto em branco
+
+      // >>> Entrar em visualização
+      currentTabelaId = id;
+      setMode('view');
       return;
     }
   }
 
-  // Modo “novo” (sem id)
+  // Modo “novo”
   itens = obterItensDaSessao();
   renderTabela();
   setMode('new'); 
@@ -264,16 +373,29 @@ function recalcTudo() {
 }
 
 function aplicarFatorGlobal() {
-  const sel = document.getElementById('desconto_global');
+  const selGlobal = document.getElementById('desconto_global');
   const fatorInput = document.getElementById('fator_global');
   let fator = null;
+
   if (fatorInput.value) fator = Number(fatorInput.value);
-  else if (sel.value && mapaDescontos[sel.value] !== undefined) fator = Number(mapaDescontos[sel.value]);
-  if (fator == null || isNaN(fator)) { alert('Informe um fator válido (0–1) ou escolha um desconto.'); return; }
+  else if (selGlobal.value && mapaDescontos[selGlobal.value] !== undefined) fator = Number(mapaDescontos[selGlobal.value]);
+
+  if (fator == null || isNaN(fator)) { 
+    alert('Informe um fator válido (0–1) ou escolha um desconto.'); 
+    return; 
+  }
+
+  // Zera o desconto global visualmente
+  if (selGlobal) selGlobal.value = '';
+
+  // Aplica em cada linha e zera o select de desconto
   document.querySelectorAll('#tbody-itens tr').forEach(tr => {
     const inp = tr.querySelector('td:nth-child(7) input');
+    const sel = tr.querySelector('td:nth-child(8) select'); // coluna Desconto
     if (inp) inp.value = fator;
+    if (sel) sel.value = ''; // "—"
   });
+
   recalcTudo();
 }
 
@@ -484,6 +606,12 @@ async function onCancelar(e) {
   }
 }
 
+function goToListarTabelas() {
+  const ctx = getCtxId();
+  clearPickerBridgeFor(ctx);
+  window.location.href = 'listar_tabelas.html';
+}
+
 // === Bootstrap ===
 document.addEventListener('DOMContentLoaded', () => {
   // Eventos globais
@@ -531,9 +659,10 @@ document.getElementById('tbody-itens')?.addEventListener('change', (e) => {
  })();
 
   document.getElementById('btn-buscar')?.addEventListener('click', () => {
-    // Se você já tem a navegação pronta pro buscador, mantém:
-    window.location.href = 'tabela_preco.html';
-  });
+  saveHeaderSnapshot();  // <-- salva topo
+  preparePickerBridgeBeforeNavigate(); // (ver tópico 3)
+  window.location.href = 'tabela_preco.html';
+});
 
   document.getElementById('btn-remover-selecionados')?.addEventListener('click', () => {
     removerSelecionados();
@@ -592,3 +721,5 @@ document.getElementById('tbody-itens')?.addEventListener('change', (e) => {
     refreshToolbarEnablement();
   })();
 });
+ restoreHeaderSnapshotIfNew();
+ mergeBufferFromPickerIfAny();
