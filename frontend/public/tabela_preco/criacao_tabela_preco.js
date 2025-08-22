@@ -543,7 +543,10 @@ document.getElementById('tbody-itens')?.addEventListener('change', (e) => {
   document.getElementById('btn-salvar')?.addEventListener('click', async () => {
   try {
     await salvarTabela();
-    setMode('view');
+
+    // Após salvar em NEW ou DUP → volta para NEW travado
+    setMode(MODE.NEW);
+    setFormDisabled(true); // trava campos
   } catch (e) {
     console.error(e);
     alert(e.message || 'Erro ao salvar a tabela.');
