@@ -540,20 +540,33 @@ document.getElementById('tbody-itens')?.addEventListener('change', (e) => {
     refreshToolbarEnablement();
   });
 
-  document.getElementById('btn-salvar')?.addEventListener('click', async () => {
+  document.getElementById('btn-salvar')?.addEventListener('click', async (e) => {
+  // Evita submit do form caso o botão esteja como <button type="submit">
+  if (e && typeof e.preventDefault === 'function') e.preventDefault();
+
+  // Garante que o botão não é submit (caso o HTML esteja com type padrão)
+  const btn = document.getElementById('btn-salvar');
+  if (btn) btn.setAttribute('type', 'button');
+
   try {
     await salvarTabela();
 
-    // Após salvar em NEW ou DUP → volta para NEW travado
-    setMode(MODE.NEW);
-    setFormDisabled(true); // trava campos
+    // ✅ Após salvar em QUALQUER modo, voltar para NEW limpo e destravado
+    if (typeof limparFormularioCabecalho === 'function') limparFormularioCabecalho();
+    if (typeof limparGradeProdutos === 'function') limparGradeProdutos();
+    currentTabelaId = null;
+    sourceTabelaId  = null;
+
+    setMode(MODE.NEW);         // muda modo
+    setFormDisabled(false);    // garante que está destravado
+
   } catch (e) {
     console.error(e);
     alert(e.message || 'Erro ao salvar a tabela.');
-    // NÃO mude de modo; apenas re-sincronize a barra
+    // não muda de modo em erro
   } finally {
-    toggleToolbarByMode();
-    refreshToolbarEnablement();
+    if (typeof toggleToolbarByMode === 'function') toggleToolbarByMode();
+    if (typeof refreshToolbarEnablement === 'function') refreshToolbarEnablement();
   }
 });
   
