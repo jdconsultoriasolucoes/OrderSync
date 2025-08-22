@@ -263,3 +263,4 @@ input[type="text"], select {
   height: 25px;          /* deixe igual aos selects ou no tamanho que preferir */
   max-height: 180px;      /* garante que não passe disso */
 }
+.ja-adicionado { opacity: .6; } .ja-adicionado td { text-decoration: none; }

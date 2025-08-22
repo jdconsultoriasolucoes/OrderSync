@@ -260,9 +260,17 @@ function preencherTabela(produtos) {
 
 function marcarPreSelecionados() {
   if (!preSelecionadosCodigos.size) return;
+
   document.querySelectorAll("#tabela-produtos-body .produto-checkbox").forEach(chk => {
     const codigo = chk.dataset.codigo;
-    if (preSelecionadosCodigos.has(codigo)) chk.checked = true;
+    if (preSelecionadosCodigos.has(codigo)) {
+      // Não marcar de novo: deixa desmarcado e desabilita para evitar duplicação
+      chk.checked = false;
+      chk.disabled = true;
+      chk.title = "Já adicionado à tabela";
+      const tr = chk.closest("tr");
+      if (tr) tr.classList.add("ja-adicionado"); // opcional: estilizar se quiser
+    }
   });
 }
 
