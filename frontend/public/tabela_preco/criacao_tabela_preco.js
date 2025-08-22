@@ -434,10 +434,10 @@ async function onCancelar(e) {
           const t = await r.json();
 
           // repõe cabeçalho
-          document.getElementById('nome_tabela')?.value     = t.nome_tabela || '';
-          document.getElementById('cliente')?.value         = t.cliente || '';
-          document.getElementById('validade_inicio')?.value = t.validade_inicio || '';
-          document.getElementById('validade_fim')?.value    = t.validade_fim || '';
+          document.getElementById('nome_tabela').value     = t.nome_tabela || '';
+          document.getElementById('cliente').value         = t.cliente || '';
+          document.getElementById('validade_inicio').value = t.validade_inicio || '';
+          document.getElementById('validade_fim').value    = t.validade_fim || '';
 
           // repõe itens e re-renderiza grade
           itens = Array.isArray(t.produtos) ? t.produtos.map(p => ({ ...p })) : [];
@@ -492,8 +492,10 @@ document.addEventListener('DOMContentLoaded', () => {
     refreshToolbarEnablement();        // <— ADICIONE ESTA LINHA
   });
   document.getElementById('chk-all')?.addEventListener('change', (e) => {
-  document.querySelectorAll('#tbody-itens .chk-linha').forEach(ch => ch.checked = e.target.checked);refreshToolbarEnablement();
-    });
+  document.querySelectorAll('#tbody-itens .chk-linha')
+    .forEach(ch => { ch.checked = e.target.checked; });
+  refreshToolbarEnablement();
+});
 
   document.getElementById('btn-buscar')?.addEventListener('click', () => {
     // Se você já tem a navegação pronta pro buscador, mantém:
