@@ -79,6 +79,22 @@ function sendBufferBackToParent(selecionados) {
   ?.addEventListener("click", () => window.location.href = 'criacao_tabela_preco.html');
 });
 
+// === Compat shim: envia seleção de volta ao PAI, sem quebrar legado ===
+function sendBufferBackToParent(selecionados) {
+  try {
+    const arr = Array.isArray(selecionados) ? selecionados : [];
+    // Legado: o pai já consome essa chave
+    sessionStorage.setItem('criacao_tabela_preco_produtos', JSON.stringify(arr));
+
+    // Opcional/contexto: se houver, também grava o buffer por contexto (não interfere se o pai não usar)
+    const ctx = sessionStorage.getItem('TP_CTX_ID');
+    if (ctx) {
+      sessionStorage.setItem(`TP_BUFFER:${ctx}`, JSON.stringify(arr));
+    }
+  } catch (e) {
+    console.warn('sendBufferBackToParent shim falhou:', e);
+  }
+}
 
 // fora do DOMContentLoaded
 const fornecedoresMap = new Map(); 
