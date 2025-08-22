@@ -278,13 +278,20 @@ function aplicarFatorGlobal() {
 }
 
 function removerSelecionados() {
-  const novas = []; const rows = Array.from(document.querySelectorAll('#tbody-itens tr'));
+  const novas = [];
+  const rows = Array.from(document.querySelectorAll('#tbody-itens tr'));
   rows.forEach((tr, i) => {
     const chk = tr.querySelector('input.chk-linha');
-    if (chk && chk.checked) return; // descarta
+    if (chk && chk.checked) return; // descarta selecionadas
     novas.push(itens[i]);
   });
-  itens = novas; renderTabela();
+  itens = novas;
+  renderTabela();
+
+  // reset visual e estado dos botões
+  const chkAll = document.getElementById('chk-all');
+  if (chkAll) chkAll.checked = false;
+  if (typeof refreshToolbarEnablement === 'function') refreshToolbarEnablement();
 }
 
 async function salvarTabela() {
@@ -491,11 +498,37 @@ document.addEventListener('DOMContentLoaded', () => {
     recalcTudo();
     refreshToolbarEnablement();        // <— ADICIONE ESTA LINHA
   });
-  document.getElementById('chk-all')?.addEventListener('change', (e) => {
-  document.querySelectorAll('#tbody-itens .chk-linha')
-    .forEach(ch => { ch.checked = e.target.checked; });
-  refreshToolbarEnablement();
+  // Habilitar/Desabilitar "Remover selecionados" ao marcar/desmarcar linhas individuais
+document.getElementById('tbody-itens')?.addEventListener('change', (e) => {
+  if (e.target && e.target.classList.contains('chk-linha')) {
+    // Atualiza o estado do botão
+    if (typeof refreshToolbarEnablement === 'function') refreshToolbarEnablement();
+
+    // Sincroniza o "selecionar todos"
+    const all   = document.querySelectorAll('#tbody-itens .chk-linha');
+    const marked= document.querySelectorAll('#tbody-itens .chk-linha:checked');
+    const chkAll= document.getElementById('chk-all');
+    if (chkAll) chkAll.checked = (all.length > 0 && marked.length === all.length);
+  }
 });
+ // Selecionar todos — robusto (funciona em click e change)
+(function bindChkAll(){
+  const chkAll = document.getElementById('chk-all');
+  if (!chkAll) return;
+
+  const toggleAll = (e) => {
+    const checked = (e && e.currentTarget) ? !!e.currentTarget.checked : !!chkAll.checked;
+    document.querySelectorAll('#tbody-itens .chk-linha')
+      .forEach(cb => { cb.checked = checked; });
+
+    // Atualiza habilitação do botão "Remover selecionados"
+    if (typeof refreshToolbarEnablement === 'function') refreshToolbarEnablement();
+  };
+
+  // Usa os dois eventos para não depender do timing do 'change'
+  chkAll.addEventListener('click',  toggleAll);
+  chkAll.addEventListener('change', toggleAll);
+ })();
 
   document.getElementById('btn-buscar')?.addEventListener('click', () => {
     // Se você já tem a navegação pronta pro buscador, mantém:
