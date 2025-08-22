@@ -324,9 +324,11 @@ function carregarPreSelecionadosDaSessao() {
 
 // No onload do filho:
 window.onload = async function () {
-  
+  // ✅ Blindagem mínima: só chama se existir; se não, ignora e segue.
+  if (typeof carregarPreSelecionadosDaSessao === 'function') {
+    try { carregarPreSelecionadosDaSessao(); } catch (e) { console.warn(e); }
+  }
+  // mantém o fluxo original
   await carregarGrupos();
   await carregarProdutos();
-  loadPreselectionFromParent();
-
 };
