@@ -324,7 +324,9 @@ function carregarPreSelecionadosDaSessao() {
 
 // No onload do filho:
 window.onload = async function () {
-  loadPreselectionFromParent();
+  
   await carregarGrupos();
   await carregarProdutos();
+  loadPreselectionFromParent();
+
 };
