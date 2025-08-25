@@ -178,13 +178,14 @@ function setMode(mode) {
 const fmtMoney = (v) => (Number(v || 0)).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 const fmt4 = (v) => (Number(v || 0)).toLocaleString('pt-BR', { minimumFractionDigits: 4, maximumFractionDigits: 4 });
 const fmtPct = (v) => (Number(v || 0)).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
-function calcularLinha(item, fator, taxaCond, freteKg) {
+
+function calcularLinha(item, fator, taxaCond, freteKg,aplicarIvaSt) {
   const valor = Number(item.valor || 0);
   const peso = Number(item.peso_liquido || 0);
   const acrescimoCond = valor * (Number(taxaCond || 0));
   
   //Impostos
-  const ipi   = Number(item.ipi   || 0);
+  const ipi   = Number(item.ipi || 0);
   const ivaSt = aplicarIvaSt ? Number(item.iva_st || 0) : 0;
   
   // Frete por regra já usada no projeto: (frete_kg / 1000) * peso_liquido
@@ -409,8 +410,7 @@ function recalcLinha(tr) {
   const codCond  = selCond ? selCond.value : '';
   const taxaCond = mapaCondicoes[codCond] ?? mapaCondicoes[document.getElementById('plano_pagamento').value] ?? 0;
 
-  const { acrescimoCond, freteValor, descontoValor, valorFinal } =
-    calcularLinha(item, fator, taxaCond, freteKg, ivaStAtivo);
+  const { acrescimoCond, freteValor, descontoValor, valorFinal } = calcularLinha(item, fator, taxaCond, freteKg, ivaStAtivo);
 
   tr.querySelector('td:nth-child(11)').textContent = fmtMoney(acrescimoCond); // Cond. (R$)
   tr.querySelector('td:nth-child(12)').textContent = fmtMoney(freteValor);    // Frete (R$)
@@ -418,9 +418,8 @@ function recalcLinha(tr) {
   tr.querySelector('td:nth-child(16)').textContent = fmtMoney(valorFinal);    // Valor Final
 }
 
-function recalcTudo() {
-  document.querySelectorAll('#tbody-itens tr').forEach(tr => recalcLinha(tr));
-}
+function recalcTudo() {document.querySelectorAll('#tbody-itens tr').forEach(tr => recalcLinha(tr));
+                      }
 
 function aplicarFatorGlobal() {
   const selGlobal = document.getElementById('desconto_global');
