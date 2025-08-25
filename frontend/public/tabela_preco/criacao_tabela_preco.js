@@ -10,6 +10,14 @@ let currentMode = 'new';       // 'new' | 'view' | 'edit' | 'duplicate'
 let currentTabelaId = null;
 let sourceTabelaId  = null;
 
+// ✅ Se a página for recarregada (F5), zera o buffer legado
+try {
+  const nav = performance.getEntriesByType('navigation')[0];
+  if (nav && nav.type === 'reload') {
+    sessionStorage.removeItem('criacao_tabela_preco_produtos');
+  }
+} catch {}
+
 // === Contexto e Snapshot de Cabeçalho ===
 function getCtxId() {
   return currentTabelaId ? String(currentTabelaId) : 'new';
@@ -399,6 +407,12 @@ function aplicarFatorGlobal() {
   recalcTudo();
 }
 
+// Mantém o picker em dia com o que está na grade do PAI
+function snapshotSelecionadosParaPicker() {
+  try { sessionStorage.setItem('criacao_tabela_preco_produtos', JSON.stringify(itens || [])); }
+  catch (e) { console.warn('snapshotSelecionadosParaPicker falhou:', e); }
+}
+
 function removerSelecionados() {
   const novas = [];
   const rows = Array.from(document.querySelectorAll('#tbody-itens tr'));
@@ -409,7 +423,8 @@ function removerSelecionados() {
   });
   itens = novas;
   renderTabela();
-
+ // ✅ mantém o picker alinhado após remoção
+  snapshotSelecionadosParaPicker();
   // reset visual e estado dos botões
   const chkAll = document.getElementById('chk-all');
   if (chkAll) chkAll.checked = false;
@@ -661,6 +676,7 @@ document.getElementById('tbody-itens')?.addEventListener('change', (e) => {
   document.getElementById('btn-buscar')?.addEventListener('click', () => {
   saveHeaderSnapshot();  // <-- salva topo
   preparePickerBridgeBeforeNavigate(); // (ver tópico 3)
+  snapshotSelecionadosParaPicker();
   window.location.href = 'tabela_preco.html';
 });
 
