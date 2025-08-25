@@ -9,6 +9,7 @@ let itens = []; // itens carregados
 let currentMode = 'new';       // 'new' | 'view' | 'edit' | 'duplicate'
 let currentTabelaId = null;
 let sourceTabelaId  = null;
+let ivaStAtivo = false; // por padrão DESLIGADO: não aplica IVA_ST no cálculo
 
 // ✅ Se a página for recarregada (F5), zera o buffer legado
 try {
@@ -32,7 +33,6 @@ function getHeaderSnapshot() {
     frete_kg: document.getElementById('frete_kg')?.value || '0',
     plano_pagamento: document.getElementById('plano_pagamento')?.value || '',
     desconto_global: document.getElementById('desconto_global')?.value || '',
-    fator_global: document.getElementById('fator_global')?.value || ''
   };
 }
 
@@ -59,7 +59,6 @@ function restoreHeaderSnapshotIfNew() {
     // selects precisam existir antes
     atualizarPillTaxa();
     set('desconto_global', '');              // não reimpõe desconto global
-    set('fator_global', snap.fator_global);  // mantém fator como pista do usuário
     recalcTudo();
     refreshToolbarEnablement();
   } catch {}
@@ -178,15 +177,21 @@ function setMode(mode) {
 // === Utils ===
 const fmtMoney = (v) => (Number(v || 0)).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 const fmt4 = (v) => (Number(v || 0)).toLocaleString('pt-BR', { minimumFractionDigits: 4, maximumFractionDigits: 4 });
-
+const fmtPct = (v) => (Number(v || 0)).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 function calcularLinha(item, fator, taxaCond, freteKg) {
   const valor = Number(item.valor || 0);
   const peso = Number(item.peso_liquido || 0);
   const acrescimoCond = valor * (Number(taxaCond || 0));
+  
+  //Impostos
+  const ipi   = Number(item.ipi   || 0);
+  const ivaSt = aplicarIvaSt ? Number(item.iva_st || 0) : 0;
+  
   // Frete por regra já usada no projeto: (frete_kg / 1000) * peso_liquido
   const freteValor = (Number(freteKg || 0) / 1000) * peso;
   const descontoValor = valor * Number(fator || 0);
-  const valorFinal = valor + acrescimoCond + freteValor - descontoValor;
+  const base = valor + acrescimoCond + freteValor - descontoValor;
+  const valorFinal = base + (base * ipi) + (base * ivaSt);
   return { acrescimoCond, freteValor, descontoValor, valorFinal };
 }
 
@@ -236,12 +241,20 @@ async function carregarDescontos() {
   sel.innerHTML = '';
   sel.appendChild(option('Selecione…', ''));
   data.forEach(d => { mapaDescontos[d.codigo] = Number(d.percentual) || 0; sel.appendChild(option(`${d.codigo} - ${d.percentual}`, d.codigo)); });
+  atualizarPillDesconto();
 }
 
 function atualizarPillTaxa() {
   const codigo = document.getElementById('plano_pagamento').value;
   const taxa = mapaCondicoes[codigo];
   document.getElementById('pill-taxa').textContent = (taxa || taxa === 0) ? `${fmt4(taxa)}` : '—';
+}
+
+function atualizarPillDesconto() {
+  const code = document.getElementById('desconto_global')?.value || '';
+  const fator = mapaDescontos[code];
+  const el = document.getElementById('pill-fator');
+  if (el) el.textContent = (fator != null && !isNaN(fator)) ? fmt4(fator) : '—';
 }
 
 function obterItensDaSessao() {
@@ -289,9 +302,7 @@ async function carregarItens() {
       // >>> NOVO: fator global (se todos iguais)
       const fatores = Array.from(new Set((itens || []).map(x => Number(x.fator_comissao || 0))));
       const fatorGlobal = (fatores.length === 1) ? fatores[0] : null;
-      const fg = document.getElementById('fator_global');
       const dg = document.getElementById('desconto_global');
-      if (fg) fg.value = (fatorGlobal != null) ? String(fatorGlobal) : '';
       if (dg) dg.value = ''; // deixa desconto em branco
 
       // >>> Entrar em visualização
@@ -327,9 +338,10 @@ function criarLinha(item, idx) {
   // Fator comissão (editável) + Desconto (select)
   const tdFator = document.createElement('td'); tdFator.className = 'num';
   const inpFator = document.createElement('input'); Object.assign(inpFator, { type: 'number', step: '0.0001', min: '0', max: '1', value: item.fator_comissao ?? '' });
-  inpFator.style.width = '110px'; inpFator.addEventListener('input', () => recalcLinha(tr));
-  tdFator.appendChild(inpFator);
-
+  inpFator.readOnly = true; // <<<<< BLOQUEIA DIGITAÇÃO
+  inpFator.title = 'Defina pelo seletor de desconto ou “Aplicar fator a todos”';
+  inpFator.style.width = '110px';
+  inpFator.addEventListener('input', () => recalcLinha(tr));
   const tdDescOpt = document.createElement('td');
   const selDesc = document.createElement('select');
   selDesc.appendChild(option('—', ''));
@@ -346,13 +358,34 @@ function criarLinha(item, idx) {
   });
   tdDescOpt.appendChild(selDesc);
 
-  const tdCond = document.createElement('td'); tdCond.className = 'num'; tdCond.textContent = '0,00';
+// Condição por linha (código) — NOVO
+  const tdCondCod = document.createElement('td');
+  const selCond   = document.createElement('select');
+  selCond.appendChild(option('—', ''));
+  Object.entries(mapaCondicoes).forEach(([cod]) => selCond.appendChild(option(cod, cod)));
+  // default: se a linha já tem plano_pagamento, usa; senão, usa o global selecionado
+  const planoGlobal = document.getElementById('plano_pagamento')?.value || '';
+  selCond.value = item.plano_pagamento || planoGlobal || '';
+  selCond.addEventListener('change', () => recalcLinha(tr));
+  tdCondCod.appendChild(selCond);
+
+  const tdCondVal   = document.createElement('td'); tdCondVal.className = 'num'; tdCondVal.textContent = '0,00';
   const tdFrete = document.createElement('td'); tdFrete.className = 'num'; tdFrete.textContent = '0,00';
   const tdDescAplic = document.createElement('td'); tdDescAplic.className = 'num'; tdDescAplic.textContent = '0,00';
+  
+  // IPI e IVA_ST (%) — NOVOS
+  const tdIpi   = document.createElement('td'); tdIpi.className   = 'num'; tdIpi.textContent   = fmtPct(item.ipi || 0);
+  const tdIvaSt = document.createElement('td'); tdIvaSt.className = 'num'; tdIvaSt.textContent = fmtPct(item.iva_st || 0);
+  
   const tdGrupo = document.createElement('td'); tdGrupo.textContent = [item.grupo, item.departamento].filter(Boolean).join(' / ');
   const tdFinal = document.createElement('td'); tdFinal.className = 'num'; tdFinal.textContent = '0,00';
 
-  tr.append(tdSel, tdCod, tdDesc, tdEmb, tdPeso, tdValor, tdFator, tdDescOpt, tdCond, tdFrete, tdDescAplic, tdGrupo, tdFinal);
+  tr.append(
+  tdSel, tdCod, tdDesc, tdEmb, tdGrupo,
+  tdPeso, tdValor, tdFator, tdDescOpt,
+  tdCondCod, tdCondVal, tdFrete, tdDescAplic,
+  tdIpi, tdIvaSt, tdFinal
+);
   return tr;
 }
 
@@ -365,18 +398,24 @@ function renderTabela() {
 }
 
 function recalcLinha(tr) {
-  const idx = Number(tr.dataset.idx);
+  const idx  = Number(tr.dataset.idx);
   const item = itens[idx]; if (!item) return;
 
-  const fator = Number(tr.querySelector('td:nth-child(7) input')?.value || 0);
-  const taxaCond = mapaCondicoes[document.getElementById('plano_pagamento').value] || 0;
-  const freteKg = Number(document.getElementById('frete_kg').value || 0);
+  const fator    = Number(tr.querySelector('td:nth-child(7) input')?.value || 0);
+  const freteKg  = Number(document.getElementById('frete_kg').value || 0);
 
-  const { acrescimoCond, freteValor, descontoValor, valorFinal } = calcularLinha(item, fator, taxaCond, freteKg);
-  tr.querySelector('td:nth-child(9)').textContent = fmtMoney(acrescimoCond);
-  tr.querySelector('td:nth-child(10)').textContent = fmtMoney(freteValor);
-  tr.querySelector('td:nth-child(11)').textContent = fmtMoney(descontoValor);
-  tr.querySelector('td:nth-child(13)').textContent = fmtMoney(valorFinal);
+  // Condição por linha (código → taxa)
+  const selCond  = tr.querySelector('td:nth-child(9) select');
+  const codCond  = selCond ? selCond.value : '';
+  const taxaCond = mapaCondicoes[codCond] ?? mapaCondicoes[document.getElementById('plano_pagamento').value] ?? 0;
+
+  const { acrescimoCond, freteValor, descontoValor, valorFinal } =
+    calcularLinha(item, fator, taxaCond, freteKg, ivaStAtivo);
+
+  tr.querySelector('td:nth-child(11)').textContent = fmtMoney(acrescimoCond); // Cond. (R$)
+  tr.querySelector('td:nth-child(12)').textContent = fmtMoney(freteValor);    // Frete (R$)
+  tr.querySelector('td:nth-child(13)').textContent = fmtMoney(descontoValor); // Desc. aplicado
+  tr.querySelector('td:nth-child(16)').textContent = fmtMoney(valorFinal);    // Valor Final
 }
 
 function recalcTudo() {
@@ -385,27 +424,24 @@ function recalcTudo() {
 
 function aplicarFatorGlobal() {
   const selGlobal = document.getElementById('desconto_global');
-  const fatorInput = document.getElementById('fator_global');
-  let fator = null;
+  const code = selGlobal?.value || '';
+  const fator = mapaDescontos[code];
 
-  if (fatorInput.value) fator = Number(fatorInput.value);
-  else if (selGlobal.value && mapaDescontos[selGlobal.value] !== undefined) fator = Number(mapaDescontos[selGlobal.value]);
-
-  if (fator == null || isNaN(fator)) { 
-    alert('Informe um fator válido (0–1) ou escolha um desconto.'); 
-    return; 
+  if (fator == null || isNaN(fator)) {
+    alert('Escolha um desconto válido.');
+    return;
   }
 
-  // Zera o desconto global visualmente
-  if (selGlobal) selGlobal.value = '';
-
-  // Aplica em cada linha e zera o select de desconto
+  // Aplica em cada linha e sincroniza o select da linha
   document.querySelectorAll('#tbody-itens tr').forEach(tr => {
-    const inp = tr.querySelector('td:nth-child(7) input');
-    const sel = tr.querySelector('td:nth-child(8) select'); // coluna Desconto
+    const inp = tr.querySelector('td:nth-child(7) input'); // fator por linha
+    const sel = tr.querySelector('td:nth-child(8) select'); // desconto por linha
     if (inp) inp.value = fator;
-    if (sel) sel.value = ''; // "—"
+    if (sel) sel.value = code;
+    recalcLinha(tr);
   });
+
+  atualizarPillDesconto();
 
   recalcTudo();
 }
@@ -442,27 +478,37 @@ async function salvarTabela() {
   const plano_pagamento = document.getElementById('plano_pagamento').value || null;
   const frete_kg = Number(document.getElementById('frete_kg').value || 0);
 
-  const taxaCond = mapaCondicoes[plano_pagamento] || 0;
-
   // Mapeia as linhas já renderizadas na tabela para o formato do backend
   const produtos = Array.from(document.querySelectorAll('#tbody-itens tr')).map(tr => {
-    const idx = Number(tr.dataset.idx); const item = itens[idx];
-    const fator = Number(tr.querySelector('td:nth-child(7) input')?.value || 0);
-    const { acrescimoCond, freteValor, descontoValor, valorFinal } =
-      calcularLinha(item, fator, taxaCond, frete_kg);
+  const idx  = Number(tr.dataset.idx); 
+  const item = itens[idx];
 
-    return {
-      nome_tabela, validade_inicio, validade_fim, cliente, fornecedor: item.fornecedor || '',
-      codigo_tabela: item.codigo_tabela, descricao: item.descricao, embalagem: item.embalagem,
-      peso_liquido: item.peso_liquido || 0, peso_bruto: item.peso_bruto || item.peso_liquido || 0,
-      valor: item.valor || 0,
-      desconto: Number(descontoValor.toFixed(4)),
-      acrescimo: Number((acrescimoCond + freteValor).toFixed(4)),
-      fator_comissao: fator || 0, plano_pagamento, frete_kg, frete_percentual: null,
-      valor_liquido: Number(valorFinal.toFixed(2)),
-      grupo: item.grupo || null, departamento: item.departamento || null
-    };
-  });
+  const fator   = Number(tr.querySelector('td:nth-child(7) input')?.value || 0);
+  const selCond = tr.querySelector('td:nth-child(9) select');
+  const codCond = selCond ? selCond.value : (document.getElementById('plano_pagamento').value || null);
+
+  const taxaCondLinha = mapaCondicoes[codCond] || 0;
+
+  const { acrescimoCond, freteValor, descontoValor, valorFinal } =
+    calcularLinha(item, fator, taxaCondLinha, frete_kg, ivaStAtivo);
+
+  return {
+    nome_tabela, validade_inicio, validade_fim, cliente, fornecedor: item.fornecedor || '',
+    codigo_tabela: item.codigo_tabela, descricao: item.descricao, embalagem: item.embalagem,
+    peso_liquido: item.peso_liquido || 0, peso_bruto: item.peso_bruto || item.peso_liquido || 0,
+    valor: item.valor || 0,
+    desconto: Number(descontoValor.toFixed(4)),
+    acrescimo: Number((acrescimoCond + freteValor).toFixed(4)),
+    fator_comissao: fator || 0,
+    plano_pagamento: codCond || null,       // <<<<<< per‑line
+    frete_kg,
+    frete_percentual: null,
+    valor_liquido: Number(valorFinal.toFixed(2)),
+    grupo: item.grupo || null, departamento: item.departamento || null,
+    ipi: item.ipi || 0,
+    iva_st: ivaStAtivo ? (item.iva_st || 0) : 0 // salva coerente com o que foi calculado
+  };
+});
 
   const payload = { nome_tabela, validade_inicio, validade_fim, cliente, fornecedor: '', produtos };
 
@@ -522,10 +568,7 @@ function limparFormularioCabecalho() {
   const descGlobal = document.getElementById('desconto_global');
   if (descGlobal) descGlobal.value = '';
 
-  const fatorGlobal = document.getElementById('fator_global');
-  if (fatorGlobal) fatorGlobal.value = '';
-
-  // Pill de taxa
+    // Pill de taxa
   const pill = document.getElementById('pill-taxa');
   if (pill) pill.textContent = '—';
 
@@ -641,6 +684,7 @@ function mergeItensExistentesENovos(existentes, novos) {
 }
 
 
+
 // === Bootstrap ===
 document.addEventListener('DOMContentLoaded', () => {
   // Eventos globais
@@ -656,7 +700,7 @@ document.addEventListener('DOMContentLoaded', () => {
     refreshToolbarEnablement();        // <— ADICIONE ESTA LINHA
   });
   // Habilitar/Desabilitar "Remover selecionados" ao marcar/desmarcar linhas individuais
-document.getElementById('tbody-itens')?.addEventListener('change', (e) => {
+  document.getElementById('tbody-itens')?.addEventListener('change', (e) => {
   if (e.target && e.target.classList.contains('chk-linha')) {
     // Atualiza o estado do botão
     if (typeof refreshToolbarEnablement === 'function') refreshToolbarEnablement();
@@ -667,9 +711,9 @@ document.getElementById('tbody-itens')?.addEventListener('change', (e) => {
     const chkAll= document.getElementById('chk-all');
     if (chkAll) chkAll.checked = (all.length > 0 && marked.length === all.length);
   }
-});
+ });
  // Selecionar todos — robusto (funciona em click e change)
-(function bindChkAll(){
+ (function bindChkAll(){
   const chkAll = document.getElementById('chk-all');
   if (!chkAll) return;
 
@@ -692,7 +736,7 @@ document.getElementById('tbody-itens')?.addEventListener('change', (e) => {
   preparePickerBridgeBeforeNavigate(); // (ver tópico 3)
   snapshotSelecionadosParaPicker();
   window.location.href = 'tabela_preco.html';
-});
+ });
 
   document.getElementById('btn-remover-selecionados')?.addEventListener('click', () => {
     removerSelecionados();
@@ -727,7 +771,7 @@ document.getElementById('tbody-itens')?.addEventListener('change', (e) => {
     if (typeof toggleToolbarByMode === 'function') toggleToolbarByMode();
     if (typeof refreshToolbarEnablement === 'function') refreshToolbarEnablement();
   }
-});
+ });
   
   document.getElementById('btn-cancelar')?.addEventListener('click', onCancelar);
   document.getElementById('btn-editar')?.addEventListener('click', onEditar);
@@ -750,6 +794,24 @@ document.getElementById('tbody-itens')?.addEventListener('change', (e) => {
 
     refreshToolbarEnablement();
   })();
-});
+ });
  restoreHeaderSnapshotIfNew();
  mergeBufferFromPickerIfAny();
+
+ document.getElementById('btn-aplicar-condicao-todos')?.addEventListener('click', () => {
+  const cod = document.getElementById('plano_pagamento')?.value || '';
+  document.querySelectorAll('#tbody-itens tr').forEach(tr => {
+    const sel = tr.querySelector('td:nth-child(9) select');
+    if (sel) sel.value = cod;
+    recalcLinha(tr);
+  });
+ });
+ document.getElementById('iva_st_toggle')?.addEventListener('change', (e) => {
+  ivaStAtivo = !!e.target.checked;
+  recalcTudo();
+ });
+
+ document.getElementById('desconto_global')?.addEventListener('change', () => {
+  atualizarPillDesconto();
+  recalcTudo();
+});

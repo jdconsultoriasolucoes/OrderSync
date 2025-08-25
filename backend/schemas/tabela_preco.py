@@ -30,8 +30,10 @@ class TabelaPreco(BaseModel):
     valor_liquido: Optional[float] = None
     grupo: Optional[str] = None
     departamento: Optional[str] = None
+    ipi: Optional[float] = 0.0
+    iva_st: Optional[float] = 0.0
 
-    @validator("peso_liquido", "peso_bruto", "valor", "desconto", "acrescimo", "fator_comissao",
+    @validator("peso_liquido", "peso_bruto", "valor", "desconto", "acrescimo", "fator_comissao","ipi","iva_st",
                "frete_percentual", "frete_kg", "valor_liquido")
     def valida_positivos(cls, v, field):
         if v is not None and v < 0:
@@ -46,7 +48,9 @@ class ProdutoCalculo(BaseModel):
     descricao: str
     valor: float
     peso_liquido: Optional[float] = 0.0
-
+    ipi: Optional[float] = 0.0
+    iva_st: Optional[float] = 0.0
+    
 class ParametrosCalculo(BaseModel):
     produtos: List[ProdutoCalculo]
     frete_unitario : float

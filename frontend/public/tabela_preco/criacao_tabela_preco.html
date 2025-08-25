@@ -26,6 +26,13 @@
           <input id="cliente" type="text" placeholder="Código ou nome do cliente" />
         </div>
         <div class="field">
+          <label for="iva_st_toggle">IVA_ST</label>
+          <div class="inline">
+              <input id="iva_st_toggle" type="checkbox" />
+              <span class="hint">IVA_ST (Sim / Não) </span>
+          </div>
+        </div>
+        <div class="field">
           <label for="validade_inicio">Data Início</label>
           <input id="validade_inicio" type="date" />
         </div>
@@ -45,13 +52,17 @@
           <select id="plano_pagamento"></select>
           <div class="hint" id="hint-condicao">Carregando condições…</div>
         </div>
+        <div class="toolbar left-gap">
+         <button class="btn" id="btn-aplicar-condicao-todos">Aplicar condição a todos</button>
+         <span class="pill"><span>Taxa Condição:</span><strong id="pill-taxa">—</strong></span>
+        </div>
         <div class="field">
           <label for="desconto_global">Desconto / Fator de Comissão</label>
           <div class="inline">
             <select id="desconto_global" class="grow"></select>
-            <input id="fator_global" type="number" step="0.0001" min="0" max="1" placeholder="Fator (ex.: 0.1500)" />
+            <span class="pill"><span>Taxa do fator:</span><strong id="pill-fator">—</strong></span>
           </div>
-          <div class="hint">Selecione um desconto ou informe um fator (0–1). Você pode <b>aplicar a todos</b> abaixo.</div>
+          <div class="hint">Selecione um desconto para <b>aplicar a todos</b> abaixo.</div>
           <div class="toolbar left-gap">
             <button class="btn" id="btn-aplicar-todos">Aplicar fator a todos</button>
             <span class="pill"><span>Taxa Condição:</span><strong id="pill-taxa">—</strong></span>
@@ -84,14 +95,17 @@
               <th>Código</th>
               <th>Descrição</th>
               <th>Embalagem</th>
+              <th>Grupo / Depto.</th>
               <th class="right">Peso Líq.</th>
               <th class="right">Valor</th>
               <th class="right">Fator Comissão</th>
               <th>Desconto</th>
+              <th>Cond. Pagto (cód)</th><!-- NOVO (editável por linha) -->
               <th class="right">Cond. Pagto (R$)</th>
               <th class="right">Frete (R$)</th>
               <th class="right">Desc. aplicado (R$)</th>
-              <th>Grupo / Depto.</th>
+              <th class="right">IPI (%)</th><!-- NOVO -->
+              <th class="right">IVA_ST (%)</th><!-- NOVO -->
               <th class="right">Valor Final (R$)</th>
             </tr>
           </thead>

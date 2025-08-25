@@ -73,7 +73,7 @@ def filtrar_produtos_para_tabela_preco(
                 p.peso AS peso_bruto,
                 p.preco_lista_supra AS valor,
                 p.ipi AS ipi,
-                p.iva_st AS icms_st,
+                p.iva_st AS iva_st,
                 p.marca AS grupo,
                 f.familia AS departamento,
                 p.fornecedor
@@ -180,6 +180,8 @@ def salvar_tabela_preco(payload: TabelaPrecoCompleta):
                 valor_liquido=produto.valor_liquido,
                 grupo=produto.grupo,
                 departamento=produto.departamento,
+                ipi = produto.ipi,
+                iva_st=produto.iva_st,
             )
             db.add(registro)
 
@@ -300,6 +302,8 @@ def obter_tabela(id_tabela: int):
                     "valor_liquido": p.valor_liquido,
                     "grupo": p.grupo,
                     "departamento": p.departamento,
+                    "ipi": p.ipi,
+                    "iva_st": p.iva_st,
                 } for p in itens
             ]
         }

@@ -28,6 +28,8 @@ class TabelaPreco(Base):
     valor_liquido = Column(Float, nullable=True)
     grupo = Column(String, nullable=True)
     departamento = Column(String, nullable=True)
+    ipi = Column(Float, default=0.0)
+    iva_st = Column(Float, default=0.0)
 
     # Auditoria
     ativo = Column(Boolean, default=True)

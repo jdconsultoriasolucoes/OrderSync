@@ -8,12 +8,15 @@ def calcular_valores_dos_produtos(payload: ParametrosCalculo) -> List[ProdutoCal
     for produto in payload.produtos:
         valor = produto.valor
         peso = produto.peso_liquido or 0.0
+        ipi = produto.ipi or 0.0
+        iva_st = produto.iva_st or 0.0
 
         frete_kg = (payload.frete_unitario / 1000) * peso
         ajuste_pagamento = valor * payload.acrescimo_pagamento
         comissao_aplicada = valor * payload.fator_comissao
 
-        valor_liquido = valor + frete_kg + ajuste_pagamento - comissao_aplicada
+        base = valor + frete_kg + ajuste_pagamento - comissao_aplicada 
+        valor_liquido = base + ((base * ipi) + (base * iva_st))
 
         resultado.append(ProdutoCalculado(
             **produto.dict(),
