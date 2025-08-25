@@ -83,16 +83,31 @@ function sendBufferBackToParent(selecionados) {
 function sendBufferBackToParent(selecionados) {
   try {
     const arr = Array.isArray(selecionados) ? selecionados : [];
-    // Legado: o pai já consome essa chave
-    sessionStorage.setItem('criacao_tabela_preco_produtos', JSON.stringify(arr));
 
-    // Opcional/contexto: se houver, também grava o buffer por contexto (não interfere se o pai não usar)
+    // --- LEGADO: MERGE na chave 'criacao_tabela_preco_produtos'
+    let prev = [];
+    try { prev = JSON.parse(sessionStorage.getItem('criacao_tabela_preco_produtos') || '[]'); } catch {}
+    const map = new Map((prev || []).map(x => [(x.codigo_tabela ?? x.codigo), x]));
+    for (const p of arr) {
+      const k = p.codigo_tabela ?? p.codigo;
+      map.set(k, { ...(map.get(k) || {}), ...p });
+    }
+    sessionStorage.setItem('criacao_tabela_preco_produtos', JSON.stringify(Array.from(map.values())));
+
+    // --- CONTEXTO (se houver): MERGE em TP_BUFFER:<ctx> (não atrapalha se o pai não usar)
     const ctx = sessionStorage.getItem('TP_CTX_ID');
     if (ctx) {
-      sessionStorage.setItem(`TP_BUFFER:${ctx}`, JSON.stringify(arr));
+      let prevCtx = [];
+      try { prevCtx = JSON.parse(sessionStorage.getItem(`TP_BUFFER:${ctx}`) || '[]'); } catch {}
+      const mapCtx = new Map((prevCtx || []).map(x => [(x.codigo_tabela ?? x.codigo), x]));
+      for (const p of arr) {
+        const k = p.codigo_tabela ?? p.codigo;
+        mapCtx.set(k, { ...(mapCtx.get(k) || {}), ...p });
+      }
+      sessionStorage.setItem(`TP_BUFFER:${ctx}`, JSON.stringify(Array.from(mapCtx.values())));
     }
   } catch (e) {
-    console.warn('sendBufferBackToParent shim falhou:', e);
+    console.warn('sendBufferBackToParent merge shim falhou:', e);
   }
 }
 
