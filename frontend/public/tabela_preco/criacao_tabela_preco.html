@@ -45,7 +45,7 @@
       <div class="grid grid-3 grid-gap">
         <div class="field">
           <label for="frete_kg">Frete por KG <span class="hint">(aplica-se por linha)</span></label>
-          <input id="frete_kg" type="number" step="0.01" min="0" value="0" />
+          <input id="frete_kg" type="number" step="0" min="0" value="0" />
         </div>
         <div class="field">
           <label for="plano_pagamento">Condição de Pagamento</label>
@@ -58,14 +58,13 @@
         </div>
         <div class="field">
           <label for="desconto_global">Desconto / Fator de Comissão</label>
-          <div class="inline">
+          <!--<div class="inline">-->
             <select id="desconto_global" class="grow"></select>
             <span class="pill"><span>Taxa do fator:</span><strong id="pill-fator">—</strong></span>
-          </div>
+          <!--</div>-->
           <div class="hint">Selecione um desconto para <b>aplicar a todos</b> abaixo.</div>
           <div class="toolbar left-gap">
             <button class="btn" id="btn-aplicar-todos">Aplicar fator a todos</button>
-            <span class="pill"><span>Taxa Condição:</span><strong id="pill-taxa">—</strong></span>
           </div>
         </div>
       </div>

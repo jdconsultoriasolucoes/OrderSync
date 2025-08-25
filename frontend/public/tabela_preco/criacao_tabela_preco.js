@@ -433,8 +433,8 @@ function aplicarFatorGlobal() {
 
   // Aplica em cada linha e sincroniza o select da linha
   document.querySelectorAll('#tbody-itens tr').forEach(tr => {
-    const inp = tr.querySelector('td:nth-child(7) input'); // fator por linha
-    const sel = tr.querySelector('td:nth-child(8) select'); // desconto por linha
+    const inp = tr.querySelector('td:nth-child(8) input'); // fator por linha
+    const sel = tr.querySelector('td:nth-child(9) select'); // desconto por linha
     if (inp) inp.value = fator;
     if (sel) sel.value = code;
     recalcLinha(tr);
