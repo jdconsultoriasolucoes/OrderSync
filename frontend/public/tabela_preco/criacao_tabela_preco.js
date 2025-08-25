@@ -301,8 +301,11 @@ async function carregarItens() {
     }
   }
 
-  // Modo “novo”
-  itens = obterItensDaSessao();
+  const novos = obterItensDaSessao();              // o que veio do picker nesta volta
+  itens = mergeItensExistentesENovos(itens, novos); // ✅ MESCLA em vez de substituir
+
+  // (opcional, mas recomendado) já limpa o buffer legado para não reaplicar depois
+  try { sessionStorage.removeItem('criacao_tabela_preco_produtos'); } catch {}
   renderTabela();
   setMode('new'); 
 }
@@ -626,6 +629,17 @@ function goToListarTabelas() {
   clearPickerBridgeFor(ctx);
   window.location.href = 'listar_tabelas.html';
 }
+
+
+function mergeItensExistentesENovos(existentes, novos) {
+  const map = new Map((existentes || []).map(x => [x.codigo_tabela, x]));
+  (novos || []).forEach(nv => {
+    const prev = map.get(nv.codigo_tabela);
+    map.set(nv.codigo_tabela, prev ? { ...prev, ...nv } : nv);
+  });
+  return Array.from(map.values());
+}
+
 
 // === Bootstrap ===
 document.addEventListener('DOMContentLoaded', () => {
