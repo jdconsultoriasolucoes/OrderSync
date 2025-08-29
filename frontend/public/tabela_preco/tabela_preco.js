@@ -338,7 +338,9 @@ function enviarSelecionados() {
       grupo: p.grupo || null,
       departamento: p.departamento || null,
       fornecedor: p.fornecedor || "",
-      fator_comissao: 0
+      fator_comissao: 0,
+      ipi: Number(p.ipi ?? 0),
+      iva_st: Number(p.iva_st ?? 0)
     });
   });
 
