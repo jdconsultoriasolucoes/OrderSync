@@ -269,6 +269,46 @@ def listar_tabelas():
             }
             for r in rows
         ]
+
+
+
+@router.get("/busca_cliente")
+def busca_cliente(
+    q: str = Query("", description="Trecho do nome ou CNPJ"),
+    ramo: str | None = Query(None, description="Filtra pelo ramo_juridico ex.: 'Revenda'"),
+    page: int = Query(1, ge=1),
+    page_size: int = Query(20, ge=1, le=100),
+):
+    try:
+        db = SessionLocal()
+        base_sql = """
+            SELECT
+              codigo,
+              cnpj_cpf_faturamento AS cnpj_cpf,
+              nome_empresarial     AS nome_cliente,
+              ramo_juridico
+            FROM public.t_cadastro_cliente
+            WHERE
+              (:q = '' OR nome_empresarial ILIKE :like OR cnpj_cpf_faturamento ILIKE :like)
+        """
+        params = {
+            "q": q,
+            "like": f"%{q}%",
+            "offset": (page - 1) * page_size,
+            "limit": page_size,
+        }
+        if ramo:
+            base_sql += " AND ramo_juridico = :ramo"
+            params["ramo"] = ramo
+
+        base_sql += " ORDER BY nome_empresarial OFFSET :offset LIMIT :limit"
+
+        rows = db.execute(text(base_sql), params).mappings().all()
+        return [dict(r) for r in rows]
+    finally:
+        db.close()
+
+
 @router.get("/{id_tabela}")
 def obter_tabela(id_tabela: int):
     with SessionLocal() as db:
@@ -307,40 +347,3 @@ def obter_tabela(id_tabela: int):
                 } for p in itens
             ]
         }
-
-
-@router.get("/busca_cliente")
-def busca_cliente(
-    q: str = Query("", description="Trecho do nome ou CNPJ"),
-    ramo: str | None = Query(None, description="Filtra pelo ramo_juridico ex.: 'Revenda'"),
-    page: int = Query(1, ge=1),
-    page_size: int = Query(20, ge=1, le=100),
-):
-    try:
-        db = SessionLocal()
-        base_sql = """
-            SELECT
-              codigo,
-              cnpj_cpf_faturamento AS cnpj_cpf,
-              nome_empresarial     AS nome_cliente,
-              ramo_juridico
-            FROM public.t_cadastro_cliente
-            WHERE
-              (:q = '' OR nome_empresarial ILIKE :like OR cnpj_cpf_faturamento ILIKE :like)
-        """
-        params = {
-            "q": q,
-            "like": f"%{q}%",
-            "offset": (page - 1) * page_size,
-            "limit": page_size,
-        }
-        if ramo:
-            base_sql += " AND ramo_juridico = :ramo"
-            params["ramo"] = ramo
-
-        base_sql += " ORDER BY nome_empresarial OFFSET :offset LIMIT :limit"
-
-        rows = db.execute(text(base_sql), params).mappings().all()
-        return [dict(r) for r in rows]
-    finally:
-        db.close()
