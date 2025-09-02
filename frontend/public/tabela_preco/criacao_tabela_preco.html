@@ -22,8 +22,12 @@
           <input id="nome_tabela" type="text" placeholder="Ex.: Tabela Promocional Set/25" />
         </div>
         <div class="field">
-          <label for="cliente">Cliente</label>
-          <input id="cliente" type="text" placeholder="Código ou nome do cliente" />
+          <label for="cliente_nome">Cliente</label>
+          <input id="cliente_nome" type="text" autocomplete="off" placeholder="Digite o nome ou CNPJ..." />
+          <input id="cliente_codigo" type="hidden" />
+          <input id="cliente_ramo" type="hidden" />
+          <!-- container do autocomplete (fica logo após o input) -->
+          <div id="cliente_suggestions" class="suggestions"></div>
         </div>
         <div class="field">
           <label for="iva_st_toggle">IVA_ST</label>
