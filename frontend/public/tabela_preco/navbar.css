@@ -10,7 +10,12 @@ header {
   align-items: center;
   background-color: #111;
   padding: 10px 20px;
+  
 }
+/* em navbar.css ou no seu CSS */
+.navbar { width: 100%; }
+.navbar .logo { margin-left: auto; }  /* garante o logo à direita */
+
 
 .menu-btn {
   font-size: 28px;

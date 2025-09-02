@@ -18,12 +18,21 @@ body {
   font-family: system-ui, -apple-system, Segoe UI, Roboto, Ubuntu, Cantarell, Noto Sans, Helvetica, Arial, "Apple Color Emoji", "Segoe UI Emoji";
   background: var(--bg);
   color: var(--text);
+  font-size: 14px;
+  zoom: 100%;
 }
 
+.page-container {
+  max-width: 2000px;
+  width: 100%;
+  margin: 0 auto;
+  padding: 30px 40px;
+  box-sizing: border-box;
+}
+
+
 /* ====== Layout ====== */
-.container { max-width: 1200px; margin: 0 auto; padding: 16px 24px 48px; }
-header { padding: 18px 24px; display: flex; justify-content: space-between; align-items: center; }
-header h1 { margin: 0; font-size: 1.25rem; font-weight: 700; letter-spacing: .2px; }
+
 
 .card { background: var(--card); border: 1px solid var(--border); border-radius: 16px; box-shadow: 0 6px 18px rgba(0,0,0,.06); }
 .card.pad { padding: 16px; }
@@ -38,6 +47,14 @@ header h1 { margin: 0; font-size: 1.25rem; font-weight: 700; letter-spacing: .2p
 .grid-4 { grid-template-columns: repeat(4, minmax(0, 1fr)); }
 .grid-3 { grid-template-columns: repeat(3, minmax(0, 1fr)); }
 @media (max-width: 980px) { .grid-4, .grid-3 { grid-template-columns: 1fr; } }
+/* forçar as duas datas para a linha de baixo (desktop) */
+.grid-4 .row-2 { grid-row: 2; }
+
+/* em telas pequenas, volta ao fluxo normal de 1 coluna */
+@media (max-width: 980px) {
+  .grid-4 .row-2 { grid-row: auto; }
+}
+
 
 /* ====== Campos ====== */
 .field label { font-size: .82rem; color: var(--muted); display: block; margin-bottom: 6px; }

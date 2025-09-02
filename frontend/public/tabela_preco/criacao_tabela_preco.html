@@ -4,16 +4,37 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>Criação de Tabela de Preço</title>
-  <!-- Visual totalmente externo -->
-  <link rel="stylesheet" href="criacao_tabela_preco.css" />
+  <link rel="stylesheet" href="criacao_tabela_preco.css">
+  <link rel="stylesheet" href="navbar.css">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600&display=swap" rel="stylesheet">
+  
 </head>
+
 <body>
-  <header class="container">
-    <h1>Criação de Tabela de Preço <span class="subtle">(etapa de conferência)</span></h1>
+  <header>
+    <div class="navbar">
+      <button class="menu-btn" id="menu-button">&#9776;</button>
+      <img src="logo.png" alt="Logo" class="logo" />
+    </div>
   </header>
 
-  <main class="container">
+  <nav class="sidebar" id="sidebar">
+    <ul>
+      <li><a href="/clientes/cliente.html">Cadastrar Cliente</a></li>
+      <li><a href="#">Atualizar Catálogo</a></li>
+      <li><a href="#">Registrar Pedido</a></li>
+      <li><a href="/tabela_preco/tabela_preco.html">Tabela de Preços</a></li>
+      <li><a href="#">Exportar Relatórios</a></li>
+    </ul>
+  </nav>
+  <div id="overlay"></div>
+
+  <div class="page-container">
+    
+    <!-- <h1>Criação de Tabela de Preço <span class="subtle">(etapa de conferência)</span></h1> -->
     <!-- TOPO: Cabeçalho e parâmetros globais -->
+     <h1> Criação de Tabela de Preço </h1>
+
     <section class="card pad" aria-labelledby="sec-topo">
       <h2 id="sec-topo" class="section-title">Dados principais</h2>
       <div class="grid grid-4 grid-gap">
@@ -36,11 +57,11 @@
               <span class="hint">IVA_ST (Sim / Não) </span>
           </div>
         </div>
-        <div class="field">
+        <div class="field row-2">
           <label for="validade_inicio">Data Início</label>
           <input id="validade_inicio" type="date" />
         </div>
-        <div class="field">
+        <div class="field row-2">
           <label for="validade_fim">Data Fim</label>
           <input id="validade_fim" type="date" />
         </div>
@@ -116,10 +137,24 @@
         </table>
       </div>
     </section>
-  </main>
-
-
+  </div>
   <!-- Lógica totalmente externa -->
   <script src="criacao_tabela_preco.js"></script>
+    <script>
+      const menuButton = document.getElementById("menu-button");
+      const sidebar    = document.getElementById("sidebar");
+      const overlay    = document.getElementById("overlay");
+
+      menuButton.addEventListener("click", () => {
+        sidebar.classList.toggle("active");
+        overlay.style.display = sidebar.classList.contains("active") ? "block" : "none";
+      });
+
+      overlay.addEventListener("click", () => {
+        sidebar.classList.remove("active");
+        overlay.style.display = "none";
+      });
+    </script>
+
 </body>
 </html>
