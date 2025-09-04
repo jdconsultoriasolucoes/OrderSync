@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <title>Listar Tabelas de Preço</title>
-  <link rel="stylesheet" href="tabela_preco.css">
+  <link rel="stylesheet" href="listar_tabela.css">
   <link rel="stylesheet" href="navbar.css">
   <script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js"></script>
 </head>
@@ -26,8 +26,17 @@
   <div id="overlay"></div>
 
   <main class="page-container">
-    <h1>Tabelas de Preço Registradas</h1>
+    <h1>Tabelas de Preço Cadastradas</h1>
 
+    <div class="toolbar">
+      <div class="search">
+        <input type="text" id="pesquisa" placeholder="Pesquisar tabela...">
+      </div>
+      <div class="actions">
+        <button onclick="voltar()">Voltar</button>
+      </div>
+    </div>
+    
     <table class="table">
       <thead>
         <tr>
@@ -43,11 +52,7 @@
       </tbody>
     </table>
   
-  <div class="acoes-gerais" style="margin-top: 20px;">
-  <button id="btn-editar" onclick="selecionarTabela()" disabled>Editar Tabela</button>
-  <button id="btn-excluir" onclick="deletarTabela()" disabled>Excluir Tabela</button>
-  <button onclick="voltar()">Voltar</button>
-</div>
+
 </div>
   </main>
   <div id="modal-confirmar-delete" style="display:none; position: fixed; top: 0; left: 0; 

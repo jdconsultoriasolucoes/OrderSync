@@ -178,26 +178,6 @@ input[type="text"], select {
   opacity: 0.85;
 }
 
-/* Botão base e variações */
-.btn{
-  border: 0;
-  border-radius: 10px;
-  padding: 10px 14px;
-  font-weight: 600;
-  line-height: 1;
-  box-shadow: 0 1px 2px rgba(0,0,0,.06);
-  transition: transform .02s, box-shadow .2s, background-color .2s;
-  cursor: pointer;
-}
-.btn:active{ transform: translateY(1px); }
-
-.btn-primario{ background:#111827; color:#fff; }
-.btn-primario:hover{ background:#0f172a; }
-
-.btn-neutro{ background:#f3f4f6; color:#374151; }
-.btn-neutro:hover{ background:#e5e7eb; }
-
-
 .btn-secundario {
   background-color: #e0e0e0;
   color: #333;
@@ -274,15 +254,6 @@ input[type="text"], select {
 /* Botão alinhado pela base e perto do input */
 .toolbar .btn{ height:36px; padding:0 14px; border-radius:8px; }
 
-/* Ações no topo, à direita */
-.toolbar .actions{
-  margin-left: auto;
-  display: flex;
-  align-items: center;
-  gap: 10px;
-}
-
-
 .toolbar .grow { 
   flex: 0 0 auto;
 }
@@ -334,3 +305,49 @@ input[type="text"], select {
   }
 }
 
+/* limita a largura do conteúdo e alinha tudo com a tabela */
+.page-container{
+  max-width: 1100px;   /* ajuste fino: 960–1200 */
+  margin: 0 auto;
+  padding: 24px 16px;
+}
+
+/* barra superior alinhada com a tabela */
+.toolbar{
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  margin: 12px 0 8px;
+  width: 100%;
+}
+
+/* input ocupa a parte esquerda, na mesma largura “ótica” da tabela */
+.toolbar{ flex-wrap: nowrap; }                 /* garante que não quebre a linha */
+.toolbar .search{ flex: 0 0 420px; }           /* largura fixa ~420px (ajuste à vontade) */
+.toolbar .search input{ 
+  width: 100%; 
+  max-width: 420px;                            /* impede crescer e encostar no botão */
+}
+
+/* botões agrupados à direita */
+.toolbar .actions{
+  margin-left: auto;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.toolbar .actions button{ padding: 8px 12px; }
+
+/* tabela ocupa toda a largura do container */
+.table{
+  width: 100%;
+  border-collapse: collapse;
+}
+.table th, .table td{ padding: 8px 10px; }
+.table th{ text-align: left; }
+
+/* responsivo */
+@media (max-width: 768px){
+  .toolbar{ flex-direction: column; align-items: stretch; }
+  .toolbar .actions{ justify-content: flex-end; }
+}

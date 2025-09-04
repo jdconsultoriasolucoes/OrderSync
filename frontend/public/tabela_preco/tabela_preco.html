@@ -34,23 +34,27 @@
     <h1>Inserir Produtos</h1>
 
     <!-- Filtros mínimos (somente Grupo) -->
-   <div id="toolbar-filtros" class="toolbar">
-  <div class="field">
-    <label for="grupo">Grupo:</label>
-    <select id="grupo"></select>
-  </div>
+  <div id="toolbar-filtros" class="toolbar">
+    <div class="field">
+      <label for="grupo">Grupo:</label>
+      <select id="grupo"></select>
+    </div>
 
-  <div class="field">
-    <label for="filtro-fornecedor">Fornecedor:</label>
-    <select id="filtro-fornecedor"></select>
-  </div>
+    <div class="field">
+      <label for="filtro-fornecedor">Fornecedor:</label>
+      <select id="filtro-fornecedor"></select>
+    </div>
 
-  <div class="field grow">
-    <label for="filtro-palavra">&nbsp;</label>
-    <input id="filtro-palavra" type="text" placeholder="Buscar por código, descrição...">
-  </div>
+    <div class="field grow">
+      <label for="filtro-palavra">&nbsp;</label>
+      <input id="filtro-palavra" type="text" placeholder="Buscar por código, descrição...">
+    </div>
 
-  <button id="btn-limpar" class="btn btn-secundario" type="button">Limpar</button>
+  <div class="actions">
+      <button id="btn-limpar" class="btn btn-secundario" type="button">Limpar</button>
+      <button class="btn btn-primario" id="btn-adicionar-selecionados">Adicionar selecionados</button>
+      <button class="btn btn-neutro" id="btn-cancelar">Cancelar</button>
+    </div>
 </div>
 
     <div class="table-wrap">
@@ -85,11 +89,6 @@
       <button type="button" class="btn" id="btn-next" onclick="gotoNextPage()">Próxima ▶</button>
     </div>
 
-    <!-- Ações -->
-    <div style="margin-top:16px; display:flex; gap:8px;">
-      <button class="btn btn-salvar" id="btn-adicionar-selecionados">Adicionar selecionados</button>
-      <button class="btn btn-cancelar" id="btn-cancelar">Cancelar</button>
-    </div>
   </main>
 
   <script src="tabela_preco.js"></script>

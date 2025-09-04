@@ -100,3 +100,13 @@ function abrirModalDelecao(id) {
   const modal = document.getElementById("modal-confirmar-delete");
   modal.style.display = "flex";
 }
+
+document.getElementById("pesquisa").addEventListener("keyup", function() {
+  let filtro = this.value.toLowerCase();
+  let linhas = document.querySelectorAll("#lista-tabelas-body tr");
+
+  linhas.forEach(linha => {
+    let textoLinha = linha.innerText.toLowerCase();
+    linha.style.display = textoLinha.includes(filtro) ? "" : "none";
+  });
+});
