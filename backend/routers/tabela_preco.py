@@ -76,7 +76,9 @@ def filtrar_produtos_para_tabela_preco(
                 p.iva_st AS iva_st,
                 p.marca AS grupo,
                 f.familia AS departamento,
-                p.fornecedor
+                p.fornecedor,
+                f.tipo,
+                p.icms
             FROM t_cadastro_produto p
             LEFT JOIN t_familia_produtos f 
                 ON CAST(p.familia AS INT) = CAST(f.id AS INT)
