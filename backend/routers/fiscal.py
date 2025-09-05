@@ -6,7 +6,7 @@ from pydantic import BaseModel, Field
 from sqlalchemy import text
 from sqlalchemy.orm import Session
 
-from db import SessionLocal
+from database import SessionLocal
 from services.fiscal import decide_st, calcular_linha, D, money
 
 router = APIRouter(tags=["Fiscal"])
