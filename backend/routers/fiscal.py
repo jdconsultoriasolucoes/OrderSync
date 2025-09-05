@@ -69,14 +69,14 @@ def carregar_cliente(db: Session, codigo: Optional[int]) -> dict:
 def carregar_produto(db: Session, produto_id: int) -> dict:
     row = db.execute(text("""
         SELECT
-          id_produto,
+          codigo_supra,
           tipo,         -- 'PET' quando aplicável
           peso_kg,      -- decimal
           iva_st,       -- decimal, já vem do produto
           ipi,          -- alíquota de IPI (ex.: 0.065)
           icms          -- alíquota de ICMS (ex.: 0.18)
         FROM public.t_catalogo_produto
-        WHERE id_produto = :pid
+        WHERE codigo_supra = :pid
         LIMIT 1
     """), {"pid": produto_id}).mappings().first()
     if not row:
