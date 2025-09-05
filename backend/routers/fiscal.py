@@ -77,7 +77,7 @@ def carregar_produto(db: Session, produto_id: str) -> dict:
             b.icms                  -- alíquota ICMS
         FROM public.t_familia_produtos a
             JOIN public.t_cadastro_produto b
-            ON (CAST(b.familia AS numeric) = CAST(a.id AS numeric))
+            ON b.familia = a.id
             WHERE b.codigo_supra = :pid
         """), 
             {"pid": produto_id}).mappings().first()
