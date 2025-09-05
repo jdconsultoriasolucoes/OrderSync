@@ -69,16 +69,18 @@ def carregar_cliente(db: Session, codigo: Optional[int]) -> dict:
 def carregar_produto(db: Session, produto_id: int) -> dict:
     row = db.execute(text("""
         SELECT
-          codigo_supra,
-          tipo,         -- 'PET' quando aplicável
-          peso_kg,      -- decimal
-          iva_st,       -- decimal, já vem do produto
-          ipi,          -- alíquota de IPI (ex.: 0.065)
-          icms          -- alíquota de ICMS (ex.: 0.18)
-        FROM public.t_catalogo_produto
-        WHERE codigo_supra = :pid
-        LIMIT 1
-    """), {"pid": produto_id}).mappings().first()
+            b.codigo_supra,
+            a.tipo,                 -- 'PET' quando aplicável
+            b.peso_kg,
+            b.iva_st,
+            b.ipi,                  -- alíquota IPI
+            b.icms                  -- alíquota ICMS
+        FROM public.t_familia_produtos a
+            JOIN public.t_cadastro_produto b
+            ON (CAST(b.familia AS numeric) = CAST(a.id AS numeric))
+            WHERE b.codigo_supra = :pid
+        """), 
+            {"pid": produto_id}).mappings().first()
     if not row:
         raise HTTPException(status_code=404, detail="Produto não encontrado")
     return dict(row)
