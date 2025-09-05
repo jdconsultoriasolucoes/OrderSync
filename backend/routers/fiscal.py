@@ -15,7 +15,7 @@ router = APIRouter(tags=["Fiscal"])
 class LinhaPreviewIn(BaseModel):
     cliente_codigo: Optional[int] = Field(default=None)
     forcar_iva_st: bool = Field(default=False)
-    produto_id: int
+    produto_id: str
 
     preco_unit: Decimal
     quantidade: Decimal
@@ -66,7 +66,7 @@ def carregar_cliente(db: Session, codigo: Optional[int]) -> dict:
     """), {"cod": codigo}).mappings().first()
     return dict(row) if row else {}
 
-def carregar_produto(db: Session, produto_id: int) -> dict:
+def carregar_produto(db: Session, produto_id: str) -> dict:
     row = db.execute(text("""
         SELECT
             b.codigo_supra,
