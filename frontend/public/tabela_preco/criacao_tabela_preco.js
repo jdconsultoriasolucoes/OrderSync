@@ -200,6 +200,21 @@ function calcularLinha(item, fator, taxaCond, freteKg,aplicarIvaSt) {
   return { acrescimoCond, freteValor, descontoValor, valorFinal };
 }
 
+
+async function previewFiscalLinha(payload) {
+  const r = await fetch(`${API_BASE}/fiscal/preview-linha`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(payload),
+  });
+  if (!r.ok) {
+    const txt = await r.text().catch(()=> '');
+    throw new Error(txt || 'Falha ao calcular preview fiscal');
+  }
+  return r.json();
+}
+
+
 // --- Persistência compacta ---
 async function salvarTabelaPreco(payload) {
   if (!payload?.nome_tabela || !payload?.cliente || !payload?.validade_inicio || !payload?.validade_fim) {
@@ -380,8 +395,11 @@ function criarLinha(item, idx) {
   const tdDescAplic = document.createElement('td'); tdDescAplic.className = 'num'; tdDescAplic.textContent = '0,00';
   
   // IPI e IVA_ST (%) — NOVOS
-  const tdIpi   = document.createElement('td'); tdIpi.className   = 'num'; tdIpi.textContent   = fmtPct(Number(item.ipi ?? 0));
-  const tdIvaSt = document.createElement('td'); tdIvaSt.className = 'num'; tdIvaSt.textContent = fmtPct(Number(item.iva_st ?? 0));
+  const tdIpiR$     = document.createElement('td'); tdIpiR$.className     = 'num col-ipi';              tdIpiR$.textContent     = '0,00';
+  const tdBaseStR$  = document.createElement('td'); tdBaseStR$.className  = 'num col-base-st';         tdBaseStR$.textContent  = '0,00';
+  const tdIcmsProp$ = document.createElement('td'); tdIcmsProp$.className = 'num col-icms-proprio';    tdIcmsProp$.textContent = '0,00';
+  const tdIcmsCheio$= document.createElement('td'); tdIcmsCheio$.className= 'num col-icms-st-cheio';   tdIcmsCheio$.textContent= '0,00';
+  const tdIcmsReter$= document.createElement('td'); tdIcmsReter$.className= 'num col-icms-st-reter';   tdIcmsReter$.textContent= '0,00';
 
   const tdGrupo = document.createElement('td'); tdGrupo.textContent = [item.grupo, item.departamento].filter(Boolean).join(' / ');
   const tdFinal = document.createElement('td'); tdFinal.className = 'num'; tdFinal.textContent = '0,00';
@@ -390,7 +408,7 @@ function criarLinha(item, idx) {
   tdSel, tdCod, tdDesc, tdEmb, tdGrupo,
   tdPeso, tdValor, tdFator, tdDescOpt,
   tdCondCod, tdCondVal, tdFrete, tdDescAplic,
-  tdIpi, tdIvaSt, tdFinal
+  tdIpiR$, tdBaseStR$, tdIcmsProp$, tdIcmsCheio$, tdIcmsReter$, tdFinal
 );
   return tr;
 }
@@ -403,10 +421,11 @@ function renderTabela() {
   if (typeof refreshToolbarEnablement === 'function') refreshToolbarEnablement();
 }
 
-function recalcLinha(tr) {
+async function recalcLinha(tr) {
   const idx  = Number(tr.dataset.idx);
   const item = itens[idx]; if (!item) return;
 
+  // 1) Comercial: fator/condição/frete-kg (sem impostos)
   const fator    = Number(tr.querySelector('td:nth-child(8) input')?.value || 0);
   const freteKg  = Number(document.getElementById('frete_kg').value || 0);
 
@@ -415,16 +434,62 @@ function recalcLinha(tr) {
   const codCond  = selCond ? selCond.value : '';
   const taxaCond = mapaCondicoes[codCond] ?? mapaCondicoes[document.getElementById('plano_pagamento').value] ?? 0;
 
-  const { acrescimoCond, freteValor, descontoValor, valorFinal } = calcularLinha(item, fator, taxaCond, freteKg, ivaStAtivo);
+  const valor = Number(item.valor || 0);
+  const peso  = Number(item.peso_liquido || 0);
+  const acrescimoCond = valor * Number(taxaCond || 0);
+  const descontoValor = valor * Number(fator || 0);
+  const precoBase     = valor + acrescimoCond - descontoValor;
 
+  // Frete por regra do projeto
+  const freteValor = (Number(freteKg || 0) / 1000) * peso;
+
+  // Preenche colunas comerciais
   tr.querySelector('td:nth-child(11)').textContent = fmtMoney(acrescimoCond); // Cond. (R$)
   tr.querySelector('td:nth-child(12)').textContent = fmtMoney(freteValor);    // Frete (R$)
-  tr.querySelector('td:nth-child(13)').textContent = fmtMoney(descontoValor); // Desc. aplicado
-  tr.querySelector('td:nth-child(16)').textContent = fmtMoney(valorFinal);    // Valor Final
+  tr.querySelector('td:nth-child(13)').textContent = fmtMoney(descontoValor); // Desc. aplicado (R$)
+
+  // 2) Fiscal (backend)
+  const clienteCodigo = Number(document.getElementById('cliente_codigo')?.value || 0) || null;
+  const forcarST = !!document.getElementById('iva_st_toggle')?.checked;
+  const produtoId = (tr.querySelector('td:nth-child(2)')?.textContent || '').trim(); // usa a coluna Código (codigo_tabela)
+
+  try {
+    const fiscal = await previewFiscalLinha({
+      cliente_codigo: clienteCodigo,
+      forcar_iva_st: forcarST,
+      produto_id: produtoId,
+      preco_unit: precoBase,
+      quantidade: 1,              // sempre 1 na tabela_preco
+      desconto_linha: 0,          // já aplicado no precoBase
+      frete_linha: freteValor
+    });
+
+    // 3) Pintar colunas fiscais (R$)
+    tr.querySelector('.col-ipi').textContent           = fmtMoney(fiscal.ipi);
+    tr.querySelector('.col-base-st').textContent       = fmtMoney(fiscal.base_st);
+    tr.querySelector('.col-icms-proprio').textContent  = fmtMoney(fiscal.icms_proprio);
+    tr.querySelector('.col-icms-st-cheio').textContent = fmtMoney(fiscal.icms_st_cheio);
+    tr.querySelector('.col-icms-st-reter').textContent = fmtMoney(fiscal.icms_st_reter);
+
+    // 4) Valor final (escolha sua política: com ST ou sem ST)
+    tr.querySelector('.col-total').textContent = fmtMoney(fiscal.total_linha_com_st);
+
+  } catch (e) {
+    console.warn('Falha fiscal na linha:', e);
+    // Se der erro, zera as colunas fiscais para não confundir
+    ['.col-ipi','.col-base-st','.col-icms-proprio','.col-icms-st-cheio','.col-icms-st-reter','.col-total']
+      .forEach(sel => { const el = tr.querySelector(sel); if (el) el.textContent = '0,00'; });
+  }
 }
 
-function recalcTudo() {document.querySelectorAll('#tbody-itens tr').forEach(tr => recalcLinha(tr));
-                      }
+async function recalcTudo() {
+  const rows = Array.from(document.querySelectorAll('#tbody-itens tr'));
+  for (const tr of rows) {
+    // aguarda uma a uma para evitar flood; se quiser paralelizar, use Promise.all com cuidado
+    // eslint-disable-next-line no-await-in-loop
+    await recalcLinha(tr);
+  }
+}
 
 function aplicarFatorGlobal() {
   const selGlobal = document.getElementById('desconto_global');
@@ -818,4 +883,4 @@ document.addEventListener('DOMContentLoaded', () => {
  document.getElementById('desconto_global')?.addEventListener('change', () => {
   atualizarPillDesconto();
   recalcTudo();
-});
+}); 
