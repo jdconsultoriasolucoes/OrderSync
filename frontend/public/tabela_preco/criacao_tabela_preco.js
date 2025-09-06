@@ -100,7 +100,15 @@ function mergeBufferFromPickerIfAny() {
   }
 }
 
-
+async function previewFiscalLinha(payload) {
+  const r = await fetch(`${API_BASE}/fiscal/preview-linha`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(payload),
+  });
+  if (!r.ok) throw new Error(await r.text().catch(()=> 'Falha ao calcular preview fiscal'));
+  return r.json();
+}
 
 
 // Habilita/desabilita todos os campos e a grade
@@ -183,21 +191,19 @@ const fmtMoney = (v) => (Number(v || 0)).toLocaleString('pt-BR', { minimumFracti
 const fmt4 = (v) => (Number(v || 0)).toLocaleString('pt-BR', { minimumFractionDigits: 4, maximumFractionDigits: 4 });
 const fmtPct = (v) => (Number(v || 0)).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 4 });
 
-function calcularLinha(item, fator, taxaCond, freteKg,aplicarIvaSt) {
+function calcularLinha(item, fator, taxaCond, freteKg) {
   const valor = Number(item.valor || 0);
-  const peso = Number(item.peso_liquido || 0);
-  const acrescimoCond = valor * (Number(taxaCond || 0));
-  
-  //Impostos
-  const ipi   = Number(item.ipi || 0);
-  const ivaSt = aplicarIvaSt ? Number(item.iva_st || 0) : 0;
-  
-  // Frete por regra já usada no projeto: (frete_kg / 1000) * peso_liquido
-  const freteValor = (Number(freteKg || 0) / 1000) * peso;
+  const peso  = Number(item.peso_liquido || 0);
+
+  const acrescimoCond = valor * Number(taxaCond || 0);
   const descontoValor = valor * Number(fator || 0);
-  const base = valor + acrescimoCond + freteValor - descontoValor;
-  const valorFinal = base + (base * ipi) + (base * ivaSt);
-  return { acrescimoCond, freteValor, descontoValor, valorFinal };
+
+  const freteValor    = (Number(freteKg || 0) / 1000) * peso;
+
+  // preço-base sem impostos (vai para o backend fiscal)
+  const precoBase = valor + acrescimoCond - descontoValor;
+
+  return { acrescimoCond, freteValor, descontoValor, precoBase };
 }
 
 
@@ -425,62 +431,53 @@ async function recalcLinha(tr) {
   const idx  = Number(tr.dataset.idx);
   const item = itens[idx]; if (!item) return;
 
-  // 1) Comercial: fator/condição/frete-kg (sem impostos)
   const fator    = Number(tr.querySelector('td:nth-child(8) input')?.value || 0);
   const freteKg  = Number(document.getElementById('frete_kg').value || 0);
 
-  // Condição por linha (código → taxa)
+  // Condição por linha → taxa
   const selCond  = tr.querySelector('td:nth-child(10) select');
   const codCond  = selCond ? selCond.value : '';
   const taxaCond = mapaCondicoes[codCond] ?? mapaCondicoes[document.getElementById('plano_pagamento').value] ?? 0;
 
-  const valor = Number(item.valor || 0);
-  const peso  = Number(item.peso_liquido || 0);
-  const acrescimoCond = valor * Number(taxaCond || 0);
-  const descontoValor = valor * Number(fator || 0);
-  const precoBase     = valor + acrescimoCond - descontoValor;
+  // base comercial (sem imposto)
+  const { acrescimoCond, freteValor, descontoValor, precoBase } =
+    calcularLinha(item, fator, taxaCond, freteKg);
 
-  // Frete por regra do projeto
-  const freteValor = (Number(freteKg || 0) / 1000) * peso;
-
-  // Preenche colunas comerciais
+  // pinta colunas comerciais
   tr.querySelector('td:nth-child(11)').textContent = fmtMoney(acrescimoCond); // Cond. (R$)
   tr.querySelector('td:nth-child(12)').textContent = fmtMoney(freteValor);    // Frete (R$)
-  tr.querySelector('td:nth-child(13)').textContent = fmtMoney(descontoValor); // Desc. aplicado (R$)
+  tr.querySelector('td:nth-child(13)').textContent = fmtMoney(descontoValor); // Desc. aplicado
 
-  // 2) Fiscal (backend)
+  // chama backend fiscal (quantidade = 1 na tabela_preco)
   const clienteCodigo = Number(document.getElementById('cliente_codigo')?.value || 0) || null;
-  const forcarST = !!document.getElementById('iva_st_toggle')?.checked;
-  const produtoId = (tr.querySelector('td:nth-child(2)')?.textContent || '').trim(); // usa a coluna Código (codigo_tabela)
+  const forcarST      = !!document.getElementById('iva_st_toggle')?.checked;
+  const produtoId     = (tr.querySelector('td:nth-child(2)')?.textContent || '').trim();
 
   try {
-    const fiscal = await previewFiscalLinha({
+    const f = await previewFiscalLinha({
       cliente_codigo: clienteCodigo,
       forcar_iva_st: forcarST,
       produto_id: produtoId,
       preco_unit: precoBase,
-      quantidade: 1,              // sempre 1 na tabela_preco
-      desconto_linha: 0,          // já aplicado no precoBase
+      quantidade: 1,
+      desconto_linha: 0,
       frete_linha: freteValor
     });
 
-    // 3) Pintar colunas fiscais (R$)
-    tr.querySelector('.col-ipi').textContent           = fmtMoney(fiscal.ipi);
-    tr.querySelector('.col-base-st').textContent       = fmtMoney(fiscal.base_st);
-    tr.querySelector('.col-icms-proprio').textContent  = fmtMoney(fiscal.icms_proprio);
-    tr.querySelector('.col-icms-st-cheio').textContent = fmtMoney(fiscal.icms_st_cheio);
-    tr.querySelector('.col-icms-st-reter').textContent = fmtMoney(fiscal.icms_st_reter);
-
-    // 4) Valor final (escolha sua política: com ST ou sem ST)
-    tr.querySelector('.col-total').textContent = fmtMoney(fiscal.total_linha_com_st);
+    tr.querySelector('.col-ipi')?.textContent           = fmtMoney(f.ipi);
+    tr.querySelector('.col-base-st')?.textContent       = fmtMoney(f.base_st);
+    tr.querySelector('.col-icms-proprio')?.textContent  = fmtMoney(f.icms_proprio);
+    tr.querySelector('.col-icms-st-cheio')?.textContent = fmtMoney(f.icms_st_cheio);
+    tr.querySelector('.col-icms-st-reter')?.textContent = fmtMoney(f.icms_st_reter);
+    tr.querySelector('.col-total')?.textContent         = fmtMoney(f.total_linha_com_st); // ou total_linha
 
   } catch (e) {
     console.warn('Falha fiscal na linha:', e);
-    // Se der erro, zera as colunas fiscais para não confundir
     ['.col-ipi','.col-base-st','.col-icms-proprio','.col-icms-st-cheio','.col-icms-st-reter','.col-total']
       .forEach(sel => { const el = tr.querySelector(sel); if (el) el.textContent = '0,00'; });
   }
 }
+
 
 async function recalcTudo() {
   const rows = Array.from(document.querySelectorAll('#tbody-itens tr'));
