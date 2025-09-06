@@ -72,7 +72,7 @@ def carregar_produto(db: Session, produto_id: str) -> dict:
             SELECT
                 b.codigo_supra,
                 a.tipo,
-                b.peso_kg,
+                b.peso,
                 COALESCE(b.iva_st, 0) AS iva_st,
                 COALESCE(b.ipi, 0)     AS ipi,
                 COALESCE(b.icms, 0.18) AS icms
@@ -101,14 +101,14 @@ def preview_linha(payload: LinhaPreviewIn, db: Session = Depends(get_db)):
 
         ramo = cliente.get("ramo_juridico") if cliente else None
         tipo = produto.get("tipo")
-        peso = produto.get("peso_kg")
+        peso = produto.get("peso")
         iva_st = D(produto.get("iva_st", 0))
         ipi = D(produto.get("ipi", 0))
         icms = D(produto.get("icms", 0.18))
 
         aplica, motivos = decide_st(
             tipo=tipo,
-            peso_kg=peso,
+            peso=peso,
             ramo_juridico=ramo,
             forcar_iva_st=payload.forcar_iva_st
         )
