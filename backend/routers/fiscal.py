@@ -54,6 +54,21 @@ def get_db():
 
 # --------- Data access (mesmas fontes dos seus endpoints) ---------
 # ---- em routers/fiscal.py ----
+def carregar_cliente(db: Session, codigo: Optional[int]) -> dict:
+    if not codigo:
+        return {}
+    row = db.execute(text("""
+        SELECT
+          codigo,
+          ramo_juridico
+        FROM public.t_cadastro_cliente
+        WHERE codigo = :cod
+        LIMIT 1
+    """), {"cod": codigo}).mappings().first()
+    return dict(row) if row else {}
+
+
+
 def carregar_produto(db: Session, produto_id: str) -> dict:
     try:
         row = db.execute(text("""
