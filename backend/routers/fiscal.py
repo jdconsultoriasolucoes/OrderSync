@@ -83,7 +83,6 @@ def carregar_produto(db: Session, produto_id: str) -> dict:
             LIMIT 1
         """), {"pid": produto_id}).mappings().first()
     except Exception as e:
-        # LOG TEMPORÁRIO – deixa isso por enquanto
         print("ERRO carregar_produto:", repr(e))
         raise HTTPException(status_code=500, detail=f"Falha ao carregar produto: {repr(e)}")
 
