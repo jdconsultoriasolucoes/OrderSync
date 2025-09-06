@@ -53,29 +53,17 @@ def get_db():
         db.close()
 
 # --------- Data access (mesmas fontes dos seus endpoints) ---------
-def carregar_cliente(db: Session, codigo: Optional[int]) -> dict:
-    if not codigo:
-        return {}
-    row = db.execute(text("""
-        SELECT
-          codigo,
-          ramo_juridico
-        FROM public.t_cadastro_cliente
-        WHERE codigo = :cod
-        LIMIT 1
-    """), {"cod": codigo}).mappings().first()
-    return dict(row) if row else {}
-
+# ---- em routers/fiscal.py ----
 def carregar_produto(db: Session, produto_id: str) -> dict:
     try:
         row = db.execute(text("""
             SELECT
-                b.codigo_supra,
-                a.tipo,
-                b.peso,
-                COALESCE(b.iva_st, 0) AS iva_st,
-                COALESCE(b.ipi, 0)     AS ipi,
-                COALESCE(b.icms, 0.18) AS icms
+              b.codigo_supra,
+              a.tipo,
+              COALESCE(b.peso,   0)    AS peso_kg,   -- alias certo
+              COALESCE(b.iva_st, 0)    AS iva_st,
+              COALESCE(b.ipi,    0)    AS ipi,
+              COALESCE(b.icms,   0.18) AS icms
             FROM public.t_familia_produtos a
             JOIN public.t_cadastro_produto b
               ON b.familia = a.id
@@ -88,27 +76,28 @@ def carregar_produto(db: Session, produto_id: str) -> dict:
 
     if not row:
         raise HTTPException(status_code=404, detail="Produto não encontrado")
-
     return dict(row)
 
-# --------- Endpoint (linha a linha) ---------
 @router.post("/fiscal/preview-linha", response_model=LinhaPreviewOut)
 def preview_linha(payload: LinhaPreviewIn, db: Session = Depends(get_db)):
     try:
+        print("DBG payload:", payload.dict())
+
         cliente = carregar_cliente(db, payload.cliente_codigo)
         produto = carregar_produto(db, payload.produto_id)
 
+        print("DBG cliente:", cliente)
+        print("DBG produto:", produto)
+
         ramo = cliente.get("ramo_juridico") if cliente else None
         tipo = produto.get("tipo")
-        peso = produto.get("peso")
+        peso = produto.get("peso_kg")
         iva_st = D(produto.get("iva_st", 0))
         ipi = D(produto.get("ipi", 0))
         icms = D(produto.get("icms", 0.18))
 
         aplica, motivos = decide_st(
-            tipo=tipo,
-            peso=peso,
-            ramo_juridico=ramo,
+            tipo=tipo, peso_kg=peso, ramo_juridico=ramo,
             forcar_iva_st=payload.forcar_iva_st
         )
 
@@ -117,31 +106,23 @@ def preview_linha(payload: LinhaPreviewIn, db: Session = Depends(get_db)):
             quantidade=payload.quantidade,
             desconto_linha=payload.desconto_linha,
             frete_linha=payload.frete_linha,
-            ipi=ipi,
-            icms=icms,
-            iva_st=iva_st,
+            ipi=ipi, icms=icms, iva_st=iva_st,
             aplica_st=aplica
         )
 
-        # Convertendo para float para facilitar consumo no front
         return LinhaPreviewOut(
-            aplica_iva_st=aplica,
-            motivos_iva_st=motivos,
+            aplica_iva_st=aplica, motivos_iva_st=motivos,
             subtotal_mercadoria=float(comp["subtotal"]),
-            base_ipi=float(comp["base_ipi"]),
-            ipi=float(comp["ipi"]),
-            base_icms_proprio=float(comp["base_icms"]),
-            icms_proprio=float(comp["icms_proprio"]),
-            base_st=float(comp["base_st"]),
-            icms_st_cheio=float(comp["icms_st_cheio"]),
-            icms_st_reter=float(comp["icms_st_reter"]),
-            desconto_linha=float(money(payload.desconto_linha)),
-            frete_linha=float(money(payload.frete_linha)),
-            total_linha=float(comp["total_sem_st"]),          # padrão atual: SEM ST
-            total_linha_com_st=float(comp["total_com_st"]),   # alternativo: COM ST
+            base_ipi=float(comp["base_ipi"]), ipi=float(comp["ipi"]),
+            base_icms_proprio=float(comp["base_icms"]), icms_proprio=float(comp["icms_proprio"]),
+            base_st=float(comp["base_st"]), icms_st_cheio=float(comp["icms_st_cheio"]), icms_st_reter=float(comp["icms_st_reter"]),
+            desconto_linha=float(money(payload.desconto_linha)), frete_linha=float(money(payload.frete_linha)),
+            total_linha=float(comp["total_sem_st"]), total_linha_com_st=float(comp["total_com_st"]),
             total_impostos_linha=float(comp["total_impostos"])
         )
     except HTTPException:
         raise
-    except Exception:
-        raise HTTPException(status_code=500, detail="Falha ao calcular preview fiscal")
+    except Exception as e:
+        print("ERRO preview_linha:", repr(e))
+        raise HTTPException(status_code=500, detail=f"Falha ao calcular preview fiscal: {repr(e)}")
+
