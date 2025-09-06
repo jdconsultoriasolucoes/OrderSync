@@ -67,20 +67,25 @@ def carregar_cliente(db: Session, codigo: Optional[int]) -> dict:
     return dict(row) if row else {}
 
 def carregar_produto(db: Session, produto_id: str) -> dict:
-    row = db.execute(text("""
-        SELECT
-            b.codigo_supra,
-            a.tipo,                 -- 'PET' quando aplicável
-            b.peso_kg,
-            b.iva_st,
-            b.ipi,                  -- alíquota IPI
-            b.icms                  -- alíquota ICMS
-        FROM public.t_familia_produtos a
+    try:
+        row = db.execute(text("""
+            SELECT
+                b.codigo_supra,
+                a.tipo,
+                b.peso_kg,
+                COALESCE(b.iva_st, 0) AS iva_st,
+                COALESCE(b.ipi, 0)     AS ipi,
+                COALESCE(b.icms, 0) AS icms
+            FROM public.t_familia_produtos a
             JOIN public.t_cadastro_produto b
-            ON b.familia = a.id
-            WHERE b.codigo_supra = :pid
-        """), 
-            {"pid": produto_id}).mappings().first()
+              ON b.familia = a.id
+            WHERE b.codigo_supra::text = :pid      -- <- força comparação como texto
+            LIMIT 1
+        """), {"pid": produto_id}).mappings().first()
+    except Exception as e:
+        print("ERRO carregar_produto:", repr(e))   # log temporário
+        raise HTTPException(status_code=500, detail="Falha ao carregar produto")
+
     if not row:
         raise HTTPException(status_code=404, detail="Produto não encontrado")
     return dict(row)
