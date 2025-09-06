@@ -75,19 +75,21 @@ def carregar_produto(db: Session, produto_id: str) -> dict:
                 b.peso_kg,
                 COALESCE(b.iva_st, 0) AS iva_st,
                 COALESCE(b.ipi, 0)     AS ipi,
-                COALESCE(b.icms, 0) AS icms
+                COALESCE(b.icms, 0.18) AS icms
             FROM public.t_familia_produtos a
             JOIN public.t_cadastro_produto b
               ON b.familia = a.id
-            WHERE b.codigo_supra::text = :pid      -- <- força comparação como texto
+            WHERE b.codigo_supra::text = :pid
             LIMIT 1
         """), {"pid": produto_id}).mappings().first()
     except Exception as e:
-        print("ERRO carregar_produto:", repr(e))   # log temporário
-        raise HTTPException(status_code=500, detail="Falha ao carregar produto")
+        # LOG TEMPORÁRIO – deixa isso por enquanto
+        print("ERRO carregar_produto:", repr(e))
+        raise HTTPException(status_code=500, detail=f"Falha ao carregar produto: {repr(e)}")
 
     if not row:
         raise HTTPException(status_code=404, detail="Produto não encontrado")
+
     return dict(row)
 
 # --------- Endpoint (linha a linha) ---------
