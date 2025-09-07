@@ -266,58 +266,163 @@ async function previewFiscalLinha(payload) {
 function normaliza(s){ return String(s||'').normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase(); }
 
 async function buscarClientes(term){
-  // tenta endpoint com query; se não existir, cai no plano B (lista inteira e filtra)
-  const base = `${API_BASE.replace(/\/$/, '')}/tabela_preco/busca_cliente/`;
-  try {
-    const r = await fetch(`${base}?query=${encodeURIComponent(term)}`, { cache: 'no-store' });
-    if (r.ok) return r.json();
-  } catch {}
+  const q = (term || '').trim();
+  if (q.length < 2) return [];
+
+  const api  = API_BASE.replace(/\/$/, '');
+  const base = `${api}/tabela_preco/busca_cliente/`;
+
+  // tenta ?query= e depois ?q=
+  for (const p of [`query=${encodeURIComponent(q)}`, `q=${encodeURIComponent(q)}`]) {
+    try {
+      const r = await fetch(`${base}?${p}`, { cache: 'no-store' });
+      if (r.ok) {
+        const data = await r.json();
+        if (Array.isArray(data)) return data;
+      }
+    } catch {}
+  }
+
+  // Fallback: GET + filtro SOMENTE por Nome/CNPJ (sem código)
   try {
     const r2 = await fetch(base, { cache: 'no-store' });
     if (!r2.ok) return [];
-    const all = await r2.json();
-    const t = normaliza(term);
-    return (all||[]).filter(c =>
-      normaliza(c.nome||'').includes(t) ||
-      String(c.cnpj||'').includes(term) ||
-      String(c.codigo||c.id||'').includes(term)
-    );
-  } catch { return []; }
+    const all = (await r2.json()) || [];
+
+    const nq   = normaliza(q);
+    const qCnj = q.replace(/\D/g, '');
+
+    return all.filter(c => {
+      const nome = normaliza(c.nome || c.razao || c.razao_social || c.fantasia || c.NOME || '');
+      const cnpj = String(c.cnpj || c.CNPJ || '').replace(/\D/g, '');
+      return (nome.includes(nq) || (qCnj && cnpj.includes(qCnj)));
+    });
+  } catch {
+    return [];
+  }
 }
+
 
 function setupClienteAutocomplete(){
   const input = document.getElementById('cliente_nome');
   const box   = document.getElementById('cliente_suggestions');
   if (!input || !box) return;
 
-  let timer=null, items=[], idx=-1;
+  let timer = null, items = [], idx = -1;
 
-  async function doSearch(q){
-    if (!q || q.trim().length < 2){ box.innerHTML=''; box.style.display='none'; return; }
-    items = (await buscarClientes(q)).slice(0,8);
-    render();
+  function fmtDoc(s){
+  const d = String(s||'').replace(/\D/g,'');
+  if (d.length === 14) { // CNPJ
+    return d.replace(/^(\d{2})(\d{3})(\d{3})(\d{4})(\d{2})$/, '$1.$2.$3/$4-$5');
   }
+  if (d.length === 11) { // CPF (se vier algum)
+    return d.replace(/^(\d{3})(\d{3})(\d{3})(\d{2})$/, '$1.$2.$3-$4');
+  }
+  return s || '';
+  }
+
+  function normCliente(c){
+    if (!c) return null;
+    if (typeof c === 'string' || typeof c === 'number'){
+      const s = String(c);
+      return { cod:s, nome:s, cnpj:'', ramo:'' };
+    }
+    return {
+      cod:  c.codigo ?? c.id ?? c.CODIGO ?? c.cod ?? c.code ?? '',
+      nome: c.nome ?? c.razao ?? c.razao_social ?? c.fantasia ?? c.NOME ?? '',
+      cnpj: c.cnpj ?? c.CNPJ ?? '',
+      ramo: c.ramo ?? c.segmento ?? c.RAMO ?? ''
+    };
+  }
+
+  
+
+  // BUSCA: só por nome/CNPJ; se não achar, oferece "usar o digitado"
+  let searchToken = 0;
+async function doSearch(q){
+  const typed = (q || '').trim();
+  if (typed.length < 2){ items = []; render(); return; }
+
+  const myToken = ++searchToken;
+
+  // 1) busca remota
+  const data = await buscarClientes(typed);
+  items = (data || [])
+  .map(normCliente)
+  .filter(c => c && (c.nome || c.cnpj));
+
+  // 2) se nada veio, oferecer “usar o que digitei”
+  if (!items.length){
+  items = [{ __raw:true, cod:'', nome:typed, cnpj:'', ramo:'' }];
+}
+
+  // 3) render rápido (pode mostrar “(sem nome)” no primeiro momento)
+  idx = -1; render();
+
+  // 4) enriquecer os que não têm nome/CNPJ (top 8) e re-render ao preencher
+  const faltando = items
+    .map((c,i)=>({i,c}))
+    .filter(x => !(x.c && x.c.nome && x.c.cnpj))
+    .slice(0,8);
+
+  for (const {i, c} of faltando){
+    const det = await fetchClienteDetalhePorCodigo(c.cod);
+    if (myToken !== searchToken) return; // aborta se o usuário digitou outra coisa
+    if (det){
+      const up = normCliente({ ...c, ...det });
+      items[i] = up;
+      render();
+    }
+  }
+ }
+
   function render(){
-    box.innerHTML = items.map((c,i)=>`
-      <div class="suggest ${i===idx?'active':''}" data-i="${i}"
-           style="padding:6px 8px; cursor:pointer;">
-        <div><strong>${c.codigo||c.id||''}</strong> — ${c.nome||''}</div>
-        <small style="opacity:.7">${c.cnpj||''} ${c.ramo||c.segmento||''}</small>
-      </div>`).join('');
-    box.style.display = items.length ? 'block' : 'none';
-  }
+  box.innerHTML = items.map((c,i)=>{
+    if (c.__raw){
+      return `
+        <div class="suggest ${i===idx?'active':''}" data-i="${i}" style="padding:6px 8px; cursor:pointer;">
+          <div>Usar: <strong>"${c.nome}"</strong></div>
+          <small style="opacity:.7">não encontrado — gravar como texto</small>
+        </div>`;
+    }
+    const doc = fmtDoc(c.cnpj);
+    const linha = [doc, (c.nome || '(sem nome)')].filter(Boolean).join(' — ');
+    const sub   = c.ramo ? `<small style="opacity:.7">${c.ramo}</small>` : '';
+    return `
+      <div class="suggest ${i===idx?'active':''}" data-i="${i}" style="padding:6px 8px; cursor:pointer;">
+        <div>${linha}</div>
+        ${sub}
+      </div>`;
+  }).join('');
+  box.style.display = items.length ? 'block' : 'none';
+}
+
   function selectItem(i){
-    const c = items[i]; if (!c) return;
-    document.getElementById('cliente_nome').value   = c.nome || '';
-    document.getElementById('cliente_codigo').value = c.codigo || c.id || '';
-    document.getElementById('cliente_ramo').value   = c.ramo || c.segmento || '';
-    box.innerHTML=''; box.style.display='none';
-    recalcTudo(); // ST/ICMS dependem do cliente
+  const c = items[i]; if (!c) return;
+
+  const nomeEl = document.getElementById('cliente_nome');
+  const codEl  = document.getElementById('cliente_codigo');
+  const ramoEl = document.getElementById('cliente_ramo');
+
+  if (c.__raw){
+    if (nomeEl) nomeEl.value = c.nome;
+    if (codEl)  codEl.value  = '';
+    if (ramoEl) ramoEl.value = '';
+  } else {
+    const display = [fmtDoc(c.cnpj), c.nome].filter(Boolean).join(' - ');
+    if (nomeEl) nomeEl.value = display || c.nome || '';
+    if (codEl)  codEl.value  = c.cod || '';
+    if (ramoEl) ramoEl.value = c.ramo || '';
   }
 
+  box.innerHTML=''; box.style.display='none';
+  Promise.resolve(recalcTudo()).catch(()=>{});
+}
+
+  // Eventos
   input.addEventListener('input', () => {
     clearTimeout(timer);
-    timer = setTimeout(()=> doSearch(input.value), 250);
+    timer = setTimeout(() => { Promise.resolve(doSearch(input.value)).catch(()=>{}); }, 250);
   });
   input.addEventListener('keydown', (e)=>{
     if (!items.length) return;
@@ -326,14 +431,17 @@ function setupClienteAutocomplete(){
     else if (e.key === 'Enter'){ if (idx>=0){ selectItem(idx); e.preventDefault(); } }
     else if (e.key === 'Escape'){ box.innerHTML=''; box.style.display='none'; }
   });
-  // mousedown evita perder o clique por causa do blur
   box.addEventListener('mousedown', (e)=>{
     const el = e.target.closest('.suggest'); if (!el) return;
     selectItem(Number(el.dataset.i)||0);
   });
-  // fecha ao sair do foco
+  box.addEventListener('click', (e)=>{
+    const el = e.target.closest('.suggest'); if (!el) return;
+    selectItem(Number(el.dataset.i)||0);
+  });
   input.addEventListener('blur', ()=> setTimeout(()=>{ box.innerHTML=''; box.style.display='none'; }, 150));
 }
+
 
 // --- Persistência compacta ---
 async function salvarTabelaPreco(payload) {
@@ -443,7 +551,7 @@ async function carregarItens() {
 
       // Atualiza a pill e recálculo
       atualizarPillTaxa();
-      recalcTudo();
+      Promise.resolve(recalcTudo()).catch(err => console.debug('recalcTudo falhou:', err));
 
       // >>> NOVO: fator global (se todos iguais)
       const fatores = Array.from(new Set((itens || []).map(x => Number(x.fator_comissao || 0))));
@@ -542,7 +650,7 @@ function renderTabela() {
   const tbody = document.getElementById('tbody-itens');
   tbody.innerHTML = '';
   itens.forEach((it, i) => tbody.appendChild(criarLinha(it, i)));
-  recalcTudo();
+  Promise.resolve(recalcTudo()).catch(err => console.debug('recalcTudo falhou:', err));
   if (typeof refreshToolbarEnablement === 'function') refreshToolbarEnablement();
 }
 
@@ -632,7 +740,7 @@ function aplicarFatorGlobal() {
 
   atualizarPillDesconto();
 
-  recalcTudo();
+  Promise.resolve(recalcTudo()).catch(err => console.debug('recalcTudo falhou:', err));
 }
 
 // Mantém o picker em dia com o que está na grade do PAI
@@ -1000,11 +1108,11 @@ document.addEventListener('DOMContentLoaded', () => {
  });
  document.getElementById('iva_st_toggle')?.addEventListener('change', (e) => {
   ivaStAtivo = !!e.target.checked;
-  recalcTudo();
+  Promise.resolve(recalcTudo()).catch(err => console.debug('recalcTudo falhou:', err));
  });
 
  document.getElementById('desconto_global')?.addEventListener('change', () => {
   atualizarPillDesconto();
-  recalcTudo();
+  Promise.resolve(recalcTudo()).catch(err => console.debug('recalcTudo falhou:', err));
   
 }); 
