@@ -110,6 +110,49 @@ async function previewFiscalLinha(payload) {
   return r.json();
 }
 
+async function atualizarPrecosAtuais(){
+  const codigos = Array.from(new Set((itens||[]).map(x=>x.codigo_tabela).filter(Boolean)));
+  if (!codigos.length) return;
+
+  let mapa = {};
+  // 1) tenta batch
+  try {
+    const r = await fetch(`${API_BASE}/catalogo/precos?ids=${encodeURIComponent(codigos.join(','))}`);
+    if (r.ok) mapa = await r.json(); // esperado: { "COD1": 123.45, ... }
+  } catch {}
+
+  // 2) fallback por item (evita travar a UI)
+  if (!Object.keys(mapa).length){
+    for (const cod of codigos){
+      try{
+        const r = await fetch(`${API_BASE}/catalogo/produto/${encodeURIComponent(cod)}`);
+        if (r.ok){
+          const p = await r.json();
+          mapa[cod] = Number(p.valor || p.preco || p.preco_venda || 0);
+        }
+      } catch {}
+    }
+  }
+
+  // aplica e atualiza a grade
+  let mudou=false;
+  itens = (itens||[]).map(it=>{
+    const novo = mapa[it.codigo_tabela];
+    if (novo!=null && !isNaN(novo) && Number(novo)!==Number(it.valor)){
+      mudou=true; return {...it, valor:Number(novo)};
+    }
+    return it;
+  });
+
+  if (mudou){
+    const rows = Array.from(document.querySelectorAll('#tbody-itens tr'));
+    rows.forEach((tr,i)=>{
+      const tdValor = tr.querySelector('td:nth-child(7)');
+      if (tdValor) tdValor.textContent = fmtMoney(itens[i].valor||0);
+    });
+    await recalcTudo();
+  }
+}
 
 // Habilita/desabilita todos os campos e a grade
 function setFormDisabled(disabled) {
@@ -220,6 +263,77 @@ async function previewFiscalLinha(payload) {
   return r.json();
 }
 
+function normaliza(s){ return String(s||'').normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase(); }
+
+async function buscarClientes(term){
+  // tenta endpoint com query; se não existir, cai no plano B (lista inteira e filtra)
+  const base = `${API_BASE.replace(/\/$/, '')}/cliente/`;
+  try {
+    const r = await fetch(`${base}?query=${encodeURIComponent(term)}`, { cache: 'no-store' });
+    if (r.ok) return r.json();
+  } catch {}
+  try {
+    const r2 = await fetch(base, { cache: 'no-store' });
+    if (!r2.ok) return [];
+    const all = await r2.json();
+    const t = normaliza(term);
+    return (all||[]).filter(c =>
+      normaliza(c.nome||'').includes(t) ||
+      String(c.cnpj||'').includes(term) ||
+      String(c.codigo||c.id||'').includes(term)
+    );
+  } catch { return []; }
+}
+
+function setupClienteAutocomplete(){
+  const input = document.getElementById('cliente_nome');
+  const box   = document.getElementById('cliente_suggestions');
+  if (!input || !box) return;
+
+  let timer=null, items=[], idx=-1;
+
+  async function doSearch(q){
+    if (!q || q.trim().length < 2){ box.innerHTML=''; box.style.display='none'; return; }
+    items = (await buscarClientes(q)).slice(0,8);
+    render();
+  }
+  function render(){
+    box.innerHTML = items.map((c,i)=>`
+      <div class="suggest ${i===idx?'active':''}" data-i="${i}"
+           style="padding:6px 8px; cursor:pointer;">
+        <div><strong>${c.codigo||c.id||''}</strong> — ${c.nome||''}</div>
+        <small style="opacity:.7">${c.cnpj||''} ${c.ramo||c.segmento||''}</small>
+      </div>`).join('');
+    box.style.display = items.length ? 'block' : 'none';
+  }
+  function selectItem(i){
+    const c = items[i]; if (!c) return;
+    document.getElementById('cliente_nome').value   = c.nome || '';
+    document.getElementById('cliente_codigo').value = c.codigo || c.id || '';
+    document.getElementById('cliente_ramo').value   = c.ramo || c.segmento || '';
+    box.innerHTML=''; box.style.display='none';
+    recalcTudo(); // ST/ICMS dependem do cliente
+  }
+
+  input.addEventListener('input', () => {
+    clearTimeout(timer);
+    timer = setTimeout(()=> doSearch(input.value), 250);
+  });
+  input.addEventListener('keydown', (e)=>{
+    if (!items.length) return;
+    if (e.key === 'ArrowDown'){ idx=(idx+1)%items.length; render(); e.preventDefault(); }
+    else if (e.key === 'ArrowUp'){ idx=(idx-1+items.length)%items.length; render(); e.preventDefault(); }
+    else if (e.key === 'Enter'){ if (idx>=0){ selectItem(idx); e.preventDefault(); } }
+    else if (e.key === 'Escape'){ box.innerHTML=''; box.style.display='none'; }
+  });
+  // mousedown evita perder o clique por causa do blur
+  box.addEventListener('mousedown', (e)=>{
+    const el = e.target.closest('.suggest'); if (!el) return;
+    selectItem(Number(el.dataset.i)||0);
+  });
+  // fecha ao sair do foco
+  input.addEventListener('blur', ()=> setTimeout(()=>{ box.innerHTML=''; box.style.display='none'; }, 150));
+}
 
 // --- Persistência compacta ---
 async function salvarTabelaPreco(payload) {
@@ -266,7 +380,12 @@ async function carregarDescontos() {
   const sel = document.getElementById('desconto_global');
   sel.innerHTML = '';
   sel.appendChild(option('Selecione…', ''));
-  data.forEach(d => { mapaDescontos[d.codigo] = Number(d.percentual) || 0; sel.appendChild(option(`${d.codigo} - ${d.percentual}`, d.codigo)); });
+  
+  data.forEach(d => { 
+  const frac = Number(d.percentual) || 0;        // mantém como fração 0–1
+  mapaDescontos[d.codigo] = frac;
+  sel.appendChild(option(`${d.codigo} - ${(frac*100).toFixed(2)}`, d.codigo));
+  });
   atualizarPillDesconto();
 }
 
@@ -280,7 +399,7 @@ function atualizarPillDesconto() {
   const code = document.getElementById('desconto_global')?.value || '';
   const fator = mapaDescontos[code];
   const el = document.getElementById('pill-fator');
-  if (el) el.textContent = (fator != null && !isNaN(fator)) ? fmt4(fator) : '—';
+  if (el) el.textContent = (fator != null && !isNaN(fator)) ? `${(Number(fator)*100).toFixed(2)}` : '—';
 }
 
 function obterItensDaSessao() {
@@ -300,7 +419,8 @@ async function carregarItens() {
     if (r.ok) {
       const t = await r.json();
       document.getElementById('nome_tabela').value = t.nome_tabela || '';
-      document.getElementById('cliente').value = t.cliente || '';
+      document.getElementById('cliente_nome').value = t.cliente_nome || t.cliente || '';
+      document.getElementById('cliente_codigo').value = t.cliente_codigo || '';
       document.getElementById('validade_inicio').value = t.validade_inicio || '';
       document.getElementById('validade_fim').value = t.validade_fim || '';
 
@@ -363,8 +483,7 @@ function criarLinha(item, idx) {
 
   // Fator comissão (editável) + Desconto (select)
   const tdFator = document.createElement('td'); tdFator.className = 'num';
-  const inpFator = document.createElement('input'); Object.assign(inpFator, { type: 'number', step: '0.0001', min: '0', max: '1', value: item.fator_comissao ?? '' });
-  inpFator.readOnly = false; // <<<<< BLOQUEIA DIGITAÇÃO
+  const inpFator = document.createElement('input');Object.assign(inpFator, {type: 'number', step: '0.01', min: '0', max: '100',value:(item.fator_comissao != null) ? (Number(item.fator_comissao) * 100).toFixed(2) : ''});
   inpFator.title = 'Defina pelo seletor de desconto ou “Aplicar fator a todos”';
   inpFator.style.width = '110px';
   inpFator.addEventListener('input', () => recalcLinha(tr));
@@ -372,7 +491,7 @@ function criarLinha(item, idx) {
   const tdDescOpt = document.createElement('td');
   const selDesc = document.createElement('select');
   selDesc.appendChild(option('—', ''));
-  Object.entries(mapaDescontos).forEach(([cod, fator]) => selDesc.appendChild(option(`${cod} - ${fator}`, cod)));
+  Object.entries(mapaDescontos).forEach(([cod, fator]) => selDesc.appendChild(option(`${cod} - ${(Number(fator)*100).toFixed(2)}`, cod)));
   if (item.desconto && item.valor) {
     const fatorInferido = (Number(item.desconto) / Number(item.valor)).toFixed(4);
     const match = Object.entries(mapaDescontos).find(([, f]) => String(f) === fatorInferido);
@@ -380,7 +499,7 @@ function criarLinha(item, idx) {
   }
   selDesc.addEventListener('change', () => {
     const code = selDesc.value; const fator = mapaDescontos[code];
-    if (fator !== undefined) { inpFator.value = fator; }
+    if (fator !== undefined) { inpFator.value = (Number(fator) * 100).toFixed(2); }
     recalcLinha(tr);
   });
   tdDescOpt.appendChild(selDesc);
@@ -408,7 +527,7 @@ function criarLinha(item, idx) {
   const tdIcmsReter$= document.createElement('td'); tdIcmsReter$.className= 'num col-icms-st-reter';   tdIcmsReter$.textContent= '0,00';
 
   const tdGrupo = document.createElement('td'); tdGrupo.textContent = [item.grupo, item.departamento].filter(Boolean).join(' / ');
-  const tdFinal = document.createElement('td'); tdFinal.className = 'num'; tdFinal.textContent = '0,00';
+  const tdFinal = document.createElement('td'); tdFinal.className = 'num col-total'; tdFinal.textContent = '0,00';
 
   tr.append(
   tdSel, tdCod, tdDesc, tdEmb, tdGrupo,
@@ -431,7 +550,7 @@ async function recalcLinha(tr) {
   const idx  = Number(tr.dataset.idx);
   const item = itens[idx]; if (!item) return;
 
-  const fator    = Number(tr.querySelector('td:nth-child(8) input')?.value || 0);
+  const fator    = Number(tr.querySelector('td:nth-child(8) input')?.value || 0) / 100;
   const freteKg  = Number(document.getElementById('frete_kg').value || 0);
 
   // Condição por linha → taxa
@@ -464,12 +583,16 @@ async function recalcLinha(tr) {
       frete_linha: freteValor
     });
 
-    tr.querySelector('.col-ipi')?.textContent           = fmtMoney(f.ipi);
-    tr.querySelector('.col-base-st')?.textContent       = fmtMoney(f.base_st);
-    tr.querySelector('.col-icms-proprio')?.textContent  = fmtMoney(f.icms_proprio);
-    tr.querySelector('.col-icms-st-cheio')?.textContent = fmtMoney(f.icms_st_cheio);
-    tr.querySelector('.col-icms-st-reter')?.textContent = fmtMoney(f.icms_st_reter);
-    tr.querySelector('.col-total')?.textContent         = fmtMoney(f.total_linha_com_st); // ou total_linha
+    const setCell = (sel, val) => {
+    const el = tr.querySelector(sel);
+    if (el) el.textContent = fmtMoney(val);
+    };
+    setCell('.col-ipi',            f.ipi);
+    setCell('.col-base-st',        f.base_st);
+    setCell('.col-icms-proprio',   f.icms_proprio);
+    setCell('.col-icms-st-cheio',  f.icms_st_cheio);
+    setCell('.col-icms-st-reter',  f.icms_st_reter);
+     setCell('.col-total',          f.total_linha_com_st); // ou total_linha
 
   } catch (e) {
     console.warn('Falha fiscal na linha:', e);
@@ -502,7 +625,7 @@ function aplicarFatorGlobal() {
   document.querySelectorAll('#tbody-itens tr').forEach(tr => {
     const inp = tr.querySelector('td:nth-child(8) input'); // fator por linha
     const sel = tr.querySelector('td:nth-child(9) select'); // desconto por linha
-    if (inp) inp.value = fator;
+    if (inp) inp.value = (Number(fator) * 100).toFixed(2);
     if (sel) sel.value = code;
     recalcLinha(tr);
   });
@@ -538,7 +661,7 @@ function removerSelecionados() {
 
 async function salvarTabela() {
   const nome_tabela = document.getElementById('nome_tabela').value.trim();
-  const cliente = document.getElementById('cliente').value.trim();
+  const cliente = document.getElementById('cliente_nome').value.trim();
   const validade_inicio = document.getElementById('validade_inicio').value;
   const validade_fim = document.getElementById('validade_fim').value;
   const plano_pagamento = document.getElementById('plano_pagamento').value || null;
@@ -549,7 +672,7 @@ async function salvarTabela() {
   const idx  = Number(tr.dataset.idx); 
   const item = itens[idx];
 
-  const fator   = Number(tr.querySelector('td:nth-child(7) input')?.value || 0);
+  const fator   = Number(tr.querySelector('td:nth-child(8) input')?.value || 0) / 100;
   const selCond = tr.querySelector('td:nth-child(10) select');
   const codCond = selCond ? selCond.value : (document.getElementById('plano_pagamento').value || null);
 
@@ -591,7 +714,7 @@ async function salvarTabela() {
 
 function validarCabecalhoMinimo() {
   const nome   = document.getElementById('nome_tabela')?.value?.trim();
-  const cliente = document.getElementById('cliente')?.value?.trim();
+  const cliente = document.getElementById('cliente_nome')?.value?.trim();
   const ini    = document.getElementById('validade_inicio')?.value;
   const fim    = document.getElementById('validade_fim')?.value;
 
@@ -620,7 +743,8 @@ function refreshToolbarEnablement() {
 function limparFormularioCabecalho() {
   // Campos principais
   document.getElementById('nome_tabela').value = '';
-  document.getElementById('cliente').value = '';
+  document.getElementById('cliente_nome').value = '';
+  document.getElementById('cliente_codigo').value = '';
   document.getElementById('validade_inicio').value = '';
   document.getElementById('validade_fim').value = '';
 
@@ -691,7 +815,8 @@ async function onCancelar(e) {
 
           // repõe cabeçalho
           document.getElementById('nome_tabela').value     = t.nome_tabela || '';
-          document.getElementById('cliente').value         = t.cliente || '';
+          document.getElementById('cliente_nome').value = t.cliente_nome || t.cliente || '';
+          document.getElementById('cliente_codigo').value = t.cliente_codigo || '';
           document.getElementById('validade_inicio').value = t.validade_inicio || '';
           document.getElementById('validade_fim').value    = t.validade_fim || '';
 
@@ -847,6 +972,7 @@ document.addEventListener('DOMContentLoaded', () => {
   (async function init(){
     await Promise.all([carregarCondicoes(), carregarDescontos()]);
     await carregarItens();
+    setupClienteAutocomplete();
    // Se vier com ação na URL (?action=edit|duplicate), respeitar:
     const q = new URLSearchParams(location.search);
     const action = q.get('action') || q.get('mode') || q.get('modo');
@@ -880,4 +1006,5 @@ document.addEventListener('DOMContentLoaded', () => {
  document.getElementById('desconto_global')?.addEventListener('change', () => {
   atualizarPillDesconto();
   recalcTudo();
+  
 }); 
