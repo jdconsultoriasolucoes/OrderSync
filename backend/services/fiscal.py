@@ -35,7 +35,7 @@ def decide_st(
     peso_ok = (peso_kg is not None) and (D(peso_kg) <= D(10))
     if peso_ok: motivos.append("peso<=10")
 
-    is_revenda = _norm(ramo_juridico) == "revenda"
+    is_revenda = _norm(ramo_juridico) == "Revenda"
     if is_revenda: motivos.append("cliente=Revenda")
 
     aplica = is_pet and peso_ok and is_revenda

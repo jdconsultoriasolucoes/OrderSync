@@ -363,12 +363,18 @@ function setupClienteAutocomplete(){
   const data = await buscarClientes(typed);
 
   // mapeia campos do back
-  const mapped = (data || []).map(c => ({
-    codigo: c.codigo ?? c.id ?? c.CODIGO ?? c.cod ?? null,
-    nome:   c.nome_cliente ?? c.nomeEmpresarial ?? c.NOME_EMPRESARIAL
-         ?? c.nome ?? c.razao ?? c.razao_social ?? c.razaoSocial ?? c.fantasia ?? '',
-    cnpj:   c.cnpj ?? c.CNPJ ?? c.cnpj_cpf ?? c.cnpjCpf ?? ''
-  })).filter(c => (c.nome || c.cnpj));
+// mapeia campos do back (pega várias chaves possíveis)
+const mapped = (data || []).map(c => ({
+  // captura o código do cliente com várias variações comuns
+  codigo: c.codigo ?? c.id ?? c.id_cliente ?? c.codigo_cliente ?? c.codigoCliente ?? c.CODIGO ?? c.COD_CLIENTE ?? c.cod ?? null,
+
+  // prioriza nome_cliente
+  nome:   c.nome_cliente ?? c.nomeCliente ?? c.NOME_CLIENTE
+        ?? c.nome ?? c.razao ?? c.razao_social ?? c.razaoSocial ?? c.fantasia ?? '',
+
+  // cnpj em variações
+  cnpj:   c.cnpj ?? c.CNPJ ?? c.cnpj_cpf ?? c.cnpjCpf ?? ''
+})).filter(c => (c.nome || c.cnpj));
 
   // 🔎 filtro FINAL no front (sempre), por nome ou CNPJ
   const nq   = normaliza(typed);
@@ -653,7 +659,7 @@ async function recalcLinha(tr) {
   tr.querySelector('td:nth-child(13)').textContent = fmtMoney(descontoValor); // Desc. aplicado
 
   // chama backend fiscal (quantidade = 1 na tabela_preco)
-  const clienteCodigo = Number(document.getElementById('cliente_codigo')?.value || 0) || null;
+  const clienteCodigo = (document.getElementById('cliente_codigo')?.value || '').trim() || null;
   const forcarST      = !!document.getElementById('iva_st_toggle')?.checked;
   const produtoId     = (tr.querySelector('td:nth-child(2)')?.textContent || '').trim();
 
