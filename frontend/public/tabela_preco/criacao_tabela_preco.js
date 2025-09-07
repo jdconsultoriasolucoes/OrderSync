@@ -30,7 +30,7 @@ function getCtxId() {
 function getHeaderSnapshot() {
   return {
     nome_tabela: document.getElementById('nome_tabela')?.value || '',
-    cliente: document.getElementById('cliente')?.value || '',
+    cliente: document.getElementById('cliente_nome')?.value || '',
     validade_inicio: document.getElementById('validade_inicio')?.value || '',
     validade_fim: document.getElementById('validade_fim')?.value || '',
     frete_kg: document.getElementById('frete_kg')?.value || '0',
@@ -54,7 +54,7 @@ function restoreHeaderSnapshotIfNew() {
     const snap = JSON.parse(raw);
     const set = (id, v) => { const el = document.getElementById(id); if (el && v != null) el.value = v; };
     set('nome_tabela', snap.nome_tabela);
-    set('cliente', snap.cliente);
+    set('cliente_nome', snap.cliente);
     set('validade_inicio', snap.validade_inicio);
     set('validade_fim', snap.validade_fim);
     set('frete_kg', snap.frete_kg);
@@ -169,10 +169,6 @@ function setFormDisabled(disabled) {
   if (chkAll) chkAll.disabled = disabled;
 }
 
-function goToListarTabelas() {
-  window.location.href = 'listar_tabelas.html';
-}
-
 function onDuplicar() {
   // guarda a tabela de ORIGEM para poder voltar na hora do Cancelar
   sourceTabelaId = currentTabelaId ? String(currentTabelaId) : null;
@@ -265,182 +261,163 @@ async function previewFiscalLinha(payload) {
 
 function normaliza(s){ return String(s||'').normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase(); }
 
+// formata CNPJ/CPF para exibir bonito
+function fmtDoc(s){
+  const d = String(s||'').replace(/\D/g,'');
+  if (d.length===14) return d.replace(/^(\d{2})(\d{3})(\d{3})(\d{4})(\d{2})$/,'$1.$2.$3/$4-$5');
+  if (d.length===11) return d.replace(/^(\d{3})(\d{3})(\d{3})(\d{2})$/,'$1.$2.$3-$4');
+  return s||'';
+}
+
+// chamada única ao backend (aceita q= ou query=)
 async function buscarClientes(term){
   const q = (term || '').trim();
   if (q.length < 2) return [];
 
-  const api  = API_BASE.replace(/\/$/, '');
-  const base = `${api}/tabela_preco/busca_cliente/`;
+  const api = API_BASE.replace(/\/$/, '');
+  const bases = [
+    `${api}/tabela_preco/busca_cliente`,
+    `${api}/tabela_preco/busca_cliente/`,
+  ];
+  const params = ['q','query','nome','term','busca'];
 
-  // tenta ?query= e depois ?q=
-  for (const p of [`query=${encodeURIComponent(q)}`, `q=${encodeURIComponent(q)}`]) {
-    try {
-      const r = await fetch(`${base}?${p}`, { cache: 'no-store' });
-      if (r.ok) {
+  // tenta GET com várias chaves (?q=, ?query=, etc) e normaliza a resposta
+  for (const base of bases){
+    for (const k of params){
+      try{
+        const r = await fetch(`${base}?${k}=${encodeURIComponent(q)}`, { cache: 'no-store' });
+        if (!r.ok) continue;
+
         const data = await r.json();
-        if (Array.isArray(data)) return data;
-      }
-    } catch {}
+        const arr =
+          Array.isArray(data)             ? data :
+          Array.isArray(data?.results)    ? data.results :
+          Array.isArray(data?.clientes)   ? data.clientes :
+          Array.isArray(data?.items)      ? data.items :
+          (data && (data.nome || data.cnpj)) ? [data] : [];
+
+        if (arr.length) return arr;
+      }catch{/* tenta próximo */}
+    }
   }
 
-  // Fallback: GET + filtro SOMENTE por Nome/CNPJ (sem código)
-  try {
-    const r2 = await fetch(base, { cache: 'no-store' });
+  // fallback: GET sem query e filtro no front (SÓ por nome/CNPJ)
+  try{
+    const r2 = await fetch(bases[0], { cache: 'no-store' });
     if (!r2.ok) return [];
-    const all = (await r2.json()) || [];
+    const all = await r2.json();
 
     const nq   = normaliza(q);
     const qCnj = q.replace(/\D/g, '');
-
-    return all.filter(c => {
-      const nome = normaliza(c.nome || c.razao || c.razao_social || c.fantasia || c.NOME || '');
+    return (all || []).filter(c => {
+      const nome = normaliza(c.nome_cliente || c.razao || c.razao_social || c.fantasia || c.NOME || '');
       const cnpj = String(c.cnpj || c.CNPJ || '').replace(/\D/g, '');
       return (nome.includes(nq) || (qCnj && cnpj.includes(qCnj)));
     });
-  } catch {
-    return [];
-  }
+  }catch{ return []; }
 }
-
 
 function setupClienteAutocomplete(){
   const input = document.getElementById('cliente_nome');
   const box   = document.getElementById('cliente_suggestions');
   if (!input || !box) return;
 
-  let timer = null, items = [], idx = -1;
+  let items=[], idx=-1, timer=null;
 
-  function fmtDoc(s){
-  const d = String(s||'').replace(/\D/g,'');
-  if (d.length === 14) { // CNPJ
-    return d.replace(/^(\d{2})(\d{3})(\d{3})(\d{4})(\d{2})$/, '$1.$2.$3/$4-$5');
-  }
-  if (d.length === 11) { // CPF (se vier algum)
-    return d.replace(/^(\d{3})(\d{3})(\d{3})(\d{2})$/, '$1.$2.$3-$4');
-  }
-  return s || '';
+  function render(){
+    box.innerHTML = items.map((c,i)=>{
+      if (c.__raw){
+        return `<div class="suggest ${i===idx?'active':''}" data-i="${i}" style="padding:6px 8px;cursor:pointer">
+                  <div>Usar: <strong>"${c.nome}"</strong></div>
+                  <small style="opacity:.7">não encontrado — gravar como texto</small>
+                </div>`;
+      }
+      const linha = [fmtDoc(c.cnpj), c.nome].filter(Boolean).join(' - ');
+      return `<div class="suggest ${i===idx?'active':''}" data-i="${i}" style="padding:6px 8px;cursor:pointer">
+                <div>${linha}</div>
+              </div>`;
+    }).join('');
+    box.style.display = items.length ? 'block' : 'none';
   }
 
-  function normCliente(c){
-    if (!c) return null;
-    if (typeof c === 'string' || typeof c === 'number'){
-      const s = String(c);
-      return { cod:s, nome:s, cnpj:'', ramo:'' };
+  function selectItem(i){
+    const c = items[i]; if (!c) return;
+    const nomeEl = document.getElementById('cliente_nome');
+    const codEl  = document.getElementById('cliente_codigo');
+
+    if (c.__raw){
+      if (nomeEl) nomeEl.value = c.nome;
+      if (codEl)  codEl.value  = '';
+    } else {
+      if (nomeEl) nomeEl.value = [fmtDoc(c.cnpj), c.nome].filter(Boolean).join(' - ');
+      if (codEl)  codEl.value  = c.codigo ?? '';
     }
-    return {
-      cod:  c.codigo ?? c.id ?? c.CODIGO ?? c.cod ?? c.code ?? '',
-      nome: c.nome ?? c.razao ?? c.razao_social ?? c.fantasia ?? c.NOME ?? '',
-      cnpj: c.cnpj ?? c.CNPJ ?? '',
-      ramo: c.ramo ?? c.segmento ?? c.RAMO ?? ''
-    };
+    box.innerHTML=''; box.style.display='none';
+    Promise.resolve(recalcTudo()).catch(()=>{});
   }
 
-  
-
-  // BUSCA: só por nome/CNPJ; se não achar, oferece "usar o digitado"
-  let searchToken = 0;
-async function doSearch(q){
+  async function doSearch(q){
   const typed = (q || '').trim();
   if (typed.length < 2){ items = []; render(); return; }
 
-  const myToken = ++searchToken;
-
-  // 1) busca remota
   const data = await buscarClientes(typed);
-  items = (data || [])
-  .map(normCliente)
-  .filter(c => c && (c.nome || c.cnpj));
 
-  // 2) se nada veio, oferecer “usar o que digitei”
+  // mapeia campos do back
+  const mapped = (data || []).map(c => ({
+    codigo: c.codigo ?? c.id ?? c.CODIGO ?? c.cod ?? null,
+    nome:   c.nome_cliente ?? c.nomeEmpresarial ?? c.NOME_EMPRESARIAL
+         ?? c.nome ?? c.razao ?? c.razao_social ?? c.razaoSocial ?? c.fantasia ?? '',
+    cnpj:   c.cnpj ?? c.CNPJ ?? c.cnpj_cpf ?? c.cnpjCpf ?? ''
+  })).filter(c => (c.nome || c.cnpj));
+
+  // 🔎 filtro FINAL no front (sempre), por nome ou CNPJ
+  const nq   = normaliza(typed);
+  const qCnj = typed.replace(/\D/g, '');
+  items = mapped.filter(c => {
+    const nomeNorm    = normaliza(c.nome || '');
+    const cnpjDigits  = String(c.cnpj || '').replace(/\D/g, '');
+    return (nomeNorm.includes(nq) || (qCnj && cnpjDigits.includes(qCnj)));
+  });
+
   if (!items.length){
-  items = [{ __raw:true, cod:'', nome:typed, cnpj:'', ramo:'' }];
-}
-
-  // 3) render rápido (pode mostrar “(sem nome)” no primeiro momento)
-  idx = -1; render();
-
-  // 4) enriquecer os que não têm nome/CNPJ (top 8) e re-render ao preencher
-  const faltando = items
-    .map((c,i)=>({i,c}))
-    .filter(x => !(x.c && x.c.nome && x.c.cnpj))
-    .slice(0,8);
-
-  for (const {i, c} of faltando){
-    const det = await fetchClienteDetalhePorCodigo(c.cod);
-    if (myToken !== searchToken) return; // aborta se o usuário digitou outra coisa
-    if (det){
-      const up = normCliente({ ...c, ...det });
-      items[i] = up;
-      render();
-    }
-  }
- }
-
-  function render(){
-  box.innerHTML = items.map((c,i)=>{
-    if (c.__raw){
-      return `
-        <div class="suggest ${i===idx?'active':''}" data-i="${i}" style="padding:6px 8px; cursor:pointer;">
-          <div>Usar: <strong>"${c.nome}"</strong></div>
-          <small style="opacity:.7">não encontrado — gravar como texto</small>
-        </div>`;
-    }
-    const doc = fmtDoc(c.cnpj);
-    const linha = [doc, (c.nome || '(sem nome)')].filter(Boolean).join(' — ');
-    const sub   = c.ramo ? `<small style="opacity:.7">${c.ramo}</small>` : '';
-    return `
-      <div class="suggest ${i===idx?'active':''}" data-i="${i}" style="padding:6px 8px; cursor:pointer;">
-        <div>${linha}</div>
-        ${sub}
-      </div>`;
-  }).join('');
-  box.style.display = items.length ? 'block' : 'none';
-}
-
-  function selectItem(i){
-  const c = items[i]; if (!c) return;
-
-  const nomeEl = document.getElementById('cliente_nome');
-  const codEl  = document.getElementById('cliente_codigo');
-  const ramoEl = document.getElementById('cliente_ramo');
-
-  if (c.__raw){
-    if (nomeEl) nomeEl.value = c.nome;
-    if (codEl)  codEl.value  = '';
-    if (ramoEl) ramoEl.value = '';
-  } else {
-    const display = [fmtDoc(c.cnpj), c.nome].filter(Boolean).join(' - ');
-    if (nomeEl) nomeEl.value = display || c.nome || '';
-    if (codEl)  codEl.value  = c.cod || '';
-    if (ramoEl) ramoEl.value = c.ramo || '';
+    // nada casou → oferece “usar o que digitei”
+    items = [{ __raw:true, nome: typed }];
   }
 
-  box.innerHTML=''; box.style.display='none';
-  Promise.resolve(recalcTudo()).catch(()=>{});
+  idx = -1;
+  render();
 }
 
-  // Eventos
-  input.addEventListener('input', () => {
+  input.addEventListener('input', ()=>{
     clearTimeout(timer);
-    timer = setTimeout(() => { Promise.resolve(doSearch(input.value)).catch(()=>{}); }, 250);
+    timer = setTimeout(()=>{ doSearch(input.value); }, 250);
   });
-  input.addEventListener('keydown', (e)=>{
-    if (!items.length) return;
-    if (e.key === 'ArrowDown'){ idx=(idx+1)%items.length; render(); e.preventDefault(); }
-    else if (e.key === 'ArrowUp'){ idx=(idx-1+items.length)%items.length; render(); e.preventDefault(); }
-    else if (e.key === 'Enter'){ if (idx>=0){ selectItem(idx); e.preventDefault(); } }
-    else if (e.key === 'Escape'){ box.innerHTML=''; box.style.display='none'; }
-  });
-  box.addEventListener('mousedown', (e)=>{
-    const el = e.target.closest('.suggest'); if (!el) return;
-    selectItem(Number(el.dataset.i)||0);
-  });
-  box.addEventListener('click', (e)=>{
+  input.addEventListener('keydown', (e) => {
+  if (e.key === 'ArrowDown' && items.length){ idx = (idx + 1) % items.length; render(); e.preventDefault(); }
+  else if (e.key === 'ArrowUp'   && items.length){ idx = (idx - 1 + items.length) % items.length; render(); e.preventDefault(); }
+  else if (e.key === 'Enter'){
+    e.preventDefault();
+    if (items.length && idx >= 0){
+      selectItem(idx);
+    } else {
+      // aceita o que foi digitado
+      const val = (input.value || '').trim();
+      if (!val) return;
+      items = [{ __raw:true, nome: val }];
+      selectItem(0);
+    }
+  } else if (e.key === 'Escape'){
+    box.innerHTML = ''; box.style.display = 'none';
+  }
+});
+  box.addEventListener('mousedown', e=>{
     const el = e.target.closest('.suggest'); if (!el) return;
     selectItem(Number(el.dataset.i)||0);
   });
   input.addEventListener('blur', ()=> setTimeout(()=>{ box.innerHTML=''; box.style.display='none'; }, 150));
 }
+
+
 
 
 // --- Persistência compacta ---
@@ -786,7 +763,7 @@ async function salvarTabela() {
 
   const taxaCondLinha = mapaCondicoes[codCond] || 0;
 
-  const { acrescimoCond, freteValor, descontoValor, valorFinal } =
+  const { acrescimoCond, freteValor, descontoValor} =
     calcularLinha(item, fator, taxaCondLinha, frete_kg, ivaStAtivo);
 
   return {
@@ -800,7 +777,6 @@ async function salvarTabela() {
     plano_pagamento: codCond || null,       // <<<<<< per‑line
     frete_kg,
     frete_percentual: null,
-    valor_liquido: Number(valorFinal.toFixed(2)),
     grupo: item.grupo || null, departamento: item.departamento || null,
     ipi: item.ipi || 0,
     iva_st: ivaStAtivo ? (item.iva_st || 0) : 0 // salva coerente com o que foi calculado
