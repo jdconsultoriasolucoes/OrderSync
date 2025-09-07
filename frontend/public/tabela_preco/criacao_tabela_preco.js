@@ -267,7 +267,7 @@ function normaliza(s){ return String(s||'').normalize('NFD').replace(/[\u0300-\u
 
 async function buscarClientes(term){
   // tenta endpoint com query; se não existir, cai no plano B (lista inteira e filtra)
-  const base = `${API_BASE.replace(/\/$/, '')}/cliente/`;
+  const base = `${API_BASE.replace(/\/$/, '')}/tabela_preco/busca_cliente/`;
   try {
     const r = await fetch(`${base}?query=${encodeURIComponent(term)}`, { cache: 'no-store' });
     if (r.ok) return r.json();
