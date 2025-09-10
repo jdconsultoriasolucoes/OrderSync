@@ -91,6 +91,7 @@ function mergeBufferFromPickerIfAny() {
     }
     itens = Array.from(map.values());
     renderTabela();
+    recalcTudo();
   } catch {}
   finally {
 //    try { sessionStorage.removeItem(`TP_BUFFER:${ctx}`); } catch {}
@@ -1196,6 +1197,25 @@ document.addEventListener('DOMContentLoaded', () => {
     await Promise.all([carregarCondicoes(), carregarDescontos()]);
     await carregarItens();
     setupClienteAutocomplete();
+
+   // —— quando o usuário editar manualmente o NOME do cliente ——
+   const inpNome   = document.getElementById('cliente_nome');
+   const hidCodigo = document.getElementById('cliente_codigo');
+   const hidRamo   = document.getElementById('ramo_juridico');
+
+   inpNome?.addEventListener('input', () => {
+   // Se o campo ficar vazio, não considere mais “cliente cadastrado”
+   if (!inpNome.value.trim()) {
+     if (hidCodigo) hidCodigo.value = '';
+     if (hidRamo)   hidRamo.value   = '';
+    recalcTudo();                         // dispara o preview em todas as linhas
+   }
+   });
+
+   // Se algum outro código limpar/alterar esses campos, recalcule também
+   hidCodigo?.addEventListener('change', recalcTudo);
+   hidRamo  ?.addEventListener('change', recalcTudo);
+
    // Se vier com ação na URL (?action=edit|duplicate), respeitar:
     const q = new URLSearchParams(location.search);
     const action = q.get('action') || q.get('mode') || q.get('modo');
@@ -1223,10 +1243,11 @@ document.addEventListener('DOMContentLoaded', () => {
  });
  document.getElementById('iva_st_toggle')?.addEventListener('change', (e) => {
   ivaStAtivo = !!e.target.checked;
+  recalcTudo(); 
    });
 
  document.getElementById('desconto_global')?.addEventListener('change', () => {
   atualizarPillDesconto();
-  
+  aplicarFatorGlobal();
 }); 
 
