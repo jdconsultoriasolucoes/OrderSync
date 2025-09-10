@@ -21,22 +21,30 @@ def decide_st(
     ramo_juridico: Optional[str],
     forcar_iva_st: bool
 ) -> Tuple[bool, List[str]]:
-    """
-    Regra: aplica ST quando (tipo=PET) e (peso <= 10) e (ramo=Revenda).
-    Se cliente não cadastrado (sem ramo) e checkbox marcado, aplica ST.
-    """
     motivos: List[str] = []
-    if forcar_iva_st and not ramo_juridico:
-        return True, ["forcado_ui", "cliente_sem_cadastro"]
 
+    # normaliza tudo para comparação
     is_pet = _norm(tipo) == "pet"
-    if is_pet: motivos.append("tipo=PET")
+    if is_pet:
+        motivos.append("tipo=PET")
 
     peso_ok = (peso_kg is not None) and (D(peso_kg) <= D(10))
-    if peso_ok: motivos.append("peso<=10")
+    if peso_ok:
+        motivos.append("peso<=10")
 
-    is_revenda = _norm(ramo_juridico) == "Revenda"
-    if is_revenda: motivos.append("cliente=Revenda")
+    is_revenda = _norm(ramo_juridico) == "revenda"   # <<--- usar lower-case
+    if is_revenda:
+        motivos.append("cliente=Revenda")
+
+    # Se forçar via UI e cliente NÃO cadastrado: ainda exige que o produto
+    # seja PET e peso <= 10kg antes de aplicar. Não aplique indiscriminadamente.
+    if forcar_iva_st and not ramo_juridico:
+        aplica_forcado = is_pet and peso_ok
+        if aplica_forcado:
+            motivos.extend(["forcado_ui", "cliente_sem_cadastro"])
+        else:
+            motivos.append("forcado_ui_invalido")  # ajuda no debug
+        return aplica_forcado, motivos
 
     aplica = is_pet and peso_ok and is_revenda
     return aplica, motivos

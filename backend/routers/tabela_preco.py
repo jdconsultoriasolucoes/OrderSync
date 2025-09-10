@@ -12,43 +12,7 @@ router = APIRouter()
 # Simula um banco de dados em memória
 tabelas_de_preco_db: List[TabelaPreco] = []
 
-#@router.post("/TabelaPreco", response_model=TabelaPreco)
-#def criar_tabela_preco(tabela: TabelaPreco):
-#    tabela.id = len(tabelas_de_preco_db) + 1
-#    tabelas_de_preco_db.append(tabela)
-#    return tabela
-#
-#
-#@router.get("/TabelaPreco", response_model=List[TabelaPreco])
-#def listar_tabelas_preco():
-#    return tabelas_de_preco_db
-#
-#
-#@router.get("/TabelaPreco/{tabela_id}", response_model=TabelaPreco)
-#def obter_tabela_preco(tabela_id: Optional [int]):
-#    for tabela in tabelas_de_preco_db:
-#        if tabela.id == tabela_id:
-#            return tabela
-#    raise HTTPException(status_code=404, detail="Tabela de preço não encontrada")
-#
-#
-#@router.put("/TabelaPreco/{tabela_id}", response_model=TabelaPreco)
-#def atualizar_tabela_preco(tabela_id: Optional [int], tabela_atualizada: TabelaPreco):
-#    for idx, tabela in enumerate(tabelas_de_preco_db):
-#        if tabela.id == tabela_id:
-#            tabela_atualizada.id = tabela_id
-#            tabelas_de_preco_db[idx] = tabela_atualizada
-#            return tabela_atualizada
-#    raise HTTPException(status_code=404, detail="Tabela de preço não encontrada")
-#
-#
-#@router.delete("/TabelaPreco/{tabela_id}")
-#def deletar_tabela_preco(tabela_id: Optional [int]):
-#    for idx, tabela in enumerate(tabelas_de_preco_db):
-#        if tabela.id == tabela_id:
-#            del tabelas_de_preco_db[idx]
-#            return {"message": "Tabela de preço deletada com sucesso"}
-#    raise HTTPException(status_code=404, detail="Tabela de preço não encontrada")
+
 
 @router.get("/produtos_filtro")
 def filtrar_produtos_para_tabela_preco(
@@ -70,7 +34,6 @@ def filtrar_produtos_para_tabela_preco(
                     ELSE p.unidade
                 END AS embalagem,
                 p.peso AS peso_liquido,
-                p.peso AS peso_bruto,
                 p.preco_lista_supra AS valor,
                 p.ipi AS ipi,
                 p.iva_st AS iva_st,
@@ -333,7 +296,6 @@ def obter_tabela(id_tabela: int):
                     "descricao": p.descricao,
                     "embalagem": p.embalagem,
                     "peso_liquido": p.peso_liquido,
-                    "peso_bruto": p.peso_bruto,
                     "valor": p.valor,
                     "desconto": p.comissao_aplicada,
                     "acrescimo": p.ajuste_pagamento,

@@ -12,8 +12,6 @@ let sourceTabelaId  = null;
 let ivaStAtivo = !!document.getElementById('iva_st_toggle')?.checked;
 
 
-
-
 // ✅ Se a página for recarregada (F5), zera o buffer legado
 try {
   const nav = performance.getEntriesByType('navigation')[0];
@@ -87,7 +85,6 @@ function mergeBufferFromPickerIfAny() {
   if (!raw) return;
   try {
     const recebidos = JSON.parse(raw) || [];
-    console.log('[DEBUG] BUFFER recebido do picker:', recebidos);
     const map = new Map((itens || []).map(x => [x.codigo_tabela, x]));
     for (const p of recebidos) {
       map.set(p.codigo_tabela, { ...(map.get(p.codigo_tabela) || {}), ...p });
@@ -351,6 +348,8 @@ function setupClienteAutocomplete(){
     } else {
       if (nomeEl) nomeEl.value = [fmtDoc(c.cnpj), c.nome].filter(Boolean).join(' - ');
       if (codEl)  codEl.value  = c.codigo ?? '';
+      const ramoEl = document.getElementById('ramo_juridico');
+      if (ramoEl) ramoEl.value = c.ramo_juridico ?? c.ramo ?? '';
     }
     box.innerHTML=''; box.style.display='none';
     Promise.resolve(recalcTudo()).catch(()=>{});
@@ -367,13 +366,9 @@ function setupClienteAutocomplete(){
 const mapped = (data || []).map(c => ({
   // captura o código do cliente com várias variações comuns
   codigo: c.codigo ?? c.id ?? c.id_cliente ?? c.codigo_cliente ?? c.codigoCliente ?? c.CODIGO ?? c.COD_CLIENTE ?? c.cod ?? null,
-
-  // prioriza nome_cliente
-  nome:   c.nome_cliente ?? c.nomeCliente ?? c.NOME_CLIENTE
-        ?? c.nome ?? c.razao ?? c.razao_social ?? c.razaoSocial ?? c.fantasia ?? '',
-
-  // cnpj em variações
-  cnpj:   c.cnpj ?? c.CNPJ ?? c.cnpj_cpf ?? c.cnpjCpf ?? ''
+  nome:   c.nome_cliente ?? c.nomeCliente ?? c.NOME_CLIENTE ?? c.nome ?? c.razao ?? c.razao_social ?? c.razaoSocial ?? c.fantasia ?? '',
+  cnpj:   c.cnpj ?? c.CNPJ ?? c.cnpj_cpf ?? c.cnpjCpf ?? '',
+  ramo_juridico: c.ramo_juridico ?? ''
 })).filter(c => (c.nome || c.cnpj));
 
   // 🔎 filtro FINAL no front (sempre), por nome ou CNPJ
@@ -514,6 +509,7 @@ async function carregarItens() {
       document.getElementById('cliente_codigo').value = t.cliente_codigo || '';
       document.getElementById('validade_inicio').value = t.validade_inicio || '';
       document.getElementById('validade_fim').value = t.validade_fim || '';
+      document.getElementById('ramo_juridico').value = t.ramo_juridico || '';
 
       // >>> NOVO: preencher frete/condição (se existirem) e inferir do item[0] se faltar
       const first = (Array.isArray(t.produtos) && t.produtos.length) ? t.produtos[0] : null;
@@ -529,12 +525,17 @@ async function carregarItens() {
         planoSel.value = planoVal || '';
       }
 
-    itens = (t.produtos || []).map(p => ({...p, ipi: Number(p.ipi ?? 0), iva_st: Number(p.iva_st ?? p.st ?? 0) }));
+     itens = (t.produtos || []).map(p => ({...p, ipi: Number(p.ipi ?? 0), iva_st: Number(p.iva_st ?? p.st ?? 0) }));
+      
+     itens = itens.map(p => ({...p,peso_liquido: Number(p.peso_liquido ?? p.peso ??  p.peso_kg ?? p.pesoLiquido ??  0 ),
+                                 tipo: p.tipo ?? p.grupo ?? p.departamento ?? null
+     
+     }));
       renderTabela();
-
+      await preencherPesoTipoSeFaltarem()
       // Atualiza a pill e recálculo
       atualizarPillTaxa();
-      Promise.resolve(recalcTudo()).catch(err => console.debug('recalcTudo falhou:', err));
+      
 
       // >>> NOVO: fator global (se todos iguais)
       const fatores = Array.from(new Set((itens || []).map(x => Number(x.fator_comissao || 0))));
@@ -552,6 +553,9 @@ async function carregarItens() {
   const novos = obterItensDaSessao();              // o que veio do picker nesta volta
   itens = mergeItensExistentesENovos(itens, novos); // ✅ MESCLA em vez de substituir
   itens = itens.map(p => ({ ...p, ipi: Number(p.ipi ?? 0), iva_st: Number(p.iva_st ?? 0) }));
+  itens = itens.map(p => ({...p,peso_liquido: Number(p.peso_liquido ?? p.peso ??  p.peso_kg ?? p.pesoLiquido ??  0 ),
+                                tipo: p.tipo ?? p.grupo ?? p.departamento ?? null
+                              }));
   // (opcional, mas recomendado) já limpa o buffer legado para não reaplicar depois
   try { sessionStorage.removeItem('criacao_tabela_preco_produtos'); } catch {}
   renderTabela();
@@ -629,15 +633,144 @@ function criarLinha(item, idx) {
   return tr;
 }
 
+async function recalcularLinhaComFiscal(item, clienteCodigo, forcarST, frete_linha) {
+  const payload = {
+    cliente_codigo: clienteCodigo ?? null,
+    forcar_iva_st: !!forcarST,
+    produto_id: item.codigo_tabela,
+    tipo: (item.tipo || "").toLowerCase(),
+    peso_kg: Number(item.peso_liquido || 0),
+    preco_unit: Number(item.valor || 0),
+    quantidade: 1,
+    desconto_linha: Number(item.desconto || 0),
+    frete_linha: Number(frete_linha || 0),
+  };
+
+  const r = await fetch(`${API_BASE}/fiscal/preview-linha`, {
+    method: "POST",
+    headers: {"Content-Type": "application/json"},
+    body: JSON.stringify(payload),
+  });
+  const out = await r.json();
+
+  // use o que fizer sentido: total sem ST ou COM ST
+  item.valor_liquido = out.total_linha;          // ou: out.total_linha_com_st
+  item._motivos_iva = out.motivos_iva_st;        // útil pra debug na UI
+  return item;
+}
+
+function buildFiscalInputsFromRow(tr) {
+  const idx  = Number(tr.dataset.idx);
+  const item = (itens || [])[idx] || {};
+
+  // DOM: fator por linha e condição (código)
+  const fatorPct = Number(tr.querySelector('td:nth-child(8) input')?.value || 0);
+  const fator    = fatorPct / 100;
+  const codCond  = tr.querySelector('td:nth-child(10) select')?.value || (document.getElementById('plano_pagamento')?.value || '');
+  const taxaCond = (window.mapaCondicoes && window.mapaCondicoes[codCond]) ?? 0;
+
+  // DOM: frete global e toggles
+  const freteKg       = Number(document.getElementById('frete_kg')?.value || 0); // R$/kg
+  const clienteCodigo = (document.getElementById('cliente_codigo')?.value || '').trim() || null;
+  const ramoJuridico  = (document.getElementById('ramo_juridico')?.value || '').trim() || null;
+  const forcarST      = !!document.getElementById('iva_st_toggle')?.checked;
+
+  // Item básico
+  const produtoId = (tr.querySelector('td:nth-child(2)')?.textContent || '').trim();
+  const tipo = String(item?.tipo || item?.grupo || item?.departamento || '').trim();
+  const peso_kg   = Number(item?.peso_liquido ?? item?.peso ?? item?.peso_kg ?? item?.pesoLiquido ?? 0);
+
+  // Preço base (espelha sua lógica da tela): valor + acrescimo(condição) - desconto(fator)
+  const valor           = Number(item?.valor || 0);
+  const acrescimoCond   = valor * Number(taxaCond || 0);
+  const descontoValor   = valor * Number(fator || 0);
+  const precoBase       = valor + acrescimoCond - descontoValor;
+
+  // Frete por linha (usando kg diretamente)
+  const frete_linha = Number(freteKg || 0) * Number(peso_kg || 0); 
+
+  const payload = {
+  cliente_codigo: clienteCodigo,
+  forcar_iva_st: forcarST,
+  produto_id: produtoId,
+  ramo_juridico: ramoJuridico,
+  peso_kg: Number(peso_kg || 0),
+  tipo: tipo,
+  preco_unit: Number(precoBase || 0),
+  quantidade: 1,
+  desconto_linha: 0,
+  frete_linha: Number(frete_linha || 0),
+};
+
+  return {
+    produto_id: produtoId,
+    tipo, peso_kg, ramo_juridico: ramoJuridico, forcar_iva_st: forcarST,
+    preco_unit: payload.preco_unit, frete_linha: payload.frete_linha,
+    fator_percent: fatorPct, condicao_codigo: codCond, taxa_condicao: taxaCond,
+    payload
+  };
+}
+
+
 function renderTabela() {
   const tbody = document.getElementById('tbody-itens');
   tbody.innerHTML = '';
   itens.forEach((it, i) => tbody.appendChild(criarLinha(it, i)));
-  Promise.resolve(recalcTudo()).catch(err => console.debug('recalcTudo falhou:', err));
   if (typeof refreshToolbarEnablement === 'function') refreshToolbarEnablement();
 }
 
+
+
+// >>> cole acima de recalcLinha(tr)
+async function preencherPesoTipoSeFaltarem() {
+  const faltando = (window.itens || []).filter(p =>
+    !(Number(p?.peso_liquido) > 0) || !p?.tipo
+  );
+  const codigos = [...new Set(faltando.map(p => p.codigo_tabela).filter(Boolean))];
+  if (!codigos.length) return;
+
+  const api = (window.API_BASE || '').replace(/\/$/,''); // já existe no topo do arquivo
+  const mapa = {};
+
+  for (const cod of codigos) {
+    try {
+      const r = await fetch(`${api}/catalogo/produto/${encodeURIComponent(cod)}`);
+      if (!r.ok) continue;
+      const p = await r.json();
+      mapa[cod] = {
+        peso_liquido: Number(p.peso_liquido ?? p.peso ?? p.peso_kg ?? p.pesoLiquido ?? 0), // KG
+        tipo: p.tipo ?? p.grupo ?? p.departamento ?? null
+      };
+    } catch {}
+  }
+
+  // aplica nos itens
+  window.itens = (window.itens || []).map(it => {
+    const inf = mapa[it.codigo_tabela];
+    if (!inf) return it;
+    return {
+      ...it,
+      peso_liquido: Number(it.peso_liquido ?? inf.peso_liquido ?? 0),
+      tipo: it.tipo ?? inf.tipo ?? null
+    };
+  });
+
+  // atualiza a coluna "Peso Líq." já renderizada
+  document.querySelectorAll('#tbody-itens tr').forEach((tr, i) => {
+    const tdPeso = tr.querySelector('td:nth-child(6)');
+    if (!tdPeso) return;
+    const v = Number((window.itens[i] || {}).peso_liquido || 0);
+    tdPeso.textContent = v.toLocaleString('pt-BR', { minimumFractionDigits: 4, maximumFractionDigits: 4 });
+  });
+
+  if (typeof recalcTudo === 'function') await recalcTudo();
+}
+
+
 async function recalcLinha(tr) {
+  
+  
+    
   const idx  = Number(tr.dataset.idx);
   const item = itens[idx]; if (!item) return;
 
@@ -662,17 +795,17 @@ async function recalcLinha(tr) {
   const clienteCodigo = (document.getElementById('cliente_codigo')?.value || '').trim() || null;
   const forcarST      = !!document.getElementById('iva_st_toggle')?.checked;
   const produtoId     = (tr.querySelector('td:nth-child(2)')?.textContent || '').trim();
-
+  const ramoJuridico = (document.getElementById('ramo_juridico')?.value || '').trim() || null;
+  const pesoLinha = Number(item.peso_liquido ?? item.peso ?? item.peso_kg ?? item.pesoLiquido ?? 0);
+  
   try {
-    const f = await previewFiscalLinha({
-      cliente_codigo: clienteCodigo,
-      forcar_iva_st: forcarST,
-      produto_id: produtoId,
-      preco_unit: precoBase,
-      quantidade: 1,
-      desconto_linha: 0,
-      frete_linha: freteValor
-    });
+    const built = buildFiscalInputsFromRow(tr);
+
+    // usa exatamente o que JÁ calculamos nesta função
+    built.payload.preco_unit  = precoBase;   // já calculado acima
+    built.payload.frete_linha = freteValor;  // já calculado acima
+
+    const f = await previewFiscalLinha(built.payload);
 
     const setCell = (sel, val) => {
     const el = tr.querySelector(sel);
@@ -686,9 +819,8 @@ async function recalcLinha(tr) {
      setCell('.col-total',          f.total_linha_com_st); // ou total_linha
 
   } catch (e) {
-    console.warn('Falha fiscal na linha:', e);
-    ['.col-ipi','.col-base-st','.col-icms-proprio','.col-icms-st-cheio','.col-icms-st-reter','.col-total']
-      .forEach(sel => { const el = tr.querySelector(sel); if (el) el.textContent = '0,00'; });
+  ['.col-ipi','.col-base-st','.col-icms-proprio','.col-icms-st-cheio','.col-icms-st-reter','.col-total']
+    .forEach(sel => { const el = tr.querySelector(sel); if (el) el.textContent = '0,00'; });
   }
 }
 
@@ -723,7 +855,7 @@ function aplicarFatorGlobal() {
 
   atualizarPillDesconto();
 
-  Promise.resolve(recalcTudo()).catch(err => console.debug('recalcTudo falhou:', err));
+
 }
 
 // Mantém o picker em dia com o que está na grade do PAI
@@ -757,6 +889,7 @@ async function salvarTabela() {
   const validade_fim = document.getElementById('validade_fim').value;
   const plano_pagamento = document.getElementById('plano_pagamento').value || null;
   const frete_kg = Number(document.getElementById('frete_kg').value || 0);
+  const ramo_juridico = document.getElementById('ramo_juridico').value || null;
 
   // Mapeia as linhas já renderizadas na tabela para o formato do backend
   const produtos = Array.from(document.querySelectorAll('#tbody-itens tr')).map(tr => {
@@ -775,7 +908,7 @@ async function salvarTabela() {
   return {
     nome_tabela, validade_inicio, validade_fim, cliente, fornecedor: item.fornecedor || '',
     codigo_tabela: item.codigo_tabela, descricao: item.descricao, embalagem: item.embalagem,
-    peso_liquido: item.peso_liquido || 0, peso_bruto: item.peso_bruto || item.peso_liquido || 0,
+    peso_liquido: Number(item.peso_liquido ?? item.peso ?? item.peso_kg ?? item.pesoLiquido ?? item.peso_bruto ?? 0),
     valor: item.valor || 0,
     desconto: Number(descontoValor.toFixed(4)),
     acrescimo: Number((acrescimoCond + freteValor).toFixed(4)),
@@ -789,7 +922,7 @@ async function salvarTabela() {
   };
 });
 
-  const payload = { nome_tabela, validade_inicio, validade_fim, cliente, fornecedor: '', produtos };
+  const payload = { nome_tabela, validade_inicio, validade_fim, cliente, ramo_juridico, fornecedor: '', produtos };
 
   try {
     const resp = await salvarTabelaPreco(payload);
@@ -1090,11 +1223,10 @@ document.addEventListener('DOMContentLoaded', () => {
  });
  document.getElementById('iva_st_toggle')?.addEventListener('change', (e) => {
   ivaStAtivo = !!e.target.checked;
-  Promise.resolve(recalcTudo()).catch(err => console.debug('recalcTudo falhou:', err));
- });
+   });
 
  document.getElementById('desconto_global')?.addEventListener('change', () => {
   atualizarPillDesconto();
-  Promise.resolve(recalcTudo()).catch(err => console.debug('recalcTudo falhou:', err));
   
 }); 
+

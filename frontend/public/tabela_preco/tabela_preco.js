@@ -337,6 +337,7 @@ function enviarSelecionados() {
       valor: p.valor || 0,
       grupo: p.grupo || null,
       departamento: p.departamento || null,
+      tipo: p.tipo, 
       fornecedor: p.fornecedor || "",
       fator_comissao: 0,
       ipi: Number(p.ipi ?? 0),

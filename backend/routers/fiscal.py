@@ -13,14 +13,21 @@ router = APIRouter(tags=["Fiscal"])
 
 # --------- I/O ---------
 class LinhaPreviewIn(BaseModel):
-    cliente_codigo: Optional[int] = Field(default=None)
-    forcar_iva_st: bool = Field(default=False)
+    cliente_codigo: Optional[int] = None
+    forcar_iva_st: bool = False
     produto_id: str
-
     preco_unit: Decimal
     quantidade: Decimal
-    desconto_linha: Decimal = Field(default=Decimal("0.00"))
-    frete_linha: Decimal = Field(default=Decimal("0.00"))
+    desconto_linha: Decimal = Decimal("0.00")
+    frete_linha: Decimal = Decimal("0.00")
+
+    # novos (opcionais) — permitem fallback quando DB não tem dados
+    ramo_juridico: Optional[str] = None
+    peso_kg: Optional[Decimal] = None
+    tipo: Optional[str] = None
+
+    class Config:
+        extra = "ignore"
 
 class LinhaPreviewOut(BaseModel):
     aplica_iva_st: bool
@@ -95,6 +102,7 @@ def carregar_produto(db: Session, produto_id: str) -> dict:
 
 @router.post("/fiscal/preview-linha", response_model=LinhaPreviewOut)
 def preview_linha(payload: LinhaPreviewIn, db: Session = Depends(get_db)):
+   
     try:
         print("DBG payload:", payload.dict())
 
@@ -104,9 +112,17 @@ def preview_linha(payload: LinhaPreviewIn, db: Session = Depends(get_db)):
         print("DBG cliente:", cliente)
         print("DBG produto:", produto)
 
-        ramo = cliente.get("ramo_juridico") if cliente else None
-        tipo = produto.get("tipo")
+        ramo_db = cliente.get("ramo_juridico") if cliente else None
+        ramo = ramo_db or getattr(payload, "ramo_juridico", None)
+
+        tipo = produto.get("tipo") or getattr(payload, "tipo", None)
+
         peso = produto.get("peso_kg")
+        if not peso:   # None ou zero
+            peso = getattr(payload, "peso_kg", None)
+        # garantir Decimal
+        peso = D(peso)
+
         iva_st = D(produto.get("iva_st", 0))
         ipi = D(produto.get("ipi", 0))
         icms = D(produto.get("icms", 0.18))
