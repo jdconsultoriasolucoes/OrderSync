@@ -75,6 +75,7 @@ function clearPickerBridgeFor(ctx) {
 function preparePickerBridgeBeforeNavigate() {
   const ctx = getCtxId();
   sessionStorage.setItem('TP_CTX_ID', ctx);
+  try { sessionStorage.removeItem(`TP_BUFFER:${ctx}`); } catch {}
   // salva itens atuais do pai para pré‑marcação no picker
   sessionStorage.setItem(`TP_ATUAL:${ctx}`, JSON.stringify(itens || []));
 }
@@ -85,6 +86,7 @@ function mergeBufferFromPickerIfAny() {
   if (!raw) return;
   try {
     const recebidos = JSON.parse(raw) || [];
+    console.log('[DEBUG] BUFFER recebido do picker:', recebidos);
     const map = new Map((itens || []).map(x => [x.codigo_tabela, x]));
     for (const p of recebidos) {
       map.set(p.codigo_tabela, { ...(map.get(p.codigo_tabela) || {}), ...p });
@@ -94,7 +96,7 @@ function mergeBufferFromPickerIfAny() {
     recalcTudo();
   } catch {}
   finally {
-//    try { sessionStorage.removeItem(`TP_BUFFER:${ctx}`); } catch {}
+    try { sessionStorage.removeItem(`TP_BUFFER:${ctx}`); } catch {}
   }
 }
 
@@ -1243,7 +1245,7 @@ document.addEventListener('DOMContentLoaded', () => {
  });
  document.getElementById('iva_st_toggle')?.addEventListener('change', (e) => {
   ivaStAtivo = !!e.target.checked;
-  recalcTudo(); 
+  Promise.resolve(recalcTudo()).catch(err => console.debug('recalcTudo falhou:', err));
    });
 
  document.getElementById('desconto_global')?.addEventListener('change', () => {
