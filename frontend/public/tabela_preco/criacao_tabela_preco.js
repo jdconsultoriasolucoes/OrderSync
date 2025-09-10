@@ -10,7 +10,8 @@ let currentMode = 'new';       // 'new' | 'view' | 'edit' | 'duplicate'
 let currentTabelaId = null;
 let sourceTabelaId  = null;
 let ivaStAtivo = !!document.getElementById('iva_st_toggle')?.checked;
-
+let __recalcRunning = false;
+let __recalcPending = false;
 
 // ✅ Se a página for recarregada (F5), zera o buffer legado
 try {
@@ -714,7 +715,6 @@ function renderTabela() {
 
 
 
-// >>> cole acima de recalcLinha(tr)
 async function preencherPesoTipoSeFaltarem() {
   const faltando = (window.itens || []).filter(p =>
     !(Number(p?.peso_liquido) > 0) || !p?.tipo
@@ -811,18 +811,33 @@ async function recalcLinha(tr) {
      setCell('.col-total',          f.total_linha_com_st); // ou total_linha
 
   } catch (e) {
-  ['.col-ipi','.col-base-st','.col-icms-proprio','.col-icms-st-cheio','.col-icms-st-reter','.col-total']
-    .forEach(sel => { const el = tr.querySelector(sel); if (el) el.textContent = '0,00'; });
+ if (tr.dataset.reqId === myId) {
+      ['.col-ipi','.col-base-st','.col-icms-proprio','.col-icms-st-cheio','.col-icms-st-reter','.col-total']
+        .forEach(sel => { const el = tr.querySelector(sel); if (el) el.textContent = '0,00'; });
+    }
   }
 }
 
 
 async function recalcTudo() {
-  const rows = Array.from(document.querySelectorAll('#tbody-itens tr'));
-  for (const tr of rows) {
-    // aguarda uma a uma para evitar flood; se quiser paralelizar, use Promise.all com cuidado
-    // eslint-disable-next-line no-await-in-loop
-    await recalcLinha(tr);
+  if (__recalcRunning) {           // já tem uma rodada em andamento?
+    __recalcPending = true;        // marca que ficou pendente rodar de novo
+    return;                        // deixa a rodada atual terminar
+  }
+  __recalcRunning = true;
+
+  try {
+    do {
+      __recalcPending = false;     // vamos processar o "snapshot" atual
+      const rows = Array.from(document.querySelectorAll('#tbody-itens tr'));
+      for (const tr of rows) {
+        // eslint-disable-next-line no-await-in-loop
+        await recalcLinha(tr);     // 1 a 1, na ordem, para estabilidade visual
+      }
+      // Se, enquanto rodávamos, alguém pediu outra rodada, repete o laço
+    } while (__recalcPending);
+  } finally {
+    __recalcRunning = false;
   }
 }
 
