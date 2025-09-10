@@ -100,16 +100,6 @@ function mergeBufferFromPickerIfAny() {
   }
 }
 
-async function previewFiscalLinha(payload) {
-  const r = await fetch(`${API_BASE}/fiscal/preview-linha`, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(payload),
-  });
-  if (!r.ok) throw new Error(await r.text().catch(()=> 'Falha ao calcular preview fiscal'));
-  return r.json();
-}
-
 async function atualizarPrecosAtuais(){
   const codigos = Array.from(new Set((itens||[]).map(x=>x.codigo_tabela).filter(Boolean)));
   if (!codigos.length) return;
@@ -771,11 +761,13 @@ async function preencherPesoTipoSeFaltarem() {
 
 
 async function recalcLinha(tr) {
-  
-  
     
   const idx  = Number(tr.dataset.idx);
   const item = itens[idx]; if (!item) return;
+
+  const nextId = (Number(tr.dataset.reqId || 0) + 1);
+  tr.dataset.reqId = String(nextId);
+  const myId = String(nextId);
 
   const fator    = Number(tr.querySelector('td:nth-child(8) input')?.value || 0) / 100;
   const freteKg  = Number(document.getElementById('frete_kg').value || 0);
@@ -794,12 +786,6 @@ async function recalcLinha(tr) {
   tr.querySelector('td:nth-child(12)').textContent = fmtMoney(freteValor);    // Frete (R$)
   tr.querySelector('td:nth-child(13)').textContent = fmtMoney(descontoValor); // Desc. aplicado
 
-  // chama backend fiscal (quantidade = 1 na tabela_preco)
-  const clienteCodigo = (document.getElementById('cliente_codigo')?.value || '').trim() || null;
-  const forcarST      = !!document.getElementById('iva_st_toggle')?.checked;
-  const produtoId     = (tr.querySelector('td:nth-child(2)')?.textContent || '').trim();
-  const ramoJuridico = (document.getElementById('ramo_juridico')?.value || '').trim() || null;
-  const pesoLinha = Number(item.peso_liquido ?? item.peso ?? item.peso_kg ?? item.pesoLiquido ?? 0);
   
   try {
     const built = buildFiscalInputsFromRow(tr);
@@ -809,11 +795,14 @@ async function recalcLinha(tr) {
     built.payload.frete_linha = freteValor;  // já calculado acima
 
     const f = await previewFiscalLinha(built.payload);
-
+   
+    if (tr.dataset.reqId !== myId) return;
+   
     const setCell = (sel, val) => {
-    const el = tr.querySelector(sel);
-    if (el) el.textContent = fmtMoney(val);
+      const el = tr.querySelector(sel);
+      if (el) el.textContent = fmtMoney(val);
     };
+   
     setCell('.col-ipi',            f.ipi);
     setCell('.col-base-st',        f.base_st);
     setCell('.col-icms-proprio',   f.icms_proprio);
