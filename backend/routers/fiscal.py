@@ -108,7 +108,9 @@ def preview_linha(payload: LinhaPreviewIn, db: Session = Depends(get_db)):
 
         cliente = carregar_cliente(db, payload.cliente_codigo)
         produto = carregar_produto(db, payload.produto_id)
-
+       
+        print("DBG ramo_db=", repr(ramo_db), "ramo_req=", repr(getattr(payload, "ramo_juridico", None)))
+        
         print("DBG cliente:", cliente)
         print("DBG produto:", produto)
 
