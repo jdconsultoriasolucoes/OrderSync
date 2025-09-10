@@ -115,7 +115,7 @@ def preview_linha(payload: LinhaPreviewIn, db: Session = Depends(get_db)):
         print("DBG produto:", produto)
 
         ramo_db = cliente.get("ramo_juridico") if cliente else None
-        print("DBG ramo_db=", repr(ramo_db), "ramo_req=", repr(getattr(payload, "ramo_juridico", None)))
+       # print("DBG ramo_db=", repr(ramo_db), "ramo_req=", repr(getattr(payload, "ramo_juridico", None)))
         ramo = ramo_db or getattr(payload, "ramo_juridico", None)
 
         tipo = produto.get("tipo") or getattr(payload, "tipo", None)
