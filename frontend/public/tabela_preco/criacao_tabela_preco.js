@@ -14,12 +14,23 @@ let __recalcRunning = false;
 let __recalcPending = false;
 
 // ✅ Se a página for recarregada (F5), zera o buffer legado
-try {
-  const nav = performance.getEntriesByType('navigation')[0];
-  if (nav && nav.type === 'reload') {
-    sessionStorage.removeItem('criacao_tabela_preco_produtos');
-  }
-} catch {}
+const __IS_RELOAD = (() => {
+  try {
+    const nav = performance.getEntriesByType('navigation')[0];
+    return !!(nav && nav.type === 'reload');
+  } catch { return false; }
+})();
+
+if (__IS_RELOAD) {
+  try { sessionStorage.removeItem('criacao_tabela_preco_produtos'); } catch {}
+  // limpe também snapshots/ponte por contexto, se usar TP_CTX_ID
+  Object.keys(sessionStorage).forEach(k => {
+    if (k.startsWith('TP_HEADER_SNAPSHOT:')) sessionStorage.removeItem(k);
+    if (k.startsWith('TP_ATUAL:'))           sessionStorage.removeItem(k);
+    if (k.startsWith('TP_BUFFER:'))          sessionStorage.removeItem(k);
+  });
+}
+
 
 // === Contexto e Snapshot de Cabeçalho ===
 function getCtxId() {
@@ -27,14 +38,25 @@ function getCtxId() {
 }
 
 function getHeaderSnapshot() {
+  const $ = (id) => document.getElementById(id);
+  const val = (id) => ($(`${id}`)?.value ?? "").trim();
+  const on  = (id) => !!$(`${id}`)?.checked;
+
   return {
-    nome_tabela: document.getElementById('nome_tabela')?.value || '',
-    cliente: document.getElementById('cliente_nome')?.value || '',
-    validade_inicio: document.getElementById('validade_inicio')?.value || '',
-    validade_fim: document.getElementById('validade_fim')?.value || '',
-    frete_kg: document.getElementById('frete_kg')?.value || '0',
-    plano_pagamento: document.getElementById('plano_pagamento')?.value || '',
-    desconto_global: document.getElementById('desconto_global')?.value || '',
+    // visuais
+    nome_tabela:     val("nome_tabela"),
+    cliente:         val("cliente_nome"),   // texto mostrado no input
+    // ocultos/importantes
+    cliente_codigo:  val("cliente_codigo"),
+    ramo_juridico:   val("ramo_juridico"),
+    // datas
+    validade_inicio: val("validade_inicio"),
+    validade_fim:    val("validade_fim"),
+    // toggles/parametrizações
+    iva_st:          on("iva_st_toggle"),
+    frete_kg:        val("frete_kg") || "0",
+    plano_pagamento: val("plano_pagamento"),
+    desconto_global: val("desconto_global"),
   };
 }
 
@@ -60,7 +82,7 @@ function restoreHeaderSnapshotIfNew() {
     set('plano_pagamento', snap.plano_pagamento);
     // selects precisam existir antes
     atualizarPillTaxa();
-    set('desconto_global', '');              // não reimpõe desconto global
+    set('desconto_global', snap.desconto_global || '');
     recalcTudo();
     refreshToolbarEnablement();
   } catch {}
@@ -151,6 +173,7 @@ function setFormDisabled(disabled) {
   document.querySelectorAll('input, select').forEach(el => {
     // não travar o botão, só inputs/selects
     if (['BUTTON','A'].includes(el.tagName)) return;
+    if (el.id === 'iva_st_toggle' && !disabled) return;
     el.disabled = disabled;
   });
 
@@ -214,6 +237,7 @@ function setMode(mode) {
   currentMode = mode;
   setFormDisabled(mode === 'view');
   toggleToolbarByMode();
+  enforceIvaLockByCliente?.();
 }
 
 // === Utils ===
@@ -332,22 +356,44 @@ function setupClienteAutocomplete(){
   }
 
   function selectItem(i){
-    const c = items[i]; if (!c) return;
-    const nomeEl = document.getElementById('cliente_nome');
-    const codEl  = document.getElementById('cliente_codigo');
+  const c = items[i]; if (!c) return;
 
-    if (c.__raw){
-      if (nomeEl) nomeEl.value = c.nome;
-      if (codEl)  codEl.value  = '';
-    } else {
-      if (nomeEl) nomeEl.value = [fmtDoc(c.cnpj), c.nome].filter(Boolean).join(' - ');
-      if (codEl)  codEl.value  = c.codigo ?? '';
-      const ramoEl = document.getElementById('ramo_juridico');
-      if (ramoEl) ramoEl.value = c.ramo_juridico ?? c.ramo ?? '';
-    }
-    box.innerHTML=''; box.style.display='none';
-    Promise.resolve(recalcTudo()).catch(()=>{});
-  }
+  const nomeEl = document.getElementById('cliente_nome');
+  const codEl  = document.getElementById('cliente_codigo');
+  const ramoEl = document.getElementById('ramo_juridico');
+  const ivaChk = document.getElementById('iva_st_toggle');
+  if (ivaChk) { ivaChk.checked = false; ivaChk.disabled = true; window.ivaStAtivo = false; }
+  enforceIvaLockByCliente();
+
+  if (c.__raw){
+    // cliente não cadastrado — usa texto livre
+    if (nomeEl) nomeEl.value = c.nome;
+  if (codEl)  codEl.value  = '';    // sem código
+  if (ramoEl) ramoEl.value = '';    // opcional: limpa ramo
+
+  // ✅ marca & trava o IVA_ST SOMENTE quando escolhe "Usar: ..."
+  enforceIvaLockByCliente({ fromFreeSelection: true });
+
+  // snapshot 1x só
+  saveHeaderSnapshot?.();
+
+} else {
+  // cliente encontrado no back
+  if (nomeEl) nomeEl.value = [fmtDoc(c.cnpj), c.nome].filter(Boolean).join(' - ');
+  if (codEl)  codEl.value  = c.codigo ?? '';
+  if (ramoEl) ramoEl.value = c.ramo_juridico ?? c.ramo ?? '';
+
+  // ✅ não mexe no .checked; apenas destrava se for cadastrado
+  enforceIvaLockByCliente();
+
+  saveHeaderSnapshot?.();
+}
+
+// fecha sugestões e recalcula
+box.innerHTML = '';
+box.style.display = 'none';
+Promise.resolve(recalcTudo()).catch(() => {});}
+
 
   async function doSearch(q){
   const typed = (q || '').trim();
@@ -412,6 +458,22 @@ const mapped = (data || []).map(c => ({
   input.addEventListener('blur', ()=> setTimeout(()=>{ box.innerHTML=''; box.style.display='none'; }, 150));
 }
 
+// PATCH: bloqueio/controle do IVA_ST conforme cliente (livre x cadastrado)
+function enforceIvaLockByCliente(opts = {}) {
+  const ivaChk  = document.getElementById('iva_st_toggle');
+  const codigo  = (document.getElementById('cliente_codigo')?.value || '').trim();
+  if (!ivaChk) return;
+  const isLivre = !codigo;
+
+  if (isLivre) {
+    ivaChk.disabled = true;                 // cinza/“travado” por padrão
+    if (opts.fromFreeSelection) ivaChk.checked = true; // só marca se veio da seleção “Usar: …”
+  } else {
+    ivaChk.disabled = false;                // cliente cadastrado → libera
+    // não mudamos .checked aqui
+  }
+  window.ivaStAtivo = !!ivaChk.checked;
+}
 
 
 
@@ -527,6 +589,7 @@ async function carregarItens() {
      }));
       renderTabela();
       await preencherPesoTipoSeFaltarem()
+      
       // Atualiza a pill e recálculo
       atualizarPillTaxa();
       
@@ -575,7 +638,10 @@ function criarLinha(item, idx) {
   const inpFator = document.createElement('input');Object.assign(inpFator, {type: 'number', step: '0.01', min: '0', max: '100',value:(item.fator_comissao != null) ? (Number(item.fator_comissao) * 100).toFixed(2) : ''});
   inpFator.title = 'Defina pelo seletor de desconto ou “Aplicar fator a todos”';
   inpFator.style.width = '110px';
-  inpFator.addEventListener('input', () => recalcLinha(tr));
+  inpFator.addEventListener('input', () => {
+  itens[idx].fator_comissao = Number(inpFator.value || 0) / 100;
+  recalcLinha(tr);
+  });
   tdFator.appendChild(inpFator); 
   const tdDescOpt = document.createElement('td');
   const selDesc = document.createElement('select');
@@ -587,22 +653,38 @@ function criarLinha(item, idx) {
     if (match) selDesc.value = match[0];
   }
   selDesc.addEventListener('change', () => {
-    const code = selDesc.value; const fator = mapaDescontos[code];
-    if (fator !== undefined) { inpFator.value = (Number(fator) * 100).toFixed(2); }
-    recalcLinha(tr);
-  });
+  const code  = selDesc.value || '';
+  const fator = mapaDescontos[code];
+  if (fator != null) {
+    inpFator.value = (Number(fator) * 100).toFixed(2);
+    itens[idx].fator_comissao = Number(fator);
+  }
+  recalcLinha(tr);
+ });
   tdDescOpt.appendChild(selDesc);
 
-// Condição por linha (código) — NOVO
+ // Condição por linha (código) — NOVO
   const tdCondCod = document.createElement('td');
   const selCond   = document.createElement('select');
   selCond.appendChild(option('—', ''));
-  Object.entries(mapaCondicoes).forEach(([cod]) => selCond.appendChild(option(cod, cod)));
+  
+  //Object.entries(mapaCondicoes).forEach(([cod]) => selCond.appendChild(option(cod, cod))); Verificar se pode deletar linha
   // default: se a linha já tem plano_pagamento, usa; senão, usa o global selecionado
-  const planoGlobal = document.getElementById('plano_pagamento')?.value || '';
-  selCond.value = item.plano_pagamento || planoGlobal || '';
-  selCond.addEventListener('change', () => recalcLinha(tr));
+  //const planoGlobal = document.getElementById('plano_pagamento')?.value || ''; Verifica se pode deletar linha
+  
+  Object.keys(mapaCondicoes).forEach(cod => {
+  selCond.appendChild(option(cod, cod));
+});
+  
+  
+  selCond.value = item.plano_pagamento || '';
+  
   tdCondCod.appendChild(selCond);
+
+  selCond.addEventListener('change', () => {
+  itens[idx].plano_pagamento = selCond.value || null;
+  recalcLinha(tr);
+  });
 
   const tdCondVal   = document.createElement('td'); tdCondVal.className = 'num'; tdCondVal.textContent = '0,00';
   const tdFrete = document.createElement('td'); tdFrete.className = 'num'; tdFrete.textContent = '0,00';
@@ -616,7 +698,7 @@ function criarLinha(item, idx) {
   const tdIcmsReter$= document.createElement('td'); tdIcmsReter$.className= 'num col-icms-st-reter';   tdIcmsReter$.textContent= '0,00';
 
   const tdGrupo = document.createElement('td'); tdGrupo.textContent = [item.grupo, item.departamento].filter(Boolean).join(' / ');
-  const tdFinal = document.createElement('td'); tdFinal.className = 'num col-total'; tdFinal.textContent = '0,00';
+  const tdFinal = document.createElement('td'); tdFinal.className = 'num col-total'; tdFinal.textContent = fmtMoney(item.valor || 0);tr.appendChild(tdFinal);
 
   tr.append(
   tdSel, tdCod, tdDesc, tdEmb, tdGrupo,
@@ -660,7 +742,7 @@ function buildFiscalInputsFromRow(tr) {
   // DOM: fator por linha e condição (código)
   const fatorPct = Number(tr.querySelector('td:nth-child(8) input')?.value || 0);
   const fator    = fatorPct / 100;
-  const codCond  = tr.querySelector('td:nth-child(10) select')?.value || (document.getElementById('plano_pagamento')?.value || '');
+  const codCond  = tr.querySelector('td:nth-child(10) select')?.value || '';
   const taxaCond = (window.mapaCondicoes && window.mapaCondicoes[codCond]) ?? 0;
 
   // DOM: frete global e toggles
@@ -775,7 +857,7 @@ async function recalcLinha(tr) {
   // Condição por linha → taxa
   const selCond  = tr.querySelector('td:nth-child(10) select');
   const codCond  = selCond ? selCond.value : '';
-  const taxaCond = mapaCondicoes[codCond] ?? mapaCondicoes[document.getElementById('plano_pagamento').value] ?? 0;
+  const taxaCond = mapaCondicoes[codCond] ?? 0;
 
   // base comercial (sem imposto)
   const { acrescimoCond, freteValor, descontoValor, precoBase } =
@@ -808,12 +890,17 @@ async function recalcLinha(tr) {
     setCell('.col-icms-proprio',   f.icms_proprio);
     setCell('.col-icms-st-cheio',  f.icms_st_cheio);
     setCell('.col-icms-st-reter',  f.icms_st_reter);
-     setCell('.col-total',          f.total_linha_com_st); // ou total_linha
+    setCell('.col-total',          f.total_linha_com_st); // ou total_linha
 
   } catch (e) {
- if (tr.dataset.reqId === myId) {
-      ['.col-ipi','.col-base-st','.col-icms-proprio','.col-icms-st-cheio','.col-icms-st-reter','.col-total']
-        .forEach(sel => { const el = tr.querySelector(sel); if (el) el.textContent = '0,00'; });
+  if (tr.dataset.reqId === myId && tr.isConnected) {
+    const msg = String(e && (e.name || e.message || e));
+    const isAbort = /abort|aborted|cancel|canceled|cancelled/i.test(msg);
+
+    if (!isAbort) {
+      console.warn('[Fiscal ERROR ignorado]', msg);
+      // ⚠️ Não zera mais os valores já exibidos
+    }
     }
   }
 }
@@ -905,7 +992,7 @@ async function salvarTabela() {
 
   const fator   = Number(tr.querySelector('td:nth-child(8) input')?.value || 0) / 100;
   const selCond = tr.querySelector('td:nth-child(10) select');
-  const codCond = selCond ? selCond.value : (document.getElementById('plano_pagamento').value || null);
+  const codCond = selCond ? (selCond.value || null) : null;
 
   const taxaCondLinha = mapaCondicoes[codCond] || 0;
 
@@ -1162,6 +1249,7 @@ document.addEventListener('DOMContentLoaded', () => {
   document.getElementById('btn-remover-selecionados')?.addEventListener('click', () => {
     removerSelecionados();
     refreshToolbarEnablement();
+    snapshotSelecionadosParaPicker();
   });
 
   document.getElementById('btn-salvar')?.addEventListener('click', async (e) => {
@@ -1201,9 +1289,21 @@ document.addEventListener('DOMContentLoaded', () => {
   // Init
   (async function init(){
     await Promise.all([carregarCondicoes(), carregarDescontos()]);
-    await carregarItens();
-    setupClienteAutocomplete();
+    
+    if (__IS_RELOAD) {
+    // F5: deixa tudo zerado
+    limparFormularioCabecalho?.();
+  } else {
+    // navegação normal: restaura cabeçalho salvo
+    restoreHeaderSnapshotIfNew?.();
+  }
 
+   await carregarItens();                       // carrega itens salvos/edição
+   if (!__IS_RELOAD) mergeBufferFromPickerIfAny?.();
+
+   setupClienteAutocomplete();
+   enforceIvaLockByCliente();
+       
    // —— quando o usuário editar manualmente o NOME do cliente ——
    const inpNome   = document.getElementById('cliente_nome');
    const hidCodigo = document.getElementById('cliente_codigo');
@@ -1216,11 +1316,21 @@ document.addEventListener('DOMContentLoaded', () => {
      if (hidRamo)   hidRamo.value   = '';
     recalcTudo();                         // dispara o preview em todas as linhas
    }
+     enforceIvaLockByCliente();
+     saveHeaderSnapshot?.();  
    });
 
    // Se algum outro código limpar/alterar esses campos, recalcule também
-   hidCodigo?.addEventListener('change', recalcTudo);
-   hidRamo  ?.addEventListener('change', recalcTudo);
+   hidCodigo?.addEventListener('change', () => {
+    enforceIvaLockByCliente();   // 👈 acrescenta
+    saveHeaderSnapshot?.();      // 👈 acrescenta
+    recalcTudo();
+     });
+
+   hidRamo?.addEventListener('change', () => {
+    saveHeaderSnapshot?.();      // 👈 opcional
+    recalcTudo();
+    });
 
    // Se vier com ação na URL (?action=edit|duplicate), respeitar:
     const q = new URLSearchParams(location.search);

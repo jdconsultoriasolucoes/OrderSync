@@ -125,3 +125,7 @@ body {
 .hidden { display: none !important; }
 .m-0 { margin: 0 !important; }
 .p-0 { padding: 0 !important; }
+
+
+#iva_st_toggle[disabled] { opacity:.6; cursor:not-allowed; }
+#iva_st_toggle[disabled] ~ .hint { opacity:.6; pointer-events:none; }
