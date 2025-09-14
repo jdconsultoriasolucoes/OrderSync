@@ -31,6 +31,14 @@ if (__IS_RELOAD) {
   });
 }
 
+window.isClienteLivreSelecionado = false;
+
+function parseBool(v){
+  if (typeof v === 'boolean') return v;
+  if (typeof v === 'number') return v === 1;
+  if (typeof v === 'string') return ['s','sim','true','1','y','yes'].includes(v.trim().toLowerCase());
+  return false;
+}
 
 // === Contexto e Snapshot de Cabeçalho ===
 function getCtxId() {
@@ -57,6 +65,8 @@ function getHeaderSnapshot() {
     frete_kg:        val("frete_kg") || "0",
     plano_pagamento: val("plano_pagamento"),
     desconto_global: val("desconto_global"),
+    cliente_livre:   !!window.isClienteLivreSelecionado,   
+    iva_enabled:     !$("iva_st_toggle")?.disabled
   };
 }
 
@@ -68,42 +78,69 @@ function saveHeaderSnapshot() {
 function restoreHeaderSnapshotIfNew() {
   // Só restaura em NEW (sem id na URL) para não sujar edição/visualização
   if (currentTabelaId) return;
+
   const ctx = getCtxId();
   const raw = sessionStorage.getItem(`TP_HEADER_SNAPSHOT:${ctx}`);
   if (!raw) return;
+
   try {
     const snap = JSON.parse(raw);
-    const set = (id, v) => { const el = document.getElementById(id); if (el && v != null) el.value = v; };
-    set('nome_tabela', snap.nome_tabela);
-    set('cliente_nome', snap.cliente);
+    const set = (id, v) => {
+      const el = document.getElementById(id);
+      if (el != null && v != null) el.value = v;
+    };
+
+    // ---- Cabeçalho básico
+    set('nome_tabela',     snap.nome_tabela);
+    set('cliente_nome',    snap.cliente);
+    set('cliente_codigo',  snap.cliente_codigo);
+    set('ramo_juridico',   snap.ramo_juridico);
     set('validade_inicio', snap.validade_inicio);
-    set('validade_fim', snap.validade_fim);
-    set('frete_kg', snap.frete_kg);
-    set('plano_pagamento', snap.plano_pagamento);
-    // selects precisam existir antes
-    atualizarPillTaxa();
+    set('validade_fim',    snap.validade_fim);
+    set('frete_kg',        snap.frete_kg);
+
+    // ---- Selects (este método deve ser chamado DEPOIS de carregarCondicoes/Descontos)
+    set('plano_pagamento', snap.plano_pagamento || '');
     set('desconto_global', snap.desconto_global || '');
-    recalcTudo();
-    refreshToolbarEnablement();
-  } catch {}
+
+    // ---- IVA_ST e flags do cliente livre
+    const ivaChk = document.getElementById('iva_st_toggle');
+    if (ivaChk) {
+      ivaChk.checked  = !!snap.iva_st;
+      ivaChk.disabled = !snap.iva_enabled;   // se estava habilitado, volta habilitado
+      window.ivaStAtivo = ivaChk.checked;
+    }
+    window.isClienteLivreSelecionado = !!snap.cliente_livre;
+
+    // ---- Atualizações visuais e locks
+    atualizarPillTaxa?.();
+    atualizarPillDesconto?.();
+    enforceIvaLockByCliente?.();             // garante regra: cadastrado = travado, livre = habilita
+
+    // ---- Recalcula e atualiza botões
+    recalcTudo?.();
+    refreshToolbarEnablement?.();
+  } catch (e) {
+    console.warn('restoreHeaderSnapshotIfNew: snapshot inválido', e);
+  }
 }
 
 
-// === Ponte Pai–Filho (contexto de itens) ===
-function clearPickerBridgeFor(ctx) {
+ // === Ponte Pai–Filho (contexto de itens) ===
+ function clearPickerBridgeFor(ctx) {
   try { sessionStorage.removeItem(`TP_ATUAL:${ctx}`); } catch {}
   try { sessionStorage.removeItem(`TP_BUFFER:${ctx}`); } catch {}
-}
+ }
 
-function preparePickerBridgeBeforeNavigate() {
+ function preparePickerBridgeBeforeNavigate() {
   const ctx = getCtxId();
   sessionStorage.setItem('TP_CTX_ID', ctx);
   try { sessionStorage.removeItem(`TP_BUFFER:${ctx}`); } catch {}
   // salva itens atuais do pai para pré‑marcação no picker
   sessionStorage.setItem(`TP_ATUAL:${ctx}`, JSON.stringify(itens || []));
-}
+ }
 
-function mergeBufferFromPickerIfAny() {
+ function mergeBufferFromPickerIfAny() {
   const ctx = getCtxId();
   const raw = sessionStorage.getItem(`TP_BUFFER:${ctx}`);
   if (!raw) return;
@@ -121,7 +158,7 @@ function mergeBufferFromPickerIfAny() {
   finally {
     try { sessionStorage.removeItem(`TP_BUFFER:${ctx}`); } catch {}
   }
-}
+ }
 
 async function atualizarPrecosAtuais(){
   const codigos = Array.from(new Set((itens||[]).map(x=>x.codigo_tabela).filter(Boolean)));
@@ -363,31 +400,39 @@ function setupClienteAutocomplete(){
   const ramoEl = document.getElementById('ramo_juridico');
   const ivaChk = document.getElementById('iva_st_toggle');
   if (ivaChk) { ivaChk.checked = false; ivaChk.disabled = true; window.ivaStAtivo = false; }
+  window.isClienteLivreSelecionado = false;
+
   enforceIvaLockByCliente();
 
   if (c.__raw){
-    // cliente não cadastrado — usa texto livre
-    if (nomeEl) nomeEl.value = c.nome;
-  if (codEl)  codEl.value  = '';    // sem código
-  if (ramoEl) ramoEl.value = '';    // opcional: limpa ramo
+  // cliente “livre” (gravar como texto)
+  if (nomeEl) nomeEl.value = c.nome;
+  if (codEl)  codEl.value  = '';          // sem código
+  if (ramoEl) ramoEl.value = '';
 
-  // ✅ marca & trava o IVA_ST SOMENTE quando escolhe "Usar: ..."
-  enforceIvaLockByCliente({ fromFreeSelection: true });
-
-  // snapshot 1x só
+  window.isClienteLivreSelecionado = true;
+  if (ivaChk){
+    ivaChk.disabled = false;              // ✅ habilita para você decidir
+    // não marco/desmarco aqui — decisão manual
+  }
   saveHeaderSnapshot?.();
 
 } else {
-  // cliente encontrado no back
+  // cliente cadastrado
   if (nomeEl) nomeEl.value = [fmtDoc(c.cnpj), c.nome].filter(Boolean).join(' - ');
   if (codEl)  codEl.value  = c.codigo ?? '';
   if (ramoEl) ramoEl.value = c.ramo_juridico ?? c.ramo ?? '';
 
-  // ✅ não mexe no .checked; apenas destrava se for cadastrado
-  enforceIvaLockByCliente();
-
+  // aplica preferência vinda do cadastro, mas TRAVADO
+  const pref = c.iva_st ?? c.usa_iva_st ?? c.st ?? c.calcula_st ?? null;
+  if (ivaChk){
+    if (pref != null) ivaChk.checked = parseBool(pref);
+    ivaChk.disabled = true;              // 🔒 travado para cliente cadastrado
+  }
+  window.isClienteLivreSelecionado = false;
   saveHeaderSnapshot?.();
 }
+
 
 // fecha sugestões e recalcula
 box.innerHTML = '';
@@ -459,23 +504,20 @@ const mapped = (data || []).map(c => ({
 }
 
 // PATCH: bloqueio/controle do IVA_ST conforme cliente (livre x cadastrado)
-function enforceIvaLockByCliente(opts = {}) {
+function enforceIvaLockByCliente(){
   const ivaChk  = document.getElementById('iva_st_toggle');
   const codigo  = (document.getElementById('cliente_codigo')?.value || '').trim();
   if (!ivaChk) return;
-  const isLivre = !codigo;
 
-  if (isLivre) {
-    ivaChk.disabled = true;                 // cinza/“travado” por padrão
-    if (opts.fromFreeSelection) ivaChk.checked = true; // só marca se veio da seleção “Usar: …”
+  if (codigo){                         // cliente cadastrado
+    ivaChk.disabled = true;            // 🔒 travado
+    // não muda o checked aqui (pode já ter vindo do cadastro)
   } else {
-    ivaChk.disabled = false;                // cliente cadastrado → libera
-    // não mudamos .checked aqui
+    // sem código: só habilita se já selecionou “Usar: ...”
+    ivaChk.disabled = !window.isClienteLivreSelecionado;
   }
   window.ivaStAtivo = !!ivaChk.checked;
 }
-
-
 
 // --- Persistência compacta ---
 async function salvarTabelaPreco(payload) {
