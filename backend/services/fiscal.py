@@ -17,7 +17,6 @@ def _norm(s: Optional[str]) -> str:
 
 def decide_st(
     tipo: Optional[str],
-    peso_kg: Optional[Decimal],
     ramo_juridico: Optional[str],
     forcar_iva_st: bool
 ) -> Tuple[bool, List[str]]:
@@ -28,25 +27,21 @@ def decide_st(
     if is_pet:
         motivos.append("tipo=PET")
 
-    peso_ok = (peso_kg is not None) and (D(peso_kg) <= D(10))
-    if peso_ok:
-        motivos.append("peso<=10")
-
     is_revenda = _norm(ramo_juridico) == "revenda"   # <<--- usar lower-case
     if is_revenda:
         motivos.append("cliente=Revenda")
 
     # Se forçar via UI e cliente NÃO cadastrado: ainda exige que o produto
-    # seja PET e peso <= 10kg antes de aplicar. Não aplique indiscriminadamente.
+    
     if forcar_iva_st and not ramo_juridico:
-        aplica_forcado = is_pet and peso_ok
+        aplica_forcado = is_pet
         if aplica_forcado:
             motivos.extend(["forcado_ui", "cliente_sem_cadastro"])
         else:
             motivos.append("forcado_ui_invalido")  # ajuda no debug
         return aplica_forcado, motivos
 
-    aplica = is_pet and peso_ok and is_revenda
+    aplica = is_pet and is_revenda
     return aplica, motivos
 
 def calcular_linha(

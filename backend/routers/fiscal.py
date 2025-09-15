@@ -7,7 +7,7 @@ from sqlalchemy import text
 from sqlalchemy.orm import Session
 
 from database import SessionLocal
-from services.fiscal import decide_st, calcular_linha, D, money
+from services.fiscal import decide_st, calcular_linha, D, money, _norm
 
 router = APIRouter(tags=["Fiscal"])
 
@@ -115,23 +115,22 @@ def preview_linha(payload: LinhaPreviewIn, db: Session = Depends(get_db)):
         print("DBG produto:", produto)
 
         ramo_db = cliente.get("ramo_juridico") if cliente else None
-       # print("DBG ramo_db=", repr(ramo_db), "ramo_req=", repr(getattr(payload, "ramo_juridico", None)))
         ramo = ramo_db or getattr(payload, "ramo_juridico", None)
 
         tipo = produto.get("tipo") or getattr(payload, "tipo", None)
 
-        peso = produto.get("peso_kg")
-        if not peso:   # None ou zero
-            peso = getattr(payload, "peso_kg", None)
-        # garantir Decimal
+        peso = produto.get("peso_kg") or getattr(payload, "peso_kg", None)
         peso = D(peso)
+        ipi_prod = D(produto.get("ipi", 0))
+        # nova regra:
+        ipi = ipi_prod if (_norm(tipo) == "pet" and peso is not None and peso <= D(10)) else D(0)
 
         iva_st = D(produto.get("iva_st", 0))
-        ipi = D(produto.get("ipi", 0))
         icms = D(produto.get("icms", 0.18))
 
         aplica, motivos = decide_st(
-            tipo=tipo, peso_kg=peso, ramo_juridico=ramo,
+            tipo=tipo,
+            ramo_juridico=ramo,
             forcar_iva_st=payload.forcar_iva_st
         )
 

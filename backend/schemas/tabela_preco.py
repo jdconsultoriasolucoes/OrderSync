@@ -50,6 +50,7 @@ class ProdutoCalculo(BaseModel):
     peso_liquido: Optional[float] = 0.0
     ipi: Optional[float] = 0.0
     iva_st: Optional[float] = 0.0
+    tipo: Optional[str] = None
     
 class ParametrosCalculo(BaseModel):
     produtos: List[ProdutoCalculo]

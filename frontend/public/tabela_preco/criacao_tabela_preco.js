@@ -146,7 +146,6 @@ function restoreHeaderSnapshotIfNew() {
   if (!raw) return;
   try {
     const recebidos = JSON.parse(raw) || [];
-    console.log('[DEBUG] BUFFER recebido do picker:', recebidos);
     const map = new Map((itens || []).map(x => [x.codigo_tabela, x]));
     for (const p of recebidos) {
       map.set(p.codigo_tabela, { ...(map.get(p.codigo_tabela) || {}), ...p });
