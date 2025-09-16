@@ -135,12 +135,13 @@ function restoreHeaderSnapshotIfNew() {
  function preparePickerBridgeBeforeNavigate() {
   const ctx = getCtxId();
   sessionStorage.setItem('TP_CTX_ID', ctx);
+  sessionStorage.setItem(`TP_RETURN_MODE:${ctx}`, currentMode);
   try { sessionStorage.removeItem(`TP_BUFFER:${ctx}`); } catch {}
   // salva itens atuais do pai para pré‑marcação no picker
   sessionStorage.setItem(`TP_ATUAL:${ctx}`, JSON.stringify(itens || []));
  }
 
- function mergeBufferFromPickerIfAny() {
+ async function mergeBufferFromPickerIfAny() {
   const ctx = getCtxId();
   const raw = sessionStorage.getItem(`TP_BUFFER:${ctx}`);
   if (!raw) return;
@@ -152,7 +153,11 @@ function restoreHeaderSnapshotIfNew() {
     }
     itens = Array.from(map.values());
     renderTabela();
-    recalcTudo();
+   // garante dados que o preview usa
+    await preencherPesoTipoSeFaltarem();
+    await atualizarPrecosAtuais();
+    // agenda o recálculo no próximo tick
+    queueMicrotask(() => Promise.resolve(recalcTudo()).catch(()=>{}));
   } catch {}
   finally {
     try { sessionStorage.removeItem(`TP_BUFFER:${ctx}`); } catch {}
@@ -285,15 +290,20 @@ function calcularLinha(item, fator, taxaCond, freteKg) {
   const valor = Number(item.valor || 0);
   const peso  = Number(item.peso_liquido || 0);
 
-  const acrescimoCond = valor * Number(taxaCond || 0);
+  // 1) DESCONTO/FATOR → base líquida
   const descontoValor = valor * Number(fator || 0);
+  const liquido       = Math.max(0, valor - descontoValor);
 
+  // 2) Condição SOBRE o líquido
+  const acrescimoCond = liquido * Number(taxaCond || 0);
+
+  // 3) Frete (continua por KG — só soma no total)
   const freteValor    = (Number(freteKg || 0) / 1000) * peso;
 
-  // preço-base sem impostos (vai para o backend fiscal)
-  const precoBase = valor + acrescimoCond - descontoValor;
+  // 4) Preço comercial sem impostos (líquido + condição)
+  const precoBase     = liquido + acrescimoCond;
 
-  return { acrescimoCond, freteValor, descontoValor, precoBase };
+  return { acrescimoCond, freteValor, descontoValor, precoBase, liquido }
 }
 
 
@@ -674,50 +684,78 @@ function criarLinha(item, idx) {
   const tdPeso = document.createElement('td'); tdPeso.className = 'num'; tdPeso.textContent = fmt4(item.peso_liquido || 0);
   const tdValor = document.createElement('td'); tdValor.className = 'num'; tdValor.textContent = fmtMoney(item.valor || 0);
 
-  // Fator comissão (editável) + Desconto (select)
-  const tdFator = document.createElement('td'); tdFator.className = 'num';
-  const inpFator = document.createElement('input');Object.assign(inpFator, {type: 'number', step: '0.01', min: '0', max: '100',value:(item.fator_comissao != null) ? (Number(item.fator_comissao) * 100).toFixed(2) : ''});
-  inpFator.title = 'Defina pelo seletor de desconto ou “Aplicar fator a todos”';
-  inpFator.style.width = '110px';
-  inpFator.addEventListener('input', () => {
-  itens[idx].fator_comissao = Number(inpFator.value || 0) / 100;
-  recalcLinha(tr);
-  });
-  tdFator.appendChild(inpFator); 
-  const tdDescOpt = document.createElement('td');
-  const selDesc = document.createElement('select');
-  selDesc.appendChild(option('—', ''));
-  Object.entries(mapaDescontos).forEach(([cod, fator]) => selDesc.appendChild(option(`${cod} - ${(Number(fator)*100).toFixed(2)}`, cod)));
-  if (item.desconto && item.valor) {
-    const fatorInferido = (Number(item.desconto) / Number(item.valor)).toFixed(4);
-    const match = Object.entries(mapaDescontos).find(([, f]) => String(f) === fatorInferido);
-    if (match) selDesc.value = match[0];
+// % (Fator/Desconto) — COLUNA ÚNICA por linha (override quando alterado)
+const tdPercent = document.createElement('td');
+const selPercent = document.createElement('select');
+selPercent.appendChild(option('—', ''));
+
+// popula com o mesmo dicionário do cabeçalho (mapaDescontos: {codigo -> fração 0..1})
+Object.entries(mapaDescontos).forEach(([cod, frac]) => {
+  selPercent.appendChild(option(`${cod} - ${(Number(frac)*100).toFixed(2)}`, cod));
+});
+
+
+(() => {
+  
+  const frac = (item.fator_comissao != null) ? Number(item.fator_comissao) : null;
+  if (frac != null && !isNaN(frac) && Number(frac) > 0) {
+    const match = Object.entries(mapaDescontos).find(([, f]) => Number(f) === Number(frac));
+    if (match) selPercent.value = match[0];
   }
-  selDesc.addEventListener('change', () => {
-  const code  = selDesc.value || '';
-  const fator = mapaDescontos[code];
-  if (fator != null) {
-    inpFator.value = (Number(fator) * 100).toFixed(2);
-    itens[idx].fator_comissao = Number(fator);
+
+  if (
+    !selPercent.value &&
+    Number(item.desconto) > 0 &&
+    Number(item.valor) > 0
+  ) {
+    const fatorInferido = Number(item.desconto) / Number(item.valor);
+    if (fatorInferido > 0) {
+      const match = Object.entries(mapaDescontos).find(([, f]) =>
+        Number(f).toFixed(4) === Number(fatorInferido).toFixed(4)
+      );
+      if (match) selPercent.value = match[0];
+    }
   }
+})();
+
+selPercent.addEventListener('change', () => {
+  const code  = selPercent.value || '';
+  const frac  = mapaDescontos[code];
+  // guarda a fração (0..1) como fator_comissao da linha
+  itens[idx].fator_comissao = (frac != null && !isNaN(frac)) ? Number(frac) : 0;
+  // marca override implícito (se quiser sinalizar depois com badge)
+  itens[idx].__overridePercent = true;
   recalcLinha(tr);
- });
-  tdDescOpt.appendChild(selDesc);
+});
+
+tdPercent.appendChild(selPercent);
 
  // Condição por linha (código) — NOVO
   const tdCondCod = document.createElement('td');
   const selCond   = document.createElement('select');
   selCond.appendChild(option('—', ''));
+    
+  //código + descrição (igual ao cabeçalho)---------------
+  const selHdr = document.getElementById('plano_pagamento');
+    Array.from(selHdr?.options || []).forEach(o => {
+  if (o.value) selCond.appendChild(option(o.textContent, o.value));
+  });
   
-  //Object.entries(mapaCondicoes).forEach(([cod]) => selCond.appendChild(option(cod, cod))); Verificar se pode deletar linha
-  // default: se a linha já tem plano_pagamento, usa; senão, usa o global selecionado
-  //const planoGlobal = document.getElementById('plano_pagamento')?.value || ''; Verifica se pode deletar linha
-  
-  Object.keys(mapaCondicoes).forEach(cod => {
-  selCond.appendChild(option(cod, cod));
-});
-  
-  
+  //só a descrição-----------
+//  const selHdr = document.getElementById('plano_pagamento');
+//  Array.from(selHdr?.options || []).forEach(o => {
+//  if (!o.value) return; // pula "Selecione…"
+//  const partes = (o.textContent || '').split(' - ');
+//  const desc   = partes.slice(1).join(' - ') || o.textContent; // robusto
+//  selCond.appendChild(option(desc, o.value));
+//  });
+
+
+     //Só o codigo ----------
+  //Object.keys(mapaCondicoes).forEach(cod => {
+  //selCond.appendChild(option(cod, cod));
+//});
+    
   selCond.value = item.plano_pagamento || '';
   
   tdCondCod.appendChild(selCond);
@@ -743,7 +781,7 @@ function criarLinha(item, idx) {
 
   tr.append(
   tdSel, tdCod, tdDesc, tdEmb, tdGrupo,
-  tdPeso, tdValor, tdFator, tdDescOpt,
+  tdPeso, tdValor, tdPercent,
   tdCondCod, tdCondVal, tdFrete, tdDescAplic,
   tdIpiR$, tdBaseStR$, tdIcmsProp$, tdIcmsCheio$, tdIcmsReter$, tdFinal
 );
@@ -783,7 +821,7 @@ function buildFiscalInputsFromRow(tr) {
   // DOM: fator por linha e condição (código)
   const fatorPct = Number(tr.querySelector('td:nth-child(8) input')?.value || 0);
   const fator    = fatorPct / 100;
-  const codCond  = tr.querySelector('td:nth-child(10) select')?.value || '';
+  const codCond  = tr.querySelector('td:nth-child(9) select')?.value || '';
   const taxaCond = (window.mapaCondicoes && window.mapaCondicoes[codCond]) ?? 0;
 
   // DOM: frete global e toggles
@@ -799,9 +837,11 @@ function buildFiscalInputsFromRow(tr) {
 
   // Preço base (espelha sua lógica da tela): valor + acrescimo(condição) - desconto(fator)
   const valor           = Number(item?.valor || 0);
-  const acrescimoCond   = valor * Number(taxaCond || 0);
   const descontoValor   = valor * Number(fator || 0);
-  const precoBase       = valor + acrescimoCond - descontoValor;
+  const liquido       = Math.max(0, valor - descontoValor);
+  const acrescimoCond   = liquido * Number(taxaCond || 0);
+  
+  const precoBase       = liquido + acrescimoCond;
 
   // Frete por linha (usando kg diretamente)
   const frete_linha = Number(freteKg || 0) * Number(peso_kg || 0); 
@@ -813,7 +853,7 @@ function buildFiscalInputsFromRow(tr) {
   ramo_juridico: ramoJuridico,
   peso_kg: Number(peso_kg || 0),
   tipo: tipo,
-  preco_unit: Number(precoBase || 0),
+  preco_unit: Number(liquido  || 0),
   quantidade: 1,
   desconto_linha: 0,
   frete_linha: Number(frete_linha || 0),
@@ -824,7 +864,7 @@ function buildFiscalInputsFromRow(tr) {
     tipo, peso_kg, ramo_juridico: ramoJuridico, forcar_iva_st: forcarST,
     preco_unit: payload.preco_unit, frete_linha: payload.frete_linha,
     fator_percent: fatorPct, condicao_codigo: codCond, taxa_condicao: taxaCond,
-    payload
+    payload, precoBase, liquido
   };
 }
 
@@ -892,29 +932,32 @@ async function recalcLinha(tr) {
   tr.dataset.reqId = String(nextId);
   const myId = String(nextId);
 
-  const fator    = Number(tr.querySelector('td:nth-child(8) input')?.value || 0) / 100;
+  const selPct   = tr.querySelector('td:nth-child(8) select');
+  const codePct  = selPct ? (selPct.value || '') : '';
+  const fator    = (mapaDescontos[codePct] != null) ? Number(mapaDescontos[codePct]) : 0;
+
   const freteKg  = Number(document.getElementById('frete_kg').value || 0);
 
   // Condição por linha → taxa
-  const selCond  = tr.querySelector('td:nth-child(10) select');
+  const selCond  = tr.querySelector('td:nth-child(9) select');
   const codCond  = selCond ? selCond.value : '';
   const taxaCond = mapaCondicoes[codCond] ?? 0;
 
   // base comercial (sem imposto)
-  const { acrescimoCond, freteValor, descontoValor, precoBase } =
+  const { acrescimoCond, freteValor, descontoValor, liquido  } =
     calcularLinha(item, fator, taxaCond, freteKg);
 
   // pinta colunas comerciais
-  tr.querySelector('td:nth-child(11)').textContent = fmtMoney(acrescimoCond); // Cond. (R$)
-  tr.querySelector('td:nth-child(12)').textContent = fmtMoney(freteValor);    // Frete (R$)
-  tr.querySelector('td:nth-child(13)').textContent = fmtMoney(descontoValor); // Desc. aplicado
+  tr.querySelector('td:nth-child(10)').textContent = fmtMoney(acrescimoCond); // Cond. (R$)
+  tr.querySelector('td:nth-child(11)').textContent = fmtMoney(freteValor);    // Frete (R$)
+  tr.querySelector('td:nth-child(12)').textContent = fmtMoney(descontoValor); // Desc. aplicado
 
   
   try {
     const built = buildFiscalInputsFromRow(tr);
 
     // usa exatamente o que JÁ calculamos nesta função
-    built.payload.preco_unit  = precoBase;   // já calculado acima
+    built.payload.preco_unit  = liquido;   // já calculado acima
     built.payload.frete_linha = freteValor;  // já calculado acima
 
     const f = await previewFiscalLinha(built.payload);
@@ -932,6 +975,14 @@ async function recalcLinha(tr) {
     setCell('.col-icms-st-cheio',  f.icms_st_cheio);
     setCell('.col-icms-st-reter',  f.icms_st_reter);
     setCell('.col-total',          f.total_linha_com_st); // ou total_linha
+
+    const totalFiscal = Number(f.total_linha_com_st ?? f.total_linha ?? 0);
+
+    // ✅ aplica CONDIÇÃO (R$) sobre o líquido e soma no total final exibido
+    const totalComercial = totalFiscal + Number(acrescimoCond || 0);
+
+    setCell('.col-total', totalComercial);
+
 
   } catch (e) {
   if (tr.dataset.reqId === myId && tr.isConnected) {
@@ -969,7 +1020,7 @@ async function recalcTudo() {
   }
 }
 
-function aplicarFatorGlobal() {
+async function aplicarFatorGlobal() {
   const selGlobal = document.getElementById('desconto_global');
   const code = selGlobal?.value || '';
   const fator = mapaDescontos[code];
@@ -981,15 +1032,15 @@ function aplicarFatorGlobal() {
 
   // Aplica em cada linha e sincroniza o select da linha
   document.querySelectorAll('#tbody-itens tr').forEach(tr => {
-    const inp = tr.querySelector('td:nth-child(8) input'); // fator por linha
-    const sel = tr.querySelector('td:nth-child(9) select'); // desconto por linha
-    if (inp) inp.value = (Number(fator) * 100).toFixed(2);
-    if (sel) sel.value = code;
-    recalcLinha(tr);
+    const sel = tr.querySelector('td:nth-child(8) select'); // coluna unificada
+    if (!sel) return;
+    sel.value = code;
+    // 🔑 dispara o mesmo fluxo do usuário (atualiza itens[idx] e recalcula)
+    sel.dispatchEvent(new Event('change', { bubbles: true }));
   });
-
+  await Promise.resolve(recalcTudo()).catch(()=>{});
   atualizarPillDesconto();
-
+  snapshotSelecionadosParaPicker?.();
 
 }
 
@@ -1022,7 +1073,7 @@ async function salvarTabela() {
   const cliente = document.getElementById('cliente_nome').value.trim();
   const validade_inicio = document.getElementById('validade_inicio').value;
   const validade_fim = document.getElementById('validade_fim').value;
-  const plano_pagamento = document.getElementById('plano_pagamento').value || null;
+  //const plano_pagamento = document.getElementById('plano_pagamento').value || null;
   const frete_kg = Number(document.getElementById('frete_kg').value || 0);
   const ramo_juridico = document.getElementById('ramo_juridico').value || null;
 
@@ -1031,8 +1082,9 @@ async function salvarTabela() {
   const idx  = Number(tr.dataset.idx); 
   const item = itens[idx];
 
-  const fator   = Number(tr.querySelector('td:nth-child(8) input')?.value || 0) / 100;
-  const selCond = tr.querySelector('td:nth-child(10) select');
+  const codePct = tr.querySelector('td:nth-child(8) select')?.value || '';
+  const fator   = (mapaDescontos[codePct] != null) ? Number(mapaDescontos[codePct]) : 0;
+  const selCond = tr.querySelector('td:nth-child(9) select');
   const codCond = selCond ? (selCond.value || null) : null;
 
   const taxaCondLinha = mapaCondicoes[codCond] || 0;
@@ -1242,11 +1294,12 @@ document.addEventListener('DOMContentLoaded', () => {
   
   document.getElementById('btn-aplicar-todos')?.addEventListener('click', aplicarFatorGlobal);
   
-  document.getElementById('plano_pagamento')?.addEventListener('change', () => { atualizarPillTaxa(); recalcTudo(); refreshToolbarEnablement();
+  document.getElementById('plano_pagamento')?.addEventListener('change', () => { atualizarPillTaxa(); recalcTudo(); refreshToolbarEnablement();saveHeaderSnapshot();  
     });
   document.getElementById('frete_kg')?.addEventListener('input', () => {
     recalcTudo();
-    refreshToolbarEnablement();        // <— ADICIONE ESTA LINHA
+    refreshToolbarEnablement();  
+        
   });
   // Habilitar/Desabilitar "Remover selecionados" ao marcar/desmarcar linhas individuais
   document.getElementById('tbody-itens')?.addEventListener('change', (e) => {
@@ -1340,7 +1393,7 @@ document.addEventListener('DOMContentLoaded', () => {
   }
 
    await carregarItens();                       // carrega itens salvos/edição
-   if (!__IS_RELOAD) mergeBufferFromPickerIfAny?.();
+   if (!__IS_RELOAD) await mergeBufferFromPickerIfAny?.();
 
    setupClienteAutocomplete();
    enforceIvaLockByCliente();
@@ -1376,6 +1429,22 @@ document.addEventListener('DOMContentLoaded', () => {
    // Se vier com ação na URL (?action=edit|duplicate), respeitar:
     const q = new URLSearchParams(location.search);
     const action = q.get('action') || q.get('mode') || q.get('modo');
+    
+    let modeRestored = false;
+    
+    if (!action) {
+    const ctx = sessionStorage.getItem('TP_CTX_ID') || getCtxId();
+    const ret = sessionStorage.getItem(`TP_RETURN_MODE:${ctx}`);
+     if (ret) {
+      if (ret === MODE.EDIT)      setMode(MODE.EDIT);
+      else if (ret === MODE.DUP)  setMode(MODE.DUP);
+      else if (ret === MODE.NEW)  setMode(MODE.NEW);
+      sessionStorage.removeItem(`TP_RETURN_MODE:${ctx}`);
+      modeRestored = true;
+  }
+}
+
+  if (!modeRestored) {
     if (currentTabelaId) {
       if (action === 'edit') setMode(MODE.EDIT);
       else if (action === 'duplicate') onDuplicar(); // usa o fluxo que guarda a origem
@@ -1383,20 +1452,27 @@ document.addEventListener('DOMContentLoaded', () => {
     } else {
       setMode(MODE.NEW);
     }
-
+   
+  }
     refreshToolbarEnablement();
+    await Promise.resolve(recalcTudo()).catch(()=>{});
   })();
  });
- restoreHeaderSnapshotIfNew();
- mergeBufferFromPickerIfAny();
+ 
 
  document.getElementById('btn-aplicar-condicao-todos')?.addEventListener('click', () => {
   const cod = document.getElementById('plano_pagamento')?.value || '';
   document.querySelectorAll('#tbody-itens tr').forEach(tr => {
-    const sel = tr.querySelector('td:nth-child(10) select');
-    if (sel) sel.value = cod;
-    recalcLinha(tr);
+    const sel = tr.querySelector('td:nth-child(9) select');
+    if (!sel) return;
+    sel.value = cod;
+    // 🔑 garante persistência em itens[idx] + recálculo
+    sel.dispatchEvent(new Event('change', { bubbles: true }));
   });
+    setTimeout(() => {
+    Promise.resolve(recalcTudo()).catch(()=>{});
+  }, 0);
+    snapshotSelecionadosParaPicker?.();
  });
  document.getElementById('iva_st_toggle')?.addEventListener('change', (e) => {
   ivaStAtivo = !!e.target.checked;
@@ -1405,6 +1481,10 @@ document.addEventListener('DOMContentLoaded', () => {
 
  document.getElementById('desconto_global')?.addEventListener('change', () => {
   atualizarPillDesconto();
-  aplicarFatorGlobal();
-}); 
+  saveHeaderSnapshot();                      // << acrescentar
+ });
 
+ window.addEventListener('pageshow', () => {
+  if (typeof recalcTudo === 'function') {
+      queueMicrotask(() => Promise.resolve(recalcTudo()).catch(() => {}));  }
+});

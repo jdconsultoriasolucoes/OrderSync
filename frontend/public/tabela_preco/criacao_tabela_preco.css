@@ -129,3 +129,41 @@ body {
 
 #iva_st_toggle[disabled] { opacity:.6; cursor:not-allowed; }
 #iva_st_toggle[disabled] ~ .hint { opacity:.6; pointer-events:none; }
+
+
+.th-st {
+  white-space: nowrap;
+}
+.st-toggle-in-th {
+  display: inline-flex;
+  align-items: center;
+  gap: .4rem;
+  cursor: pointer;
+  user-select: none;
+  font-weight: 500;
+}
+.st-toggle-in-th input {
+  /* visualmente escondido, mas clicável via <label> */
+  position: absolute;
+  opacity: 0;
+  width: 0; height: 0;
+}
+.st-toggle-in-th .chevron {
+  display: inline-block;
+  transition: transform .15s ease;
+  font-size: 12px;
+  line-height: 1;
+  transform-origin: center;
+}
+
+/* Chevron gira quando expandido */
+#tabela-itens:has(#st-toggle:checked) .th-st .chevron {
+  transform: rotate(90deg);
+}
+
+/* --- Colapse das colunas ST (Opção 1: esconder só os detalhes) --- */
+/* Quando o toggle NÃO estiver marcado, esconda as colunas 16 e 17 (Cheio, A reter) */
+#tabela-itens:has(#st-toggle:not(:checked)) tr > :nth-child(16),
+#tabela-itens:has(#st-toggle:not(:checked)) tr > :nth-child(17) {
+  display: none;
+}

@@ -121,15 +121,20 @@
               <th>Embalagem</th>
               <th>Grupo / Depto.</th>
               <th class="right">Peso Líq.</th>
-              <th class="right">Valor</th>
-              <th class="right">Fator Comissão %</th>
-              <th>Desconto %</th>
+              <th class="right">Valor Unitário</th>
+              <th class="right">Fator Comissão/Desconto %</th>
               <th>Cond. Pagto (cód)</th><!-- NOVO (editável por linha) -->
               <th class="right">Cond. Pagto (R$)</th>
               <th class="right">Frete (R$)</th>
               <th class="right">Desc. aplicado (R$)</th>
               <th class="right">IPI (R$)</th>          <!-- foi IPI (%) -->
-              <th class="right">Base ST (R$)</th>      <!-- novo, no lugar do IVA_ST (%) -->
+              <th class="th-st">
+              <label class="st-toggle-in-th" title="Mostrar/ocultar detalhes de ST">
+                <input id="st-toggle" type="checkbox" />
+                <span class="st-title">Base ST (R$)</span>
+                <span class="chevron">▶</span>
+              </label>
+              </th>      <!-- novo, no lugar do IVA_ST (%) -->
               <th class="right">ICMS próprio (R$)</th> <!-- novo -->
               <th class="right">ICMS ST cheio (R$)</th><!-- novo -->
               <th class="right">ICMS ST a reter (R$)</th><!-- novo -->
