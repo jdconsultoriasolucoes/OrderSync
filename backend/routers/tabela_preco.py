@@ -328,15 +328,16 @@ def validade_global():
                 WHERE p.status_produto = 'ATIVO'
             """)).scalar()
 
-        if not v:
-            return ValidadeGlobalResp()  # tudo None/“nao_definida”
+        v_date = _as_date(v)
+        if not v_date:
+            return ValidadeGlobalResp()
 
-        d = dias_restantes(v)
+        d = dias_restantes(v_date)
         s = classificar_status(d)
-        v_br = v.strftime("%d/%m/%Y")
+        v_br = v_date.strftime("%d/%m/%Y")
 
         return ValidadeGlobalResp(
-            validade_tabela=v,
+            validade_tabela=v_date,
             validade_tabela_br=v_br,
             dias_restantes=d,
             status_validade=s,
