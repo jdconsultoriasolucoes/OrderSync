@@ -6,7 +6,7 @@ from sqlalchemy import text
 from models.tabela_preco import TabelaPreco as TabelaPrecoModel
 from datetime import datetime
 from database import SessionLocal
-from utils.calc_validade_dia import dias_restantes, classificar_status
+from utils.calc_validade_dia import dias_restantes, classificar_status, _as_date
 
 router_meta = APIRouter(prefix="/tabela_preco/meta", tags=["tabela_preco"])
 router      = APIRouter(prefix="/tabela_preco",       tags=["tabela_preco"])
@@ -323,7 +323,7 @@ def validade_global():
     try:
         with SessionLocal() as db:
             v = db.execute(text("""
-                SELECT MAX(validade_tabela) AS max_validade
+                SELECT MAX(CAST(p.validade_tabela AS DATE)) AS max_validade
                 FROM t_cadastro_produto p
                 WHERE p.status_produto = 'ATIVO'
             """)).scalar()
