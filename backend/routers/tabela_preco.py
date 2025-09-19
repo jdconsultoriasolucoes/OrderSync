@@ -8,7 +8,8 @@ from datetime import datetime
 from database import SessionLocal
 from utils.calc_validade_dia import dias_restantes, classificar_status
 
-router = APIRouter()
+router_meta = APIRouter(prefix="/tabela_preco/meta", tags=["tabela_preco"])
+router      = APIRouter(prefix="/tabela_preco",       tags=["tabela_preco"])
 
 # Simula um banco de dados em memória
 tabelas_de_preco_db: List[TabelaPreco] = []
@@ -317,7 +318,7 @@ def obter_tabela(id_tabela: int):
 
   
 
-@router.get("/validade_global", response_model=ValidadeGlobalResp)
+@router_meta.get("meta/validade_global", response_model=ValidadeGlobalResp)
 def validade_global():
     try:
         with SessionLocal() as db:

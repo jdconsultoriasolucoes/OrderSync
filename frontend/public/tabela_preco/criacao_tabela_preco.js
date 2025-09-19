@@ -1,6 +1,8 @@
 // === Config ===
 const API_BASE = "https://ordersync-backend-edjq.onrender.com";
 window.API_BASE = API_BASE;
+const ENDPOINT_VALIDADE = `${API_BASE}/tabela_preco/meta/validade_global`;
+
 // === Estado ===
 const MODE = { NEW:'new', VIEW:'view', EDIT:'edit', DUP:'duplicate' };
 let mapaCondicoes = {}; // { codigo: taxa }
@@ -1242,20 +1244,24 @@ function mergeItensExistentesENovos(existentes, novos) {
   return Array.from(map.values());
 }
 
-async function atualizarValidadeCabecalhoGlobal(){
-  const r = await fetch(`${API_BASE}/tabela_preco/validade_global`, { cache: 'no-store' });
-  if (!r.ok) return;
-  const data = await r.json();
+async function atualizarValidadeCabecalhoGlobal() {
+  try {
+    const r = await fetch(ENDPOINT_VALIDADE, { cache: 'no-store' });
+    if (!r.ok) return;
+    const data = await r.json();
 
-  const elDate = document.getElementById('validade_tabela');
-  const elDias = document.getElementById('dias_restantes');
+    const elDate = document.getElementById('validade_tabela');
+    const elDias = document.getElementById('dias_restantes');
 
-  if (elDate) elDate.value = data.validade_tabela_br || '';   // usa dd/mm/aaaa
-  if (elDias) {
-    const n = data.dias_restantes;
-    if (n == null) { elDias.value = '—'; elDias.dataset.status = 'nao_definida'; }
-    else if (n >= 0) { elDias.value = `Faltam ${n} dia${n===1?'':'s'}`; elDias.dataset.status = n<=7?'alerta':'ok'; }
-    else { const k = Math.abs(n); elDias.value = `Expirada há ${k} dia${k===1?'':'s'}`; elDias.dataset.status = 'expirada'; }
+    if (elDate) elDate.value = data.validade_tabela_br || '';
+    if (elDias) {
+      const n = data.dias_restantes;
+      if (n == null) { elDias.value = '—'; elDias.dataset.status = 'nao_definida'; }
+      else if (n >= 0) { elDias.value = `Faltam ${n} dia${n===1?'':'s'}`; elDias.dataset.status = n<=7?'alerta':'ok'; }
+      else { const k = Math.abs(n); elDias.value = `Expirada há ${k} dia${k===1?'':'s'}`; elDias.dataset.status = 'expirada'; }
+    }
+  } catch (e) {
+    console.error('validade_global:', e);
   }
 }
 

@@ -4,6 +4,7 @@ sys.path.append(os.path.dirname(os.path.abspath(__file__))) #Linha temporaria
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from routers import cliente, listas, tabela_preco, fiscal
+from routers.tabela_preco import router_meta, router as router_tabela
 
 app = FastAPI()
 
@@ -17,6 +18,8 @@ app.include_router(cliente.router, prefix="/cliente", tags=["Cliente"])
 #Deletar biblioteca abaixo apos conexão com o banco, para listagem de itens para o frontend.
 app.include_router(listas.router, prefix="/listas", tags=["Listas"])
 app.include_router(fiscal.router)
+app.include_router(router_meta)       
+app.include_router(router_tabela)
 #Teste de conexão com o banco
 #app.include_router(teste.router)
 
