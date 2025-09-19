@@ -19,7 +19,6 @@ app.include_router(cliente.router, prefix="/cliente", tags=["Cliente"])
 app.include_router(listas.router, prefix="/listas", tags=["Listas"])
 app.include_router(fiscal.router)
 app.include_router(router_meta)       
-app.include_router(router_tabela)
 #Teste de conexão com o banco
 #app.include_router(teste.router)
 
