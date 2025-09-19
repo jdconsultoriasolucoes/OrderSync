@@ -89,7 +89,7 @@ def carregar_produto(db: Session, produto_id: str) -> dict:
             FROM public.t_familia_produtos a
             JOIN public.t_cadastro_produto b
               ON b.familia = a.id
-            WHERE b.codigo_supra::text = :pid
+            WHERE status_produto = 'ATIVO' and b.codigo_supra::text = :pid
             LIMIT 1
         """), {"pid": produto_id}).mappings().first()
     except Exception as e:

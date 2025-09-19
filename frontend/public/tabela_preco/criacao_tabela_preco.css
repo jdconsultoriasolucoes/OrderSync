@@ -163,7 +163,12 @@ body {
 
 /* --- Colapse das colunas ST (Opção 1: esconder só os detalhes) --- */
 /* Quando o toggle NÃO estiver marcado, esconda as colunas 16 e 17 (Cheio, A reter) */
+#tabela-itens:has(#st-toggle:not(:checked)) tr > :nth-child(15),
 #tabela-itens:has(#st-toggle:not(:checked)) tr > :nth-child(16),
 #tabela-itens:has(#st-toggle:not(:checked)) tr > :nth-child(17) {
   display: none;
 }
+
+#dias_restantes[data-status="ok"] { color:#12b886; }
+#dias_restantes[data-status="alerta"] { color:#f08c00; }
+#dias_restantes[data-status="expirada"] { color:#e03131; font-weight:600; }

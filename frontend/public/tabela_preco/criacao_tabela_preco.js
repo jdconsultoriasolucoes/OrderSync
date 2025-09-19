@@ -1,6 +1,6 @@
 // === Config ===
 const API_BASE = "https://ordersync-backend-edjq.onrender.com";
-
+window.API_BASE = API_BASE;
 // === Estado ===
 const MODE = { NEW:'new', VIEW:'view', EDIT:'edit', DUP:'duplicate' };
 let mapaCondicoes = {}; // { codigo: taxa }
@@ -154,7 +154,7 @@ function restoreHeaderSnapshotIfNew() {
     itens = Array.from(map.values());
     renderTabela();
    // garante dados que o preview usa
-    await preencherPesoTipoSeFaltarem();
+    
     await atualizarPrecosAtuais();
     // agenda o recálculo no próximo tick
     queueMicrotask(() => Promise.resolve(recalcTudo()).catch(()=>{}));
@@ -168,25 +168,16 @@ async function atualizarPrecosAtuais(){
   const codigos = Array.from(new Set((itens||[]).map(x=>x.codigo_tabela).filter(Boolean)));
   if (!codigos.length) return;
 
-  let mapa = {};
-  // 1) tenta batch
-  try {
-    const r = await fetch(`${API_BASE}/catalogo/precos?ids=${encodeURIComponent(codigos.join(','))}`);
-    if (r.ok) mapa = await r.json(); // esperado: { "COD1": 123.45, ... }
-  } catch {}
-
-  // 2) fallback por item (evita travar a UI)
-  if (!Object.keys(mapa).length){
-    for (const cod of codigos){
-      try{
-        const r = await fetch(`${API_BASE}/catalogo/produto/${encodeURIComponent(cod)}`);
-        if (r.ok){
-          const p = await r.json();
-          mapa[cod] = Number(p.valor || p.preco || p.preco_venda || 0);
-        }
-      } catch {}
-    }
-  }
+  const mapa = {};
+ for (const cod of codigos){
+   try {
+     const r = await fetch(`${API_BASE}/tabela_preco/produtos_filtro?codigo=${encodeURIComponent(cod)}`, { cache: 'no-store' });
+     if (!r.ok) continue;
+     const raw = await r.json();
+     const p = raw?.items ? (raw.items[0] || {}) : raw;
+     mapa[cod] = Number(p.valor ?? p.preco ?? p.preco_venda ?? 0);
+   } catch {}
+ }
 
   // aplica e atualiza a grade
   let mudou=false;
@@ -585,7 +576,10 @@ async function carregarDescontos() {
 function atualizarPillTaxa() {
   const codigo = document.getElementById('plano_pagamento').value;
   const taxa = mapaCondicoes[codigo];
-  document.getElementById('pill-taxa').textContent = (taxa || taxa === 0) ? `${fmt4(taxa)}` : '—';
+  const el = document.getElementById('pill-taxa');
+  if (!el) return;
+  el.textContent = (taxa != null && !isNaN(taxa))
+    ? `${(Number(taxa) * 100).toFixed(2)} %` : '—';
 }
 
 function atualizarPillDesconto() {
@@ -639,7 +633,7 @@ async function carregarItens() {
      
      }));
       renderTabela();
-      await preencherPesoTipoSeFaltarem()
+     
       
       // Atualiza a pill e recálculo
       atualizarPillTaxa();
@@ -778,12 +772,13 @@ tdPercent.appendChild(selPercent);
 
   const tdGrupo = document.createElement('td'); tdGrupo.textContent = [item.grupo, item.departamento].filter(Boolean).join(' / ');
   const tdFinal = document.createElement('td'); tdFinal.className = 'num col-total'; tdFinal.textContent = fmtMoney(item.valor || 0);tr.appendChild(tdFinal);
-
+  const tdTotalSemFrete = document.createElement('td');tdTotalSemFrete.className = 'num col-total-sem-frete';tdTotalSemFrete.textContent = '0,00';tr.appendChild(tdTotalSemFrete);
+  
   tr.append(
   tdSel, tdCod, tdDesc, tdEmb, tdGrupo,
-  tdPeso, tdValor, tdPercent,
-  tdCondCod, tdCondVal, tdFrete, tdDescAplic,
-  tdIpiR$, tdBaseStR$, tdIcmsProp$, tdIcmsCheio$, tdIcmsReter$, tdFinal
+  tdPeso, tdValor, tdPercent,tdDescAplic,
+  tdCondCod, tdCondVal, tdFrete, 
+  tdIpiR$, tdBaseStR$, tdIcmsProp$, tdIcmsCheio$, tdIcmsReter$, tdFinal, tdTotalSemFrete
 );
   return tr;
 }
@@ -819,9 +814,9 @@ function buildFiscalInputsFromRow(tr) {
   const item = (itens || [])[idx] || {};
 
   // DOM: fator por linha e condição (código)
-  const fatorPct = Number(tr.querySelector('td:nth-child(8) input')?.value || 0);
+  const fatorPct = Number(tr.querySelector('td:nth-child(8) select')?.value || 0);
   const fator    = fatorPct / 100;
-  const codCond  = tr.querySelector('td:nth-child(9) select')?.value || '';
+  const codCond  = tr.querySelector('td:nth-child(10) select')?.value || '';
   const taxaCond = (window.mapaCondicoes && window.mapaCondicoes[codCond]) ?? 0;
 
   // DOM: frete global e toggles
@@ -868,60 +863,12 @@ function buildFiscalInputsFromRow(tr) {
   };
 }
 
-
 function renderTabela() {
   const tbody = document.getElementById('tbody-itens');
   tbody.innerHTML = '';
   itens.forEach((it, i) => tbody.appendChild(criarLinha(it, i)));
   if (typeof refreshToolbarEnablement === 'function') refreshToolbarEnablement();
 }
-
-
-
-async function preencherPesoTipoSeFaltarem() {
-  const faltando = (window.itens || []).filter(p =>
-    !(Number(p?.peso_liquido) > 0) || !p?.tipo
-  );
-  const codigos = [...new Set(faltando.map(p => p.codigo_tabela).filter(Boolean))];
-  if (!codigos.length) return;
-
-  const api = (window.API_BASE || '').replace(/\/$/,''); // já existe no topo do arquivo
-  const mapa = {};
-
-  for (const cod of codigos) {
-    try {
-      const r = await fetch(`${api}/catalogo/produto/${encodeURIComponent(cod)}`);
-      if (!r.ok) continue;
-      const p = await r.json();
-      mapa[cod] = {
-        peso_liquido: Number(p.peso_liquido ?? p.peso ?? p.peso_kg ?? p.pesoLiquido ?? 0), // KG
-        tipo: p.tipo ?? p.grupo ?? p.departamento ?? null
-      };
-    } catch {}
-  }
-
-  // aplica nos itens
-  window.itens = (window.itens || []).map(it => {
-    const inf = mapa[it.codigo_tabela];
-    if (!inf) return it;
-    return {
-      ...it,
-      peso_liquido: Number(it.peso_liquido ?? inf.peso_liquido ?? 0),
-      tipo: it.tipo ?? inf.tipo ?? null
-    };
-  });
-
-  // atualiza a coluna "Peso Líq." já renderizada
-  document.querySelectorAll('#tbody-itens tr').forEach((tr, i) => {
-    const tdPeso = tr.querySelector('td:nth-child(6)');
-    if (!tdPeso) return;
-    const v = Number((window.itens[i] || {}).peso_liquido || 0);
-    tdPeso.textContent = v.toLocaleString('pt-BR', { minimumFractionDigits: 4, maximumFractionDigits: 4 });
-  });
-
-  if (typeof recalcTudo === 'function') await recalcTudo();
-}
-
 
 async function recalcLinha(tr) {
     
@@ -939,7 +886,7 @@ async function recalcLinha(tr) {
   const freteKg  = Number(document.getElementById('frete_kg').value || 0);
 
   // Condição por linha → taxa
-  const selCond  = tr.querySelector('td:nth-child(9) select');
+  const selCond  = tr.querySelector('td:nth-child(10) select');
   const codCond  = selCond ? selCond.value : '';
   const taxaCond = mapaCondicoes[codCond] ?? 0;
 
@@ -948,9 +895,10 @@ async function recalcLinha(tr) {
     calcularLinha(item, fator, taxaCond, freteKg);
 
   // pinta colunas comerciais
-  tr.querySelector('td:nth-child(10)').textContent = fmtMoney(acrescimoCond); // Cond. (R$)
-  tr.querySelector('td:nth-child(11)').textContent = fmtMoney(freteValor);    // Frete (R$)
-  tr.querySelector('td:nth-child(12)').textContent = fmtMoney(descontoValor); // Desc. aplicado
+  tr.querySelector('td:nth-child(9)').textContent = fmtMoney(descontoValor); // Desc. aplicado
+  tr.querySelector('td:nth-child(11)').textContent = fmtMoney(acrescimoCond); // Cond. (R$)
+  tr.querySelector('td:nth-child(12)').textContent = fmtMoney(freteValor);    // Frete (R$)
+  
 
   
   try {
@@ -980,9 +928,18 @@ async function recalcLinha(tr) {
 
     // ✅ aplica CONDIÇÃO (R$) sobre o líquido e soma no total final exibido
     const totalComercial = totalFiscal + Number(acrescimoCond || 0);
+    
+    const totalSemFrete = totalComercial - Number(freteValor || 0);
+    const tdSemFrete = tr.querySelector('.col-total-sem-frete');
+    if (tdSemFrete) tdSemFrete.textContent = fmtMoney(totalSemFrete);
 
     setCell('.col-total', totalComercial);
+    item._freteValor = Number(freteValor || 0);
+    item._totalComercial = Number(totalComercial || 0);
+    item.total_sem_frete = Math.max(0, item._totalComercial - item._freteValor);
 
+    const td = tr.querySelector('.col-total-sem-frete');
+      if (td) td.textContent = fmtMoney(item.total_sem_frete || 0);
 
   } catch (e) {
   if (tr.dataset.reqId === myId && tr.isConnected) {
@@ -1084,7 +1041,7 @@ async function salvarTabela() {
 
   const codePct = tr.querySelector('td:nth-child(8) select')?.value || '';
   const fator   = (mapaDescontos[codePct] != null) ? Number(mapaDescontos[codePct]) : 0;
-  const selCond = tr.querySelector('td:nth-child(9) select');
+  const selCond = tr.querySelector('td:nth-child(10) select');
   const codCond = selCond ? (selCond.value || null) : null;
 
   const taxaCondLinha = mapaCondicoes[codCond] || 0;
@@ -1099,6 +1056,7 @@ async function salvarTabela() {
     valor: item.valor || 0,
     desconto: Number(descontoValor.toFixed(4)),
     acrescimo: Number((acrescimoCond + freteValor).toFixed(4)),
+    total_sem_frete: Number(((item.total_sem_frete || 0)).toFixed(4)),
     fator_comissao: fator || 0,
     plano_pagamento: codCond || null,       // <<<<<< per‑line
     frete_kg,
@@ -1284,7 +1242,22 @@ function mergeItensExistentesENovos(existentes, novos) {
   return Array.from(map.values());
 }
 
+async function atualizarValidadeCabecalhoGlobal(){
+  const r = await fetch(`${API_BASE}/tabela_preco/validade_global`, { cache: 'no-store' });
+  if (!r.ok) return;
+  const data = await r.json();
 
+  const elDate = document.getElementById('validade_tabela');
+  const elDias = document.getElementById('dias_restantes');
+
+  if (elDate) elDate.value = data.validade_tabela_br || '';   // usa dd/mm/aaaa
+  if (elDias) {
+    const n = data.dias_restantes;
+    if (n == null) { elDias.value = '—'; elDias.dataset.status = 'nao_definida'; }
+    else if (n >= 0) { elDias.value = `Faltam ${n} dia${n===1?'':'s'}`; elDias.dataset.status = n<=7?'alerta':'ok'; }
+    else { const k = Math.abs(n); elDias.value = `Expirada há ${k} dia${k===1?'':'s'}`; elDias.dataset.status = 'expirada'; }
+  }
+}
 
 // === Bootstrap ===
 document.addEventListener('DOMContentLoaded', () => {
@@ -1463,7 +1436,7 @@ document.addEventListener('DOMContentLoaded', () => {
  document.getElementById('btn-aplicar-condicao-todos')?.addEventListener('click', () => {
   const cod = document.getElementById('plano_pagamento')?.value || '';
   document.querySelectorAll('#tbody-itens tr').forEach(tr => {
-    const sel = tr.querySelector('td:nth-child(9) select');
+    const sel = tr.querySelector('td:nth-child(10) select');
     if (!sel) return;
     sel.value = cod;
     // 🔑 garante persistência em itens[idx] + recálculo

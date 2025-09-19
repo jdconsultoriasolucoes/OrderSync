@@ -1,5 +1,5 @@
 from pydantic import BaseModel, Field, validator
-from typing import Optional, List
+from typing import Optional, List, Literal
 from datetime import date
 
 
@@ -72,3 +72,13 @@ class TabelaPrecoCompleta(BaseModel):
     cliente: str
     fornecedor: str
     produtos: List[TabelaPreco]
+
+
+StatusValidade = Literal["ok", "alerta", "expirada", "nao_definida"]
+
+class ValidadeGlobalResp(BaseModel):
+    validade_tabela: Optional[date] = None
+    validade_tabela_br: Optional[str] = None 
+    dias_restantes: Optional[int] = None
+    status_validade: StatusValidade = "nao_definida"
+    origem: Literal["max_ativos", "nao_definida"] = "nao_definida"

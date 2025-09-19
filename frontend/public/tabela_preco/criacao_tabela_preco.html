@@ -58,12 +58,12 @@
           </div>
         </div>
         <div class="field row-2">
-          <label for="validade_inicio">Data Início</label>
-          <input id="validade_inicio" type="date" />
+            <label for="validade_tabela">Validade da Tabela</label>
+            <input id="validade_tabela" type="text" readonly />
         </div>
         <div class="field row-2">
-          <label for="validade_fim">Data Fim</label>
-          <input id="validade_fim" type="date" />
+            <label for="dias_restantes">Tempo restante</label>
+            <input id="dias_restantes" type="text" readonly />
         </div>
       </div>
 
@@ -123,10 +123,10 @@
               <th class="right">Peso Líq.</th>
               <th class="right">Valor Unitário</th>
               <th class="right">Fator Comissão/Desconto %</th>
+              <th class="right">Desc. aplicado (R$)</th>
               <th>Cond. Pagto (cód)</th><!-- NOVO (editável por linha) -->
               <th class="right">Cond. Pagto (R$)</th>
               <th class="right">Frete (R$)</th>
-              <th class="right">Desc. aplicado (R$)</th>
               <th class="right">IPI (R$)</th>          <!-- foi IPI (%) -->
               <th class="th-st">
               <label class="st-toggle-in-th" title="Mostrar/ocultar detalhes de ST">
@@ -139,6 +139,7 @@
               <th class="right">ICMS ST cheio (R$)</th><!-- novo -->
               <th class="right">ICMS ST a reter (R$)</th><!-- novo -->
               <th class="right">Valor Final (R$)</th>
+              <th class="right">Valor s/ Frete (R$)</th>
             </tr>
           </thead>
           <tbody id="tbody-itens"></tbody>

@@ -1,6 +1,8 @@
-from typing import List
+from typing import List, Optional
 from schemas.tabela_preco import ParametrosCalculo, ProdutoCalculado
-
+from datetime import date
+from sqlalchemy import text
+from sqlalchemy.ext.asyncio import AsyncSession
 
 def calcular_valores_dos_produtos(payload: ParametrosCalculo) -> List[ProdutoCalculado]:
     resultado = []
@@ -30,3 +32,13 @@ def calcular_valores_dos_produtos(payload: ParametrosCalculo) -> List[ProdutoCal
             ))
 
     return resultado
+
+async def buscar_max_validade_ativos(session: AsyncSession) -> Optional[date]:
+    sql = text("""
+        SELECT MAX(validade_tabela) AS max_validade
+        FROM t_cadastro_produto p
+        WHERE p.status_produto = 'ATIVO'
+    """)
+    res = await session.execute(sql)
+    row = res.mappings().first()
+    return row["max_validade"] if row and row["max_validade"] is not None else None

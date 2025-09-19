@@ -1,11 +1,12 @@
 from fastapi import APIRouter, HTTPException, Query
-from services.tabela_preco import calcular_valores_dos_produtos
-from schemas.tabela_preco import TabelaPreco, TabelaPrecoCompleta, ProdutoCalculado, ParametrosCalculo 
+from services.tabela_preco import calcular_valores_dos_produtos, buscar_max_validade_ativos
+from schemas.tabela_preco import TabelaPreco, TabelaPrecoCompleta, ProdutoCalculado, ParametrosCalculo, ValidadeGlobalResp 
 from typing import List, Optional
 from sqlalchemy import text
 from models.tabela_preco import TabelaPreco as TabelaPrecoModel
 from datetime import datetime
 from database import SessionLocal
+from utils.calc_validade_dia import dias_restantes, classificar_status
 
 router = APIRouter()
 
@@ -41,11 +42,12 @@ def filtrar_produtos_para_tabela_preco(
                 f.familia AS departamento,
                 p.fornecedor,
                 f.tipo,
-                p.icms
+                p.icms,
+                p.validade_tabela
             FROM t_cadastro_produto p
             LEFT JOIN t_familia_produtos f 
                 ON CAST(p.familia AS INT) = CAST(f.id AS INT)
-            WHERE (:grupo IS NULL OR p.marca = :grupo)
+            WHERE status_produto = 'ATIVO' and (:grupo IS NULL OR p.marca = :grupo)
               
         """
 
@@ -311,3 +313,33 @@ def obter_tabela(id_tabela: int):
                 } for p in itens
             ]
         }
+    
+
+  
+
+@router.get("/validade_global", response_model=ValidadeGlobalResp)
+def validade_global():
+    try:
+        with SessionLocal() as db:
+            v = db.execute(text("""
+                SELECT MAX(validade_tabela) AS max_validade
+                FROM t_cadastro_produto p
+                WHERE p.status_produto = 'ATIVO'
+            """)).scalar()
+
+        if not v:
+            return ValidadeGlobalResp()  # tudo None/“nao_definida”
+
+        d = dias_restantes(v)
+        s = classificar_status(d)
+        v_br = v.strftime("%d/%m/%Y")
+
+        return ValidadeGlobalResp(
+            validade_tabela=v,
+            validade_tabela_br=v_br,
+            dias_restantes=d,
+            status_validade=s,
+            origem="max_ativos",
+        )
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Erro ao calcular validade_global: {e}")
