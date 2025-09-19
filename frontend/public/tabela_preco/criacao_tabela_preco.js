@@ -1293,6 +1293,9 @@ document.addEventListener('DOMContentLoaded', () => {
     if (chkAll) chkAll.checked = (all.length > 0 && marked.length === all.length);
   }
  });
+
+ atualizarValidadeCabecalhoGlobal();
+
  // Selecionar todos — robusto (funciona em click e change)
  (function bindChkAll(){
   const chkAll = document.getElementById('chk-all');
