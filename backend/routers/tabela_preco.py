@@ -318,7 +318,7 @@ def obter_tabela(id_tabela: int):
 
   
 
-@router_meta.get("meta/validade_global", response_model=ValidadeGlobalResp)
+@router_meta.get("/validade_global", response_model=ValidadeGlobalResp)
 def validade_global():
     try:
         with SessionLocal() as db:
