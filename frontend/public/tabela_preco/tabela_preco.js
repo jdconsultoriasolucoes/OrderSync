@@ -216,34 +216,39 @@ function carregarProdutos(page = currentPage) {
   const url = new URL(`${API_BASE}/tabela_preco/produtos_filtro`);
   if (grupo)      url.searchParams.append("grupo", grupo);
   if (fornecedor) url.searchParams.append("fornecedor", fornecedor);
-  if (termo)      url.searchParams.append("q", termo); // ajuste se o nome do param for outro
+  if (termo)      url.searchParams.append("q", termo);
   url.searchParams.append("page", currentPage);
   url.searchParams.append("page_size", pageSize);
 
   fetch(url)
     .then(r => { if (!r.ok) throw new Error("Erro ao buscar produtos"); return r.json(); })
     .then(data => {
-      const lista = Array.isArray(data) ? data
-                  : (Array.isArray(data.items) ? data.items : []);
+      const paginado = !Array.isArray(data) && Array.isArray(data.items);
 
-      // dropdown de fornecedor (distinct)
-      coletarFornecedores(lista);
-      renderFornecedoresDropdown();
+      let items = [];
+      let total = 0;
 
-      // aplica filtros locais (garante mesmo se o backend não filtrar)
-      let base = lista;
-      if (fornecedor) base = base.filter(p => p.fornecedor === fornecedor);
-      if (termoN)     base = base.filter(p => matchesTerm(p, termoN));
+      if (paginado) {
+        // ✅ confiar no backend: sem filtro local
+        items = data.items || [];
+        total = typeof data.total === "number" ? data.total : (data.items?.length || 0);
 
-      let items = [], total = 0;
-      if (Array.isArray(data)) {
+        // ainda podemos popular o dropdown de fornecedores com a página atual
+        coletarFornecedores(items);
+        renderFornecedoresDropdown();
+      } else {
+        // 🔁 legado: array simples => filtra e pagina no cliente
+        let base = Array.isArray(data) ? data : [];
+        coletarFornecedores(base);
+        renderFornecedoresDropdown();
+
+        if (fornecedor) base = base.filter(p => p.fornecedor === fornecedor);
+        if (termoN)     base = base.filter(p => matchesTerm(p, termoN));
+
         const start = (currentPage - 1) * pageSize;
         const end   = start + pageSize;
         items = base.slice(start, end);
         total = base.length;
-      } else {
-        items = base;
-        total = typeof data.total === "number" ? data.total : base.length;
       }
 
       preencherTabela(items);

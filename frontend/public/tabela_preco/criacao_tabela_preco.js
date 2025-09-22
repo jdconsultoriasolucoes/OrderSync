@@ -137,7 +137,10 @@ function restoreHeaderSnapshotIfNew() {
   try { sessionStorage.removeItem(`TP_BUFFER:${ctx}`); } catch {}
   // salva itens atuais do pai para pré‑marcação no picker
   sessionStorage.setItem(`TP_ATUAL:${ctx}`, JSON.stringify(itens || []));
+  if (currentMode === MODE.DUP && sourceTabelaId) {
+   sessionStorage.setItem('TP_SOURCE_ID', String(sourceTabelaId));
  }
+}
 
  async function mergeBufferFromPickerIfAny() {
   const ctx = getCtxId();
@@ -216,7 +219,7 @@ function setFormDisabled(disabled) {
 function onDuplicar() {
   // guarda a tabela de ORIGEM para poder voltar na hora do Cancelar
   sourceTabelaId = currentTabelaId ? String(currentTabelaId) : null;
-
+  if (sourceTabelaId) sessionStorage.setItem('TP_SOURCE_ID', sourceTabelaId);
   // entra em duplicação: libera campos e garante que será POST
   setMode(MODE.DUP);
   currentTabelaId = null;      // POST
@@ -259,6 +262,7 @@ function toggleToolbarByMode() {
 
 // AÇÕES DE BOTÃO
 function onEditar(){
+  if (currentTabelaId) sessionStorage.setItem('TP_LAST_VIEW_ID', String(currentTabelaId));
   setMode(MODE.EDIT);
 }
 
@@ -1164,22 +1168,27 @@ async function onCancelar(e) {
   if (currentMode === MODE.NEW) {
     if (typeof limparFormularioCabecalho === 'function') limparFormularioCabecalho();
     if (typeof limparGradeProdutos === 'function') limparGradeProdutos();
+    
     setMode(MODE.NEW);
     return;
   }
 
   // EDIT → VIEW (mesma tabela, travada)
   if (currentMode === MODE.EDIT) {
-    if (!currentTabelaId) {
-     const idUrl = getIdFromUrl();
-    if (idUrl) currentTabelaId = idUrl;
-      }
-    setMode(MODE.VIEW);
-    if (typeof setFormDisabled === 'function') setFormDisabled(true);
-    if (typeof toggleToolbarByMode === 'function') toggleToolbarByMode();
-    if (typeof refreshToolbarEnablement === 'function') refreshToolbarEnablement();
-    return;
+  if (!currentTabelaId) {
+    const idUrl = getIdFromUrl();
+    const mem   = sessionStorage.getItem('TP_LAST_VIEW_ID');
+    const ctx   = sessionStorage.getItem('TP_CTX_ID');
+    const cand  = idUrl || (mem && mem !== 'new' ? mem : null) || (ctx && ctx !== 'new' ? ctx : null);
+    if (cand) currentTabelaId = String(cand);
   }
+  setMode(MODE.VIEW);
+  if (typeof setFormDisabled === 'function') setFormDisabled(true);
+  if (typeof toggleToolbarByMode === 'function') toggleToolbarByMode();
+  if (typeof refreshToolbarEnablement === 'function') refreshToolbarEnablement();
+  sessionStorage.removeItem('TP_LAST_VIEW_ID');
+  return;
+}
 
   // DUP → VIEW (tabela ORIGEM, travada) — sem navegar
   if (currentMode === MODE.DUP) {
@@ -1208,12 +1217,20 @@ async function onCancelar(e) {
       }
     }
     
-    if (sourceTabelaId && !currentTabelaId) {
-        currentTabelaId = String(sourceTabelaId);
-      }
+   if (!currentTabelaId) {
+     const srcMem = sessionStorage.getItem('TP_SOURCE_ID');
+     const last   = sessionStorage.getItem('TP_LAST_VIEW_ID');
+     const url    = getIdFromUrl();
+     const ctx    = sessionStorage.getItem('TP_CTX_ID');
+     const cand   = sourceTabelaId || (srcMem && srcMem !== 'new' ? srcMem : null)
+                   || (last && last !== 'new' ? last : null)
+                   || url || (ctx && ctx !== 'new' ? ctx : null);
+     if (cand) currentTabelaId = String(cand);
+   }
+   sourceTabelaId = null;
+   sessionStorage.removeItem('TP_SOURCE_ID');
 
-     // sai do estado de duplicação
-    sourceTabelaId = null; 
+    
     // trava e mostra botões de decisão (Editar/Duplicar)
     setMode(MODE.VIEW);
     if (typeof setFormDisabled === 'function') setFormDisabled(true);
@@ -1223,20 +1240,19 @@ async function onCancelar(e) {
   }
 
   if (currentMode === MODE.VIEW) {
-  if (currentTabelaId) {
-    // Em VIEW com id: NÃO limpar para NEW.
-    setMode(MODE.VIEW);
-    if (typeof setFormDisabled === 'function') setFormDisabled(true);
-    if (typeof toggleToolbarByMode === 'function') toggleToolbarByMode();
-    if (typeof refreshToolbarEnablement === 'function') refreshToolbarEnablement();
-    return;
-  }
-
+    if (currentTabelaId) {
+      currentTabelaId = null; sourceTabelaId = null;
+      limparFormularioCabecalho?.(); limparGradeProdutos?.();
+    return setMode(MODE.NEW);
+    }
+  
   // Sem id (tela em branco) → aí sim limpa para NEW
   if (typeof limparFormularioCabecalho === 'function') limparFormularioCabecalho();
   if (typeof limparGradeProdutos === 'function') limparGradeProdutos();
   currentTabelaId = null;
   sourceTabelaId  = null;
+
+  
   setMode(MODE.NEW);
   if (typeof setFormDisabled === 'function') setFormDisabled(false);
   if (typeof toggleToolbarByMode === 'function') toggleToolbarByMode();

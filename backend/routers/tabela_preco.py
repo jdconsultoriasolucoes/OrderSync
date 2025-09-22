@@ -19,20 +19,20 @@ tabelas_de_preco_db: List[TabelaPreco] = []
 @router.get("/produtos_filtro")
 def filtrar_produtos_para_tabela_preco(
     grupo: Optional[str] = Query(None),
+    fornecedor: Optional[str] = Query(None),
+    q: Optional[str] = Query(None, description="Busca em código, descrição, grupo/marca, unidade/tipo"),
     page: int = Query(1, ge=1),
     page_size: int = Query(25, ge=1, le=100),
 ):
     try:
-        print(f"grupo={grupo}, page={page}, page_size={page_size}")
-
         base_sql = """
             SELECT 
                 p.codigo_supra AS codigo_tabela,
                 p.nome_produto AS descricao,
                 CASE 
                     WHEN p.unidade IN ('SC','SACO') THEN 'SACO'
-                    WHEN p.unidade IN ('FD') THEN 'FARDO'
-                    WHEN p.unidade IN ('CX') THEN 'CAIXA'
+                    WHEN p.unidade IN ('FD')       THEN 'FARDO'
+                    WHEN p.unidade IN ('CX')       THEN 'CAIXA'
                     ELSE p.unidade
                 END AS embalagem,
                 p.peso AS peso_liquido,
@@ -47,22 +47,31 @@ def filtrar_produtos_para_tabela_preco(
                 p.validade_tabela
             FROM t_cadastro_produto p
             LEFT JOIN t_familia_produtos f 
-                ON CAST(p.familia AS INT) = CAST(f.id AS INT)
-            WHERE status_produto = 'ATIVO' and (:grupo IS NULL OR p.marca = :grupo)
-              
+              ON CAST(p.familia AS INT) = CAST(f.id AS INT)
+            WHERE p.status_produto = 'ATIVO'
+              AND (:grupo IS NULL OR p.marca = :grupo)
+              AND (:fornecedor IS NULL OR p.fornecedor = :fornecedor)
+              AND (
+                    :q IS NULL
+                 OR  p.codigo_supra::text ILIKE :like
+                 OR  p.nome_produto       ILIKE :like
+                 OR  COALESCE(p.marca,'') ILIKE :like
+                 OR  COALESCE(p.unidade,'') ILIKE :like
+                 OR  COALESCE(f.tipo,'')  ILIKE :like
+              )
         """
 
-        # mesmos params para count e paginação
         params = {
             "grupo": grupo or None,
-                  }
+            "fornecedor": fornecedor or None,
+            "q": q or None,
+            "like": f"%{q}%" if q else None,
+        }
 
         with SessionLocal() as db:
-            # total
             count_sql = f"SELECT COUNT(*) AS total FROM ({base_sql}) sub"
             total = db.execute(text(count_sql), params).scalar() or 0
 
-            # paginação + ordenação determinística
             offset = (page - 1) * page_size
             paginated_sql = f"""
                 {base_sql}
@@ -70,16 +79,9 @@ def filtrar_produtos_para_tabela_preco(
                 LIMIT :limit OFFSET :offset
             """
             params_lim = {**params, "limit": int(page_size), "offset": int(offset)}
-
             rows = db.execute(text(paginated_sql), params_lim).mappings().all()
 
-        return {
-            "items": rows,
-            "total": total,
-            "page": page,
-            "page_size": page_size,
-        }
-
+        return {"items": rows, "total": total, "page": page, "page_size": page_size}
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Erro ao buscar produtos: {str(e)}")
 
