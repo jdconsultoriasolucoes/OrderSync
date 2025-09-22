@@ -59,9 +59,7 @@ function getHeaderSnapshot() {
     // ocultos/importantes
     cliente_codigo:  val("cliente_codigo"),
     ramo_juridico:   val("ramo_juridico"),
-    // datas
-    validade_inicio: val("validade_inicio"),
-    validade_fim:    val("validade_fim"),
+    
     // toggles/parametrizações
     iva_st:          on("iva_st_toggle"),
     frete_kg:        val("frete_kg") || "0",
@@ -97,8 +95,6 @@ function restoreHeaderSnapshotIfNew() {
     set('cliente_nome',    snap.cliente);
     set('cliente_codigo',  snap.cliente_codigo);
     set('ramo_juridico',   snap.ramo_juridico);
-    set('validade_inicio', snap.validade_inicio);
-    set('validade_fim',    snap.validade_fim);
     set('frete_kg',        snap.frete_kg);
 
     // ---- Selects (este método deve ser chamado DEPOIS de carregarCondicoes/Descontos)
@@ -435,6 +431,14 @@ function setupClienteAutocomplete(){
   saveHeaderSnapshot?.();
 }
 
+function ensureHasId(){
+  if (!currentTabelaId) {
+    const q = new URLSearchParams(location.search);
+    const idUrl = q.get('id');
+    const cand = idUrl || sourceTabelaId;
+    if (cand) currentTabelaId = String(cand);
+  }
+}
 
 // fecha sugestões e recalcula
 box.innerHTML = '';
@@ -523,8 +527,8 @@ function enforceIvaLockByCliente(){
 
 // --- Persistência compacta ---
 async function salvarTabelaPreco(payload) {
-  if (!payload?.nome_tabela || !payload?.cliente || !payload?.validade_inicio || !payload?.validade_fim) {
-    throw new Error('Preencha Nome, Cliente, Data Início e Data Fim.');
+  if (!payload?.nome_tabela || !payload?.cliente ) {
+    throw new Error('Preencha Nome, Cliente.');
   }
   if (!Array.isArray(payload?.produtos) || payload.produtos.length === 0) {
     throw new Error('Nenhum produto na lista.');
@@ -610,8 +614,6 @@ async function carregarItens() {
       document.getElementById('nome_tabela').value = t.nome_tabela || '';
       document.getElementById('cliente_nome').value = t.cliente_nome || t.cliente || '';
       document.getElementById('cliente_codigo').value = t.cliente_codigo || '';
-      document.getElementById('validade_inicio').value = t.validade_inicio || '';
-      document.getElementById('validade_fim').value = t.validade_fim || '';
       document.getElementById('ramo_juridico').value = t.ramo_juridico || '';
 
       // >>> NOVO: preencher frete/condição (se existirem) e inferir do item[0] se faltar
@@ -1030,8 +1032,6 @@ function removerSelecionados() {
 async function salvarTabela() {
   const nome_tabela = document.getElementById('nome_tabela').value.trim();
   const cliente = document.getElementById('cliente_nome').value.trim();
-  const validade_inicio = document.getElementById('validade_inicio').value;
-  const validade_fim = document.getElementById('validade_fim').value;
   //const plano_pagamento = document.getElementById('plano_pagamento').value || null;
   const frete_kg = Number(document.getElementById('frete_kg').value || 0);
   const ramo_juridico = document.getElementById('ramo_juridico').value || null;
@@ -1052,7 +1052,7 @@ async function salvarTabela() {
     calcularLinha(item, fator, taxaCondLinha, frete_kg, ivaStAtivo);
 
   return {
-    nome_tabela, validade_inicio, validade_fim, cliente, fornecedor: item.fornecedor || '',
+    nome_tabela, cliente, fornecedor: item.fornecedor || '',
     codigo_tabela: item.codigo_tabela, descricao: item.descricao, embalagem: item.embalagem,
     peso_liquido: Number(item.peso_liquido ?? item.peso ?? item.peso_kg ?? item.pesoLiquido ?? item.peso_bruto ?? 0),
     valor: item.valor || 0,
@@ -1069,7 +1069,7 @@ async function salvarTabela() {
   };
 });
 
-  const payload = { nome_tabela, validade_inicio, validade_fim, cliente, ramo_juridico, fornecedor: '', produtos };
+  const payload = { nome_tabela, cliente, ramo_juridico, fornecedor: '', produtos };
 
   try {
     const resp = await salvarTabelaPreco(payload);
@@ -1085,16 +1085,11 @@ async function salvarTabela() {
 function validarCabecalhoMinimo() {
   const nome   = document.getElementById('nome_tabela')?.value?.trim();
   const cliente = document.getElementById('cliente_nome')?.value?.trim();
-  const ini    = document.getElementById('validade_inicio')?.value;
-  const fim    = document.getElementById('validade_fim')?.value;
-
-  if (!nome || !cliente || !ini || !fim) return false;
+  
+  if (!nome || !cliente ) return false;
 
   // valida ordem das datas (se ambos presentes)
-  const dIni = new Date(ini);
-  const dFim = new Date(fim);
-  if (isFinite(dIni) && isFinite(dFim) && dFim < dIni) return false;
-
+ 
   return true;
 }
 
@@ -1115,8 +1110,6 @@ function limparFormularioCabecalho() {
   document.getElementById('nome_tabela').value = '';
   document.getElementById('cliente_nome').value = '';
   document.getElementById('cliente_codigo').value = '';
-  document.getElementById('validade_inicio').value = '';
-  document.getElementById('validade_fim').value = '';
 
   // Parâmetros globais
   const frete = document.getElementById('frete_kg');
@@ -1154,6 +1147,15 @@ function limparGradeProdutos() {
   if (typeof refreshToolbarEnablement === 'function') refreshToolbarEnablement();
 }
 
+function getIdFromUrl() {
+  try {
+    const id = new URLSearchParams(window.location.search).get('id');
+    return id ? String(id) : null;
+  } catch {
+    return null;
+  }
+}
+
 // CANCELAR — EDIT->VIEW(mesma) | DUP->VIEW(origem) | VIEW->NEW(limpo) | NEW->NEW(limpo)
 async function onCancelar(e) {
   if (e) e.preventDefault?.();
@@ -1168,6 +1170,10 @@ async function onCancelar(e) {
 
   // EDIT → VIEW (mesma tabela, travada)
   if (currentMode === MODE.EDIT) {
+    if (!currentTabelaId) {
+     const idUrl = getIdFromUrl();
+    if (idUrl) currentTabelaId = idUrl;
+      }
     setMode(MODE.VIEW);
     if (typeof setFormDisabled === 'function') setFormDisabled(true);
     if (typeof toggleToolbarByMode === 'function') toggleToolbarByMode();
@@ -1187,9 +1193,7 @@ async function onCancelar(e) {
           document.getElementById('nome_tabela').value     = t.nome_tabela || '';
           document.getElementById('cliente_nome').value = t.cliente_nome || t.cliente || '';
           document.getElementById('cliente_codigo').value = t.cliente_codigo || '';
-          document.getElementById('validade_inicio').value = t.validade_inicio || '';
-          document.getElementById('validade_fim').value    = t.validade_fim || '';
-
+          
           // repõe itens e re-renderiza grade
           itens = Array.isArray(t.produtos) ? t.produtos.map(p => ({ ...p })) : [];
           if (typeof renderTabela === 'function') renderTabela();
@@ -1203,9 +1207,13 @@ async function onCancelar(e) {
         console.warn('Cancelar DUP: erro ao recarregar a origem:', err);
       }
     }
-    // sai do estado de duplicação
-    sourceTabelaId = null;
+    
+    if (sourceTabelaId && !currentTabelaId) {
+        currentTabelaId = String(sourceTabelaId);
+      }
 
+     // sai do estado de duplicação
+    sourceTabelaId = null; 
     // trava e mostra botões de decisão (Editar/Duplicar)
     setMode(MODE.VIEW);
     if (typeof setFormDisabled === 'function') setFormDisabled(true);
@@ -1214,18 +1222,27 @@ async function onCancelar(e) {
     return;
   }
 
-  // VIEW (momento de decisão) → NEW (limpo) — sem navegar
   if (currentMode === MODE.VIEW) {
-    if (typeof limparFormularioCabecalho === 'function') limparFormularioCabecalho();
-    if (typeof limparGradeProdutos === 'function') limparGradeProdutos();
-    currentTabelaId = null;
-    sourceTabelaId  = null;
-    setMode(MODE.NEW);
-    if (typeof setFormDisabled === 'function') setFormDisabled(false);
+  if (currentTabelaId) {
+    // Em VIEW com id: NÃO limpar para NEW.
+    setMode(MODE.VIEW);
+    if (typeof setFormDisabled === 'function') setFormDisabled(true);
     if (typeof toggleToolbarByMode === 'function') toggleToolbarByMode();
     if (typeof refreshToolbarEnablement === 'function') refreshToolbarEnablement();
     return;
   }
+
+  // Sem id (tela em branco) → aí sim limpa para NEW
+  if (typeof limparFormularioCabecalho === 'function') limparFormularioCabecalho();
+  if (typeof limparGradeProdutos === 'function') limparGradeProdutos();
+  currentTabelaId = null;
+  sourceTabelaId  = null;
+  setMode(MODE.NEW);
+  if (typeof setFormDisabled === 'function') setFormDisabled(false);
+  if (typeof toggleToolbarByMode === 'function') toggleToolbarByMode();
+  if (typeof refreshToolbarEnablement === 'function') refreshToolbarEnablement();
+  return;
+}
 }
 
 function goToListarTabelas() {
