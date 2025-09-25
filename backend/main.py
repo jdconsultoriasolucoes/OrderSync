@@ -19,6 +19,14 @@ ALLOWED_ORIGINS = [
     "http://localhost:5500",
 ]
 
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],
+    allow_credentials=False,  # precisa ser False para usar "*"
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
+
 # Routers (sem duplicar e na ordem certa)
 app.include_router(router_meta)          # /tabela_preco/meta/*
 app.include_router(router_tabela)        # /tabela_preco/*
@@ -27,10 +35,3 @@ app.include_router(listas.router, prefix="/listas", tags=["Listas"])
 app.include_router(fiscal.router)        # (deixe sem prefixo aqui se o router já tiver)
 app.include_router(pedido_preview.router)
 
-app.add_middleware(
-    CORSMiddleware,
-    allow_origins= ALLOWED_ORIGINS,
-    allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
-)
