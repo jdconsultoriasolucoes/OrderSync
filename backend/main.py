@@ -13,6 +13,12 @@ app = FastAPI()
 def root():
     return {"mensagem": "API do OrderSync está rodando"}
 
+ALLOWED_ORIGINS = [
+    "https://ordersync-y7kg.onrender.com",  # FRONT em produção
+    "http://127.0.0.1:5500",                # FRONT em dev (Live Server)
+    "http://localhost:5500",
+]
+
 # Routers (sem duplicar e na ordem certa)
 app.include_router(router_meta)          # /tabela_preco/meta/*
 app.include_router(router_tabela)        # /tabela_preco/*
@@ -23,7 +29,7 @@ app.include_router(pedido_preview.router)
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
+    allow_origins= ALLOWED_ORIGINS,
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
