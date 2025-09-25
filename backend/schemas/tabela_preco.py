@@ -4,17 +4,17 @@ from datetime import date
 
 
 class TabelaPreco(BaseModel):
-    id_tabela: Optional[int] = Field(None, description="ID da tabela de preço")
-    id_linha: Optional[int] = Field(None, description="ID interno da tabela de preço")
+    id_tabela: Optional[int] = Field(None)
+    id_linha: Optional[int] = Field(None)
 
-    # Dados principais
-    nome_tabela: str = Field(..., description="Nome da tabela de preços")
-    validade_inicio: date = Field(..., description="Data de início da validade")
-    validade_fim: date = Field(..., description="Data de fim da validade")
-    fornecedor: str = Field(..., description="Nome do fornecedor")
-    cliente: str = Field(..., description="Código ou nome do cliente associado")
+    # Dados principais (deixamos datas opcionais para o salvar da tela)
+    nome_tabela: str
+    validade_inicio: Optional[date] = None
+    validade_fim: Optional[date] = None
+    fornecedor: Optional[str] = None
+    cliente: str
 
-    # Dados do produto
+    # Produto
     codigo_tabela: str
     descricao: str
     embalagem: Optional[str] = None
@@ -33,15 +33,20 @@ class TabelaPreco(BaseModel):
     ipi: Optional[float] = 0.0
     iva_st: Optional[float] = 0.0
 
-    @validator("peso_liquido", "peso_bruto", "valor", "desconto", "acrescimo", "fator_comissao","ipi","iva_st",
-               "frete_percentual", "frete_kg", "valor_liquido")
+    # >>> NOVOS: o front pode mandar pronto
+    valor_frete: Optional[float] = None
+    valor_s_frete: Optional[float] = None
+
+    @validator("peso_liquido", "peso_bruto", "valor", "desconto", "acrescimo",
+               "fator_comissao", "ipi", "iva_st", "frete_percentual",
+               "frete_kg", "valor_liquido", "valor_frete", "valor_s_frete")
     def valida_positivos(cls, v, field):
         if v is not None and v < 0:
             raise ValueError(f"{field.name} deve ser um valor positivo.")
         return v
-    
+
     class Config:
-            orm_mode = True
+        orm_mode = True
 
 class ProdutoCalculo(BaseModel):
     codigo_tabela: str
@@ -67,12 +72,11 @@ class ProdutoCalculado(ProdutoCalculo):
 
 class TabelaPrecoCompleta(BaseModel):
     nome_tabela: str
-    validade_inicio: date
-    validade_fim: date
+    validade_inicio: Optional[date] = None
+    validade_fim: Optional[date] = None
     cliente: str
-    fornecedor: str
+    fornecedor: Optional[str] = None
     produtos: List[TabelaPreco]
-
 
 StatusValidade = Literal["ok", "alerta", "expirada", "nao_definida"]
 

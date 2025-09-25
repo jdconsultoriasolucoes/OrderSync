@@ -531,23 +531,38 @@ function enforceIvaLockByCliente(){
 
 // --- Persistência compacta ---
 async function salvarTabelaPreco(payload) {
-  if (!payload?.nome_tabela || !payload?.cliente ) {
-    throw new Error('Preencha Nome, Cliente.');
-  }
-  if (!Array.isArray(payload?.produtos) || payload.produtos.length === 0) {
-    throw new Error('Nenhum produto na lista.');
-  }
-  const r = await fetch(`${API_BASE}/tabela_preco/salvar`, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(payload)
+  // (opcional) log inicial pra você ver o que está indo
+  console.log("[SALVAR payload]", payload);
+
+  const resp = await fetch(`${API_BASE}/tabela_preco/salvar`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(payload),
   });
-  if (!r.ok) {
-    let msg = 'Erro ao salvar a tabela.';
-    try { const e = await r.json(); if (e?.detail) msg = e.detail; } catch {}
-    throw new Error(msg);
+
+  const raw = await resp.text();        // lê uma vez só
+  let data = null;
+  try { data = JSON.parse(raw); } catch {}
+
+  if (!resp.ok) {
+    // ---- Formata FastAPI 422 ----
+    if (resp.status === 422 && data?.detail) {
+      const linhas = data.detail.map((d) => {
+        const loc = Array.isArray(d.loc) ? d.loc.join(".") : d.loc || "";
+        return `• ${loc} — ${d.msg}`;
+      });
+      // Mostra legível
+      const msg = `Erro 422 ao salvar:\n\n${linhas.join("\n")}`;
+      console.error(msg, data);
+      throw new Error(msg);
+    }
+
+    // Outros erros: mostra o texto bruto
+    console.error(`Falha ${resp.status}`, raw);
+    throw new Error(`Falha ao salvar (${resp.status}).\n${raw}`);
   }
-  return r.json();
+
+  return data; // JSON de sucesso
 }
 
 
@@ -1034,59 +1049,55 @@ function removerSelecionados() {
 }
 
 async function salvarTabela() {
-  const nome_tabela = document.getElementById('nome_tabela').value.trim();
-  const cliente = document.getElementById('cliente_nome').value.trim();
-  //const plano_pagamento = document.getElementById('plano_pagamento').value || null;
-  const frete_kg = Number(document.getElementById('frete_kg').value || 0);
+  const nome_tabela   = document.getElementById('nome_tabela').value.trim();
+  const cliente       = document.getElementById('cliente_nome').value.trim();
+  const frete_kg      = Number(document.getElementById('frete_kg').value || 0);
   const ramo_juridico = document.getElementById('ramo_juridico').value || null;
 
-  // Mapeia as linhas já renderizadas na tabela para o formato do backend
   const produtos = Array.from(document.querySelectorAll('#tbody-itens tr')).map(tr => {
-  const idx  = Number(tr.dataset.idx); 
-  const item = itens[idx];
+    const idx  = Number(tr.dataset.idx);
+    const item = itens[idx];
 
-  const codePct = tr.querySelector('td:nth-child(8) select')?.value || '';
-  const fator   = (mapaDescontos[codePct] != null) ? Number(mapaDescontos[codePct]) : 0;
-  const selCond = tr.querySelector('td:nth-child(10) select');
-  const codCond = selCond ? (selCond.value || null) : null;
+    const codePct = tr.querySelector('td:nth-child(8) select')?.value || '';
+    const fator   = (mapaDescontos[codePct] != null) ? Number(mapaDescontos[codePct]) : 0;
+    const selCond = tr.querySelector('td:nth-child(10) select');
+    const codCond = selCond ? (selCond.value || null) : null;
 
-  const taxaCondLinha = mapaCondicoes[codCond] || 0;
+    const taxaCondLinha = mapaCondicoes[codCond] || 0;
+    const { acrescimoCond, freteValor, descontoValor } =
+      calcularLinha(item, fator, taxaCondLinha, frete_kg, ivaStAtivo);
 
-  const { acrescimoCond, freteValor, descontoValor} =
-    calcularLinha(item, fator, taxaCondLinha, frete_kg, ivaStAtivo);
-
-  return {
-    nome_tabela, cliente, fornecedor: item.fornecedor || '',
-    codigo_tabela: item.codigo_tabela, descricao: item.descricao, embalagem: item.embalagem,
-    peso_liquido: Number(item.peso_liquido ?? item.peso ?? item.peso_kg ?? item.pesoLiquido ?? item.peso_bruto ?? 0),
-    valor: item.valor || 0,
-    desconto: Number(descontoValor.toFixed(4)),
-    acrescimo: Number((acrescimoCond + freteValor).toFixed(4)),
-    total_sem_frete: Number(((item.total_sem_frete || 0)).toFixed(4)),
-    fator_comissao: fator || 0,
-    plano_pagamento: codCond || null,       // <<<<<< per‑line
-    frete_kg,
-    frete_percentual: null,
-    grupo: item.grupo || null, departamento: item.departamento || null,
-    ipi: item.ipi || 0,
-    iva_st: ivaStAtivo ? (item.iva_st || 0) : 0 // salva coerente com o que foi calculado
-  };
-});
+    return {
+      nome_tabela, cliente, fornecedor: item.fornecedor || '',
+      codigo_tabela: item.codigo_tabela, descricao: item.descricao, embalagem: item.embalagem,
+      peso_liquido: Number(item.peso_liquido ?? item.peso ?? item.peso_kg ?? item.pesoLiquido ?? item.peso_bruto ?? 0),
+      valor: item.valor || 0,
+      desconto: Number(descontoValor.toFixed(4)),
+      acrescimo: Number((acrescimoCond + freteValor).toFixed(4)),
+      total_sem_frete: Number(((item.total_sem_frete || 0)).toFixed(4)),
+      fator_comissao: fator || 0,
+      plano_pagamento: codCond || null,
+      frete_kg,
+      frete_percentual: null,
+      grupo: item.grupo || null, departamento: item.departamento || null,
+      ipi: item.ipi || 0,
+      iva_st: ivaStAtivo ? (item.iva_st || 0) : 0
+    };
+  });
 
   const payload = { nome_tabela, cliente, ramo_juridico, fornecedor: '', produtos };
-
   try {
-    const resp = await salvarTabelaPreco(payload);
-    alert(`Tabela salva! ${resp.qtd_produtos} produtos incluídos.`);
+    const resp = await salvarTabelaPreco(payload);   // ESTA função já faz fetch e r.json()
+    alert(`Tabela salva! ${resp.qtd_produtos ?? 0} produtos incluídos.`);
+    return resp;                                     // <<<<<< FUNDAMENTAL
   } catch (e) {
     console.error(e);
     alert(e.message || 'Erro ao salvar a tabela.');
-  }
-}
+    return null;
+  }}
+  
 
-
-
-function validarCabecalhoMinimo() {
+ function validarCabecalhoMinimo() {
   const nome   = document.getElementById('nome_tabela')?.value?.trim();
   const cliente = document.getElementById('cliente_nome')?.value?.trim();
   
@@ -1361,35 +1372,86 @@ document.addEventListener('DOMContentLoaded', () => {
     snapshotSelecionadosParaPicker();
   });
 
-  document.getElementById('btn-salvar')?.addEventListener('click', async (e) => {
-  // Evita submit do form caso o botão esteja como <button type="submit">
-  if (e && typeof e.preventDefault === 'function') e.preventDefault();
-
-  // Garante que o botão não é submit (caso o HTML esteja com type padrão)
+  // handler único (sem aninhar addEventListener dentro de outro)
+(() => {
   const btn = document.getElementById('btn-salvar');
-  if (btn) btn.setAttribute('type', 'button');
+  if (!btn) return;
 
-  try {
-    await salvarTabela();
+  btn.type = 'button';
+  let saving = false;
 
-    // ✅ Após salvar em QUALQUER modo, voltar para NEW limpo e destravado
-    if (typeof limparFormularioCabecalho === 'function') limparFormularioCabecalho();
-    if (typeof limparGradeProdutos === 'function') limparGradeProdutos();
-    currentTabelaId = null;
-    sourceTabelaId  = null;
+  btn.addEventListener('click', async (e) => {
+    e.preventDefault();
+    if (saving) return;
+    saving = true;
+    btn.disabled = true;
 
-    setMode(MODE.NEW);         // muda modo
-    setFormDisabled(false);    // garante que está destravado
+    try {
+      const resp = await salvarTabela(); // agora retorna JSON
+      if (!resp) return;
+      if (resp?.qtd_produtos != null) {
+        alert(`Tabela salva! ${resp.qtd_produtos} produtos incluídos.`);
+      }
 
-  } catch (e) {
-    console.error(e);
-    alert(e.message || 'Erro ao salvar a tabela.');
-    // não muda de modo em erro
-  } finally {
-    if (typeof toggleToolbarByMode === 'function') toggleToolbarByMode();
-    if (typeof refreshToolbarEnablement === 'function') refreshToolbarEnablement();
+      // pegue o ID
+      const tabelaId = resp?.tabela_id || resp?.id_tabela || resp?.id || window.currentTabelaId;
+      if (!tabelaId) {
+        alert("Tabela salva, mas o ID não veio no retorno do backend. Ajuste o /tabela_preco/salvar para devolver o id.");
+        return;
+      }
+
+      // pergunta de decisão
+      const querEnviar = confirm("Deseja mandar o link do orçamento?");
+       if (querEnviar) {
+        if (typeof window.__showGerarLinkModal === "function") {
+         window.__showGerarLinkModal({
+         tabelaId,
+         pedidoClientePath: "/tabela_preco/pedido_cliente.html",
+         });
+          } else {
+    alert("Módulo de gerar link não carregado (../js/gerar_link_pedido.js).");
   }
- });
+} else {
+  // >>> MODO VIEW quando NÃO enviar o link <<<
+  // guarda o id atual para ações futuras
+  window.currentTabelaId = tabelaId;
+  window.sourceTabelaId  = tabelaId; // se você usa esse também
+
+  // trava os campos e muda o modo
+  if (typeof setMode === "function" && typeof MODE !== "undefined") {
+    setMode(MODE.VIEW);
+  }
+  if (typeof setFormDisabled === "function") {
+    setFormDisabled(true);
+  }
+
+  // atualiza a toolbar/botões conforme seu projeto
+  if (typeof toggleToolbarByMode === "function") toggleToolbarByMode();
+  if (typeof refreshToolbarEnablement === "function") refreshToolbarEnablement();
+
+  // feedback opcional na tela
+  if (typeof setMensagem === "function") {
+    setMensagem("Tabela salva. Você pode enviar o link depois.", true);
+  } else {
+    console.log("Tabela salva. Você pode enviar o link depois.");
+  }
+
+  
+}
+
+      } catch (err) {
+      // mostra 422 legível, se vier no formato FastAPI
+      const msg = (err && err.message) ? err.message : 'Erro ao salvar a tabela.';
+      alert(msg);
+      console.error(err);
+    } finally {
+      saving = false;
+      btn.disabled = false;
+      toggleToolbarByMode?.();
+      refreshToolbarEnablement?.();
+    }
+  });
+})();
   
   document.getElementById('btn-cancelar')?.addEventListener('click', onCancelar);
   document.getElementById('btn-editar')?.addEventListener('click', onEditar);

@@ -1,0 +1,58 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <title>Confirmação de Pedido</title>
+  <link rel="stylesheet" href="pedido_cliente.css">
+</head>
+<body>
+  <div class="documento">
+    <header>
+      <div class="logo-cliente">
+        <img src="logo_cliente_supra.png" alt="Logo do Cliente">
+      </div>
+      <div class="dados-header">
+        <h1>Proposta Comercial</h1>
+        <p><strong>Cliente:</strong> <span id="cnpjCliente">---</span> - <span id="razaoSocialCliente">---</span></p>
+        <p><strong>Condição de Pagamento:</strong> <span id="condicaoPagamento">---</span></p>
+        <p><strong>Validade:</strong> <span id="validadeTabela">---</span> (<span id="tempoRestante">---</span>)</p>
+      </div>
+    </header>
+
+    <main>
+      <table id="tabelaProdutos">
+        <thead>
+          <tr>
+            <th>Código</th>
+            <th>Produto</th>
+            <th>Embalagem</th>
+            <th>Peso</th>
+            <th>Valor <span id="tituloValorFrete">c/ Frete</span></th>
+            <th>Quantidade</th>
+            <th>Subtotal</th>
+          </tr>
+        </thead>
+        <tbody></tbody>
+      </table>
+
+      <div class="total">
+        <p><strong>Total:</strong> R$ <span id="totalGeral">0,00</span></p>
+      </div>
+
+      <div class="acoes">
+        <button id="btnConfirmar">Confirmar Pedido</button>
+        <button id="btnCancelar">Cancelar</button>
+      </div>
+     
+      <div class="marca-dagua">
+        <img src="logo.png" alt="Marca d'água OrderSync">
+       </div>
+      <p id="mensagem"></p>
+    </main>
+  </div>
+
+  
+
+  <script src="pedido_cliente.js"></script>
+</body>
+</html>

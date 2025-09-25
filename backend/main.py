@@ -5,6 +5,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from routers import cliente, listas, fiscal
 from routers.tabela_preco import router_meta, router as router_tabela  # ✅ use estes
+from routers import pedido_preview
 
 app = FastAPI()
 
@@ -15,12 +16,10 @@ def root():
 # Routers (sem duplicar e na ordem certa)
 app.include_router(router_meta)          # /tabela_preco/meta/*
 app.include_router(router_tabela)        # /tabela_preco/*
-
 app.include_router(cliente.router, prefix="/cliente", tags=["Cliente"])
 app.include_router(listas.router, prefix="/listas", tags=["Listas"])
 app.include_router(fiscal.router)        # (deixe sem prefixo aqui se o router já tiver)
-
-from db import fake_db  # Força a execução de fake_db e popula a lista
+app.include_router(pedido_preview.router)
 
 app.add_middleware(
     CORSMiddleware,

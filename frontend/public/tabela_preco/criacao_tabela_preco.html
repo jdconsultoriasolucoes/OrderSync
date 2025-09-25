@@ -148,6 +148,11 @@
     </section>
   </div>
   <!-- Lógica totalmente externa -->
+  <script type="module">
+      import { showGerarLinkModal } from "../js/gerar_link_pedido.js";
+      window.__showGerarLinkModal = showGerarLinkModal;
+   </script> 
+  
   <script src="criacao_tabela_preco.js"></script>
     <script>
       const menuButton = document.getElementById("menu-button");
@@ -165,5 +170,6 @@
       });
     </script>
 
+    
 </body>
 </html>

@@ -24,8 +24,9 @@ async function carregarTabelas() {
       <td>${tabela.fornecedor}</td>
       <td>${formatarData(tabela.validade_inicio)} → ${formatarData(tabela.validade_fim)}</td>
       <td>
-        <button onclick="window.location.href='criacao_tabela_preco.html?id=${encodeURIComponent(tabela.id)}'">Editar</button>
-        <button onclick="abrirModalDelecao(${tabela.id})">Excluir</button>
+          <button onclick="window.location.href='criacao_tabela_preco.html?id=${encodeURIComponent(tabela.id)}'">Editar</button>
+          <button onclick="abrirModalDelecao(${tabela.id})">Excluir</button>
+          <button class="btn-enviar-link" data-id="${tabela.id}">Enviar</button>
       </td>
       `;
 
@@ -109,4 +110,15 @@ document.getElementById("pesquisa").addEventListener("keyup", function() {
     let textoLinha = linha.innerText.toLowerCase();
     linha.style.display = textoLinha.includes(filtro) ? "" : "none";
   });
+});
+
+document.addEventListener("click", (e) => {
+  const btn = e.target.closest(".btn-enviar-link");
+  if (!btn) return;
+  const tabelaId = btn.dataset.id;
+  if (!tabelaId) return alert("ID da tabela não encontrado.");
+  if (typeof window.__showGerarLinkModal !== "function") {
+    return alert("Módulo de gerar link não carregado. Verifique o import em listar_tabelas.html.");
+  }
+  window.__showGerarLinkModal({ tabelaId, pedidoClientePath: "/tabela_preco/pedido_cliente.html" });
 });

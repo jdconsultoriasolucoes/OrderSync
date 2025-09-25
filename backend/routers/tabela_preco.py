@@ -129,7 +129,7 @@ def salvar_tabela_preco(payload: TabelaPrecoCompleta):
                 validade_inicio=payload.validade_inicio,
                 validade_fim=payload.validade_fim,
                 cliente=payload.cliente,
-                fornecedor=payload.fornecedor,
+                fornecedor=payload.fornecedor or (getattr(produto, "fornecedor", None) or ""),
 
                 # Produto
                 codigo_tabela=produto.codigo_tabela,
@@ -139,7 +139,7 @@ def salvar_tabela_preco(payload: TabelaPrecoCompleta):
                 peso_bruto=produto.peso_bruto,
                 valor=produto.valor,
 
-                # Mapeamentos corretos (no payload são desconto/acrescimo)
+                # Mapping existente
                 comissao_aplicada=(produto.desconto or 0.0),
                 ajuste_pagamento=(produto.acrescimo or 0.0),
 
@@ -150,8 +150,12 @@ def salvar_tabela_preco(payload: TabelaPrecoCompleta):
                 valor_liquido=produto.valor_liquido,
                 grupo=produto.grupo,
                 departamento=produto.departamento,
-                ipi = produto.ipi,
+                ipi=produto.ipi,
                 iva_st=produto.iva_st,
+
+                # >>> NOVOS campos salvos
+                valor_frete=produto.valor_frete,
+                valor_s_frete=produto.valor_s_frete,
             )
             db.add(registro)
 

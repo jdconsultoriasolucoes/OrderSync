@@ -1,0 +1,35 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <title>Configuração de E-mails</title>
+  <link rel="stylesheet" href="config_email.css">
+</head>
+<body>
+  <div class="container">
+    <h1>Configuração de E-mails</h1>
+
+    <form id="formEmail">
+      <label for="emailPrincipal">E-mail principal da área:</label>
+      <input type="email" id="emailPrincipal" required>
+
+      <label for="emailsCopia">E-mails em cópia (separados por vírgula):</label>
+      <input type="text" id="emailsCopia">
+
+      <label for="assuntoPadrao">Assunto padrão:</label>
+      <input type="text" id="assuntoPadrao">
+
+      <label for="corpoPadrao">Corpo do e-mail (use {{cliente}}, {{tabela}}, {{total}}, {{link}}):</label>
+      <textarea id="corpoPadrao" rows="8"></textarea>
+
+      <div class="acoes">
+        <button type="submit">Salvar</button>
+      </div>
+
+      <p id="mensagem"></p>
+    </form>
+  </div>
+
+  <script src="config_email.js"></script>
+</body>
+</html>

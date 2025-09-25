@@ -25,12 +25,12 @@ class TabelaPreco(Base):
     plano_pagamento = Column(String, nullable=True)
     frete_percentual = Column(Float, nullable=True)
     frete_kg = Column(Float, nullable=True)
-    valor_liquido = Column(Float, nullable=True)
     grupo = Column(String, nullable=True)
     departamento = Column(String, nullable=True)
     ipi = Column(Float, default=0.0)
-    iva_st = Column(Float, default=0.0)
-
+    iva_st = Column(Float, default=0.0) 
+    valor_frete   = Column(Float, nullable=True)   
+    valor_s_frete = Column(Float, nullable=True)   
     # Auditoria
     ativo = Column(Boolean, default=True)
     criado_em = Column(DateTime, default=datetime.utcnow)
