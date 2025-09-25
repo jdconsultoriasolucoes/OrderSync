@@ -21,11 +21,16 @@ ALLOWED_ORIGINS = [
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
-    allow_credentials=False,  # precisa ser False para usar "*"
+    allow_origins=ALLOWED_ORIGINS,   # NÃO use "*"
+    allow_credentials=True,
     allow_methods=["*"],
-    allow_headers=["*"],
-)
+    allow_headers=["*"],)
+
+@app.middleware("http")
+async def add_debug_header(request, call_next):
+    resp = await call_next(request)
+    resp.headers["x-cors-debug"] = "main.py-cors-v1"
+    return resp
 
 # Routers (sem duplicar e na ordem certa)
 app.include_router(router_meta)          # /tabela_preco/meta/*
