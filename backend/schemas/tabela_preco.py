@@ -12,8 +12,7 @@ class TabelaPreco(BaseModel):
     nome_tabela: str
     fornecedor: Optional[str] = None
     cliente: str
-    validade_tabela: Optional[date] = Field(None, description="Data de validade da tabela")
-
+    
     # Produto (chave e descrição)
     codigo_tabela: str
     descricao: str
@@ -30,7 +29,7 @@ class TabelaPreco(BaseModel):
     fator_comissao: Optional[float] = None
 
     # Frete
-    frete_percentual: Optional[float] = None  # 0..100
+    frete_percentual: Optional[float] = None
     frete_kg: Optional[float] = None
 
     # Totais (podem vir prontos do front)
@@ -39,15 +38,14 @@ class TabelaPreco(BaseModel):
     valor_s_frete: Optional[float] = None
 
     # Fiscais
-    ipi: Optional[float] = 0.0        # Sim/Não -> True/False
-    icms_st: Optional[bool] = False     # Sim/Não -> True/False
-    iva_st: Optional[float] = 0.0       # percentual 0..100
+    ipi: Optional[float] = 0.0        
+    iva_st: Optional[float] = 0.0       
 
+    icms_st: Optional[bool] = Field(False, exclude=True)
     # --- Validadores ---
     @validator(
-        "peso_liquido", "peso_bruto", "valor", "desconto", "acrescimo",
-        "fator_comissao", "frete_kg", "valor_liquido",
-        "valor_frete", "valor_s_frete", "cond_pagto_valor"
+        "peso_liquido","peso_bruto","valor","desconto","acrescimo",
+        "fator_comissao","frete_kg","ipi","iva_st"
     )
     def valida_positivos(cls, v, field):
         if v is not None and v < 0:

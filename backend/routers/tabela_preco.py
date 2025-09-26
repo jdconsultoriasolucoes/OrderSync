@@ -122,40 +122,42 @@ def salvar_tabela_preco(payload: TabelaPrecoCompleta):
         max_tid = db.execute(text("SELECT COALESCE(MAX(id_tabela), 0) FROM tb_tabela_preco")).scalar() or 0
         id_tabela = int(max_tid) + 1
         for produto in payload.produtos:
-            registro = TabelaPrecoModel(
-                # Cabeçalho
-                id_tabela=id_tabela,
-                nome_tabela=payload.nome_tabela,
-                cliente=payload.cliente,
-                fornecedor=payload.fornecedor or (getattr(produto, "fornecedor", None) or ""),
+           registro = TabelaPrecoModel(
+                 # Cabeçalho
+                 id_tabela=id_tabela,
+                 nome_tabela=payload.nome_tabela,
+                 cliente=payload.cliente,
+                 fornecedor=payload.fornecedor or (getattr(produto, "fornecedor", None) or ""),
+                 validade_inicio=payload.validade_inicio,
+                 validade_fim=payload.validade_fim,
 
-                # Produto
-                codigo_tabela=produto.codigo_tabela,
-                descricao=produto.descricao,
-                embalagem=produto.embalagem,
-                peso_liquido=produto.peso_liquido,
-                peso_bruto=produto.peso_bruto,
-                valor=produto.valor,
+                 # Produto
+                 codigo_tabela=produto.codigo_tabela,
+                 descricao=produto.descricao,
+                 embalagem=produto.embalagem,
+                 peso_liquido=produto.peso_liquido,
+                 peso_bruto=produto.peso_bruto,
+                 valor=produto.valor,  # mantém apenas ESTE
+                # NÃO setar: valor=produto.valor_liquido  (removido)
 
-                # Mapping existente
-                comissao_aplicada=(produto.desconto or 0.0),
-                ajuste_pagamento=(produto.acrescimo or 0.0),
+                 # Mapping existente
+                 comissao_aplicada=(produto.desconto or 0.0),
+                 ajuste_pagamento=(produto.acrescimo or 0.0),
 
-                fator_comissao=produto.fator_comissao,
-                plano_pagamento=produto.plano_pagamento,
-                frete_percentual=produto.frete_percentual,
-                frete_kg=produto.frete_kg,
-                valor=produto.valor_liquido,
-                grupo=produto.grupo,
-                departamento=produto.departamento,
-                ipi=produto.ipi,
-                iva_st=produto.iva_st,
+                 fator_comissao=produto.fator_comissao,
+                 plano_pagamento=produto.plano_pagamento,
+                 frete_percentual=produto.frete_percentual,
+                 frete_kg=produto.frete_kg,
+                 grupo=produto.grupo,
+                 departamento=produto.departamento,
+                 ipi=produto.ipi,
+                 iva_st=produto.iva_st,
 
-                # >>> NOVOS campos salvos
-                valor_frete=produto.valor_frete,
-                valor_s_frete=produto.valor_s_frete,
-            )
-            db.add(registro)
+                  # Colunas que existem no modelo (ok persistir)
+                  valor_frete=produto.valor_frete,
+                  valor_s_frete=produto.valor_s_frete,
+                         )
+        db.add(registro)
 
         db.commit()
         return {"mensagem": "Tabela salva com sucesso", "qtd_produtos": len(payload.produtos)}
@@ -165,31 +167,40 @@ def salvar_tabela_preco(payload: TabelaPrecoCompleta):
 
 @router.put("/{id_linha}")
 def editar_produto(id_linha: int, novo_produto: TabelaPreco):
-    with SessionLocal() as db:
-     produto = db.query(TabelaPrecoModel).get(id_linha)
-     if not produto:
-        raise HTTPException(status_code=404, detail="Produto não encontrado")
+ with SessionLocal() as db:
+    produto = db.query(TabelaPrecoModel).get(id_linha)
+    if not produto:
+     raise HTTPException(status_code=404, detail="Produto não encontrado")
 
-     # Converte para dicionário
-     dados = novo_produto.dict()
+    dados = novo_produto.dict()
 
-     # Bloqueia campos de identificador
-     dados.pop("id_linha", None)
-     dados.pop("id_tabela", None)
+    # Bloqueia identificadores
+    dados.pop("id_linha", None)
+    dados.pop("id_tabela", None)
 
-     # Mapeia campos do schema para o model
-     if "desconto" in dados:
+    # Mapeia descontos/acréscimos
+    if "desconto" in dados:
         produto.comissao_aplicada = dados.pop("desconto") or 0.0
-
-     if "acrescimo" in dados:
+    if "acrescimo" in dados:
         produto.ajuste_pagamento = dados.pop("acrescimo") or 0.0
 
-     # Aplica os demais campos
-     for campo, valor in dados.items():
-        setattr(produto, campo, valor)
+    # Campos do modelo que podem ser atualizados
+    permitidos = {
+        "nome_tabela","fornecedor","cliente",
+        "codigo_tabela","descricao","embalagem","peso_liquido","peso_bruto","valor",
+        "fator_comissao","plano_pagamento","frete_percentual","frete_kg",
+        "grupo","departamento","ipi","iva_st",
+        "valor_frete","valor_s_frete",
+        # se quiser permitir: "validade_inicio","validade_fim" (normalmente ficam no cabeçalho)
+    }
 
-     db.commit()
-     return {"mensagem": "Produto atualizado com sucesso"}
+    for campo, valor in list(dados.items()):
+        if campo in permitidos:
+            setattr(produto, campo, valor)
+        # ignora silenciosamente o resto (ex.: icms_st, valor_liquido, validade_tabela, etc.)
+
+    db.commit()
+    return {"mensagem": "Produto atualizado com sucesso"}
 
 
 @router.delete("/{id_tabela}")
@@ -220,8 +231,6 @@ def listar_tabelas():
               nome_tabela,
               cliente,
               fornecedor,
-              validade_inicio,
-              validade_fim,
               MAX(criado_em) AS criado_em
             FROM tb_tabela_preco
             WHERE ativo is TRUE
@@ -236,8 +245,6 @@ def listar_tabelas():
                 "nome_tabela": r["nome_tabela"],
                 "cliente": r["cliente"],
                 "fornecedor": r["fornecedor"],
-                "validade_inicio": r["validade_inicio"],
-                "validade_fim": r["validade_fim"],
             }
             for r in rows
         ]
@@ -310,7 +317,6 @@ def obter_tabela(id_tabela: int):
                     "plano_pagamento": p.plano_pagamento,
                     "frete_percentual": p.frete_percentual,
                     "frete_kg": p.frete_kg,
-                    "valor_liquido": p.valor_liquido,
                     "grupo": p.grupo,
                     "departamento": p.departamento,
                     "ipi": p.ipi,
@@ -349,3 +355,41 @@ def validade_global():
         )
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Erro ao calcular validade_global: {e}")
+    
+
+def _as_frac(x: float | None) -> float:
+    if not x: 
+        return 0.0
+    # aceita 0–1 (fração) ou 0–100 (percentual)
+    return x/100.0 if x > 1.0 else x
+
+def calcular_valores_dos_produtos(payload: ParametrosCalculo) -> List[ProdutoCalculado]:
+    resultado = []
+    for produto in payload.produtos:
+        valor = produto.valor
+        peso  = produto.peso_liquido or 0.0
+        is_pet = (str(produto.tipo or "").strip().lower() == "pet")
+
+        ipi_pct  = _as_frac(produto.ipi)
+        iva_pct  = _as_frac(produto.iva_st)
+        # se os parâmetros do payload forem percentuais, normalize também
+        fator_comissao     = _as_frac(payload.fator_comissao)
+        acrescimo_pagamento = _as_frac(payload.acrescimo_pagamento)
+
+        ipi_item = ipi_pct if (is_pet and peso <= 10) else 0.0
+
+        frete_kg = (payload.frete_unitario / 1000) * peso
+        ajuste_pagamento = valor * acrescimo_pagamento
+        comissao_aplicada = valor * fator_comissao
+
+        base = valor + frete_kg + ajuste_pagamento - comissao_aplicada
+        valor_liquido = base + (base * ipi_item) + (base * iva_pct)
+
+        resultado.append(ProdutoCalculado(
+            **produto.dict(),
+            frete_kg=round(frete_kg, 4),
+            ajuste_pagamento=round(ajuste_pagamento, 4),
+            comissao_aplicada=round(comissao_aplicada, 4),
+            valor_liquido=round(valor_liquido, 2),
+        ))
+    return resultado

@@ -8,8 +8,6 @@ class TabelaPreco(Base):
     id_tabela = Column(Integer, index=True, nullable=False)
     id_linha = Column(Integer, primary_key=True, index=True)
     nome_tabela = Column(String, nullable=False)
-    validade_inicio = Column(Date, nullable=False)
-    validade_fim = Column(Date, nullable=False)
     fornecedor = Column(String, nullable=False)
     cliente = Column(String, nullable=False)
 
