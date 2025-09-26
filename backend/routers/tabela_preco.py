@@ -126,8 +126,6 @@ def salvar_tabela_preco(payload: TabelaPrecoCompleta):
                 # Cabeçalho
                 id_tabela=id_tabela,
                 nome_tabela=payload.nome_tabela,
-                validade_inicio=payload.validade_inicio,
-                validade_fim=payload.validade_fim,
                 cliente=payload.cliente,
                 fornecedor=payload.fornecedor or (getattr(produto, "fornecedor", None) or ""),
 
@@ -147,7 +145,7 @@ def salvar_tabela_preco(payload: TabelaPrecoCompleta):
                 plano_pagamento=produto.plano_pagamento,
                 frete_percentual=produto.frete_percentual,
                 frete_kg=produto.frete_kg,
-                valor_liquido=produto.valor_liquido,
+                valor=produto.valor_liquido,
                 grupo=produto.grupo,
                 departamento=produto.departamento,
                 ipi=produto.ipi,

@@ -4,49 +4,65 @@ from datetime import date
 
 
 class TabelaPreco(BaseModel):
+    # Identificadores
     id_tabela: Optional[int] = Field(None)
     id_linha: Optional[int] = Field(None)
 
-    # Dados principais (deixamos datas opcionais para o salvar da tela)
+    # Cabeçalho / metadados
     nome_tabela: str
-    validade_inicio: Optional[date] = None
-    validade_fim: Optional[date] = None
     fornecedor: Optional[str] = None
     cliente: str
+    validade_tabela: Optional[date] = Field(None, description="Data de validade da tabela")
 
-    # Produto
+    # Produto (chave e descrição)
     codigo_tabela: str
     descricao: str
     embalagem: Optional[str] = None
+    grupo: Optional[str] = None
+    departamento: Optional[str] = None
+
+    # Valores básicos
     peso_liquido: Optional[float] = None
     peso_bruto: Optional[float] = None
     valor: float
     desconto: Optional[float] = 0.0
     acrescimo: Optional[float] = 0.0
     fator_comissao: Optional[float] = None
-    plano_pagamento: Optional[str] = None
-    frete_percentual: Optional[float] = None
-    frete_kg: Optional[float] = None
-    valor_liquido: Optional[float] = None
-    grupo: Optional[str] = None
-    departamento: Optional[str] = None
-    ipi: Optional[float] = 0.0
-    iva_st: Optional[float] = 0.0
 
-    # >>> NOVOS: o front pode mandar pronto
+    # Frete
+    frete_percentual: Optional[float] = None  # 0..100
+    frete_kg: Optional[float] = None
+
+    # Totais (podem vir prontos do front)
+    valor_liquido: Optional[float] = None
     valor_frete: Optional[float] = None
     valor_s_frete: Optional[float] = None
 
-    @validator("peso_liquido", "peso_bruto", "valor", "desconto", "acrescimo",
-               "fator_comissao", "ipi", "iva_st", "frete_percentual",
-               "frete_kg", "valor_liquido", "valor_frete", "valor_s_frete")
+    # Fiscais
+    ipi: Optional[float] = 0.0        # Sim/Não -> True/False
+    icms_st: Optional[bool] = False     # Sim/Não -> True/False
+    iva_st: Optional[float] = 0.0       # percentual 0..100
+
+    # --- Validadores ---
+    @validator(
+        "peso_liquido", "peso_bruto", "valor", "desconto", "acrescimo",
+        "fator_comissao", "frete_kg", "valor_liquido",
+        "valor_frete", "valor_s_frete", "cond_pagto_valor"
+    )
     def valida_positivos(cls, v, field):
         if v is not None and v < 0:
             raise ValueError(f"{field.name} deve ser um valor positivo.")
         return v
 
+    @validator("frete_percentual", "iva_st")
+    def valida_percentuais(cls, v, field):
+        if v is not None and not (0 <= v <= 100):
+            raise ValueError(f"{field.name} deve estar entre 0 e 100.")
+        return v
+
     class Config:
         orm_mode = True
+        anystr_strip_whitespace = True
 
 class ProdutoCalculo(BaseModel):
     codigo_tabela: str
@@ -86,3 +102,36 @@ class ValidadeGlobalResp(BaseModel):
     dias_restantes: Optional[int] = None
     status_validade: StatusValidade = "nao_definida"
     origem: Literal["max_ativos", "nao_definida"] = "nao_definida"
+
+
+class ProdutoSalvar(BaseModel):
+    codigo_tabela: str
+    descricao: str
+    embalagem: Optional[str] = None
+    peso_liquido: Optional[float] = None
+    valor: Optional[float] = None
+    desconto: Optional[float] = 0.0
+    acrescimo: Optional[float] = 0.0
+    total_sem_frete: Optional[float] = 0.0
+    # colunas novas que você disse que já existem
+    valor_frete: Optional[float] = None
+    valor_s_frete: Optional[float] = None
+    plano_pagamento: Optional[str] = None
+    # campos que às vezes vêm
+    grupo: Optional[str] = None
+    departamento: Optional[str] = None
+    ipi: Optional[float] = 0.0
+    iva_st: Optional[float] = 0.0
+    class Config:
+        extra = 'ignore'
+
+class TabelaSalvar(BaseModel):
+    nome_tabela: str
+    cliente: str
+    validade_inicio: Optional[str] = None
+    validade_fim: Optional[str] = None
+    fornecedor: Optional[str] = None
+    ramo_juridico: Optional[str] = None
+    produtos: List[ProdutoSalvar]
+    class Config:
+        extra = 'ignore'    
