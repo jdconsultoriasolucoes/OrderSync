@@ -27,7 +27,7 @@ class TabelaPreco(BaseModel):
     desconto: Optional[float] = 0.0
     acrescimo: Optional[float] = 0.0
     fator_comissao: Optional[float] = None
-
+    plano_pagamento: Optional[str] = None
     # Frete
     frete_percentual: Optional[float] = None
     frete_kg: Optional[float] = None
