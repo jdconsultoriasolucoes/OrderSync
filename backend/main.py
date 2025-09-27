@@ -14,9 +14,11 @@ def root():
     return {"mensagem": "API do OrderSync está rodando"}
 
 ALLOWED_ORIGINS = [
-    "https://ordersync-y7kg.onrender.com",  # FRONT em produção
-    "http://127.0.0.1:5500",                # FRONT em dev (Live Server)
-    "http://localhost:5500",
+    "https://ordersync-y7kg.onrender.com",  # FRONT (Render)
+    "http://localhost:5500",                # FRONT local (ex. Live Server)
+    "http://127.0.0.1:5500",
+    "http://localhost:3000",
+    "http://127.0.0.1:3000",
 ]
 
 app.add_middleware(
