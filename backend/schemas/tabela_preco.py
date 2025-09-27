@@ -86,8 +86,6 @@ class ProdutoCalculado(ProdutoCalculo):
 
 class TabelaPrecoCompleta(BaseModel):
     nome_tabela: str
-    validade_inicio: Optional[date] = None
-    validade_fim: Optional[date] = None
     cliente: str
     fornecedor: Optional[str] = None
     produtos: List[TabelaPreco]
@@ -126,8 +124,6 @@ class ProdutoSalvar(BaseModel):
 class TabelaSalvar(BaseModel):
     nome_tabela: str
     cliente: str
-    validade_inicio: Optional[str] = None
-    validade_fim: Optional[str] = None
     fornecedor: Optional[str] = None
     ramo_juridico: Optional[str] = None
     produtos: List[ProdutoSalvar]

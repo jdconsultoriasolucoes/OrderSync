@@ -128,9 +128,7 @@ def salvar_tabela_preco(payload: TabelaPrecoCompleta):
                  nome_tabela=payload.nome_tabela,
                  cliente=payload.cliente,
                  fornecedor=payload.fornecedor or (getattr(produto, "fornecedor", None) or ""),
-                 validade_inicio=payload.validade_inicio,
-                 validade_fim=payload.validade_fim,
-
+                
                  # Produto
                  codigo_tabela=produto.codigo_tabela,
                  descricao=produto.descricao,
@@ -191,8 +189,7 @@ def editar_produto(id_linha: int, novo_produto: TabelaPreco):
         "fator_comissao","plano_pagamento","frete_percentual","frete_kg",
         "grupo","departamento","ipi","iva_st",
         "valor_frete","valor_s_frete",
-        # se quiser permitir: "validade_inicio","validade_fim" (normalmente ficam no cabeçalho)
-    }
+            }
 
     for campo, valor in list(dados.items()):
         if campo in permitidos:
@@ -234,7 +231,7 @@ def listar_tabelas():
               MAX(criado_em) AS criado_em
             FROM tb_tabela_preco
             WHERE ativo is TRUE
-            GROUP BY id_tabela, nome_tabela, cliente, fornecedor, validade_inicio, validade_fim
+            GROUP BY id_tabela, nome_tabela, cliente, fornecedor
             ORDER BY criado_em DESC
         """)).mappings().all()
 
@@ -302,8 +299,6 @@ def obter_tabela(id_tabela: int):
             "nome_tabela": cab.nome_tabela,
             "cliente": cab.cliente,
             "fornecedor": cab.fornecedor,
-            "validade_inicio": cab.validade_inicio,
-            "validade_fim": cab.validade_fim,
             "produtos": [
                 {
                     "codigo_tabela": p.codigo_tabela,
