@@ -155,7 +155,7 @@ def salvar_tabela_preco(payload: TabelaPrecoCompleta):
                   valor_frete=produto.valor_frete,
                   valor_s_frete=produto.valor_s_frete,
                          )
-        db.add(registro)
+           db.add(registro)
 
         db.commit()
         return {"mensagem": "Tabela salva com sucesso", "qtd_produtos": len(payload.produtos)}
@@ -357,34 +357,3 @@ def _as_frac(x: float | None) -> float:
         return 0.0
     # aceita 0–1 (fração) ou 0–100 (percentual)
     return x/100.0 if x > 1.0 else x
-
-def calcular_valores_dos_produtos(payload: ParametrosCalculo) -> List[ProdutoCalculado]:
-    resultado = []
-    for produto in payload.produtos:
-        valor = produto.valor
-        peso  = produto.peso_liquido or 0.0
-        is_pet = (str(produto.tipo or "").strip().lower() == "pet")
-
-        ipi_pct  = _as_frac(produto.ipi)
-        iva_pct  = _as_frac(produto.iva_st)
-        # se os parâmetros do payload forem percentuais, normalize também
-        fator_comissao     = _as_frac(payload.fator_comissao)
-        acrescimo_pagamento = _as_frac(payload.acrescimo_pagamento)
-
-        ipi_item = ipi_pct if (is_pet and peso <= 10) else 0.0
-
-        frete_kg = (payload.frete_unitario / 1000) * peso
-        ajuste_pagamento = valor * acrescimo_pagamento
-        comissao_aplicada = valor * fator_comissao
-
-        base = valor + frete_kg + ajuste_pagamento - comissao_aplicada
-        valor_liquido = base + (base * ipi_item) + (base * iva_pct)
-
-        resultado.append(ProdutoCalculado(
-            **produto.dict(),
-            frete_kg=round(frete_kg, 4),
-            ajuste_pagamento=round(ajuste_pagamento, 4),
-            comissao_aplicada=round(comissao_aplicada, 4),
-            valor_liquido=round(valor_liquido, 2),
-        ))
-    return resultado
