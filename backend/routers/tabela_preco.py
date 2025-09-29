@@ -1,6 +1,6 @@
 from fastapi import APIRouter, HTTPException, Query
 from services.tabela_preco import calcular_valores_dos_produtos, buscar_max_validade_ativos
-from schemas.tabela_preco import TabelaPreco, TabelaPrecoCompleta, ProdutoCalculado, ParametrosCalculo, ValidadeGlobalResp 
+from schemas.tabela_preco import TabelaPreco, TabelaPrecoCompleta, ProdutoCalculado, ParametrosCalculo, ValidadeGlobalResp, TabelaSalvar  
 from typing import List, Optional
 from sqlalchemy import text
 from models.tabela_preco import TabelaPreco as TabelaPrecoModel
@@ -118,7 +118,7 @@ def filtro_grupo_produto():
         db.close()
 
 @router.post("/salvar")
-def salvar_tabela_preco(body: SalvarTabelaRequest, db: Session = Depends(get_db)):
+def salvar_tabela_preco(body: TabelaSalvar, db: Session = Depends(get_db)):
     # 1) gera um id_tabela seguro via sequence
     id_tabela = db.execute(
         text("SELECT nextval('seq_tabela_preco_id_tabela')")
@@ -343,6 +343,8 @@ def obter_tabela(id_tabela: int):
                     "departamento": p.departamento,
                     "ipi": p.ipi,
                     "iva_st": p.iva_st,
+                    "valor_frete": p.valor_frete,       
+                    "valor_s_frete": p.valor_s_frete,
                 } for p in itens
             ]
         }
