@@ -529,6 +529,8 @@ function enforceIvaLockByCliente(){
   window.ivaStAtivo = !!ivaChk.checked;
 }
 
+
+
 // --- Persistência compacta ---
 async function salvarTabelaPreco(payload) {
   // (opcional) log inicial pra você ver o que está indo
@@ -1048,6 +1050,11 @@ function removerSelecionados() {
   if (typeof refreshToolbarEnablement === 'function') refreshToolbarEnablement();
 }
 
+function inferirFornecedorDaGrade() {
+  const lista = Array.from(new Set((itens || []).map(x => x.fornecedor).filter(Boolean)));
+  return lista.length === 1 ? lista[0] : (lista[0] || '');
+}
+
 async function salvarTabela() {
   const nome_tabela   = document.getElementById('nome_tabela').value.trim();
   const cliente       = document.getElementById('cliente_nome').value.trim();
@@ -1084,11 +1091,10 @@ async function salvarTabela() {
       iva_st: ivaStAtivo ? (item.iva_st || 0) : 0
     };
   });
-
-  const payload = { nome_tabela, cliente, ramo_juridico, fornecedor: '', produtos };
+  const fornecedorHeader = inferirFornecedorDaGrade();
+  const payload = { nome_tabela, cliente, ramo_juridico, fornecedor: fornecedorHeader, produtos };
   try {
-    const resp = await salvarTabelaPreco(payload);   // ESTA função já faz fetch e r.json()
-    alert(`Tabela salva! ${resp.qtd_produtos ?? 0} produtos incluídos.`);
+    const resp = await salvarTabelaPreco(payload);
     return resp;                                     // <<<<<< FUNDAMENTAL
   } catch (e) {
     console.error(e);
@@ -1389,9 +1395,9 @@ document.addEventListener('DOMContentLoaded', () => {
     try {
       const resp = await salvarTabela(); // agora retorna JSON
       if (!resp) return;
-      if (resp?.qtd_produtos != null) {
-        alert(`Tabela salva! ${resp.qtd_produtos} produtos incluídos.`);
-      }
+      const qtd = resp?.itens_inseridos ?? resp?.qtd_produtos ?? itens.length;
+      alert(`Tabela salva! ${qtd} produtos incluídos.`);
+      
 
       // pegue o ID
       const tabelaId = resp?.tabela_id || resp?.id_tabela || resp?.id || window.currentTabelaId;

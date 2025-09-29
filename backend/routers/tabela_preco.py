@@ -7,6 +7,8 @@ from models.tabela_preco import TabelaPreco as TabelaPrecoModel
 from datetime import datetime
 from database import SessionLocal
 from utils.calc_validade_dia import dias_restantes, classificar_status, _as_date
+from fastapi.responses import JSONResponse
+from fastapi.encoders import jsonable_encoder
 
 router_meta = APIRouter(prefix="/tabela_preco/meta", tags=["tabela_preco"])
 router      = APIRouter(prefix="/tabela_preco",       tags=["tabela_preco"])
@@ -115,52 +117,77 @@ def filtro_grupo_produto():
     finally:
         db.close()
 
-@router.post("/salvar") 
-def salvar_tabela_preco(payload: TabelaPrecoCompleta):
-    db = SessionLocal()
-    try:
-        max_tid = db.execute(text("SELECT COALESCE(MAX(id_tabela), 0) FROM tb_tabela_preco")).scalar() or 0
-        id_tabela = int(max_tid) + 1
-        for produto in payload.produtos:
-           registro = TabelaPrecoModel(
-                 # Cabeçalho
-                 id_tabela=id_tabela,
-                 nome_tabela=payload.nome_tabela,
-                 cliente=payload.cliente,
-                 fornecedor=payload.fornecedor or (getattr(produto, "fornecedor", None) or ""),
-                
-                 # Produto
-                 codigo_tabela=produto.codigo_tabela,
-                 descricao=produto.descricao,
-                 embalagem=produto.embalagem,
-                 peso_liquido=produto.peso_liquido,
-                 peso_bruto=produto.peso_bruto,
-                 valor=produto.valor,  # mantém apenas ESTE
-                # NÃO setar: valor=produto.valor_liquido  (removido)
+@router.post("/salvar")
+def salvar_tabela_preco(body: SalvarTabelaRequest, db: Session = Depends(get_db)):
+    # 1) gera um id_tabela seguro via sequence
+    id_tabela = db.execute(
+        text("SELECT nextval('seq_tabela_preco_id_tabela')")
+    ).scalar()
 
-                 # Mapping existente
-                 comissao_aplicada=(produto.desconto or 0.0),
-                 ajuste_pagamento=(produto.acrescimo or 0.0),
+    inseridos = 0
 
-                 fator_comissao=produto.fator_comissao,
-                 plano_pagamento=produto.plano_pagamento,
-                 frete_percentual=produto.frete_percentual,
-                 frete_kg=produto.frete_kg,
-                 grupo=produto.grupo,
-                 departamento=produto.departamento,
-                 ipi=produto.ipi,
-                 iva_st=produto.iva_st,
+    insert_sql = text("""
+        INSERT INTO tb_tabela_preco (
+          id_tabela, nome_tabela, fornecedor, cliente,
+          codigo_tabela, descricao, embalagem, peso_liquido, peso_bruto, valor,
+          comissao_aplicada, ajuste_pagamento, fator_comissao, plano_pagamento, frete_percentual, frete_kg,
+          valor_liquido, valor_frete, valor_s_frete,
+          grupo, departamento,
+          ipi, iva_st
+        )
+        VALUES (
+          :id_tabela, :nome_tabela, :fornecedor, :cliente,
+          :codigo_tabela, :descricao, :embalagem, :peso_liquido, :peso_bruto, :valor,
+          :comissao_aplicada, :ajuste_pagamento, :fator_comissao, :plano_pagamento, :frete_percentual, :frete_kg,
+          :valor_liquido, :valor_frete, :valor_s_frete,
+          :grupo, :departamento,
+          :ipi, :iva_st
+        )
+        RETURNING id_linha
+    """)
 
-                  # Colunas que existem no modelo (ok persistir)
-                  valor_frete=produto.valor_frete,
-                  valor_s_frete=produto.valor_s_frete,
-                         )
-           db.add(registro)
+    for produto in body.produtos:
+        params = {
+            "id_tabela": int(id_tabela),
+            "nome_tabela": body.nome_tabela,
+            "fornecedor": body.fornecedor,
+            "cliente": body.cliente,
 
-        db.commit()
-        return {"mensagem": "Tabela salva com sucesso", "qtd_produtos": len(payload.produtos)}
-    finally:
-        db.close()
+            "codigo_tabela": produto.codigo_tabela,
+            "descricao": produto.descricao,
+            "embalagem": getattr(produto, "embalagem", None),
+            "peso_liquido": getattr(produto, "peso_liquido", None),
+            "peso_bruto": getattr(produto, "peso_bruto", None),
+            "valor": produto.valor,
+
+            "comissao_aplicada": getattr(produto, "comissao_aplicada", 0.0) or 0.0,
+            "ajuste_pagamento": getattr(produto, "ajuste_pagamento", 0.0) or 0.0,
+            "fator_comissao": getattr(produto, "fator_comissao", None),
+            "plano_pagamento": getattr(produto, "plano_pagamento", None),
+            "frete_percentual": getattr(produto, "frete_percentual", None),
+            "frete_kg": getattr(produto, "frete_kg", None),
+
+            "valor_liquido": getattr(produto, "valor_liquido", None),
+            "valor_frete": getattr(produto, "valor_frete", None),
+            "valor_s_frete": getattr(produto, "valor_s_frete", None),
+
+            "grupo": getattr(produto, "grupo", None),
+            "departamento": getattr(produto, "departamento", None),
+
+            "ipi": getattr(produto, "ipi", None),
+            "iva_st": getattr(produto, "iva_st", None),
+        }
+        db.execute(insert_sql, params)
+        inseridos += 1
+
+    db.commit()
+
+    # 3) responde 201 com Location e o id_tabela no JSON
+    payload = {"ok": True, "id_tabela": int(id_tabela), "itens_inseridos": inseridos}
+    resp = JSONResponse(status_code=201, content=jsonable_encoder(payload))
+    resp.headers["Location"] = f"/tabela_preco/{int(id_tabela)}"
+    return resp
+
 
 
 @router.put("/{id_linha}")
