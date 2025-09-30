@@ -53,6 +53,7 @@ function ensureModalInjected() {
   #glpOpen{background:#1f73f1}
   #glpWhats{background:#25D366}
   .glp-hint{font-size:12px;color:#555;margin-top:8px}
+  .glp-option.is-active {background: #eef2ff;border-color: #c7d2fe;box-shadow: inset 0 0 0 2px #c7d2fe;}
   `;
 
   const wrap = document.createElement("div");
@@ -78,7 +79,6 @@ function hideModal() {
 function showModal() {
   const el = document.getElementById("modalGerarLinkPedido");
   if (el) {
-    el.querySelector(".glp-linkbox").style.display = "none";
     el.querySelector("#glpLinkInput").value = "";
     el.querySelector("#glpHint").textContent = "";
     el.style.display = "flex";
@@ -130,21 +130,32 @@ export function showGerarLinkModal({ tabelaId, pedidoClientePath = "/pedido_clie
   const linkBox = modal.querySelector(".glp-linkbox");
   const input = modal.querySelector("#glpLinkInput");
   const hint = modal.querySelector("#glpHint");
+  const buttons = Array.from(modal.querySelectorAll(".glp-option"));
 
-  // Escolha COM/SEM frete dentro do modal
-  modal.querySelectorAll(".glp-option").forEach((btn) => {
-    btn.onclick = () => {
-      const comFrete = btn.dataset.frete === "1";
-      const link = buildPedidoLink({ tabelaId, comFrete, pedidoClientePath });
-      input.value = link;
-      linkBox.style.display = "block";
-      hint.textContent = comFrete
-        ? "Este link exibirá os preços COM frete. A validade será buscada automaticamente."
-        : "Este link exibirá os preços SEM frete. A validade será buscada automaticamente.";
-    };
-  });
-
-  // Ações
+ // 2.1) DEFAULT ao abrir: COM FRETE (ajuste se quiser SEM como padrão)
+ const defaultComFrete = true; // ou false para trocar o padrão
+ const firstLink = buildPedidoLink({ tabelaId, comFrete: defaultComFrete, pedidoClientePath });
+ input.value = firstLink;
+ linkBox.style.display = "block";
+ hint.textContent = defaultComFrete
+    ? "Este link exibirá os preços COM frete. A validade será buscada automaticamente."
+    : "Este link exibirá os preços SEM frete. A validade será buscada automaticamente.";
+ // (Opcional) marca botão ativo
+ buttons.forEach(b => b.classList.toggle("is-active", (b.dataset.frete === "1") === defaultComFrete));
+ buttons.forEach((btn) => {
+   btn.onclick = () => {
+     const comFrete = btn.dataset.frete === "1";
+    const link = buildPedidoLink({ tabelaId, comFrete, pedidoClientePath });
+     input.value = link;
+     hint.textContent = comFrete
+       ? "Este link exibirá os preços COM frete. A validade será buscada automaticamente."
+       : "Este link exibirá os preços SEM frete. A validade será buscada automaticamente.";
+     // (Opcional) marca botão ativo
+     buttons.forEach(b => b.classList.toggle("is-active", b === btn));
+   };
+ });
+  
+ // Ações
   modal.querySelector("#glpCopy").onclick = async () => {
     if (!input.value) return;
     const ok = await copyToClipboard(input.value);
