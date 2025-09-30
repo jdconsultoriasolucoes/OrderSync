@@ -1,8 +1,5 @@
 // js/gerar_link_pedido.js
-// ES Module reutilizável para criar/mostrar o modal de "Gerar Link" da tela pedido_cliente.
-// Uso básico:
-//   import { showGerarLinkModal } from "./js/gerar_link_pedido.js";
-//   showGerarLinkModal({ tabelaId: 123, pedidoClientePath: "/pedido_cliente.html" });
+// Modal "Gerar Link" com a escolha COM/SEM frete (apenas dentro do modal) + caixa de link.
 
 function ensureModalInjected() {
   if (document.getElementById("modalGerarLinkPedido")) return;
@@ -15,10 +12,13 @@ function ensureModalInjected() {
         <button class="glp-close" aria-label="Fechar">&times;</button>
       </div>
       <div class="glp-body">
+        <!-- Escolha de frete DENTRO do modal (mantida) -->
         <div class="glp-row">
           <button class="glp-option" data-frete="1" title="Exibir valores com frete">Valor <b>com</b> Frete</button>
           <button class="glp-option" data-frete="0" title="Exibir valores sem frete">Valor <b>sem</b> Frete</button>
         </div>
+
+        <!-- Caixa que aparece após escolher -->
         <div class="glp-linkbox" style="display:none;">
           <label>Link gerado</label>
           <input type="text" id="glpLinkInput" readonly>
@@ -34,7 +34,6 @@ function ensureModalInjected() {
   </div>`;
 
   const css = `
-  /* ---- gerar_link_pedido (escopo simples) ---- */
   .glp-backdrop{position:fixed;inset:0;background:rgba(0,0,0,.45);display:flex;align-items:center;justify-content:center;z-index:9999;}
   .glp-modal{width:min(560px,95vw);background:#fff;border-radius:12px;box-shadow:0 10px 30px rgba(0,0,0,.25);overflow:hidden;font-family:system-ui,Segoe UI,Arial,sans-serif}
   .glp-header{display:flex;justify-content:space-between;align-items:center;padding:14px 16px;border-bottom:1px solid #e5e5e5}
@@ -64,7 +63,7 @@ function ensureModalInjected() {
   styleTag.textContent = css;
   document.head.appendChild(styleTag);
 
-  // Fechar
+  // fechar
   wrap.querySelector(".glp-close").addEventListener("click", hideModal);
   wrap.addEventListener("click", (e) => {
     if (e.target.id === "modalGerarLinkPedido") hideModal();
@@ -79,7 +78,6 @@ function hideModal() {
 function showModal() {
   const el = document.getElementById("modalGerarLinkPedido");
   if (el) {
-    // Reset state
     el.querySelector(".glp-linkbox").style.display = "none";
     el.querySelector("#glpLinkInput").value = "";
     el.querySelector("#glpHint").textContent = "";
@@ -88,7 +86,6 @@ function showModal() {
 }
 
 function buildPedidoLink({ tabelaId, comFrete, pedidoClientePath }) {
-  // Caminho da tela de pedido (padrão na raiz pública)
   const base = window.location.origin;
   const path = pedidoClientePath || "/pedido_cliente.html";
   const qs = new URLSearchParams({
@@ -103,7 +100,6 @@ async function copyToClipboard(text) {
     await navigator.clipboard.writeText(text);
     return true;
   } catch {
-    // fallback
     const ta = document.createElement("textarea");
     ta.value = text;
     document.body.appendChild(ta);
@@ -115,10 +111,10 @@ async function copyToClipboard(text) {
 }
 
 /**
- * Abre o modal e conduz o fluxo de gerar link.
+ * Abre o modal com a escolha COM/SEM frete e, após escolher, mostra o link.
  * @param {Object} opts
- * @param {number|string} opts.tabelaId - ID da tabela (obrigatório)
- * @param {string} [opts.pedidoClientePath="/pedido_cliente.html"] - caminho da tela de pedido
+ * @param {number|string} opts.tabelaId
+ * @param {string} [opts.pedidoClientePath="/pedido_cliente.html"]
  */
 export function showGerarLinkModal({ tabelaId, pedidoClientePath = "/pedido_cliente.html" }) {
   if (!tabelaId && tabelaId !== 0) {
@@ -135,7 +131,7 @@ export function showGerarLinkModal({ tabelaId, pedidoClientePath = "/pedido_clie
   const input = modal.querySelector("#glpLinkInput");
   const hint = modal.querySelector("#glpHint");
 
-  // Clique nas opções (com ou sem frete)
+  // Escolha COM/SEM frete dentro do modal
   modal.querySelectorAll(".glp-option").forEach((btn) => {
     btn.onclick = () => {
       const comFrete = btn.dataset.frete === "1";
@@ -169,10 +165,9 @@ export function showGerarLinkModal({ tabelaId, pedidoClientePath = "/pedido_clie
 }
 
 /**
- * Helper opcional: cria um handler que você pode plugar em vários botões.
- * Exemplo:
+ * Handler plugável:
  *   const handler = gerarLinkHandler(() => currentTabelaId);
- *   document.querySelector("#btnGerarLink").addEventListener("click", handler);
+ *   btn.addEventListener("click", handler);
  */
 export function gerarLinkHandler(getTabelaIdFn, options = {}) {
   return () => {
