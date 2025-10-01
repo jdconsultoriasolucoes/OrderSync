@@ -51,8 +51,39 @@
     </main>
   </div>
 
-  
+  <!-- defina sua API (ajuste para prod) -->
+<script>
+  window.API_BASE = window.API_BASE || "https://ordersync-backend-edjq.onrender.com";
+</script>
 
+<!-- resolve o /p/{code} e expõe os globais -->
+<script>
+(function () {
+  try {
+    const parts = location.pathname.split("/").filter(Boolean);
+    const code  = parts[parts.length - 1];
+    const okPath = parts[parts.length - 2] === "p";
+    if (!okPath || !code) return; // se não for /p/{code}, deixa o JS atual cuidar via querystring
+
+    fetch(`${window.API_BASE}/link_pedido/resolver?code=${encodeURIComponent(code)}`)
+      .then(async (resp) => {
+        if (!resp.ok) throw new Error(await resp.text());
+        return resp.json();
+      })
+      .then(({ tabela_id, com_frete }) => {
+        window.currentTabelaId = tabela_id;   // usado no JS principal
+        window.currentComFrete = com_frete;   // usado no JS principal
+        const titulo = document.getElementById("tituloValorFrete");
+        if (titulo) titulo.textContent = com_frete ? "c/ Frete" : "s/ Frete";
+      })
+      .catch((err) => {
+        document.body.innerHTML = `<h2>Link inválido ou expirado</h2><p>${String(err)}</p>`;
+      });
+  } catch (err) {
+    document.body.innerHTML = `<h2>Erro</h2><p>${String(err)}</p>`;
+  }
+})();
+</script>
   <script src="pedido_cliente.js"></script>
 </body>
 </html>

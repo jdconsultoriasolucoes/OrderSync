@@ -1,5 +1,6 @@
 // js/gerar_link_pedido.js
-// Modal "Gerar Link" com a escolha COM/SEM frete (apenas dentro do modal) + caixa de link.
+// Modal "Gerar Link" — gera URL curta via POST /link_pedido/gerar e exibe no modal.
+// Requisitos: window.API_BASE definido (ex.: http://localhost:8000)
 
 function ensureModalInjected() {
   if (document.getElementById("modalGerarLinkPedido")) return;
@@ -12,14 +13,12 @@ function ensureModalInjected() {
         <button class="glp-close" aria-label="Fechar">&times;</button>
       </div>
       <div class="glp-body">
-        <!-- Escolha de frete DENTRO do modal (mantida) -->
         <div class="glp-row">
           <button class="glp-option" data-frete="1" title="Exibir valores com frete">Valor <b>com</b> Frete</button>
           <button class="glp-option" data-frete="0" title="Exibir valores sem frete">Valor <b>sem</b> Frete</button>
         </div>
 
-        <!-- Caixa que aparece após escolher -->
-        <div class="glp-linkbox" style="display:none;">
+        <div class="glp-linkbox">
           <label>Link gerado</label>
           <input type="text" id="glpLinkInput" readonly>
           <div class="glp-actions">
@@ -43,7 +42,7 @@ function ensureModalInjected() {
   .glp-row{display:flex;gap:12px;flex-wrap:wrap;margin-bottom:14px}
   .glp-option{flex:1;min-width:180px;border:1px solid #ddd;border-radius:8px;padding:12px 14px;cursor:pointer;background:#f7f7f7}
   .glp-option:hover{background:#f0f0f0}
-  .glp-linkbox{margin-top:8px}
+  .glp-option.is-active{background:#eef2ff;border-color:#c7d2fe;box-shadow:inset 0 0 0 2px #c7d2fe}
   .glp-linkbox label{display:block;font-size:12px;color:#666;margin:6px 0}
   #glpLinkInput{width:100%;padding:10px;border:1px solid #ccc;border-radius:8px;font-size:14px}
   .glp-actions{display:flex;gap:10px;margin-top:10px}
@@ -52,8 +51,7 @@ function ensureModalInjected() {
   #glpCopy{background:#4CAF50}
   #glpOpen{background:#1f73f1}
   #glpWhats{background:#25D366}
-  .glp-hint{font-size:12px;color:#555;margin-top:8px}
-  .glp-option.is-active {background: #eef2ff;border-color: #c7d2fe;box-shadow: inset 0 0 0 2px #c7d2fe;}
+  .glp-hint{font-size:12px;color:#555;margin-top:8px;min-height:1.2em}
   `;
 
   const wrap = document.createElement("div");
@@ -85,16 +83,6 @@ function showModal() {
   }
 }
 
-function buildPedidoLink({ tabelaId, comFrete, pedidoClientePath }) {
-  const base = window.location.origin;
-  const path = pedidoClientePath || "/pedido_cliente.html";
-  const qs = new URLSearchParams({
-    tabela_id: String(tabelaId),
-    com_frete: comFrete ? "1" : "0",
-  });
-  return `${base}${path}?${qs.toString()}`;
-}
-
 async function copyToClipboard(text) {
   try {
     await navigator.clipboard.writeText(text);
@@ -110,13 +98,28 @@ async function copyToClipboard(text) {
   }
 }
 
+async function gerarLinkCurtoNoServidor({ tabelaId, comFrete }) {
+  if (!window.API_BASE) throw new Error("API_BASE não definida");
+  const resp = await fetch(`${window.API_BASE}/link_pedido/gerar`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ tabela_id: tabelaId, com_frete: comFrete }),
+  });
+  if (!resp.ok) {
+    const msg = await resp.text();
+    throw new Error(`Falha ao gerar link: ${msg}`);
+  }
+  const data = await resp.json();
+  return data.url; // ex.: https://.../p/<code>
+}
+
 /**
- * Abre o modal com a escolha COM/SEM frete e, após escolher, mostra o link.
+ * Abre o modal e já mostra a linkbox preenchida (sem "expandir").
+ * Botões COM/SEM frete apenas re-geram a URL curta.
  * @param {Object} opts
  * @param {number|string} opts.tabelaId
- * @param {string} [opts.pedidoClientePath="/pedido_cliente.html"]
  */
-export function showGerarLinkModal({ tabelaId, pedidoClientePath = "/pedido_cliente.html" }) {
+export function showGerarLinkModal({ tabelaId }) {
   if (!tabelaId && tabelaId !== 0) {
     console.warn("showGerarLinkModal: tabelaId ausente");
     alert("Não foi possível gerar o link: ID da tabela ausente.");
@@ -126,40 +129,67 @@ export function showGerarLinkModal({ tabelaId, pedidoClientePath = "/pedido_clie
   ensureModalInjected();
   showModal();
 
-  const modal = document.getElementById("modalGerarLinkPedido");
+  const modal   = document.getElementById("modalGerarLinkPedido");
   const linkBox = modal.querySelector(".glp-linkbox");
-  const input = modal.querySelector("#glpLinkInput");
-  const hint = modal.querySelector("#glpHint");
+  const input   = modal.querySelector("#glpLinkInput");
+  const hint    = modal.querySelector("#glpHint");
   const buttons = Array.from(modal.querySelectorAll(".glp-option"));
 
- // 2.1) DEFAULT ao abrir: COM FRETE (ajuste se quiser SEM como padrão)
- const defaultComFrete = true; // ou false para trocar o padrão
- const firstLink = buildPedidoLink({ tabelaId, comFrete: defaultComFrete, pedidoClientePath });
- input.value = firstLink;
- linkBox.style.display = "block";
- hint.textContent = defaultComFrete
-    ? "Este link exibirá os preços COM frete. A validade será buscada automaticamente."
-    : "Este link exibirá os preços SEM frete. A validade será buscada automaticamente.";
- // (Opcional) marca botão ativo
- buttons.forEach(b => b.classList.toggle("is-active", (b.dataset.frete === "1") === defaultComFrete));
- buttons.forEach((btn) => {
-   btn.onclick = () => {
-     const comFrete = btn.dataset.frete === "1";
-    const link = buildPedidoLink({ tabelaId, comFrete, pedidoClientePath });
-     input.value = link;
-     hint.textContent = comFrete
-       ? "Este link exibirá os preços COM frete. A validade será buscada automaticamente."
-       : "Este link exibirá os preços SEM frete. A validade será buscada automaticamente.";
-     // (Opcional) marca botão ativo
-     buttons.forEach(b => b.classList.toggle("is-active", b === btn));
-   };
- });
-  
- // Ações
+  // padrão: COM frete (troque para false se quiser SEM como padrão)
+  const defaultComFrete = true;
+
+  // estado UI helper
+  const setBusy = (busy) => {
+    buttons.forEach(b => b.disabled = busy);
+    hint.textContent = busy ? "Gerando link..." : hint.textContent;
+  };
+
+  // gera inicialmente com o padrão
+  (async () => {
+    try {
+      buttons.forEach(b => b.classList.toggle("is-active", (b.dataset.frete === "1") === defaultComFrete));
+      setBusy(true);
+      const urlCurta = await gerarLinkCurtoNoServidor({ tabelaId, comFrete: defaultComFrete });
+      input.value = urlCurta;
+      hint.textContent = defaultComFrete
+        ? "Este link exibirá os preços COM frete. A validade será buscada automaticamente."
+        : "Este link exibirá os preços SEM frete. A validade será buscada automaticamente.";
+    } catch (e) {
+      console.error(e);
+      hint.textContent = "Erro ao gerar link. Tente novamente.";
+    } finally {
+      setBusy(false);
+    }
+  })();
+
+  // cliques trocam a opção e re-geram a URL curta
+  buttons.forEach((btn) => {
+    btn.onclick = async () => {
+      const comFrete = btn.dataset.frete === "1";
+      buttons.forEach(b => b.classList.toggle("is-active", b === btn));
+      try {
+        setBusy(true);
+        const urlCurta = await gerarLinkCurtoNoServidor({ tabelaId, comFrete });
+        input.value = urlCurta;
+        hint.textContent = comFrete
+          ? "Este link exibirá os preços COM frete. A validade será buscada automaticamente."
+          : "Este link exibirá os preços SEM frete. A validade será buscada automaticamente.";
+      } catch (e) {
+        console.error(e);
+        hint.textContent = "Erro ao gerar link. Tente novamente.";
+      } finally {
+        setBusy(false);
+      }
+    };
+  });
+
+  // Ações
   modal.querySelector("#glpCopy").onclick = async () => {
     if (!input.value) return;
     const ok = await copyToClipboard(input.value);
-    hint.textContent = ok ? "Link copiado para a área de transferência." : "Não foi possível copiar. Copie manualmente.";
+    hint.textContent = ok
+      ? "Link copiado para a área de transferência."
+      : "Não foi possível copiar. Copie manualmente.";
   };
 
   modal.querySelector("#glpOpen").onclick = () => {
@@ -180,9 +210,9 @@ export function showGerarLinkModal({ tabelaId, pedidoClientePath = "/pedido_clie
  *   const handler = gerarLinkHandler(() => currentTabelaId);
  *   btn.addEventListener("click", handler);
  */
-export function gerarLinkHandler(getTabelaIdFn, options = {}) {
+export function gerarLinkHandler(getTabelaIdFn) {
   return () => {
     const tabelaId = typeof getTabelaIdFn === "function" ? getTabelaIdFn() : getTabelaIdFn;
-    showGerarLinkModal({ tabelaId, ...options });
+    showGerarLinkModal({ tabelaId });
   };
 }

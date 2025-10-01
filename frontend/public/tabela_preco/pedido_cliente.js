@@ -3,15 +3,22 @@
 // -------------------- Helpers básicos --------------------
 const url = new URL(window.location.href);
 
-// Suporta ?id=<uuid> (pedido) OU ?tabela_id=<id> (preview a partir da tabela)
+// preferir valores vindos do /p/{code} (definidos no HTML), senão cair no querystring
+let tabelaIdParam = (typeof window.currentTabelaId !== "undefined" && window.currentTabelaId !== null)
+  ? String(window.currentTabelaId)
+  : url.searchParams.get("tabela_id");
+
 let pedidoId = url.searchParams.get("id");
-let tabelaIdParam = url.searchParams.get("tabela_id");
+
 
 // Caso a página tenha sido aberta como arquivo estático (ex.: pedido_cliente.html), evita pegar ".html" como id
 if (pedidoId && pedidoId.includes(".html")) pedidoId = null;
 
-// com_frete: "1" | "0" | "true" | "false"
-const comFreteParam = url.searchParams.get("com_frete");
+const comFreteParamQS = url.searchParams.get("com_frete");
+const comFreteFromCode = (typeof window.currentComFrete !== "undefined")
+  ? (window.currentComFrete ? "true" : "false")
+  : null;
+const comFreteParam = comFreteFromCode ?? comFreteParamQS;
 
 // Dados opcionais vindos do link
 const cnpjParam      = url.searchParams.get("cnpj");
