@@ -256,6 +256,43 @@ async function confirmarPedido() {
   }
 }
 
+
+
+function assertShape(d) {
+  const must = [
+    ["tabela", "object"],
+    ["tabela.nome", "string"],
+    ["tabela.validade", "string"], // ajuste aos seus campos reais
+    ["cliente", "object"],
+    ["cliente.nome", "string"],
+    ["itens", "object"], // array
+  ];
+  const get = (o, path) => path.split(".").reduce((a,k)=> (a && a[k]!==undefined ? a[k] : undefined), o);
+  const errs = [];
+  for (const [p, t] of must) {
+    const v = get(d, p);
+    if (t === "object" && (typeof v !== "object" || v === null)) errs.push(`${p} ausente`);
+    if (t === "string" && typeof v !== "string") errs.push(`${p} inválido`);
+  }
+  if (Array.isArray(d.itens) === false) errs.push("itens não é array");
+  if (errs.length) {
+    console.error("[pedido] shape inválido:", errs, d);
+    alert("Formato de dados inesperado para a tela de pedido.");
+  }
+}
+
+async function carregarPedido() {
+  const url = `${window.API_BASE}/link_pedido/resolver/${encodeURIComponent(window.LINK_CODE)}`;
+  console.log("[pedido] GET", url);
+  const resp = await fetch(url, { cache: "no-store" });
+  const dados = await resp.json();
+  console.log("[pedido] payload", dados);
+  assertShape(dados);
+  preencherTelaPedido(dados);
+}
+
+
+
 function cancelarPedido() {
   window.location.href = "/";
 }
