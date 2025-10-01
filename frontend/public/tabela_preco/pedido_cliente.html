@@ -55,31 +55,30 @@
 <script>
   window.API_BASE = window.API_BASE || "https://ordersync-backend-edjq.onrender.com";
 </script>
-
+<script src="/static/tabela_preco/pedido_cliente.js"></script>
 <!-- resolve o /p/{code} e expõe os globais -->
 <script>
-(function () {
+  (function () {
     const API = (p) => `${(window.API_BASE || location.origin).replace(/\/$/,'')}${p}`;
     const code = location.pathname.split("/").pop();
 
-    fetch(API(`/link_pedido/resolver?code=${encodeURIComponent(code)}`))
-      .then(r => {
-        if (!r.ok) throw new Error("resolver falhou: " + r.status);
-        return r.json();
-      })
+    fetch(API(`/link_pedido/resolver?code=${encodeURIComponent(code)}`), { cache: "no-store" })
+      .then(r => { if (!r.ok) throw new Error("resolver falhou: " + r.status); return r.json(); })
       .then(d => {
-        // seta variáveis globais que o pedido_cliente.js usa
+        // 1) seta variáveis globais que o JS usa
         window.currentTabelaId = d.tabela_id;
         window.currentComFrete = d.com_frete;
-        // dispara o fluxo principal
+
+        // 2) remove o aviso vermelho (se existir)
+        document.getElementById("aviso-sem-param")?.remove();
+
+        // 3) DISPARA o carregamento da tabela
         if (window.carregarPedido) window.carregarPedido();
       })
-      .catch(err => {
-        console.error(err);
-        // aqui mantém a mensagem "URL sem parâmetros..." que você já mostra
-      });
+      .catch(err => console.error("[resolver]", err));
   })();
 </script>
-  <script src="/static/tabela_preco/pedido_cliente.js"></script>
+
+  
 </body>
 </html>

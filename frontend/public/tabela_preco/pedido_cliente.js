@@ -9,6 +9,17 @@ let tabelaIdParam = (typeof window.currentTabelaId !== "undefined" && window.cur
   : url.searchParams.get("tabela_id");
 
 let pedidoId = url.searchParams.get("id");
+let produtos = [];
+let usarValorComFrete = true;
+
+
+// 🔽 Fallbacks vindos do resolver (quando não há query string)
+if (!tabelaIdParam && typeof window.currentTabelaId !== "undefined") {
+  tabelaIdParam = String(window.currentTabelaId);
+}
+if ((comFreteParam === null || comFreteParam === "") && typeof window.currentComFrete !== "undefined") {
+  comFreteParam = String(window.currentComFrete); // "true" / "false"
+}
 
 
 // Caso a página tenha sido aberta como arquivo estático (ex.: pedido_cliente.html), evita pegar ".html" como id
@@ -25,14 +36,16 @@ const cnpjParam      = url.searchParams.get("cnpj");
 const razaoParam     = url.searchParams.get("razao_social");
 const condPagtoParam = url.searchParams.get("cond_pagto");
 
-const API_BASE = window.API_BASE || "";
-const API = (p) => API_BASE + (p.startsWith("/") ? p : "/" + p);
+const API_BASE = (typeof window !== "undefined" && window.API_BASE) ? window.API_BASE : location.origin;
+const API = (p) => {
+  const base = (typeof window !== "undefined" && window.API_BASE ? window.API_BASE : location.origin) || "";
+  // remove barra final do base e garante que p tem barra inicial
+  const normBase = base.replace(/\/+$/, "");
+  const normPath = p.startsWith("/") ? p : `/${p}`;
+  return `${normBase}${normPath}`;
+};
 
 const fmtBRL = new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" });
-
-// -------------------- Estado da tela --------------------
-let produtos = [];
-let usarValorComFrete = true;
 
 // -------------------- Elementos --------------------
 const tbody         = document.querySelector("#tabelaProdutos tbody");
@@ -100,6 +113,19 @@ function atualizarTotal() {
   }, 0);
   if (totalEl) totalEl.textContent = fmtBRL.format(total);
   if (btnConfirmar) btnConfirmar.disabled = total <= 0;
+}
+
+function obterParametrosPedido() {
+  const qs = new URLSearchParams(location.search);
+  let tabelaId = qs.get("tabela_id") || window.currentTabelaId;
+  let comFrete = qs.get("com_frete");
+
+  if (comFrete === null || comFrete === undefined) comFrete = window.currentComFrete;
+
+  comFrete = String(comFrete).toLowerCase() === "true";
+  if (!tabelaId) throw new Error("sem_parametros");
+
+  return { tabelaId: Number(tabelaId), comFrete };
 }
 
 // -------------------- Carregamento de dados --------------------
