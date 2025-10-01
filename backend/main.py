@@ -7,7 +7,7 @@ import logging, traceback, uuid
 from fastapi import FastAPI, Request
 from fastapi.responses import JSONResponse
 from fastapi.middleware.cors import CORSMiddleware
-
+from fastapi.staticfiles import StaticFiles
 # Routers
 from routers import cliente, listas, fiscal
 from routers.tabela_preco import router_meta, router as router_tabela
@@ -79,3 +79,11 @@ app.include_router(fiscal.router)        # (sem prefixo se o router já tiver)
 app.include_router(pedido_preview.router)
 app.include_router(link_pedido.router)        
 app.include_router(link_pedido.router_short)
+
+
+from fastapi.staticfiles import StaticFiles
+import os
+
+# caminho real onde estão seus arquivos (ajuste se necessário)
+static_dir = os.path.join(os.path.dirname(__file__), "..", "frontend", "public")
+app.mount("/static", StaticFiles(directory=static_dir), name="static")
