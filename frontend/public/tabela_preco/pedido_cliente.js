@@ -140,7 +140,8 @@ async function carregarPedido() {
 
       // 1B) Validade global (busca direto no front)
       try {
-        const r2 = await fetch(API(`/tabela_preco/validade_global?tabela_id=${encodeURIComponent(tabelaIdParam)}`));
+        const r2 = await fetch(API(`/tabela_preco/meta/validade_global?tabela_id=${encodeURIComponent(tabelaIdParam)}`));
+
         if (r2.ok) {
           const v = await r2.json();
           setCampoTexto("validadeTabela", v.validade ?? "---");
@@ -281,17 +282,6 @@ function assertShape(d) {
   }
 }
 
-async function carregarPedido() {
-  const url = `${window.API_BASE}/link_pedido/resolver/${encodeURIComponent(window.LINK_CODE)}`;
-  console.log("[pedido] GET", url);
-  const resp = await fetch(url, { cache: "no-store" });
-  const dados = await resp.json();
-  console.log("[pedido] payload", dados);
-  assertShape(dados);
-  preencherTelaPedido(dados);
-}
-
-
 
 function cancelarPedido() {
   window.location.href = "/";
@@ -301,4 +291,7 @@ function cancelarPedido() {
 if (btnConfirmar) btnConfirmar.addEventListener("click", confirmarPedido);
 if (btnCancelar)  btnCancelar.addEventListener("click", cancelarPedido);
 
-carregarPedido();
+resolverCode().then(({tabela_id, com_frete})=>{
+  window.currentTabelaId=tabela_id; window.currentComFrete=com_frete;
+  if (window.carregarPedido) window.carregarPedido();
+});
