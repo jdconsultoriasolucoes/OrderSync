@@ -13,14 +13,6 @@ let produtos = [];
 let usarValorComFrete = true;
 
 
-// 🔽 Fallbacks vindos do resolver (quando não há query string)
-if (!tabelaIdParam && typeof window.currentTabelaId !== "undefined") {
-  tabelaIdParam = String(window.currentTabelaId);
-}
-if ((comFreteParam === null || comFreteParam === "") && typeof window.currentComFrete !== "undefined") {
-  comFreteParam = String(window.currentComFrete); // "true" / "false"
-}
-
 
 // Caso a página tenha sido aberta como arquivo estático (ex.: pedido_cliente.html), evita pegar ".html" como id
 if (pedidoId && pedidoId.includes(".html")) pedidoId = null;
@@ -131,12 +123,25 @@ function obterParametrosPedido() {
 // -------------------- Carregamento de dados --------------------
 async function carregarPedido() {
   try {
+    const _qsNow = new URLSearchParams(location.search);
+
+    abelaIdParam = tabelaIdParam
+    || _qsNow.get("tabela_id")
+    || (typeof window.currentTabelaId !== "undefined" ? String(window.currentTabelaId) : null);
+
+    const _comFreteQS   = _qsNow.get("com_frete");
+    const _comFreteCode = (typeof window.currentComFrete !== "undefined")
+    ? (window.currentComFrete ? "true" : "false")
+    : null;
+
+    // valor efetivo de com_frete (prioriza query; se não houver, usa o do resolver)
+    const _comFreteEfetivo = (_comFreteQS ?? _comFreteCode);
     // Fluxo 1: veio de criação/listagem com ?tabela_id=... (preview)
     if (tabelaIdParam) {
       // 1A) Preview dos itens (sem validade aqui)
       const qs = new URLSearchParams({
         tabela_id: tabelaIdParam,
-        com_frete: (comFreteParam === "1" || comFreteParam === "true") ? "true" : "false",
+        com_frete: (_comFreteEfetivo === "1" || String(_comFreteEfetivo).toLowerCase() === "true") ? "true" : "false",
         cnpj: cnpjParam || "",
         razao_social: razaoParam || "",
         condicao_pagamento: condPagtoParam || ""
@@ -317,7 +322,3 @@ function cancelarPedido() {
 if (btnConfirmar) btnConfirmar.addEventListener("click", confirmarPedido);
 if (btnCancelar)  btnCancelar.addEventListener("click", cancelarPedido);
 
-resolverCode().then(({tabela_id, com_frete})=>{
-  window.currentTabelaId=tabela_id; window.currentComFrete=com_frete;
-  if (window.carregarPedido) window.carregarPedido();
-});
