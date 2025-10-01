@@ -8,10 +8,7 @@ from pathlib import Path
 
 router = APIRouter(prefix="/link_pedido", tags=["Link Pedido"])
 
-PEDIDO_HTML = Path(os.getenv(
-    "PEDIDO_HTML_PATH",
-    "/opt/render/project/src/frontend/public/tabela_preco/pedido_cliente.html"
-))
+PEDIDO_HTML = Path("/opt/render/project/src/frontend/public/tabela_preco/pedido_cliente.html")
 
 @router.post("/gerar")
 def gerar_link(body: dict, request: Request, db: Session = Depends(get_db)):
