@@ -11,7 +11,7 @@ from fastapi.middleware.cors import CORSMiddleware
 # Routers
 from routers import cliente, listas, fiscal
 from routers.tabela_preco import router_meta, router as router_tabela
-from routers import pedido_preview
+from routers import pedido_preview, link_pedido
 
 # ---- logging base (simples) ----
 logging.basicConfig(level=logging.INFO)
@@ -77,3 +77,5 @@ app.include_router(cliente.router, prefix="/cliente", tags=["Cliente"])
 app.include_router(listas.router, prefix="/listas", tags=["Listas"])
 app.include_router(fiscal.router)        # (sem prefixo se o router já tiver)
 app.include_router(pedido_preview.router)
+app.include_router(link_pedido.router)        
+app.include_router(link_pedido.router_short)

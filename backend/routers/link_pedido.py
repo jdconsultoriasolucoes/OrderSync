@@ -33,9 +33,15 @@ def resolver(code: str, db: Session = Depends(get_db)):
         raise HTTPException(410, "Link expirado")
     return {"tabela_id": link.tabela_id, "com_frete": link.com_frete}
 
-# rota curta que entrega a tela de pedido
-@router.get("/p/{code}")
+router_short = APIRouter()
+
+@router_short.get("/p/{code}")
 def abrir_link(code: str):
     if not PEDIDO_HTML.exists():
         raise HTTPException(500, "Arquivo pedido_cliente.html não encontrado")
-    return FileResponse(PEDIDO_HTML)
+    # Cabeçalhos úteis (opcional)
+    return FileResponse(PEDIDO_HTML, headers={
+        "X-Robots-Tag": "noindex, nofollow",
+        "Referrer-Policy": "no-referrer",
+        "Cache-Control": "no-store",
+    })
