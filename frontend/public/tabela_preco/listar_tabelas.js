@@ -1,5 +1,5 @@
 const API_BASE = "https://ordersync-backend-edjq.onrender.com";
-
+window.API_BASE = window.API_BASE || API_BASE;
 let tabelaSelecionadaId = null;
 
 document.addEventListener("DOMContentLoaded", () => {
@@ -31,13 +31,16 @@ async function carregarTabelas() {
       `;
 
       tr.addEventListener("click", () => {
-        document.querySelectorAll("#lista-tabelas-body tr").forEach(row => row.classList.remove("selected"));
-        tr.classList.add("selected");
-        tabelaSelecionadaId = tabela.id;
+             document.querySelectorAll("#lista-tabelas-body tr")
+             .forEach(row => row.classList.remove("selected"));
+             tr.classList.add("selected");
+             tabelaSelecionadaId = tabela.id;
 
-          // ✅ Habilita os botões
-        document.getElementById("btn-editar").disabled = false;
-        document.getElementById("btn-excluir").disabled = false;
+      // ✅ Habilita os botões se existirem na página
+       const btnEditar  = document.getElementById("btn-editar");
+       const btnExcluir = document.getElementById("btn-excluir");
+       if (btnEditar)  btnEditar.disabled  = false;
+       if (btnExcluir) btnExcluir.disabled = false;
       });
 
       tbody.appendChild(tr);

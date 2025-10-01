@@ -99,8 +99,9 @@ async function copyToClipboard(text) {
 }
 
 async function gerarLinkCurtoNoServidor({ tabelaId, comFrete }) {
-  if (!window.API_BASE) throw new Error("API_BASE não definida");
-  const resp = await fetch(`${window.API_BASE}/link_pedido/gerar`, {
+  const base = (typeof window.API_BASE === "string" && window.API_BASE) ? window.API_BASE : "";
+  const url  = base ? `${base}/link_pedido/gerar` : "/link_pedido/gerar";
+  const resp = await fetch(url, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ tabela_id: tabelaId, com_frete: comFrete }),
