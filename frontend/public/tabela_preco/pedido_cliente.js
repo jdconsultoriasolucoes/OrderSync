@@ -65,12 +65,21 @@ function renderTabela() {
       <td>${item.codigo ?? ""}</td>
       <td>${item.nome ?? ""}</td>
       <td>${item.embalagem ?? ""}</td>
-      <td>${item.peso ?? ""}</td>
+      <td>${item.condicao_pagamento ?? ""}</td>
+      <td class="celula-peso" data-peso-unit="${Number(item.peso ?? 0)}"></td>
       <td>${fmtBRL.format(valorUnitario)}</td>
-      <td><input type="number" min="0" step="1" value="${item.quantidade || 0}" data-index="${i}" class="qtd" /></td>
+      <td><input type="number" min="0" step="1" value="${item.quantidade || 1}" data-index="${i}" class="qtd" /></td>
       <td id="subtotal-${i}">${fmtBRL.format(subtotal)}</td>
     `;
     tbody.appendChild(tr);
+    // Peso total inicial (peso unitário × quantidade inicial)
+    const pesoUnit = Number(item.peso ?? 0);
+    const qtdInicial = Number(item.quantidade) || 1;
+    const pesoCell = tr.querySelector('.celula-peso');
+      if (pesoCell) {
+      const pesoTotal = pesoUnit * qtdInicial;
+      pesoCell.textContent = (Number.isFinite(pesoTotal) ? pesoTotal : 0).toLocaleString('pt-BR');
+      }
   });
 
   // Listeners de quantidade
@@ -94,6 +103,15 @@ function onQtdChange(e) {
   const subtotal = quantidade * valorUnitario;
   const cell = document.getElementById(`subtotal-${idx}`);
   if (cell) cell.textContent = fmtBRL.format(subtotal);
+  
+  // Atualizar peso total da linha (peso unitário × nova quantidade)
+ const tr = e.target.closest('tr');
+ const pesoCell = tr?.querySelector('.celula-peso');
+ if (pesoCell) {
+   const pesoUnit = Number(pesoCell.dataset.pesoUnit || produtos[idx].peso || 0);
+   const pesoTotal = pesoUnit * quantidade;
+   pesoCell.textContent = (Number.isFinite(pesoTotal) ? pesoTotal : 0).toLocaleString('pt-BR');
+  }
 
   atualizarTotal();
 }
@@ -164,7 +182,7 @@ async function carregarPedido() {
         ...p,
         valor_com_frete: Number(p.valor_com_frete) || 0,
         valor_sem_frete: Number(p.valor_sem_frete) || 0,
-        quantidade: Number(p.quantidade) || 0
+        quantidade: Number(p.quantidade) || 1
       }));
       renderTabela();
       atualizarTotal();
@@ -209,7 +227,7 @@ async function carregarPedido() {
             ...p,
             valor_com_frete: Number(p.valor_com_frete) || 0,
             valor_sem_frete: Number(p.valor_sem_frete) || 0,
-            quantidade: Number(p.quantidade) || 0,
+            quantidade: Number(p.quantidade) || 1,
           }))
         : [];
 

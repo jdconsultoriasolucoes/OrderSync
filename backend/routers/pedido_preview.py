@@ -14,6 +14,7 @@ class ProdutoPedidoPreview(BaseModel):
     nome: str
     embalagem: Optional[str] = None
     peso: Optional[float] = None
+    condicao_pagamento: Optional[str] = None
     valor_sem_frete: float
     valor_com_frete: float
     quantidade: int = 0
@@ -32,18 +33,18 @@ class PedidoPreviewResp(BaseModel):
 async def pedido_preview(
     tabela_id: int = Query(..., description="ID da tabela de preço salva"),
     com_frete: bool = Query(..., description="true/false: decidir valor com ou sem frete"),
-    cnpj: Optional[str] = Query(None),
-    razao_social: Optional[str] = Query(None),
-    condicao_pagamento: Optional[str] = Query(None),
-):
-    """
-    Monta o payload de preview do pedido para a tela pedido_cliente:
-    - Validade: vem do endpoint validade_global
-    - Condição de pagamento: vem da própria tabela (plano_pagamento)
-    - Valores: usa valor_frete / valor_s_frete (novas colunas)
-    """
-    with SessionLocal() as db:
-        # 1) Itens (somente colunas necessárias), conforme sua especificação:
+    ):
+    
+        with SessionLocal() as db:
+    # Cabeçalho: cliente "como está no banco"
+          cabecalho_sql = text("""
+          SELECT cliente
+          FROM tb_tabela_preco
+          WHERE id_tabela = :tid
+          LIMIT 1
+          """)
+        cliente = db.execute(cabecalho_sql, {"tid": tabela_id}).scalar() or ""
+
         itens_sql = text("""
             SELECT
                 id_tabela,                               -- cabeçalho (retornamos como tabela_id)
@@ -51,9 +52,10 @@ async def pedido_preview(
                 descricao          AS nome,
                 embalagem          AS embalagem,
                 peso_liquido       AS peso,
+                plano_pagamento    AS plano_pagamento,    -- vem da própria tabela
                 valor_frete        AS valor_com_frete,   -- NOVA coluna (precisa existir no banco)
-                valor_s_frete      AS valor_sem_frete,   -- NOVA coluna (precisa existir no banco)
-                plano_pagamento    AS plano_pagamento    -- vem da própria tabela
+                valor_s_frete      AS valor_sem_frete   -- NOVA coluna (precisa existir no banco)
+                
             FROM tb_tabela_preco
             WHERE id_tabela = :tid AND ativo IS TRUE
             ORDER BY descricao
@@ -70,9 +72,7 @@ async def pedido_preview(
         if not rows:
             raise HTTPException(status_code=404, detail="Tabela sem itens ou não encontrada")
 
-        # 2) Condição de pagamento
-        #    Se vier no link, usa a do link. Caso contrário, usa a do primeiro item (todas devem estar consistentes).
-        cond_pg = condicao_pagamento or rows[0].get("plano_pagamento")
+        cond_pg = rows[0].get("plano_pagamento")  # (se quiser manter algo no cabeçalho, mas não vamos usá-lo)
 
         # 3) Validade: vem de /tabela_preco/meta/validade_global (chamado pelo front)
         
@@ -93,16 +93,17 @@ async def pedido_preview(
                 nome=nome,
                 embalagem=embalagem,
                 peso=peso,
+                condicao_pagamento=r.get("plano_pagamento"),
                 valor_sem_frete=round(v_sem, 2),
                 valor_com_frete=round(v_com, 2),
-                quantidade=0
+                quantidade=1
             ))
 
         return PedidoPreviewResp(
                tabela_id=tabela_id,
-               cnpj=cnpj,
-               razao_social=razao_social,
-               condicao_pagamento=cond_pg,
+               cnpj=cliente,               # usa o campo "cliente" do banco
+               razao_social=cliente,       # mesmo texto, como você pediu
+               condicao_pagamento=None,    # agora a condição é exibida por item
                validade=None,         # front chama /tabela_preco/meta/validade_global
                tempo_restante=None,
                usar_valor_com_frete=com_frete,
