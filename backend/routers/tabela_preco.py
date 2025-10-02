@@ -10,6 +10,8 @@ from utils.calc_validade_dia import dias_restantes, classificar_status, _as_date
 from fastapi.responses import JSONResponse
 from fastapi.encoders import jsonable_encoder
 from sqlalchemy.orm import Session
+from pydantic import BaseModel
+
 
 router_meta = APIRouter(prefix="/tabela_preco/meta", tags=["tabela_preco"])
 router      = APIRouter(prefix="/tabela_preco",       tags=["tabela_preco"])
@@ -393,3 +395,38 @@ def _as_frac(x: float | None) -> float:
         return 0.0
     # aceita 0–1 (fração) ou 0–100 (percentual)
     return x/100.0 if x > 1.0 else x
+
+
+router = APIRouter(prefix="/tabela_preco", tags=["Tabela de Preço"])
+@router.post("/{tabela_id}/confirmar_pedido")
+def confirmar_pedido(tabela_id: int, body: dict):
+    # TODO: criar o pedido de verdade, gravar no BD e disparar e-mail silencioso
+    usar_valor_com_frete = bool(body.get("usar_valor_com_frete"))
+    itens = body.get("produtos", [])
+    if not itens:
+        raise HTTPException(400, "Nenhum item informado")
+    # Devolva algo para a tela
+    return {"ok": True, "tabela_id": tabela_id, "itens": len(itens)}
+
+
+class ItemReq(BaseModel):
+    codigo: str
+    quantidade: int
+
+class ConfirmarPedidoReq(BaseModel):
+    usar_valor_com_frete: bool
+    produtos: List[ItemReq]
+
+@router.post("/{tabela_id}/confirmar_pedido")
+def confirmar_pedido(tabela_id: int, body: ConfirmarPedidoReq):
+    # TODO: criar o pedido no BD e disparar e-mail silencioso
+    if not body.produtos:
+        raise HTTPException(status_code=400, detail="Nenhum item informado")
+
+    # EXEMPLO de retorno mínimo esperado pelo front (ele só checa resp.ok):
+    return {
+        "ok": True,
+        "tabela_id": tabela_id,
+        "usar_valor_com_frete": body.usar_valor_com_frete,
+        "itens": len(body.produtos)
+    }

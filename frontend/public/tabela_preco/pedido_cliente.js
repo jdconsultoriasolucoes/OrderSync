@@ -125,7 +125,7 @@ async function carregarPedido() {
   try {
     const _qsNow = new URLSearchParams(location.search);
 
-    abelaIdParam = tabelaIdParam
+    tabelaIdParam = tabelaIdParam
     || _qsNow.get("tabela_id")
     || (typeof window.currentTabelaId !== "undefined" ? String(window.currentTabelaId) : null);
 
@@ -315,10 +315,17 @@ function assertShape(d) {
 
 
 function cancelarPedido() {
-  window.location.href = "/";
+  if (window.opener) {
+    window.close();
+  } else if (history.length > 1) {
+    history.back();
+  } else {
+    window.location.href = "/";
+ }
 }
 
 // -------------------- Bind de eventos e início --------------------
 if (btnConfirmar) btnConfirmar.addEventListener("click", confirmarPedido);
 if (btnCancelar)  btnCancelar.addEventListener("click", cancelarPedido);
 
+window.carregarPedido = carregarPedido;
