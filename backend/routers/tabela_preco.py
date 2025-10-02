@@ -361,7 +361,7 @@ def obter_tabela(id_tabela: int):
 
   
 
-@router_meta.get("/validade_global", response_model=ValidadeGlobalResp)
+@router_meta.get("/validade_global")
 def validade_global():
     try:
         with SessionLocal() as db:
@@ -379,13 +379,17 @@ def validade_global():
         s = classificar_status(d)
         v_br = v_date.strftime("%d/%m/%Y")
 
-        return ValidadeGlobalResp(
-            validade_tabela=v_date,
-            validade_tabela_br=v_br,
-            dias_restantes=d,
-            status_validade=s,
-            origem="max_ativos",
-        )
+        return {
+       # chaves que o front já usa:
+       "validade": v_br,
+       "tempo_restante": f"{d} dias",
+       # mantém também o formato “rico”, se você quiser reaproveitar noutros pontos:
+       "validade_tabela": v_date.isoformat(),
+       "validade_tabela_br": v_br,
+       "dias_restantes": d,
+       "status_validade": s,
+       "origem": "max_ativos",
+         }
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Erro ao calcular validade_global: {e}")
     
@@ -395,18 +399,6 @@ def _as_frac(x: float | None) -> float:
         return 0.0
     # aceita 0–1 (fração) ou 0–100 (percentual)
     return x/100.0 if x > 1.0 else x
-
-
-router = APIRouter(prefix="/tabela_preco", tags=["Tabela de Preço"])
-@router.post("/{tabela_id}/confirmar_pedido")
-def confirmar_pedido(tabela_id: int, body: dict):
-    # TODO: criar o pedido de verdade, gravar no BD e disparar e-mail silencioso
-    usar_valor_com_frete = bool(body.get("usar_valor_com_frete"))
-    itens = body.get("produtos", [])
-    if not itens:
-        raise HTTPException(400, "Nenhum item informado")
-    # Devolva algo para a tela
-    return {"ok": True, "tabela_id": tabela_id, "itens": len(itens)}
 
 
 class ItemReq(BaseModel):

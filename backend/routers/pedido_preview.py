@@ -74,8 +74,8 @@ async def pedido_preview(
         #    Se vier no link, usa a do link. Caso contrário, usa a do primeiro item (todas devem estar consistentes).
         cond_pg = condicao_pagamento or rows[0].get("plano_pagamento")
 
-        # 3) Validade: via endpoint validade_global
-        validade, tempo_restante = await _get_validade_global(tabela_id)
+        # 3) Validade: vem de /tabela_preco/meta/validade_global (chamado pelo front)
+        
 
         # 4) Montar lista de produtos no shape do front
         produtos: List[ProdutoPedidoPreview] = []
