@@ -43,9 +43,9 @@ async def pedido_preview(
           WHERE id_tabela = :tid
           LIMIT 1
           """)
-        cliente = db.execute(cabecalho_sql, {"tid": tabela_id}).scalar() or ""
+          cliente = db.execute(cabecalho_sql, {"tid": tabela_id}).scalar() or ""
 
-        itens_sql = text("""
+          itens_sql = text("""
             SELECT
                 id_tabela,                               -- cabeçalho (retornamos como tabela_id)
                 codigo_tabela      AS codigo_supra,      -- você pediu esse alias; vamos mapear para 'codigo' na resposta
@@ -61,7 +61,7 @@ async def pedido_preview(
             ORDER BY descricao
         """)
         try:
-            rows = db.execute(itens_sql, {"tid": tabela_id}).mappings().all()
+          rows = db.execute(itens_sql, {"tid": tabela_id}).mappings().all()
         except Exception as e:
             # Tipicamente vai cair aqui se as colunas novas ainda não existem.
             raise HTTPException(
