@@ -24,7 +24,6 @@ const comFreteFromCode = (typeof window.currentComFrete !== "undefined")
 const comFreteParam = comFreteFromCode ?? comFreteParamQS;
 
 // Dados opcionais vindos do link
-const cnpjParam      = url.searchParams.get("cnpj");
 const razaoParam     = url.searchParams.get("razao_social");
 const condPagtoParam = url.searchParams.get("cond_pagto");
 
@@ -46,11 +45,21 @@ const msgEl         = document.getElementById("mensagem");
 const btnConfirmar  = document.getElementById("btnConfirmar");
 const btnCancelar   = document.getElementById("btnCancelar");
 
+// Observação do cliente – contador de caracteres
+const taObs = document.getElementById('observacaoCliente');
+const obsCounter = document.getElementById('obsCounter');
+
 // -------------------- UI utils --------------------
 function setMensagem(texto, ok = false) {
   if (!msgEl) return;
   msgEl.textContent = texto;
   msgEl.style.color = ok ? "green" : "red";
+}
+
+function atualizarObsCounter() {
+  if (!taObs || !obsCounter) return;
+  const len = (taObs.value || "").length;
+  obsCounter.textContent = `${len}/244`;
 }
 
 function renderTabela() {
@@ -80,6 +89,8 @@ function renderTabela() {
       const pesoTotal = pesoUnit * qtdInicial;
       pesoCell.textContent = (Number.isFinite(pesoTotal) ? pesoTotal : 0).toLocaleString('pt-BR');
       }
+    
+   
   });
 
   // Listeners de quantidade
@@ -88,6 +99,7 @@ function renderTabela() {
     input.addEventListener("input", handler);
     input.addEventListener("change", handler);
   });
+  atualizarResumoFreteEPeso();
 }
 
 function onQtdChange(e) {
@@ -114,6 +126,7 @@ function onQtdChange(e) {
   }
 
   atualizarTotal();
+  atualizarResumoFreteEPeso();
 }
 
 function atualizarTotal() {
@@ -124,6 +137,42 @@ function atualizarTotal() {
   if (totalEl) totalEl.textContent = fmtBRL.format(total);
   if (btnConfirmar) btnConfirmar.disabled = total <= 0;
 }
+
+function atualizarResumoFreteEPeso() {
+  const tbody = document.querySelector('#tabelaProdutos tbody');
+  if (!tbody) return;
+
+  let pesoTotal = 0;
+  let freteTotal = 0;
+
+  // usa o mesmo array 'produtos' já usado para render (presente no seu JS)
+  const linhas = tbody.querySelectorAll('tr');
+  linhas.forEach((tr, idx) => {
+    // quantidade
+    const qtdInput = tr.querySelector('input.qtd');
+    const qtd = Math.max(0, Number(qtdInput?.value) || 0);
+
+    // peso unitário (guardado na célula .celula-peso como data-attribute)
+    const pesoUnit = Number(tr.querySelector('.celula-peso')?.dataset.pesoUnit || 0);
+    pesoTotal += pesoUnit * qtd;
+
+    // frete por item (diferença entre valores) — só soma quando estiver em "com frete"
+    if (window.usarValorComFrete === true) {
+      const valorCom = Number((produtos[idx]?.valor_com_frete) || 0);
+      const valorSem = Number((produtos[idx]?.valor_sem_frete) || 0);
+      const delta = Math.max(valorCom - valorSem, 0);
+      freteTotal += delta * qtd;
+    }
+  });
+
+  // escreve na tela
+  const elPeso = document.getElementById('totalPesoPedido');
+  const elFrete = document.getElementById('totalFretePedido');
+  if (elPeso) elPeso.textContent = (Number.isFinite(pesoTotal) ? pesoTotal : 0).toLocaleString('pt-BR');
+  if (elFrete) elFrete.textContent = window.usarValorComFrete === true ? fmtBRL.format(freteTotal) : fmtBRL.format(0);
+}
+
+
 
 function obterParametrosPedido() {
   const qs = new URLSearchParams(location.search);
@@ -160,7 +209,6 @@ async function carregarPedido() {
       const qs = new URLSearchParams({
         tabela_id: tabelaIdParam,
         com_frete: (_comFreteEfetivo === "1" || String(_comFreteEfetivo).toLowerCase() === "true") ? "true" : "false",
-        cnpj: cnpjParam || "",
         razao_social: razaoParam || "",
         condicao_pagamento: condPagtoParam || ""
       });
@@ -169,13 +217,13 @@ async function carregarPedido() {
       const dados = await r1.json();
 
       // Preencher cabeçalho (sem validade ainda)
-      setCampoTexto("cnpjCliente", dados.cnpj ?? "---");
       setCampoTexto("razaoSocialCliente", dados.razao_social ?? "---");
       setCampoTexto("condicaoPagamento", dados.condicao_pagamento ?? "---");
 
       // Usar c/ ou s/ frete decidido no link
       usarValorComFrete = Boolean(dados.usar_valor_com_frete);
       setCampoTexto("tituloValorFrete", usarValorComFrete ? "c/ Frete" : "s/ Frete");
+      window.usarValorComFrete = !!dados.usar_valor_com_frete;
 
       // Itens
       produtos = (dados.produtos || []).map(p => ({
@@ -185,6 +233,7 @@ async function carregarPedido() {
         quantidade: Number(p.quantidade) || 1
       }));
       renderTabela();
+      atualizarResumoFreteEPeso();
       atualizarTotal();
 
       // 1B) Validade global (busca direto no front)
@@ -213,7 +262,6 @@ async function carregarPedido() {
       if (!resp.ok) throw new Error(`Erro ${resp.status} ao carregar pedido`);
       const dados = await resp.json();
 
-      setCampoTexto("cnpjCliente", dados.cnpj ?? "---");
       setCampoTexto("razaoSocialCliente", dados.razao_social ?? "---");
       setCampoTexto("condicaoPagamento", dados.condicao_pagamento ?? "---");
       setCampoTexto("validadeTabela",   dados.validade ?? "---");
@@ -255,7 +303,7 @@ function setCampoTexto(id, valor) {
 // -------------------- Ações --------------------
 async function confirmarPedido() {
   try {
-    const itens = produtos.filter((p) => (Number(p.quantidade) || 0) > 0);
+    const itens = produtos;
     if (itens.length === 0) {
       setMensagem("Inclua pelo menos 1 item com quantidade > 0.", false);
       return;
@@ -269,7 +317,10 @@ async function confirmarPedido() {
       const resp = await fetch(API(`/tabela_preco/${encodeURIComponent(tabelaIdParam)}/confirmar_pedido`), {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ usar_valor_com_frete: usarValorComFrete, produtos: itens }),
+        body: JSON.stringify({usar_valor_com_frete: usarValorComFrete,
+        produtos: itens,
+        observacao: (document.getElementById('observacaoCliente')?.value || '').trim().slice(0, 244)
+      }),
       });
       if (resp.ok) {
         setMensagem("Pedido confirmado! O PDF será enviado para a empresa.", true);
@@ -285,7 +336,9 @@ async function confirmarPedido() {
       const resp = await fetch(API(`/pedido/${encodeURIComponent(pedidoId)}/confirmar`), {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ produtos: itens }),
+        body: JSON.stringify({
+        produtos: itens,
+        observacao: (document.getElementById('observacaoCliente')?.value || '').trim().slice(0, 244)}),
       });
       if (resp.ok) {
         setMensagem("Pedido confirmado! O PDF será enviado para a empresa.", true);
@@ -295,6 +348,21 @@ async function confirmarPedido() {
       }
       return;
     }
+
+     const observacao = (document.getElementById('observacaoCliente')?.value || '').trim();
+
+     // ... seu body existente
+     const body = {
+     usar_valor_com_frete: !!window.usarValorComFrete,
+     produtos: produtos.map(p => ({
+     codigo: p.codigo,
+     quantidade: Number(p.quantidade) || 0,
+     // (mantenha os campos que você já envia)
+     })),
+     // ✅ novo campo:
+     observacao: observacao.slice(0, 244)
+     };
+
 
     // Se chegou aqui, não tinha nem tabelaIdParam nem pedidoId
     setMensagem("Não foi possível confirmar: parâmetro ausente (tabela_id ou id).", false);
@@ -306,7 +374,19 @@ async function confirmarPedido() {
   }
 }
 
+    const observacao = (document.getElementById('observacaoCliente')?.value || '').trim();
 
+    // ... seu body existente
+    const body = {
+      usar_valor_com_frete: !!window.usarValorComFrete,
+      produtos: produtos.map(p => ({
+        codigo: p.codigo,
+        quantidade: Number(p.quantidade) || 0,
+        // (mantenha os campos que você já envia)
+      })),
+      // ✅ novo campo:
+      observacao: observacao.slice(0, 244)
+    };
 
 function assertShape(d) {
   const must = [
@@ -347,3 +427,8 @@ if (btnConfirmar) btnConfirmar.addEventListener("click", confirmarPedido);
 if (btnCancelar)  btnCancelar.addEventListener("click", cancelarPedido);
 
 window.carregarPedido = carregarPedido;
+
+if (taObs) {
+  taObs.addEventListener('input', atualizarObsCounter);
+  atualizarObsCounter(); // inicia contador
+}

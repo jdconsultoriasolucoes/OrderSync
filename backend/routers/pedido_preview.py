@@ -1,7 +1,7 @@
 # routers/pedido_preview.py
 from __future__ import annotations
 from fastapi import APIRouter, Query, HTTPException
-from pydantic import BaseModel
+from pydantic import BaseModel, constr
 from typing import Optional, List
 from sqlalchemy import text
 from database import SessionLocal  
@@ -21,7 +21,6 @@ class ProdutoPedidoPreview(BaseModel):
 
 class PedidoPreviewResp(BaseModel):
     tabela_id: int
-    cnpj: Optional[str] = None
     razao_social: Optional[str] = None
     condicao_pagamento: Optional[str] = None
     validade: Optional[str] = None
@@ -53,8 +52,8 @@ async def pedido_preview(
                 embalagem          AS embalagem,
                 peso_liquido       AS peso,
                 plano_pagamento    AS plano_pagamento,    -- vem da própria tabela
-                valor_frete        AS valor_com_frete,   -- NOVA coluna (precisa existir no banco)
-                valor_s_frete      AS valor_sem_frete   -- NOVA coluna (precisa existir no banco)
+                COALESCE(valor_com_frete, valor_frete, 0)   AS valor_com_frete,
+                COALESCE(valor_sem_frete, valor_s_frete, 0) AS valor_sem_frete
                 
             FROM tb_tabela_preco
             WHERE id_tabela = :tid AND ativo IS TRUE
@@ -101,7 +100,6 @@ async def pedido_preview(
 
         return PedidoPreviewResp(
                tabela_id=tabela_id,
-               cnpj=cliente,               # usa o campo "cliente" do banco
                razao_social=cliente,       # mesmo texto, como você pediu
                condicao_pagamento=None,    # agora a condição é exibida por item
                validade=None,         # front chama /tabela_preco/meta/validade_global
@@ -111,3 +109,30 @@ async def pedido_preview(
             )
 
 
+class ConfirmarItem(BaseModel):
+    codigo: str
+    quantidade: int
+    # adicione outros campos se necessários
+
+class ConfirmarPedidoRequest(BaseModel):
+    usar_valor_com_frete: Optional[bool] = None  # pode vir quando a origem é por tabela
+    produtos: List[ConfirmarItem]
+    observacao: Optional[constr(max_length=244)] = None
+
+@router.post("/{tabela_id}/confirmar")
+def confirmar_pedido(tabela_id: int, body: ConfirmarPedidoRequest):
+    if not body.produtos:
+        raise HTTPException(400, "Nenhum item informado")
+
+    observacao = (body.observacao or "").strip()
+
+    # TODO: criar cabeçalho em tb_pedido (id_cliente, tabela_id, usar_valor_com_frete, observacao, etc.)
+    # TODO: inserir itens em tb_pedido_item
+    # id_pedido = ...
+
+    return {
+      "ok": True,
+      "tabela_id": tabela_id,
+      "itens": len(body.produtos),
+      "observacao": observacao
+    }

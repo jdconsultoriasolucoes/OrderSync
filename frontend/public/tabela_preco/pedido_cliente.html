@@ -13,7 +13,7 @@
       </div>
       <div class="dados-header">
         <h1>Proposta Comercial</h1>
-        <p><strong>Cliente:</strong> <span id="cnpjCliente">---</span> - <span id="razaoSocialCliente">---</span></p>
+        <p><strong>Cliente:</strong> <span id="razaoSocialCliente">---</span></p>
         <p><strong>Validade:</strong> <span id="validadeTabela">---</span> (<span id="tempoRestante">---</span>)</p>
       </div>
     </header>
@@ -34,7 +34,21 @@
         </thead>
         <tbody></tbody>
       </table>
+      <section id="resumoPedido" class="resumo-pedido">
+        <div class="resumo-grid">
+          <div><strong>Peso total:</strong> <span id="totalPesoPedido">0</span> kg</div>
+          <div><strong>Frete no pedido:</strong> <span id="totalFretePedido">R$ 0,00</span></div>
+        </div>
+      </section>
+      <section id="observacoesPedido" class="observacoes-pedido">
+        <label for="observacaoCliente" class="observacoes-label">
+          <strong>Observações do pedido</strong> <small>(opcional)</small>
+        </label>
 
+        <textarea id="observacaoCliente" maxlength="244" rows="4" class="observacoes-textarea"></textarea>
+
+        <div id="obsCounter" class="observacoes-counter">0/244</div>
+      </section>
       <div class="total">
         <p><strong>Total:</strong> R$ <span id="totalGeral">0,00</span></p>
       </div>
