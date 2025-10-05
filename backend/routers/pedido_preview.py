@@ -52,8 +52,8 @@ async def pedido_preview(
                 embalagem          AS embalagem,
                 peso_liquido       AS peso,
                 plano_pagamento    AS plano_pagamento,    -- vem da própria tabela
-                COALESCE(valor_com_frete, valor_frete, 0)   AS valor_com_frete,
-                COALESCE(valor_sem_frete, valor_s_frete, 0) AS valor_sem_frete
+                COALESCE(valor_frete, 0)   AS valor_com_frete,
+                COALESCE(valor_s_frete, 0) AS valor_sem_frete
                 
             FROM tb_tabela_preco
             WHERE id_tabela = :tid AND ativo IS TRUE
