@@ -45,7 +45,8 @@ class TabelaPreco(BaseModel):
     @validator(
         "peso_liquido", "valor_produto", "comissao_aplicada", "ajuste_pagamento",
     "frete_kg", "ipi", "iva_st", "icms_st",
-          )
+          
+          check_fields=False,)
     def valida_positivos(cls, v, field):
         if v is None:
             return v
