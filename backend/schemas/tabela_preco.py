@@ -14,22 +14,21 @@ class TabelaPreco(BaseModel):
     cliente: str
     
     # Produto (chave e descrição)
-    codigo_tabela: str
-    descricao: str
+    codigo_produto_supra: str
+    descricao_produto: Optional[str]
     embalagem: Optional[str] = None
     grupo: Optional[str] = None
     departamento: Optional[str] = None
 
     # Valores básicos
     peso_liquido: Optional[float] = None
-    peso_bruto: Optional[float] = None
-    valor: float
+    valor_produto: float
     desconto: Optional[float] = 0.0
     acrescimo: Optional[float] = 0.0
-    fator_comissao: Optional[float] = None
-    plano_pagamento: Optional[str] = None
+    descricao_fator_comissao: Optional[str] = None
+    codigo_plano_pagamento: Optional[str] = None
     # Frete
-    frete_percentual: Optional[float] = None
+    valor_frete_aplicado: Optional[float] = None
     frete_kg: Optional[float] = None
 
     # Totais (podem vir prontos do front)
@@ -41,26 +40,26 @@ class TabelaPreco(BaseModel):
     ipi: Optional[float] = 0.0        
     iva_st: Optional[float] = 0.0       
 
-    icms_st: Optional[bool] = Field(False, exclude=True)
+    icms_st: Optional[float] = 0.0
     # --- Validadores ---
     @validator(
-        "peso_liquido","peso_bruto","valor","desconto","acrescimo",
-        "fator_comissao","frete_kg","ipi","iva_st"
-    )
+        "peso_liquido", "valor_produto", "comissao_aplicada", "ajuste_pagamento",
+    "frete_kg", "ipi", "iva_st", "icms_st",
+          )
     def valida_positivos(cls, v, field):
-        if v is not None and v < 0:
-            raise ValueError(f"{field.name} deve ser um valor positivo.")
+        if v is None:
+            return v
+        try:
+            val = float(v)
+        except (TypeError, ValueError):
+            raise ValueError(f"{field.name} deve ser numérico.")
+        if val < 0:
+            raise ValueError(f"{field.name} deve ser um valor não negativo.")
         return v
-
-    @validator("frete_percentual", "iva_st")
-    def valida_percentuais(cls, v, field):
-        if v is not None and not (0 <= v <= 100):
-            raise ValueError(f"{field.name} deve estar entre 0 e 100.")
-        return v
-
+   
     class Config:
-        orm_mode = True
-        anystr_strip_whitespace = True
+            orm_mode = True
+            anystr_strip_whitespace = True
 
 class ProdutoCalculo(BaseModel):
     codigo_tabela: str
@@ -101,31 +100,51 @@ class ValidadeGlobalResp(BaseModel):
 
 
 class ProdutoSalvar(BaseModel):
-    codigo_tabela: str
-    descricao: str
+    # RENOMES
+    codigo_produto_supra: str          # was: codigo_tabela
+    descricao_produto: str             # was: descricao
+    valor_produto: Optional[float]     # was: valor
+    codigo_plano_pagamento: Optional[str]  # was: plano_pagamento
+    valor_frete_aplicado: Optional[float]  # was: frete_percentual
+    descricao_fator_comissao: Optional[str]# was: fator_comissao
+
+    # JÁ EXISTENTES (mantém nomes atuais)
     embalagem: Optional[str] = None
     peso_liquido: Optional[float] = None
-    valor: Optional[float] = None
-    desconto: Optional[float] = 0.0
-    acrescimo: Optional[float] = 0.0
-    total_sem_frete: Optional[float] = 0.0
-    # colunas novas que você disse que já existem
+    comissao_aplicada: Optional[float] = 0.0
+    ajuste_pagamento: Optional[float] = 0.0
+    frete_kg: Optional[float] = None
+
+    # Totais (armazenar como vem)
     valor_frete: Optional[float] = None
     valor_s_frete: Optional[float] = None
-    plano_pagamento: Optional[str] = None
-    # campos que às vezes vêm
+
+    # Classificações e fiscais (armazenar como vem)
     grupo: Optional[str] = None
     departamento: Optional[str] = None
     ipi: Optional[float] = 0.0
+    icms_st: Optional[float] = 0.0
     iva_st: Optional[float] = 0.0
+
     class Config:
-        extra = 'ignore'
+        extra = "ignore"
 
 class TabelaSalvar(BaseModel):
+    # Cabeçalho (confirmar se já tinha; se não, adicionar)
+    id_tabela: Optional[int] = None
     nome_tabela: str
     cliente: str
     fornecedor: Optional[str] = None
-    ramo_juridico: Optional[str] = None
+
+    # NOVOS
+    codigo_cliente: Optional[str] = None
+    criacao_usuario: Optional[str] = None
+    alteracao_usuario: Optional[str] = None
+
+    # Se o frete/kg vier no header e você replicar nos itens
+    frete_kg: Optional[float] = None
+
     produtos: List[ProdutoSalvar]
+
     class Config:
-        extra = 'ignore'    
+        extra = "ignore"

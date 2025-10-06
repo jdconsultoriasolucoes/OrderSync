@@ -22,7 +22,6 @@ async function carregarTabelas() {
       <td>${tabela.nome_tabela}</td>
       <td>${tabela.cliente}</td>
       <td>${tabela.fornecedor}</td>
-      <td>${formatarData(tabela.validade_inicio)} → ${formatarData(tabela.validade_fim)}</td>
       <td>
           <button onclick="window.location.href='criacao_tabela_preco.html?id=${encodeURIComponent(tabela.id)}'">Editar</button>
           <button onclick="abrirModalDelecao(${tabela.id})">Excluir</button>

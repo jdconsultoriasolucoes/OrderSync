@@ -1,36 +1,52 @@
-from sqlalchemy import Column, Integer, String, Float, Boolean, Date, DateTime
+from sqlalchemy import Column, Integer, String, Float, Boolean, Date, DateTime, Text, Numeric, UniqueConstraint
 from database import Base
 from datetime import datetime
 
 class TabelaPreco(Base):
-    __tablename__ = 'tb_tabela_preco'  # Nome da tabela no banco
+    __tablename__ = "tb_tabela_preco"
+   
+    id_linha = Column(Integer, primary_key=True, autoincrement=True)
+    id_tabela = Column(Integer, nullable=False, index=True)
+    nome_tabela = Column(Text, nullable=False)
+    fornecedor = Column(Text, nullable=False)
+    codigo_cliente = Column(Text, nullable=True)
+    cliente = Column(Text, nullable=False)
 
-    id_tabela = Column(Integer, index=True, nullable=False)
-    id_linha = Column(Integer, primary_key=True, index=True)
-    nome_tabela = Column(String, nullable=False)
-    fornecedor = Column(String, nullable=False)
-    cliente = Column(String, nullable=False)
+    codigo_produto_supra = Column(Text, nullable=False)
+    descricao_produto = Column(Text, nullable=False)
+    embalagem = Column(Text, nullable=False)
 
-    codigo_tabela = Column(String, nullable=False)
-    descricao = Column(String, nullable=False)
-    embalagem = Column(String, nullable=True)
-    peso_liquido = Column(Float, nullable=True)
-    peso_bruto = Column(Float, nullable=True)
-    valor = Column(Float, nullable=False)
-    comissao_aplicada = Column(Float, default=0.0)
-    ajuste_pagamento  = Column(Float, default=0.0)
-    fator_comissao = Column(Float, nullable=True)
-    plano_pagamento = Column(String, nullable=True)
-    frete_percentual = Column(Float, nullable=True)
-    frete_kg = Column(Float, nullable=True)
-    grupo = Column(String, nullable=True)
-    departamento = Column(String, nullable=True)
-    ipi = Column(Float, default=0.0)
-    iva_st = Column(Float, default=0.0) 
-    valor_frete   = Column(Float, nullable=True)   
-    valor_s_frete = Column(Float, nullable=True)   
-    # Auditoria
-    ativo = Column(Boolean, default=True)
-    criado_em = Column(DateTime, default=datetime.utcnow)
-    editado_em = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    peso_liquido = Column(Numeric(9, 3), nullable=False)
+
+    valor_produto = Column(Numeric(14, 2), nullable=False)
+    comissao_aplicada = Column(Numeric(9, 4), nullable=False, default=0)
+    ajuste_pagamento = Column(Numeric(14, 2), nullable=False, default=0)
+    descricao_fator_comissao = Column(Text, nullable=False)
+    codigo_plano_pagamento = Column(Text, nullable=False)
+    valor_frete_aplicado = Column(Numeric(14, 2), nullable=False, default=0)  # R$
+    frete_kg = Column(Numeric(9, 3), nullable=False, default=0)
+
+    # valor_liquido: NÃO persistir (a pedido)
+
+    valor_frete = Column(Numeric(14, 2), nullable=False)
+    valor_s_frete = Column(Numeric(14, 2), nullable=False)
+
+    grupo = Column(Text, nullable=False)
+    departamento = Column(Text, nullable=False)
+
+    ipi = Column(Numeric(14, 2), nullable=False)      # R$
+    icms_st = Column(Numeric(14, 2), nullable=False)  # R$
+    iva_st = Column(Numeric(14, 2), nullable=False)   # R$
+
+    ativo = Column(Boolean, nullable=False, default=True)
+
+    criado_em = Column(DateTime, nullable=True)
+    editado_em = Column(DateTime, nullable=True)
     deletado_em = Column(DateTime, nullable=True)
+
+    criacao_usuario = Column(Text, nullable=True)
+    alteracao_usuario = Column(Text, nullable=True)
+
+    __table_args__ = (
+        UniqueConstraint("id_tabela", "codigo_produto_supra", name="uq_tabela_produto"),
+    )

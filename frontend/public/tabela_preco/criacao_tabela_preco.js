@@ -640,18 +640,50 @@ async function carregarItens() {
       // >>> NOVO: preencher frete/condição (se existirem) e inferir do item[0] se faltar
       const first = (Array.isArray(t.produtos) && t.produtos.length) ? t.produtos[0] : null;
       const freteInput = document.getElementById('frete_kg');
-      const planoSel   = document.getElementById('plano_pagamento');
+      const planoSel = document.getElementById('plano_pagamento');
+      if (planoSel) {
+        const planoVal = t.codigo_plano_pagamento ?? first?.codigo_plano_pagamento ?? '';
+        if (planoVal) {
+          const opt = Array.from(planoSel.options)
+            .find(o => (o.textContent || '').trim() === String(planoVal).trim() || o.value === String(planoVal));
+          if (opt) planoSel.value = opt.value;
+        } else {
+          planoSel.value = '';
+        }
+      }
 
       if (freteInput) {
-        const freteVal = t.frete_kg ?? first?.frete_kg ?? 0;
-        freteInput.value = String(freteVal || 0);
+        const freteVal = first?.frete_kg ?? 0;
+        freteInput.value = String(freteVal);
       }
-      if (planoSel) {
-        const planoVal = t.plano_pagamento ?? first?.plano_pagamento ?? '';
-        planoSel.value = planoVal || '';
-      }
+      
+     itens = (t.produtos || []).map(p => ({
+      // chaves que a grade espera:
+      codigo_tabela:      p.codigo_produto_supra ?? p.codigo_tabela ?? '',
+      descricao:          p.descricao_produto    ?? p.descricao     ?? '',
+      embalagem:          p.embalagem            ?? '',
+      peso_liquido:       Number(p.peso_liquido ?? 0),
+      valor:              Number(p.valor_produto ?? p.valor ?? 0),
 
-     itens = (t.produtos || []).map(p => ({...p, ipi: Number(p.ipi ?? 0), iva_st: Number(p.iva_st ?? p.st ?? 0) }));
+      // comerciais/fiscais
+      desconto:           Number(p.comissao_aplicada ?? 0),      // mantém em R$ pra exibir
+      acrescimo:          Number(p.ajuste_pagamento  ?? 0),      // mantém em R$ pra exibir
+      plano_pagamento:    p.codigo_plano_pagamento   ?? p.plano_pagamento ?? null,
+      frete_kg:           Number(p.frete_kg ?? 0),
+      ipi:                Number(p.ipi     ?? 0),
+      icms_st:            Number(p.icms_st ?? 0),
+      iva_st:             Number(p.iva_st  ?? 0),
+      grupo:              p.grupo ?? null,
+      departamento:       p.departamento ?? null,
+
+      // totais que você já exibe na tela
+      total_sem_frete:    Number(p.valor_s_frete ?? p.total_sem_frete ?? 0),
+
+      // guarda para reaproveitar na hora do POST
+      __descricao_fator_label:    p.descricao_fator_comissao || null,
+      __plano_pagto_label:        p.codigo_plano_pagamento   || null, // já vem "COD - desc" às vezes
+      fornecedor: t.fornecedor || ''
+      }));
       
      itens = itens.map(p => ({...p,peso_liquido: Number(p.peso_liquido ?? p.peso ??  p.peso_kg ?? p.pesoLiquido ??  0 ),
                                  tipo: p.tipo ?? p.grupo ?? p.departamento ?? null
@@ -1073,25 +1105,49 @@ async function salvarTabela() {
     const taxaCondLinha = mapaCondicoes[codCond] || 0;
     const { acrescimoCond, freteValor, descontoValor } =
       calcularLinha(item, fator, taxaCondLinha, frete_kg, ivaStAtivo);
+    
+      const fatorSel   = tr.querySelector('td:nth-child(8) select');
+    const fatorLabel = fatorSel ? (fatorSel.options[fatorSel.selectedIndex]?.textContent || '').trim() : '';
+
+    const condSel     = tr.querySelector('td:nth-child(10) select');
+    const condCode    = condSel ? (condSel.value || '') : '';
+    const condLabel   = condSel ? (condSel.options[condSel.selectedIndex]?.textContent || '').trim() : '';
 
     return {
-      nome_tabela, cliente, fornecedor: item.fornecedor || '',
-      codigo_tabela: item.codigo_tabela, descricao: item.descricao, embalagem: item.embalagem,
-      peso_liquido: Number(item.peso_liquido ?? item.peso ?? item.peso_kg ?? item.pesoLiquido ?? item.peso_bruto ?? 0),
-      valor: item.valor || 0,
-      desconto: Number(descontoValor.toFixed(4)),
-      acrescimo: Number((acrescimoCond + freteValor).toFixed(4)),
-      total_sem_frete: Number(((item.total_sem_frete || 0)).toFixed(4)),
-      fator_comissao: fator || 0,
-      plano_pagamento: codCond || null,
-      frete_kg,
-      frete_percentual: null,
-      grupo: item.grupo || null, departamento: item.departamento || null,
-      ipi: item.ipi || 0,
-      iva_st: ivaStAtivo ? (item.iva_st || 0) : 0
-    };
+      nome_tabela,
+  cliente,
+  fornecedor: item.fornecedor || '',
+
+  // produto (novos)
+  codigo_produto_supra: item.codigo_tabela,
+  descricao_produto:    item.descricao,
+  embalagem:            item.embalagem || '',
+  peso_liquido:         Number(item.peso_liquido ?? 0),
+
+  // valores (novos)
+  valor_produto:            Number(item.valor || 0),
+  comissao_aplicada:        Number(descontoValor.toFixed(2)), 
+  ajuste_pagamento:         Number(acrescimoCond.toFixed(2)), 
+  descricao_fator_comissao: fatorLabel,                       
+  codigo_plano_pagamento:   condLabel || condCode,            
+
+  valor_frete_aplicado:     Number(freteValor.toFixed(2)),    
+  frete_kg:                 Number(frete_kg || 0),
+
+  // totais (novos)
+  valor_frete:    Number((item._totalComercial || 0).toFixed(2)), 
+  valor_s_frete:  Number(((item.total_sem_frete || 0)).toFixed(2)),
+
+  // classificação / fiscais
+  grupo:        item.grupo || null,
+  departamento: item.departamento || null,
+  ipi:          Number(item.ipi     || 0),
+  icms_st:      Number(item.icms_st || 0),
+  iva_st:       Number(item.iva_st  || 0)
+};
   });
   const fornecedorHeader = inferirFornecedorDaGrade();
+  const codigo_cliente = (document.getElementById('cliente_codigo')?.value || '').trim() || null;
   const payload = { nome_tabela, cliente, ramo_juridico, fornecedor: fornecedorHeader, produtos };
   try {
     const resp = await salvarTabelaPreco(payload);

@@ -130,22 +130,18 @@ def salvar_tabela_preco(body: TabelaSalvar):  # <- sem Depends
 
         insert_sql = text("""
             INSERT INTO tb_tabela_preco (
-              id_tabela, nome_tabela, fornecedor, cliente,
-              codigo_tabela, descricao, embalagem, peso_liquido, peso_bruto, valor,
-              comissao_aplicada, ajuste_pagamento, fator_comissao, plano_pagamento,
-              frete_percentual, frete_kg,
-              valor_liquido, valor_frete, valor_s_frete,
-              grupo, departamento,
-              ipi, iva_st
+              id_tabela, nome_tabela, fornecedor, codigo_cliente, cliente, 
+              codigo_produto_supra, descricao_produto, embalagem, peso_liquido, valor_produto, 
+              comissao_aplicada, ajuste_pagamento, descricao_fator_comissao, codigo_plano_pagamento,
+              valor_frete_aplicado, frete_kg,  valor_frete, valor_s_frete, grupo, departamento, 
+              ipi, icms_st, iva_st
             )
             VALUES (
-              :id_tabela, :nome_tabela, :fornecedor, :cliente,
-              :codigo_tabela, :descricao, :embalagem, :peso_liquido, :peso_bruto, :valor,
-              :comissao_aplicada, :ajuste_pagamento, :fator_comissao, :plano_pagamento,
-              :frete_percentual, :frete_kg,
-              :valor_liquido, :valor_frete, :valor_s_frete,
-              :grupo, :departamento,
-              :ipi, :iva_st
+              :id_tabela, :nome_tabela, :fornecedor, :codigo_cliente, :cliente, 
+              :codigo_produto_supra, :descricao_produto, :embalagem, :peso_liquido, :valor_produto, 
+              :comissao_aplicada, :ajuste_pagamento, :descricao_fator_comissao, :codigo_plano_pagamento,
+              :valor_frete_aplicado, :frete_kg, :valor_frete, :valor_s_frete, :grupo, :departamento, 
+              :ipi, :icms_st, :iva_st
             )
             RETURNING id_linha
         """)
@@ -155,31 +151,33 @@ def salvar_tabela_preco(body: TabelaSalvar):  # <- sem Depends
                 "id_tabela": int(id_tabela),
                 "nome_tabela": body.nome_tabela,
                 "fornecedor": body.fornecedor,
+                "codigo_cliente": body.codigo_cliente,
                 "cliente": body.cliente,
 
-                "codigo_tabela": produto.codigo_tabela,
-                "descricao": produto.descricao,
-                "embalagem": getattr(produto, "embalagem", None),
-                "peso_liquido": getattr(produto, "peso_liquido", None),
-                "peso_bruto": getattr(produto, "peso_bruto", None),
-                "valor": produto.valor,
+                "codigo_produto_supra": produto.codigo_produto_supra,
+                "descricao_produto": produto.descricao_produto,
+                "embalagem": getattr(produto, "embalagem", "") or "",
+                "peso_liquido": getattr(produto, "peso_liquido", 0) or 0,
+
+                "valor_produto": produto.valor_produto,
 
                 "comissao_aplicada": getattr(produto, "comissao_aplicada", 0.0) or 0.0,
                 "ajuste_pagamento": getattr(produto, "ajuste_pagamento", 0.0) or 0.0,
-                "fator_comissao": getattr(produto, "fator_comissao", None),
-                "plano_pagamento": getattr(produto, "plano_pagamento", None),
-                "frete_percentual": getattr(produto, "frete_percentual", None),
-                "frete_kg": getattr(produto, "frete_kg", None),
+                "descricao_fator_comissao": getattr(produto, "descricao_fator_comissao", "") or "",
+                "codigo_plano_pagamento": getattr(produto, "codigo_plano_pagamento", "") or "",
 
-                "valor_liquido": getattr(produto, "valor_liquido", None),
-                "valor_frete": getattr(produto, "valor_frete", None),         # <- garante salvar
-                "valor_s_frete": getattr(produto, "valor_s_frete", None),     # <- garante salvar
+                "valor_frete_aplicado": getattr(produto, "valor_frete_aplicado", 0.0) or 0.0,
+                "frete_kg": getattr(produto, "frete_kg", 0.0) or 0.0,
 
-                "grupo": getattr(produto, "grupo", None),
-                "departamento": getattr(produto, "departamento", None),
+                "valor_frete": getattr(produto, "valor_frete", 0.0) or 0.0,
+                "valor_s_frete": getattr(produto, "valor_s_frete", 0.0) or 0.0,
 
-                "ipi": getattr(produto, "ipi", None),
-                "iva_st": getattr(produto, "iva_st", None),
+                "grupo": getattr(produto, "grupo", "") or "",
+                "departamento": getattr(produto, "departamento", "") or "",
+
+                "ipi": getattr(produto, "ipi", 0.0) or 0.0,
+                "icms_st": getattr(produto, "icms_st", 0.0) or 0.0,
+                "iva_st": getattr(produto, "iva_st", 0.0) or 0.0,
             }
             db.execute(insert_sql, params)
             inseridos += 1
@@ -220,17 +218,15 @@ def editar_produto(id_linha: int, novo_produto: TabelaPreco):
 
     # Campos do modelo que podem ser atualizados
     permitidos = {
-        "nome_tabela","fornecedor","cliente",
-        "codigo_tabela","descricao","embalagem","peso_liquido","peso_bruto","valor",
-        "fator_comissao","plano_pagamento","frete_percentual","frete_kg",
-        "grupo","departamento","ipi","iva_st",
-        "valor_frete","valor_s_frete",
+        "codigo_produto_supra","descricao_produto","embalagem","peso_liquido","valor_produto","comissao_aplicada","codigo_plano_pagamento",
+        "valor_frete_aplicado","frete_kg","grupo","departamento","ipi","iva_st","valor_frete","valor_s_frete",
+        "icms_st","ajuste_pagamento","descricao_fator_comissao",
             }
 
     for campo, valor in list(dados.items()):
         if campo in permitidos:
             setattr(produto, campo, valor)
-        # ignora silenciosamente o resto (ex.: icms_st, valor_liquido, validade_tabela, etc.)
+        # ignora silenciosamente o resto (ex.: icms_st, validade_tabela, etc.)
 
     db.commit()
     return {"mensagem": "Produto atualizado com sucesso"}
@@ -296,7 +292,7 @@ def busca_cliente(
         base_sql = """
             SELECT
               codigo,
-              cnpj_cpf_faturamento AS cnpj_cpf,
+              cnpj_cpf_faturamento_formatted AS cnpj_cpf,
               nome_empresarial     AS nome_cliente,
               ramo_juridico
             FROM public.t_cadastro_cliente
@@ -337,23 +333,24 @@ def obter_tabela(id_tabela: int):
             "fornecedor": cab.fornecedor,
             "produtos": [
                 {
-                    "codigo_tabela": p.codigo_tabela,
-                    "descricao": p.descricao,
-                    "embalagem": p.embalagem,
-                    "peso_liquido": p.peso_liquido,
-                    "valor": p.valor,
-                    "desconto": p.comissao_aplicada,
-                    "acrescimo": p.ajuste_pagamento,
-                    "fator_comissao": p.fator_comissao,
-                    "plano_pagamento": p.plano_pagamento,
-                    "frete_percentual": p.frete_percentual,
-                    "frete_kg": p.frete_kg,
-                    "grupo": p.grupo,
-                    "departamento": p.departamento,
-                    "ipi": p.ipi,
-                    "iva_st": p.iva_st,
-                    "valor_frete": p.valor_frete,       
-                    "valor_s_frete": p.valor_s_frete,
+                "codigo_produto_supra": p.codigo_produto_supra,     
+                "descricao_produto": p.descricao_produto,           
+                "embalagem": p.embalagem,
+                "peso_liquido": p.peso_liquido,
+                "valor_produto": p.valor_produto,                   
+                "comissao_aplicada": p.comissao_aplicada,           
+                "ajuste_pagamento": p.ajuste_pagamento,             
+                "descricao_fator_comissao": p.descricao_fator_comissao, 
+                "codigo_plano_pagamento": p.codigo_plano_pagamento, 
+                "valor_frete_aplicado": p.valor_frete_aplicado,     
+                "frete_kg": p.frete_kg,
+                "grupo": p.grupo,
+                "departamento": p.departamento,
+                "ipi": p.ipi,
+                "iva_st": p.iva_st,
+                "icms_st": p.icms_st,
+                "valor_frete": p.valor_frete,
+                "valor_s_frete": p.valor_s_frete,
                 } for p in itens
             ]
         }
@@ -393,13 +390,6 @@ def validade_global():
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Erro ao calcular validade_global: {e}")
     
-
-def _as_frac(x: float | None) -> float:
-    if not x: 
-        return 0.0
-    # aceita 0–1 (fração) ou 0–100 (percentual)
-    return x/100.0 if x > 1.0 else x
-
 
 class ItemReq(BaseModel):
     codigo: str
