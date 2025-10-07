@@ -966,8 +966,11 @@ async function recalcLinha(tr) {
     built.payload.frete_linha = freteValor;  // já calculado acima
 
     const f = await previewFiscalLinha(built.payload);
-   
-    if (tr.dataset.reqId !== myId) return;
+   item.ipi     = Number((f.ipi          ?? 0).toFixed(2));
+   item.iva_st  = Number((f.base_st      ?? 0).toFixed(2));
+   item.icms_st = Number((f.icms_proprio ?? 0).toFixed(2));
+    
+   if (tr.dataset.reqId !== myId) return;
    
     const setCell = (sel, val) => {
       const el = tr.querySelector(sel);
