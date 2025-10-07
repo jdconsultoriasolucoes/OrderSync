@@ -47,17 +47,17 @@ async def pedido_preview(
           itens_sql = text("""
             SELECT
                 id_tabela,                               -- cabeçalho (retornamos como tabela_id)
-                codigo_tabela      AS codigo_supra,      -- você pediu esse alias; vamos mapear para 'codigo' na resposta
-                descricao          AS nome,
+                codigo_supra      AS codigo_supra,      -- você pediu esse alias; vamos mapear para 'codigo' na resposta
+                descricao_produto          AS nome,
                 embalagem          AS embalagem,
                 peso_liquido       AS peso,
-                plano_pagamento    AS plano_pagamento,    -- vem da própria tabela
+                codigo_plano_pagamento    AS plano_pagamento,    -- vem da própria tabela
                 COALESCE(valor_frete, 0)   AS valor_com_frete,
                 COALESCE(valor_s_frete, 0) AS valor_sem_frete
                 
             FROM tb_tabela_preco
             WHERE id_tabela = :tid AND ativo IS TRUE
-            ORDER BY descricao
+            ORDER BY descricao_produto
         """)
         try:
           rows = db.execute(itens_sql, {"tid": tabela_id}).mappings().all()
@@ -71,7 +71,7 @@ async def pedido_preview(
         if not rows:
             raise HTTPException(status_code=404, detail="Tabela sem itens ou não encontrada")
 
-        cond_pg = rows[0].get("plano_pagamento")  # (se quiser manter algo no cabeçalho, mas não vamos usá-lo)
+        cond_pg = rows[0].get("codigo_plano_pagamento")  # (se quiser manter algo no cabeçalho, mas não vamos usá-lo)
 
         # 3) Validade: vem de /tabela_preco/meta/validade_global (chamado pelo front)
         
