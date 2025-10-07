@@ -47,7 +47,7 @@ async def pedido_preview(
           itens_sql = text("""
             SELECT
                 id_tabela,                               -- cabeçalho (retornamos como tabela_id)
-                codigo_supra      AS codigo_supra,      -- você pediu esse alias; vamos mapear para 'codigo' na resposta
+                codigo_produto_supra      AS codigo_supra,      -- você pediu esse alias; vamos mapear para 'codigo' na resposta
                 descricao_produto          AS nome,
                 embalagem          AS embalagem,
                 peso_liquido       AS peso,
