@@ -57,7 +57,7 @@ function getHeaderSnapshot() {
     nome_tabela:     val("nome_tabela"),
     cliente:         val("cliente_nome"),   // texto mostrado no input
     // ocultos/importantes
-    cliente_codigo:  val("cliente_codigo"),
+    codigo_cliente:  val("codigo_cliente"),
     ramo_juridico:   val("ramo_juridico"),
     
     // toggles/parametrizações
@@ -93,7 +93,7 @@ function restoreHeaderSnapshotIfNew() {
     // ---- Cabeçalho básico
     set('nome_tabela',     snap.nome_tabela);
     set('cliente_nome',    snap.cliente);
-    set('cliente_codigo',  snap.cliente_codigo);
+    set('codigo_cliente',  snap.codigo_cliente);
     set('ramo_juridico',   snap.ramo_juridico);
     set('frete_kg',        snap.frete_kg);
 
@@ -398,7 +398,7 @@ function setupClienteAutocomplete(){
   const c = items[i]; if (!c) return;
 
   const nomeEl = document.getElementById('cliente_nome');
-  const codEl  = document.getElementById('cliente_codigo');
+  const codEl  = document.getElementById('codigo_cliente');
   const ramoEl = document.getElementById('ramo_juridico');
   const ivaChk = document.getElementById('iva_st_toggle');
   if (ivaChk) { ivaChk.checked = false; ivaChk.disabled = true; window.ivaStAtivo = false; }
@@ -516,7 +516,7 @@ const mapped = (data || []).map(c => ({
 // PATCH: bloqueio/controle do IVA_ST conforme cliente (livre x cadastrado)
 function enforceIvaLockByCliente(){
   const ivaChk  = document.getElementById('iva_st_toggle');
-  const codigo  = (document.getElementById('cliente_codigo')?.value || '').trim();
+  const codigo  = (document.getElementById('codigo_cliente')?.value || '').trim();
   if (!ivaChk) return;
 
   if (codigo){                         // cliente cadastrado
@@ -634,7 +634,7 @@ async function carregarItens() {
       const t = await r.json();
       document.getElementById('nome_tabela').value = t.nome_tabela || '';
       document.getElementById('cliente_nome').value = t.cliente_nome || t.cliente || '';
-      document.getElementById('cliente_codigo').value = t.cliente_codigo || '';
+      document.getElementById('codigo_cliente').value = t.codigo_cliente || '';
       document.getElementById('ramo_juridico').value = t.ramo_juridico || '';
 
       // >>> NOVO: preencher frete/condição (se existirem) e inferir do item[0] se faltar
@@ -842,7 +842,7 @@ tdPercent.appendChild(selPercent);
 
 async function recalcularLinhaComFiscal(item, clienteCodigo, forcarST, frete_linha) {
   const payload = {
-    cliente_codigo: clienteCodigo ?? null,
+    codigo_cliente: clienteCodigo ?? null,
     forcar_iva_st: !!forcarST,
     produto_id: item.codigo_tabela,
     tipo: (item.tipo || "").toLowerCase(),
@@ -878,7 +878,7 @@ function buildFiscalInputsFromRow(tr) {
 
   // DOM: frete global e toggles
   const freteKg       = Number(document.getElementById('frete_kg')?.value || 0); // R$/kg
-  const clienteCodigo = (document.getElementById('cliente_codigo')?.value || '').trim() || null;
+  const clienteCodigo = (document.getElementById('codigo_cliente')?.value || '').trim() || null;
   const ramoJuridico  = (document.getElementById('ramo_juridico')?.value || '').trim() || null;
   const forcarST      = !!document.getElementById('iva_st_toggle')?.checked;
 
@@ -899,7 +899,7 @@ function buildFiscalInputsFromRow(tr) {
   const frete_linha = Number(freteKg || 0) * Number(peso_kg || 0); 
 
   const payload = {
-  cliente_codigo: clienteCodigo,
+  codigo_cliente: clienteCodigo,
   forcar_iva_st: forcarST,
   produto_id: produtoId,
   ramo_juridico: ramoJuridico,
@@ -1150,8 +1150,8 @@ async function salvarTabela() {
 };
   });
   const fornecedorHeader = inferirFornecedorDaGrade();
-  const codigo_cliente = (document.getElementById('cliente_codigo')?.value || '').trim() || null;
-  const payload = { nome_tabela, cliente, ramo_juridico, fornecedor: fornecedorHeader, produtos };
+  const codigo_cliente = (document.getElementById('codigo_cliente')?.value || '').trim() || null;
+  const payload = {nome_tabela, cliente, codigo_cliente: (codigo_cliente || "Não cadastrado"), ramo_juridico,fornecedor: fornecedorHeader, produtos};
   try {
     const resp = await salvarTabelaPreco(payload);
     return resp;                                     // <<<<<< FUNDAMENTAL
@@ -1189,7 +1189,7 @@ function limparFormularioCabecalho() {
   // Campos principais
   document.getElementById('nome_tabela').value = '';
   document.getElementById('cliente_nome').value = '';
-  document.getElementById('cliente_codigo').value = '';
+  document.getElementById('codigo_cliente').value = '';
 
   // Parâmetros globais
   const frete = document.getElementById('frete_kg');
@@ -1277,7 +1277,7 @@ async function onCancelar(e) {
           // repõe cabeçalho
           document.getElementById('nome_tabela').value     = t.nome_tabela || '';
           document.getElementById('cliente_nome').value = t.cliente_nome || t.cliente || '';
-          document.getElementById('cliente_codigo').value = t.cliente_codigo || '';
+          document.getElementById('codigo_cliente').value = t.codigo_cliente || '';
           
           // repõe itens e re-renderiza grade
           itens = Array.isArray(t.produtos) ? t.produtos.map(p => ({ ...p })) : [];
@@ -1542,7 +1542,7 @@ document.addEventListener('DOMContentLoaded', () => {
        
    // —— quando o usuário editar manualmente o NOME do cliente ——
    const inpNome   = document.getElementById('cliente_nome');
-   const hidCodigo = document.getElementById('cliente_codigo');
+   const hidCodigo = document.getElementById('codigo_cliente');
    const hidRamo   = document.getElementById('ramo_juridico');
 
    inpNome?.addEventListener('input', () => {
