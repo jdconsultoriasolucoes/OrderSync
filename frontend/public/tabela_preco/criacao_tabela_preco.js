@@ -840,9 +840,9 @@ tdPercent.appendChild(selPercent);
   return tr;
 }
 
-async function recalcularLinhaComFiscal(item, clienteCodigo, forcarST, frete_linha) {
+async function recalcularLinhaComFiscal(item, codigo_cliente, forcarST, frete_linha) {
   const payload = {
-    codigo_cliente: clienteCodigo ?? null,
+    codigo_cliente: codigo_cliente ?? null,
     forcar_iva_st: !!forcarST,
     produto_id: item.codigo_tabela,
     tipo: (item.tipo || "").toLowerCase(),
@@ -878,7 +878,7 @@ function buildFiscalInputsFromRow(tr) {
 
   // DOM: frete global e toggles
   const freteKg       = Number(document.getElementById('frete_kg')?.value || 0); // R$/kg
-  const clienteCodigo = (document.getElementById('codigo_cliente')?.value || '').trim() || null;
+  const codigo_cliente = (document.getElementById('codigo_cliente')?.value || '').trim() || null;
   const ramoJuridico  = (document.getElementById('ramo_juridico')?.value || '').trim() || null;
   const forcarST      = !!document.getElementById('iva_st_toggle')?.checked;
 
@@ -899,7 +899,7 @@ function buildFiscalInputsFromRow(tr) {
   const frete_linha = Number(freteKg || 0) * Number(peso_kg || 0); 
 
   const payload = {
-  codigo_cliente: clienteCodigo,
+  codigo_cliente: codigo_cliente,
   forcar_iva_st: forcarST,
   produto_id: produtoId,
   ramo_juridico: ramoJuridico,
