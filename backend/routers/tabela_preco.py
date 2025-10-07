@@ -11,7 +11,8 @@ from fastapi.responses import JSONResponse
 from fastapi.encoders import jsonable_encoder
 from sqlalchemy.orm import Session
 from pydantic import BaseModel
-
+import logging
+logger = logging.getLogger("tabela_preco")
 
 router_meta = APIRouter(prefix="/tabela_preco/meta", tags=["tabela_preco"])
 router      = APIRouter(prefix="/tabela_preco",       tags=["tabela_preco"])
@@ -145,13 +146,14 @@ def salvar_tabela_preco(body: TabelaSalvar):  # <- sem Depends
             )
             RETURNING id_linha
         """)
-
+        logger.info("[/salvar] header: id=%s nome=%s cliente=%s fornecedor=%s codigo_cliente=%s",
+                    id_tabela, body.nome_tabela, body.cliente, body.fornecedor, getattr(body, "codigo_cliente", None))
         for produto in body.produtos:
             params = {
                 "id_tabela": int(id_tabela),
                 "nome_tabela": body.nome_tabela,
-                "fornecedor": body.fornecedor,
-                "codigo_cliente": body.codigo_cliente,
+                "fornecedor": body.fornecedor or "",
+                "codigo_cliente": getattr(body, "codigo_cliente", None),
                 "cliente": body.cliente,
 
                 "codigo_produto_supra": produto.codigo_produto_supra,
@@ -191,6 +193,7 @@ def salvar_tabela_preco(body: TabelaSalvar):  # <- sem Depends
 
     except Exception:
         db.rollback()
+        logger.exception("Falha no /salvar: %s", e)
         raise
     finally:
         db.close()
