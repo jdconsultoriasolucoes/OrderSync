@@ -12,6 +12,8 @@ from fastapi.encoders import jsonable_encoder
 from sqlalchemy.orm import Session
 from pydantic import BaseModel
 import logging
+from sqlalchemy.exc import SQLAlchemyError
+
 logger = logging.getLogger("tabela_preco")
 
 router_meta = APIRouter(prefix="/tabela_preco/meta", tags=["tabela_preco"])
@@ -122,79 +124,88 @@ def filtro_grupo_produto():
         db.close()
 
 @router.post("/salvar")
-def salvar_tabela_preco(body: TabelaSalvar):  # <- sem Depends
+def salvar_tabela_preco(body: TabelaSalvar):
     db: Session = SessionLocal()
     try:
-        # 1) gera o id
-        id_tabela = db.execute(text("SELECT nextval('seq_tabela_preco_id_tabela')")).scalar()
-        inseridos = 0
+        # 1) Gera id_tabela com fallback
+        try:
+            id_tabela = db.execute(text("SELECT nextval('seq_tabela_preco_id_tabela')")).scalar()
+        except Exception:
+            logger.warning("seq_tabela_preco_id_tabela ausente; usando MAX+1")
+            id_tabela = db.execute(text("SELECT COALESCE(MAX(id_tabela),0)+1 FROM tb_tabela_preco")).scalar()
 
         insert_sql = text("""
             INSERT INTO tb_tabela_preco (
-              id_tabela, nome_tabela, fornecedor, codigo_cliente, cliente, 
-              codigo_produto_supra, descricao_produto, embalagem, peso_liquido, valor_produto, 
+              id_tabela, nome_tabela, fornecedor, codigo_cliente, cliente,
+              codigo_produto_supra, descricao_produto, embalagem, peso_liquido, valor_produto,
               comissao_aplicada, ajuste_pagamento, descricao_fator_comissao, codigo_plano_pagamento,
-              valor_frete_aplicado, frete_kg,  valor_frete, valor_s_frete, grupo, departamento, 
+              valor_frete_aplicado, frete_kg, valor_frete, valor_s_frete, grupo, departamento,
               ipi, icms_st, iva_st
-            )
-            VALUES (
-              :id_tabela, :nome_tabela, :fornecedor, :codigo_cliente, :cliente, 
-              :codigo_produto_supra, :descricao_produto, :embalagem, :peso_liquido, :valor_produto, 
+            ) VALUES (
+              :id_tabela, :nome_tabela, :fornecedor, :codigo_cliente, :cliente,
+              :codigo_produto_supra, :descricao_produto, :embalagem, :peso_liquido, :valor_produto,
               :comissao_aplicada, :ajuste_pagamento, :descricao_fator_comissao, :codigo_plano_pagamento,
-              :valor_frete_aplicado, :frete_kg, :valor_frete, :valor_s_frete, :grupo, :departamento, 
+              :valor_frete_aplicado, :frete_kg, :valor_frete, :valor_s_frete, :grupo, :departamento,
               :ipi, :icms_st, :iva_st
             )
             RETURNING id_linha
         """)
-        logger.info("[/salvar] header: id=%s nome=%s cliente=%s fornecedor=%s codigo_cliente=%s",
+
+        logger.info("[/salvar] header id=%s nome=%s cliente=%s fornecedor=%s codigo_cliente=%s",
                     id_tabela, body.nome_tabela, body.cliente, body.fornecedor, getattr(body, "codigo_cliente", None))
-        for produto in body.produtos:
+
+        inseridos = 0
+        for i, produto in enumerate(body.produtos, start=1):
             params = {
                 "id_tabela": int(id_tabela),
-                "nome_tabela": body.nome_tabela,
-                "fornecedor": body.fornecedor or "",
+                "nome_tabela": body.nome_tabela or "",
+                "fornecedor":  (body.fornecedor or ""),
                 "codigo_cliente": getattr(body, "codigo_cliente", None),
-                "cliente": body.cliente,
+                "cliente":     body.cliente or "",
 
-                "codigo_produto_supra": produto.codigo_produto_supra,
-                "descricao_produto": produto.descricao_produto,
-                "embalagem": getattr(produto, "embalagem", "") or "",
-                "peso_liquido": getattr(produto, "peso_liquido", 0) or 0,
+                "codigo_produto_supra": produto.codigo_produto_supra or "",
+                "descricao_produto":    (produto.descricao_produto or ""),
+                "embalagem":            (getattr(produto, "embalagem", "") or ""),
+                "peso_liquido":         float(getattr(produto, "peso_liquido", 0) or 0),
 
-                "valor_produto": produto.valor_produto,
+                "valor_produto":        float(produto.valor_produto or 0),
 
-                "comissao_aplicada": getattr(produto, "comissao_aplicada", 0.0) or 0.0,
-                "ajuste_pagamento": getattr(produto, "ajuste_pagamento", 0.0) or 0.0,
-                "descricao_fator_comissao": getattr(produto, "descricao_fator_comissao", "") or "",
-                "codigo_plano_pagamento": getattr(produto, "codigo_plano_pagamento", "") or "",
+                "comissao_aplicada":        float(getattr(produto, "comissao_aplicada", 0) or 0),
+                "ajuste_pagamento":         float(getattr(produto, "ajuste_pagamento", 0) or 0),
+                "descricao_fator_comissao": (getattr(produto, "descricao_fator_comissao", "") or ""),
+                "codigo_plano_pagamento":   (getattr(produto, "codigo_plano_pagamento", "") or ""),
 
-                "valor_frete_aplicado": getattr(produto, "valor_frete_aplicado", 0.0) or 0.0,
-                "frete_kg": getattr(produto, "frete_kg", 0.0) or 0.0,
+                "valor_frete_aplicado": float(getattr(produto, "valor_frete_aplicado", 0) or 0),
+                "frete_kg":             float(getattr(produto, "frete_kg", 0) or 0),
 
-                "valor_frete": getattr(produto, "valor_frete", 0.0) or 0.0,
-                "valor_s_frete": getattr(produto, "valor_s_frete", 0.0) or 0.0,
+                "valor_frete":   float(getattr(produto, "valor_frete", 0) or 0),
+                "valor_s_frete": float(getattr(produto, "valor_s_frete", 0) or 0),
 
-                "grupo": getattr(produto, "grupo", "") or "",
-                "departamento": getattr(produto, "departamento", "") or "",
+                "grupo":        (getattr(produto, "grupo", "") or ""),
+                "departamento": (getattr(produto, "departamento", "") or ""),
 
-                "ipi": getattr(produto, "ipi", 0.0) or 0.0,
-                "icms_st": getattr(produto, "icms_st", 0.0) or 0.0,
-                "iva_st": getattr(produto, "iva_st", 0.0) or 0.0,
+                "ipi":     float(getattr(produto, "ipi", 0) or 0),
+                "icms_st": float(getattr(produto, "icms_st", 0) or 0),
+                "iva_st":  float(getattr(produto, "iva_st", 0) or 0),
             }
-            db.execute(insert_sql, params)
-            inseridos += 1
+
+            logger.info("[/salvar] item %s params=%s", i, params)
+
+            try:
+                db.execute(insert_sql, params)
+                inseridos += 1
+            except SQLAlchemyError as e:
+                logger.exception("[/salvar] ERRO no item %s. Params acima. Detalhe: %s", i, e)
+                raise
 
         db.commit()
+        return {"ok": True, "id_tabela": int(id_tabela), "itens_inseridos": inseridos}
 
-        payload = {"ok": True, "id_tabela": int(id_tabela), "itens_inseridos": inseridos}
-        resp = JSONResponse(status_code=201, content=jsonable_encoder(payload))
-        resp.headers["Location"] = f"/tabela_preco/{int(id_tabela)}"
-        return resp
-
-    except Exception:
+    except Exception as e:
         db.rollback()
-        logger.exception("Falha no /salvar: %s", e)
-        raise
+        logger.exception("[/salvar] Falha geral: %s", e)
+        # devolve uma mensagem útil pro front enquanto debuga
+        raise HTTPException(status_code=500, detail=f"Erro ao salvar tabela_preco: {e}")
     finally:
         db.close()
 
