@@ -533,38 +533,33 @@ function enforceIvaLockByCliente(){
 
 // --- Persistência compacta ---
 async function salvarTabelaPreco(payload) {
-  // (opcional) log inicial pra você ver o que está indo
-  console.log("[SALVAR payload]", payload);
+  const isEdicao = (currentMode === MODE.EDIT) && !!currentTabelaId;
 
-  const resp = await fetch(`${API_BASE}/tabela_preco/salvar`, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
+  const url = isEdicao
+    ? `${API_BASE}/tabela_preco/${encodeURIComponent(currentTabelaId)}`
+    : `${API_BASE}/tabela_preco/salvar`;
+
+  const method = isEdicao ? 'PUT' : 'POST';
+
+  const resp = await fetch(url, {
+    method,
+    headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(payload),
   });
 
-  const raw = await resp.text();        // lê uma vez só
-  let data = null;
-  try { data = JSON.parse(raw); } catch {}
+  const raw = await resp.text();
+  let data = null; try { data = JSON.parse(raw); } catch {}
 
   if (!resp.ok) {
-    // ---- Formata FastAPI 422 ----
-    if (resp.status === 422 && data?.detail) {
-      const linhas = data.detail.map((d) => {
-        const loc = Array.isArray(d.loc) ? d.loc.join(".") : d.loc || "";
-        return `• ${loc} — ${d.msg}`;
-      });
-      // Mostra legível
-      const msg = `Erro 422 ao salvar:\n\n${linhas.join("\n")}`;
-      console.error(msg, data);
-      throw new Error(msg);
-    }
-
-    // Outros erros: mostra o texto bruto
-    console.error(`Falha ${resp.status}`, raw);
-    throw new Error(`Falha ao salvar (${resp.status}).\n${raw}`);
+    // trata 422 bonitinho, se vier
+    try {
+      const j = JSON.parse(raw);
+      if (j?.detail) throw new Error(typeof j.detail === 'string' ? j.detail
+                             : j.detail.map(d => `• ${d.loc?.join('.')}: ${d.msg}`).join('\n'));
+    } catch {}
+    throw new Error(`Falha ao salvar (${resp.status}). ${raw}`);
   }
-
-  return data; // JSON de sucesso
+  return data;
 }
 
 
@@ -659,6 +654,7 @@ async function carregarItens() {
       
      itens = (t.produtos || []).map(p => ({
       // chaves que a grade espera:
+      id_linha:           p.id_linha ?? p.idLinha ?? null, 
       codigo_tabela:      p.codigo_produto_supra ?? p.codigo_tabela ?? '',
       descricao:          p.descricao_produto    ?? p.descricao     ?? '',
       embalagem:          p.embalagem            ?? '',
@@ -1096,59 +1092,62 @@ async function salvarTabela() {
   const frete_kg      = Number(document.getElementById('frete_kg').value || 0);
   const ramo_juridico = document.getElementById('ramo_juridico').value || null;
 
-  const produtos = Array.from(document.querySelectorAll('#tbody-itens tr')).map(tr => {
+  const produtos = Array.from(document.querySelectorAll('#tbody-itens tr'))
+  .map(tr => {
     const idx  = Number(tr.dataset.idx);
     const item = itens[idx];
 
-    const codePct = tr.querySelector('td:nth-child(8) select')?.value || '';
+    const selPct  = tr.querySelector('td:nth-child(8) select');
+    const codePct = selPct ? selPct.value : '';
     const fator   = (mapaDescontos[codePct] != null) ? Number(mapaDescontos[codePct]) : 0;
+
     const selCond = tr.querySelector('td:nth-child(10) select');
-    const codCond = selCond ? (selCond.value || null) : null;
+    const codCond = selCond ? (selCond.value || '') : ''; // ⬅️ só o CÓDIGO
 
-    const taxaCondLinha = mapaCondicoes[codCond] || 0;
+    const taxaCond = mapaCondicoes[codCond] || 0;
     const { acrescimoCond, freteValor, descontoValor } =
-      calcularLinha(item, fator, taxaCondLinha, frete_kg, ivaStAtivo);
-    
-      const fatorSel   = tr.querySelector('td:nth-child(8) select');
-    const fatorLabel = fatorSel ? (fatorSel.options[fatorSel.selectedIndex]?.textContent || '').trim() : '';
+      calcularLinha(item, fator, taxaCond, frete_kg /* ivaStAtivo é ignorado aqui */);
 
-    const condSel     = tr.querySelector('td:nth-child(10) select');
-    const condCode    = condSel ? (condSel.value || '') : '';
-    const condLabel   = condSel ? (condSel.options[condSel.selectedIndex]?.textContent || '').trim() : '';
+    const fatorLabel = selPct ? (selPct.options[selPct.selectedIndex]?.textContent || '').trim() : '';
 
-    return {
-      nome_tabela,
-  cliente,
-  fornecedor: item.fornecedor || '',
+    // objeto do item (NÃO coloque nome_tabela/cliente/fornecedor aqui)
+    const produto = {
+      codigo_produto_supra: item.codigo_tabela,
+      descricao_produto:    item.descricao,
+      embalagem:            item.embalagem || '',
+      peso_liquido:         Number(item.peso_liquido ?? 0),
 
-  // produto (novos)
-  codigo_produto_supra: item.codigo_tabela,
-  descricao_produto:    item.descricao,
-  embalagem:            item.embalagem || '',
-  peso_liquido:         Number(item.peso_liquido ?? 0),
+      valor_produto:            Number(item.valor || 0),
+      comissao_aplicada:        Number(descontoValor.toFixed(2)),
+      ajuste_pagamento:         Number(acrescimoCond.toFixed(2)),
+      descricao_fator_comissao: fatorLabel,
+      codigo_plano_pagamento:   codCond,                 // ⬅️ apenas o código
 
-  // valores (novos)
-  valor_produto:            Number(item.valor || 0),
-  comissao_aplicada:        Number(descontoValor.toFixed(2)), 
-  ajuste_pagamento:         Number(acrescimoCond.toFixed(2)), 
-  descricao_fator_comissao: fatorLabel,                       
-  codigo_plano_pagamento:   condLabel || condCode,            
+      valor_frete_aplicado:     Number(freteValor.toFixed(2)),
+      frete_kg:                 Number(frete_kg || 0),
+      valor_frete:              Number((item._totalComercial || 0).toFixed(2)),
+      valor_s_frete:            Number((item.total_sem_frete || 0).toFixed(2)),
 
-  valor_frete_aplicado:     Number(freteValor.toFixed(2)),    
-  frete_kg:                 Number(frete_kg || 0),
+      grupo:        item.grupo || null,
+      departamento: item.departamento || null,
+      ipi:          Number(item.ipi     || 0),
+      icms_st:      Number(item.icms_st || 0),
+      iva_st:       Number(item.iva_st  || 0)
+    };
 
-  // totais (novos)
-  valor_frete:    Number((item._totalComercial || 0).toFixed(2)), 
-  valor_s_frete:  Number(((item.total_sem_frete || 0)).toFixed(2)),
+    // id_linha: DOM primeiro; fallback pro array
+    if (tr.dataset.idLinha) {
+      produto.id_linha = Number(tr.dataset.idLinha);
+    } else if (itens[idx]?.id_linha != null) {
+      produto.id_linha = itens[idx].id_linha;
+    }
 
-  // classificação / fiscais
-  grupo:        item.grupo || null,
-  departamento: item.departamento || null,
-  ipi:          Number(item.ipi     || 0),
-  icms_st:      Number(item.icms_st || 0),
-  iva_st:       Number(item.iva_st  || 0)
-};
-  });
+    return produto; // ✅ dentro do map
+  })
+  .filter(p => p.codigo_produto_supra && p.descricao_produto);
+
+  console.table(produtos.map(p => ({ id_linha: p.id_linha, codigo: p.codigo_produto_supra })));
+
   const fornecedorHeader = inferirFornecedorDaGrade();
   const codigo_cliente = (document.getElementById('codigo_cliente')?.value || '').trim() || null;
   const payload = {nome_tabela, cliente, codigo_cliente: (codigo_cliente || "Não cadastrado"), ramo_juridico,fornecedor: fornecedorHeader, produtos};
@@ -1630,3 +1629,4 @@ document.addEventListener('DOMContentLoaded', () => {
   if (typeof recalcTudo === 'function') {
       queueMicrotask(() => Promise.resolve(recalcTudo()).catch(() => {}));  }
 });
+
