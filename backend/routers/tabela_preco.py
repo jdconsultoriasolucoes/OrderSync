@@ -2,7 +2,7 @@ from fastapi import APIRouter, HTTPException, Query
 from services.tabela_preco import calcular_valores_dos_produtos, buscar_max_validade_ativos
 from schemas.tabela_preco import TabelaPreco, TabelaPrecoCompleta, ProdutoCalculado, ParametrosCalculo, ValidadeGlobalResp, TabelaSalvar  
 from typing import List, Optional
-from sqlalchemy import text
+from sqlalchemy import text , bindparam
 from models.tabela_preco import TabelaPreco as TabelaPrecoModel
 from datetime import datetime
 from database import SessionLocal
@@ -12,7 +12,7 @@ from fastapi.encoders import jsonable_encoder
 from sqlalchemy.orm import Session
 from pydantic import BaseModel
 import logging
-from sqlalchemy.exc import SQLAlchemyError
+from sqlalchemy.exc import SQLAlchemyError, IntegrityError, DataError
 
 logger = logging.getLogger("tabela_preco")
 
@@ -429,98 +429,152 @@ def confirmar_pedido(tabela_id: int, body: ConfirmarPedidoReq):
 
 @router.put("/tabela_preco/{id_tabela}")
 def atualizar_tabela(id_tabela: int, body: TabelaSalvar):
-    from datetime import datetime
+    def only_code(v):
+        """'1200 - 28/56/84 DIAS' -> '1200'"""
+        if v is None:
+            return ""
+        s = str(v).strip()
+        return s.split(" - ", 1)[0]
+
     now = datetime.utcnow()
     with SessionLocal() as db:
-        # 0) Carrega linhas ativas atuais
-        atuais = db.query(TabelaPrecoModel)\
-                   .filter_by(id_tabela=id_tabela, ativo=True).all()
-        if not atuais:
+        # 0) carrega TODAS as linhas da tabela (ativas e inativas)
+        existentes = db.query(TabelaPrecoModel)\
+                       .filter(TabelaPrecoModel.id_tabela == id_tabela)\
+                       .all()
+        if not existentes:
             raise HTTPException(404, "Tabela não encontrada")
 
-        # Index por codigo_produto_supra (chave natural por tabela)
-        por_codigo = { (r.codigo_produto_supra or ""): r for r in atuais }
+        # índices rápidos
+        por_id      = {r.id_linha: r for r in existentes}
+        por_codigo  = {}
+        for r in existentes:
+            k = (r.codigo_produto_supra or "").strip()
+            if k:
+                por_codigo[k] = r
 
-        # 1) Atualiza “cabeçalho” em todas as linhas ativas
-        for r in atuais:
+        # 1) cabeçalho (propaga em todas as linhas)
+        for r in existentes:
             r.nome_tabela    = body.nome_tabela
             r.cliente        = body.cliente
             r.codigo_cliente = body.codigo_cliente or "Não cadastrado"
             r.fornecedor     = body.fornecedor or ""
             r.editado_em     = now
 
-        # 2) Upsert dos produtos enviados
-        enviados = set()
-        for p in body.produtos:
-            cod = str(p.codigo_produto_supra)
-            enviados.add(cod)
-            linha = por_codigo.get(cod)
+        enviados_codigos = set()
+        novos = 0
+        atualizados = 0
+        reativados = 0
 
-            if linha:
-                # UPDATE
-                linha.descricao_produto       = p.descricao_produto
-                linha.embalagem               = p.embalagem or ""
-                linha.peso_liquido            = p.peso_liquido or 0
-                linha.valor_produto           = p.valor_produto or 0
-                linha.comissao_aplicada       = p.comissao_aplicada or 0
-                linha.ajuste_pagamento        = p.ajuste_pagamento or 0
-                linha.descricao_fator_comissao= p.descricao_fator_comissao or ""
-                linha.codigo_plano_pagamento  = p.codigo_plano_pagamento or ""
-                linha.valor_frete_aplicado    = p.valor_frete_aplicado or 0
-                linha.frete_kg                = p.frete_kg or 0
-                linha.valor_frete             = p.valor_frete or 0
-                linha.valor_s_frete           = p.valor_s_frete or 0
-                linha.grupo                   = p.grupo
-                linha.departamento            = p.departamento
-                linha.ipi                     = p.ipi or 0
-                linha.icms_st                 = p.icms_st or 0
-                linha.iva_st                  = p.iva_st or 0
-                linha.ativo                   = True
-                linha.deletado_em             = None
-                linha.editado_em              = now
+        # 2) upsert item a item
+        for p in body.produtos or []:
+            codigo = (p.codigo_produto_supra or "").strip()
+            if not codigo:
+                # ignora itens sem código
+                continue
+            enviados_codigos.add(codigo)
+
+            # preferir id_linha quando vier
+            target = None
+            p_id_linha = getattr(p, "id_linha", None)
+            if p_id_linha is not None:
+                target = por_id.get(p_id_linha)
+
+            # fallback: localizar por (id_tabela, codigo_produto_supra)
+            if target is None:
+                target = por_codigo.get(codigo)
+
+            if target is not None:
+                # UPDATE (e possível reativação)
+                target.codigo_produto_supra     = codigo
+                target.descricao_produto        = p.descricao_produto
+                target.embalagem                = (p.embalagem or "")
+                target.peso_liquido             = (p.peso_liquido or 0)
+                target.valor_produto            = (p.valor_produto or 0)
+                target.comissao_aplicada        = (p.comissao_aplicada or 0)
+                target.ajuste_pagamento         = (p.ajuste_pagamento or 0)
+                target.descricao_fator_comissao = (p.descricao_fator_comissao or "")
+                target.codigo_plano_pagamento   = only_code(getattr(p, "codigo_plano_pagamento", ""))
+                target.valor_frete_aplicado     = (p.valor_frete_aplicado or 0)
+                # frete_kg pode vir no item ou no topo — priorize o item
+                target.frete_kg                 = (getattr(p, "frete_kg", None)
+                                                   if getattr(p, "frete_kg", None) is not None
+                                                   else getattr(body, "frete_kg", None) or 0)
+                target.valor_frete              = (getattr(p, "valor_frete", None)
+                                                   if getattr(p, "valor_frete", None) is not None
+                                                   else 0)
+                target.valor_s_frete            = (p.valor_s_frete or 0)
+                target.grupo                    = getattr(p, "grupo", None)
+                target.departamento             = getattr(p, "departamento", None)
+                target.ipi                      = (p.ipi or 0)
+                target.icms_st                  = (p.icms_st or 0)
+                target.iva_st                   = (p.iva_st or 0)
+                if not target.ativo:
+                    target.ativo = True
+                    target.deletado_em = None
+                    reativados += 1
+                else:
+                    atualizados += 1
+                target.editado_em = now
             else:
-                # INSERT (nova linha nesse id_tabela)
+                # INSERT (novo produto na tabela)
                 db.add(TabelaPrecoModel(
-                    id_tabela=id_tabela,
-                    nome_tabela=body.nome_tabela,
-                    cliente=body.cliente,
-                    codigo_cliente=body.codigo_cliente or "Não cadastrado",
-                    fornecedor=body.fornecedor or "",
-                    codigo_produto_supra=p.codigo_produto_supra,
-                    descricao_produto=p.descricao_produto,
-                    embalagem=p.embalagem or "",
-                    peso_liquido=p.peso_liquido or 0,
-                    valor_produto=p.valor_produto or 0,
-                    comissao_aplicada=p.comissao_aplicada or 0,
-                    ajuste_pagamento=p.ajuste_pagamento or 0,
-                    descricao_fator_comissao=p.descricao_fator_comissao or "",
-                    codigo_plano_pagamento=p.codigo_plano_pagamento or "",
-                    valor_frete_aplicado=p.valor_frete_aplicado or 0,
-                    frete_kg=p.frete_kg or 0,
-                    valor_frete=p.valor_frete or 0,
-                    valor_s_frete=p.valor_s_frete or 0,
-                    grupo=p.grupo,
-                    departamento=p.departamento,
-                    ipi=p.ipi or 0,
-                    icms_st=p.icms_st or 0,
-                    iva_st=p.iva_st or 0,
-                    ativo=True,
-                    deletado_em=None,
-                    editado_em=now,
+                    id_tabela             = id_tabela,
+                    nome_tabela           = body.nome_tabela,
+                    cliente               = body.cliente,
+                    codigo_cliente        = body.codigo_cliente or "Não cadastrado",
+                    fornecedor            = body.fornecedor or "",
+                    codigo_produto_supra  = codigo,
+                    descricao_produto     = p.descricao_produto,
+                    embalagem             = (p.embalagem or ""),
+                    peso_liquido          = (p.peso_liquido or 0),
+                    valor_produto         = (p.valor_produto or 0),
+                    comissao_aplicada     = (p.comissao_aplicada or 0),
+                    ajuste_pagamento      = (p.ajuste_pagamento or 0),
+                    descricao_fator_comissao = (p.descricao_fator_comissao or ""),
+                    codigo_plano_pagamento   = only_code(getattr(p, "codigo_plano_pagamento", "")),
+                    valor_frete_aplicado  = (p.valor_frete_aplicado or 0),
+                    frete_kg              = (getattr(p, "frete_kg", None)
+                                              if getattr(p, "frete_kg", None) is not None
+                                              else getattr(body, "frete_kg", None) or 0),
+                    valor_frete           = (getattr(p, "valor_frete", None) or 0),
+                    valor_s_frete         = (p.valor_s_frete or 0),
+                    grupo                 = getattr(p, "grupo", None),
+                    departamento          = getattr(p, "departamento", None),
+                    ipi                   = (p.ipi or 0),
+                    icms_st               = (p.icms_st or 0),
+                    iva_st                = (p.iva_st or 0),
+                    ativo                 = True,
+                    deletado_em           = None,
+                    editado_em            = now,
                 ))
+                novos += 1
 
-        # 3) Soft-delete do que saiu
-        deletados = 0
-        for cod, linha in por_codigo.items():
-            if cod not in enviados:
-                linha.ativo = False
-                linha.deletado_em = now
-                linha.editado_em  = now
-                deletados += 1
+        # 3) soft-delete do que NÃO veio no payload (apenas as linhas ativas)
+        removidos = 0
+        for r in existentes:
+            cod_exist = (r.codigo_produto_supra or "").strip()
+            if r.ativo and cod_exist and cod_exist not in enviados_codigos:
+                r.ativo = False
+                r.deletado_em = now
+                r.editado_em  = now
+                removidos += 1
 
-        
         try:
             db.commit()
+        except (IntegrityError, DataError) as e:
+            db.rollback()
+            # retorna a causa real (evita 500 genérico)
+            raise HTTPException(status_code=400, detail=f"{type(e).__name__}: {e}")
         except Exception as e:
             db.rollback()
-            raise HTTPException(400, detail=f"{type(e).__name__}: {e}")
+            raise HTTPException(status_code=500, detail="Erro ao atualizar a tabela")
+
+        return {
+            "ok": True,
+            "tabela_id": id_tabela,
+            "novos": novos,
+            "reativados": reativados,
+            "atualizados": atualizados,
+            "removidos": removidos
+        }
