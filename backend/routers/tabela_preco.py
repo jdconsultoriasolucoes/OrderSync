@@ -519,5 +519,8 @@ def atualizar_tabela(id_tabela: int, body: TabelaSalvar):
                 deletados += 1
 
         
-        db.commit()
-        return {"ok": True, "tabela_id": id_tabela, "novos": len(body.produtos)-len(por_codigo), "removidos": deletados}
+        try:
+            db.commit()
+        except Exception as e:
+            db.rollback()
+            raise HTTPException(400, detail=f"{type(e).__name__}: {e}")
