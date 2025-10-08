@@ -396,8 +396,6 @@ def confirmar_pedido(tabela_id: int, body: ConfirmarPedidoReq):
         "itens": len(body.produtos)
     }
 
-CODIGO_OK = re.compile(r"^[A-Za-z0-9._\-]+$")
-
 def only_code(v):
     # "1200 - 28/56/84 DIAS" -> "1200"
     if v is None: return ""
