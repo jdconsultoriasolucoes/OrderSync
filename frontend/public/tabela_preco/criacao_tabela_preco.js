@@ -1100,17 +1100,22 @@ async function salvarTabela() {
     const selPct  = tr.querySelector('td:nth-child(8) select');
     const codePct = selPct ? selPct.value : '';
     const fator   = (mapaDescontos[codePct] != null) ? Number(mapaDescontos[codePct]) : 0;
-
-    const selCond = tr.querySelector('td:nth-child(10) select');
-    const codCond = selCond ? (selCond.value || '') : ''; // ⬅️ só o CÓDIGO
-    const condLabel = condSel ? (condSel.options[condSel.selectedIndex]?.textContent || '').trim() : '';
+    
+    const condSel   = tr.querySelector('td:nth-child(10) select');
+    const codCond   = condSel ? (condSel.value || '') : '';
+    const condLabel = condSel
+      ? (condSel.options[condSel.selectedIndex]?.textContent || '').trim()
+      : '';
 
     const taxaCond = mapaCondicoes[codCond] || 0;
     const { acrescimoCond, freteValor, descontoValor } =
       calcularLinha(item, fator, taxaCond, frete_kg /* ivaStAtivo é ignorado aqui */);
 
     const fatorLabel = selPct ? (selPct.options[selPct.selectedIndex]?.textContent || '').trim() : '';
-
+    
+    const planoToSave = condLabel
+      ? (condLabel.startsWith(codCond) ? condLabel : (codCond ? `${codCond} - ${condLabel}` : condLabel))
+      : codCond;
     // objeto do item (NÃO coloque nome_tabela/cliente/fornecedor aqui)
     const produto = {
       codigo_produto_supra: item.codigo_tabela,
@@ -1122,7 +1127,7 @@ async function salvarTabela() {
       comissao_aplicada:        Number(descontoValor.toFixed(2)),
       ajuste_pagamento:         Number(acrescimoCond.toFixed(2)),
       descricao_fator_comissao: fatorLabel,
-      codigo_plano_pagamento:   condLabel || condCode,                 
+      codigo_plano_pagamento:  planoToSave,                 
 
       valor_frete_aplicado:     Number(freteValor.toFixed(2)),
       frete_kg:                 Number(frete_kg || 0),
