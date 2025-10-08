@@ -403,7 +403,7 @@ def only_code(v):
     if v is None: return ""
     return str(v).strip().split(" - ", 1)[0]
 
-@router.put("/tabela_preco/{id_tabela}")
+@router.put("/{id_tabela}")
 def atualizar_tabela(id_tabela: int, body: TabelaSalvar):
     now = datetime.utcnow()
     with SessionLocal() as db:
