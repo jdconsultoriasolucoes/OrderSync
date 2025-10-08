@@ -1,7 +1,3 @@
-// js/gerar_link_pedido.js
-// Modal "Gerar Link" — gera URL curta via POST /link_pedido/gerar e exibe no modal.
-// Requisitos: window.API_BASE definido (ex.: http://localhost:8000)
-
 function ensureModalInjected() {
   if (document.getElementById("modalGerarLinkPedido")) return;
 
@@ -16,6 +12,16 @@ function ensureModalInjected() {
         <div class="glp-row">
           <button class="glp-option" data-frete="1" title="Exibir valores com frete">Valor <b>com</b> Frete</button>
           <button class="glp-option" data-frete="0" title="Exibir valores sem frete">Valor <b>sem</b> Frete</button>
+        </div>
+
+        <!-- NOVO: campo de data -->
+        <div class="glp-field">
+          <label for="glpDate"><b>Data</b> (opcional)</label>
+          <input type="date" id="glpDate" />
+          <small>
+            Será exibida como <i>Data de entrega</i> (com frete) ou <i>Data de retirada</i> (sem frete).
+            Se não preencher, mostramos <i>a combinar</i>.
+          </small>
         </div>
 
         <div class="glp-linkbox">
@@ -43,6 +49,8 @@ function ensureModalInjected() {
   .glp-option{flex:1;min-width:180px;border:1px solid #ddd;border-radius:8px;padding:12px 14px;cursor:pointer;background:#f7f7f7}
   .glp-option:hover{background:#f0f0f0}
   .glp-option.is-active{background:#eef2ff;border-color:#c7d2fe;box-shadow:inset 0 0 0 2px #c7d2fe}
+  .glp-field{display:flex;flex-direction:column;gap:6px;margin:6px 0 14px}
+  .glp-field input[type="date"]{padding:8px 10px;border:1px solid #ccc;border-radius:8px;font-size:14px}
   .glp-linkbox label{display:block;font-size:12px;color:#666;margin:6px 0}
   #glpLinkInput{width:100%;padding:10px;border:1px solid #ccc;border-radius:8px;font-size:14px}
   .glp-actions{display:flex;gap:10px;margin-top:10px}
@@ -79,6 +87,8 @@ function showModal() {
   if (el) {
     el.querySelector("#glpLinkInput").value = "";
     el.querySelector("#glpHint").textContent = "";
+    const dt = el.querySelector("#glpDate");
+    if (dt) dt.value = ""; // limpa a data a cada abertura
     el.style.display = "flex";
   }
 }
@@ -98,9 +108,12 @@ async function copyToClipboard(text) {
   }
 }
 
+function apiBase() {
+  return (typeof window.API_BASE === "string" && window.API_BASE) ? window.API_BASE : "";
+}
+
 async function gerarLinkCurtoNoServidor({ tabelaId, comFrete }) {
-  const base = (typeof window.API_BASE === "string" && window.API_BASE) ? window.API_BASE : "";
-  const url  = base ? `${base}/link_pedido/gerar` : "/link_pedido/gerar";
+  const url  = apiBase() ? `${apiBase()}/link_pedido/gerar` : "/link_pedido/gerar";
   const resp = await fetch(url, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
@@ -114,9 +127,41 @@ async function gerarLinkCurtoNoServidor({ tabelaId, comFrete }) {
   return data.url; // ex.: https://.../p/<code>
 }
 
+// ----- Helpers de data -----
+function isISODate(s) {
+  return typeof s === "string" && /^\d{4}-\d{2}-\d{2}$/.test(s);
+}
+function formatarBR(iso) {
+  if (!isISODate(iso)) return null;
+  const [y,m,d] = iso.split("-").map(Number);
+  const dt = new Date(y, m-1, d);
+  if (Number.isNaN(dt.getTime())) return null;
+  return dt.toLocaleDateString("pt-BR", { timeZone: "America/Sao_Paulo" });
+}
+function normalizarEntregaISO(iso) {
+  if (!isISODate(iso)) return null;
+  const [y,m,d] = iso.split("-").map(Number);
+  const dt = new Date(y, m-1, d);
+  if (Number.isNaN(dt.getTime())) return null;
+  const hoje = new Date(); hoje.setHours(0,0,0,0);
+  dt.setHours(0,0,0,0);
+  return (dt < hoje) ? null : iso;
+}
+function aplicarEntregaNaUrl(urlCurta, entregaISO) {
+  try {
+    const u = new URL(urlCurta);
+    if (entregaISO) u.searchParams.set("entrega", entregaISO);
+    return u.toString();
+  } catch {
+    // fallback (não deve acontecer, pois urlCurta é absoluta)
+    if (!entregaISO) return urlCurta;
+    const sep = urlCurta.includes("?") ? "&" : "?";
+    return `${urlCurta}${sep}entrega=${encodeURIComponent(entregaISO)}`;
+  }
+}
+
 /**
- * Abre o modal e já mostra a linkbox preenchida (sem "expandir").
- * Botões COM/SEM frete apenas re-geram a URL curta.
+ * Abre o modal e já mostra a linkbox preenchida.
  * @param {Object} opts
  * @param {number|string} opts.tabelaId
  */
@@ -130,59 +175,60 @@ export function showGerarLinkModal({ tabelaId }) {
   ensureModalInjected();
   showModal();
 
-  const modal   = document.getElementById("modalGerarLinkPedido");
-  const linkBox = modal.querySelector(".glp-linkbox");
-  const input   = modal.querySelector("#glpLinkInput");
-  const hint    = modal.querySelector("#glpHint");
-  const buttons = Array.from(modal.querySelectorAll(".glp-option"));
+  const modal    = document.getElementById("modalGerarLinkPedido");
+  const linkBox  = modal.querySelector(".glp-linkbox");
+  const input    = modal.querySelector("#glpLinkInput");
+  const hint     = modal.querySelector("#glpHint");
+  const buttons  = Array.from(modal.querySelectorAll(".glp-option"));
+  const dateInp  = modal.querySelector("#glpDate");
 
-  // padrão: COM frete (troque para false se quiser SEM como padrão)
-  const defaultComFrete = true;
+  // padrão: COM frete
+  let currentComFrete = true;
 
-  // estado UI helper
   const setBusy = (busy) => {
     buttons.forEach(b => b.disabled = busy);
-    hint.textContent = busy ? "Gerando link..." : hint.textContent;
+    if (dateInp) dateInp.disabled = busy;
+    if (busy) hint.textContent = "Gerando link...";
   };
 
-  // gera inicialmente com o padrão
-  (async () => {
+  async function regenerate(comFrete) {
+    currentComFrete = !!comFrete;
+    buttons.forEach(b => b.classList.toggle("is-active", (b.dataset.frete === "1") === currentComFrete));
+
+    const entregaISO = normalizarEntregaISO(dateInp?.value || "");
+    if (dateInp && dateInp.value && !entregaISO) {
+      hint.textContent = "Data inválida ou no passado. Corrija ou deixe em branco.";
+      return;
+    }
+
     try {
-      buttons.forEach(b => b.classList.toggle("is-active", (b.dataset.frete === "1") === defaultComFrete));
       setBusy(true);
-      const urlCurta = await gerarLinkCurtoNoServidor({ tabelaId, comFrete: defaultComFrete });
-      input.value = urlCurta;
-      hint.textContent = defaultComFrete
-        ? "Este link exibirá os preços COM frete. A validade será buscada automaticamente."
-        : "Este link exibirá os preços SEM frete. A validade será buscada automaticamente.";
+      const urlCurta = await gerarLinkCurtoNoServidor({ tabelaId, comFrete: currentComFrete });
+      input.value = aplicarEntregaNaUrl(urlCurta, entregaISO);
+      hint.textContent = currentComFrete
+        ? "Este link exibirá os preços COM frete."
+        : "Este link exibirá os preços SEM frete.";
     } catch (e) {
       console.error(e);
       hint.textContent = "Erro ao gerar link. Tente novamente.";
     } finally {
       setBusy(false);
     }
-  })();
+  }
 
-  // cliques trocam a opção e re-geram a URL curta
+  // Gera inicialmente com COM frete
+  regenerate(true);
+
+  // Trocar COM/SEM frete
   buttons.forEach((btn) => {
-    btn.onclick = async () => {
-      const comFrete = btn.dataset.frete === "1";
-      buttons.forEach(b => b.classList.toggle("is-active", b === btn));
-      try {
-        setBusy(true);
-        const urlCurta = await gerarLinkCurtoNoServidor({ tabelaId, comFrete });
-        input.value = urlCurta;
-        hint.textContent = comFrete
-          ? "Este link exibirá os preços COM frete. A validade será buscada automaticamente."
-          : "Este link exibirá os preços SEM frete. A validade será buscada automaticamente.";
-      } catch (e) {
-        console.error(e);
-        hint.textContent = "Erro ao gerar link. Tente novamente.";
-      } finally {
-        setBusy(false);
-      }
-    };
+    btn.onclick = () => regenerate(btn.dataset.frete === "1");
   });
+
+  // Regerar quando a data mudar
+  if (dateInp) {
+    dateInp.addEventListener("change", () => regenerate(currentComFrete));
+    dateInp.addEventListener("input",  () => {/* deixa o usuário digitar sem travar */});
+  }
 
   // Ações
   modal.querySelector("#glpCopy").onclick = async () => {
@@ -200,17 +246,16 @@ export function showGerarLinkModal({ tabelaId }) {
 
   modal.querySelector("#glpWhats").onclick = () => {
     if (!input.value) return;
-    const msg = `Olá! Segue o link para visualizar sua proposta de pedido:\n${input.value}`;
+    const entregaISO = normalizarEntregaISO(dateInp?.value || "");
+    const rotulo = currentComFrete ? "Data de entrega" : "Data de retirada";
+    const dataTxt = entregaISO ? formatarBR(entregaISO) : "a combinar";
+    const msg = `Olá! Segue o link para visualizar sua proposta de pedido:\n${rotulo}: ${dataTxt}\n${input.value}`;
     const wa = `https://wa.me/?text=${encodeURIComponent(msg)}`;
     window.open(wa, "_blank", "noopener");
   };
 }
 
-/**
- * Handler plugável:
- *   const handler = gerarLinkHandler(() => currentTabelaId);
- *   btn.addEventListener("click", handler);
- */
+/** Handler plugável */
 export function gerarLinkHandler(getTabelaIdFn) {
   return () => {
     const tabelaId = typeof getTabelaIdFn === "function" ? getTabelaIdFn() : getTabelaIdFn;

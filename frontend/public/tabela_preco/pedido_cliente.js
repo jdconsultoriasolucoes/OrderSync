@@ -38,6 +38,54 @@ const API = (p) => {
 
 const fmtBRL = new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" });
 
+// ---- Helpers para Data de Entrega/Retirada ----
+function isISODate(s) {
+  return typeof s === "string" && /^\d{4}-\d{2}-\d{2}$/.test(s);
+}
+
+function formatarBR(iso) {
+  if (!isISODate(iso)) return null;
+  const [y, m, d] = iso.split("-").map(Number);
+  const dt = new Date(y, m - 1, d);
+  // validação simples do objeto Date
+  if (Number.isNaN(dt.getTime())) return null;
+  return dt.toLocaleDateString("pt-BR", { timeZone: "America/Sao_Paulo" });
+}
+
+function normalizarEntregaISO(iso) {
+  // Aceita apenas ISO e não permite data passada
+  if (!isISODate(iso)) return null;
+  const [y, m, d] = iso.split("-").map(Number);
+  const dt = new Date(y, m - 1, d);
+  if (Number.isNaN(dt.getTime())) return null;
+
+  const hoje = new Date();
+  hoje.setHours(0,0,0,0);
+  dt.setHours(0,0,0,0);
+  if (dt < hoje) return null;
+
+  return iso; // ok
+}
+
+function aplicarEntregaRetiradaHeader() {
+  const entregaQS = new URLSearchParams(location.search).get("entrega");
+  const entregaISO = normalizarEntregaISO(entregaQS);
+
+  const labelEl = document.getElementById("labelEntregaRetirada");
+  const valorEl = document.getElementById("dataEntregaValor");
+  if (!labelEl || !valorEl) return;
+
+  const label = (window.usarValorComFrete === true) ? "Data de entrega:" : "Data de retirada:";
+  labelEl.textContent = label;
+
+  if (entregaISO) {
+    const br = formatarBR(entregaISO);
+    valorEl.textContent = br || "a combinar";
+  } else {
+    valorEl.textContent = "a combinar";
+  }
+}
+
 // -------------------- Elementos --------------------
 const tbody         = document.querySelector("#tabelaProdutos tbody");
 const totalEl       = document.getElementById("totalGeral");
@@ -239,7 +287,7 @@ async function carregarPedido() {
       usarValorComFrete = Boolean(dados.usar_valor_com_frete);
       setCampoTexto("tituloValorFrete", usarValorComFrete ? "c/ Frete" : "s/ Frete");
       window.usarValorComFrete = !!dados.usar_valor_com_frete;
-
+      aplicarEntregaRetiradaHeader();
       // Itens
       produtos = (dados.produtos || []).map(p => ({
         ...p,
