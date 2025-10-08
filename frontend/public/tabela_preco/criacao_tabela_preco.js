@@ -1103,6 +1103,7 @@ async function salvarTabela() {
 
     const selCond = tr.querySelector('td:nth-child(10) select');
     const codCond = selCond ? (selCond.value || '') : ''; // ⬅️ só o CÓDIGO
+    const condLabel = condSel ? (condSel.options[condSel.selectedIndex]?.textContent || '').trim() : '';
 
     const taxaCond = mapaCondicoes[codCond] || 0;
     const { acrescimoCond, freteValor, descontoValor } =
@@ -1121,7 +1122,7 @@ async function salvarTabela() {
       comissao_aplicada:        Number(descontoValor.toFixed(2)),
       ajuste_pagamento:         Number(acrescimoCond.toFixed(2)),
       descricao_fator_comissao: fatorLabel,
-      codigo_plano_pagamento:   codCond,                 // ⬅️ apenas o código
+      codigo_plano_pagamento:   condLabel || condCode,                 
 
       valor_frete_aplicado:     Number(freteValor.toFixed(2)),
       frete_kg:                 Number(frete_kg || 0),
