@@ -430,8 +430,6 @@ def atualizar_tabela(id_tabela: int, body: TabelaSalvar):
                 continue
             if cod.lower() == "string":
                 continue
-            if not CODIGO_OK.match(cod):
-                continue
             desc = (getattr(p, "descricao_produto", "") or "").strip()
             if not desc or desc.lower() == "string":   # exige descrição também
                 continue
