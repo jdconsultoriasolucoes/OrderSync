@@ -1101,9 +1101,9 @@ async function salvarTabela() {
     const codePct = selPct ? selPct.value : '';
     const fator   = (mapaDescontos[codePct] != null) ? Number(mapaDescontos[codePct]) : 0;
     
-    const condSel   = tr.querySelector('td:nth-child(10) select');
-    const codCond   = condSel ? (condSel.value || '') : '';
-   const condLabel = (selCond?.options[selCond.selectedIndex]?.textContent || '').trim();
+    const selCond   = tr.querySelector('td:nth-child(10) select');
+    const codCond   = selCond ? (condSel.value || '') : '';
+    const condLabel = (selCond?.options[selCond.selectedIndex]?.textContent || '').trim();
 
     const taxaCond = mapaCondicoes[codCond] || 0;
     const { acrescimoCond, freteValor, descontoValor } =
