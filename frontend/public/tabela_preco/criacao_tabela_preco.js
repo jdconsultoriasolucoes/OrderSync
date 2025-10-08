@@ -98,7 +98,7 @@ function restoreHeaderSnapshotIfNew() {
     set('frete_kg',        snap.frete_kg);
 
     // ---- Selects (este método deve ser chamado DEPOIS de carregarCondicoes/Descontos)
-    set('codigo_plano_pagamento', snap.plano_pagamento || '');
+    set('plano_pagamento', snap.plano_pagamento || '');
     set('desconto_global', snap.desconto_global || '');
 
     // ---- IVA_ST e flags do cliente livre
@@ -574,7 +574,7 @@ function option(text, value) {
 
 // === Carregamentos ===
 async function carregarCondicoes() {
-  const sel = document.getElementById('codigo_plano_pagamento');
+  const sel = document.getElementById('plano_pagamento');
   sel.innerHTML = '';
   sel.appendChild(option('Selecione…', ''));
   const r = await fetch(`${API_BASE}/tabela_preco/condicoes_pagamento`);
@@ -601,7 +601,7 @@ async function carregarDescontos() {
 }
 
 function atualizarPillTaxa() {
-  const codigo = document.getElementById('codigo_plano_pagamento').value;
+  const codigo = document.getElementById('plano_pagamento').value;
   const taxa = mapaCondicoes[codigo];
   const el = document.getElementById('pill-taxa');
   if (!el) return;
@@ -640,7 +640,7 @@ async function carregarItens() {
       // >>> NOVO: preencher frete/condição (se existirem) e inferir do item[0] se faltar
       const first = (Array.isArray(t.produtos) && t.produtos.length) ? t.produtos[0] : null;
       const freteInput = document.getElementById('frete_kg');
-      const planoSel = document.getElementById('codigo_plano_pagamento');
+      const planoSel = document.getElementById('plano_pagamento');
       if (planoSel) {
         const planoVal = t.codigo_plano_pagamento ?? first?.codigo_plano_pagamento ?? '';
         if (planoVal) {
@@ -787,13 +787,13 @@ tdPercent.appendChild(selPercent);
   selCond.appendChild(option('—', ''));
     
   //código + descrição (igual ao cabeçalho)---------------
-  const selHdr = document.getElementById('codigo_plano_pagamento');
+  const selHdr = document.getElementById('plano_pagamento');
     Array.from(selHdr?.options || []).forEach(o => {
   if (o.value) selCond.appendChild(option(o.textContent, o.value));
   });
   
   //só a descrição-----------
-//  const selHdr = document.getElementById('codigo_plano_pagamento');
+//  const selHdr = document.getElementById('plano_pagamento');
 //  Array.from(selHdr?.options || []).forEach(o => {
 //  if (!o.value) return; // pula "Selecione…"
 //  const partes = (o.textContent || '').split(' - ');
@@ -1195,7 +1195,7 @@ function limparFormularioCabecalho() {
   const frete = document.getElementById('frete_kg');
   if (frete) frete.value = 0;
 
-  const cond = document.getElementById('codigo_plano_pagamento');
+  const cond = document.getElementById('plano_pagamento');
   if (cond) cond.value = '';
 
   const descGlobal = document.getElementById('desconto_global');
@@ -1382,7 +1382,7 @@ document.addEventListener('DOMContentLoaded', () => {
   
   document.getElementById('btn-aplicar-todos')?.addEventListener('click', aplicarFatorGlobal);
   
-  document.getElementById('codigo_plano_pagamento')?.addEventListener('change', () => { atualizarPillTaxa(); recalcTudo(); refreshToolbarEnablement();saveHeaderSnapshot();  
+  document.getElementById('plano_pagamento')?.addEventListener('change', () => { atualizarPillTaxa(); recalcTudo(); refreshToolbarEnablement();saveHeaderSnapshot();  
     });
   document.getElementById('frete_kg')?.addEventListener('input', () => {
     recalcTudo();
@@ -1603,7 +1603,7 @@ document.addEventListener('DOMContentLoaded', () => {
  
 
  document.getElementById('btn-aplicar-condicao-todos')?.addEventListener('click', () => {
-  const cod = document.getElementById('codigo_plano_pagamento')?.value || '';
+  const cod = document.getElementById('plano_pagamento')?.value || '';
   document.querySelectorAll('#tbody-itens tr').forEach(tr => {
     const sel = tr.querySelector('td:nth-child(10) select');
     if (!sel) return;

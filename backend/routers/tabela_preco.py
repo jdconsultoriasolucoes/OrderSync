@@ -426,3 +426,98 @@ def confirmar_pedido(tabela_id: int, body: ConfirmarPedidoReq):
         "usar_valor_com_frete": body.usar_valor_com_frete,
         "itens": len(body.produtos)
     }
+
+@router.put("/tabela_preco/{id_tabela}")
+def atualizar_tabela(id_tabela: int, body: TabelaSalvar):
+    from datetime import datetime
+    now = datetime.utcnow()
+    with SessionLocal() as db:
+        # 0) Carrega linhas ativas atuais
+        atuais = db.query(TabelaPrecoModel)\
+                   .filter_by(id_tabela=id_tabela, ativo=True).all()
+        if not atuais:
+            raise HTTPException(404, "Tabela não encontrada")
+
+        # Index por codigo_produto_supra (chave natural por tabela)
+        por_codigo = { (r.codigo_produto_supra or ""): r for r in atuais }
+
+        # 1) Atualiza “cabeçalho” em todas as linhas ativas
+        for r in atuais:
+            r.nome_tabela    = body.nome_tabela
+            r.cliente        = body.cliente
+            r.codigo_cliente = body.codigo_cliente or "Não cadastrado"
+            r.fornecedor     = body.fornecedor or ""
+            r.editado_em     = now
+
+        # 2) Upsert dos produtos enviados
+        enviados = set()
+        for p in body.produtos:
+            cod = str(p.codigo_produto_supra)
+            enviados.add(cod)
+            linha = por_codigo.get(cod)
+
+            if linha:
+                # UPDATE
+                linha.descricao_produto       = p.descricao_produto
+                linha.embalagem               = p.embalagem or ""
+                linha.peso_liquido            = p.peso_liquido or 0
+                linha.valor_produto           = p.valor_produto or 0
+                linha.comissao_aplicada       = p.comissao_aplicada or 0
+                linha.ajuste_pagamento        = p.ajuste_pagamento or 0
+                linha.descricao_fator_comissao= p.descricao_fator_comissao or ""
+                linha.codigo_plano_pagamento  = p.codigo_plano_pagamento or ""
+                linha.valor_frete_aplicado    = p.valor_frete_aplicado or 0
+                linha.frete_kg                = p.frete_kg or 0
+                linha.valor_frete             = p.valor_frete or 0
+                linha.valor_s_frete           = p.valor_s_frete or 0
+                linha.grupo                   = p.grupo
+                linha.departamento            = p.departamento
+                linha.ipi                     = p.ipi or 0
+                linha.icms_st                 = p.icms_st or 0
+                linha.iva_st                  = p.iva_st or 0
+                linha.ativo                   = True
+                linha.deletado_em             = None
+                linha.editado_em              = now
+            else:
+                # INSERT (nova linha nesse id_tabela)
+                db.add(TabelaPrecoModel(
+                    id_tabela=id_tabela,
+                    nome_tabela=body.nome_tabela,
+                    cliente=body.cliente,
+                    codigo_cliente=body.codigo_cliente or "Não cadastrado",
+                    fornecedor=body.fornecedor or "",
+                    codigo_produto_supra=p.codigo_produto_supra,
+                    descricao_produto=p.descricao_produto,
+                    embalagem=p.embalagem or "",
+                    peso_liquido=p.peso_liquido or 0,
+                    valor_produto=p.valor_produto or 0,
+                    comissao_aplicada=p.comissao_aplicada or 0,
+                    ajuste_pagamento=p.ajuste_pagamento or 0,
+                    descricao_fator_comissao=p.descricao_fator_comissao or "",
+                    codigo_plano_pagamento=p.codigo_plano_pagamento or "",
+                    valor_frete_aplicado=p.valor_frete_aplicado or 0,
+                    frete_kg=p.frete_kg or 0,
+                    valor_frete=p.valor_frete or 0,
+                    valor_s_frete=p.valor_s_frete or 0,
+                    grupo=p.grupo,
+                    departamento=p.departamento,
+                    ipi=p.ipi or 0,
+                    icms_st=p.icms_st or 0,
+                    iva_st=p.iva_st or 0,
+                    ativo=True,
+                    deletado_em=None,
+                    editado_em=now,
+                ))
+
+        # 3) Soft-delete do que saiu
+        deletados = 0
+        for cod, linha in por_codigo.items():
+            if cod not in enviados:
+                linha.ativo = False
+                linha.deletado_em = now
+                linha.editado_em  = now
+                deletados += 1
+
+        
+        db.commit()
+        return {"ok": True, "tabela_id": id_tabela, "novos": len(body.produtos)-len(por_codigo), "removidos": deletados}
