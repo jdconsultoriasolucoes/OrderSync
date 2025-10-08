@@ -1102,7 +1102,7 @@ async function salvarTabela() {
     const fator   = (mapaDescontos[codePct] != null) ? Number(mapaDescontos[codePct]) : 0;
     
     const selCond   = tr.querySelector('td:nth-child(10) select');
-    const codCond   = selCond ? (condSel.value || '') : '';
+    const codCond   = selCond ? (selCond.value || '') : '';
     const condLabel = (selCond?.options[selCond.selectedIndex]?.textContent || '').trim();
 
     const taxaCond = mapaCondicoes[codCond] || 0;
