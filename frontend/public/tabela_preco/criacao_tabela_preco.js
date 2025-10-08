@@ -1103,9 +1103,7 @@ async function salvarTabela() {
     
     const condSel   = tr.querySelector('td:nth-child(10) select');
     const codCond   = condSel ? (condSel.value || '') : '';
-    const condLabel = condSel
-      ? (condSel.options[condSel.selectedIndex]?.textContent || '').trim()
-      : '';
+   const condLabel = (selCond?.options[selCond.selectedIndex]?.textContent || '').trim();
 
     const taxaCond = mapaCondicoes[codCond] || 0;
     const { acrescimoCond, freteValor, descontoValor } =
@@ -1113,9 +1111,12 @@ async function salvarTabela() {
 
     const fatorLabel = selPct ? (selPct.options[selPct.selectedIndex]?.textContent || '').trim() : '';
     
-    const planoToSave = condLabel
-      ? (condLabel.startsWith(codCond) ? condLabel : (codCond ? `${codCond} - ${condLabel}` : condLabel))
-      : codCond;
+    let planoToSave = condLabel || '';
+    if (codCond) {
+      if (!planoToSave || !planoToSave.startsWith(codCond)) {
+        planoToSave = planoToSave ? `${codCond} - ${planoToSave}` : codCond;
+      }
+    }
     // objeto do item (NÃO coloque nome_tabela/cliente/fornecedor aqui)
     const produto = {
       codigo_produto_supra: item.codigo_tabela,

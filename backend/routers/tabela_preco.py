@@ -435,7 +435,7 @@ def atualizar_tabela(id_tabela: int, body: TabelaSalvar):
                 continue
             # normaliza plano
             p.codigo_produto_supra = cod
-            p.codigo_plano_pagamento = only_code(getattr(p, "codigo_plano_pagamento", ""))
+            p.codigo_plano_pagamento =  (getattr(p, "codigo_plano_pagamento", "") or "").strip()
             produtos_validos.append(p)
 
         enviados_codigos = set()
