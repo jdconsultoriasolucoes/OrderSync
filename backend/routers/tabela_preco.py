@@ -13,6 +13,7 @@ from sqlalchemy.orm import Session
 from pydantic import BaseModel
 import logging
 from sqlalchemy.exc import SQLAlchemyError, IntegrityError, DataError
+import re
 
 logger = logging.getLogger("tabela_preco")
 
@@ -427,33 +428,27 @@ def confirmar_pedido(tabela_id: int, body: ConfirmarPedidoReq):
         "itens": len(body.produtos)
     }
 
+CODIGO_OK = re.compile(r"^[A-Za-z0-9._\-]+$")
+
+def only_code(v):
+    # "1200 - 28/56/84 DIAS" -> "1200"
+    if v is None: return ""
+    return str(v).strip().split(" - ", 1)[0]
+
 @router.put("/tabela_preco/{id_tabela}")
 def atualizar_tabela(id_tabela: int, body: TabelaSalvar):
-    def only_code(v):
-        """'1200 - 28/56/84 DIAS' -> '1200'"""
-        if v is None:
-            return ""
-        s = str(v).strip()
-        return s.split(" - ", 1)[0]
-
     now = datetime.utcnow()
     with SessionLocal() as db:
-        # 0) carrega TODAS as linhas da tabela (ativas e inativas)
-        existentes = db.query(TabelaPrecoModel)\
-                       .filter(TabelaPrecoModel.id_tabela == id_tabela)\
-                       .all()
+        existentes = db.query(TabelaPrecoModel).filter(
+            TabelaPrecoModel.id_tabela == id_tabela
+        ).all()
         if not existentes:
             raise HTTPException(404, "Tabela não encontrada")
 
-        # índices rápidos
-        por_id      = {r.id_linha: r for r in existentes}
-        por_codigo  = {}
-        for r in existentes:
-            k = (r.codigo_produto_supra or "").strip()
-            if k:
-                por_codigo[k] = r
+        por_id = {r.id_linha: r for r in existentes}
+        por_codigo = { (r.codigo_produto_supra or "").strip(): r for r in existentes if (r.codigo_produto_supra or "").strip() }
 
-        # 1) cabeçalho (propaga em todas as linhas)
+        # cabeçalho
         for r in existentes:
             r.nome_tabela    = body.nome_tabela
             r.cliente        = body.cliente
@@ -461,32 +456,40 @@ def atualizar_tabela(id_tabela: int, body: TabelaSalvar):
             r.fornecedor     = body.fornecedor or ""
             r.editado_em     = now
 
-        enviados_codigos = set()
-        novos = 0
-        atualizados = 0
-        reativados = 0
-
-        # 2) upsert item a item
-        for p in body.produtos or []:
-            codigo = (p.codigo_produto_supra or "").strip()
-            if not codigo:
-                # ignora itens sem código
+        # ✅ filtra itens "lixo" do Swagger/exemplo
+        produtos_validos = []
+        for p in (body.produtos or []):
+            cod = (getattr(p, "codigo_produto_supra", "") or "").strip()
+            if not cod:               # sem código -> ignora
                 continue
-            enviados_codigos.add(codigo)
+            if cod.lower() == "string":
+                continue
+            if not CODIGO_OK.match(cod):
+                continue
+            desc = (getattr(p, "descricao_produto", "") or "").strip()
+            if not desc or desc.lower() == "string":   # exige descrição também
+                continue
+            # normaliza plano
+            p.codigo_produto_supra = cod
+            p.codigo_plano_pagamento = only_code(getattr(p, "codigo_plano_pagamento", ""))
+            produtos_validos.append(p)
 
-            # preferir id_linha quando vier
+        enviados_codigos = set()
+        novos = atualizados = reativados = 0
+
+        for p in produtos_validos:
+            cod = p.codigo_produto_supra
+            enviados_codigos.add(cod)
+
             target = None
             p_id_linha = getattr(p, "id_linha", None)
             if p_id_linha is not None:
                 target = por_id.get(p_id_linha)
-
-            # fallback: localizar por (id_tabela, codigo_produto_supra)
             if target is None:
-                target = por_codigo.get(codigo)
+                target = por_codigo.get(cod)
 
             if target is not None:
-                # UPDATE (e possível reativação)
-                target.codigo_produto_supra     = codigo
+                # UPDATE + possível reativação
                 target.descricao_produto        = p.descricao_produto
                 target.embalagem                = (p.embalagem or "")
                 target.peso_liquido             = (p.peso_liquido or 0)
@@ -494,15 +497,12 @@ def atualizar_tabela(id_tabela: int, body: TabelaSalvar):
                 target.comissao_aplicada        = (p.comissao_aplicada or 0)
                 target.ajuste_pagamento         = (p.ajuste_pagamento or 0)
                 target.descricao_fator_comissao = (p.descricao_fator_comissao or "")
-                target.codigo_plano_pagamento   = only_code(getattr(p, "codigo_plano_pagamento", ""))
+                target.codigo_plano_pagamento   = p.codigo_plano_pagamento
                 target.valor_frete_aplicado     = (p.valor_frete_aplicado or 0)
-                # frete_kg pode vir no item ou no topo — priorize o item
                 target.frete_kg                 = (getattr(p, "frete_kg", None)
-                                                   if getattr(p, "frete_kg", None) is not None
-                                                   else getattr(body, "frete_kg", None) or 0)
-                target.valor_frete              = (getattr(p, "valor_frete", None)
-                                                   if getattr(p, "valor_frete", None) is not None
-                                                   else 0)
+                                                  if getattr(p, "frete_kg", None) is not None
+                                                  else getattr(body, "frete_kg", None) or 0)
+                target.valor_frete              = (getattr(p, "valor_frete", None) or 0)
                 target.valor_s_frete            = (p.valor_s_frete or 0)
                 target.grupo                    = getattr(p, "grupo", None)
                 target.departamento             = getattr(p, "departamento", None)
@@ -517,40 +517,40 @@ def atualizar_tabela(id_tabela: int, body: TabelaSalvar):
                     atualizados += 1
                 target.editado_em = now
             else:
-                # INSERT (novo produto na tabela)
+                # INSERT novo
                 db.add(TabelaPrecoModel(
-                    id_tabela             = id_tabela,
-                    nome_tabela           = body.nome_tabela,
-                    cliente               = body.cliente,
-                    codigo_cliente        = body.codigo_cliente or "Não cadastrado",
-                    fornecedor            = body.fornecedor or "",
-                    codigo_produto_supra  = codigo,
-                    descricao_produto     = p.descricao_produto,
-                    embalagem             = (p.embalagem or ""),
-                    peso_liquido          = (p.peso_liquido or 0),
-                    valor_produto         = (p.valor_produto or 0),
-                    comissao_aplicada     = (p.comissao_aplicada or 0),
-                    ajuste_pagamento      = (p.ajuste_pagamento or 0),
+                    id_tabela            = id_tabela,
+                    nome_tabela          = body.nome_tabela,
+                    cliente              = body.cliente,
+                    codigo_cliente       = body.codigo_cliente or "Não cadastrado",
+                    fornecedor           = body.fornecedor or "",
+                    codigo_produto_supra = cod,
+                    descricao_produto    = p.descricao_produto,
+                    embalagem            = (p.embalagem or ""),
+                    peso_liquido         = (p.peso_liquido or 0),
+                    valor_produto        = (p.valor_produto or 0),
+                    comissao_aplicada    = (p.comissao_aplicada or 0),
+                    ajuste_pagamento     = (p.ajuste_pagamento or 0),
                     descricao_fator_comissao = (p.descricao_fator_comissao or ""),
-                    codigo_plano_pagamento   = only_code(getattr(p, "codigo_plano_pagamento", "")),
-                    valor_frete_aplicado  = (p.valor_frete_aplicado or 0),
-                    frete_kg              = (getattr(p, "frete_kg", None)
-                                              if getattr(p, "frete_kg", None) is not None
-                                              else getattr(body, "frete_kg", None) or 0),
-                    valor_frete           = (getattr(p, "valor_frete", None) or 0),
-                    valor_s_frete         = (p.valor_s_frete or 0),
-                    grupo                 = getattr(p, "grupo", None),
-                    departamento          = getattr(p, "departamento", None),
-                    ipi                   = (p.ipi or 0),
-                    icms_st               = (p.icms_st or 0),
-                    iva_st                = (p.iva_st or 0),
-                    ativo                 = True,
-                    deletado_em           = None,
-                    editado_em            = now,
+                    codigo_plano_pagamento   = p.codigo_plano_pagamento,
+                    valor_frete_aplicado = (p.valor_frete_aplicado or 0),
+                    frete_kg             = (getattr(p, "frete_kg", None)
+                                             if getattr(p, "frete_kg", None) is not None
+                                             else getattr(body, "frete_kg", None) or 0),
+                    valor_frete          = (getattr(p, "valor_frete", None) or 0),
+                    valor_s_frete        = (p.valor_s_frete or 0),
+                    grupo                = getattr(p, "grupo", None),
+                    departamento         = getattr(p, "departamento", None),
+                    ipi                  = (p.ipi or 0),
+                    icms_st              = (p.icms_st or 0),
+                    iva_st               = (p.iva_st or 0),
+                    ativo                = True,
+                    deletado_em          = None,
+                    editado_em           = now,
                 ))
                 novos += 1
 
-        # 3) soft-delete do que NÃO veio no payload (apenas as linhas ativas)
+        # soft-delete do que não veio
         removidos = 0
         for r in existentes:
             cod_exist = (r.codigo_produto_supra or "").strip()
@@ -562,13 +562,9 @@ def atualizar_tabela(id_tabela: int, body: TabelaSalvar):
 
         try:
             db.commit()
-        except (IntegrityError, DataError) as e:
-            db.rollback()
-            # retorna a causa real (evita 500 genérico)
-            raise HTTPException(status_code=400, detail=f"{type(e).__name__}: {e}")
         except Exception as e:
             db.rollback()
-            raise HTTPException(status_code=500, detail="Erro ao atualizar a tabela")
+            raise HTTPException(400, detail=f"{type(e).__name__}: {e}")
 
         return {
             "ok": True,
