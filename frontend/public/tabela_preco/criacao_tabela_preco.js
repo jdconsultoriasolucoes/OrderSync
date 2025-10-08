@@ -1146,7 +1146,7 @@ async function salvarTabela() {
   })
   .filter(p => p.codigo_produto_supra && p.descricao_produto);
 
-  console.table(produtos.map(p => ({ id_linha: p.id_linha, codigo: p.codigo_produto_supra })));
+  console.table(produtos.map(p => ({ id_linha: p.id_linha, codigo: p.codigo_produto_supra, valor: p.valor_produto, plano: p.codigo_plano_pagamento})));
 
   const fornecedorHeader = inferirFornecedorDaGrade();
   const codigo_cliente = (document.getElementById('codigo_cliente')?.value || '').trim() || null;

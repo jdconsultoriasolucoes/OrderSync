@@ -212,39 +212,7 @@ def salvar_tabela_preco(body: TabelaSalvar):
 
 
 
-@router.put("/{id_linha}")
-def editar_produto(id_linha: int, novo_produto: TabelaPreco):
- with SessionLocal() as db:
-    produto = db.query(TabelaPrecoModel).get(id_linha)
-    if not produto:
-     raise HTTPException(status_code=404, detail="Produto não encontrado")
 
-    dados = novo_produto.dict()
-
-    # Bloqueia identificadores
-    dados.pop("id_linha", None)
-    dados.pop("id_tabela", None)
-
-    # Mapeia descontos/acréscimos
-    if "desconto" in dados:
-        produto.comissao_aplicada = dados.pop("desconto") or 0.0
-    if "acrescimo" in dados:
-        produto.ajuste_pagamento = dados.pop("acrescimo") or 0.0
-
-    # Campos do modelo que podem ser atualizados
-    permitidos = {
-        "codigo_produto_supra","descricao_produto","embalagem","peso_liquido","valor_produto","comissao_aplicada","codigo_plano_pagamento",
-        "valor_frete_aplicado","frete_kg","grupo","departamento","ipi","iva_st","valor_frete","valor_s_frete",
-        "icms_st","ajuste_pagamento","descricao_fator_comissao",
-            }
-
-    for campo, valor in list(dados.items()):
-        if campo in permitidos:
-            setattr(produto, campo, valor)
-        # ignora silenciosamente o resto (ex.: icms_st, validade_tabela, etc.)
-
-    db.commit()
-    return {"mensagem": "Produto atualizado com sucesso"}
 
 
 @router.delete("/{id_tabela}")
