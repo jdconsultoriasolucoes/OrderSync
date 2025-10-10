@@ -14,18 +14,53 @@ def calcular_expires_at_global(db):
     """)).scalar()
     return _fim_do_dia(v) if v else None
 
-def gerar_link_code(db, tabela_id: int, com_frete: bool):
+def _parse_iso_date(s):
+    """Converte 'YYYY-MM-DD' em date; se for inválido ou None, retorna None."""
+    if not isinstance(s, str) or len(s) != 10:
+        return None
+    try:
+        return datetime.strptime(s, "%Y-%m-%d").date()
+    except ValueError:
+        return None
+
+def gerar_link_code(db, tabela_id: int, com_frete: bool, data_prevista_str: str | None = None):
+    """
+    Cria um link curto para a tabela.
+    - data_prevista_str: string 'YYYY-MM-DD' (opcional). Será gravada em tb_pedido_link.data_prevista.
+    Retorna: (code, expires_at, data_prevista)
+    """
     code = secrets.token_urlsafe(12)[:16]
     expires_at = calcular_expires_at_global(db)
-    link = PedidoLink(code=code, tabela_id=tabela_id, com_frete=com_frete, expires_at=expires_at)
+    data_prevista = _parse_iso_date(data_prevista_str)
+
+    link = PedidoLink(
+        code=code,
+        tabela_id=tabela_id,
+        com_frete=com_frete,
+        data_prevista=data_prevista,  # << NOVO
+        expires_at=expires_at
+    )
     db.add(link)
     db.commit()
-    return code, expires_at
+
+    return code, expires_at, data_prevista
 
 def resolver_code(db, code: str):
+    """
+    Busca o link pelo code. Se expirado, retorna ('expired').
+    Se ok, incrementa contador de uso e retorna (link, 'ok').
+    """
     link = db.query(PedidoLink).get(code)
     if not link:
         return None, "not_found"
     if link.expires_at and datetime.utcnow() > link.expires_at:
         return None, "expired"
+
+    # incrementa usos ao resolver com sucesso
+    db.execute(
+        text("UPDATE tb_pedido_link SET uses = COALESCE(uses,0)+1 WHERE code = :c"),
+        {"c": code}
+    )
+    db.commit()
+
     return link, "ok"

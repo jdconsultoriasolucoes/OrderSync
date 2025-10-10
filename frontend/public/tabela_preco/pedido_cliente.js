@@ -62,9 +62,6 @@ function normalizarEntregaISO(iso) {
   return iso;
 }
 function aplicarEntregaRetiradaHeader() {
-  const entregaQS = new URLSearchParams(location.search).get("entrega");
-  const entregaISO = normalizarEntregaISO(entregaQS);
-
   const labelEl = document.getElementById("labelEntregaRetirada");
   const valorEl = document.getElementById("dataEntregaValor");
   if (!labelEl || !valorEl) return;
@@ -74,7 +71,11 @@ function aplicarEntregaRetiradaHeader() {
     : "Data de retirada:";
   labelEl.textContent = label;
 
-  valorEl.textContent = entregaISO ? (formatarBR(entregaISO) || "a combinar") : "a combinar";
+  const iso = (typeof window.entregaISO === "string" && isISODate(window.entregaISO))
+    ? window.entregaISO
+    : null;
+
+  valorEl.textContent = iso ? (formatarBR(iso) || "a combinar") : "a combinar";
 }
 
 // -------------------- Elementos --------------------
@@ -299,6 +300,9 @@ async function carregarPedido() {
           const v = await r2.json();
           setCampoTexto("validadeTabela", v.validade ?? "---");
           setCampoTexto("tempoRestante",  v.tempo_restante ?? "---");
+          if (v && typeof v.validade === "string" && isISODate(v.validade)) {
+            window.validadeGlobalISO = v.validade;
+           }
         } else {
           setCampoTexto("validadeTabela", "---");
           setCampoTexto("tempoRestante",  "---");
@@ -362,7 +366,7 @@ function setCampoTexto(id, valor) {
 async function confirmarPedido() {
   try {
     const itens = produtos;
-    if (itens.length === 0) {
+    if (!Array.isArray(itens) || itens.length === 0) {
       setMensagem("Inclua pelo menos 1 item com quantidade > 0.", false);
       return;
     }
@@ -370,49 +374,64 @@ async function confirmarPedido() {
     if (btnConfirmar) btnConfirmar.disabled = true;
     setMensagem("Enviando pedido...", true);
 
-    // Quando vier por preview de tabela, podemos confirmar para um endpoint próprio (ajuste quando existir)
-    if (tabelaIdParam) {
-      const resp = await fetch(API(`/tabela_preco/${encodeURIComponent(tabelaIdParam)}/confirmar_pedido`), {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({usar_valor_com_frete: usarValorComFrete,
-        produtos: itens,
-        observacao: (document.getElementById('observacaoCliente')?.value || '').trim().slice(0, 244)
-      }),
-      });
-      if (resp.ok) {
-        setMensagem("Pedido confirmado! O PDF será enviado para a empresa.", true);
-      } else {
-        const txt = await resp.text();
-        throw new Error(`Falha na confirmação: ${resp.status} - ${txt}`);
-      }
-      return;
+    // token do link curto (/p/{code})
+    const originCode = location.pathname.split('/').pop() || null;
+
+    // razão social mostrada na tela
+    const clienteRazao = (document.getElementById('razaoSocialCliente')?.textContent || '').trim() || null;
+
+    // observação limitada a 244 chars
+    const observacao = (document.getElementById('observacaoCliente')?.value || '').trim().slice(0, 244);
+
+    const entregaQS = new URLSearchParams(location.search).get("entrega");
+    const dataRetiradaISO = (typeof entregaQS === "string" && isISODate(entregaQS)) ? entregaQS : null;
+
+    // pega a validade que guardamos ao carregar a tela
+    const validadeISO = (typeof window.validadeGlobalISO === "string" && isISODate(window.validadeGlobalISO))
+      ? window.validadeGlobalISO
+      : null;
+
+    // CHAMADA ao backend: agora usamos /pedido/{tabela_id}/confirmar
+    const resp = await fetch(API(`/pedido/${encodeURIComponent(tabelaIdParam)}/confirmar`), {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      cache: "no-store",
+      body: JSON.stringify({
+        origin_code: originCode,
+        usar_valor_com_frete: !!usarValorComFrete,
+        produtos: itens.map(x => ({
+          codigo: x.codigo,
+          quantidade: Number(x.quantidade || 0),
+          preco_unit: x.preco_unit ?? x.valor_sem_frete ?? 0,
+          preco_unit_com_frete: x.preco_unit_com_frete ?? x.valor_com_frete ?? x.preco_unit ?? 0,
+          peso_kg: x.peso ?? x.peso_kg ?? null
+        })),
+        observacao,
+        cliente: clienteRazao,
+        validade_ate: (typeof window.validadeGlobalISO === "string" && isISODate(window.validadeGlobalISO)) ? window.validadeGlobalISO : null,
+        data_retirada: (typeof window.entregaISO === "string" && isISODate(window.entregaISO)) ? window.entregaISO : null,
+      })
+    });
+
+    if (!resp.ok) {
+      const txt = await resp.text();
+      throw new Error(`Erro ao confirmar (${resp.status}) ${txt || ''}`);
     }
 
-    // Fluxo alternativo (se já existir pedido_id):
-    if (pedidoId) {
-      const resp = await fetch(API(`/pedido/${encodeURIComponent(pedidoId)}/confirmar`), {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-        produtos: itens,
-        observacao: (document.getElementById('observacaoCliente')?.value || '').trim().slice(0, 244)}),
-      });
-      if (resp.ok) {
-        setMensagem("Pedido confirmado! O PDF será enviado para a empresa.", true);
-      } else {
-        const txt = await resp.text();
-        throw new Error(`Falha na confirmação: ${resp.status} - ${txt}`);
-      }
-      return;
+    const data = await resp.json();
+    const pedidoIdConfirmado = data?.id;
+
+    if (!pedidoIdConfirmado) {
+      throw new Error("Resposta sem id do pedido.");
     }
 
-    // Se chegou aqui, não tinha nem tabelaIdParam nem pedidoId
-    setMensagem("Não foi possível confirmar: parâmetro ausente (tabela_id ou id).", false);
-  } catch (e) {
-    console.error(e);
-    setMensagem("Erro ao confirmar pedido. Tente novamente.", false);
-  } finally {
+    // Redirecionar para a tela de sucesso (está em /static/tabela_preco/)
+    window.location.href = `/static/tabela_preco/pedido_confirmado.html?pedidoId=${encodeURIComponent(pedidoIdConfirmado)}`;
+
+  } catch (err) {
+    console.error('[confirmarPedido] erro', err);
+    alert("Não foi possível confirmar o pedido. Tente novamente.");
+    setMensagem("Falha ao enviar o pedido.", false);
     if (btnConfirmar) btnConfirmar.disabled = false;
   }
 }

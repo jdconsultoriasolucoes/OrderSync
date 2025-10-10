@@ -112,12 +112,15 @@ function apiBase() {
   return (typeof window.API_BASE === "string" && window.API_BASE) ? window.API_BASE : "";
 }
 
-async function gerarLinkCurtoNoServidor({ tabelaId, comFrete }) {
+async function gerarLinkCurtoNoServidor({ tabelaId, comFrete, dataPrevistaISO  }) {
   const url  = apiBase() ? `${apiBase()}/link_pedido/gerar` : "/link_pedido/gerar";
   const resp = await fetch(url, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ tabela_id: tabelaId, com_frete: comFrete }),
+    body: JSON.stringify({
+      tabela_id: tabelaId,
+      com_frete: comFrete,
+      data_prevista: (isISODate(dataPrevistaISO) ? dataPrevistaISO : null) }),
   });
   if (!resp.ok) {
     const msg = await resp.text();
@@ -203,8 +206,8 @@ export function showGerarLinkModal({ tabelaId }) {
 
     try {
       setBusy(true);
-      const urlCurta = await gerarLinkCurtoNoServidor({ tabelaId, comFrete: currentComFrete });
-      input.value = aplicarEntregaNaUrl(urlCurta, entregaISO);
+      const urlCurta = await gerarLinkCurtoNoServidor({ tabelaId, comFrete: currentComFrete,dataPrevistaISO: entregaISO });
+      input.value = urlCurta;
       hint.textContent = currentComFrete
         ? "Este link exibirá os preços COM frete."
         : "Este link exibirá os preços SEM frete.";

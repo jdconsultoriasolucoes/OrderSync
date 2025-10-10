@@ -1,10 +1,12 @@
 # routers/pedido_preview.py
 from __future__ import annotations
-from fastapi import APIRouter, Query, HTTPException
-from pydantic import BaseModel, constr
+from fastapi import APIRouter, Query, HTTPException, Request, Depends
+from pydantic import BaseModel, constr, conlist
 from typing import Optional, List
 from sqlalchemy import text
 from database import SessionLocal  
+from datetime import datetime
+from sqlalchemy.orm import Session
 
 router = APIRouter(prefix="/pedido", tags=["Pedido"])
 
@@ -106,33 +108,122 @@ async def pedido_preview(
                tempo_restante=None,
                usar_valor_com_frete=com_frete,
                produtos=produtos
-            )
-
+        )
 
 class ConfirmarItem(BaseModel):
     codigo: str
     quantidade: int
-    # adicione outros campos se necessários
+    preco_unit: float | None = None
+    preco_unit_com_frete: float | None = None
+    peso_kg: float | None = None
 
 class ConfirmarPedidoRequest(BaseModel):
-    usar_valor_com_frete: Optional[bool] = None  # pode vir quando a origem é por tabela
-    produtos: List[ConfirmarItem]
-    observacao: Optional[constr(max_length=244)] = None
+    origin_code: str | None = None              # token do link /p/{code}
+    usar_valor_com_frete: bool = True
+    produtos: list[ConfirmarItem]
+    observacao: str | None = None
+    cliente: str | None = None                  # razão social mostrada
+    validade_ate: str | None = None             # 'YYYY-MM-DD' (opcional)
+    data_retirada: str | None = None            # 'YYYY-MM-DD' (opcional)
 
 @router.post("/{tabela_id}/confirmar")
 def confirmar_pedido(tabela_id: int, body: ConfirmarPedidoRequest):
     if not body.produtos:
-        raise HTTPException(400, "Nenhum item informado")
+        raise HTTPException(status_code=400, detail="Nenhum item informado")
 
-    observacao = (body.observacao or "").strip()
+    db = SessionLocal()
 
-    # TODO: criar cabeçalho em tb_pedido (id_cliente, tabela_id, usar_valor_com_frete, observacao, etc.)
-    # TODO: inserir itens em tb_pedido_item
-    # id_pedido = ...
+    # 1) Validar o link do token (se veio)
+    link_row = None
+    if body.origin_code:
+        link_row = db.execute(text("""
+            SELECT code, tabela_id, com_frete, expires_at, data_prevista
+              FROM tb_pedido_link
+             WHERE code = :c
+        """), {"c": body.origin_code}).mappings().first()
 
-    return {
-      "ok": True,
-      "tabela_id": tabela_id,
-      "itens": len(body.produtos),
-      "observacao": observacao
-    }
+        if not link_row:
+            raise HTTPException(status_code=404, detail="Link não encontrado")
+        if link_row["expires_at"] and datetime.utcnow() > link_row["expires_at"]:
+            raise HTTPException(status_code=410, detail="Link expirado")
+        if int(link_row["tabela_id"]) != int(tabela_id):
+            raise HTTPException(status_code=400, detail="Link e tabela não conferem")
+
+        # força o com_frete do link
+        body.usar_valor_com_frete = bool(link_row["com_frete"])
+
+    # 2) Somar totais no servidor
+    peso_total_kg = 0.0
+    total_sem_frete = 0.0
+    total_com_frete = 0.0
+    for it in body.produtos:
+        qtd = float(it.quantidade or 0)
+        peso_total_kg += float(it.peso_kg or 0) * qtd
+        total_sem_frete += float(it.preco_unit or 0) * qtd
+        total_com_frete += float((it.preco_unit_com_frete if it.preco_unit_com_frete is not None else it.preco_unit) or 0) * qtd
+
+    frete_total = max(0.0, total_com_frete - total_sem_frete)
+    total_pedido = total_com_frete if body.usar_valor_com_frete else total_sem_frete
+
+    # 3) Datas e campos
+    def _parse_date(s: str | None):
+        if not s: return None
+        return datetime.strptime(s, "%Y-%m-%d").date()
+
+    validade_ate = _parse_date(body.validade_ate)
+    data_retirada = _parse_date(body.data_retirada) or (link_row["data_prevista"] if link_row else None)
+
+    cliente_str = (body.cliente or "").strip() or "---"
+    codigo_cliente = (f"LINK:{body.origin_code}" if body.origin_code else f"TABELA:{tabela_id}")[:80]
+    observacao = (body.observacao or "").strip() or None
+    agora = datetime.utcnow()
+
+    link_expira_em = link_row["expires_at"] if link_row else None
+    link_token = body.origin_code
+
+    # 4) Gravar o pedido
+    insert_sql = text("""
+        INSERT INTO tb_pedidos (
+          codigo_cliente, cliente, tabela_preco_id,
+          validade_ate, validade_dias, data_retirada,
+          usar_valor_com_frete, itens,
+          peso_total_kg, frete_total, total_sem_frete, total_com_frete, total_pedido,
+          observacoes, status, confirmado_em,
+          link_token, link_url, link_enviado_em, link_expira_em, link_status,
+          criado_em, atualizado_em
+        )
+        VALUES (
+          :codigo_cliente, :cliente, :tabela_preco_id,
+          :validade_ate, NULL, :data_retirada,
+          :usar_valor_com_frete, :itens::jsonb,
+          :peso_total_kg, :frete_total, :total_sem_frete, :total_com_frete, :total_pedido,
+          :observacoes, 'CONFIRMADO', :confirmado_em,
+          :link_token, NULL, :link_enviado_em, :link_expira_em, 'ABERTO',
+          :agora, :agora
+        )
+        RETURNING id
+    """)
+
+    new_id = db.execute(insert_sql, {
+        "codigo_cliente": codigo_cliente,
+        "cliente": cliente_str,
+        "tabela_preco_id": tabela_id,
+        "validade_ate": validade_ate,
+        "data_retirada": data_retirada,
+        "usar_valor_com_frete": body.usar_valor_com_frete,
+        "itens": [i.dict() for i in body.produtos],
+        "peso_total_kg": round(peso_total_kg, 3),
+        "frete_total": round(frete_total, 2),
+        "total_sem_frete": round(total_sem_frete, 2),
+        "total_com_frete": round(total_com_frete, 2),
+        "total_pedido": round(total_pedido, 2),
+        "observacoes": observacao,
+        "confirmado_em": agora,
+        "link_token": link_token,
+        "link_enviado_em": agora,
+        "link_expira_em": link_expira_em,
+        "agora": agora
+    }).scalar()
+
+    db.commit()
+    return {"id": new_id, "status": "CRIADO"}
