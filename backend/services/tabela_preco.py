@@ -1,4 +1,4 @@
-from typing import List, Optional
+from typing import List, Optional, Any
 from schemas.tabela_preco import ParametrosCalculo, ProdutoCalculado
 from datetime import date
 from sqlalchemy import text
