@@ -39,10 +39,10 @@ async def pedido_preview(
         with SessionLocal() as db:
     # Cabeçalho: cliente "como está no banco"
           cabecalho_sql = text("""
-          SELECT cliente
-          FROM tb_tabela_preco
-          WHERE id_tabela = :tid
-          LIMIT 1
+            SELECT cliente
+            FROM tb_tabela_preco
+            WHERE id_tabela = :tid
+            LIMIT 1
           """)
           cliente = db.execute(cabecalho_sql, {"tid": tabela_id}).scalar() or ""
 
@@ -79,35 +79,27 @@ async def pedido_preview(
         
 
         # 4) Montar lista de produtos no shape do front
-        produtos: List[ProdutoPedidoPreview] = []
+        produtos = []
         for r in rows:
-            # Mapeia codigo_supra -> codigo (mantém compatibilidade com a tela)
-            codigo = str(r.get("codigo_supra") or "")
-            nome = r.get("nome") or ""
-            embalagem = r.get("embalagem")
-            peso = float(r.get("peso") or 0.0)
-            v_sem = float(r.get("valor_sem_frete") or 0.0)
-            v_com = float(r.get("valor_com_frete") or 0.0)
-
             produtos.append(ProdutoPedidoPreview(
-                codigo=codigo,
-                nome=nome,
-                embalagem=embalagem,
-                peso=peso,
+                codigo=str(r.get("codigo_supra") or ""),
+                nome=r.get("nome") or "",
+                embalagem=r.get("embalagem"),
+                peso=float(r.get("peso") or 0.0),
                 condicao_pagamento=r.get("plano_pagamento"),
-                valor_sem_frete=round(v_sem, 2),
-                valor_com_frete=round(v_com, 2),
-                quantidade=1
+                valor_sem_frete=round(float(r.get("valor_sem_frete") or 0.0), 2),
+                valor_com_frete=round(float(r.get("valor_com_frete") or 0.0), 2),
+                quantidade=1,
             ))
 
         return PedidoPreviewResp(
-               tabela_id=tabela_id,
-               razao_social=cliente,       # mesmo texto, como você pediu
-               condicao_pagamento=None,    # agora a condição é exibida por item
-               validade=None,         # front chama /tabela_preco/meta/validade_global
-               tempo_restante=None,
-               usar_valor_com_frete=com_frete,
-               produtos=produtos
+            tabela_id=tabela_id,
+            razao_social=cliente,
+            condicao_pagamento=None,
+            validade=None,
+            tempo_restante=None,
+            usar_valor_com_frete=com_frete,
+            produtos=produtos,
         )
 
 class ConfirmarItem(BaseModel):
@@ -128,11 +120,11 @@ class ConfirmarPedidoRequest(BaseModel):
 
 @router.post("/{tabela_id}/confirmar")
 def confirmar_pedido(tabela_id: int, body: ConfirmarPedidoRequest):
-    if not body.produtos:
-        raise HTTPException(status_code=400, detail="Nenhum item informado")
-
-    db = SessionLocal()
-
+    with SessionLocal() as db:
+        if not body.produtos:
+         raise HTTPException(status_code=400, detail="Nenhum item informado")
+        
+    
     # 1) Validar o link do token (se veio)
     link_row = None
     if body.origin_code:
