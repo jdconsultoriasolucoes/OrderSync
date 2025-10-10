@@ -7,6 +7,7 @@ from sqlalchemy import text
 from database import SessionLocal  
 from datetime import datetime
 from sqlalchemy.orm import Session
+import json
 
 router = APIRouter(prefix="/pedido", tags=["Pedido"])
 
@@ -187,7 +188,7 @@ def confirmar_pedido(tabela_id: int, body: ConfirmarPedidoRequest):
         VALUES (
           :codigo_cliente, :cliente, :tabela_preco_id,
           :validade_ate, NULL, :data_retirada,
-          :usar_valor_com_frete, :itens::jsonb,
+          usar_valor_com_frete, CAST(:itens AS jsonb),
           :peso_total_kg, :frete_total, :total_sem_frete, :total_com_frete, :total_pedido,
           :observacoes, 'CONFIRMADO', :confirmado_em,
           :link_token, NULL, :link_enviado_em, :link_expira_em, 'ABERTO',
@@ -203,7 +204,7 @@ def confirmar_pedido(tabela_id: int, body: ConfirmarPedidoRequest):
         "validade_ate": validade_ate,
         "data_retirada": data_retirada,
         "usar_valor_com_frete": body.usar_valor_com_frete,
-        "itens": [i.dict() for i in body.produtos],
+        "itens": json.dumps([i.dict() for i in body.produtos]),
         "peso_total_kg": round(peso_total_kg, 3),
         "frete_total": round(frete_total, 2),
         "total_sem_frete": round(total_sem_frete, 2),
