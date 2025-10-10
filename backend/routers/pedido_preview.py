@@ -1,5 +1,5 @@
 # routers/pedido_preview.py
-from __future__ import annotations
+from typing import Any, Optional, List
 from fastapi import APIRouter, Query, HTTPException, Request, Depends
 from pydantic import BaseModel, constr, conlist
 from typing import Optional, List
