@@ -8,22 +8,32 @@ function ensureModalInjected() {
         <h3>Gerar Link do Pedido</h3>
         <button class="glp-close" aria-label="Fechar">&times;</button>
       </div>
+
       <div class="glp-body">
-        <div class="glp-row">
-          <button class="glp-option" data-frete="1" title="Exibir valores com frete">Valor <b>com</b> Frete</button>
-          <button class="glp-option" data-frete="0" title="Exibir valores sem frete">Valor <b>sem</b> Frete</button>
+
+        <!-- ===== Toolbar: Segmented (com/sem frete) + Chip de Data ===== -->
+        <div class="glp-toolbar">
+          <div class="glp-segment" role="tablist" aria-label="Modo de frete">
+            <button class="glp-option glp-seg is-active" data-frete="1" aria-selected="true">
+              Valor <b>com</b> Frete
+            </button>
+            <button class="glp-option glp-seg" data-frete="0" aria-selected="false">
+              Valor <b>sem</b> Frete
+            </button>
+          </div>
+
+          <div class="glp-datechip">
+            <label for="glpDate">Data de entrega/retirada</label>
+            <input type="date" id="glpDate" />
+          </div>
         </div>
 
-        <!-- NOVO: campo de data -->
-        <div class="glp-field">
-          <label for="glpDate"><b>Data</b> (opcional)</label>
-          <input type="date" id="glpDate" />
-          <small>
-            Será exibida como <i>Data de entrega</i> (com frete) ou <i>Data de retirada</i> (sem frete).
-            Se não preencher, mostramos <i>a combinar</i>.
-          </small>
-        </div>
+        <small class="glp-help">
+          Será exibida como <i>Data de entrega</i> (com frete) ou <i>Data de retirada</i> (sem frete).
+          Se não preencher, mostramos <i>a combinar</i>.
+        </small>
 
+        <!-- ===== Link Gerado + Ações ===== -->
         <div class="glp-linkbox">
           <label>Link gerado</label>
           <input type="text" id="glpLinkInput" readonly>
@@ -34,6 +44,7 @@ function ensureModalInjected() {
           </div>
           <p id="glpHint" class="glp-hint"></p>
         </div>
+
       </div>
     </div>
   </div>`;
@@ -45,12 +56,40 @@ function ensureModalInjected() {
   .glp-header h3{margin:0;font-size:18px}
   .glp-close{background:none;border:none;font-size:22px;cursor:pointer;line-height:1}
   .glp-body{padding:16px}
-  .glp-row{display:flex;gap:12px;flex-wrap:wrap;margin-bottom:14px}
-  .glp-option{flex:1;min-width:180px;border:1px solid #ddd;border-radius:8px;padding:12px 14px;cursor:pointer;background:#f7f7f7}
+
+  /* ===== Toolbar moderna ===== */
+  .glp-toolbar{
+    display:flex;align-items:center;justify-content:space-between;
+    gap:12px;flex-wrap:wrap;margin:6px 0 10px;
+  }
+
+  /* Segmented control (pílulas) */
+  .glp-segment{
+    display:inline-flex;border:1px solid #d0d7de;border-radius:10px;overflow:hidden;background:#fff;
+  }
+  /* IMPORTANTE: sobrescreve o estilo genérico de .glp-option */
+  .glp-option{ /* estilo legado, mantido para outras telas se usarem */
+    flex:1;min-width:180px;border:1px solid #ddd;border-radius:8px;padding:12px 14px;cursor:pointer;background:#f7f7f7;
+  }
   .glp-option:hover{background:#f0f0f0}
   .glp-option.is-active{background:#eef2ff;border-color:#c7d2fe;box-shadow:inset 0 0 0 2px #c7d2fe}
-  .glp-field{display:flex;flex-direction:column;gap:6px;margin:6px 0 14px}
-  .glp-field input[type="date"]{padding:8px 10px;border:1px solid #ccc;border-radius:8px;font-size:14px}
+
+  /* Botões do segmented nesta toolbar */
+  .glp-seg{flex:0 0 auto;min-width:auto;border:0;border-radius:0;background:#fff;padding:8px 14px;font-weight:600;color:#344054;cursor:pointer}
+  .glp-seg + .glp-seg{border-left:1px solid #d0d7de}
+  .glp-seg.is-active{background:#eef4ff;color:#1f4bd8}
+
+  /* Chip de data */
+  .glp-datechip{
+    display:flex;align-items:center;gap:8px;background:#f8fafc;border:1px solid #e5e7eb;border-radius:999px;padding:6px 10px;
+  }
+  .glp-datechip label{margin:0;font-size:12px;color:#475569;white-space:nowrap}
+  .glp-datechip input[type="date"]{width:150px;border:0;background:transparent;padding:2px 4px;font-size:13px}
+
+  /* Texto de ajuda menor */
+  .glp-help{font-size:11px;color:#666;display:block;margin:-2px 0 10px}
+
+  /* Linkbox e ações (mantidos) */
   .glp-linkbox label{display:block;font-size:12px;color:#666;margin:6px 0}
   #glpLinkInput{width:100%;padding:10px;border:1px solid #ccc;border-radius:8px;font-size:14px}
   .glp-actions{display:flex;gap:10px;margin-top:10px}
@@ -60,6 +99,12 @@ function ensureModalInjected() {
   #glpOpen{background:#1f73f1}
   #glpWhats{background:#25D366}
   .glp-hint{font-size:12px;color:#555;margin-top:8px;min-height:1.2em}
+
+  /* Responsivo */
+  @media (max-width:520px){
+    .glp-toolbar{flex-direction:column;align-items:stretch}
+    .glp-datechip{align-self:flex-end}
+  }
   `;
 
   const wrap = document.createElement("div");

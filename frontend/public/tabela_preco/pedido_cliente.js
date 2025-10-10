@@ -61,6 +61,20 @@ function normalizarEntregaISO(iso) {
   if (dt < hoje) return null;
   return iso;
 }
+
+function brToISO(br) {
+  // "31/12/2025" -> "2025-12-31"
+  if (typeof br !== "string") return null;
+  const m = br.match(/^(\d{2})\/(\d{2})\/(\d{4})$/);
+  return m ? `${m[3]}-${m[2]}-${m[1]}` : null;
+}
+function normalizarValidadeCampo(x) {
+  if (!x) return null;
+  if (/^\d{4}-\d{2}-\d{2}$/.test(x)) return x; // já é ISO
+  return brToISO(x); // tenta converter BR -> ISO
+}
+
+
 function aplicarEntregaRetiradaHeader() {
   const labelEl = document.getElementById("labelEntregaRetirada");
   const valorEl = document.getElementById("dataEntregaValor");
@@ -313,11 +327,11 @@ async function carregarPedido() {
 
         if (r2.ok) {
           const v = await r2.json();
-          setCampoTexto("validadeTabela", v.validade ?? "---");
+          setCampoTexto("validadeTabela", v.validade ?? v.validade_tabela ?? "---");
           setCampoTexto("tempoRestante",  v.tempo_restante ?? "---");
-          if (v && typeof v.validade === "string" && isISODate(v.validade)) {
-            window.validadeGlobalISO = v.validade;
-           }
+          const rawVal = v.validade ?? v.validade_tabela ?? null;
+          window.validadeGlobalISO = normalizarValidadeCampo(rawVal);
+          console.debug("[validade] raw:", rawVal, "ISO:", window.validadeGlobalISO);
         } else {
           setCampoTexto("validadeTabela", "---");
           setCampoTexto("tempoRestante",  "---");
@@ -383,7 +397,41 @@ function obterValidadeDiasDaTela() {
   const m = (el.textContent || "").match(/(\d+)/);
   return m ? parseInt(m[1], 10) : null;
 }
+//Bloqueia tela depois de confirmar pedido
+function lockPageAfterConfirm() {
+  // Desabilita todos os elementos interativos da página (menos o botão do modal)
+  document.body.classList.add('page-locked');
+  document.querySelectorAll('input, textarea, select, button').forEach(el => {
+    if (el.id === 'btnFecharConfirm') return;
+    el.disabled = true;
+  });
+  // Também evita scroll enquanto o modal estiver aberto
+  document.body.classList.add('modal-open');
+}
 
+function openConfirmModal(pedidoId) {
+  const modal = document.getElementById('confirmModal');
+  const info  = document.getElementById('confirmPedidoInfo');
+  if (!modal) return;
+
+  info.textContent = pedidoId ? `Número do pedido: ${pedidoId}` : '';
+  modal.hidden = false;
+
+  // Trava a página para não permitir mais modificações
+  lockPageAfterConfirm();
+
+  // Foco no botão para acessibilidade
+  const btn = document.getElementById('btnFecharConfirm');
+  btn && btn.focus();
+}
+
+function closeConfirmModal() {
+  const modal = document.getElementById('confirmModal');
+  if (!modal) return;
+  modal.hidden = true;
+  // Mantém a página travada mesmo após fechar o pop-up (conforme solicitado)
+  document.body.classList.remove('modal-open'); // só libera o scroll do pop-up
+}
 
 // -------------------- Ações --------------------
 async function confirmarPedido() {
@@ -451,8 +499,7 @@ async function confirmarPedido() {
       throw new Error("Resposta sem id do pedido.");
     }
 
-    // Redirecionar para a tela de sucesso (está em /static/tabela_preco/)
-    window.location.href = `/static/tabela_preco/pedido_confirmado.html?pedidoId=${encodeURIComponent(pedidoIdConfirmado)}`;
+    openConfirmModal(pedidoIdConfirmado);
 
   } catch (err) {
     console.error('[confirmarPedido] erro', err);
@@ -506,3 +553,5 @@ if (taObs) {
   taObs.addEventListener('input', atualizarObsCounter);
   atualizarObsCounter(); // inicia contador
 }
+const btnFecharConfirm = document.getElementById('btnFecharConfirm');
+if (btnFecharConfirm) btnFecharConfirm.addEventListener('click', closeConfirmModal);

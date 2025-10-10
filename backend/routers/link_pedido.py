@@ -18,8 +18,6 @@ def gerar_link(body: dict, request: Request):
     with SessionLocal() as db:
         tabela_id = int(body["tabela_id"])
         com_frete = bool(body["com_frete"])
-        
-
         codigo_cliente = body.get("codigo_cliente")
         code, expires_at, data_prevista = gerar_link_code(db, tabela_id, com_frete, body.get("data_prevista"), codigo_cliente)
 
