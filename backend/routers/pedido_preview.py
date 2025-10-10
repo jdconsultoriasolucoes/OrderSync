@@ -188,7 +188,7 @@ def confirmar_pedido(tabela_id: int, body: ConfirmarPedidoRequest):
         VALUES (
           :codigo_cliente, :cliente, :tabela_preco_id,
           :validade_ate, NULL, :data_retirada,
-          usar_valor_com_frete, CAST(:itens AS jsonb),
+          :usar_valor_com_frete, CAST(:itens AS jsonb),
           :peso_total_kg, :frete_total, :total_sem_frete, :total_com_frete, :total_pedido,
           :observacoes, 'CONFIRMADO', :confirmado_em,
           :link_token, NULL, :link_enviado_em, :link_expira_em, 'ABERTO',
