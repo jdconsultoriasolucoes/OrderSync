@@ -18,11 +18,10 @@ def gerar_link(body: dict, request: Request):
     with SessionLocal() as db:
         tabela_id = int(body["tabela_id"])
         com_frete = bool(body["com_frete"])
-        data_prevista_str = body.get("data_prevista")  # pode ser None
+        
 
-        code, expires_at, data_prevista = gerar_link_code(
-            db, tabela_id, com_frete, data_prevista_str
-        )
+        codigo_cliente = body.get("codigo_cliente")
+        code, expires_at, data_prevista = gerar_link_code(db, tabela_id, com_frete, body.get("data_prevista"), codigo_cliente)
 
     # monta URL pública
     scheme = request.headers.get("x-forwarded-proto", request.url.scheme)
@@ -50,6 +49,10 @@ def resolver_link(code: str):
             "com_frete": link.com_frete,
             "expires_at": link.expires_at.isoformat() if link.expires_at else None,
             "data_prevista": link.data_prevista.isoformat() if getattr(link, "data_prevista", None) else None,
+            "codigo_cliente": getattr(link, "codigo_cliente", None),
+            "uses": getattr(link, "uses", None),
+            "first_access_at": getattr(link, "first_access_at", None) and link.first_access_at.isoformat(),
+            "last_access_at": getattr(link, "last_access_at", None) and link.last_access_at.isoformat(),
         }
 
 # Rota curta que serve o HTML público

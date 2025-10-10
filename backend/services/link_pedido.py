@@ -23,7 +23,7 @@ def _parse_iso_date(s):
     except ValueError:
         return None
 
-def gerar_link_code(db, tabela_id: int, com_frete: bool, data_prevista_str: str | None = None):
+def gerar_link_code(db, tabela_id: int, com_frete: bool, data_prevista_str: str | None = None, codigo_cliente: str | None = None):
     """
     Cria um link curto para a tabela.
     - data_prevista_str: string 'YYYY-MM-DD' (opcional). Será gravada em tb_pedido_link.data_prevista.
@@ -38,6 +38,7 @@ def gerar_link_code(db, tabela_id: int, com_frete: bool, data_prevista_str: str 
         tabela_id=tabela_id,
         com_frete=com_frete,
         data_prevista=data_prevista,  # << NOVO
+        codigo_cliente=codigo_cliente,
         expires_at=expires_at
     )
     db.add(link)
@@ -56,11 +57,16 @@ def resolver_code(db, code: str):
     if link.expires_at and datetime.utcnow() > link.expires_at:
         return None, "expired"
 
-    # incrementa usos ao resolver com sucesso
-    db.execute(
-        text("UPDATE tb_pedido_link SET uses = COALESCE(uses,0)+1 WHERE code = :c"),
-        {"c": code}
-    )
+    # contadores e carimbos
+    now = datetime.utcnow()
+    db.execute(text("""
+        UPDATE tb_pedido_link
+           SET uses = COALESCE(uses,0) + 1,
+               first_access_at = COALESCE(first_access_at, :now),
+               last_access_at  = :now
+         WHERE code = :c
+    """), {"c": code, "now": now})
     db.commit()
-
+    # recarrega atualizado
+    link = db.query(PedidoLink).get(code)
     return link, "ok"

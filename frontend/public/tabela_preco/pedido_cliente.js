@@ -231,6 +231,21 @@ function obterParametrosPedido() {
 async function carregarPedido() {
   try {
     const _qsNow = new URLSearchParams(location.search);
+    
+    const pathParts = location.pathname.split('/').filter(Boolean);
+    const lastPart = pathParts[pathParts.length - 1];
+    if (pathParts[0] === 'p' && lastPart) {
+      try {
+        const r = await fetch(`/link_pedido/resolver?code=${encodeURIComponent(lastPart)}`, { cache: "no-store" });
+        if (r.ok) {
+          const info = await r.json();
+          window.currentTabelaId = info.tabela_id ?? window.currentTabelaId;
+          window.currentComFrete = info.com_frete ?? window.currentComFrete;
+          window.codigoClienteHidden = info.codigo_cliente || null;  // <— oculto
+        }
+      } catch {}
+    }
+
 
     tabelaIdParam = tabelaIdParam
     || _qsNow.get("tabela_id")
@@ -362,6 +377,14 @@ function setCampoTexto(id, valor) {
   if (el) el.textContent = valor;
 }
 
+function obterValidadeDiasDaTela() {
+  const el = document.getElementById("tempoRestante");
+  if (!el) return null;
+  const m = (el.textContent || "").match(/(\d+)/);
+  return m ? parseInt(m[1], 10) : null;
+}
+
+
 // -------------------- Ações --------------------
 async function confirmarPedido() {
   try {
@@ -409,7 +432,10 @@ async function confirmarPedido() {
         observacao,
         cliente: clienteRazao,
         validade_ate: (typeof window.validadeGlobalISO === "string" && isISODate(window.validadeGlobalISO)) ? window.validadeGlobalISO : null,
-        data_retirada: (typeof window.entregaISO === "string" && isISODate(window.entregaISO)) ? window.entregaISO : null,
+        data_retirada: dataRetiradaISO,
+        validade_dias: obterValidadeDiasDaTela(),
+        codigo_cliente: (typeof window.codigoClienteHidden === "string" ? window.codigoClienteHidden : null),
+        link_url: location.href
       })
     });
 

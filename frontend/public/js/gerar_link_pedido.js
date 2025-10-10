@@ -112,6 +112,16 @@ function apiBase() {
   return (typeof window.API_BASE === "string" && window.API_BASE) ? window.API_BASE : "";
 }
 
+function getCodigoClienteHidden() {
+  const el =
+    document.querySelector('#codigo_cliente') ||
+    document.querySelector('input[name="codigo_cliente"]') ||
+    document.querySelector('[data-codigo-cliente]');
+  const v = el?.value ?? el?.dataset?.codigoCliente ?? null;
+  return (typeof v === "string" && v.trim()) ? v.trim() : null;
+}
+
+
 async function gerarLinkCurtoNoServidor({ tabelaId, comFrete, dataPrevistaISO  }) {
   const url  = apiBase() ? `${apiBase()}/link_pedido/gerar` : "/link_pedido/gerar";
   const resp = await fetch(url, {
@@ -120,7 +130,9 @@ async function gerarLinkCurtoNoServidor({ tabelaId, comFrete, dataPrevistaISO  }
     body: JSON.stringify({
       tabela_id: tabelaId,
       com_frete: comFrete,
-      data_prevista: (isISODate(dataPrevistaISO) ? dataPrevistaISO : null) }),
+      data_prevista: (isISODate(dataPrevistaISO) ? dataPrevistaISO : null),
+     codigo_cliente: getCodigoClienteHidden() }),
+      
   });
   if (!resp.ok) {
     const msg = await resp.text();

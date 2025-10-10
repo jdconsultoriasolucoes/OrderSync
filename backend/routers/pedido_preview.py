@@ -110,6 +110,9 @@ class ConfirmarPedidoRequest(BaseModel):
     cliente: str | None = None                  # razão social mostrada
     validade_ate: str | None = None             # 'YYYY-MM-DD' (opcional)
     data_retirada: str | None = None            # 'YYYY-MM-DD' (opcional)
+    validade_dias: int | None = None
+    codigo_cliente: str | None = None
+    link_url: str | None = None
 
 @router.post("/{tabela_id}/confirmar")
 def confirmar_pedido(tabela_id: int, body: ConfirmarPedidoRequest):
@@ -122,7 +125,7 @@ def confirmar_pedido(tabela_id: int, body: ConfirmarPedidoRequest):
         link_row = None
         if body.origin_code:
             link_row = db.execute(text("""
-                SELECT code, tabela_id, com_frete, expires_at, data_prevista
+                SELECT code, tabela_id, com_frete, expires_at, data_prevista, uses, first_access_at, last_access_at
                   FROM tb_pedido_link
                  WHERE code = :c
             """), {"c": body.origin_code}).mappings().first()
@@ -157,10 +160,12 @@ def confirmar_pedido(tabela_id: int, body: ConfirmarPedidoRequest):
             return datetime.strptime(s, "%Y-%m-%d").date()
 
         validade_ate = _parse_date(body.validade_ate)
+        validade_dias = body.validade_dias
         data_retirada = _parse_date(body.data_retirada) or (link_row["data_prevista"] if link_row else None)
 
         cliente_str = (body.cliente or "").strip() or "---"
-        codigo_cliente = (f"LINK:{body.origin_code}" if body.origin_code else f"TABELA:{tabela_id}")[:80]
+        codigo_cliente = (body.codigo_cliente or "").strip() or None
+        link_url = (body.link_url or None)
         observacao = (body.observacao or "").strip() or None
         agora = datetime.utcnow()
 
@@ -170,46 +175,91 @@ def confirmar_pedido(tabela_id: int, body: ConfirmarPedidoRequest):
         # 5) Insert
         insert_sql = text("""
             INSERT INTO tb_pedidos (
-              codigo_cliente, cliente, tabela_preco_id,
-              validade_ate, validade_dias, data_retirada,
-              usar_valor_com_frete, itens,
-              peso_total_kg, frete_total, total_sem_frete, total_com_frete, total_pedido,
-              observacoes, status, confirmado_em,
-              link_token, link_url, link_enviado_em, link_expira_em, link_status,
-              criado_em, atualizado_em
-            )
+                codigo_cliente, cliente, tabela_preco_id,
+                validade_ate, validade_dias, data_retirada,
+                usar_valor_com_frete, itens,
+                peso_total_kg, frete_total, total_sem_frete, total_com_frete, total_pedido,
+                observacoes, status, confirmado_em,
+                link_token, link_url, link_enviado_em, link_expira_em, link_status,
+                link_primeiro_acesso_em, link_ultimo_acesso_em, link_qtd_acessos,
+                criado_em, atualizado_em
+                )
             VALUES (
-              :codigo_cliente, :cliente, :tabela_preco_id,
-              :validade_ate, NULL, :data_retirada,
-              :usar_valor_com_frete, CAST(:itens AS jsonb),
-              :peso_total_kg, :frete_total, :total_sem_frete, :total_com_frete, :total_pedido,
-              :observacoes, 'CONFIRMADO', :confirmado_em,
-              :link_token, NULL, :link_enviado_em, :link_expira_em, 'ABERTO',
-              :agora, :agora
+                :codigo_cliente, :cliente, :tabela_preco_id,
+                :validade_ate, :validade_dias, :data_retirada,
+                :usar_valor_com_frete, CAST(:itens AS jsonb),
+                :peso_total_kg, :frete_total, :total_sem_frete, :total_com_frete, :total_pedido,
+                :observacoes, 'CONFIRMADO', :confirmado_em,
+                :link_token, :link_url, :link_enviado_em, :link_expira_em, 'ABERTO',
+                :link_primeiro_acesso_em, :link_ultimo_acesso_em, :link_qtd_acessos,
+                :agora, :agora
             )
             RETURNING id_pedido
         """)
 
-        new_id = db.execute(insert_sql, {
-            "codigo_cliente": codigo_cliente,
-            "cliente": cliente_str,
+        params = {
+            "codigo_cliente": codigo_cliente or (f"LINK:{body.origin_code}" if body.origin_code else f"TABELA:{tabela_id}")[:80],
+            "cliente": (body.cliente or "").strip() or "---",
             "tabela_preco_id": tabela_id,
+
             "validade_ate": validade_ate,
+            "validade_dias": validade_dias,
             "data_retirada": data_retirada,
+
             "usar_valor_com_frete": bool(body.usar_valor_com_frete),
             "itens": json.dumps([i.dict() for i in body.produtos]),
+
             "peso_total_kg": round(peso_total_kg, 3),
             "frete_total": round(frete_total, 2),
             "total_sem_frete": round(total_sem_frete, 2),
             "total_com_frete": round(total_com_frete, 2),
             "total_pedido": round(total_pedido, 2),
-            "observacoes": observacao,
+
+            "observacoes": (body.observacao or "").strip() or None,
             "confirmado_em": agora,
-            "link_token": link_token,
+
+            "link_token": body.origin_code,
+            "link_url": link_url,
             "link_enviado_em": agora,
             "link_expira_em": link_expira_em,
+
+            "link_primeiro_acesso_em": link_row.get("first_access_at") if link_row else None,
+            "link_ultimo_acesso_em": link_row.get("last_access_at") if link_row else None,
+            "link_qtd_acessos": link_row.get("uses") if link_row else None,
+
             "agora": agora
-        }).scalar()
+        }
+        new_id = db.execute(insert_sql, params).scalar()
+
+        insert_item_sql = text("""
+            INSERT INTO tb_pedidos_itens (
+                id_pedido, codigo, nome, embalagem, peso_kg,
+                preco_unit, preco_unit_frt, quantidade,
+                subtotal_sem_f, subtotal_com_f
+            ) VALUES (
+                :id_pedido, :codigo, :nome, :embalagem, :peso_kg,
+                :preco_unit, :preco_unit_frt, :quantidade,
+                :subtotal_sem_f, :subtotal_com_f
+            )
+        """)
+
+        for it in body.produtos:
+            qtd   = float(it.quantidade or 0)
+            p_sem = float(it.preco_unit or 0)
+            p_com = float((it.preco_unit_com_frete if it.preco_unit_com_frete is not None else it.preco_unit) or 0)
+
+            db.execute(insert_item_sql, {
+                "id_pedido": new_id,
+                "codigo": (it.codigo or "")[:80],
+                "nome": None,        # enviar no futuro se desejar
+                "embalagem": None,   # enviar no futuro se desejar
+                "peso_kg": float(it.peso_kg or 0),
+                "preco_unit": round(p_sem, 2),
+                "preco_unit_frt": round(p_com, 2),
+                "quantidade": qtd,
+                "subtotal_sem_f": round(p_sem * qtd, 2),
+                "subtotal_com_f": round(p_com * qtd, 2),
+            })
 
         db.commit()
         return {"id": new_id, "status": "CRIADO"}
