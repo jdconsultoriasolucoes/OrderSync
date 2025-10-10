@@ -12,3 +12,6 @@ class PedidoLink(Base):
     uses = Column(Integer, default=0)
     max_uses = Column(Integer, nullable=True)
     created_at = Column(DateTime, server_default=func.now())
+    codigo_cliente  = Column(String(80), nullable=True)
+    first_access_at = Column(DateTime(timezone=True), nullable=True)
+    last_access_at  = Column(DateTime(timezone=True), nullable=True)
