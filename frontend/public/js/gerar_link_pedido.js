@@ -304,10 +304,13 @@ export function showGerarLinkModal({ tabelaId }) {
   try {
     const u = new URL(input.value);
     u.searchParams.set("modo", "interno");
+    // acrescenta hash para sobreviver a redirects que removem a query
+    u.hash = "interno";
     window.open(u.toString(), "_blank", "noopener,noreferrer");
   } catch {
     const sep = input.value.includes("?") ? "&" : "?";
-    window.open(`${input.value}${sep}modo=interno`, "_blank", "noopener,noreferrer");
+    const url = `${input.value}${sep}modo=interno#interno`;
+    window.open(url, "_blank", "noopener,noreferrer");
   }
 };
 

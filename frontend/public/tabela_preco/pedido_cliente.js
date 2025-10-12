@@ -4,7 +4,7 @@
 const url = new URL(window.location.href);
 
 // Modo interno (prévia via "Visualizar")
-const IS_MODO_INTERNO = new URLSearchParams(location.search).get("modo") === "interno";
+const IS_MODO_INTERNO = new URLSearchParams(location.search).get("modo") === "interno" || location.hash.replace("#","") === "interno";;
 // preferir valores vindos do /p/{code} (definidos no HTML), senão cair no querystring
 let tabelaIdParam = (typeof window.currentTabelaId !== "undefined" && window.currentTabelaId !== null)
   ? String(window.currentTabelaId)
