@@ -548,25 +548,13 @@ function cancelarPedido() {
 
 function aplicarModoInterno() {
   if (!IS_MODO_INTERNO) return;
-
-  // 1) Esconder "Confirmar pedido"
-  const btnConf = document.getElementById("btnConfirmar");
-  if (btnConf) btnConf.style.display = "none";
-
-  // 2) "Cancelar" -> "Voltar" (reuso do seu handler cancelarPedido)
+  document.getElementById("btnConfirmar")?.style.setProperty("display","none");
   const btnCanc = document.getElementById("btnCancelar");
-  if (btnCanc) {
-    btnCanc.textContent = "Voltar";
-    btnCanc.disabled = false; // garante clique
-  }
-
-  // 3) Renomear "Validade:" -> "Proposta válida até:"
+  if (btnCanc) { btnCanc.textContent = "Voltar"; btnCanc.disabled = false; }
   const spanVal = document.getElementById("validadeTabela");
   if (spanVal) {
-    const lbl = spanVal.previousElementSibling; // deve ser o <strong> "Validade:"
-    if (lbl && lbl.tagName === "STRONG") {
-      lbl.textContent = "Proposta válida até:";
-    }
+    const lbl = spanVal.previousElementSibling;
+    if (lbl && lbl.tagName === "STRONG") lbl.textContent = "Proposta válida até:";
   }
 }
 

@@ -23,7 +23,7 @@ function ensureModalInjected() {
           </div>
 
           <div class="glp-datechip">
-            <label for="glpDate">Data de entrega/retirada</label>
+            <label for="glpDate">Agendamento</label>
             <input type="date" id="glpDate" />
           </div>
         </div>
