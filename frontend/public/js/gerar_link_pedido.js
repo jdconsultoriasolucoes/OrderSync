@@ -299,10 +299,17 @@ export function showGerarLinkModal({ tabelaId }) {
       : "Não foi possível copiar. Copie manualmente.";
   };
 
-  modal.querySelector("#glpOpen").onclick = () => {
-    if (!input.value) return;
-    window.open(input.value, "_blank", "noopener");
-  };
+ modal.querySelector("#glpOpen").onclick = () => {
+  if (!input.value) return;
+  try {
+    const u = new URL(input.value);
+    u.searchParams.set("modo", "interno");
+    window.open(u.toString(), "_blank", "noopener,noreferrer");
+  } catch {
+    const sep = input.value.includes("?") ? "&" : "?";
+    window.open(`${input.value}${sep}modo=interno`, "_blank", "noopener,noreferrer");
+  }
+};
 
   modal.querySelector("#glpWhats").onclick = () => {
     if (!input.value) return;

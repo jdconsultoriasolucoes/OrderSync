@@ -3,6 +3,8 @@
 // -------------------- Helpers básicos --------------------
 const url = new URL(window.location.href);
 
+// Modo interno (prévia via "Visualizar")
+const IS_MODO_INTERNO = new URLSearchParams(location.search).get("modo") === "interno";
 // preferir valores vindos do /p/{code} (definidos no HTML), senão cair no querystring
 let tabelaIdParam = (typeof window.currentTabelaId !== "undefined" && window.currentTabelaId !== null)
   ? String(window.currentTabelaId)
@@ -543,11 +545,37 @@ function cancelarPedido() {
  }
 }
 
+
+function aplicarModoInterno() {
+  if (!IS_MODO_INTERNO) return;
+
+  // 1) Esconder "Confirmar pedido"
+  const btnConf = document.getElementById("btnConfirmar");
+  if (btnConf) btnConf.style.display = "none";
+
+  // 2) "Cancelar" -> "Voltar" (reuso do seu handler cancelarPedido)
+  const btnCanc = document.getElementById("btnCancelar");
+  if (btnCanc) {
+    btnCanc.textContent = "Voltar";
+    btnCanc.disabled = false; // garante clique
+  }
+
+  // 3) Renomear "Validade:" -> "Proposta válida até:"
+  const spanVal = document.getElementById("validadeTabela");
+  if (spanVal) {
+    const lbl = spanVal.previousElementSibling; // deve ser o <strong> "Validade:"
+    if (lbl && lbl.tagName === "STRONG") {
+      lbl.textContent = "Proposta válida até:";
+    }
+  }
+}
+
 // -------------------- Bind de eventos e início --------------------
 if (btnConfirmar) btnConfirmar.addEventListener("click", confirmarPedido);
 if (btnCancelar)  btnCancelar.addEventListener("click", cancelarPedido);
 
 window.carregarPedido = carregarPedido;
+window.addEventListener("DOMContentLoaded", aplicarModoInterno);
 
 if (taObs) {
   taObs.addEventListener('input', atualizarObsCounter);
