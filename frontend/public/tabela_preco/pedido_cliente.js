@@ -548,13 +548,47 @@ function cancelarPedido() {
 
 function aplicarModoInterno() {
   if (!IS_MODO_INTERNO) return;
-  document.getElementById("btnConfirmar")?.style.setProperty("display","none");
-  const btnCanc = document.getElementById("btnCancelar");
-  if (btnCanc) { btnCanc.textContent = "Voltar"; btnCanc.disabled = false; }
+
+  // 1) Esconde "Confirmar pedido"
+  document.getElementById("btnConfirmar")?.style.setProperty("display", "none");
+
+  // 2) "Cancelar" -> "Voltar" (removendo listeners antigos)
+  const oldBtn = document.getElementById("btnCancelar");
+  if (oldBtn) {
+    const newBtn = oldBtn.cloneNode(true);         // remove todos os listeners antigos
+    newBtn.textContent = "Voltar";
+    newBtn.disabled = false;
+
+    newBtn.onclick = (ev) => {
+      ev.preventDefault();
+      ev.stopPropagation();
+
+      // Se foi aberto via window.open a partir do modal, fecha a aba
+      if (window.opener && !window.opener.closed) {
+        window.close();
+        return;
+      }
+
+      // Se não foi aberto por script (ex.: colaram o link), tenta voltar
+      if (history.length > 1) {
+        history.back();
+        return;
+      }
+
+      // Fallback: volta para a tela principal do app (ajuste se sua home for outra)
+      window.location.href = "/";
+    };
+
+    oldBtn.replaceWith(newBtn);
+  }
+
+  // 3) Renomeia "Validade:" -> "Proposta válida até:"
   const spanVal = document.getElementById("validadeTabela");
   if (spanVal) {
-    const lbl = spanVal.previousElementSibling;
-    if (lbl && lbl.tagName === "STRONG") lbl.textContent = "Proposta válida até:";
+    const lbl = spanVal.previousElementSibling; // <strong>Validade:</strong>
+    if (lbl && lbl.tagName === "STRONG") {
+      lbl.textContent = "Proposta válida até:";
+    }
   }
 }
 
