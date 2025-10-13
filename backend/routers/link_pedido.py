@@ -51,6 +51,7 @@ def resolver_link(code: str):
             "uses": getattr(link, "uses", None),
             "first_access_at": getattr(link, "first_access_at", None) and link.first_access_at.isoformat(),
             "last_access_at": getattr(link, "last_access_at", None) and link.last_access_at.isoformat(),
+            "created_at": getattr(link, "created_at", None) and link.created_at.isoformat(),
         }
 
 # Rota curta que serve o HTML público

@@ -260,7 +260,7 @@ async function carregarPedido() {
           window.currentTabelaId = info.tabela_id ?? window.currentTabelaId;
           window.currentComFrete = info.com_frete ?? window.currentComFrete;
           window.codigoClienteHidden = info.codigo_cliente || null;  // <— oculto
-          const elCriado = document.getElementById("linkCriadoEm");
+          const elCriado = document.getElementById("datadopedido");
           if (elCriado && info?.created_at) {
             const dt = new Date(info.created_at);
             elCriado.textContent = dt.toLocaleString("pt-BR", { timeZone: "America/Sao_Paulo" });
