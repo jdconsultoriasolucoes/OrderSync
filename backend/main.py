@@ -98,6 +98,20 @@ app.include_router(link_pedido.router_short)
 static_dir = os.path.join(os.path.dirname(__file__), "..", "frontend", "public")
 app.mount("/static", StaticFiles(directory=static_dir), name="static")
 
+@app.middleware("http")
+async def no_cache_static_tabela_preco(request, call_next):
+    resp = await call_next(request)
+    p = request.url.path
+
+    if p.startswith("/static/tabela_preco/") and any(
+        p.endswith(ext) for ext in (".js", ".css", ".png", ".jpg", ".jpeg", ".svg", ".webp")
+    ):
+        # Mata cache do browser e de proxies/CDNs
+        resp.headers["Cache-Control"] = "no-store, no-cache, must-revalidate, max-age=0"
+        resp.headers["Pragma"] = "no-cache"
+        resp.headers["Expires"] = "0"
+    return resp
+
 # ---- CORS: adicionar por ÚLTIMO (camada mais externa) ----
 app.add_middleware(
     CORSMiddleware,
