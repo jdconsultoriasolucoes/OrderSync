@@ -9,10 +9,13 @@
   <div class="documento">
     <header>
       <div class="logo-cliente">
-        <img src="/static/tabela_preco/assets/logo_cliente_supra.png" alt="Logo do Cliente">
+        <img src="/static/tabela_preco/logo_cliente_supra.png" alt="Logo do Cliente">
       </div>
       <div class="dados-header">
         <h1>Proposta Comercial</h1>
+        <div class="meta-link" style="font-size:12px;color:#666;margin-top:4px;">
+          Link gerado em: <span id="linkCriadoEm">—</span>
+        </div>
         <p><strong>Cliente:</strong> <span id="razaoSocialCliente">---</span></p>
         <p><strong>Validade:</strong> <span id="validadeTabela">---</span> (<span id="tempoRestante">---</span>)</p>
         <p><strong id="labelEntregaRetirada">Data:</strong> <span id="dataEntregaValor">a combinar</span></p> 
@@ -41,6 +44,9 @@
           <div><strong>Frete no pedido:</strong> <span id="totalFretePedido">R$ 0,00</span></div>
         </div>
       </section>
+      <div class="total">
+        <p><strong>Total:</strong> R$ <span id="totalGeral">0,00</span></p>
+      </div>
       <section id="observacoesPedido" class="observacoes-pedido">
         <label for="observacaoCliente" class="observacoes-label">
           <strong>Observações do pedido</strong> <small>(opcional)</small>
@@ -50,17 +56,13 @@
 
         <div id="obsCounter" class="observacoes-counter">0/244</div>
       </section>
-      <div class="total">
-        <p><strong>Total:</strong> R$ <span id="totalGeral">0,00</span></p>
-      </div>
-
       <div class="acoes">
         <button id="btnConfirmar">Confirmar Pedido</button>
         <button id="btnCancelar">Cancelar</button>
       </div>
      
       <div class="marca-dagua">
-        <img src="/static/tabela_preco/assets/logo.png" alt="Marca d'água OrderSync">
+        <img src="/static/tabela_preco/logo.png" alt="Marca d'água OrderSync">
        </div>
       <p id="mensagem"></p>
     </main>

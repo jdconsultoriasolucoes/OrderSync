@@ -247,22 +247,33 @@ function obterParametrosPedido() {
 async function carregarPedido() {
   try {
     const _qsNow = new URLSearchParams(location.search);
-    
     const pathParts = location.pathname.split('/').filter(Boolean);
     const lastPart = pathParts[pathParts.length - 1];
+    
+    let info = null;
+    
     if (pathParts[0] === 'p' && lastPart) {
       try {
         const r = await fetch(`/link_pedido/resolver?code=${encodeURIComponent(lastPart)}`, { cache: "no-store" });
         if (r.ok) {
-          const info = await r.json();
+          info = await r.json(); 
           window.currentTabelaId = info.tabela_id ?? window.currentTabelaId;
           window.currentComFrete = info.com_frete ?? window.currentComFrete;
           window.codigoClienteHidden = info.codigo_cliente || null;  // <— oculto
+          const elCriado = document.getElementById("linkCriadoEm");
+          if (elCriado && info?.created_at) {
+            const dt = new Date(info.created_at);
+            elCriado.textContent = dt.toLocaleString("pt-BR", { timeZone: "America/Sao_Paulo" });
+          }
+          const logoEl = document.getElementById("logoCliente");
+          if (logoEl && typeof info?.logo_url === "string" && /^https?:\/\//.test(info.logo_url)) {
+            logoEl.src = info.logo_url;
+            logoEl.onerror = () => { logoEl.style.display = "none"; };
+          }
         }
       } catch {}
     }
-
-
+  
     tabelaIdParam = tabelaIdParam
     || _qsNow.get("tabela_id")
     || (typeof window.currentTabelaId !== "undefined" ? String(window.currentTabelaId) : null);
@@ -429,10 +440,19 @@ function openConfirmModal(pedidoId) {
 
 function closeConfirmModal() {
   const modal = document.getElementById('confirmModal');
-  if (!modal) return;
-  modal.hidden = true;
-  // Mantém a página travada mesmo após fechar o pop-up (conforme solicitado)
-  document.body.classList.remove('modal-open'); // só libera o scroll do pop-up
+  if (modal) modal.hidden = true;
+
+  // 1) fecha a aba (se aberta via window.open)
+  try { window.close(); } catch {}
+
+  // 2) se não fechar, volta no histórico
+  if (history.length > 1) {
+    history.back();
+    return;
+  }
+
+  // 3) fallback: limpa a aba
+  window.location.replace("about:blank");
 }
 
 // -------------------- Ações --------------------
@@ -554,19 +574,30 @@ function aplicarModoInterno() {
 
   // "Cancelar" -> "Voltar" com override total de listeners
   const oldBtn = document.getElementById("btnCancelar");
-  if (oldBtn) {
-    const newBtn = oldBtn.cloneNode(true);
-    newBtn.textContent = "Voltar";
-    newBtn.disabled = false;
-    newBtn.onclick = (ev) => {
-      ev.preventDefault();
-      ev.stopPropagation();
-      if (window.opener && !window.opener.closed) { window.close(); return; }
-      if (history.length > 1) { history.back(); return; }
-      window.location.href = "/";
-    };
-    oldBtn.replaceWith(newBtn);
-  }
+if (oldBtn) {
+  const newBtn = oldBtn.cloneNode(true);   // remove listeners antigos
+  newBtn.textContent = "Voltar";
+  newBtn.disabled = false;
+
+  newBtn.onclick = (ev) => {
+    ev.preventDefault();
+    ev.stopPropagation();
+
+    // fecha se foi aberto pelo botão Visualizar
+    try { window.close(); } catch {}
+
+    // se não fechar, tenta voltar
+    if (history.length > 1) {
+      history.back();
+      return;
+    }
+
+    // fallback
+    window.location.replace("about:blank");
+  };
+
+  oldBtn.replaceWith(newBtn);
+}
 
   // "Validade:" -> "Proposta válida até:"
   const spanVal = document.getElementById("validadeTabela");
