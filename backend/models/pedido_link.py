@@ -15,3 +15,4 @@ class PedidoLink(Base):
     codigo_cliente  = Column(String(80), nullable=True)
     first_access_at = Column(DateTime(timezone=True), nullable=True)
     last_access_at  = Column(DateTime(timezone=True), nullable=True)
+    link_url = Column(String(512), nullable=True)

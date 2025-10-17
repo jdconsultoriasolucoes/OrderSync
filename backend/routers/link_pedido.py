@@ -27,6 +27,15 @@ def gerar_link(body: dict, request: Request):
     origin = f"{scheme}://{host}"
     url = f"{origin}/p/{code}"
 
+    with SessionLocal() as db:
+        db.execute(
+            update(PedidoLink)
+            .where(PedidoLink.code == code)
+            .values(link_url=url)
+        )
+        db.commit()
+
+
     return {
         "url": url,
         "expires_at": expires_at.isoformat() if expires_at else None,
@@ -52,6 +61,7 @@ def resolver_link(code: str):
             "first_access_at": getattr(link, "first_access_at", None) and link.first_access_at.isoformat(),
             "last_access_at": getattr(link, "last_access_at", None) and link.last_access_at.isoformat(),
             "created_at": getattr(link, "created_at", None) and link.created_at.isoformat(),
+            "link_url": getattr(link, "link_url", None),
         }
 
 # Rota curta que serve o HTML público

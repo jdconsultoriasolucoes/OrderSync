@@ -182,7 +182,7 @@ def confirmar_pedido(tabela_id: int, body: ConfirmarPedidoRequest):
                 observacoes, status, confirmado_em,
                 link_token, link_url, link_enviado_em, link_expira_em, link_status,
                 link_primeiro_acesso_em, link_ultimo_acesso_em, link_qtd_acessos,
-                criado_em, atualizado_em
+                criado_em, atualizado_em, created_at
                 )
             VALUES (
                 :codigo_cliente, :cliente, :tabela_preco_id,
@@ -192,13 +192,13 @@ def confirmar_pedido(tabela_id: int, body: ConfirmarPedidoRequest):
                 :observacoes, 'CONFIRMADO', :confirmado_em,
                 :link_token, :link_url, :link_enviado_em, :link_expira_em, 'ABERTO',
                 :link_primeiro_acesso_em, :link_ultimo_acesso_em, :link_qtd_acessos,
-                :agora, :agora
+                :agora, :agora, :pedido_created_at
             )
             RETURNING id_pedido
         """)
 
         params = {
-            "codigo_cliente": codigo_cliente or (f"LINK:{body.origin_code}" if body.origin_code else f"TABELA:{tabela_id}")[:80],
+            "codigo_cliente": (codigo_cliente or "Não cadastrado")[:80],
             "cliente": (body.cliente or "").strip() or "---",
             "tabela_preco_id": tabela_id,
 
@@ -227,7 +227,8 @@ def confirmar_pedido(tabela_id: int, body: ConfirmarPedidoRequest):
             "link_ultimo_acesso_em": link_row.get("last_access_at") if link_row else None,
             "link_qtd_acessos": link_row.get("uses") if link_row else None,
 
-            "agora": agora
+            "agora": agora,
+            "pedido_created_at": (link_row["created_at"] if link_row and link_row.get("created_at") else None)
         }
         new_id = db.execute(insert_sql, params).scalar()
 
