@@ -7,6 +7,7 @@ from services.link_pedido import gerar_link_code, resolver_code
 from models.pedido_link import PedidoLink
 from pathlib import Path
 from datetime import datetime
+from sqlalchemy import update
 
 router = APIRouter(prefix="/link_pedido", tags=["Link Pedido"])
 
