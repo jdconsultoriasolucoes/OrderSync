@@ -125,7 +125,7 @@ def confirmar_pedido(tabela_id: int, body: ConfirmarPedidoRequest):
         link_row = None
         if body.origin_code:
             link_row = db.execute(text("""
-                SELECT code, tabela_id, com_frete, expires_at, data_prevista, uses, first_access_at, last_access_at
+                SELECT code, tabela_id, com_frete, expires_at, data_prevista, uses, first_access_at, last_access_at,created_at, link_url, codigo_cliente
                   FROM tb_pedido_link
                  WHERE code = :c
             """), {"c": body.origin_code}).mappings().first()
@@ -139,7 +139,9 @@ def confirmar_pedido(tabela_id: int, body: ConfirmarPedidoRequest):
 
             # força o com_frete do link
             body.usar_valor_com_frete = bool(link_row["com_frete"])
-
+            pedido_created_at = link_row["created_at"]  # instante da GERAÇÃO do link
+            link_url = link_row["link_url"]  # opcional, se você usa no insert
+            
         # 3) Somar totais no servidor
         peso_total_kg = 0.0
         total_sem_frete = 0.0
@@ -165,7 +167,10 @@ def confirmar_pedido(tabela_id: int, body: ConfirmarPedidoRequest):
 
         cliente_str = (body.cliente or "").strip() or "---"
         codigo_cliente = (body.codigo_cliente or "").strip() or None
-        link_url = (body.link_url or None)
+        if link_row:
+            link_url = link_row.get("link_url")
+        else:
+            link_url = None
         observacao = (body.observacao or "").strip() or None
         agora = datetime.utcnow()
 
@@ -219,7 +224,7 @@ def confirmar_pedido(tabela_id: int, body: ConfirmarPedidoRequest):
             "confirmado_em": agora,
 
             "link_token": body.origin_code,
-            "link_url": link_url,
+            "link_url": (link_row.get("link_url") if link_row else None),
             "link_enviado_em": agora,
             "link_expira_em": link_expira_em,
 
@@ -228,7 +233,7 @@ def confirmar_pedido(tabela_id: int, body: ConfirmarPedidoRequest):
             "link_qtd_acessos": link_row.get("uses") if link_row else None,
 
             "agora": agora,
-            "pedido_created_at": (link_row["created_at"] if link_row and link_row.get("created_at") else None)
+            "pedido_created_at": (link_row.get("created_at") if link_row else None),
         }
         new_id = db.execute(insert_sql, params).scalar()
 

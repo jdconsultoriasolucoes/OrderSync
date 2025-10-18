@@ -37,9 +37,9 @@ def gerar_link_code(db, tabela_id: int, com_frete: bool, data_prevista_str: str 
         code=code,
         tabela_id=tabela_id,
         com_frete=com_frete,
-        data_prevista=data_prevista,  # << NOVO
-        codigo_cliente=codigo_cliente,
+        data_prevista=data_prevista, 
         expires_at=expires_at
+        codigo_cliente=(codigo_cliente or None)
     )
     db.add(link)
     db.commit()

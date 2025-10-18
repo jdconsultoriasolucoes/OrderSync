@@ -20,7 +20,7 @@ def gerar_link(body: dict, request: Request):
         tabela_id = int(body["tabela_id"])
         com_frete = bool(body["com_frete"])
         codigo_cliente = body.get("codigo_cliente")
-        code, expires_at, data_prevista = gerar_link_code(db, tabela_id, com_frete, body.get("data_prevista"), codigo_cliente)
+        code, expires_at, data_prevista = gerar_link_code(db, tabela_id, com_frete, body.get("data_prevista"), body.get("codigo_cliente"))
 
     # monta URL pública
     scheme = request.headers.get("x-forwarded-proto", request.url.scheme)
