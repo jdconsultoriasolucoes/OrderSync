@@ -1,91 +1,115 @@
-<div class="orc-page">
-  <div class="orc-card">
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+  <meta http-equiv="Pragma" content="no-cache">
+  <meta http-equiv="Expires" content="0">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
 
-    <!-- Cabeçalho -->
-    <header class="orc-header">
-      <h1 class="orc-title">Solicitação de Orçamento</h1>
-      <div class="orc-head-date">
-        <div class="orc-label">Data</div>
-        <div class="orc-value" id="dataPedidoHeader">__/__/____</div>
-      </div>
-    </header>
+  <title>Confirmação de Pedido</title>
 
-    <!-- Faixa 1: Código + Cliente -->
-    <section class="orc-faixa orc-cols-2">
-      <div class="orc-field">
-        <div class="orc-label">Código</div>
-        <div class="orc-value" id="codigoCliente">—</div>
-      </div>
-      <div class="orc-field">
-        <div class="orc-label">Cliente</div>
-        <div class="orc-value" id="nomeCliente">—</div>
-      </div>
-    </section>
+  <!-- GARANTA o path correto abaixo -->
+  <link rel="stylesheet" href="/static/tabela_preco/pedido_cliente.css?v=20251020c">
 
-    <!-- Faixa 2: Validade + Data Entrega/Retira -->
-    <section class="orc-faixa orc-cols-2" style="margin-top: 12px;">
-      <div class="orc-field">
-        <div class="orc-label">Validade da Tabela</div>
-        <div class="orc-value" id="validadeTabela">__/__/____</div>
-      </div>
-      <div class="orc-field">
-        <div class="orc-label">Data da Entrega ou Retira</div>
-        <div class="orc-value" id="dataEntregaRetira">__/__/____</div>
-      </div>
-    </section>
+  <!-- plano B: se o CSS externo não carregar, ainda esconde o frete -->
+  <style>.hidden{display:none!important}</style>
+</head>
+<body>
 
-    <!-- Itens -->
-    <section class="orc-itens">
-      <table id="tabelaProdutos">
-        <thead>
-          <tr>
-            <th style="width:110px">Código</th>
-            <th>Produto</th>
-            <th style="width:120px">Embalagem</th>
-            <th style="width:90px">Quantidade</th>
-            <th class="num" style="width:120px">Valor Retira</th>
-            <th class="num" style="width:120px">Valor Entrega</th>
-            <th style="width:180px">Condições Pagamento</th>
-          </tr>
-        </thead>
-        <tbody><!-- linhas via JS --></tbody>
-      </table>
-    </section>
+  <div class="orc-page">
+    <div class="orc-card">
 
-    <!-- Rodapé: Fechamento + Observações -->
-    <section class="orc-footer">
-      <div class="orc-fechamento">
-        <div class="orc-row">
-          <div><strong>Total em Peso Bruto</strong></div>
-          <div><span id="totalPesoPedido">0</span> kg</div>
+      <!-- Cabeçalho -->
+      <header class="orc-header">
+        <h1 class="orc-title">Solicitação de Orçamento</h1>
+        <div class="orc-head-date">
+          <div class="orc-label">Data</div>
+          <div class="orc-value" id="dataPedidoHeader">__/__/____</div>
         </div>
-        <div class="orc-row">
-          <div><strong>Total em Valor</strong></div>
-          <div>R$ <span id="totalGeral">0,00</span></div>
+      </header>
+
+      <!-- Faixa 1: Código + Cliente -->
+      <section class="orc-faixa orc-cols-2">
+        <div class="orc-field">
+          <div class="orc-label">Código</div>
+          <div class="orc-value" id="codigoCliente">—</div>
         </div>
+        <div class="orc-field">
+          <div class="orc-label">Cliente</div>
+          <div class="orc-value" id="nomeCliente">—</div>
+        </div>
+      </section>
+
+      <!-- Faixa 2: Validade + Data Entrega/Retira -->
+      <section class="orc-faixa orc-cols-2" style="margin-top: 12px;">
+        <div class="orc-field">
+          <div class="orc-label">Validade da Tabela</div>
+          <div class="orc-value" id="validadeTabela">__/__/____</div>
+        </div>
+        <div class="orc-field">
+          <div class="orc-label">Data da Entrega ou Retira</div>
+          <div class="orc-value" id="dataEntregaRetira">__/__/____</div>
+        </div>
+      </section>
+
+      <!-- Itens -->
+      <section class="orc-itens">
+        <table id="tabelaProdutos">
+          <thead>
+            <tr>
+              <th style="width:110px">Código</th>
+              <th>Produto</th>
+              <th style="width:120px">Embalagem</th>
+              <th style="width:90px">Quantidade</th>
+              <th class="num" style="width:120px">Valor Retira</th>
+              <th class="num" style="width:120px">Valor Entrega</th>
+              <th style="width:180px">Condições Pagamento</th>
+            </tr>
+          </thead>
+          <tbody><!-- linhas via JS --></tbody>
+        </table>
+      </section>
+
+      <!-- Rodapé: Fechamento + Observações -->
+      <section class="orc-footer">
+        <div class="orc-fechamento">
+          <div class="orc-row">
+            <div><strong>Total em Peso Bruto</strong></div>
+            <div><span id="totalPesoPedido">0</span> kg</div>
+          </div>
+          <div class="orc-row">
+            <div><strong>Total em Valor</strong></div>
+            <div>R$ <span id="totalGeral">0,00</span></div>
+          </div>
+        </div>
+
+        <div class="orc-observacoes">
+          <div class="orc-label" style="font-weight:600">Observações do Cliente</div>
+          <textarea id="observacoesPedido" maxlength="100" placeholder="Digite suas observações (opcional)"></textarea>
+          <div class="orc-obs-meta">
+            <span id="observacoesHint">&nbsp;</span>
+            <span id="obsCounter">0/100</span>
+          </div>
+        </div>
+      </section>
+
+      <!-- (Oculto) Frete no pedido -->
+      <div id="blocoFretePedido" class="hidden">
+        <strong>Frete no pedido:</strong>
+        <span id="totalFretePedido">R$ 0,00</span>
       </div>
 
-      <div class="orc-observacoes">
-        <div class="orc-label" style="font-weight:600">Observações do Cliente</div>
-        <textarea id="observacoesPedido" maxlength="100" placeholder="Digite suas observações (opcional)"></textarea>
-        <div class="orc-obs-meta">
-          <span id="observacoesHint">&nbsp;</span>
-          <span id="obsCounter">0/100</span>
-        </div>
+      <!-- Ações -->
+      <div class="orc-actions">
+        <button class="orc-btn" id="btnVoltar">Voltar</button>
+        <button class="orc-btn orc-primary" id="btnConfirmar">Confirmar</button>
       </div>
-    </section>
 
-    <!-- (Oculto) Frete no pedido -->
-    <div id="blocoFretePedido" class="hidden">
-      <strong>Frete no pedido:</strong>
-      <span id="totalFretePedido">R$ 0,00</span>
     </div>
-
-    <!-- Ações (opcional) -->
-    <div class="orc-actions">
-      <button class="orc-btn" id="btnVoltar">Voltar</button>
-      <button class="orc-btn orc-primary" id="btnConfirmar">Confirmar</button>
-    </div>
-
   </div>
-</div>
+
+  <!-- GARANTA o path correto do JS também -->
+  <script defer src="/static/tabela_preco/pedido_cliente.js?v=20251020c"></script>
+</body>
+</html>
