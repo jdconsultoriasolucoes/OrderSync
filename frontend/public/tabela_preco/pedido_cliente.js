@@ -115,7 +115,7 @@ function setMensagem(texto, ok = false) {
 function atualizarObsCounter() {
   if (!taObs || !obsCounter) return;
   const len = (taObs.value || "").length;
-  obsCounter.textContent = `${len}/244`;
+  obsCounter.textContent = `${len}/100`;
 }
 
 function renderTabela() {
@@ -478,8 +478,8 @@ async function confirmarPedido() {
     // razão social mostrada na tela
     const clienteRazao = (document.getElementById('razaoSocialCliente')?.textContent || '').trim() || null;
 
-    // observação limitada a 244 chars
-    const observacao = (document.getElementById('observacaoCliente')?.value || '').trim().slice(0, 244);
+    // observação limitada a 100 chars
+    const observacao = (document.getElementById('observacaoCliente')?.value || '').trim().slice(0, 100);
 
     const entregaQS = new URLSearchParams(location.search).get("entrega");
     const dataRetiradaISO = (typeof entregaQS === "string" && isISODate(entregaQS)) ? entregaQS : null;
