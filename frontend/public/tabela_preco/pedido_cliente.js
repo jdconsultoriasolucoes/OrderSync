@@ -143,7 +143,7 @@ function renderTabela() {
     const pesoCell = tr.querySelector('.celula-peso');
       if (pesoCell) {
       const pesoTotal = pesoUnit * qtdInicial;
-      pesoCell.textContent = (Number.isFinite(pesoTotal) ? pesoTotal : 0).toLocaleString('pt-BR');
+      pesoCell.textContent = formatIntBR(pesoTotal, { mode: "trunc" });
       }
     
    
@@ -156,6 +156,11 @@ function renderTabela() {
     input.addEventListener("change", handler);
   });
   atualizarResumoFreteEPeso();
+}
+
+function formatIntBR(n, { mode = "trunc" } = {}) {
+  const v = (mode === "trunc") ? Math.trunc(n) : Math.round(n); // escolha truncar ou arredondar
+  return v.toLocaleString("pt-BR");
 }
 
 function onQtdChange(e) {

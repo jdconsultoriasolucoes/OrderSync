@@ -187,3 +187,11 @@ body.page-locked .documento { filter: grayscale(0.2); }
 body.page-locked .documento *:not(#confirmModal):not(.modal-content):not(.btn-modal) {
   cursor: not-allowed !important;
 }
+
+.hidden { display: none !important; }
+
+/* esconde a coluna 8 (Subtotal) da tabela */
+#tabelaProdutos th:nth-child(8),
+#tabelaProdutos td:nth-child(8) {
+  display: none !important;
+}

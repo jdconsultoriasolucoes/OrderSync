@@ -31,11 +31,11 @@
           <tr>
             <th>Código</th>
             <th>Produto</th>
-            <th>Embalagem</th>
+            <th>Embal.</th>
             <th>Condição de Pagamento</th>
             <th>Peso</th>
             <th>Valor <span id="tituloValorFrete">c/ Frete</span></th>
-            <th>Quantidade</th>
+            <th>Qtd</th>
             <th>Subtotal</th>
           </tr>
         </thead>
@@ -44,7 +44,7 @@
       <section id="resumoPedido" class="resumo-pedido">
         <div class="resumo-grid">
           <div><strong>Peso total:</strong> <span id="totalPesoPedido">0</span> kg</div>
-          <div><strong>Frete no pedido:</strong> <span id="totalFretePedido">R$ 0,00</span></div>
+          <div class="hidden"></div>><strong>Frete no pedido:</strong> <span id="totalFretePedido">R$ 0,00</span></div>
         </div>
       </section>
       <div class="total">
@@ -55,9 +55,9 @@
           <strong>Observações do pedido</strong> <small>(opcional)</small>
         </label>
 
-        <textarea id="observacaoCliente" maxlength="244" rows="4" class="observacoes-textarea"></textarea>
+        <textarea id="observacaoCliente" maxlength="100" rows="1" class="observacoes-textarea"></textarea>
 
-        <div id="obsCounter" class="observacoes-counter">0/244</div>
+        <div id="obsCounter" class="observacoes-counter">0/100</div>
       </section>
       <div class="acoes">
         <button id="btnConfirmar">Confirmar Pedido</button>
