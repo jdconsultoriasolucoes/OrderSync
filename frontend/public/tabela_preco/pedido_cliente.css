@@ -1,197 +1,45 @@
-/* pedido_cliente.css */
+/* ===== Layout “Solicitação de Orçamento” (somente disposição) ===== */
+:root { --orc-gap: 12px; --orc-gap-sm: 8px; --orc-radius: 10px; }
+.orc-page { max-width: 1060px; margin: 24px auto 48px; padding: 16px; }
+.orc-card { background:#fff; border-radius: var(--orc-radius); box-shadow: 0 6px 22px rgba(0,0,0,.06); padding: 20px; }
 
-body {
-  margin: 0;
-  padding: 0;
-  background-color: #f0f2f5;
-  font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-  position: relative;
-}
+/* Cabeçalho */
+.orc-header { display:grid; grid-template-columns: 1fr auto; gap: var(--orc-gap); align-items:start; margin-bottom:16px; }
+.orc-title { font-size: 1.6rem; font-weight: 700; margin:0; }
+.orc-head-date { display:grid; justify-items:end; gap:6px; }
 
-.documento {
-  max-width: 1000px;
-  margin: 40px auto;
-  background: #fff;
-  padding: 40px;
-  box-shadow: 0 0 15px rgba(0, 0, 0, 0.1);
-  border-radius: 8px;
-  position: relative;
-  overflow: hidden;
-}
+/* Faixas e campos */
+.orc-faixa { display:grid; gap: var(--orc-gap); }
+.orc-cols-2 { grid-template-columns: 260px 1fr; }
+.orc-field { display:grid; gap:4px; }
+.orc-label { font-size:.86rem; opacity:.8; }
+.orc-value { background:#f9fafb; border:1px solid #e5e7eb; border-radius:8px; padding:10px 12px; min-height:40px; display:flex; align-items:center; }
 
-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: flex-start;
-  border-bottom: 2px solid #ccc;
-  padding-bottom: 20px;
-  margin-bottom: 30px;
-  flex-direction: row-reverse;
-}
+/* Tabela de itens */
+.orc-itens { margin-top:14px; }
+#tabelaProdutos { width:100%; border-collapse:collapse; }
+#tabelaProdutos thead th { text-align:left; font-weight:600; background:#f3f4f6; }
+#tabelaProdutos th, #tabelaProdutos td { padding:10px 8px; border-bottom:1px solid #e5e7eb; vertical-align:middle; }
+#tabelaProdutos .num { text-align:right; }
 
-.dados-header {
-  text-align: left;
-}
+/* Rodapé */
+.orc-footer { display:grid; grid-template-columns: 360px 1fr; gap: var(--orc-gap); margin-top:16px; }
+.orc-fechamento { display:grid; gap: var(--orc-gap-sm); }
+.orc-row { display:flex; justify-content:space-between; gap:8px; }
 
-.logo-cliente {
-  display: flex;
-  justify-content: flex-end;
-  align-items: flex-start;
-}
+.orc-observacoes { display:grid; gap: var(--orc-gap-sm); }
+.orc-observacoes textarea { width:100%; min-height:120px; resize:vertical; padding:10px 12px; border:1px solid #e5e7eb; border-radius:8px; font:inherit; }
+.orc-obs-meta { display:flex; justify-content:space-between; align-items:center; font-size:.9rem; opacity:.8; }
 
-.logo-cliente img {
-  height: 60px;
-}
+/* Ações */
+.orc-actions { display:flex; justify-content:flex-end; margin-top:18px; gap:10px; }
+.orc-btn { padding:10px 14px; border:1px solid #e5e7eb; background:#fff; border-radius:8px; cursor:pointer; }
+.orc-primary { background:#111827; color:#fff; border-color:#111827; }
 
-.dados-header h1 {
-  margin: 0 0 10px;
-  font-size: 24px;
-  color: #333;
-}
+/* Utilitário já usado no projeto */
+.hidden { display:none !important; }
 
-.dados-header p {
-  margin: 4px 0;
-  font-size: 14px;
-  color: #444;
-}
-
-table {
-  width: 100%;
-  border-collapse: collapse;
-  margin-bottom: 30px;
-}
-
-table thead {
-  background: #eaeaea;
-}
-
-table th,
-table td {
-  padding: 10px;
-  border: 1px solid #ccc;
-  text-align: left;
-  font-size: 14px;
-}
-
-input[type="number"] {
-  width: 70px;
-  padding: 6px;
-  font-size: 14px;
-  border: 1px solid #aaa;
-  border-radius: 4px;
-}
-
-.total {
-  text-align: right;
-  font-size: 18px;
-  margin-bottom: 30px;
-}
-
-.acoes {
-  text-align: center;
-}
-
-.acoes button {
-  background-color: #4CAF50;
-  border: none;
-  color: white;
-  padding: 10px 30px;
-  font-size: 14px;
-  margin: 0 10px;
-  border-radius: 5px;
-  cursor: pointer;
-}
-
-.acoes button#btnCancelar {
-  background-color: #f44336;
-}
-
-#mensagem {
-  text-align: center;
-  font-weight: bold;
-  margin-top: 20px;
-  color: green;
-}
-
-.marca-dagua {
-  display: flex;
-  justify-content: center;
-  margin-top: 60px;
-  opacity: 0.80;
-}
-
-.marca-dagua img {
-  height: 80px;
-  width: auto;
-}
-
-/* Resumo do pedido */
-.resumo-pedido { margin-top: 16px; }
-.resumo-pedido .resumo-grid {
-  display: flex;
-  gap: 24px;
-  flex-wrap: wrap;
-}
-
-/* Observações do pedido */
-.observacoes-pedido { margin-top: 16px; }
-.observacoes-label { display: block; margin-bottom: 8px; }
-.observacoes-textarea {
-  width: 100%;
-  min-height: 96px;
-  padding: 8px 10px;
-  border: 1px solid #d6d6d6;
-  border-radius: 8px;
-  resize: vertical;
-  font: inherit;
-}
-.observacoes-counter {
-  text-align: right;
-  font-size: 0.9rem;
-  opacity: 0.7;
-  margin-top: 4px;
-}
-
-/* ===== Modal de confirmação ===== */
-.modal[hidden] { display: none !important; }
-.modal {
-  position: fixed; inset: 0; z-index: 9999;
-  display: grid; place-items: center;
-}
-.modal-backdrop {
-  position: absolute; inset: 0;
-  background: rgba(0,0,0,0.55);
-  backdrop-filter: blur(2px);
-}
-.modal-content {
-  position: relative;
-  max-width: 680px; width: calc(100% - 32px);
-  background: #101012; color: #fff;
-  border-radius: 14px; padding: 24px;
-  box-shadow: 0 10px 40px rgba(0,0,0,0.35);
-}
-.modal-content h2 { margin: 0 0 8px; font-size: 1.5rem; }
-.modal-content .confirm-text, .modal-content .confirm-info {
-  margin: 0 0 12px; color: #b9c0cf;
-}
-.btn-modal {
-  display: inline-block;
-  padding: 10px 16px; border-radius: 10px;
-  border: 1px solid #2d2f39; background: #1a1c24;
-  cursor: pointer; font: inherit; color: #fff;
-}
-body.modal-open { overflow: hidden; }
-
-/* Estado travado após confirmação (evita interação/estilo visual) */
-body.page-locked .documento { filter: grayscale(0.2); }
-body.page-locked .documento *:not(#confirmModal):not(.modal-content):not(.btn-modal) {
-  cursor: not-allowed !important;
-}
-
-.hidden { display: none !important; }
-
-/* esconde a coluna 8 (Subtotal) da tabela */
-#tabelaProdutos th:nth-child(8),
-#tabelaProdutos td:nth-child(8) {
-  display: none !important;
+/* Responsivo */
+@media (max-width: 900px) {
+  .orc-cols-2, .orc-footer { grid-template-columns: 1fr; }
 }
