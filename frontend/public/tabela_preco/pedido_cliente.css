@@ -213,23 +213,23 @@ body.page-locked .documento *:not(#confirmModal):not(.modal-content):not(.btn-mo
 #btnFecharConfirm:hover{ filter:brightness(.95); }
 #btnFecharConfirm:focus{ outline:2px solid rgba(255,255,255,.25); outline-offset:2px; }
 
-.totais-pedido{
-  display:grid;
-  grid-template-columns: 1fr auto;
-  align-items:center;
-  gap:12px;
-  margin:12px 0 8px;
+section.totais-pedido{
+  display:grid !important;
+  grid-template-columns: 1fr auto !important;
+  align-items:center !important;
+  gap:12px !important;
+  margin:12px 0 8px !important;
 }
-
-/* Neutraliza o margin herdado do .total dentro do wrapper */
-.totais-pedido .total{
-  justify-self:end;
-  margin:0;              /* <-- evita o vão extra */
-  font-size:18px;        /* mantém visual atual */
-  text-align:right;
+section.totais-pedido > #resumoPedido{
+  margin:0 !important;
 }
-
+section.totais-pedido > .total{
+  margin:0 !important;            /* neutraliza o 30px global */
+  justify-self:end !important;
+  font-size:18px !important;
+  text-align:right !important;
+}
 @media (max-width:640px){
-  .totais-pedido{ grid-template-columns: 1fr; }  /* empilha no mobile */
-  .totais-pedido .total{ justify-self:start; }
+  section.totais-pedido{ grid-template-columns:1fr !important; }
+  section.totais-pedido > .total{ justify-self:start !important; }
 }
