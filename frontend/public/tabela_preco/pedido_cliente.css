@@ -81,12 +81,6 @@ input[type="number"] {
   border-radius: 4px;
 }
 
-.total {
-  text-align: right;
-  font-size: 18px;
-  margin-bottom: 30px;
-}
-
 .acoes {
   text-align: center;
 }
@@ -213,23 +207,24 @@ body.page-locked .documento *:not(#confirmModal):not(.modal-content):not(.btn-mo
 #btnFecharConfirm:hover{ filter:brightness(.95); }
 #btnFecharConfirm:focus{ outline:2px solid rgba(255,255,255,.25); outline-offset:2px; }
 
-section.totais-pedido{
-  display:grid !important;
-  grid-template-columns: 1fr auto !important;
-  align-items:center !important;
-  gap:12px !important;
-  margin:12px 0 8px !important;
+.totais-pedido{
+  display:grid;
+  grid-template-columns: 1fr auto;
+  align-items:center;
+  gap:12px;
+  margin:12px 0 8px;
 }
-section.totais-pedido > #resumoPedido{
-  margin:0 !important;
+.totais-pedido #resumoPedido{ margin:0; }
+
+/* Estilo do bloco Total (escopado) */
+.totais-pedido .total{
+  text-align:right;
+  font-size:18px;
+  margin:0;            /* não empurra pra baixo */
+  justify-self:end;
 }
-section.totais-pedido > .total{
-  margin:0 !important;            /* neutraliza o 30px global */
-  justify-self:end !important;
-  font-size:18px !important;
-  text-align:right !important;
-}
+
 @media (max-width:640px){
-  section.totais-pedido{ grid-template-columns:1fr !important; }
-  section.totais-pedido > .total{ justify-self:start !important; }
+  .totais-pedido{ grid-template-columns:1fr; }
+  .totais-pedido .total{ justify-self:start; }
 }
