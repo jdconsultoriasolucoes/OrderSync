@@ -8,8 +8,10 @@ from database import SessionLocal
 from datetime import datetime, timezone
 from sqlalchemy.orm import Session
 import json
+from zoneinfo import ZoneInfo
 
 router = APIRouter(prefix="/pedido", tags=["Pedido"])
+TZ = ZoneInfo("America/Sao_Paulo")
 
 # ----- Models de resposta (shape que a tela pedido_cliente já consome) -----
 class ProdutoPedidoPreview(BaseModel):
@@ -132,8 +134,13 @@ def confirmar_pedido(tabela_id: int, body: ConfirmarPedidoRequest):
 
             if not link_row:
                 raise HTTPException(status_code=404, detail="Link não encontrado")
-            if link_row["expires_at"] and datetime.now(timezone.utc) > link_row["expires_at"]:
-                raise HTTPException(status_code=410, detail="Link expirado")
+            exp = link_row.get("expires_at")
+            if exp is not None:
+                if exp.tzinfo is None:
+                    exp = exp.replace(tzinfo=TZ)
+                agora_sp = datetime.now(TZ)
+                if agora_sp > exp:
+                    raise HTTPException(status_code=410, detail="Link expirado")
             if int(link_row["tabela_id"]) != int(tabela_id):
                 raise HTTPException(status_code=400, detail="Link e tabela não conferem")
 
