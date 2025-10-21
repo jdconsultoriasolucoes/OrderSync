@@ -179,7 +179,7 @@ def confirmar_pedido(tabela_id: int, body: ConfirmarPedidoRequest):
         else:
             link_url = None
         observacao = (body.observacao or "").strip() or None
-        agora = datetime.utcnow()
+        agora = datetime.now(TZ)
 
         link_expira_em = link_row["expires_at"] if link_row else None
         link_token = body.origin_code

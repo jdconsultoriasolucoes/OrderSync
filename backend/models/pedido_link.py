@@ -8,7 +8,7 @@ class PedidoLink(Base):
     tabela_id = Column(Integer, nullable=False)
     com_frete = Column(Boolean, nullable=False)
     data_prevista = Column(Date, nullable=True)
-    expires_at = Column(DateTime, nullable=True)
+    expires_at = Column(DateTime(timezone=True), nullable=True)
     uses = Column(Integer, default=0)
     max_uses = Column(Integer, nullable=True)
     created_at = Column(DateTime(timezone=True), server_default=func.now())

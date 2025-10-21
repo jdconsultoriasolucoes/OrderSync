@@ -2,6 +2,9 @@ import secrets
 from datetime import datetime, time
 from sqlalchemy import text
 from models.pedido_link import PedidoLink
+from zoneinfo import ZoneInfo
+
+TZ = ZoneInfo("America/Sao_Paulo")
 
 def _fim_do_dia(d):  # date → datetime no fim do dia
     return datetime.combine(d, time(23, 59, 59, 999999))
@@ -42,7 +45,7 @@ def gerar_link_code(db, tabela_id: int, com_frete: bool, data_prevista_str: str 
         com_frete=com_frete,
         data_prevista=data_prevista, 
         expires_at=expires_at,
-        codigo_cliente=(codigo_cliente or None)
+        codigo_cliente=cod
     )
     db.add(link)
     db.commit()
@@ -57,11 +60,11 @@ def resolver_code(db, code: str):
     link = db.query(PedidoLink).get(code)
     if not link:
         return None, "not_found"
-    if link.expires_at and datetime.utcnow() > link.expires_at:
+    if link.expires_at and datetime.now(TZ) > link.expires_at:
         return None, "expired"
 
     # contadores e carimbos
-    now = datetime.utcnow()
+    now = datetime.now(TZ)
     db.execute(text("""
         UPDATE tb_pedido_link
            SET uses = COALESCE(uses,0) + 1,
