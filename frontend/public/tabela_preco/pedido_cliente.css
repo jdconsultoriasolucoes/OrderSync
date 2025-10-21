@@ -190,6 +190,9 @@ body.page-locked .documento *:not(#confirmModal):not(.modal-content):not(.btn-mo
 
 .hidden { display: none !important; }
 
+/* esconde a coluna 5 (Peso) da tabela */
+#tabelaProdutos th:nth-child(5),
+#tabelaProdutos td:nth-child(5),
 /* esconde a coluna 8 (Subtotal) da tabela */
 #tabelaProdutos th:nth-child(8),
 #tabelaProdutos td:nth-child(8) {
@@ -209,3 +212,24 @@ body.page-locked .documento *:not(#confirmModal):not(.modal-content):not(.btn-mo
 }
 #btnFecharConfirm:hover{ filter:brightness(.95); }
 #btnFecharConfirm:focus{ outline:2px solid rgba(255,255,255,.25); outline-offset:2px; }
+
+.totais-pedido{
+  display:grid;
+  grid-template-columns: 1fr auto;
+  align-items:center;
+  gap:12px;
+  margin:12px 0 8px;
+}
+
+/* Neutraliza o margin herdado do .total dentro do wrapper */
+.totais-pedido .total{
+  justify-self:end;
+  margin:0;              /* <-- evita o vão extra */
+  font-size:18px;        /* mantém visual atual */
+  text-align:right;
+}
+
+@media (max-width:640px){
+  .totais-pedido{ grid-template-columns: 1fr; }  /* empilha no mobile */
+  .totais-pedido .total{ justify-self:start; }
+}

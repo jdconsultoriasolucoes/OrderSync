@@ -33,7 +33,7 @@
             <th>Produto</th>
             <th>Embal.</th>
             <th>Condição de Pagamento</th>
-            <th>Peso</th>
+            <th>Peso</th> <!-- Retirado por pedido do Edson, o campo continua sendo calculado, para retornar ele necessario retirar do CSS regra de ocultar -->
             <th>Valor <span id="tituloValorFrete">c/ Frete</span></th>
             <th>Qtd</th>
             <th>Subtotal</th> <!-- Retirado por pedido do Edson, o campo continua sendo calculado, para retornar ele necessario retirar do CSS regra de ocultar -->
@@ -41,15 +41,6 @@
         </thead>
         <tbody></tbody>
       </table>
-      <section id="resumoPedido" class="resumo-pedido">
-        <div class="resumo-grid">
-          <div><strong>Peso total:</strong> <span id="totalPesoPedido">0</span> kg</div>
-          <div id="blocoFretePedido" class="hidden">  <strong>Frete no pedido:</strong> <span id="totalFretePedido">R$ 0,00</span></div>
-        </div>
-      </section>
-      <div class="total">
-        <p><strong>Total:</strong>  <span id="totalGeral">0,00</span></p>
-      </div>
       <section id="observacoesPedido" class="observacoes-pedido">
         <label for="observacaoCliente" class="observacoes-label">
           <strong>Observações do pedido</strong> <small>(opcional)</small>
