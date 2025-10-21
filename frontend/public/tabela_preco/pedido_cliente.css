@@ -195,3 +195,17 @@ body.page-locked .documento *:not(#confirmModal):not(.modal-content):not(.btn-mo
 #tabelaProdutos td:nth-child(8) {
   display: none !important;
 }
+
+#btnFecharConfirm{
+  appearance:none; -webkit-appearance:none;
+  background:#2b2b2b;
+  color:#fff;
+  border:0;
+  border-radius:8px;
+  padding:10px 14px;
+  font-weight:600;
+  cursor:pointer;
+  box-shadow:0 2px 6px rgba(0,0,0,.18);
+}
+#btnFecharConfirm:hover{ filter:brightness(.95); }
+#btnFecharConfirm:focus{ outline:2px solid rgba(255,255,255,.25); outline-offset:2px; }
