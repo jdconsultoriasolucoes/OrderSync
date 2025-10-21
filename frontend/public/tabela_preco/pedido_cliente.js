@@ -623,5 +623,7 @@ if (taObs) {
   taObs.addEventListener('input', atualizarObsCounter);
   atualizarObsCounter(); // inicia contador
 }
-const btnFecharConfirm = document.getElementById('btnFecharConfirm');
-if (btnFecharConfirm) btnFecharConfirm.addEventListener('click', closeConfirmModal);
+window.addEventListener('DOMContentLoaded', () => {
+  const btnFecharConfirm = document.getElementById('btnFecharConfirm');
+  if (btnFecharConfirm) btnFecharConfirm.addEventListener('click', closeConfirmModal);
+});
