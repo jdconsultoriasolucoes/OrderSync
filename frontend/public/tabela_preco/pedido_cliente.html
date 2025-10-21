@@ -5,111 +5,109 @@
   <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
   <meta http-equiv="Pragma" content="no-cache">
   <meta http-equiv="Expires" content="0">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
-
   <title>Confirmação de Pedido</title>
-
-  <!-- GARANTA o path correto abaixo -->
-  <link rel="stylesheet" href="/static/tabela_preco/pedido_cliente.css?v=20251020c">
-
-  <!-- plano B: se o CSS externo não carregar, ainda esconde o frete -->
-  <style>.hidden{display:none!important}</style>
+  <link rel="stylesheet" href="/static/tabela_preco/pedido_cliente.css?v=20251013a">
 </head>
 <body>
-
-  <div class="orc-page">
-    <div class="orc-card">
-
-      <!-- Cabeçalho -->
-      <header class="orc-header">
-        <h1 class="orc-title">Solicitação de Orçamento</h1>
-        <div class="orc-head-date">
-          <div class="orc-label">Data</div>
-          <div class="orc-value" id="dataPedidoHeader">__/__/____</div>
-        </div>
-      </header>
-
-      <!-- Faixa 1: Código + Cliente -->
-      <section class="orc-faixa orc-cols-2">
-        <div class="orc-field">
-          <div class="orc-label">Código</div>
-          <div class="orc-value" id="codigoCliente">—</div>
-        </div>
-        <div class="orc-field">
-          <div class="orc-label">Cliente</div>
-          <div class="orc-value" id="nomeCliente">—</div>
-        </div>
-      </section>
-
-      <!-- Faixa 2: Validade + Data Entrega/Retira -->
-      <section class="orc-faixa orc-cols-2" style="margin-top: 12px;">
-        <div class="orc-field">
-          <div class="orc-label">Validade da Tabela</div>
-          <div class="orc-value" id="validadeTabela">__/__/____</div>
-        </div>
-        <div class="orc-field">
-          <div class="orc-label">Data da Entrega ou Retira</div>
-          <div class="orc-value" id="dataEntregaRetira">__/__/____</div>
-        </div>
-      </section>
-
-      <!-- Itens -->
-      <section class="orc-itens">
-        <table id="tabelaProdutos">
-          <thead>
-            <tr>
-              <th style="width:110px">Código</th>
-              <th>Produto</th>
-              <th style="width:120px">Embalagem</th>
-              <th style="width:90px">Quantidade</th>
-              <th class="num" style="width:120px">Valor Retira</th>
-              <th class="num" style="width:120px">Valor Entrega</th>
-              <th style="width:180px">Condições Pagamento</th>
-            </tr>
-          </thead>
-          <tbody><!-- linhas via JS --></tbody>
-        </table>
-      </section>
-
-      <!-- Rodapé: Fechamento + Observações -->
-      <section class="orc-footer">
-        <div class="orc-fechamento">
-          <div class="orc-row">
-            <div><strong>Total em Peso Bruto</strong></div>
-            <div><span id="totalPesoPedido">0</span> kg</div>
-          </div>
-          <div class="orc-row">
-            <div><strong>Total em Valor</strong></div>
-            <div>R$ <span id="totalGeral">0,00</span></div>
-          </div>
-        </div>
-
-        <div class="orc-observacoes">
-          <div class="orc-label" style="font-weight:600">Observações do Cliente</div>
-          <textarea id="observacoesPedido" maxlength="100" placeholder="Digite suas observações (opcional)"></textarea>
-          <div class="orc-obs-meta">
-            <span id="observacoesHint">&nbsp;</span>
-            <span id="obsCounter">0/100</span>
-          </div>
-        </div>
-      </section>
-
-      <!-- (Oculto) Frete no pedido -->
-      <div id="blocoFretePedido" class="hidden">
-        <strong>Frete no pedido:</strong>
-        <span id="totalFretePedido">R$ 0,00</span>
+  <div class="documento">
+    <header>
+      <div class="logo-cliente">
+        <img src="/static/tabela_preco/logo_cliente_supra.png" alt="Logo do Cliente">
       </div>
-
-      <!-- Ações -->
-      <div class="orc-actions">
-        <button class="orc-btn" id="btnVoltar">Voltar</button>
-        <button class="orc-btn orc-primary" id="btnConfirmar">Confirmar</button>
+      <div class="dados-header">
+        <h1>Solicitação de orçamento</h1>
+        <div class="meta-link" style="font-size:12px;color:#666;margin-top:4px;">
+          Data do pedido: <span id="datadopedido">—</span>
+        </div>
+        <p><strong>Cliente:</strong> <span id="razaoSocialCliente">---</span></p>
+        <p><strong>Validade:</strong> <span id="validadeTabela">---</span> (<span id="tempoRestante">---</span>)</p>
+        <p><strong id="labelEntregaRetirada">Data:</strong> <span id="dataEntregaValor">a combinar</span></p> 
       </div>
+    </header>
 
-    </div>
+    <main>
+      <table id="tabelaProdutos">
+        <thead>
+          <tr>
+            <th>Código</th>
+            <th>Produto</th>
+            <th>Embal.</th>
+            <th>Condição de Pagamento</th>
+            <th>Peso</th>
+            <th>Valor <span id="tituloValorFrete">c/ Frete</span></th>
+            <th>Qtd</th>
+            <th>Subtotal</th> <!-- Retirado por pedido do Edson, o campo continua sendo calculado, para retornar ele necessario retirar do CSS regra de ocultar -->
+          </tr>
+        </thead>
+        <tbody></tbody>
+      </table>
+      <section id="resumoPedido" class="resumo-pedido">
+        <div class="resumo-grid">
+          <div><strong>Peso total:</strong> <span id="totalPesoPedido">0</span> kg</div>
+          <div id="blocoFretePedido" class="hidden">  <strong>Frete no pedido:</strong> <span id="totalFretePedido">R$ 0,00</span></div>
+        </div>
+      </section>
+      <div class="total">
+        <p><strong>Total:</strong>  <span id="totalGeral">0,00</span></p>
+      </div>
+      <section id="observacoesPedido" class="observacoes-pedido">
+        <label for="observacaoCliente" class="observacoes-label">
+          <strong>Observações do pedido</strong> <small>(opcional)</small>
+        </label>
+
+        <textarea id="observacaoCliente" maxlength="100" rows="1" class="observacoes-textarea"></textarea>
+
+        <div id="obsCounter" class="observacoes-counter">0/100</div>
+      </section>
+      <div class="acoes">
+        <button id="btnConfirmar">Confirmar Pedido</button>
+        <button id="btnCancelar">Cancelar</button>
+      </div>
+     
+      <div class="marca-dagua">
+        <img src="/static/tabela_preco/logo.png" alt="Marca d'água OrderSync">
+       </div>
+      <p id="mensagem"></p>
+    </main>
   </div>
 
-  <!-- GARANTA o path correto do JS também -->
-  <script defer src="/static/tabela_preco/pedido_cliente.js?v=20251020c"></script>
+  <!-- defina sua API (ajuste para prod) -->
+<script>
+  window.API_BASE = window.API_BASE || "https://ordersync-backend-edjq.onrender.com";
+</script>
+<script src="/static/tabela_preco/pedido_cliente.js?v=20251012b"></script>
+<!-- resolve o /p/{code} e expõe os globais -->
+<script>
+  window.addEventListener('DOMContentLoaded', () => {
+    const API = (p) => `${(window.API_BASE || location.origin).replace(/\/$/,'')}${p}`;
+    const code = location.pathname.split('/').pop();
+
+   fetch(API(`/link_pedido/resolver?code=${encodeURIComponent(code)}`), { cache:'no-store' })
+      .then(r => { if (!r.ok) throw new Error('resolver '+r.status); return r.json(); })
+      .then(d => {
+        window.currentTabelaId  = d.tabela_id;
+        window.currentComFrete  = d.com_frete;
+        window.entregaISO       = (typeof d.data_prevista === 'string' ? d.data_prevista : null); // << NOVO
+        console.log('[resolver] ok', d);
+
+        if (typeof window.carregarPedido === 'function') {
+          window.carregarPedido();
+        } else {
+          setTimeout(() => window.carregarPedido && window.carregarPedido(), 0);
+        }
+      })
+      .catch(err => console.error('[resolver] fail', err));
+  });
+</script>
+
+  <div id="confirmModal" class="modal" hidden>
+  <div class="modal-backdrop"></div>
+  <div class="modal-content" role="dialog" aria-modal="true" aria-labelledby="confirmTitle">
+    <h2 id="confirmTitle">Pedido confirmado ✅</h2>
+    <p class="confirm-text">Recebemos seu pedido e ele já está sendo processado.</p>
+    <p id="confirmPedidoInfo" class="confirm-info"></p>
+    <button id="btnFecharConfirm" class="btn-modal">Fechar</button>
+  </div>
+</div>
 </body>
 </html>

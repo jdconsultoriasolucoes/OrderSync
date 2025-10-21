@@ -5,7 +5,7 @@ from pydantic import BaseModel, constr, conlist
 from typing import Optional, List
 from sqlalchemy import text
 from database import SessionLocal  
-from datetime import datetime
+from datetime import datetime, timezone
 from sqlalchemy.orm import Session
 import json
 
@@ -132,7 +132,7 @@ def confirmar_pedido(tabela_id: int, body: ConfirmarPedidoRequest):
 
             if not link_row:
                 raise HTTPException(status_code=404, detail="Link não encontrado")
-            if link_row["expires_at"] and datetime.utcnow() > link_row["expires_at"]:
+            if link_row["expires_at"] and datetime.now(timezone.utc) > link_row["expires_at"]:
                 raise HTTPException(status_code=410, detail="Link expirado")
             if int(link_row["tabela_id"]) != int(tabela_id):
                 raise HTTPException(status_code=400, detail="Link e tabela não conferem")
@@ -165,7 +165,7 @@ def confirmar_pedido(tabela_id: int, body: ConfirmarPedidoRequest):
         validade_dias = body.validade_dias
         data_retirada = _parse_date(body.data_retirada) or (link_row["data_prevista"] if link_row else None)
 
-        cliente_str = (body.cliente or "").strip() or "---"
+        
         codigo_cliente = (body.codigo_cliente or "").strip() or None
         if link_row:
             link_url = link_row.get("link_url")

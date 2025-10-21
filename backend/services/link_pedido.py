@@ -33,6 +33,9 @@ def gerar_link_code(db, tabela_id: int, com_frete: bool, data_prevista_str: str 
     expires_at = calcular_expires_at_global(db)
     data_prevista = _parse_iso_date(data_prevista_str)
 
+    cod = (codigo_cliente or "").strip() or "Não cadastrado"
+    cod = cod[:80]
+    
     link = PedidoLink(
         code=code,
         tabela_id=tabela_id,
