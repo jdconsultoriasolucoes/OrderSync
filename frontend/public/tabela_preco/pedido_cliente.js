@@ -102,8 +102,8 @@ const btnConfirmar  = document.getElementById("btnConfirmar");
 const btnCancelar   = document.getElementById("btnCancelar");
 
 // Observação do cliente – contador de caracteres
-const taObs = document.getElementById('observacaoCliente');
-const obsCounter = document.getElementById('obsCounter');
+const taObs = document.getElementById('observacaoPedido');
+const obsCounter = document.getElementById('obsCount');
 
 // -------------------- UI utils --------------------
 function setMensagem(texto, ok = false) {
@@ -479,7 +479,7 @@ async function confirmarPedido() {
     const clienteRazao = (document.getElementById('razaoSocialCliente')?.textContent || '').trim() || null;
 
     // observação limitada a 100 chars
-    const observacao = (document.getElementById('observacaoCliente')?.value || '').trim().slice(0, 100);
+    const observacao = (document.getElementById('observacaoPedido')?.value || '').trim().slice(0, 100);
 
     const entregaQS = new URLSearchParams(location.search).get("entrega");
     const dataRetiradaISO = (typeof entregaQS === "string" && isISODate(entregaQS)) ? entregaQS : null;

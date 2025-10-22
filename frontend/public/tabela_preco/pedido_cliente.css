@@ -207,24 +207,79 @@ body.page-locked .documento *:not(#confirmModal):not(.modal-content):not(.btn-mo
 #btnFecharConfirm:hover{ filter:brightness(.95); }
 #btnFecharConfirm:focus{ outline:2px solid rgba(255,255,255,.25); outline-offset:2px; }
 
-.totais-pedido{
+/* === Fechamento estilo tabela + Observações lado a lado === */
+.fechamento-grid{
   display:grid;
-  grid-template-columns: 1fr auto;
-  align-items:center;
-  gap:12px;
-  margin:12px 0 8px;
+  grid-template-columns:minmax(280px,360px) 1fr;
+  gap:16px;
+  align-items:start;
+  margin:14px 0 10px;
 }
-.totais-pedido #resumoPedido{ margin:0; }
 
-/* Estilo do bloco Total (escopado) */
-.totais-pedido .total{
+/* Caixa dos totais (borda preta, linhas) */
+.fechamento-card{
+  border:2px solid #000;
+  background:#fff;
+}
+.fech-row{
+  display:grid;
+  grid-template-columns: 1fr 1fr;
+  border-bottom:2px solid #000;
+}
+.fech-row:last-child{ border-bottom:0; }
+.fech-label{
+  background:#f2ff37;            /* amarelo */
+  padding:8px 10px;
+  font-weight:700;
+}
+.fech-value{
+  padding:8px 10px;
   text-align:right;
-  font-size:18px;
-  margin:0;            /* não empurra pra baixo */
-  justify-self:end;
+  font-weight:700;
 }
 
-@media (max-width:640px){
-  .totais-pedido{ grid-template-columns:1fr; }
-  .totais-pedido .total{ justify-self:start; }
+/* Caixa de observações (título pêssego + linhas internas) */
+.obs-card{
+  border:2px solid #000;
+  background:#fff;
+  position:relative;
+}
+.obs-title{
+  display:inline-block;
+  background:#f6d3bd;            /* pêssego */
+  padding:6px 10px;
+  border:2px solid #000;
+  border-bottom:0;
+  border-right:0;
+  margin:-2px 0 0 -2px;           /* cantinho “saltado” como no mock */
+  font-weight:700;
+}
+.obs-body{ padding:6px; }
+.obs-card textarea{
+  width:100%;
+  min-height:120px;
+  border:0;
+  resize:vertical;
+  padding:8px 10px;
+  /* linhas horizontais como no exemplo */
+  background:
+    repeating-linear-gradient(
+      to bottom,
+      #fff 0,
+      #fff 22px,
+      #000 23px
+    );
+  outline:none;
+  font: inherit;
+}
+.obs-count{
+  text-align:right;
+  font-size:12px;
+  color:#666;
+  margin-top:4px;
+}
+
+/* Responsivo: empilha no mobile */
+@media (max-width:700px){
+  .fechamento-grid{ grid-template-columns:1fr; }
 }

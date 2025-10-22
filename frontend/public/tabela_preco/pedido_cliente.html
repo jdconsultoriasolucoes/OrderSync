@@ -6,7 +6,7 @@
   <meta http-equiv="Pragma" content="no-cache">
   <meta http-equiv="Expires" content="0">
   <title>Confirmação de Pedido</title>
-  <link rel="stylesheet" href="/static/tabela_preco/pedido_cliente.css?v=20251013c">
+  <link rel="stylesheet" href="/static/tabela_preco/pedido_cliente.css?v=20251013h">
 </head>
 <body>
   <div class="documento">
@@ -41,28 +41,27 @@
         </thead>
         <tbody></tbody>
       </table>
-        <section class="totais-pedido">
-        <!-- mantém o bloco atual de Peso total como está -->
-        <section id="resumoPedido">
-          <strong>Peso total:</strong> <span id="totalPesoPedido">0</span> kg
-          <div id="blocoFretePedido" class="hidden">
-            <strong>Frete no pedido:</strong> <span id="totalFretePedido">R$ 0,00</span>
+      <section class="fechamento-grid">
+        <!-- CAIXA ESQUERDA: Totais -->
+        <div class="fechamento-card">
+          <div class="fech-row">
+            <div class="fech-label">Total em Peso Bruto</div>
+            <div class="fech-value"><span id="totalPesoPedido">0</span> kg</div>
           </div>
-        </section>
-
-        <!-- mantém o bloco atual de Total como está -->
-        <div class="total">
-          <strong>Total:</strong> <span id="totalGeral">0,00</span>
+          <div class="fech-row">
+            <div class="fech-label">Total em Valor</div>
+            <div class="fech-value"><strong>R$ <span id="totalGeral">0,00</span></strong></div>
+          </div>
         </div>
-      </section>
-      <section id="observacoesPedido" class="observacoes-pedido">
-        <label for="observacaoCliente" class="observacoes-label">
-          <strong>Observações do pedido</strong> <small>(opcional)</small>
-        </label>
 
-        <textarea id="observacaoCliente" maxlength="100" rows="1" class="observacoes-textarea"></textarea>
-
-        <div id="obsCounter" class="observacoes-counter">0/100</div>
+        <!-- CAIXA DIREITA: Observações do Cliente -->
+        <div class="obs-card">
+          <div class="obs-title">Observações do Cliente:</div>
+          <div class="obs-body">
+            <textarea id="observacaoPedido" maxlength="100" placeholder="Digite aqui..."></textarea>
+            <div class="obs-count"><span id="obsCount">0</span>/100</div>
+          </div>
+        </div>
       </section>
       <div class="acoes">
         <button id="btnConfirmar">Confirmar Pedido</button>
@@ -80,7 +79,7 @@
 <script>
   window.API_BASE = window.API_BASE || "https://ordersync-backend-edjq.onrender.com";
 </script>
-<script src="/static/tabela_preco/pedido_cliente.js?v=20251012b"></script>
+<script src="/static/tabela_preco/pedido_cliente.js?v=20251012c"></script>
 <!-- resolve o /p/{code} e expõe os globais -->
 <script>
   window.addEventListener('DOMContentLoaded', () => {
