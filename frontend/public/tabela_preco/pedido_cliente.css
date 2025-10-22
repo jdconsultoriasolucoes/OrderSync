@@ -277,3 +277,16 @@ body.page-locked .documento *:not(#confirmModal):not(.modal-content):not(.btn-mo
 @media (max-width: 700px){
   .fech-row{ grid-template-columns: 1fr 120px;}
   }
+
+/* Wrapper lado a lado (desktop) e empilhado (mobile) */
+.fechamento-grid{
+  display: grid;
+  grid-template-columns: minmax(260px, 360px) 1fr;
+  gap: 24px;
+  align-items: start;
+  margin: 20px 0 10px;
+}
+
+@media (max-width: 700px){
+  .fechamento-grid{ grid-template-columns: 1fr; }
+}  
