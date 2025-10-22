@@ -207,73 +207,73 @@ body.page-locked .documento *:not(#confirmModal):not(.modal-content):not(.btn-mo
 #btnFecharConfirm:hover{ filter:brightness(.95); }
 #btnFecharConfirm:focus{ outline:2px solid rgba(255,255,255,.25); outline-offset:2px; }
 
-/* === Fechamento estilo tabela + Observações lado a lado === */
-.fechamento-grid{
-  display:grid;
-  grid-template-columns:minmax(280px,360px) 1fr;
-  gap:16px;
-  align-items:start;
-  margin:14px 0 10px;
-}
+/* largura máxima do bloco de totais (opcional) */
+.fechamento-card{ max-width: 420px; }
 
-/* Caixa dos totais (borda preta, linhas) */
-.fechamento-card,
-.obs-card{
-  border: 0 !important;
-  background: transparent !important;
-  box-shadow: none !important;
+/* cada linha: rótulo à esquerda, valor à direita em coluna fixa */
+.fech-row{
+  display: grid;
+  grid-template-columns: 1fr 140px;  /* ajuste a largura dos valores se quiser */
+  align-items: center;
+  padding: 8px 0;
+  border-bottom: 1px solid #eee;
 }
-.fech-row{                 /* remove as “linhas” internas da caixa de totais */
-  border-bottom: 0 !important;
-}
+.fech-row:last-child{ border-bottom: 0; }
 
-.fech-label{               /* tira o amarelo */
-  background: transparent !important;
+/* rótulos e valores no MESMO tamanho */
+.fech-label{
+  font-size: 16px;
+  font-weight: 600;
+  color: #475569;              /* cinza 600 */
 }
 .fech-value{
-  padding:8px 10px;
-  text-align:right;
-  font-weight:700;
+  text-align: right;
+  font-size: 16px;             /* igual ao rótulo */
+  font-weight: 600;            /* sem negrito exagerado */
+  letter-spacing: 0;
+  font-variant-numeric: tabular-nums;  /* dígitos com largura fixa */
+  color: #0f172a;              /* quase preto */
 }
 
-/* Caixa de observações (título pêssego + linhas internas) */
-.obs-card{
-  border:2px solid #000;
-  background:#fff;
-  position:relative;
+/* neutraliza <strong> dentro do valor para não “engrossar” */
+.fech-value strong{ font-weight: 600; }
+.fech-value span{ line-height: 1; }
+
+/* unidade do peso (opcional, se usar <span class="unit"> kg</span>) */
+.fech-value .unit{ color:#64748b; margin-left:4px; }
+
+/* Observações clean (mantém seu HTML/IDs) */
+.obs-title{
+  margin: 0 0 6px 0;
+  padding: 0;
+  background: transparent;
+  border: 0;
+  color: #334155;              /* cinza 700 */
+  font-weight: 700;
 }
-.obs-title{                /* tira o pêssego e a borda “saltada” */
-  background: transparent !important;
-  border: 0 !important;
-  margin: 0 !important;
-  padding: 0 !important;
-}
-.obs-body{ padding:6px; }
+.obs-body{ padding: 0; }
 .obs-card textarea{
-  width:100%;
-  min-height:120px;
-  border:0;
-  resize:vertical;
-  padding:8px 10px;
-  /* linhas horizontais como no exemplo */
-  background:
-    repeating-linear-gradient(
-      to bottom,
-      #fff 0,
-      #fff 22px,
-      #000 23px
-    );
-  outline:none;
-  font: inherit;
+  width: 100%;
+  min-height: 120px;
+  resize: vertical;
+  border: 1px solid #e5e7eb;
+  border-radius: 8px;
+  padding: 10px 12px;
+  background: #fff;            /* sem linhas */
+  outline: none;
+}
+.obs-card textarea:focus{
+  border-color:#c7d2fe;
+  box-shadow:0 0 0 3px rgba(99,102,241,.15);
 }
 .obs-count{
-  text-align:right;
-  font-size:12px;
-  color:#666;
-  margin-top:4px;
+  text-align: right;
+  font-size: 12px;
+  color: #64748b;
+  margin-top: 6px;
 }
 
-/* Responsivo: empilha no mobile */
-@media (max-width:700px){
-  .fechamento-grid{ grid-template-columns:1fr; }
-}
+/* Responsivo */
+@media (max-width: 700px){
+  .fech-row{ grid-template-columns: 1fr 120px;}
+  }
