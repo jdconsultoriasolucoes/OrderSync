@@ -217,20 +217,18 @@ body.page-locked .documento *:not(#confirmModal):not(.modal-content):not(.btn-mo
 }
 
 /* Caixa dos totais (borda preta, linhas) */
-.fechamento-card{
-  border:2px solid #000;
-  background:#fff;
+.fechamento-card,
+.obs-card{
+  border: 0 !important;
+  background: transparent !important;
+  box-shadow: none !important;
 }
-.fech-row{
-  display:grid;
-  grid-template-columns: 1fr 1fr;
-  border-bottom:2px solid #000;
+.fech-row{                 /* remove as “linhas” internas da caixa de totais */
+  border-bottom: 0 !important;
 }
-.fech-row:last-child{ border-bottom:0; }
-.fech-label{
-  background:#f2ff37;            /* amarelo */
-  padding:8px 10px;
-  font-weight:700;
+
+.fech-label{               /* tira o amarelo */
+  background: transparent !important;
 }
 .fech-value{
   padding:8px 10px;
@@ -244,15 +242,11 @@ body.page-locked .documento *:not(#confirmModal):not(.modal-content):not(.btn-mo
   background:#fff;
   position:relative;
 }
-.obs-title{
-  display:inline-block;
-  background:#f6d3bd;            /* pêssego */
-  padding:6px 10px;
-  border:2px solid #000;
-  border-bottom:0;
-  border-right:0;
-  margin:-2px 0 0 -2px;           /* cantinho “saltado” como no mock */
-  font-weight:700;
+.obs-title{                /* tira o pêssego e a borda “saltada” */
+  background: transparent !important;
+  border: 0 !important;
+  margin: 0 !important;
+  padding: 0 !important;
 }
 .obs-body{ padding:6px; }
 .obs-card textarea{
