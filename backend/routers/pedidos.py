@@ -94,8 +94,8 @@ class StatusChangeBody(BaseModel):
 # ---------- Routes ----------
 @router.get("", response_model=ListagemResponse)
 def listar_pedidos(
-    from_: Optional[str] = Query(None, alias="from"),  # agora string "YYYY-MM-DD"
-    to_:   Optional[str] = Query(None, alias="to"),    # idem
+    from_: Optional[str] = Query(None, alias="from"),  # string "YYYY-MM-DD"
+    to_:   Optional[str] = Query(None, alias="to"),    # string "YYYY-MM-DD"
     status: Optional[str] = Query(None),
     tabela_nome: Optional[str] = Query(None),
     cliente: Optional[str] = Query(None),
@@ -104,35 +104,75 @@ def listar_pedidos(
     pageSize: int = 25,
     db: Session = Depends(get_db),
 ):
-    # Se não mandou nada, define range padrão (últimos 30 dias)
+    # 1. fallback de período padrão (últimos 30 dias)
     if not from_ or not to_:
         hoje = datetime.now()
         inicio = hoje - timedelta(days=30)
-        # formata como date puro pra manter coerência com a lógica abaixo
         from_ = inicio.strftime("%Y-%m-%d")
         to_   = hoje.strftime("%Y-%m-%d")
 
-    # Agora montamos datetime de verdade pro SQL:
+    # 2. normaliza as datas p/ intervalo fechado do dia
     try:
-        from_dt = datetime.strptime(from_, "%Y-%m-%d").replace(hour=0,  minute=0,  second=0, microsecond=0)
-        to_dt   = datetime.strptime(to_,   "%Y-%m-%d").replace(hour=23, minute=59, second=59, microsecond=999999)
+        from_dt = datetime.strptime(from_, "%Y-%m-%d").replace(
+            hour=0, minute=0, second=0, microsecond=0
+        )
+        # OBS: no SQL você está usando >= :from AND < :to
+        # então aqui o to_dt tem que ser dia seguinte meia-noite
+        # (porque usamos "< :to", não "<= :to")
+        limite_to = datetime.strptime(to_, "%Y-%m-%d").replace(
+            hour=0, minute=0, second=0, microsecond=0
+        ) + timedelta(days=1)
     except ValueError:
-        # Se vier porcaria no querystring, devolve lista vazia sem quebrar
         return {"data": [], "page": page, "pageSize": pageSize, "total": 0}
 
-    # Daqui pra baixo você chama o service, passando esses datetimes já normalizados:
-    # exemplo:
-    rows, total = listar_pedidos_db(
-        db=db,
-        from_dt=from_dt,
-        to_dt=to_dt,
-        status=status,
-        tabela_nome=tabela_nome,
-        cliente=cliente,
-        fornecedor=fornecedor,
-        page=page,
-        pageSize=pageSize,
-    )
+    # 3. paginação
+    limit = pageSize
+    offset = (page - 1) * pageSize
+    if offset < 0:
+        offset = 0
+
+    # 4. trata filtros opcionais
+    # status pode vir "ABERTO,CONFIRMADO"
+    status_list = status.split(",") if status else None
+
+    params_base = {
+        "from": from_dt,
+        "to": limite_to,
+        "status_list": status_list,
+        "tabela_nome": f"%{tabela_nome}%" if tabela_nome else None,
+        "cliente_busca": f"%{cliente}%" if cliente else None,
+        "fornecedor_busca": f"%{fornecedor}%" if fornecedor else None,
+    }
+
+    # 5. total
+    total_row = db.execute(COUNT_SQL, params_base).mappings().first()
+    total = total_row["total"] if total_row and "total" in total_row else 0
+
+    # 6. dados paginados
+    params_listagem = {
+        **params_base,
+        "limit": limit,
+        "offset": offset,
+    }
+    rows_raw = db.execute(LISTAGEM_SQL, params_listagem).mappings().all()
+
+    # 7. montar objetos da resposta no formato do schema PedidoListItem
+    rows = []
+    for r in rows_raw:
+        rows.append(PedidoListItem(
+            numero_pedido      = r["numero_pedido"],
+            data_pedido        = r["data_pedido"],
+            cliente_nome       = r["cliente_nome"],
+            cliente_codigo     = r["cliente_codigo"],
+            modalidade         = r["modalidade"],
+            valor_total        = r["valor_total"],
+            status_codigo      = r["status_codigo"],
+            tabela_preco_nome  = r["tabela_preco_nome"],
+            fornecedor         = r["fornecedor"],
+            link_url           = r["link_url"],
+            link_status        = r["link_status"],
+            link_enviado       = r["link_enviado"],
+        ))
 
     return {
         "data": rows,
