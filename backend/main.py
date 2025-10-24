@@ -10,9 +10,8 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 
 # Routers
-from routers import cliente, listas, fiscal,pedidos
 from routers.tabela_preco import router_meta, router as router_tabela
-from routers import pedido_preview, link_pedido, admin_config_email
+from routers import pedido_preview, link_pedido, admin_config_email, cliente, listas, fiscal,pedidos
 
 # ---- logging base (simples) ----
 logging.basicConfig(level=logging.INFO)

@@ -54,8 +54,8 @@ async function loadList(page=1) {
   }
 
   const params = new URLSearchParams();
-  params.set("from", document.getElementById("fFrom").value + "T00:00:00");
-  params.set("to",   document.getElementById("fTo").value   + "T23:59:59");
+  params.set("from", document.getElementById("fFrom").value);
+  params.set("to",   document.getElementById("fTo").value);
   if (selStatus.length) params.set("status", selStatus.join(","));
   if (fTabela) params.set("tabela_nome", fTabela);
   if (fCliente) params.set("cliente", fCliente);
@@ -172,8 +172,22 @@ function bindUI() {
   });
 }
 
+function addDays(baseDate, days) {
+  const d = new Date(baseDate);
+  d.setDate(d.getDate() + days);
+  return d;
+}
+
 (async function init(){
   bindUI();
   await loadStatus();
+
+  // período padrão: últimos 30 dias
+  const hoje = new Date();
+  const inicio = addDays(hoje, -30);
+
+  document.getElementById("fFrom").value = inicio.toISOString().slice(0,10);
+  document.getElementById("fTo").value   = hoje.toISOString().slice(0,10);
+
   await loadList(1);
 })();

@@ -118,11 +118,12 @@ main {
 }
 
 
-.card-cliente     { background-color: #4f46e5; }
-.card-catalogo    { background-color: #06b6d4; }
-.card-pedido      { background-color: #0ea5e9; }
-.card-relatorios  { background-color: #a855f7; }
-.card-precos      { background-color: #f755ea; }
+.card-cliente      { background-color: #4f46e5; }
+.card-catalogo     { background-color: #06b6d4; }
+.card-pedido       { background-color: #0ea5e9; }
+.card-relatorios   { background-color: #a855f7; }
+.card-precos       { background-color: #f755ea; }
+.card-config_email { background-color: #1e1af1; }
 
 .cards-grid .card { 
   position: relative; 

@@ -2,7 +2,7 @@
 from fastapi import APIRouter, Depends, HTTPException, Query
 from pydantic import BaseModel, Field
 from typing import List, Optional
-from datetime import datetime
+from datetime import datetime, timedelta
 from sqlalchemy.orm import Session
 from sqlalchemy import text
 
@@ -94,31 +94,52 @@ class StatusChangeBody(BaseModel):
 # ---------- Routes ----------
 @router.get("", response_model=ListagemResponse)
 def listar_pedidos(
-    from_: datetime = Query(..., alias="from"),
-    to_: datetime = Query(..., alias="to"),
-    status: Optional[str] = Query(None, description="CSV ex.: ABERTO,CONFIRMADO"),
+    from_: Optional[str] = Query(None, alias="from"),  # agora string "YYYY-MM-DD"
+    to_:   Optional[str] = Query(None, alias="to"),    # idem
+    status: Optional[str] = Query(None),
     tabela_nome: Optional[str] = Query(None),
-    cliente: Optional[str] = Query(None, description="busca em nome ou código"),
+    cliente: Optional[str] = Query(None),
     fornecedor: Optional[str] = Query(None),
     page: int = 1,
     pageSize: int = 25,
     db: Session = Depends(get_db),
 ):
-    status_list = [s.strip() for s in status.split(",")] if status else None
-    params = {
-        "from": from_,
-        "to": to_,
-        "status_list": status_list,
-        "tabela_nome": f"%{tabela_nome}%" if tabela_nome else None,
-        "cliente_busca": f"%{cliente}%" if cliente else None,
-        "fornecedor_busca": f"%{fornecedor}%" if fornecedor else None,
-        "limit": pageSize,
-        "offset": (page - 1) * pageSize,
+    # Se não mandou nada, define range padrão (últimos 30 dias)
+    if not from_ or not to_:
+        hoje = datetime.now()
+        inicio = hoje - timedelta(days=30)
+        # formata como date puro pra manter coerência com a lógica abaixo
+        from_ = inicio.strftime("%Y-%m-%d")
+        to_   = hoje.strftime("%Y-%m-%d")
+
+    # Agora montamos datetime de verdade pro SQL:
+    try:
+        from_dt = datetime.strptime(from_, "%Y-%m-%d").replace(hour=0,  minute=0,  second=0, microsecond=0)
+        to_dt   = datetime.strptime(to_,   "%Y-%m-%d").replace(hour=23, minute=59, second=59, microsecond=999999)
+    except ValueError:
+        # Se vier porcaria no querystring, devolve lista vazia sem quebrar
+        return {"data": [], "page": page, "pageSize": pageSize, "total": 0}
+
+    # Daqui pra baixo você chama o service, passando esses datetimes já normalizados:
+    # exemplo:
+    rows, total = listar_pedidos_db(
+        db=db,
+        from_dt=from_dt,
+        to_dt=to_dt,
+        status=status,
+        tabela_nome=tabela_nome,
+        cliente=cliente,
+        fornecedor=fornecedor,
+        page=page,
+        pageSize=pageSize,
+    )
+
+    return {
+        "data": rows,
+        "page": page,
+        "pageSize": pageSize,
+        "total": total,
     }
-    total_rows = db.execute(COUNT_SQL, params).scalar()
-    rows = db.execute(LISTAGEM_SQL, params).mappings().all()
-    data = [PedidoListItem(**dict(r)) for r in rows]
-    return ListagemResponse(data=data, page=page, pageSize=pageSize, total=total_rows)
 
 @router.get("/{id_pedido}/resumo", response_model=PedidoResumo)
 def resumo_pedido(id_pedido: int, db: Session = Depends(get_db)):
