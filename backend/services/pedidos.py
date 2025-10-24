@@ -17,7 +17,7 @@ SELECT
   a.link_status,
   (a.link_enviado_em IS NOT NULL)           AS link_enviado
 FROM public.tb_pedidos a
-JOIN public.tb_tabela_preco b ON a.id_tabela = b.id_tabela
+JOIN public.tb_tabela_preco b ON a.tabela_preco_id = b.id_tabela
 WHERE a.created_at >= :from
   AND a.created_at <  :to
   AND (:status_list::text[] IS NULL OR a.status = ANY(:status_list))
@@ -31,7 +31,7 @@ LIMIT :limit OFFSET :offset
 COUNT_SQL = text("""
 SELECT COUNT(*) AS total
 FROM public.tb_pedidos a
-JOIN public.tb_tabela_preco b ON a.id_tabela = b.id_tabela
+JOIN public.tb_tabela_preco b ON a.tabela_preco_id = b.id_tabela
 WHERE a.created_at >= :from
   AND a.created_at <  :to
   AND (:status_list::text[] IS NULL OR a.status = ANY(:status_list))
@@ -66,7 +66,7 @@ SELECT
   a.link_status,
   a.created_at
 FROM public.tb_pedidos a
-JOIN public.tb_tabela_preco b ON a.id_tabela = b.id_tabela
+JOIN public.tb_tabela_preco b ON a.tabela_preco_id = b.id_tabela
 WHERE a.id_pedido = :id_pedido
 """)
 
