@@ -1,4 +1,4 @@
-from pydantic import BaseModel, EmailStr
+from pydantic import BaseModel
 from typing import Optional
 
 # ---------- MENSAGEM / DESTINO (aba 'Mensagens e Destinatários') ----------
@@ -18,7 +18,7 @@ class ConfigEmailMensagemOut(ConfigEmailMensagemBase):
 # ---------- SMTP / REMETENTE (aba 'Remetente e SMTP') ----------
 
 class ConfigEmailSMTPBase(BaseModel):
-    remetente_email: EmailStr
+    remetente_email: str
     smtp_host: str
     smtp_port: int
     smtp_user: str
