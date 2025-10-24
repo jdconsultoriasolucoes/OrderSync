@@ -7,7 +7,7 @@ from email.mime.multipart import MIMEMultipart
 
 from models.config_email_mensagem import ConfigEmailMensagem
 from models.config_email_smtp import ConfigEmailSMTP
-from cliente import ClienteModel  # seu modelo ORM real de cliente
+from models.cliente import ClienteModel  # seu modelo ORM real de cliente
 
 
 def get_cfg_mensagem(db: Session) -> ConfigEmailMensagem:
