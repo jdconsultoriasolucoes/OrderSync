@@ -124,3 +124,35 @@ main {
 .card-relatorios  { background-color: #a855f7; }
 .card-precos      { background-color: #f755ea; }
 
+.cards-grid .card { 
+  position: relative; 
+  overflow: hidden; 
+}
+
+/* Overlay clicável ocupa 100% do card (só na home) */
+.cards-grid .card .card-link {
+  position: absolute;
+  inset: 0;
+  display: block;
+  z-index: 1;            /* fica por cima, mas sem estilizar */
+}
+
+/* Realce suave no centro no hover (só na home) */
+.cards-grid .card::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity .18s ease;
+  background: radial-gradient(circle at 50% 45%, rgba(255,255,255,.12), transparent 60%);
+}
+
+.cards-grid .card:hover::before { 
+  opacity: 1; 
+}
+
+/* Toquezinho extra só no card de pedidos (opcional) */
+.cards-grid .card-pedido:hover { 
+  box-shadow: 0 8px 22px rgba(0,0,0,.18); 
+}

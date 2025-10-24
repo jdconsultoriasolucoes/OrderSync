@@ -1,40 +1,110 @@
-const form = document.getElementById("formEmail");
-const mensagem = document.getElementById("mensagem");
+// troca de aba lateral
+const sidebarItems = document.querySelectorAll(".sidebar-item");
+const sections = document.querySelectorAll(".content-section");
 
-async function carregarConfiguracoes() {
-  const resp = await fetch("/config_email");
-  if (!resp.ok) return;
+sidebarItems.forEach(item => {
+  item.addEventListener("click", () => {
+    const target = item.getAttribute("data-target");
 
-  const config = await resp.json();
-  document.getElementById("emailPrincipal").value = config.email_principal || "";
-  document.getElementById("emailsCopia").value = (config.email_copia || []).join(", ");
-  document.getElementById("assuntoPadrao").value = config.assunto || "";
-  document.getElementById("corpoPadrao").value = config.corpo || "";
+    sidebarItems.forEach(i => i.classList.remove("active"));
+    item.classList.add("active");
+
+    sections.forEach(sec => {
+      if (sec.id === target) {
+        sec.classList.remove("hidden");
+      } else {
+        sec.classList.add("hidden");
+      }
+    });
+  });
+});
+
+async function fetchJSON(url) {
+  const r = await fetch(url, { method: "GET", cache: "no-store" });
+  if (!r.ok) throw new Error("Erro GET " + url);
+  return await r.json();
 }
 
-form.addEventListener("submit", async function (e) {
-  e.preventDefault();
-
-  const payload = {
-    email_principal: document.getElementById("emailPrincipal").value,
-    email_copia: document.getElementById("emailsCopia").value.split(",").map(e => e.trim()).filter(Boolean),
-    assunto: document.getElementById("assuntoPadrao").value,
-    corpo: document.getElementById("corpoPadrao").value
-  };
-
-  const resp = await fetch("/config_email", {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify(payload)
+async function putJSON(url, data) {
+  const r = await fetch(url, {
+    method: "PUT",
+    headers: {
+      "Content-Type": "application/json"
+    },
+    body: JSON.stringify(data),
   });
+  if (!r.ok) {
+    const err = await r.json().catch(() => ({}));
+    throw new Error(err.detail || "Erro PUT " + url);
+  }
+  return await r.json();
+}
 
-  if (resp.ok) {
-    mensagem.textContent = "Configurações salvas com sucesso!";
-    mensagem.style.color = "green";
-  } else {
-    mensagem.textContent = "Erro ao salvar configurações.";
-    mensagem.style.color = "red";
+// ---------- carregar configs na tela ----------
+
+async function carregarMensagem() {
+  try {
+    const data = await fetchJSON("/admin/config_email/mensagem");
+    document.getElementById("destinatario_interno").value = data.destinatario_interno || "";
+    document.getElementById("assunto_padrao").value = data.assunto_padrao || "";
+    document.getElementById("corpo_html").value = data.corpo_html || "";
+    document.getElementById("enviar_para_cliente").checked = !!data.enviar_para_cliente;
+  } catch (e) {
+    console.warn("Sem config de mensagem ainda?", e);
+  }
+}
+
+async function carregarSMTP() {
+  try {
+    const data = await fetchJSON("/admin/config_email/smtp");
+    document.getElementById("remetente_email").value = data.remetente_email || "";
+    document.getElementById("smtp_host").value = data.smtp_host || "";
+    document.getElementById("smtp_port").value = data.smtp_port || "";
+    document.getElementById("smtp_user").value = data.smtp_user || "";
+    document.getElementById("usar_tls").checked = !!data.usar_tls;
+    // senha não volta por segurança
+    document.getElementById("smtp_senha").value = "";
+  } catch (e) {
+    console.warn("Sem config smtp ainda?", e);
+  }
+}
+
+// ---------- salvar configs ----------
+
+document.getElementById("btnSalvarMensagem").addEventListener("click", async () => {
+  const payload = {
+    destinatario_interno: document.getElementById("destinatario_interno").value,
+    assunto_padrao: document.getElementById("assunto_padrao").value,
+    corpo_html: document.getElementById("corpo_html").value,
+    enviar_para_cliente: document.getElementById("enviar_para_cliente").checked
+  };
+  try {
+    await putJSON("/admin/config_email/mensagem", payload);
+    alert("Configuração de mensagem salva.");
+  } catch (e) {
+    alert("Erro ao salvar mensagem: " + e.message);
   }
 });
 
-carregarConfiguracoes();
+document.getElementById("btnSalvarSMTP").addEventListener("click", async () => {
+  const payload = {
+    remetente_email: document.getElementById("remetente_email").value,
+    smtp_host: document.getElementById("smtp_host").value,
+    smtp_port: parseInt(document.getElementById("smtp_port").value || "0", 10),
+    smtp_user: document.getElementById("smtp_user").value,
+    smtp_senha: document.getElementById("smtp_senha").value || null,
+    usar_tls: document.getElementById("usar_tls").checked
+  };
+  try {
+    await putJSON("/admin/config_email/smtp", payload);
+    alert("Configuração SMTP salva.");
+    // limpa o campo senha depois de salvar
+    document.getElementById("smtp_senha").value = "";
+  } catch (e) {
+    alert("Erro ao salvar SMTP: " + e.message);
+  }
+});
+
+// inicializa
+carregarMensagem();
+carregarSMTP();

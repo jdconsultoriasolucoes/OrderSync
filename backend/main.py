@@ -10,9 +10,9 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 
 # Routers
-from routers import cliente, listas, fiscal
+from routers import cliente, listas, fiscal,pedidos
 from routers.tabela_preco import router_meta, router as router_tabela
-from routers import pedido_preview, link_pedido
+from routers import pedido_preview, link_pedido, admin_config_email
 
 # ---- logging base (simples) ----
 logging.basicConfig(level=logging.INFO)
@@ -93,7 +93,8 @@ app.include_router(fiscal.router)              # (sem prefixo se o router já ti
 app.include_router(pedido_preview.router)
 app.include_router(link_pedido.router)
 app.include_router(link_pedido.router_short)
-
+app.include_router(pedidos.router)
+app.include_router(admin_config_email.router)
 # ---- Static (se precisar servir arquivos públicos do front) ----
 static_dir = os.path.join(os.path.dirname(__file__), "..", "frontend", "public")
 app.mount("/static", StaticFiles(directory=static_dir), name="static")

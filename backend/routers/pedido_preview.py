@@ -9,6 +9,7 @@ from datetime import datetime, timezone
 from sqlalchemy.orm import Session
 import json
 from zoneinfo import ZoneInfo
+from services.email_service import enviar_email_notificacao
 
 router = APIRouter(prefix="/pedido", tags=["Pedido"])
 TZ = ZoneInfo("America/Sao_Paulo")
@@ -275,4 +276,22 @@ def confirmar_pedido(tabela_id: int, body: ConfirmarPedidoRequest):
             })
 
         db.commit()
+        
+    
+        pedido_info = {
+            "pedido_id": new_id,
+            "cliente_nome": (body.cliente or "").strip() or "---",
+            "total_pedido": round(total_pedido, 2),
+        }
+        
+        link_pdf = None
+
+            # dispara e-mail
+        enviar_email_notificacao(
+                db=db,
+                pedido_info=pedido_info,
+                codigo_cliente=codigo_cliente,
+                link_pdf=link_pdf
+            )
+
         return {"id": new_id, "status": "CRIADO"}

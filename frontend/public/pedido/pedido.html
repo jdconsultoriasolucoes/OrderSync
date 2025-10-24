@@ -1,0 +1,71 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8" />
+  <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Pedidos</title>
+  <link rel="stylesheet" href="./pedido.css?v=20251023a">
+</head>
+<body class="orc-page">
+  <div class="orc-card">
+    <header class="orc-header">
+      <h1 class="orc-title">Pedidos</h1>
+      <div class="filters">
+        <label>Data:
+          <input type="date" id="fFrom"> —
+          <input type="date" id="fTo">
+        </label>
+        <label>Status:
+          <select id="fStatus" multiple size="4"></select>
+        </label>
+        <label>Tabela:
+          <input type="text" id="fTabela" placeholder="Nome da tabela de preço">
+        </label>
+        <label>Cliente:
+          <input type="text" id="fCliente" placeholder="Nome ou código">
+        </label>
+        <label>Fornecedor:
+          <input type="text" id="fFornecedor" placeholder="Fornecedor">
+        </label>
+        <button id="btnBuscar">Buscar</button>
+      </div>
+    </header>
+
+    <div class="table-wrap">
+      <table class="orc-table" id="tblPedidos">
+        <thead>
+          <tr>
+            <th>Data</th>
+            <th>Número</th>
+            <th>Cliente</th>
+            <th>Entrega/Retirada</th>
+            <th>Valor</th>
+            <th>Status</th>
+            <th>Tabela</th>
+            <th>Fornecedor</th>
+            <th>Link</th>
+          </tr>
+        </thead>
+        <tbody id="tblBody"></tbody>
+      </table>
+      <div class="pagination">
+        <button id="prevPage">◀</button>
+        <span id="pageInfo">1</span>
+        <button id="nextPage">▶</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Drawer -->
+  <aside id="drawer" class="drawer hidden">
+    <div class="drawer-head">
+      <h2>Resumo do Pedido</h2>
+      <button id="btnCloseDrawer">✕</button>
+    </div>
+    <div id="drawerContent" class="drawer-content"></div>
+  </aside>
+
+  <script src="./pedido.js?v=20251023a"></script>
+</body>
+</html>
