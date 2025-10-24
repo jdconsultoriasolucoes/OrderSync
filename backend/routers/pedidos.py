@@ -104,28 +104,23 @@ def listar_pedidos(
     pageSize: int = 25,
     db: Session = Depends(get_db),
 ):
-    # 1. Se não veio período, usa últimos 30 dias
+    # 1. período padrão = últimos 30 dias
     if not from_ or not to_:
         hoje = datetime.now()
         inicio = hoje - timedelta(days=30)
         from_ = inicio.strftime("%Y-%m-%d")
         to_   = hoje.strftime("%Y-%m-%d")
 
-    # 2. Converte as datas "YYYY-MM-DD" em datetimes pra query
+    # 2. parse datas
     try:
         from_dt = datetime.strptime(from_, "%Y-%m-%d").replace(
             hour=0, minute=0, second=0, microsecond=0
         )
-
-        # IMPORTANTE:
-        # sua query usa "a.created_at < :to"
-        # então :to tem que ser o dia seguinte às 00:00
+        # nosso WHERE usa "< :to", então :to = dia seguinte 00:00
         limite_to = datetime.strptime(to_, "%Y-%m-%d").replace(
             hour=0, minute=0, second=0, microsecond=0
         ) + timedelta(days=1)
-
     except ValueError:
-        # Se mandarem data inválida, não derruba o server
         return {
             "data": [],
             "page": page,
@@ -133,51 +128,91 @@ def listar_pedidos(
             "total": 0,
         }
 
-    # 3. Paginação segura
+    # 3. paginação
     limit = pageSize
     offset = (page - 1) * pageSize
     if offset < 0:
         offset = 0
 
-    # 4. Monta status_list
-    # - Se o front mandou ?status=ABERTO,CONFIRMADO -> ['ABERTO','CONFIRMADO']
-    # - Se NÃO mandou nada, precisamos mandar uma lista válida
-    #   para evitar ANY(NULL) no SQL
+    # 4. quebra status em lista (se veio)
     if status:
         status_list = [s.strip() for s in status.split(",") if s.strip()]
     else:
-        # <- ATENÇÃO AQUI:
-        # Coloca aqui TODOS os códigos possíveis de status que existem hoje no tb_pedidos.status
-        # Se tiver outros (ex: EXPIRADO, ENVIADO, etc), adiciona aqui.
-        status_list = ["ABERTO", "CONFIRMADO", "CANCELADO", "EXPIRADO"]
+        status_list = None  # <- agora realmente None é permitido, MAS só no Python
 
-    # 5. Monta os parâmetros base que vão tanto para o COUNT_SQL quanto para o LISTAGEM_SQL
-    params_base = {
+    # 5. montar dinamicamente os filtros
+    filtros_sql = [
+        "a.created_at >= :from",
+        "a.created_at <  :to",
+    ]
+    params = {
         "from": from_dt,
         "to": limite_to,
-        "status_list": status_list,  # <-- nunca mais None
-        "tabela_nome": f"%{tabela_nome}%" if tabela_nome else None,
-        "cliente_busca": f"%{cliente}%" if cliente else None,
-        "fornecedor_busca": f"%{fornecedor}%" if fornecedor else None,
     }
 
-    # 6. Executa COUNT_SQL pra saber o total
-    total_row = db.execute(COUNT_SQL, params_base).mappings().first()
-    total = total_row["total"] if total_row and "total" in total_row else 0
+    if status_list:
+        filtros_sql.append("a.status = ANY(:status_list)")
+        params["status_list"] = status_list
 
-    # 7. Executa LISTAGEM_SQL pra pegar os registros da página
+    if tabela_nome:
+        filtros_sql.append("b.nome_tabela ILIKE :tabela_nome")
+        params["tabela_nome"] = f"%{tabela_nome}%"
+
+    if cliente:
+        filtros_sql.append("(a.cliente ILIKE :cliente_busca OR a.codigo_cliente ILIKE :cliente_busca)")
+        params["cliente_busca"] = f"%{cliente}%"
+
+    if fornecedor:
+        filtros_sql.append("a.fornecedor ILIKE :fornecedor_busca")
+        params["fornecedor_busca"] = f"%{fornecedor}%"
+
+    where_clause = " AND ".join(filtros_sql)
+
+    # 6. montar SQL COUNT e LISTAGEM de forma segura
+    count_sql = text(f"""
+        SELECT COUNT(*) AS total
+        FROM public.tb_pedidos a
+        JOIN public.tb_tabela_preco b ON a.tabela_preco_id = b.id_tabela
+        WHERE {where_clause}
+    """)
+
+    listagem_sql = text(f"""
+        SELECT
+          a.id_pedido                               AS numero_pedido,
+          a.created_at                              AS data_pedido,
+          a.cliente                                 AS cliente_nome,
+          a.codigo_cliente                          AS cliente_codigo,
+          CASE WHEN a.usar_valor_com_frete THEN 'ENTREGA' ELSE 'RETIRADA' END AS modalidade,
+          a.total_pedido                            AS valor_total,
+          a.status                                  AS status_codigo,
+          b.nome_tabela                             AS tabela_preco_nome,
+          a.fornecedor                              AS fornecedor,
+          a.link_url,
+          a.link_status,
+          (a.link_enviado_em IS NOT NULL)           AS link_enviado
+        FROM public.tb_pedidos a
+        JOIN public.tb_tabela_preco b ON a.tabela_preco_id = b.id_tabela
+        WHERE {where_clause}
+        ORDER BY a.created_at DESC, a.id_pedido DESC
+        LIMIT :limit OFFSET :offset
+    """)
+
+    # adiciona paginação nos params da listagem
     params_listagem = {
-        **params_base,
+        **params,
         "limit": limit,
         "offset": offset,
     }
 
-    rows_raw = db.execute(LISTAGEM_SQL, params_listagem).mappings().all()
+    # 7. executa
+    total_row = db.execute(count_sql, params).mappings().first()
+    total = total_row["total"] if total_row and "total" in total_row else 0
 
-    # 8. Converte cada linha SQL para o schema PedidoListItem
-    rows = []
-    for r in rows_raw:
-        rows.append(PedidoListItem(
+    rows_raw = db.execute(listagem_sql, params_listagem).mappings().all()
+
+    # 8. monta resposta
+    rows = [
+        PedidoListItem(
             numero_pedido      = r["numero_pedido"],
             data_pedido        = r["data_pedido"],
             cliente_nome       = r["cliente_nome"],
@@ -190,9 +225,10 @@ def listar_pedidos(
             link_url           = r["link_url"],
             link_status        = r["link_status"],
             link_enviado       = r["link_enviado"],
-        ))
+        )
+        for r in rows_raw
+    ]
 
-    # 9. Retorna no formato esperado pelo Pydantic ListagemResponse
     return {
         "data": rows,
         "page": page,
