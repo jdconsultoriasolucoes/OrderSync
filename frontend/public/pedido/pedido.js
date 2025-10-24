@@ -1,8 +1,12 @@
+// base do backend FastAPI publicado no Render
+const API_BASE = "https://ordersync-backend-edjq.onrender.com";
+
 const API = {
-  list:  "/api/pedidos",
-  status: "/api/pedidos/status",
-  resumo: (id) => `/api/pedidos/${id}/resumo`,
+  list:   `${API_BASE}/api/pedidos`,
+  status: `${API_BASE}/api/pedidos/status`,
+  resumo: (id) => `${API_BASE}/api/pedidos/${id}/resumo`,
 };
+
 
 let state = { page: 1, pageSize: 25, total: 0 };
 
@@ -21,6 +25,10 @@ function fmtDate(s) {
 
 async function loadStatus() {
   const r = await fetch(API.status, { cache: "no-store" });
+  if (!r.ok) {
+    console.error("Falha ao carregar status:", r.status, await r.text());
+    return;
+  }
   const j = await r.json();
   const sel = document.getElementById("fStatus");
   sel.innerHTML = "";
@@ -42,28 +50,35 @@ function getFilters() {
   return { fFrom, fTo, fTabela, fCliente, fFornecedor, selStatus };
 }
 
-async function loadList(page=1) {
+async function loadList(page = 1) {
   state.page = page;
   const { fFrom, fTo, fTabela, fCliente, fFornecedor, selStatus } = getFilters();
 
-  // Se datas vazias, usa hoje por padrão
+  // Se datas vazias, usa hoje como fallback
   if (!fFrom || !fTo) {
     const today = new Date().toISOString().slice(0,10);
-    document.getElementById("fFrom").value = today;
-    document.getElementById("fTo").value = today;
+    document.getElementById("fFrom").value = fFrom || today;
+    document.getElementById("fTo").value   = fTo   || today;
   }
 
   const params = new URLSearchParams();
-  params.set("from", document.getElementById("fFrom").value);
-  params.set("to",   document.getElementById("fTo").value);
-  if (selStatus.length) params.set("status", selStatus.join(","));
-  if (fTabela) params.set("tabela_nome", fTabela);
-  if (fCliente) params.set("cliente", fCliente);
+  params.set("from", document.getElementById("fFrom").value); // só "YYYY-MM-DD"
+  params.set("to",   document.getElementById("fTo").value);   // só "YYYY-MM-DD"
+  if (selStatus.length) params.set("status", selStatus.join(",")); // "ABERTO,CONFIRMADO"
+  if (fTabela)     params.set("tabela_nome", fTabela);
+  if (fCliente)    params.set("cliente", fCliente);
   if (fFornecedor) params.set("fornecedor", fFornecedor);
   params.set("page", state.page);
   params.set("pageSize", state.pageSize);
 
-  const r = await fetch(`${API.list}?${params.toString()}`, { cache: "no-store" });
+  const url = `${API.list}?${params.toString()}`;
+
+  const r = await fetch(url, { cache: "no-store" });
+  if (!r.ok) {
+    console.error("Falha ao carregar pedidos:", r.status, await r.text());
+    return;
+  }
+
   const j = await r.json();
   state.total = j.total;
   renderTable(j.data);
@@ -170,6 +185,22 @@ function bindUI() {
   document.getElementById("btnCloseDrawer").addEventListener("click", () => {
     document.getElementById("drawer").classList.add("hidden");
   });
+   const periodoEl = document.getElementById("fPeriodoRapido");
+  if (periodoEl) {
+    periodoEl.addEventListener("change", aplicarPeriodoRapido);
+  }
+
+  // botão "Buscar" manual (se existir)
+  const btnBuscar = document.getElementById("btnBuscar");
+  if (btnBuscar) {
+    btnBuscar.addEventListener("click", () => loadList(1));
+  }
+}
+
+function addDays(baseDate, days) {
+  const d = new Date(baseDate);
+  d.setDate(d.getDate() + days);
+  return d;
 }
 
 function addDays(baseDate, days) {
@@ -182,12 +213,35 @@ function addDays(baseDate, days) {
   bindUI();
   await loadStatus();
 
-  // período padrão: últimos 30 dias
+  // garante período inicial (30 dias porque está selected no HTML)
+  const periodoEl = document.getElementById("fPeriodoRapido");
+  if (periodoEl) {
+    aplicarPeriodoRapido();
+  } else {
+    // fallback (caso o select não esteja no HTML ainda)
+    const hoje = new Date();
+    const inicio = addDays(hoje, -30);
+    document.getElementById("fFrom").value = inicio.toISOString().slice(0,10);
+    document.getElementById("fTo").value   = hoje.toISOString().slice(0,10);
+    await loadList(1);
+  }
+})();
+
+function aplicarPeriodoRapido() {
+  const sel = document.getElementById("fPeriodoRapido");
+  const val = sel.value; // "7", "15", "30", "60", "90", ou "custom"
+
+  // se for custom, não mexe nos campos de data, o usuário vai escolher
+  if (val === "custom") {
+    return;
+  }
+
   const hoje = new Date();
-  const inicio = addDays(hoje, -30);
+  const inicio = addDays(hoje, -parseInt(val, 10));
 
   document.getElementById("fFrom").value = inicio.toISOString().slice(0,10);
   document.getElementById("fTo").value   = hoje.toISOString().slice(0,10);
 
-  await loadList(1);
-})();
+  // depois que atualiza as datas, já recarrega a lista página 1
+  loadList(1);
+}
