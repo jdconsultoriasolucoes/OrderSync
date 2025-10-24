@@ -94,69 +94,87 @@ class StatusChangeBody(BaseModel):
 # ---------- Routes ----------
 @router.get("", response_model=ListagemResponse)
 def listar_pedidos(
-    from_: Optional[str] = Query(None, alias="from"),  # string "YYYY-MM-DD"
-    to_:   Optional[str] = Query(None, alias="to"),    # string "YYYY-MM-DD"
-    status: Optional[str] = Query(None),
+    from_: Optional[str] = Query(None, alias="from"),  # "YYYY-MM-DD"
+    to_:   Optional[str] = Query(None, alias="to"),    # "YYYY-MM-DD"
+    status: Optional[str] = Query(None, description="CSV ex.: ABERTO,CONFIRMADO"),
     tabela_nome: Optional[str] = Query(None),
-    cliente: Optional[str] = Query(None),
+    cliente: Optional[str] = Query(None, description="busca em nome ou código"),
     fornecedor: Optional[str] = Query(None),
     page: int = 1,
     pageSize: int = 25,
     db: Session = Depends(get_db),
 ):
-    # 1. fallback de período padrão (últimos 30 dias)
+    # 1. Se não veio período, usa últimos 30 dias
     if not from_ or not to_:
         hoje = datetime.now()
         inicio = hoje - timedelta(days=30)
         from_ = inicio.strftime("%Y-%m-%d")
         to_   = hoje.strftime("%Y-%m-%d")
 
-    # 2. normaliza as datas p/ intervalo fechado do dia
+    # 2. Converte as datas "YYYY-MM-DD" em datetimes pra query
     try:
         from_dt = datetime.strptime(from_, "%Y-%m-%d").replace(
             hour=0, minute=0, second=0, microsecond=0
         )
-        # OBS: no SQL você está usando >= :from AND < :to
-        # então aqui o to_dt tem que ser dia seguinte meia-noite
-        # (porque usamos "< :to", não "<= :to")
+
+        # IMPORTANTE:
+        # sua query usa "a.created_at < :to"
+        # então :to tem que ser o dia seguinte às 00:00
         limite_to = datetime.strptime(to_, "%Y-%m-%d").replace(
             hour=0, minute=0, second=0, microsecond=0
         ) + timedelta(days=1)
-    except ValueError:
-        return {"data": [], "page": page, "pageSize": pageSize, "total": 0}
 
-    # 3. paginação
+    except ValueError:
+        # Se mandarem data inválida, não derruba o server
+        return {
+            "data": [],
+            "page": page,
+            "pageSize": pageSize,
+            "total": 0,
+        }
+
+    # 3. Paginação segura
     limit = pageSize
     offset = (page - 1) * pageSize
     if offset < 0:
         offset = 0
 
-    # 4. trata filtros opcionais
-    # status pode vir "ABERTO,CONFIRMADO"
-    status_list = status.split(",") if status else None
+    # 4. Monta status_list
+    # - Se o front mandou ?status=ABERTO,CONFIRMADO -> ['ABERTO','CONFIRMADO']
+    # - Se NÃO mandou nada, precisamos mandar uma lista válida
+    #   para evitar ANY(NULL) no SQL
+    if status:
+        status_list = [s.strip() for s in status.split(",") if s.strip()]
+    else:
+        # <- ATENÇÃO AQUI:
+        # Coloca aqui TODOS os códigos possíveis de status que existem hoje no tb_pedidos.status
+        # Se tiver outros (ex: EXPIRADO, ENVIADO, etc), adiciona aqui.
+        status_list = ["ABERTO", "CONFIRMADO", "CANCELADO", "EXPIRADO"]
 
+    # 5. Monta os parâmetros base que vão tanto para o COUNT_SQL quanto para o LISTAGEM_SQL
     params_base = {
         "from": from_dt,
         "to": limite_to,
-        "status_list": status_list,
+        "status_list": status_list,  # <-- nunca mais None
         "tabela_nome": f"%{tabela_nome}%" if tabela_nome else None,
         "cliente_busca": f"%{cliente}%" if cliente else None,
         "fornecedor_busca": f"%{fornecedor}%" if fornecedor else None,
     }
 
-    # 5. total
+    # 6. Executa COUNT_SQL pra saber o total
     total_row = db.execute(COUNT_SQL, params_base).mappings().first()
     total = total_row["total"] if total_row and "total" in total_row else 0
 
-    # 6. dados paginados
+    # 7. Executa LISTAGEM_SQL pra pegar os registros da página
     params_listagem = {
         **params_base,
         "limit": limit,
         "offset": offset,
     }
+
     rows_raw = db.execute(LISTAGEM_SQL, params_listagem).mappings().all()
 
-    # 7. montar objetos da resposta no formato do schema PedidoListItem
+    # 8. Converte cada linha SQL para o schema PedidoListItem
     rows = []
     for r in rows_raw:
         rows.append(PedidoListItem(
@@ -174,6 +192,7 @@ def listar_pedidos(
             link_enviado       = r["link_enviado"],
         ))
 
+    # 9. Retorna no formato esperado pelo Pydantic ListagemResponse
     return {
         "data": rows,
         "page": page,
