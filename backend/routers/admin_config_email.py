@@ -38,7 +38,14 @@ def get_mensagem_cfg(db: Session = Depends(get_db)):
         .first()
     )
     if not cfg:
-        raise HTTPException(status_code=404, detail="Configuração de mensagem não encontrada (id=1).")
+        # Retorna defaults sem 404 (dia zero não quebra a tela)
+        return ConfigEmailMensagemOut(
+            id=1,
+            destinatario_interno="",
+            assunto_padrao="Novo pedido {{pedido_id}}",
+            corpo_html="",
+            enviar_para_cliente=False,
+        )
     return cfg
 
 
@@ -86,7 +93,15 @@ def get_smtp_cfg(db: Session = Depends(get_db)):
         .first()
     )
     if not cfg:
-        raise HTTPException(status_code=404, detail="Configuração SMTP não encontrada (id=1).")
+        # Defaults seguros para a tela (não envia e-mail com isso — só exibe)
+        return ConfigEmailSMTPOut(
+            id=1,
+            remetente_email="",
+            smtp_host="",
+            smtp_port=587,
+            smtp_user="",
+            usar_tls=True,
+        )
     return cfg
 
 
