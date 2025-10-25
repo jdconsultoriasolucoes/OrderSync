@@ -251,13 +251,13 @@ def resumo_pedido(id_pedido: int, db: Session = Depends(get_db)):
     head = db.execute(RESUMO_SQL, {"id_pedido": id_pedido}).mappings().first()
     if not head:
         raise HTTPException(status_code=404, detail="Pedido não encontrado")
-    itens_json = db.execute(ITENS_JSON_SQL, {"id_pedido": id_pedido}).mappings().first()
-    itens = itens_json["itens"] if itens_json and itens_json["itens"] else []
+
     head_dict = dict(head)
     for k in ("validade_ate", "created_at", "atualizado_em", "data_prevista", "confirmado_em"):
         if k in head_dict:
             head_dict[k] = to_iso_or_none(head_dict[k])
-    itens = db.execute(ITENS_JSON_SQL, {"id_pedido": id}).scalar() or []
+
+    itens = db.execute(ITENS_JSON_SQL, {"id_pedido": id_pedido}).scalar() or []
     head_dict["itens"] = itens
 
     return PedidoResumo(**head_dict)

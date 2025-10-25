@@ -275,7 +275,7 @@ function aplicarPeriodoRapido() {
 }
 
 document.addEventListener("DOMContentLoaded", () => {
-  const tb = document.getElementById("tbodyPedidos");
+  const tb = document.getElementById("tblBody");
 
   // Clique em “Número” (link) ou na linha inteira
   tb.addEventListener("click", (ev) => {
