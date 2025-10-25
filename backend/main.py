@@ -95,7 +95,7 @@ app.include_router(link_pedido.router_short)
 app.include_router(pedidos.router)
 app.include_router(admin_config_email.router)
 
-app.include_router(router_debug)
+
 # ---- Static (se precisar servir arquivos públicos do front) ----
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 
@@ -201,3 +201,6 @@ def static_list():
             rel = os.path.relpath(os.path.join(root, f), static_dir)
             out.append(rel.replace("\\", "/"))
     return {"base": str(static_dir), "files": sorted(out)[:500]}
+
+
+app.include_router(router_debug)
