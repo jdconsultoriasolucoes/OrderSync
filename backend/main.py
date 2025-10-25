@@ -5,7 +5,7 @@ sys.path.append(os.path.dirname(os.path.abspath(__file__)))
 # --- imports extras para o middleware de erro ---
 import logging, traceback, uuid
 from fastapi import FastAPI, Request, HTTPException,APIRouter
-from fastapi.responses import JSONResponse, FileResponse
+from fastapi.responses import JSONResponse, FileResponse, RedirectResponse
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 from pathlib import Path  
@@ -121,21 +121,16 @@ if not os.path.isdir(static_dir):
 
 app.mount("/static", StaticFiles(directory=static_dir), name="static")
 
-@app.get("/admin/static/config_email.js", include_in_schema=False)
-def serve_cfg_email_js():
-    p = CONFIG_STATIC / "config_email.js"
-    if not p.exists():
-        raise HTTPException(status_code=404, detail="JS não encontrado")
-    return FileResponse(
-        p,
-        media_type="application/javascript",
-        headers={"Cache-Control": "no-store, no-cache, must-revalidate, max-age=0"},
-    )
+@app.get("/admin/config-email")
+def config_email_page():
+    # sempre aponta para o HTML dentro do /static
+    return RedirectResponse(url="/static/config_email/config_email.html")
 
 
 
-
-
+@app.get("/", include_in_schema=False)
+def root():
+    return RedirectResponse(url="/static/index.html")
 
 
 @app.middleware("http")
@@ -143,6 +138,7 @@ async def no_cache_static_tabela_preco(request, call_next):
     resp = await call_next(request)
     p = request.url.path
 
+    no_cache_roots = ("/static/tabela_preco/", "/static/config_email/")
     if p.startswith("/static/tabela_preco/") and any(
         p.endswith(ext) for ext in (".js", ".css", ".png", ".jpg", ".jpeg", ".svg", ".webp")
     ):
@@ -174,33 +170,3 @@ app.add_middleware(
 #     max_age=86400,
 # )
 
-router_debug = APIRouter()
-
-@router_debug.get("/_debug/static-ok")
-def static_ok():
-    return {
-        "mounted_dir": str(static_dir),
-        "exists": os.path.isdir(static_dir),
-        "sample_files": [
-            str(Path(static_dir)/"config_email/config_email.css"),
-            str(Path(static_dir)/"config_email/config_email.js"),
-            str(Path(static_dir)/"logo.png"),
-        ],
-        "present": [
-            os.path.isfile(Path(static_dir)/"config_email/config_email.css"),
-            os.path.isfile(Path(static_dir)/"config_email/config_email.js"),
-            os.path.isfile(Path(static_dir)/"logo.png"),
-        ],
-    }
-
-@router_debug.get("/_debug/static-list")
-def static_list():
-    out = []
-    for root, dirs, files in os.walk(static_dir):
-        for f in files:
-            rel = os.path.relpath(os.path.join(root, f), static_dir)
-            out.append(rel.replace("\\", "/"))
-    return {"base": str(static_dir), "files": sorted(out)[:500]}
-
-
-app.include_router(router_debug)

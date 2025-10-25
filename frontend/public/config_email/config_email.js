@@ -1,5 +1,6 @@
 // ================== AUTO-DETECÇÃO DE ENDPOINTS ==================
 const CANDIDATES = [
+ "/admin/config_email", 
   "/config/email",
   "/admin_config_email",
   "/admin/config_email",
