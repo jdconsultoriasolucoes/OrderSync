@@ -95,8 +95,30 @@ app.include_router(link_pedido.router_short)
 app.include_router(pedidos.router)
 app.include_router(admin_config_email.router)
 # ---- Static (se precisar servir arquivos públicos do front) ----
-static_dir = os.path.join(os.path.dirname(__file__), "..", "frontend", "public")
+BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+static_dir = os.path.abspath(os.path.join(BASE_DIR, "..", "frontend", "public"))
+
+# logs úteis pra saber o caminho real em produção
+logger.info(f"[STATIC] /static -> {static_dir}")
+if not os.path.isdir(static_dir):
+    logger.error(f"[STATIC] Pasta NÃO existe: {static_dir}")
+
 app.mount("/static", StaticFiles(directory=static_dir), name="static")
+
+# ---- Rota de debug para listar o conteúdo de /static ----
+from fastapi.responses import JSONResponse
+
+@app.get("/_debug/static-list", include_in_schema=False)
+def _debug_static_list():
+    try:
+        paths = []
+        for root, _, files in os.walk(static_dir):
+            for f in files:
+                rel = os.path.relpath(os.path.join(root, f), static_dir).replace("\\", "/")
+                paths.append(rel)
+        return {"static_dir": static_dir, "files": sorted(paths)}
+    except Exception as e:
+        return JSONResponse({"error": str(e)}, status_code=500)
 
 @app.middleware("http")
 async def no_cache_static_tabela_preco(request, call_next):
