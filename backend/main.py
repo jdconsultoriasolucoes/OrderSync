@@ -97,6 +97,7 @@ app.include_router(admin_config_email.router)
 # ---- Static (se precisar servir arquivos públicos do front) ----
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 static_dir = os.path.abspath(os.path.join(BASE_DIR, "..", "frontend", "public"))
+CONFIG_STATIC = Path(static_dir) / "config_email"
 
 # logs úteis pra saber o caminho real em produção
 logger.info(f"[STATIC] /static -> {static_dir}")
@@ -119,6 +120,34 @@ def _debug_static_list():
         return {"static_dir": static_dir, "files": sorted(paths)}
     except Exception as e:
         return JSONResponse({"error": str(e)}, status_code=500)
+
+@app.get("/admin/static/config_email.css", include_in_schema=False)
+def serve_cfg_email_css():
+    p = CONFIG_STATIC / "config_email.css"
+    if not p.exists():
+        raise HTTPException(status_code=404, detail="CSS não encontrado")
+    return FileResponse(
+        p,
+        media_type="text/css",
+        headers={"Cache-Control": "no-store, no-cache, must-revalidate, max-age=0"},
+    )
+
+@app.get("/admin/static/config_email.js", include_in_schema=False)
+def serve_cfg_email_js():
+    p = CONFIG_STATIC / "config_email.js"
+    if not p.exists():
+        raise HTTPException(status_code=404, detail="JS não encontrado")
+    return FileResponse(
+        p,
+        media_type="application/javascript",
+        headers={"Cache-Control": "no-store, no-cache, must-revalidate, max-age=0"},
+    )
+
+
+
+
+
+
 
 @app.middleware("http")
 async def no_cache_static_tabela_preco(request, call_next):
