@@ -14,16 +14,6 @@ body {
   box-sizing: border-box;
 }
 
-
-.page-container {
-  max-width: 2000px;
-  width: 100%;
-  margin: 0 auto;
-  padding: 30px 40px;
-  box-sizing: border-box;
-}
-
-
 /* Títulos */
 h2 {
   font-size: 18px;
@@ -334,3 +324,12 @@ input[type="text"], select {
   }
 }
 
+/* RESET: neutralizar o .card global (da home) dentro das telas internas */
+.page-container .card {
+  display: block !important;
+  align-items: unset !important;
+  justify-content: unset !important;
+  height: auto !important;
+  color: inherit !important;
+  text-align: left !important;
+}

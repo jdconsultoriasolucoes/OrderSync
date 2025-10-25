@@ -7,8 +7,9 @@ body {
 /* padrão para as páginas internas (NÃO centraliza) */
 .page-container {
   width: 100%;
-  margin: 0;                /* tiramos o auto */
-  padding: 0 40px;
+  max-width: none;     /* tira limite */
+  margin: 0;           /* mata centralização */
+  padding: 30px 40px;  /* ou 0 40px, como você quiser */
   box-sizing: border-box;
 }
 
