@@ -1,21 +1,19 @@
-// troca de aba lateral
-const sidebarItems = document.querySelectorAll(".sidebar-item");
-const sections = document.querySelectorAll(".content-section");
+document.querySelectorAll(".mini-card").forEach(card => {
+  card.addEventListener("click", () => {
+    const id = card.getAttribute("data-target");
+    const panel = document.getElementById(id);
+    if (panel) {
+      panel.classList.remove("hidden");
+      panel.scrollIntoView({ behavior: "smooth", block: "start" });
+    }
+  });
+});
 
-sidebarItems.forEach(item => {
-  item.addEventListener("click", () => {
-    const target = item.getAttribute("data-target");
-
-    sidebarItems.forEach(i => i.classList.remove("active"));
-    item.classList.add("active");
-
-    sections.forEach(sec => {
-      if (sec.id === target) {
-        sec.classList.remove("hidden");
-      } else {
-        sec.classList.add("hidden");
-      }
-    });
+// fecha o painel
+document.querySelectorAll("[data-close]").forEach(btn => {
+  btn.addEventListener("click", () => {
+    const panel = btn.closest(".panel");
+    if (panel) panel.classList.add("hidden");
   });
 });
 
