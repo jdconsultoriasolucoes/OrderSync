@@ -40,6 +40,24 @@ async function loadStatus() {
   });
 }
 
+function groupByPedido(rows) {
+  if (!Array.isArray(rows)) return [];
+  const map = new Map();
+  const ordered = [];
+
+  for (const r of rows) {
+    // tente detectar o id do pedido no payload
+    const id = r.numero_pedido ?? r.id_pedido ?? r.pedido_id;
+    if (!id) continue;
+
+    if (!map.has(id)) {
+      map.set(id, { ...r, _count_itens: 0 });
+      ordered.push(map.get(id));
+    }
+    map.get(id)._count_itens += 1; // opcional, caso queira mostrar a qtde de itens
+  }
+  return ordered;
+}
 function getFilters() {
   const fFrom = document.getElementById("fFrom").value;
   const fTo = document.getElementById("fTo").value;
@@ -81,7 +99,12 @@ async function loadList(page = 1) {
 
   const j = await r.json();
   state.total = j.total;
-  renderTable(j.data);
+
+  // 🔴 AGRUPA: transforma N linhas por item em 1 linha por pedido
+  const rows = groupByPedido(j.data);
+
+  // renderiza já consolidado
+  renderTable(rows);
   renderPager();
 }
 
@@ -89,38 +112,43 @@ function renderTable(rows) {
   const tb = document.getElementById("tblBody");
   tb.innerHTML = "";
   rows.forEach(row => {
+    const id = row.numero_pedido ?? row.id_pedido ?? row.pedido_id;
+
     const tr = document.createElement("tr");
+    tr.classList.add("row-click");
+    tr.dataset.id = id;
+
     tr.innerHTML = `
       <td>${fmtDate(row.data_pedido)}</td>
-      <td><button class="btn-link" data-id="${row.numero_pedido}">${row.numero_pedido}</button></td>
+      <td><a href="#" class="lnk-resumo" data-id="${id}">${id}</a></td>
       <td>${row.cliente_nome ?? "---"}</td>
-      <td><span class="badge">${row.modalidade}</span></td>
+      <td><span class="badge">${row.modalidade ?? "---"}</span></td>
       <td class="tar">${fmtMoney(row.valor_total)}</td>
-      <td>${row.status_codigo}</td>
+      <td>${row.status_codigo ?? row.status ?? "---"}</td>
       <td>${row.tabela_preco_nome ?? "---"}</td>
       <td>${row.fornecedor ?? "---"}</td>
       <td>
         ${row.link_url
-          ? `<button class="btn-copy" data-url="${row.link_url}">${row.link_enviado ? "Enviado" : "Gerado"}</button>`
+          ? `
+            <div class="flex-gap">
+              <a class="btn" href="${row.link_url}" target="_blank" rel="noopener">Abrir</a>
+              <button class="btn-copy" data-url="${row.link_url}">
+                ${row.link_enviado ? "Copiar (Enviado)" : "Copiar (Gerado)"}
+              </button>
+            </div>
+          `
           : "<span class='muted'>—</span>"
         }
       </td>
     `;
-    tb.appendChild(tr);
-  });
 
-  // bind actions
-  tb.querySelectorAll(".btn-link").forEach(btn => {
-    btn.addEventListener("click", () => openResumo(btn.dataset.id));
-  });
-  tb.querySelectorAll(".btn-copy").forEach(btn => {
-    btn.addEventListener("click", async () => {
-      try { await navigator.clipboard.writeText(btn.dataset.url);
-        btn.textContent = "Copiado!"; setTimeout(()=>btn.textContent="Copiar",1500);
-      } catch { alert("Não foi possível copiar o link."); }
+    tb.appendChild(tr);
+    tr.addEventListener("click", (ev) => {
+      if (ev.target.closest(".btn") || ev.target.closest("a")) return;
+      openResumo(id);
     });
-  });
-}
+  }
+)}
 
 function renderPager() {
   const pageInfo = document.getElementById("pageInfo");
@@ -245,3 +273,32 @@ function aplicarPeriodoRapido() {
   // depois que atualiza as datas, já recarrega a lista página 1
   loadList(1);
 }
+
+document.addEventListener("DOMContentLoaded", () => {
+  const tb = document.getElementById("tbodyPedidos");
+
+  // Clique em “Número” (link) ou na linha inteira
+  tb.addEventListener("click", (ev) => {
+    const a = ev.target.closest(".lnk-resumo");
+    if (a) {
+      ev.preventDefault();
+      openResumo(a.dataset.id);
+      return;
+    }
+    const tr = ev.target.closest("tr.row-click");
+    if (tr && !ev.target.closest(".btn") && !ev.target.closest("a")) {
+      openResumo(tr.dataset.id);
+    }
+  });
+
+  // Botões de copiar link (delegação)
+  tb.addEventListener("click", (ev) => {
+    const btn = ev.target.closest(".btn-copy");
+    if (!btn) return;
+    const url = btn.getAttribute("data-url");
+    navigator.clipboard.writeText(url).then(() => {
+      btn.textContent = "Copiado!";
+      setTimeout(() => (btn.textContent = "Copiar"), 1500);
+    });
+  });
+});

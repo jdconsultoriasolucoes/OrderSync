@@ -2,7 +2,7 @@
 from fastapi import APIRouter, Depends, HTTPException, Query
 from pydantic import BaseModel, Field
 from typing import List, Optional
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta,date
 from sqlalchemy.orm import Session
 from sqlalchemy import text
 
@@ -92,6 +92,16 @@ class StatusChangeBody(BaseModel):
     user_id: Optional[str] = None
 
 # ---------- Routes ----------
+def to_iso_or_none(v):
+    if v is None:
+        return None
+    if isinstance(v, (date, datetime)):
+        try:
+            return v.isoformat()
+        except Exception:
+            return str(v)
+    return str(v)
+
 @router.get("", response_model=ListagemResponse)
 def listar_pedidos(
     from_: Optional[str] = Query(None, alias="from"),  # "YYYY-MM-DD"
@@ -244,7 +254,12 @@ def resumo_pedido(id_pedido: int, db: Session = Depends(get_db)):
     itens_json = db.execute(ITENS_JSON_SQL, {"id_pedido": id_pedido}).mappings().first()
     itens = itens_json["itens"] if itens_json and itens_json["itens"] else []
     head_dict = dict(head)
-    head_dict["itens"] = [PedidoItemResumo(**i) for i in itens]
+    for k in ("validade_ate", "created_at", "atualizado_em", "data_prevista", "confirmado_em"):
+        if k in head_dict:
+            head_dict[k] = to_iso_or_none(head_dict[k])
+    itens = db.execute(ITENS_JSON_SQL, {"id_pedido": id}).scalar() or []
+    head_dict["itens"] = itens
+
     return PedidoResumo(**head_dict)
 
 @router.get("/status", response_model=StatusListResponse)

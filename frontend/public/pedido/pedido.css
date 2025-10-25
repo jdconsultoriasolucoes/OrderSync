@@ -25,3 +25,9 @@ body { background:#0b0b0b; color:#e7e7e7; font-family: system-ui, -apple-system,
 .block { padding: 8px 0; border-top: 1px dashed #242424; }
 .itens .item { display:flex; justify-content: space-between; padding: 6px 0; border-bottom: 1px dotted #222; }
 .truncate { max-width: 320px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.flex-gap { display:flex; gap:8px; align-items:center; flex-wrap:wrap; }
+.orc-table tr.row-click { cursor: pointer; }
+.orc-table tr.row-click:hover { background:#121212; }
+.orc-table tr.row-click { cursor: pointer; }
+.orc-table tr.row-click:hover { background: #121212; }
+.flex-gap { display:flex; gap:8px; align-items:center; flex-wrap:wrap; }
