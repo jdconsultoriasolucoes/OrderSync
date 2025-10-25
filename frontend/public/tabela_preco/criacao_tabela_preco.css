@@ -165,12 +165,3 @@ body {
 #dias_restantes[data-status="alerta"] { color:#f08c00; }
 #dias_restantes[data-status="expirada"] { color:#e03131; font-weight:600; }
 
-/* RESET: neutralizar o .card global (da home) dentro das telas internas */
-.page-container .card {
-  display: block !important;
-  align-items: unset !important;
-  justify-content: unset !important;
-  height: auto !important;
-  color: inherit !important;
-  text-align: left !important;
-}

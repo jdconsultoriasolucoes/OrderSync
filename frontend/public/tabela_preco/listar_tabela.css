@@ -343,12 +343,4 @@ input[type="text"], select {
   .toolbar .actions{ justify-content: flex-end; }
 }
 
-/* RESET: neutralizar o .card global (da home) dentro das telas internas */
-.page-container .card {
-  display: block !important;
-  align-items: unset !important;
-  justify-content: unset !important;
-  height: auto !important;
-  color: inherit !important;
-  text-align: left !important;
-}
+
