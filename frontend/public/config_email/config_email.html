@@ -1,147 +1,97 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="pt-BR">
 <head>
-  <meta charset="UTF-8">
-  <title>Configuração de E-mail</title>
-  <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
-  <meta http-equiv="Pragma" content="no-cache">
-  <meta http-equiv="Expires" content="0">
-  <link rel="stylesheet" href="/static/config_email/config_email.css?">
+  <meta charset="utf-8" />
+  <title>Configuração de E-mail · OrderSync</title>
+  <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate" />
+  <meta http-equiv="Pragma" content="no-cache" />
+  <meta http-equiv="Expires" content="0" />
+  <link rel="stylesheet" href="/static/config_email/config_email.css?v=tab-1" />
+  <script defer src="/static/config_email/config_email.js?v=tab-1"></script>
 </head>
-<body class="layout-body">
-
-  <!-- Barra topo padrão -->
+<body>
   <header class="topbar">
-    <div class="topbar-left">
-      <button class="burger" id="btnMenu">
-        <span></span><span></span><span></span>
-      </button>
-    </div>
-    <div class="topbar-right">
-      <img src="/static/logo.png" class="logo" alt="ORDERSYNC">
-      <span class="brand">ORDERSYNC</span>
+    <div class="brand">
+      <img src="/static/logo.png" class="logo" alt="ORDERSYNC" />
+      <span>ORDERSYNC</span>
     </div>
   </header>
 
-  <!-- Conteúdo -->
-  <main class="page-wrapper">
+  <main class="container">
+    <h1>Configuração de E-mail</h1>
 
-    <h1 class="page-title">Configuração de E-mail</h1>
+    <nav class="tabs" role="tablist" aria-label="Configuração de e-mail">
+      <button class="tab active" data-tab="tab-mensagem" role="tab" aria-selected="true">Mensagem</button>
+      <button class="tab" data-tab="tab-smtp" role="tab" aria-selected="false">SMTP</button>
+    </nav>
 
-    <!-- overview cards -->
-    <section id="overview" class="card-grid">
-      <div class="mini-card" data-target="mensagem-view">
-        <div class="mini-card-title">Mensagens e Destinatários</div>
-        <div class="mini-card-desc">
-          Define quem recebe, assunto, corpo do e-mail e se copia o cliente.
+    <!-- Guia: Mensagem -->
+    <section id="tab-mensagem" class="tab-panel active" role="tabpanel" aria-labelledby="Mensagem">
+      <form id="form-mensagem" class="form">
+        <div class="field">
+          <label>Destinatário interno <small>(separar por vírgula)</small></label>
+          <textarea id="destinatario_interno" rows="3" placeholder="ex.: pedidos@empresa.com, compras@empresa.com"></textarea>
         </div>
-        <button class="mini-card-btn">Editar</button>
-      </div>
 
-      <div class="mini-card" data-target="smtp-view">
-        <div class="mini-card-title">Remetente e SMTP</div>
-        <div class="mini-card-desc">
-          Configura remetente, servidor SMTP, porta, usuário, senha e TLS.
+        <div class="field">
+          <label>Assunto padrão</label>
+          <input id="assunto_padrao" type="text" placeholder="Novo pedido {{pedido_id}}" />
         </div>
-        <button class="mini-card-btn">Editar</button>
-      </div>
+
+        <div class="field">
+          <label>Corpo do e-mail <small>(HTML permitido)</small></label>
+          <textarea id="corpo_html" rows="8" placeholder="<p>Olá {{cliente_nome}}, seu pedido {{pedido_id}} foi recebido...</p>"></textarea>
+          <p class="help">Placeholders: <code>{{pedido_id}}</code>, <code>{{cliente_nome}}</code>, <code>{{total_pedido}}</code>, <code>{{link_pdf}}</code></p>
+        </div>
+
+        <div class="field checkbox">
+          <input id="enviar_para_cliente" type="checkbox" />
+          <label for="enviar_para_cliente">Enviar também para o cliente</label>
+        </div>
+
+        <div class="actions">
+          <button type="button" id="btnSalvarMensagem" class="btn primary">Salvar</button>
+          <button type="button" id="btnTestarEnvio" class="btn">Testar envio</button>
+        </div>
+      </form>
     </section>
 
-    <!-- FORM 1: Mensagem / Destinatários -->
-    <section id="mensagem-view" class="panel hidden">
-      <div class="panel-head">
-        <div>
-          <div class="panel-title">Mensagens e Destinatários</div>
-          <div class="panel-sub">Controle de para quem vai o e-mail e como ele chega</div>
-        </div>
-        <button class="btn-close-panel" data-close>Fechar</button>
-      </div>
-
-      <div class="form-grid">
-        <label class="field-block">
-          <span class="field-label">Destinatário interno (separar por vírgula)</span>
-          <input id="destinatario_interno" class="field-input" type="text" placeholder="pedidos@empresa.com, comercial@empresa.com">
-        </label>
-
-        <label class="field-block">
-          <span class="field-label">Assunto padrão</span>
-          <input id="assunto_padrao" class="field-input" type="text" placeholder="Novo pedido {{pedido_id}} - {{cliente_nome}}">
-        </label>
-
-        <label class="field-block full">
-          <span class="field-label">Corpo do e-mail (HTML permitido)</span>
-          <textarea id="corpo_html" class="field-textarea" rows="8"></textarea>
-          <div class="hint">
-            Placeholders disponíveis: {{pedido_id}}, {{cliente_nome}}, {{total_pedido}}, {{link_pdf}}
+    <!-- Guia: SMTP -->
+    <section id="tab-smtp" class="tab-panel" role="tabpanel" aria-labelledby="SMTP">
+      <form id="form-smtp" class="form">
+        <div class="grid-2">
+          <div class="field">
+            <label>Remetente (From)</label>
+            <input id="remetente_email" type="email" placeholder="Pedidos &lt;pedidos@empresa.com&gt; ou pedidos@empresa.com" />
           </div>
-        </label>
-
-        <label class="checkbox-line full">
-          <input id="enviar_para_cliente" type="checkbox">
-          <span>Enviar também para o cliente (usa o e-mail do responsável de compras)</span>
-        </label>
-
-        <div class="button-row full">
-          <button id="btnSalvarMensagem" class="btn-primary">Salvar</button>
-          <button id="btnTestarMensagem" class="btn-secondary">Testar envio</button>
+          <div class="field">
+            <label>Servidor SMTP (host)</label>
+            <input id="smtp_host" type="text" placeholder="smtp.seudominio.com" />
+          </div>
+          <div class="field">
+            <label>Porta</label>
+            <input id="smtp_port" type="number" min="1" step="1" value="587" />
+          </div>
+          <div class="field">
+            <label>Usuário SMTP</label>
+            <input id="smtp_user" type="text" placeholder="pedidos@empresa.com" />
+          </div>
+          <div class="field">
+            <label>Senha SMTP</label>
+            <input id="smtp_senha" type="password" />
+          </div>
+          <div class="field checkbox">
+            <input id="usar_tls" type="checkbox" checked />
+            <label for="usar_tls">Usar TLS</label>
+          </div>
         </div>
-      </div>
+
+        <div class="actions">
+          <button type="button" id="btnSalvarSMTP" class="btn primary">Salvar</button>
+          <button type="button" id="btnTestarSMTP" class="btn">Testar conexão</button>
+        </div>
+      </form>
     </section>
-
-    <!-- FORM 2: SMTP / Remetente -->
-    <section id="smtp-view" class="panel hidden">
-      <div class="panel-head">
-        <div>
-          <div class="panel-title">Remetente e SMTP</div>
-          <div class="panel-sub">Credenciais e servidor usados para disparar o e-mail</div>
-        </div>
-        <button class="btn-close-panel" data-close>Fechar</button>
-      </div>
-
-      <div class="form-grid">
-        <label class="field-block">
-          <span class="field-label">Remetente (From)</span>
-          <input id="remetente_email" class="field-input" type="text" placeholder="pedidos@empresa.com">
-        </label>
-
-        <label class="field-block">
-          <span class="field-label">Servidor SMTP (host)</span>
-          <input id="smtp_host" class="field-input" type="text" placeholder="smtp.seudominio.com">
-        </label>
-
-        <label class="field-block">
-          <span class="field-label">Porta</span>
-          <input id="smtp_port" class="field-input" type="number" placeholder="587">
-        </label>
-
-        <label class="field-block">
-          <span class="field-label">Usuário SMTP</span>
-          <input id="smtp_user" class="field-input" type="text" placeholder="pedidos@empresa.com">
-        </label>
-
-        <label class="field-block">
-          <span class="field-label">Senha SMTP</span>
-          <input id="smtp_senha" class="field-input" type="password" placeholder="••••••••">
-        </label>
-
-        <label class="checkbox-line">
-          <input id="usar_tls" type="checkbox" checked>
-          <span>Usar TLS</span>
-        </label>
-
-        <div class="button-row full">
-          <button id="btnSalvarSMTP" class="btn-primary">Salvar</button>
-          <button id="btnTestarSMTP" class="btn-secondary">Testar conexão</button>
-        </div>
-
-        <div class="warning full">
-          Atenção: essas credenciais são sensíveis. Não compartilhe.
-        </div>
-      </div>
-    </section>
-
   </main>
-
-  <script src="/static/config_email/config_email.js?"></script>
 </body>
 </html>
