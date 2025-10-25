@@ -4,7 +4,7 @@ sys.path.append(os.path.dirname(os.path.abspath(__file__)))
 
 # --- imports extras para o middleware de erro ---
 import logging, traceback, uuid
-from fastapi import FastAPI, Request, HTTPException
+from fastapi import FastAPI, Request, HTTPException,APIRouter
 from fastapi.responses import JSONResponse, FileResponse
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
@@ -94,43 +94,32 @@ app.include_router(link_pedido.router)
 app.include_router(link_pedido.router_short)
 app.include_router(pedidos.router)
 app.include_router(admin_config_email.router)
+
+app.include_router(router_debug)
 # ---- Static (se precisar servir arquivos públicos do front) ----
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
-static_dir = os.path.abspath(os.path.join(BASE_DIR, "..", "frontend", "public"))
+
+# Suporta 2 layouts de repo:
+# 1) main.py em src/ -> repo_root/frontend/public
+# 2) main.py na raiz  -> raiz/frontend/public
+candidates = [
+    os.path.abspath(os.path.join(BASE_DIR, "..", "frontend", "public")),
+    os.path.abspath(os.path.join(BASE_DIR, "frontend", "public")),
+]
+
+static_dir = next((p for p in candidates if os.path.isdir(p)), None)
+if not static_dir:
+    logger.error("[STATIC] 'frontend/public' NÃO encontrado. Candidatos: %s", candidates)
+    # mantém o primeiro como fallback pra evitar quebrar o mount
+    static_dir = candidates[0]
+
 CONFIG_STATIC = Path(static_dir) / "config_email"
 
-# logs úteis pra saber o caminho real em produção
-logger.info(f"[STATIC] /static -> {static_dir}")
+logger.info("[STATIC] /static -> %s", static_dir)
 if not os.path.isdir(static_dir):
-    logger.error(f"[STATIC] Pasta NÃO existe: {static_dir}")
+    logger.error("[STATIC] Pasta NÃO existe: %s", static_dir)
 
 app.mount("/static", StaticFiles(directory=static_dir), name="static")
-
-# ---- Rota de debug para listar o conteúdo de /static ----
-from fastapi.responses import JSONResponse
-
-@app.get("/_debug/static-list", include_in_schema=False)
-def _debug_static_list():
-    try:
-        paths = []
-        for root, _, files in os.walk(static_dir):
-            for f in files:
-                rel = os.path.relpath(os.path.join(root, f), static_dir).replace("\\", "/")
-                paths.append(rel)
-        return {"static_dir": static_dir, "files": sorted(paths)}
-    except Exception as e:
-        return JSONResponse({"error": str(e)}, status_code=500)
-
-@app.get("/admin/static/config_email.css", include_in_schema=False)
-def serve_cfg_email_css():
-    p = CONFIG_STATIC / "config_email.css"
-    if not p.exists():
-        raise HTTPException(status_code=404, detail="CSS não encontrado")
-    return FileResponse(
-        p,
-        media_type="text/css",
-        headers={"Cache-Control": "no-store, no-cache, must-revalidate, max-age=0"},
-    )
 
 @app.get("/admin/static/config_email.js", include_in_schema=False)
 def serve_cfg_email_js():
@@ -184,3 +173,31 @@ app.add_middleware(
 #     expose_headers=["x-cors-debug", "x-error-id"],
 #     max_age=86400,
 # )
+
+router_debug = APIRouter()
+
+@router_debug.get("/_debug/static-ok")
+def static_ok():
+    return {
+        "mounted_dir": str(static_dir),
+        "exists": os.path.isdir(static_dir),
+        "sample_files": [
+            str(Path(static_dir)/"config_email/config_email.css"),
+            str(Path(static_dir)/"config_email/config_email.js"),
+            str(Path(static_dir)/"logo.png"),
+        ],
+        "present": [
+            os.path.isfile(Path(static_dir)/"config_email/config_email.css"),
+            os.path.isfile(Path(static_dir)/"config_email/config_email.js"),
+            os.path.isfile(Path(static_dir)/"logo.png"),
+        ],
+    }
+
+@router_debug.get("/_debug/static-list")
+def static_list():
+    out = []
+    for root, dirs, files in os.walk(static_dir):
+        for f in files:
+            rel = os.path.relpath(os.path.join(root, f), static_dir)
+            out.append(rel.replace("\\", "/"))
+    return {"base": str(static_dir), "files": sorted(out)[:500]}
