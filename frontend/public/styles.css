@@ -1,0 +1,159 @@
+body {
+  margin: 0;
+  font-family: 'Inter', sans-serif;
+  background-color: #fff;
+}
+
+.page-container {
+  max-width: 1200px;
+  width: 100%;
+  margin: 0 auto;
+  padding: 0 40px;
+  box-sizing: border-box;
+}
+
+.menu-container {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 30px;
+  justify-content: center;
+  padding: 40px;
+  max-width: 900px;
+  margin: 0 auto;
+}
+
+
+
+.menu-toggle {
+  font-size: 24px;
+  cursor: pointer;
+}
+
+.menu-lateral {
+  width: 250px;
+  background-color: #333;
+  color: white;
+  position: fixed;
+  height: 100%;
+  top: 0;
+  left: -250px;
+  transition: left 0.3s ease;
+  z-index: 1000;
+  padding-top: 60px;
+}
+
+.menu-lateral ul {
+  list-style: none;
+  padding: 0;
+}
+
+.menu-lateral ul li a {
+  color: white;
+  text-decoration: none;
+  padding: 15px 20px;
+  display: block;
+}
+
+.menu-lateral ul li a:hover {
+  background-color: #444;
+}
+
+main {
+  display: grid;
+  grid-template-columns: repeat(2, 220px);
+  gap: 24px;
+  justify-content: center;
+  margin: 40px auto;
+  margin-top: 1.5rem;
+}
+
+.card-text {
+  font-size: 1.2rem;
+  font-weight: 600;
+}
+
+.cards-container {
+  display: flex;
+  justify-content: center;
+  align-items: flex-start;
+  padding: 3rem 1rem;
+  background-color: #f9f9f9;
+  min-height: calc(100vh - 60px); /* menor altura mínima */
+}
+
+.cards-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr); /* fixo em 3 colunas */
+  gap: 2rem;
+  max-width: 600px;
+  width: 100%;
+}
+
+
+.card {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  height: 180px;
+  border-radius: 12px;
+  color: white;
+  font-weight: bold;
+  font-size: 1.1rem;
+  text-align: center;
+  text-decoration: none;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+  transition: transform 0.2s ease;
+}
+
+.card img {
+  width: 40px;
+  height: 40px;
+  margin-top: 1rem;
+}
+
+.card:hover {
+  filter: brightness(0.95);
+  transform: translateY(-4px);
+}
+
+
+.card-cliente      { background-color: #4f46e5; }
+.card-catalogo     { background-color: #06b6d4; }
+.card-pedido       { background-color: #0ea5e9; }
+.card-relatorios   { background-color: #a855f7; }
+.card-precos       { background-color: #f755ea; }
+.card-config_email { background-color: #1e1af1; }
+
+.cards-grid .card { 
+  position: relative; 
+  overflow: hidden; 
+}
+
+/* Overlay clicável ocupa 100% do card (só na home) */
+.cards-grid .card .card-link {
+  position: absolute;
+  inset: 0;
+  display: block;
+  z-index: 1;            /* fica por cima, mas sem estilizar */
+}
+
+/* Realce suave no centro no hover (só na home) */
+.cards-grid .card::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity .18s ease;
+  background: radial-gradient(circle at 50% 45%, rgba(255,255,255,.12), transparent 60%);
+}
+
+.cards-grid .card:hover::before { 
+  opacity: 1; 
+}
+
+/* Toquezinho extra só no card de pedidos (opcional) */
+.cards-grid .card-pedido:hover { 
+  box-shadow: 0 8px 22px rgba(0,0,0,.18); 
+}
