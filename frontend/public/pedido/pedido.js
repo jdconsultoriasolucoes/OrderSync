@@ -108,14 +108,19 @@ function groupByPedido(rows) {
   return ordered;
 }
 function getFilters() {
-  const fFrom = document.getElementById("fFrom").value;
-  const fTo = document.getElementById("fTo").value;
-  const fTabela = document.getElementById("fTabela").value || null;
-  const fCliente = document.getElementById("fCliente").value || null;
-  const fFornecedor = document.getElementById("fFornecedor").value || null;
-  const rawStatus = Array.from(document.getElementById("fStatus").selectedOptions).map(o => o.value);
-  const selStatus = rawStatus.filter(Boolean); // remove "", i.e., "Todos"
-  if (selStatus.length) params.set("status", selStatus.join(","));  
+  const $ = id => document.getElementById(id);
+
+  const fFrom       = $("#fFrom")?.value?.trim() || "";
+  const fTo         = $("#fTo")?.value?.trim() || "";
+  const fTabela     = $("#fTabela")?.value?.trim() || "";
+  const fCliente    = $("#fCliente")?.value?.trim() || "";
+  const fFornecedor = $("#fFornecedor")?.value?.trim() || "";
+
+  // múltipla seleção; remove "" (opção "Todos")
+  const selStatus = Array.from($("#fStatus")?.selectedOptions || [])
+    .map(o => o.value)
+    .filter(Boolean);
+
   return { fFrom, fTo, fTabela, fCliente, fFornecedor, selStatus };
 }
 
