@@ -29,15 +29,64 @@ async function loadStatus() {
     console.error("Falha ao carregar status:", r.status, await r.text());
     return;
   }
+
   const j = await r.json();
   const sel = document.getElementById("fStatus");
+  if (!sel) return;
+
   sel.innerHTML = "";
-  j.data.forEach(s => {
+
+  // 0) Cria "Todos" primeiro
+  const optAll = document.createElement("option");
+  optAll.value = "";                // valor vazio => sem filtro
+  optAll.textContent = "Todos";
+  sel.appendChild(optAll);
+
+  // 1) Ordena alfabeticamente (pt-BR) e cria as demais opções
+  const coll = new Intl.Collator("pt-BR", { sensitivity: "base" });
+  const items = (Array.isArray(j.data) ? j.data : [])
+    .map(s => ({
+      codigo: String(s.codigo ?? s.id ?? "").trim(),
+      rotulo: String(s.rotulo ?? s.nome ?? s.codigo ?? "").trim()
+    }))
+    .sort((a, b) => coll.compare(a.rotulo || a.codigo, b.rotulo || b.codigo));
+
+  for (const s of items) {
     const opt = document.createElement("option");
     opt.value = s.codigo;
     opt.textContent = s.rotulo || s.codigo;
     sel.appendChild(opt);
-  });
+  }
+
+  // 2) Seleção padrão a partir do HTML (data-default / data-default-label)
+  Array.from(sel.options).forEach(o => (o.selected = false));
+  const defCode  = sel.dataset.default;        // ex.: "CONFIRMADO"
+  const defLabel = sel.dataset.defaultLabel;   // ex.: "Confirmado"
+
+  let picked = false;
+  if (defCode) {
+    const byCode = Array.from(sel.options).find(
+      o => (o.value || "").toLowerCase() === defCode.toLowerCase()
+    );
+    if (byCode) { byCode.selected = true; picked = true; }
+  }
+  if (!picked && defLabel) {
+    const byLabel = Array.from(sel.options).find(
+      o => (o.textContent || "").trim().toLowerCase() === defLabel.toLowerCase()
+    );
+    if (byLabel) { byLabel.selected = true; picked = true; }
+  }
+  // fallback: deixa "Todos" selecionado
+  if (!picked) optAll.selected = true;
+
+  // 3) Regra de exclusividade: "Todos" vs demais
+  sel.addEventListener("change", () => {
+    const values = Array.from(sel.selectedOptions).map(o => o.value);
+    if (values.includes("")) {
+      // Se "Todos" estiver selecionado junto com outros, mantém só "Todos"
+      Array.from(sel.options).forEach(o => (o.selected = (o.value === "")));
+    }
+  }, { passive: true });
 }
 
 function groupByPedido(rows) {
@@ -64,7 +113,9 @@ function getFilters() {
   const fTabela = document.getElementById("fTabela").value || null;
   const fCliente = document.getElementById("fCliente").value || null;
   const fFornecedor = document.getElementById("fFornecedor").value || null;
-  const selStatus = Array.from(document.getElementById("fStatus").selectedOptions).map(o => o.value);
+  const rawStatus = Array.from(document.getElementById("fStatus").selectedOptions).map(o => o.value);
+  const selStatus = rawStatus.filter(Boolean); // remove "", i.e., "Todos"
+  if (selStatus.length) params.set("status", selStatus.join(","));  
   return { fFrom, fTo, fTabela, fCliente, fFornecedor, selStatus };
 }
 
