@@ -147,8 +147,8 @@ function renderTable(rows) {
       if (ev.target.closest(".btn") || ev.target.closest("a")) return;
       openResumo(id);
     });
-  }
-)}
+  });
+}
 
 function renderPager() {
   const pageInfo = document.getElementById("pageInfo");
