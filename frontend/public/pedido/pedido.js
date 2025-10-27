@@ -129,7 +129,7 @@ async function loadList(page = 1) {
   const { fFrom, fTo, fTabela, fCliente, fFornecedor, selStatus } = getFilters();
 
   // Se datas vazias, usa hoje como fallback
-  if (!fFrom || !fTo) {
+  if (!fFrom && !fTo) {
     const today = new Date().toISOString().slice(0,10);
     document.getElementById("fFrom").value = fFrom || today;
     document.getElementById("fTo").value   = fTo   || today;
@@ -208,7 +208,8 @@ function renderTable(rows) {
 
 function renderPager() {
   const pageInfo = document.getElementById("pageInfo");
-  const totalPages = Math.max(1, Math.ceil(state.total / state.pageSize));
+  const total = Number(state.total || 0);
+  const totalPages = Math.max(1, Math.ceil(total / state.pageSize));
   pageInfo.textContent = `${state.page} / ${totalPages}`;
   document.getElementById("prevPage").disabled = state.page <= 1;
   document.getElementById("nextPage").disabled = state.page >= totalPages;
@@ -261,6 +262,16 @@ async function openResumo(id) {
 
 function bindUI() {
   document.getElementById("btnBuscar").addEventListener("click", () => loadList(1));
+  // Quando o usuário mexer em qualquer data, forçamos o período para "custom"
+  document.getElementById("fFrom")?.addEventListener("change", () => {
+    const sel = document.getElementById("fPeriodoRapido");
+    if (sel && sel.value !== "custom") sel.value = "custom";
+  });
+  document.getElementById("fTo")?.addEventListener("change", () => {
+    const sel = document.getElementById("fPeriodoRapido");
+    if (sel && sel.value !== "custom") sel.value = "custom";
+  });
+  
   document.getElementById("prevPage").addEventListener("click", () => { if (state.page>1) loadList(state.page-1); });
   document.getElementById("nextPage").addEventListener("click", () => {
     const totalPages = Math.max(1, Math.ceil(state.total / state.pageSize));
@@ -307,8 +318,8 @@ function addDays(baseDate, days) {
     const inicio = addDays(hoje, -30);
     document.getElementById("fFrom").value = inicio.toISOString().slice(0,10);
     document.getElementById("fTo").value   = hoje.toISOString().slice(0,10);
+    }
     await loadList(1);
-  }
 })();
 
 function aplicarPeriodoRapido() {
@@ -325,9 +336,7 @@ function aplicarPeriodoRapido() {
 
   document.getElementById("fFrom").value = inicio.toISOString().slice(0,10);
   document.getElementById("fTo").value   = hoje.toISOString().slice(0,10);
-
-  // depois que atualiza as datas, já recarrega a lista página 1
-  loadList(1);
+ 
 }
 
 document.addEventListener("DOMContentLoaded", () => {
