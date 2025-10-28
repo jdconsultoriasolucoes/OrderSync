@@ -1,6 +1,7 @@
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
-
+import socket
+import ssl
 from database import SessionLocal
 from models.config_email_mensagem import ConfigEmailMensagem
 from models.config_email_smtp import ConfigEmailSMTP
@@ -116,6 +117,14 @@ def update_smtp_cfg(
     data: ConfigEmailSMTPUpdate,
     db: Session = Depends(get_db),
 ):
+    data.smtp_host = (data.smtp_host or "").strip()
+    data.smtp_user = (data.smtp_user or "").strip()
+    if data.remetente_email is not None:
+        data.remetente_email = data.remetente_email.strip()
+
+    # sanitize senha: remove quaisquer espaços (senha de app do Gmail às vezes vem com espaços na cópia)
+    if data.smtp_senha is not None and data.smtp_senha != "":
+        data.smtp_senha = "".join(data.smtp_senha.split())
     cfg = (
         db.query(ConfigEmailSMTP)
         .filter(ConfigEmailSMTP.id == 1)
@@ -310,12 +319,3 @@ def testar_envio_email(
         raise HTTPException(status_code=500, detail=f"Erro no envio: {e}")
     
 
-@router.put("/smtp")
-def put_smtp(cfg: ConfigEmailSMTPUpdate, db: Session = Depends(get_db)):
-    # sanitize
-    cfg.smtp_host = (cfg.smtp_host or "").strip()
-    cfg.smtp_user = (cfg.smtp_user or "").strip()
-    if cfg.smtp_senha is not None and cfg.smtp_senha != "":
-        cfg.smtp_senha = "".join(cfg.smtp_senha.split())  # remove espaços
-    # ... resto do seu código de persistência
-    return {"ok": True}
