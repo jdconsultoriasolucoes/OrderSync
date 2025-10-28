@@ -43,7 +43,6 @@ async function loadStatus() {
     console.error("Falha ao carregar status:", r.status, await r.text());
     return;
   }
-
   const j = await r.json();
   const arr = Array.isArray(j) ? j : (j.data || j.items || j.results || []);
   const sel = document.getElementById("fStatus");
@@ -264,8 +263,7 @@ function renderTable(rows) {
 // ---------------------- paginação ----------------------
 function renderPager() {
   const pageInfo = document.getElementById("pageInfo");
-  const total = Number(state.total || 0);
-  const totalPages = Math.max(1, Math.ceil(total / state.pageSize));
+  const totalPages = Math.max(1, Math.ceil(state.total / state.pageSize));
   pageInfo.textContent = `${state.page} / ${totalPages}`;
 
   document.getElementById("prevPage").disabled = state.page <= 1;
@@ -425,6 +423,7 @@ function aplicarPeriodoRapido() {
     document.getElementById("fFrom").value = inicio.toISOString().slice(0, 10);
     document.getElementById("fTo").value = hoje.toISOString().slice(0, 10);
     await loadList(1);
+  }
 })();
 
 // ---------------------- eventos delegados na tabela ----------------------
