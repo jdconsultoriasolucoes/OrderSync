@@ -1484,21 +1484,23 @@ document.addEventListener('DOMContentLoaded', () => {
   }
 } else {
   // >>> MODO VIEW quando NÃO enviar o link <<<
-  // guarda o id atual para ações futuras
-  window.currentTabelaId = tabelaId;
-  window.sourceTabelaId  = tabelaId; // se você usa esse também
+  currentTabelaId = String(tabelaId);      // usado pela toolbar
+  window.currentTabelaId = currentTabelaId; // compat: se algum código legado ler window.*
 
-  // trava os campos e muda o modo
-  if (typeof setMode === "function" && typeof MODE !== "undefined") {
-    setMode(MODE.VIEW);
-  }
-  if (typeof setFormDisabled === "function") {
-    setFormDisabled(true);
-  }
+  sourceTabelaId  = String(tabelaId);
+  window.sourceTabelaId = sourceTabelaId;   // compat idem
 
-  // atualiza a toolbar/botões conforme seu projeto
-  if (typeof toggleToolbarByMode === "function") toggleToolbarByMode();
-  if (typeof refreshToolbarEnablement === "function") refreshToolbarEnablement();
+  setMode(MODE.VIEW);
+  setFormDisabled(true);
+  toggleToolbarByMode();
+  refreshToolbarEnablement();
+
+  // opcional: deixar ?id= na URL para recarregar no mesmo estado
+  try {
+    const u = new URL(location.href);
+    u.searchParams.set('id', currentTabelaId);
+    history.replaceState(null, '', u.toString());
+  } catch {}
 
   // feedback opcional na tela
   if (typeof setMensagem === "function") {
