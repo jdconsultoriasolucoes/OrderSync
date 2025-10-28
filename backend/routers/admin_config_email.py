@@ -11,7 +11,7 @@ from schemas.config_email import (
     ConfigEmailSMTPUpdate,
 )
 from typing import Optional, List
-from pydantic import BaseModel, EmailStr
+from pydantic import BaseModel
 import smtplib
 from email.mime.multipart import MIMEMultipart
 from email.mime.text import MIMEText
@@ -192,7 +192,7 @@ def testar_smtp_conexao(
 
 # ===== Testar ENVIO DE E-MAIL =====
 class TesteEnvioIn(BaseModel):
-    para: Optional[List[EmailStr]] = None   # se vazio, usa destinatario_interno salvo
+    para: Optional[List[str]] = None   # se vazio, usa destinatario_interno salvo
     assunto: Optional[str] = "Teste de e-mail - OrderSync"
     corpo_html: Optional[str] = "<p>Este é um e-mail de teste do OrderSync.</p>"
 
