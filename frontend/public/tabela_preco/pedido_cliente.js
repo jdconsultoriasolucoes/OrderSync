@@ -529,11 +529,15 @@ async function confirmarPedido() {
     openConfirmModal(pedidoIdConfirmado);
 
   } catch (err) {
-    console.error('[confirmarPedido] erro', err);
-    alert("Não foi possível confirmar o pedido. Tente novamente.");
-    setMensagem("Falha ao enviar o pedido.", false);
-    if (btnConfirmar) btnConfirmar.disabled = false;
-  }
+  console.error('[confirmarPedido] erro', err);
+  // Sem alert: só mensagem inline e reabilita o botão
+  setMensagem("Não foi possível confirmar o pedido agora. Tente novamente em instantes.", false);
+  if (btnConfirmar) btnConfirmar.disabled = false;
+
+  // opcional: foca e rola até a mensagem para o usuário perceber
+  const msg = document.getElementById('mensagem');
+  if (msg) { msg.focus?.(); msg.scrollIntoView({ behavior: 'smooth', block: 'center' }); }
+ }
 }
 
   function assertShape(d) {
