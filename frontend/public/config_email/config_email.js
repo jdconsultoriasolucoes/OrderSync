@@ -76,6 +76,12 @@ function getVal(id) { return (document.getElementById(id)?.value ?? "").trim(); 
 function getCheck(id) { return !!document.getElementById(id)?.checked; }
 function toast(ok, msg){ alert(msg || (ok ? "Salvo!" : "Falhou")); }
 
+// --- Helper para normalizar senha (remove QUALQUER espaço) ---
+function normalizeAppPassword(pwd) {
+  return (pwd || "").replace(/\s+/g, "");
+}
+
+
 // === Fluxo principal =============================================
 async function init() {
   initTabs();
@@ -104,12 +110,13 @@ async function carregarMensagem() {
 }
 
 async function salvarMensagem() {
-  const payload = {
-    destinatario_interno: getVal("destinatario_interno"),
-    assunto_padrao: getVal("assunto_padrao"),
-    corpo_html: getVal("corpo_html"),
-    enviar_para_cliente: getCheck("enviar_para_cliente")
-  };
+ const payload = {
+  smtp_host: hostInput.value?.trim(),
+  smtp_port: Number(portInput.value),
+  smtp_user: userInput.value?.trim(),
+  smtp_senha: normalizeAppPassword(senhaInput.value),  // <-- NOVO
+  usar_tls: tlsCheckbox.checked
+};
   try { await putJSON(ENDPOINTS.mensagem, payload); toast(true, "Mensagem salva."); }
   catch (e) { console.error(e); toast(false, "Falha ao salvar mensagem."); }
 }
@@ -120,6 +127,12 @@ async function testarEnvio() {
     toast(r.ok, r.ok ? "E-mail de teste enviado." : "Falha no teste de envio.");
   } catch(e){ console.error(e); toast(false, "Erro ao testar envio."); }
 }
+
+senhaInput.addEventListener('input', (e) => {
+  const cur = e.target.selectionStart;
+  e.target.value = normalizeAppPassword(e.target.value);
+  e.target.setSelectionRange(cur, cur);
+});
 
 // === SMTP ========================================================
 async function carregarSMTP() {
