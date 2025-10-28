@@ -131,8 +131,8 @@ async function loadList(page = 1) {
   // Se datas vazias, usa hoje como fallback
   if (!fFrom && !fTo) {
     const today = new Date().toISOString().slice(0,10);
-    document.getElementById("fFrom").value = fFrom || today;
-    document.getElementById("fTo").value   = fTo   || today;
+     document.getElementById("fFrom").value = today;
+     document.getElementById("fTo").value   = today;
   }
 
   const params = new URLSearchParams();
@@ -146,22 +146,30 @@ async function loadList(page = 1) {
   params.set("pageSize", state.pageSize);
 
   const url = `${API.list}?${params.toString()}`;
+  console.debug("GET", url);  
 
   const r = await fetch(url, { cache: "no-store" });
-  if (!r.ok) {
-    console.error("Falha ao carregar pedidos:", r.status, await r.text());
-    return;
-  }
+if (!r.ok) {
+  console.error("Falha ao carregar pedidos:", r.status, await r.text());
+  return;
+}
 
-  const j = await r.json();
-  state.total = j.total;
+const j = await r.json();
 
-  // 🔴 AGRUPA: transforma N linhas por item em 1 linha por pedido
-  const rows = groupByPedido(j.data);
+// Aceita {data:[...]}, {items:[...]}, {results:[...]}, ou [...] direto
+const rowsRaw = Array.isArray(j)
+  ? j
+  : (j.data ?? j.items ?? j.results ?? []);
 
-  // renderiza já consolidado
-  renderTable(rows);
-  renderPager();
+// total também fica robusto
+state.total = Array.isArray(j) ? j.length : (j.total ?? rowsRaw.length ?? 0);
+
+// 🔴 AGRUPA: N linhas por item → 1 por pedido
+const rows = groupByPedido(rowsRaw);
+
+// renderiza
+renderTable(rows);
+renderPager();
 }
 
 function renderTable(rows) {

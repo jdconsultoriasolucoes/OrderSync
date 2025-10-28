@@ -7,7 +7,11 @@
   <meta http-equiv="Pragma" content="no-cache" />
   <meta http-equiv="Expires" content="0" />
   <link rel="stylesheet" href="/static/config_email/config_email.css?v=tab-1" />
-  <script defer src="/static/config_email/config_email.js?v=tab-1"></script>
+ <script>
+  // 🔧 Force base do backend da Configuração de E-mail
+  window.CONFIG_EMAIL_BASE = "/admin/config_email";  // <-- troque se seu router usar outro prefixo
+</script>
+  <script defer src="/static/config_email/config_email.js?v=tab-2"></script>
 </head>
 <body>
   <header class="topbar">
