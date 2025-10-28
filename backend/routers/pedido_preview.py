@@ -279,19 +279,46 @@ def confirmar_pedido(tabela_id: int, body: ConfirmarPedidoRequest):
         
     
         pedido_info = {
-            "pedido_id": new_id,
-            "cliente_nome": (body.cliente or "").strip() or "---",
-            "total_pedido": round(total_pedido, 2),
-        }
-        
-        link_pdf = None
+        "pedido_id": new_id,
+        "cliente_nome": (body.cliente or "").strip() or "---",
+        "total_pedido": round(total_pedido, 2),
+    }
 
-            # dispara e-mail
-        enviar_email_notificacao(
+    # 4) “gato” do e-mail (best-effort) — DENTRO da função
+    EMAIL_MODE = os.getenv("ORDERSYNC_EMAIL_MODE", "best-effort").lower()
+    if EMAIL_MODE == "off":
+        db.execute(_sql_text("""
+            UPDATE public.tb_pedidos
+               SET link_status = 'DESABILITADO',
+                   atualizado_em = :agora
+             WHERE id_pedido = :id
+        """), {"agora": agora, "id": new_id})
+        db.commit()
+    else:
+        try:
+            enviar_email_notificacao(
                 db=db,
                 pedido_info=pedido_info,
                 codigo_cliente=codigo_cliente,
-                link_pdf=link_pdf
+                link_pdf=None,
             )
+            db.execute(_sql_text("""
+                UPDATE public.tb_pedidos
+                   SET link_enviado_em = :agora,
+                       link_status     = 'ENVIADO',
+                       atualizado_em   = :agora
+                 WHERE id_pedido = :id
+            """), {"agora": agora, "id": new_id})
+            db.commit()
+        except Exception as e:
+            logging.exception("Falha ao enviar email (ignorada): %s", e)
+            db.execute(_sql_text("""
+                UPDATE public.tb_pedidos
+                   SET link_status   = 'FALHA_ENVIO',
+                       atualizado_em = :agora
+                 WHERE id_pedido = :id
+            """), {"agora": agora, "id": new_id})
+            db.commit()
 
-        return {"id": new_id, "status": "CRIADO"}
+    # 5) resposta — SEM expor nada de e-mail
+    return {"id": new_id, "status": "CRIADO"}
