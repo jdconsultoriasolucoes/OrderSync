@@ -530,13 +530,9 @@ async function confirmarPedido() {
 
   } catch (err) {
   console.error('[confirmarPedido] erro', err);
-  // Sem alert: só mensagem inline e reabilita o botão
-  setMensagem("Não foi possível confirmar o pedido agora. Tente novamente em instantes.", false);
+  alert("Recebemos seu pedido e ele já está sendo processado. Em breve alguém da nossa equipe entrará em contato.");
+  setMensagem("Falha ao enviar o pedido.", false);
   if (btnConfirmar) btnConfirmar.disabled = false;
-
-  // opcional: foca e rola até a mensagem para o usuário perceber
-  const msg = document.getElementById('mensagem');
-  if (msg) { msg.focus?.(); msg.scrollIntoView({ behavior: 'smooth', block: 'center' }); }
  }
 }
 
