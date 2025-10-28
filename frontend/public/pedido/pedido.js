@@ -386,6 +386,24 @@ function bindUI() {
   }
 }
 
+document.addEventListener('DOMContentLoaded', () => {
+  const menuButton = document.getElementById('menu-button');
+  const sidebar    = document.getElementById('sidebar');
+  const overlay    = document.getElementById('overlay');
+  if (!menuButton || !sidebar || !overlay) return;
+
+  const open  = () => { sidebar.classList.add('active'); overlay.style.display = 'block'; };
+  const close = () => { sidebar.classList.remove('active'); overlay.style.display = 'none'; };
+
+  menuButton.addEventListener('click', (e) => {
+    e.stopPropagation();
+    if (sidebar.classList.contains('active')) close(); else open();
+  });
+
+  overlay.addEventListener('click', close);
+  document.addEventListener('keydown', (e) => { if (e.key === 'Escape') close(); });
+  });
+
 // ---------------------- aplica período e já busca ----------------------
 function aplicarPeriodoRapido() {
   const sel = document.getElementById("fPeriodoRapido");
