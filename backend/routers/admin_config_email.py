@@ -213,7 +213,6 @@ def testar_smtp_conexao(
 
     # ---- Utilitários (forçar IPv4) ----
     def _iter_ipv4(hostname: str, porta: int):
-        # Apenas IPv4 (evita Errno 101 quando o ambiente não tem rota IPv6)
         infos = socket.getaddrinfo(
             hostname, porta,
             family=socket.AF_INET,
@@ -226,52 +225,74 @@ def testar_smtp_conexao(
     # ---- Conexão com fallback IPv4 ----
     try:
         last_err = None
+        TIMEOUT = 30  # ↑ timeout maior
 
-        if port == 465:
-            # SSL direto com SNI correto (wrap manual sobre o IP para manter server_hostname=host)
-            for (ip, p) in _iter_ipv4(host, port):
+        def try_587():
+            nonlocal last_err
+            for (ip, p) in _iter_ipv4(host, 587):
                 try:
-                    raw = socket.create_connection((ip, p), timeout=20)
+                    server = smtplib.SMTP(timeout=TIMEOUT)
+                    code, msg = server.connect(host=ip, port=p)
+                    logger.info(f"[SMTP TEST] (587) CONNECT via {ip} -> {code} {msg!r}")
+                    # sempre STARTTLS no 587 (padrão seguro)
+                    server.ehlo()
+                    server.starttls(context=ssl.create_default_context())
+                    server.ehlo()
+                    server.login(user, pwd)
+                    server.quit()
+                    return {"ok": True, "host": host, "port": 587, "tls": True, "message": "Conexão SMTP OK (STARTTLS/587 IPv4)"}
+                except Exception as e:
+                    last_err = e
+                    logger.warning(f"[SMTP TEST] tentativa 587 em {ip} falhou: {type(e).__name__}: {e}")
+            return None
+
+        def try_465():
+            nonlocal last_err
+            for (ip, p) in _iter_ipv4(host, 465):
+                try:
+                    raw = socket.create_connection((ip, p), timeout=TIMEOUT)
                     ctx = ssl.create_default_context()
                     ssock = ctx.wrap_socket(raw, server_hostname=host)  # SNI com hostname
                     server = smtplib.SMTP_SSL()
                     server.sock = ssock
                     server.file = server.sock.makefile('rb')
-                    code, msg = server.connect(host=host, port=port)  # banner/helo usando hostname
+                    code, msg = server.connect(host=host, port=465)  # banner/helo com hostname
                     logger.info(f"[SMTP TEST] (SSL/465) CONNECT via {ip} -> {code} {msg!r}")
                     server.login(user, pwd)
                     server.quit()
-                    return {"ok": True, "host": host, "port": port, "tls": False, "message": "Conexão SMTP OK (SSL/465 IPv4)"}
+                    return {"ok": True, "host": host, "port": 465, "tls": False, "message": "Conexão SMTP OK (SSL/465 IPv4)"}
                 except Exception as e:
                     last_err = e
-                    logger.warning(f"[SMTP TEST] tentativa SSL/465 em {ip} falhou: {type(e).__name__}: {e}")
-            raise last_err or OSError("Falha ao conectar em IPv4 (SSL/465).")
+                    logger.warning(f"[SMTP TEST] tentativa 465 em {ip} falhou: {type(e).__name__}: {e}")
+            return None
 
+        # Escolhe caminho de acordo com a porta solicitada, com fallback
+        if port == 465 or (not use_tls and port != 587):
+            result = try_465()
+            if result:
+                return result
+            # fallback para 587
+            result = try_587()
+            if result:
+                return result
         else:
-            # Porta 587: conecta no IP v4 e sobe STARTTLS se marcado
-            for (ip, p) in _iter_ipv4(host, port):
-                try:
-                    server = smtplib.SMTP(timeout=20)
-                    code, msg = server.connect(host=ip, port=p)
-                    logger.info(f"[SMTP TEST] (587) CONNECT via {ip} -> {code} {msg!r}")
-                    if use_tls:
-                        server.ehlo()
-                        server.starttls(context=ssl.create_default_context())
-                        server.ehlo()
-                    server.login(user, pwd)
-                    server.quit()
-                    return {"ok": True, "host": host, "port": port, "tls": use_tls, "message": "Conexão SMTP OK (STARTTLS/587 IPv4)"}
-                except Exception as e:
-                    last_err = e
-                    logger.warning(f"[SMTP TEST] tentativa 587 em {ip} falhou: {type(e).__name__}: {e}")
-            raise last_err or OSError("Falha ao conectar em IPv4 (587).")
+            # tenta 587 primeiro
+            result = try_587()
+            if result:
+                return result
+            # fallback para 465
+            result = try_465()
+            if result:
+                return result
+
+        # Se chegou aqui, ambas portas falharam
+        raise last_err or OSError("Falha ao conectar em IPv4 (587 e 465).")
 
     except OSError as e:
-        # Errno 101 => rede/rota inatingível (típico de IPv6 sem rota)
-        if getattr(e, "errno", None) == 101:
+        if getattr(e, "errno", None) in (101, 110):  # 101=Network unreachable, 110=timed out (Linux)
             raise HTTPException(
                 status_code=504,
-                detail={"error": "Rede inatingível (possível IPv6 sem rota). Forçado IPv4 e ainda falhou."}
+                detail={"error": f"Rede/timeout ao conectar (porta {port}). Ambiente pode estar bloqueando SMTP (587/465)."}
             )
         raise HTTPException(status_code=504, detail={"error": f"Erro de rede: {e}"})
 
@@ -297,7 +318,6 @@ def testar_smtp_conexao(
     except Exception as e:
         logger.exception(f"[SMTP TEST] unexpected: {type(e).__name__}: {e}")
         raise HTTPException(status_code=500, detail={"error": f"Erro inesperado ao testar SMTP: {type(e).__name__}: {e}"})
-
 
 # ===== Testar ENVIO DE E-MAIL =====
 class TesteEnvioIn(BaseModel):
