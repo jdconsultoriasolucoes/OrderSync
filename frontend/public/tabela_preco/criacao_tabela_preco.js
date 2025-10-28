@@ -42,6 +42,15 @@ function parseBool(v){
   return false;
 }
 
+function setTabelaIds(id) {
+  const v = id != null ? String(id) : '';
+  currentTabelaId = v;
+  window.currentTabelaId = v; // compat com código legado
+  sourceTabelaId = v;
+  window.sourceTabelaId = v;
+}
+
+
 // === Contexto e Snapshot de Cabeçalho ===
 function getCtxId() {
   return currentTabelaId ? String(currentTabelaId) : 'new';
@@ -1484,18 +1493,14 @@ document.addEventListener('DOMContentLoaded', () => {
   }
 } else {
   // >>> MODO VIEW quando NÃO enviar o link <<<
-  currentTabelaId = String(tabelaId);      // usado pela toolbar
-  window.currentTabelaId = currentTabelaId; // compat: se algum código legado ler window.*
-
-  sourceTabelaId  = String(tabelaId);
-  window.sourceTabelaId = sourceTabelaId;   // compat idem
+  setTabelaIds(tabelaId);   // ✅ mantém os estados alinhados
 
   setMode(MODE.VIEW);
   setFormDisabled(true);
   toggleToolbarByMode();
   refreshToolbarEnablement();
 
-  // opcional: deixar ?id= na URL para recarregar no mesmo estado
+  // (opcional) fixa ?id= na URL para recarregar depois no mesmo estado
   try {
     const u = new URL(location.href);
     u.searchParams.set('id', currentTabelaId);
