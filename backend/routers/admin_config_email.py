@@ -16,7 +16,7 @@ from pydantic import BaseModel
 import smtplib
 from email.mime.multipart import MIMEMultipart
 from email.mime.text import MIMEText
-
+import logging
 
 router = APIRouter(
     prefix="/admin/config_email",
@@ -24,7 +24,7 @@ router = APIRouter(
     # IMPORTANTE: aqui precisa de proteção de acesso (auth funcionário)
     # Ex.: dependencies=[Depends(verify_admin_user)]
 )
-
+logger = logging.getLogger("ordersync.smtp_test")
 def get_db():
     db = SessionLocal()
     try:
@@ -190,6 +190,11 @@ def testar_smtp_conexao(
     user = (user or "").strip()
     host = (host or "").strip()
 
+    logger.info(
+        f"[SMTP TEST] host={host} port={port} user={user} "
+        f"use_tls={'auto' if (data and data.usar_tls is None) else (data.usar_tls if data else 'auto')}"
+    )
+
     # Inferir TLS se não vier marcado
     if data and data.usar_tls is not None:
         use_tls = bool(data.usar_tls)
@@ -207,54 +212,54 @@ def testar_smtp_conexao(
 
     # ---- Conexão ----
     try:
+        # escolhe implementação correta de acordo com a porta
         if port == 465:
-            # SSL directo (Gmail: smtp.gmail.com:465)
             server = smtplib.SMTP_SSL(host, port, timeout=20, context=ssl.create_default_context())
         else:
-            # Porta 587: plain + STARTTLS
             server = smtplib.SMTP(host, port, timeout=20)
             if use_tls:
                 server.ehlo()
                 server.starttls(context=ssl.create_default_context())
                 server.ehlo()
 
+        code, msg = server.noop()  # força round-trip antes do login
+        logger.info(f"[SMTP TEST] NOOP -> {code} {msg!r}")
+
         server.login(user, pwd)
         server.quit()
         return {"ok": True, "host": host, "port": port, "tls": (port != 465), "message": "Conexão SMTP OK"}
 
     except smtplib.SMTPAuthenticationError as e:
-        # credenciais inválidas
-        code = getattr(e, 'smtp_code', 401) or 401
-        detail = "Falha de autenticação SMTP (verifique usuário/senha de app)."
-        raise HTTPException(status_code=401, detail={"code": code, "error": detail})
+        err = getattr(e, 'smtp_error', b'').decode(errors='ignore') if hasattr(e, 'smtp_error') else str(e)
+        logger.warning(f"[SMTP TEST] auth error: {err}")
+        raise HTTPException(status_code=401, detail={"code": getattr(e, 'smtp_code', 401) or 401, "error": "Falha de autenticação SMTP (verifique usuário/senha de app)."})
 
-    except smtplib.SMTPConnectError as e:
-        # servidor recusou conexão
-        code = getattr(e, 'smtp_code', 502) or 502
+    except (smtplib.SMTPConnectError, smtplib.SMTPServerDisconnected) as e:
         msg = getattr(e, 'smtp_error', b'').decode(errors='ignore') if hasattr(e, 'smtp_error') else str(e)
-        raise HTTPException(status_code=502, detail={"code": code, "error": f"Não conectou ao servidor SMTP: {msg}"})
+        logger.error(f"[SMTP TEST] connect/disconnect: {msg}")
+        raise HTTPException(status_code=502, detail={"error": f"Servidor recusou/desconectou: {msg}"})
 
-    except smtplib.SMTPServerDisconnected as e:
-        raise HTTPException(status_code=502, detail={"error": f"Servidor desconectou: {e}"})
-
-    except smtplib.SMTPHeloError as e:
-        raise HTTPException(status_code=502, detail={"error": f"Erro no HELO/EHLO: {e}"})
-
-    except smtplib.SMTPException as e:
-        # outros erros de protocolo
-        raise HTTPException(status_code=502, detail={"error": f"Erro SMTP: {e}"})
+    except smtplib.SMTPResponseException as e:
+        # cobre outros erros com código 5xx do servidor SMTP
+        msg = getattr(e, 'smtp_error', b'').decode(errors='ignore') if hasattr(e, 'smtp_error') else str(e)
+        code = getattr(e, 'smtp_code', 502) or 502
+        logger.error(f"[SMTP TEST] response error {code}: {msg}")
+        raise HTTPException(status_code=502, detail={"code": code, "error": msg})
 
     except (socket.gaierror, socket.timeout) as e:
-        # DNS / timeout
+        logger.error(f"[SMTP TEST] DNS/timeout {host}:{port} -> {e}")
         raise HTTPException(status_code=504, detail={"error": f"Rede/DNS/timeout ao conectar em {host}:{port} - {e}"})
 
     except ssl.SSLError as e:
-        # mismatch TLS (ex.: usar SSL na 587 ou STARTTLS na 465)
-        raise HTTPException(status_code=495, detail={"error": f"Erro TLS/SSL: {e}. Dica: 587 + STARTTLS (use_tls=True) ou 465 + SSL."})
+        logger.error(f"[SMTP TEST] SSL/TLS: {e}")
+        raise HTTPException(status_code=495, detail={"error": f"Erro TLS/SSL: {e}. Dica: 587 + STARTTLS (usar_tls=True) ou 465 + SSL."})
 
     except Exception as e:
-        # catch-all sem vazar senha
-        raise HTTPException(status_code=500, detail={"error": f"Erro inesperado ao testar SMTP: {e}"})
+        # pega qualquer coisa inesperada e loga o tipo
+        logger.exception(f"[SMTP TEST] unexpected: {type(e).__name__}: {e}")
+        raise HTTPException(status_code=500, detail={"error": f"Erro inesperado ao testar SMTP: {type(e).__name__}: {e}"})
+
+
 
 # ===== Testar ENVIO DE E-MAIL =====
 class TesteEnvioIn(BaseModel):
