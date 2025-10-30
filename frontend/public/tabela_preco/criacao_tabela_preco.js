@@ -702,10 +702,28 @@ async function carregarItens() {
       
 
       // >>> NOVO: fator global (se todos iguais)
-      const fatores = Array.from(new Set((itens || []).map(x => Number(x.fator_comissao || 0))));
-      const fatorGlobal = (fatores.length === 1) ? fatores[0] : null;
       const dg = document.getElementById('desconto_global');
-      if (dg) dg.value = ''; // deixa desconto em branco
+      if (dg) {
+        const fatores = (itens || [])
+          .map(x => (x.fator_comissao != null ? Number(x.fator_comissao) : null))
+          .filter(v => v != null && !isNaN(v));
+
+        let fatorGlobal = null;
+        if (fatores.length) {
+          const base = fatores[0], tol = 1e-4;
+          const unico = fatores.every(f => Math.abs(Number(f) - Number(base)) < tol);
+          if (unico) fatorGlobal = Number(base);
+        }
+
+        if (fatorGlobal != null) {
+          const match = Object.entries(mapaDescontos || {})
+            .find(([, frac]) => Math.abs(Number(frac) - fatorGlobal) < 1e-4);
+          dg.value = match ? match[0] : '';
+        } else {
+          dg.value = '';
+        }
+        atualizarPillDesconto?.();
+      }
 
       // >>> Entrar em visualização
       currentTabelaId = id;
@@ -812,7 +830,8 @@ tdPercent.appendChild(selPercent);
   //selCond.appendChild(option(cod, cod));
 //});
     
-  selCond.value = item.plano_pagamento || '';
+  const codCondLinha = String(item.plano_pagamento || '').split(' - ')[0].trim();
+  selCond.value = codCondLinha || '';
   
   tdCondCod.appendChild(selCond);
 
@@ -1492,29 +1511,29 @@ document.addEventListener('DOMContentLoaded', () => {
     alert("Módulo de gerar link não carregado (../js/gerar_link_pedido.js).");
   }
 } else {
-  // >>> MODO VIEW quando NÃO enviar o link <<<
-  setTabelaIds(tabelaId);   // ✅ mantém os estados alinhados
+  // >>> Cancelou o envio do link: volta ao estado inicial (sem id, modo original)
+  currentTabelaId = '';
+  sourceTabelaId  = '';
+  window.currentTabelaId = '';
+  window.sourceTabelaId  = '';
 
-  setMode(MODE.VIEW);
-  setFormDisabled(true);
-  toggleToolbarByMode();
-  refreshToolbarEnablement();
-
-  // (opcional) fixa ?id= na URL para recarregar depois no mesmo estado
+  // limpa URL (?id=)
   try {
     const u = new URL(location.href);
-    u.searchParams.set('id', currentTabelaId);
+    u.searchParams.delete('id');
     history.replaceState(null, '', u.toString());
   } catch {}
 
-  // feedback opcional na tela
-  if (typeof setMensagem === "function") {
-    setMensagem("Tabela salva. Você pode enviar o link depois.", true);
-  } else {
-    console.log("Tabela salva. Você pode enviar o link depois.");
-  }
+  // limpa cabeçalho + grade e volta pro modo original (inputs habilitados)
+  if (typeof limparFormularioCabecalho === 'function') limparFormularioCabecalho();
+  if (typeof limparGradeProdutos === 'function') limparGradeProdutos();
 
-  
+  if (typeof setMode === 'function') setMode(MODE.NEW); // ou o seu "modo inicial" da tela
+  if (typeof setFormDisabled === 'function') setFormDisabled(false);
+
+  if (typeof toggleToolbarByMode === 'function') toggleToolbarByMode();
+  if (typeof refreshToolbarEnablement === 'function') refreshToolbarEnablement();
+
 }
 
       } catch (err) {

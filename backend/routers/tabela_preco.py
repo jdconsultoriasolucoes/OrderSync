@@ -313,6 +313,7 @@ def obter_tabela(id_tabela: int):
             "id": id_tabela,
             "nome_tabela": cab.nome_tabela,
             "cliente": cab.cliente,
+            "codigo_cliente": getattr(cab, "codigo_cliente", None) or getattr(cab, "cliente_codigo", None),
             "fornecedor": cab.fornecedor,
             "produtos": [
                 {
