@@ -50,6 +50,58 @@ function setTabelaIds(id) {
   window.sourceTabelaId = v;
 }
 
+// ======== Validador só de "preenchido" ========
+const RequiredValidator = (() => {
+  const CLS_ERR = 'field-error';
+  const CLS_MSG = 'field-error-msg';
+
+  function clear(root=document) {
+    root.querySelectorAll('.' + CLS_ERR).forEach(el => el.classList.remove(CLS_ERR));
+    root.querySelectorAll('.' + CLS_MSG).forEach(el => el.remove());
+  }
+
+  function mark(el, msg) {
+    el.classList.add(CLS_ERR);
+    const small = document.createElement('small');
+    small.className = CLS_MSG;
+    small.textContent = msg || 'Campo obrigatório.';
+    el.insertAdjacentElement?.('afterend', small);
+  }
+
+  // 👇 aqui é CONST interna (não use RequiredValidator.* aqui)
+  const REQUIRED_FIELDS = {
+    '#nome_tabela':  'Informe o nome da tabela.',
+    '#cliente_nome': 'Informe/selecione o cliente.',
+    '#tbody-itens tr td:nth-child(8) select':  'Selecione a classificação para todos os itens.',
+    '#tbody-itens tr td:nth-child(10) select': 'Selecione a condição de pagamento para todos os itens.'
+  };
+
+  function check(config = REQUIRED_FIELDS, root=document) {
+    clear(root);
+    const missing = [];
+
+    for (const selector in config) {
+      const msg = config[selector];
+      const nodes = root.querySelectorAll(selector);
+      if (!nodes.length) continue;
+
+      nodes.forEach(el => {
+        const val = (el.value ?? '').toString().trim();
+        if (val === '') { // aceita 0
+          mark(el, msg);
+          missing.push({ selector, el, msg });
+        }
+      });
+    }
+
+    if (missing.length) missing[0].el?.focus?.();
+    return { ok: missing.length === 0, missing };
+  }
+
+  return { check, clear, REQUIRED_FIELDS }; // <- aqui sim expõe o REQUIRED_FIELDS
+})();
+
+
 
 // === Contexto e Snapshot de Cabeçalho ===
 function getCtxId() {
@@ -758,46 +810,49 @@ function criarLinha(item, idx) {
   const tdPeso = document.createElement('td'); tdPeso.className = 'num'; tdPeso.textContent = fmt4(item.peso_liquido || 0);
   const tdValor = document.createElement('td'); tdValor.className = 'num'; tdValor.textContent = fmtMoney(item.valor || 0);
 
-// % (Fator/Desconto) — COLUNA ÚNICA por linha (override quando alterado)
-const tdPercent = document.createElement('td');
-const selPercent = document.createElement('select');
-selPercent.appendChild(option('—', ''));
+  // % (Fator/Desconto) — COLUNA ÚNICA por linha (override quando alterado)
+  const tdPercent = document.createElement('td');
+  const selPercent = document.createElement('select');
+  selPercent.appendChild(option('—', ''));
 
-// popula com o mesmo dicionário do cabeçalho (mapaDescontos: {codigo -> fração 0..1})
-Object.entries(mapaDescontos).forEach(([cod, frac]) => {
-  selPercent.appendChild(option(`${cod} - ${(Number(frac)*100).toFixed(2)}`, cod));
+  // popula com o mesmo dicionário do cabeçalho (mapaDescontos: {codigo -> fração 0..1})
+  Object.entries(mapaDescontos).forEach(([cod, frac]) => {
+    selPercent.appendChild(option(`${cod} - ${(Number(frac)*100).toFixed(2)}`, cod));
 });
 
 
 (() => {
-  
-  const frac = (item.fator_comissao != null) ? Number(item.fator_comissao) : null;
-  if (frac != null && !isNaN(frac) && Number(frac) > 0) {
-    const match = Object.entries(mapaDescontos).find(([, f]) => Number(f) === Number(frac));
+  // 1) Se veio um label do back (ex.: "15 - 0"), priorize-o, mesmo se o percentual for 0
+  const lbl = (item.__descricao_fator_label || '').trim();
+  if (lbl) {
+    const codeFromLbl = lbl.split(' - ')[0].trim(); // "15" em "15 - 0"
+    if (codeFromLbl && Object.prototype.hasOwnProperty.call(mapaDescontos, codeFromLbl)) {
+      selPercent.value = codeFromLbl;
+    }
+  }
+
+  // 2) Se não marcou ainda, tente pelo valor numérico do fator (aceitando 0)
+  if (!selPercent.value && item.fator_comissao != null && !isNaN(item.fator_comissao)) {
+    const match = Object.entries(mapaDescontos).find(([, f]) => Number(f) === Number(item.fator_comissao));
     if (match) selPercent.value = match[0];
   }
 
-  if (
-    !selPercent.value &&
-    Number(item.desconto) > 0 &&
-    Number(item.valor) > 0
-  ) {
-    const fatorInferido = Number(item.desconto) / Number(item.valor);
-    if (fatorInferido > 0) {
-      const match = Object.entries(mapaDescontos).find(([, f]) =>
-        Number(f).toFixed(4) === Number(fatorInferido).toFixed(4)
-      );
-      if (match) selPercent.value = match[0];
-    }
+  // 3) Último fallback: inferir por razão desconto/valor (aceitando 0)
+  if (!selPercent.value && Number(item.valor || 0) >= 0) {
+    const fatorInferido = Number(item.desconto || 0) / Number(item.valor || 1);
+    const match = Object.entries(mapaDescontos).find(([, f]) =>
+      Math.abs(Number(f) - fatorInferido) < 1e-6
+    );
+    if (match) selPercent.value = match[0];
   }
 })();
 
 selPercent.addEventListener('change', () => {
   const code  = selPercent.value || '';
-  const frac  = mapaDescontos[code];
-  // guarda a fração (0..1) como fator_comissao da linha
-  itens[idx].fator_comissao = (frac != null && !isNaN(frac)) ? Number(frac) : 0;
-  // marca override implícito (se quiser sinalizar depois com badge)
+  const frac  = (Object.prototype.hasOwnProperty.call(mapaDescontos, code) ? Number(mapaDescontos[code]) : 0);
+  itens[idx].fator_comissao = (!isNaN(frac) ? frac : 0);
+  itens[idx].__fator_codigo = code; // <-- guarda o código (ex.: "15")
+  itens[idx].__descricao_fator_label = selPercent.options[selPercent.selectedIndex]?.textContent?.trim() || '';
   itens[idx].__overridePercent = true;
   recalcLinha(tr);
 });
@@ -1115,6 +1170,20 @@ function inferirFornecedorDaGrade() {
 }
 
 async function salvarTabela() {
+  const linhas = document.querySelectorAll('#tbody-itens tr');
+  if (linhas.length === 0) {
+    alert('Adicione pelo menos 1 produto à tabela antes de salvar.');
+    // foca em algo útil da sua UI (ajuste se tiver um botão/field específico)
+    document.querySelector('#busca_produto, #nome_tabela')?.focus();
+    return;
+  }
+  
+  const { ok } = RequiredValidator.check(RequiredValidator.REQUIRED_FIELDS, document);
+  if (!ok) {
+    alert('Existem campos obrigatórios pendentes. Corrija os destaques em vermelho.');
+    return;
+  } 
+  
   const nome_tabela   = document.getElementById('nome_tabela').value.trim();
   const cliente       = document.getElementById('cliente_nome').value.trim();
   const frete_kg      = Number(document.getElementById('frete_kg').value || 0);
@@ -1663,3 +1732,19 @@ document.addEventListener('DOMContentLoaded', () => {
       queueMicrotask(() => Promise.resolve(recalcTudo()).catch(() => {}));  }
 });
 
+document.addEventListener('input', handleFieldChange, true);
+document.addEventListener('change', handleFieldChange, true);
+
+function handleFieldChange(e) {
+  const el = e.target;
+  if (!el || !(el instanceof HTMLElement)) return;
+
+  // Se o campo estava marcado com erro, limpamos
+  if (el.classList.contains('field-error')) {
+    el.classList.remove('field-error');
+    const msg = el.nextElementSibling;
+    if (msg && msg.classList.contains('field-error-msg')) {
+      msg.remove();
+    }
+  }
+}
