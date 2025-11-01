@@ -207,7 +207,15 @@ function restoreHeaderSnapshotIfNew() {
   const ctx = getCtxId();
   const raw = sessionStorage.getItem(`TP_BUFFER:${ctx}`);
   if (!raw) return;
+
   try {
+    // Confirmação defensiva
+    const querMesclar = confirm('Você adicionou produtos no selecionador. Deseja aplicar estas inclusões nesta tabela?');
+    if (!querMesclar) {
+      sessionStorage.removeItem(`TP_BUFFER:${ctx}`);
+      return;
+    }
+
     const recebidos = JSON.parse(raw) || [];
     const map = new Map((itens || []).map(x => [x.codigo_tabela, x]));
     for (const p of recebidos) {
@@ -215,16 +223,14 @@ function restoreHeaderSnapshotIfNew() {
     }
     itens = Array.from(map.values());
     renderTabela();
-   // garante dados que o preview usa
-    
+
     await atualizarPrecosAtuais();
-    // agenda o recálculo no próximo tick
     queueMicrotask(() => Promise.resolve(recalcTudo()).catch(()=>{}));
   } catch {}
   finally {
     try { sessionStorage.removeItem(`TP_BUFFER:${ctx}`); } catch {}
   }
- }
+}
 
 async function atualizarPrecosAtuais(){
   const codigos = Array.from(new Set((itens||[]).map(x=>x.codigo_tabela).filter(Boolean)));
@@ -236,8 +242,18 @@ async function atualizarPrecosAtuais(){
      const r = await fetch(`${API_BASE}/tabela_preco/produtos_filtro?codigo=${encodeURIComponent(cod)}`, { cache: 'no-store' });
      if (!r.ok) continue;
      const raw = await r.json();
-     const p = raw?.items ? (raw.items[0] || {}) : raw;
-     mapa[cod] = Number(p.valor ?? p.preco ?? p.preco_venda ?? 0);
+     const arr = Array.isArray(raw?.items) ? raw.items
+           : Array.isArray(raw)       ? raw
+           : raw ? [raw] : [];
+
+      const p = arr.find(it => {
+        const cands = [
+          it.codigo, it.codigo_tabela, it.codigo_produto_supra, it.CODIGO
+        ].map(x => String(x ?? '').trim());
+        return cands.includes(String(cod).trim());
+      }) || arr[0] || {};
+
+mapa[cod] = Number(p.valor ?? p.preco ?? p.preco_venda ?? 0);
    } catch {}
  }
 
@@ -756,9 +772,16 @@ async function carregarItens() {
       // >>> NOVO: fator global (se todos iguais)
       const dg = document.getElementById('desconto_global');
       if (dg) {
-        const fatores = (itens || [])
-          .map(x => (x.fator_comissao != null ? Number(x.fator_comissao) : null))
-          .filter(v => v != null && !isNaN(v));
+        const fatores = (itens || []).map(x => {
+          if (x.fator_comissao != null && !isNaN(x.fator_comissao)) return Number(x.fator_comissao);
+          // Fallback: tentar pelo label "COD - xx,yy"
+          const lbl = (x.__descricao_fator_label || x.descricao_fator_comissao || '').trim();
+          if (!lbl) return null;
+          const code = lbl.split(' - ')[0].trim();
+          const frac = Object.prototype.hasOwnProperty.call(mapaDescontos, code)
+            ? Number(mapaDescontos[code]) : null;
+          return Number.isFinite(frac) ? frac : null;
+        }).filter(v => v != null && !isNaN(v));
 
         let fatorGlobal = null;
         if (fatores.length) {
@@ -838,13 +861,15 @@ function criarLinha(item, idx) {
   }
 
   // 3) Último fallback: inferir por razão desconto/valor (aceitando 0)
-  if (!selPercent.value && Number(item.valor || 0) >= 0) {
-    const fatorInferido = Number(item.desconto || 0) / Number(item.valor || 1);
+  if (!selPercent.value && Number(item.valor || 0) > 0) {
+  const fatorInferido = Number(item.desconto || 0) / Number(item.valor || 1);
+  if (fatorInferido > 1e-6) { // evita 0
     const match = Object.entries(mapaDescontos).find(([, f]) =>
       Math.abs(Number(f) - fatorInferido) < 1e-6
     );
     if (match) selPercent.value = match[0];
   }
+}
 })();
 
 selPercent.addEventListener('change', () => {
@@ -1627,12 +1652,15 @@ document.addEventListener('DOMContentLoaded', () => {
   (async function init(){
     await Promise.all([carregarCondicoes(), carregarDescontos()]);
     
+  const temIdNaUrl = !!new URLSearchParams(location.search).get('id');
+
+// Se tem id, NÃO limpa cabeçalho antes de carregar
+  if (!temIdNaUrl) {
     if (__IS_RELOAD) {
-    // F5: deixa tudo zerado
-    limparFormularioCabecalho?.();
-  } else {
-    // navegação normal: restaura cabeçalho salvo
-    restoreHeaderSnapshotIfNew?.();
+      limparFormularioCabecalho?.();
+    } else {
+      restoreHeaderSnapshotIfNew?.();
+    }
   }
 
    await carregarItens();                       // carrega itens salvos/edição
