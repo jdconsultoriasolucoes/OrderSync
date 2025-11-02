@@ -209,13 +209,13 @@ function restoreHeaderSnapshotIfNew() {
   if (!raw) return;
 
   try {
-    // Confirmação defensiva
-    const querMesclar = confirm('Você adicionou produtos no selecionador. Deseja aplicar estas inclusões nesta tabela?');
-    if (!querMesclar) {
+    // descarte só se estiver em VIEW e NÃO houver intenção de editar/duplicar
+    const retMode = sessionStorage.getItem(`TP_RETURN_MODE:${ctx || 'new'}`);
+    const pretendEdit = (retMode === MODE.EDIT || retMode === MODE.DUP || retMode === MODE.NEW);
+    if (currentMode === MODE.VIEW && !pretendEdit) {
       sessionStorage.removeItem(`TP_BUFFER:${ctx}`);
       return;
-    }
-
+  }
     const recebidos = JSON.parse(raw) || [];
     const map = new Map((itens || []).map(x => [x.codigo_tabela, x]));
     for (const p of recebidos) {
@@ -297,11 +297,38 @@ function onDuplicar() {
   // guarda a tabela de ORIGEM para poder voltar na hora do Cancelar
   sourceTabelaId = currentTabelaId ? String(currentTabelaId) : null;
   if (sourceTabelaId) sessionStorage.setItem('TP_SOURCE_ID', sourceTabelaId);
+
   // entra em duplicação: libera campos e garante que será POST
   setMode(MODE.DUP);
   currentTabelaId = null;      // POST
+
+  // 🧽 Limpa TODO o cabeçalho (nome e cliente)
   const nome = document.getElementById('nome_tabela');
-  if (nome) nome.value = '';   // força novo cadastro com outro nome
+  const cli  = document.getElementById('cliente_nome');
+  const cod  = document.getElementById('codigo_cliente');
+  const ramo = document.getElementById('ramo_juridico');
+  const frete= document.getElementById('frete_kg');
+  const cond = document.getElementById('plano_pagamento');
+  const desc = document.getElementById('desconto_global');
+
+  if (nome) nome.value = '';
+  if (cli)  cli.value  = '';
+  if (cod)  cod.value  = '';
+  if (ramo) ramo.value = '';
+
+  if (frete) frete.value = 0;
+  if (cond)  cond.value  = '';
+  if (desc)  desc.value  = '';
+
+  // flags de cliente “livre” e travas do IVA
+  window.isClienteLivreSelecionado = false;
+  const iva = document.getElementById('iva_st_toggle');
+  if (iva) { iva.checked = false; iva.disabled = true; }
+  enforceIvaLockByCliente?.();
+
+  atualizarPillTaxa?.();
+  atualizarPillDesconto?.();
+  refreshToolbarEnablement?.();
 }
 
 // MOSTRAR/OCULTAR botões corretamente em todos os modos
@@ -699,7 +726,17 @@ function obterItensDaSessao() {
 
 async function carregarItens() {
   const urlParams = new URLSearchParams(window.location.search);
-  const id = urlParams.get('id');
+  let id = urlParams.get('id'); // ← troque const por let
+
+  // Fallback quando você voltou do "Buscar produto" sem ?id= na URL
+  if (!id) {
+    const ctx = sessionStorage.getItem('TP_CTX_ID');
+    // Só usa o ctx se ele parecer um id real e se o modo anterior era edit/view/duplicate
+    const retMode = sessionStorage.getItem(`TP_RETURN_MODE:${ctx || 'new'}`);
+    if (ctx && ctx !== 'new' && (retMode === 'edit' || retMode === 'view' || retMode === 'duplicate')) {
+      id = String(ctx);
+    }
+  }
   if (id) {
     const r = await fetch(`${API_BASE}/tabela_preco/${id}`);
     if (r.ok) {
@@ -802,7 +839,13 @@ async function carregarItens() {
 
       // >>> Entrar em visualização
       currentTabelaId = id;
-      setMode('view');
+      const __ctx = sessionStorage.getItem('TP_CTX_ID');
+      const __ret = sessionStorage.getItem(`TP_RETURN_MODE:${__ctx || 'new'}`);
+      if (__ret === MODE.EDIT || __ret === MODE.DUP) {
+        // não muda o modo aqui; o init restaura já já
+      } else {
+        setMode('view');
+      }
       return;
     }
   }
@@ -880,6 +923,17 @@ selPercent.addEventListener('change', () => {
   itens[idx].__descricao_fator_label = selPercent.options[selPercent.selectedIndex]?.textContent?.trim() || '';
   itens[idx].__overridePercent = true;
   recalcLinha(tr);
+
+  try {
+    const selsPct = Array.from(document.querySelectorAll('#tbody-itens tr td:nth-child(8) select'));
+    const vals    = new Set(selsPct.map(s => (s.value || '').trim()).filter(v => v !== ''));
+    const hdr     = document.getElementById('desconto_global');
+    if (hdr && hdr.dataset.userEdited !== '1') {
+      hdr.value = (vals.size === 1) ? [...vals][0] : '';
+      atualizarPillDesconto?.();
+      saveHeaderSnapshot?.();
+    }
+  } catch {}
 });
 
 tdPercent.appendChild(selPercent);
@@ -918,6 +972,17 @@ tdPercent.appendChild(selPercent);
   selCond.addEventListener('change', () => {
   itens[idx].plano_pagamento = selCond.value || null;
   recalcLinha(tr);
+
+  try {
+    const sels = Array.from(document.querySelectorAll('#tbody-itens tr td:nth-child(10) select'));
+    const vals = new Set(sels.map(s => (s.value || '').trim()).filter(v => v !== ''));
+    const hdr  = document.getElementById('plano_pagamento');
+    if (hdr && hdr.dataset.userEdited !== '1') {
+      hdr.value = (vals.size === 1) ? [...vals][0] : '';
+      atualizarPillTaxa?.();
+      saveHeaderSnapshot?.();
+    }
+  } catch {}
   });
 
   const tdCondVal   = document.createElement('td'); tdCondVal.className = 'num'; tdCondVal.textContent = '0,00';
@@ -1029,6 +1094,28 @@ function renderTabela() {
   tbody.innerHTML = '';
   itens.forEach((it, i) => tbody.appendChild(criarLinha(it, i)));
   if (typeof refreshToolbarEnablement === 'function') refreshToolbarEnablement();
+
+  // === Inferir cabeçalho a partir da grade (uniformidade) ===
+  try {
+    const selsPct  = Array.from(document.querySelectorAll('#tbody-itens tr td:nth-child(8) select'));
+    const selsCond = Array.from(document.querySelectorAll('#tbody-itens tr td:nth-child(10) select'));
+
+    // Fator (%)
+    const valsPct = new Set(selsPct.map(s => (s.value || '').trim()).filter(v => v !== ''));
+    const hdrPct  = document.getElementById('desconto_global');
+    if (hdrPct && hdrPct.dataset.userEdited !== '1') {
+      hdrPct.value = (valsPct.size === 1) ? [...valsPct][0] : '';
+      atualizarPillDesconto?.();
+    }
+
+    // Condição de pagamento
+    const valsCond = new Set(selsCond.map(s => (s.value || '').trim()).filter(v => v !== ''));
+    const hdrCond  = document.getElementById('plano_pagamento');
+    if (hdrCond && hdrCond.dataset.userEdited !== '1') {
+      hdrCond.value = (valsCond.size === 1) ? [...valsCond][0] : '';
+      atualizarPillTaxa?.();
+    }
+  } catch {}
 }
 
 async function recalcLinha(tr) {
@@ -1160,6 +1247,8 @@ async function aplicarFatorGlobal() {
     sel.dispatchEvent(new Event('change', { bubbles: true }));
   });
   await Promise.resolve(recalcTudo()).catch(()=>{});
+  const hdr = document.getElementById('desconto_global');
+  if (hdr) { hdr.dataset.userEdited = ''; } // destrava
   atualizarPillDesconto();
   snapshotSelecionadosParaPicker?.();
 
@@ -1510,8 +1599,11 @@ document.addEventListener('DOMContentLoaded', () => {
   
   document.getElementById('btn-aplicar-todos')?.addEventListener('click', aplicarFatorGlobal);
   
-  document.getElementById('plano_pagamento')?.addEventListener('change', () => { atualizarPillTaxa(); recalcTudo(); refreshToolbarEnablement();saveHeaderSnapshot();  
-    });
+  document.getElementById('plano_pagamento')?.addEventListener('change', (e) => {
+  // 👇 marca que o usuário editou manualmente o header
+  e.currentTarget.dataset.userEdited = '1';
+  atualizarPillTaxa(); recalcTudo(); refreshToolbarEnablement(); saveHeaderSnapshot();
+});
   document.getElementById('frete_kg')?.addEventListener('input', () => {
     recalcTudo();
     refreshToolbarEnablement();  
@@ -1654,6 +1746,15 @@ document.addEventListener('DOMContentLoaded', () => {
     
   const temIdNaUrl = !!new URLSearchParams(location.search).get('id');
 
+  // 🔒 Se tem id na URL (edição/visualização), NÃO limpe/restaure snapshot agora
+  if (!temIdNaUrl) {
+    if (__IS_RELOAD) {
+      limparFormularioCabecalho?.();
+    } else {
+      restoreHeaderSnapshotIfNew?.();
+    }
+  }
+
 // Se tem id, NÃO limpa cabeçalho antes de carregar
   if (!temIdNaUrl) {
     if (__IS_RELOAD) {
@@ -1664,8 +1765,35 @@ document.addEventListener('DOMContentLoaded', () => {
   }
 
    await carregarItens();                       // carrega itens salvos/edição
-   if (!__IS_RELOAD) await mergeBufferFromPickerIfAny?.();
+   const q = new URLSearchParams(location.search);
+   const action = q.get('action') || q.get('mode') || q.get('modo');
+   let modeRestored = false;
+   if (!action) {
+     const ctx = sessionStorage.getItem('TP_CTX_ID') || getCtxId();
+     const ret = sessionStorage.getItem(`TP_RETURN_MODE:${ctx}`);
+     if (ret) {
+       if (ret === MODE.EDIT)      setMode(MODE.EDIT);
+       else if (ret === MODE.DUP)  setMode(MODE.DUP);
+       else if (ret === MODE.NEW)  setMode(MODE.NEW);
+       sessionStorage.removeItem(`TP_RETURN_MODE:${ctx}`);
+       modeRestored = true;
+     }
+    }
+    if (!modeRestored) {
+      if (currentTabelaId) {
+        if (action === 'edit') setMode(MODE.EDIT);
+        else if (action === 'duplicate') onDuplicar();
+        else setMode(MODE.VIEW);
+      } else {
+        setMode(MODE.NEW);
+      }
+    }
 
+    // ✅ agora sim, com o modo correto, mescla o buffer do picker
+    if (!__IS_RELOAD) await mergeBufferFromPickerIfAny?.();
+
+   await Promise.resolve(recalcTudo()).catch(()=>{});
+   refreshToolbarEnablement?.();
    setupClienteAutocomplete();
    enforceIvaLockByCliente();
        
@@ -1697,12 +1825,7 @@ document.addEventListener('DOMContentLoaded', () => {
     recalcTudo();
     });
 
-   // Se vier com ação na URL (?action=edit|duplicate), respeitar:
-    const q = new URLSearchParams(location.search);
-    const action = q.get('action') || q.get('mode') || q.get('modo');
-    
-    let modeRestored = false;
-    
+      
     if (!action) {
     const ctx = sessionStorage.getItem('TP_CTX_ID') || getCtxId();
     const ret = sessionStorage.getItem(`TP_RETURN_MODE:${ctx}`);
@@ -1743,6 +1866,8 @@ document.addEventListener('DOMContentLoaded', () => {
     setTimeout(() => {
     Promise.resolve(recalcTudo()).catch(()=>{});
   }, 0);
+    const hdr = document.getElementById('plano_pagamento');
+    if (hdr) hdr.dataset.userEdited = '';
     snapshotSelecionadosParaPicker?.();
  });
  document.getElementById('iva_st_toggle')?.addEventListener('change', (e) => {
@@ -1750,10 +1875,12 @@ document.addEventListener('DOMContentLoaded', () => {
   Promise.resolve(recalcTudo()).catch(err => console.debug('recalcTudo falhou:', err));
    });
 
- document.getElementById('desconto_global')?.addEventListener('change', () => {
+ document.getElementById('desconto_global')?.addEventListener('change', (e) => {
+  // 👇 marca que o usuário editou manualmente o header
+  e.currentTarget.dataset.userEdited = '1';
   atualizarPillDesconto();
-  saveHeaderSnapshot();                      // << acrescentar
- });
+  saveHeaderSnapshot();
+});
 
  window.addEventListener('pageshow', () => {
   if (typeof recalcTudo === 'function') {
