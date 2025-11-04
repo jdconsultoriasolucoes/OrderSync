@@ -124,6 +124,8 @@ main {
 .card-relatorios   { background-color: #a855f7; }
 .card-precos       { background-color: #f755ea; }
 .card-config_email { background-color: #1e1af1; }
+.card-produto      { background-color: #1af197; }
+
 
 .cards-grid .card { 
   position: relative; 

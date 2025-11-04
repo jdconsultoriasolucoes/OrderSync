@@ -1,5 +1,5 @@
 from sqlalchemy import Column, String, Integer, Boolean, Date, DateTime, func
-from db import Base
+from database import Base
 
 class PedidoLink(Base):
     __tablename__ = "tb_pedido_link"

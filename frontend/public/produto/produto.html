@@ -1,0 +1,221 @@
+<!-- produto.html -->
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Cadastro do Produto</title>
+  <link rel="stylesheet" href="./produto.css" />
+</head>
+<body>
+  <div class="page">
+    <div class="card">
+      <div class="header">
+        <div class="title">CADASTRO DO PRODUTO</div>
+        <div class="toolbar">
+          <button id="btn-novo" class="ghost">Novo</button>
+          <button id="btn-buscar" class="ghost">Pesquisar</button>
+          <button id="btn-editar" class="ghost">Editar</button>
+          <button id="btn-salvar" class="primary">Salvar</button>
+        </div>
+      </div>
+
+      <!-- Identificação -->
+      <div class="section-title">Identificação</div>
+      <div class="grid row">
+        <div class="col-3">
+          <label for="codigo_supra">Código</label>
+          <input id="codigo_supra" type="text" placeholder="Ex.: 667E12*0.45" />
+        </div>
+        <div class="col-5">
+          <label for="nome_produto">Descrição</label>
+          <input id="nome_produto" type="text" placeholder="Nome do produto" />
+        </div>
+        <div class="col-2">
+          <label for="status_produto">Status</label>
+          <select id="status_produto"></select>
+        </div>
+        <div class="col-2">
+          <label for="tipo_giro">Tipo de Giro</label>
+          <select id="tipo_giro"></select>
+        </div>
+      </div>
+      <div class="grid row">
+        <div class="col-3">
+          <label for="linha">Linha</label>
+          <select id="linha"></select>
+        </div>
+        <div class="col-5">
+          <label for="familia">Família</label>
+          <select id="familia"></select>
+        </div>
+        <div class="col-2">
+          <label for="filhos">Filho nº</label>
+          <input id="filhos" type="number" min="0" step="1" />
+        </div>
+        <div class="col-2">
+          <label for="fornecedor">Fornecedor</label>
+          <input id="fornecedor" type="text" />
+        </div>
+      </div>
+
+      <!-- Unidade / Embalagem / Pesos -->
+      <div class="section-title">Unidade / Embalagem / Pesos</div>
+      <div class="grid row">
+        <div class="col-2">
+          <label for="unidade">Unidade de Venda</label>
+          <input id="unidade" type="text" placeholder="CX/UN" />
+        </div>
+        <div class="col-2">
+          <label for="unidade_anterior">Unidade de Venda (anterior)</label>
+          <input id="unidade_anterior" type="text" class="readonly" readonly />
+        </div>
+        <div class="col-2">
+          <label for="embalagem_venda">Embalagem de Venda</label>
+          <input id="embalagem_venda" type="text" placeholder="CX/FD/UN" />
+        </div>
+        <div class="col-2">
+          <label for="unidade_embalagem">Unidades por Embalagem</label>
+          <input id="unidade_embalagem" type="number" step="1" min="0" />
+        </div>
+        <div class="col-2">
+          <label for="peso">Peso Líquido</label>
+          <input id="peso" type="number" step="0.001" />
+        </div>
+        <div class="col-2">
+          <label for="peso_bruto">Peso Bruto</label>
+          <input id="peso_bruto" type="number" step="0.001" />
+        </div>
+      </div>
+
+      <!-- Estoque / Códigos -->
+      <div class="section-title">Estoque / Códigos</div>
+      <div class="grid row">
+        <div class="col-2">
+          <label for="estoque_disponivel">Estoque Físico</label>
+          <input id="estoque_disponivel" type="number" step="1" min="0" />
+        </div>
+        <div class="col-2">
+          <label for="estoque_ideal">Estoque Ideal</label>
+          <input id="estoque_ideal" type="number" step="1" min="0" />
+        </div>
+        <div class="col-4">
+          <label for="codigo_ean">Código de Barra (EAN/GTIN)</label>
+          <input id="codigo_ean" type="text" />
+        </div>
+        <div class="col-4">
+          <label for="codigo_embalagem">Código da Embalagem (GTIN Caixa)</label>
+          <input id="codigo_embalagem" type="text" />
+        </div>
+      </div>
+      <div class="grid row">
+        <div class="col-3">
+          <label for="ncm">NCM / SH</label>
+          <input id="ncm" type="text" placeholder="NN.NN.NN.NN" />
+        </div>
+      </div>
+
+      <!-- Impostos -->
+      <div class="section-title">Impostos</div>
+      <div class="grid row">
+        <div class="col-2"><label for="ipi">IPI (%)</label><input id="ipi" type="number" step="0.01" min="0" /></div>
+        <div class="col-2"><label for="icms">ICMS (%)</label><input id="icms" type="number" step="0.01" min="0" /></div>
+        <div class="col-3"><label for="iva_st">Substituição Tributária (%)</label><input id="iva_st" type="number" step="0.01" min="0" /></div>
+        <div class="col-2"><label for="cbs">CBS (%)</label><input id="cbs" type="number" step="0.01" min="0" /></div>
+        <div class="col-2"><label for="ibs">IBS (%)</label><input id="ibs" type="number" step="0.01" min="0" /></div>
+      </div>
+
+      <!-- Preços — Tabela Atual -->
+      <div class="section-title">Preços — Tabela Atual</div>
+      <div class="grid row">
+        <div class="col-3">
+          <label for="preco">Valor Tabela Atual (R$)</label>
+          <input id="preco" type="number" step="0.01" min="0" />
+        </div>
+        <div class="col-3">
+          <label for="preco_tonelada">Preço por Tonelada (R$)</label>
+          <input id="preco_tonelada" type="number" step="0.01" min="0" />
+        </div>
+        <div class="col-3">
+          <label for="validade_tabela">Validade da Tabela Atual a partir de</label>
+          <input id="validade_tabela" type="date" />
+        </div>
+        <div class="col-3">
+          <label for="preco_final">Preço Final (Ton.)</label>
+          <input id="preco_final" type="number" step="0.01" class="readonly" readonly />
+        </div>
+      </div>
+
+      <!-- Preços — Anteriores (somente leitura) -->
+      <div class="section-title">Preços — Anteriores (somente leitura)</div>
+      <div class="grid row">
+        <div class="col-3">
+          <label for="preco_anterior">Valor Tabela Anterior (R$)</label>
+          <input id="preco_anterior" type="number" step="0.01" class="readonly" readonly />
+        </div>
+        <div class="col-3">
+          <label for="preco_tonelada_anterior">Preço por Tonelada (Anterior)</label>
+          <input id="preco_tonelada_anterior" type="number" step="0.01" class="readonly" readonly />
+        </div>
+        <div class="col-3">
+          <label for="validade_tabela_anterior">Validade da Tabela Anterior até</label>
+          <input id="validade_tabela_anterior" type="date" class="readonly" readonly />
+        </div>
+        <div class="col-3">
+          <label for="unidade_anterior_ro">Unidade (Anterior)</label>
+          <input id="unidade_anterior_ro" type="text" class="readonly" readonly />
+        </div>
+      </div>
+
+      <!-- Desconto por Tonelada -->
+      <div class="section-title">Desconto por Tonelada</div>
+      <div class="grid row">
+        <div class="col-3">
+          <label for="desconto_valor_tonelada">Desconto por Tonelada (R$)</label>
+          <input id="desconto_valor_tonelada" type="number" step="0.01" min="0" />
+        </div>
+        <div class="col-3">
+          <label for="data_desconto_inicio">Período — Início</label>
+          <input id="data_desconto_inicio" type="date" />
+        </div>
+        <div class="col-3">
+          <label for="data_desconto_fim">Período — Fim</label>
+          <input id="data_desconto_fim" type="date" />
+        </div>
+        <div class="col-3">
+          <label>Indicadores</label>
+          <div class="indicators">
+            <span>Reajuste %: <span id="reajuste" class="pill">—</span></span>
+            <span class="right">Vigência ativa: <span id="vigencia" class="pill">—</span></span>
+          </div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- Modal de pesquisa -->
+  <div id="search-modal" class="modal hidden">
+    <div class="modal-dialog">
+      <div class="modal-header">
+        <div class="modal-title">Pesquisar produto</div>
+        <button id="search-close" class="icon-btn" title="Fechar">✕</button>
+      </div>
+
+      <div class="modal-body">
+        <input id="search-input" type="text" placeholder="Código ou descrição..." />
+        <div id="search-hint" class="hint">Digite para buscar • Enter: selecionar • Esc: fechar</div>
+        <div id="search-results" class="results"></div>
+      </div>
+
+      <div class="modal-footer">
+        <button id="search-cancel" class="ghost">Cancelar</button>
+      </div>
+    </div>
+  </div>
+
+  <div id="toast" class="toast"></div>
+
+  <script src="./produto.js"></script>
+</body>
+</html>
