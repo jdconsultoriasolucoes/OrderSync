@@ -1,5 +1,5 @@
 from typing import Optional
-from pydantic import BaseModel, Field, field_validator
+from pydantic import BaseModel, Field, validator, root_validator
 from datetime import date
 
 # ---------- Imposto ----------
@@ -15,8 +15,9 @@ class ImpostoV2Create(ImpostoV2Base):
 
 class ImpostoV2Out(ImpostoV2Base):
     id: int
+
     class Config:
-        from_attributes = True
+        orm_mode = True  # v1 (equivalente ao from_attributes do v2)
 
 # ---------- Produto ----------
 class ProdutoV2Base(BaseModel):
@@ -47,8 +48,8 @@ class ProdutoV2Base(BaseModel):
     data_desconto_inicio: Optional[date] = None
     data_desconto_fim: Optional[date] = None
 
-    @field_validator("preco", "preco_tonelada", "desconto_valor_tonelada")
-    @classmethod
+    # v2 -> v1: field_validator(...) -> validator(...)
+    @validator("preco", "preco_tonelada", "desconto_valor_tonelada")
     def _nao_negativo(cls, v):
         if v is not None and v < 0:
             raise ValueError("valor não pode ser negativo")
@@ -63,17 +64,17 @@ class ProdutoV2Update(ProdutoV2Base):
     status_produto: Optional[str] = None
     nome_produto: Optional[str] = None
 
-    @field_validator("data_desconto_fim")
-    @classmethod
-    def _datas_coesas(cls, v, info):
-        ini = info.data.get("data_desconto_inicio")
-        fim = v
+    # v2 -> v1: checagem que envolve 2 campos usa root_validator
+    @root_validator
+    def _datas_coesas(cls, values):
+        ini = values.get("data_desconto_inicio")
+        fim = values.get("data_desconto_fim")
         # regra: se preencher um, tem que preencher os dois; e ini <= fim
         if (ini and not fim) or (fim and not ini):
             raise ValueError("preencha data_desconto_inicio e data_desconto_fim juntos")
         if ini and fim and ini > fim:
             raise ValueError("data_desconto_inicio deve ser <= data_desconto_fim")
-        return v
+        return values
 
 class ProdutoV2Out(ProdutoV2Base):
     id: int
@@ -93,4 +94,4 @@ class ProdutoV2Out(ProdutoV2Base):
     imposto: Optional[ImpostoV2Out] = None
 
     class Config:
-        from_attributes = True
+        orm_mode = True  # v1
