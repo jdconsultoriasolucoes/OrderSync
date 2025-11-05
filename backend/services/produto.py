@@ -5,8 +5,8 @@ from sqlalchemy import text
 from fastapi import HTTPException
 from datetime import date
 
-from models.produto_v2 import ProdutoV2, ImpostoV2
-from schemas.produto_v2 import ProdutoV2Create, ProdutoV2Update, ImpostoV2Create, ProdutoV2Out, ImpostoV2Out
+from models.produto import ProdutoV2, ImpostoV2
+from schemas.produto import ProdutoV2Create, ProdutoV2Update, ImpostoV2Create, ProdutoV2Out, ImpostoV2Out
 
 # ----------------------------
 # Helpers

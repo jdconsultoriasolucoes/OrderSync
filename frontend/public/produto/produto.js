@@ -4,15 +4,24 @@
 const API_BASE = "https://ordersync-backend-edjq.onrender.com";
 window.API_BASE = API_BASE;
 
+// candidatos de rotas (ordem de preferência)
+const CANDIDATES = [
+  `${API_BASE}/api/produtos`,
+  `${API_BASE}/api/produto`,
+  `${API_BASE}/api/produtos_v2`,
+  `${API_BASE}/api/produto_v2`,
+  `${API_BASE}/produtos`,
+  `${API_BASE}/produto`,
+];
+
 const API = {
-  produtos:   `${API_BASE}/api/produtos`,
   familias:   `${API_BASE}/api/familias`,
   tiposGiro:  `${API_BASE}/api/tipos-giro`,
   status:     `${API_BASE}/api/produtos/status`,
 };
 
-// Estado de edição (id atual carregado)
-let CURRENT_ID = null;
+// cache em memória/localStorage do endpoint resolvido
+let PROD_ENDPOINT = localStorage.getItem('ordersync_prod_endpoint') || null;
 
 // === Utils ===
 const $ = (id) => document.getElementById(id);
@@ -24,27 +33,118 @@ const toast = (msg) => {
   setTimeout(() => (t.style.display = 'none'), 2400);
 };
 
+async function fetchRaw(url, opts = {}) {
+  return fetch(url, { headers: { 'Content-Type': 'application/json' }, ...opts });
+}
 async function fetchJSON(url, opts = {}) {
-  const res = await fetch(url, { headers: { 'Content-Type': 'application/json' }, ...opts });
+  const res = await fetchRaw(url, opts);
   if (!res.ok) {
-    let body = '';
-    try { body = await res.text(); } catch {}
-    throw new Error(body || res.statusText);
+    const body = await res.text().catch(()=> '');
+    const err = new Error(body || res.statusText);
+    err.status = res.status;
+    throw err;
   }
   return res.json();
 }
 
+// ---------- Descoberta do endpoint de produtos ----------
+async function resolveProdutosEndpoint(force = false) {
+  if (!force && PROD_ENDPOINT) return PROD_ENDPOINT;
+
+  for (const base of CANDIDATES) {
+    try {
+      // tentativa: GET lista com limite pequeno; se 404, tenta o próximo
+      const probe = await fetchRaw(`${base}?page=1&pageSize=1`);
+      if (probe.status !== 404) {
+        PROD_ENDPOINT = base;
+        localStorage.setItem('ordersync_prod_endpoint', base);
+        console.log('[produto] endpoint resolvido:', base);
+        return base;
+      }
+    } catch (_) { /* ignora e tenta próximo */ }
+  }
+  // fallback (pode 404, mas evita ficar null)
+  PROD_ENDPOINT = CANDIDATES[0];
+  localStorage.setItem('ordersync_prod_endpoint', PROD_ENDPOINT);
+  return PROD_ENDPOINT;
+}
+
+// wrappers que usam fallback automático quando 404
+async function produtosGET(path = '', qs = '') {
+  const tried = new Set();
+  while (tried.size < CANDIDATES.length) {
+    const base = await resolveProdutosEndpoint();
+    try {
+      return await fetchJSON(`${base}${path}${qs}`, { method: 'GET' });
+    } catch (e) {
+      if (e.status === 404) {
+        tried.add(base);
+        // força resolver para o próximo candidato
+        const idx = CANDIDATES.indexOf(base);
+        const next = CANDIDATES[(idx + 1) % CANDIDATES.length];
+        PROD_ENDPOINT = next;
+        localStorage.setItem('ordersync_prod_endpoint', next);
+        continue;
+      }
+      throw e;
+    }
+  }
+  // última tentativa com o primeiro candidato
+  return fetchJSON(`${CANDIDATES[0]}${path}${qs}`, { method: 'GET' });
+}
+
+async function produtosPOST(body) {
+  const base = await resolveProdutosEndpoint();
+  try {
+    return await fetchJSON(base, { method: 'POST', body: JSON.stringify(body) });
+  } catch (e) {
+    if (e.status === 404) {
+      // tenta os demais
+      for (const cand of CANDIDATES) {
+        if (cand === base) continue;
+        try {
+          PROD_ENDPOINT = cand;
+          localStorage.setItem('ordersync_prod_endpoint', cand);
+          return await fetchJSON(cand, { method: 'POST', body: JSON.stringify(body) });
+        } catch (ee) { if (ee.status !== 404) throw ee; }
+      }
+    }
+    throw e;
+  }
+}
+
+async function produtosPATCH(id, body) {
+  const base = await resolveProdutosEndpoint();
+  const paths = [`${base}/${id}`];
+  // se a rota for singular sem /{id}, não há muito o que fazer; mantemos /{id}
+  for (const p of [ `${base}/${id}`, `${base}/${encodeURIComponent(id)}` ]) {
+    try { return await fetchJSON(p, { method: 'PATCH', body: JSON.stringify(body) }); }
+    catch (e) {
+      if (e.status === 404) continue;
+      throw e;
+    }
+  }
+  // tenta outros candidatos
+  for (const cand of CANDIDATES) {
+    try { 
+      PROD_ENDPOINT = cand;
+      localStorage.setItem('ordersync_prod_endpoint', cand);
+      return await fetchJSON(`${cand}/${id}`, { method: 'PATCH', body: JSON.stringify(body) });
+    } catch (e) { if (e.status !== 404) throw e; }
+  }
+  throw new Error('Não foi possível localizar a rota de PATCH dos produtos.');
+}
+
+// ---------- cálculos/aux ----------
 function setSelect(el, items, getLabel = (x) => x.label, getValue = (x) => x.value) {
   if (!el) return;
   el.innerHTML = '<option value="">— selecione —</option>' +
     (items || []).map((it) => `<option value="${getValue(it)}">${getLabel(it)}</option>`).join('');
 }
-
 function reajustePercentual(atual, anterior) {
   if (!Number.isFinite(anterior) || anterior === 0 || !Number.isFinite(atual)) return null;
   return ((atual - anterior) / anterior) * 100;
 }
-
 function vigenciaAtiva(validadeISO) {
   if (!validadeISO) return null;
   const hoje = new Date();
@@ -71,10 +171,7 @@ const modal = {
     if (inp) inp.value = '';
   }
 };
-
-function debounce(fn, ms=300){
-  let t; return (...args)=>{ clearTimeout(t); t=setTimeout(()=>fn(...args), ms); };
-}
+function debounce(fn, ms=300){ let t; return (...a)=>{ clearTimeout(t); t=setTimeout(()=>fn(...a), ms); }; }
 
 function renderResults(list){
   const box = $('search-results');
@@ -104,7 +201,8 @@ function renderResults(list){
     tr.addEventListener('click', async ()=>{
       const id = tr.getAttribute('data-id');
       try{
-        const data = await fetchJSON(`${API.produtos}/${id}`);
+        const base = await resolveProdutosEndpoint();
+        const data = await fetchJSON(`${base}/${id}`);
         fillForm(data);
         modal.close();
         toast('Produto carregado.');
@@ -120,7 +218,7 @@ const doSearch = debounce(async ()=>{
   const q = inp.value.trim();
   if (!q){ box.innerHTML = `<div class="empty">Digite parte do código ou descrição…</div>`; return; }
   try{
-    const list = await fetchJSON(`${API.produtos}?q=${encodeURIComponent(q)}&page=1&pageSize=25`);
+    const list = await produtosGET('', `?q=${encodeURIComponent(q)}&page=1&pageSize=25`);
     renderResults(list);
   }catch(e){
     console.error(e);
@@ -166,10 +264,7 @@ async function loadSelects() {
 // === Leitura do formulário ===
 function readForm() {
   const v = (id) => ($(id)?.value ?? '').trim();
-  const n = (id) => {
-    const raw = v(id);
-    return raw === '' ? null : Number(raw);
-  };
+  const n = (id) => { const raw = v(id); return raw === '' ? null : Number(raw); };
 
   return {
     codigo_supra: v('codigo_supra') || null,
@@ -205,20 +300,12 @@ function readForm() {
 }
 
 function readImposto() {
-  const n = (id) => {
-    const raw = ($(id)?.value ?? '').trim();
-    return raw === '' ? 0 : Number(raw);
-  };
-  return {
-    ipi: n('ipi'),
-    icms: n('icms'),
-    iva_st: n('iva_st'),
-    cbs: n('cbs'),
-    ibs: n('ibs'),
-  };
+  const n = (id) => { const raw = ($(id)?.value ?? '').trim(); return raw === '' ? 0 : Number(raw); };
+  return { ipi: n('ipi'), icms: n('icms'), iva_st: n('iva_st'), cbs: n('cbs'), ibs: n('ibs') };
 }
 
 // === Preencher form ===
+let CURRENT_ID = null;
 function fillForm(p) {
   const set = (id, v) => { if ($(id)) $(id).value = (v ?? ''); };
   set('codigo_supra', p.codigo_supra);
@@ -254,7 +341,7 @@ function fillForm(p) {
   set('preco_final', p.preco_final);
 
   const r = reajustePercentual(Number(p.preco ?? 0), Number(p.preco_anterior ?? 0));
-  if ($('reajuste')) $('reajuste').textContent = r == null ? '—' : r.toFixed(2) + '%';
+  if ('reajuste' in window && $('reajuste')) $('reajuste').textContent = r == null ? '—' : r.toFixed(2) + '%';
 
   const vig = vigenciaAtiva(p.validade_tabela);
   if ($('vigencia')) {
@@ -262,16 +349,14 @@ function fillForm(p) {
     $('vigencia').className = 'pill ' + (vig ? 'ok' : '');
   }
 
-  // guarda ID para modo edição
   CURRENT_ID = p?.id ?? null;
 }
 
 // ====== Eventos ======
-document.addEventListener('DOMContentLoaded', () => {
-  // selects
+document.addEventListener('DOMContentLoaded', async () => {
+  await resolveProdutosEndpoint().catch(()=>{});
   loadSelects().catch(console.error);
 
-  // botões básicos
   $('btn-novo')?.addEventListener('click', () => {
     document.querySelectorAll('input').forEach((i) => (i.value = ''));
     document.querySelectorAll('select').forEach((s) => (s.value = ''));
@@ -285,14 +370,13 @@ document.addEventListener('DOMContentLoaded', () => {
     if (box) box.innerHTML = `<div class="empty">Digite para buscar…</div>`;
   });
 
-  // Editar (modo edição via prompt simples)
   $('btn-editar')?.addEventListener('click', async () => {
     const q = prompt('Código ou descrição para editar:');
     if (!q) return;
     try {
-      const list = await fetchJSON(`${API.produtos}?q=${encodeURIComponent(q)}&limit=1`);
+      const list = await produtosGET('', `?q=${encodeURIComponent(q)}&limit=1`);
       if (!list.length) { toast('Nenhum produto encontrado.'); return; }
-      fillForm(list[0]);           // CURRENT_ID é setado aqui
+      fillForm(list[0]);
       toast('Modo edição: produto carregado.');
     } catch (e) { toast('Erro ao carregar para edição.'); console.error(e); }
   });
@@ -308,36 +392,27 @@ document.addEventListener('DOMContentLoaded', () => {
 
     try {
       if (CURRENT_ID) {
-        const res = await fetchJSON(`${API.produtos}/${CURRENT_ID}`, {
-          method: 'PATCH',
-          body: JSON.stringify({ produto, imposto })
-        });
+        const res = await produtosPATCH(CURRENT_ID, { produto, imposto });
         fillForm(res);
         toast('Produto atualizado.');
         return;
       }
 
-      // probe por código
+      // probe por código -> decide PATCH vs POST
       let alvoId = null;
       if (produto.codigo_supra) {
         try {
-          const probe = await fetchJSON(`${API.produtos}?q=${encodeURIComponent(produto.codigo_supra)}&limit=1`);
+          const probe = await produtosGET('', `?q=${encodeURIComponent(produto.codigo_supra)}&limit=1`);
           alvoId = (probe && probe.length && probe[0].id) ? probe[0].id : null;
         } catch {}
       }
 
       if (alvoId) {
-        const res = await fetchJSON(`${API.produtos}/${alvoId}`, {
-          method: 'PATCH',
-          body: JSON.stringify({ produto, imposto })
-        });
+        const res = await produtosPATCH(alvoId, { produto, imposto });
         fillForm(res);
         toast('Produto atualizado.');
       } else {
-        const res = await fetchJSON(API.produtos, {
-          method: 'POST',
-          body: JSON.stringify({ produto, imposto })
-        });
+        const res = await produtosPOST({ produto, imposto });
         fillForm(res);
         toast('Produto criado.');
       }
@@ -347,7 +422,7 @@ document.addEventListener('DOMContentLoaded', () => {
     }
   });
 
-  // ====== Modal de pesquisa ======
+  // Modal
   $('search-close')?.addEventListener('click', modal.close);
   $('search-cancel')?.addEventListener('click', modal.close);
   $('search-input')?.addEventListener('input', doSearch);

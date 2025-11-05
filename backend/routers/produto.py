@@ -5,14 +5,14 @@ from typing import Optional
 from datetime import date
 
 from db.session import get_db  # ajuste para o seu get_db real
-from schemas.produto_v2 import (
+from schemas.produto import (
     ProdutoV2Create, ProdutoV2Update, ProdutoV2Out, ImpostoV2Create
 )
-from services.produtos_v2_service import (
+from services.produto import (
     create_produto, update_produto, get_produto, list_produtos, get_anteriores
 )
 
-router = APIRouter(prefix="/api/produtos-v2", tags=["Produtos v2"])
+router = APIRouter(prefix="/api/produto", tags=["Produtos v2"])
 
 # --------- CREATE ---------
 class ProdutoCreatePayload(BaseModel):
