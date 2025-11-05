@@ -4,7 +4,13 @@ from sqlalchemy.orm import Session
 from typing import Optional
 from datetime import date
 
-from db.session import get_db  # ajuste para o seu get_db real
+from database import SessionLocal  # ajuste para o seu get_db real
+def get_db():
+    db = SessionLocal()
+    try:
+        yield db
+    finally:
+        db.close()
 from schemas.produto import (
     ProdutoV2Create, ProdutoV2Update, ProdutoV2Out, ImpostoV2Create
 )
