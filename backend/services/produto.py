@@ -37,21 +37,82 @@ def _validate_business(update: Dict[str, Any]):
 # ----------------------------
 # CRUD via ORM + leitura pela VIEW
 # ----------------------------
-def create_produto(db: Session, payload: ProdutoV2Create, imposto: Optional[ImpostoV2Create]) -> ProdutoV2Out:
-    _validate_business(payload.model_dump(exclude_unset=True))
+def create_produto(db, produto_in, imposto_in=None):
+    try:
+        # 1) INSERT produto base
+        obj = ProdutoV2(**produto_in.dict(exclude_unset=True))
+        db.add(obj)
+        db.flush()  # garante obj.id
 
-    obj = ProdutoV2(**payload.model_dump(exclude_unset=True))
-    db.add(obj)
-    db.flush()  # pega id para o imposto e para o select da view
+        # 2) imposto (opcional)
+        if imposto_in:
+            imp = ImpostoV2(produto_id=obj.id, **imposto_in.dict(exclude_unset=True))
+            db.add(imp)
 
-    if imposto:
-        im = ImpostoV2(produto_id=obj.id, **imposto.model_dump(exclude_unset=True))
-        db.add(im)
+        db.commit()
+        db.refresh(obj)
 
-    db.commit()
+    except Exception as e:
+        db.rollback()
+        # logue o erro para saber a raiz:
+        # print(f"[create_produto] commit error: {e}")
+        raise
 
-    row = db.execute(text("SELECT * FROM v_produto_v2_preco WHERE id = :id"), {"id": obj.id}).mappings().first()
-    return _row_to_out(db, row)
+    # 3) Tentar montar o retorno pela VIEW (se existir)
+    try:
+        row = db.execute(
+            text("SELECT * FROM v_produto_v2_preco WHERE id = :id"),
+            {"id": obj.id},
+        ).mappings().first()
+        if row:
+            return ProdutoV2Out(**row)
+    except Exception as e:
+        # print(f"[create_produto] view fallback: {e}")
+        pass
+
+    # 4) Fallback: monta resposta a partir do ORM (sem view)
+    #    (ajuste os campos conforme seu schema)
+    imposto_out = None
+    if obj.imposto:  # relacionamento 1–1
+        imposto_out = ImpostoV2Out.from_orm(obj.imposto)
+
+    return ProdutoV2Out(
+        id=obj.id,
+        codigo_supra=obj.codigo_supra,
+        status_produto=obj.status_produto,
+        nome_produto=obj.nome_produto,
+        tipo_giro=obj.tipo_giro,
+        estoque_disponivel=obj.estoque_disponivel,
+        unidade=obj.unidade,
+        peso=obj.peso,
+        peso_bruto=obj.peso_bruto,
+        estoque_ideal=obj.estoque_ideal,
+        embalagem_venda=obj.embalagem_venda,
+        unidade_embalagem=obj.unidade_embalagem,
+        codigo_ean=obj.codigo_ean,
+        codigo_embalagem=obj.codigo_embalagem,
+        ncm=obj.ncm,
+        fornecedor=obj.fornecedor,
+        filhos=obj.filhos,
+        familia=obj.familia,
+        preco=obj.preco,
+        preco_tonelada=obj.preco_tonelada,
+        validade_tabela=obj.validade_tabela,
+        desconto_valor_tonelada=obj.desconto_valor_tonelada,
+        data_desconto_inicio=obj.data_desconto_inicio,
+        data_desconto_fim=obj.data_desconto_fim,
+        # calculados ficam None se não vierem da view/trigger:
+        preco_final=None,
+        reajuste_percentual=None,
+        vigencia_ativa=None,
+        # imposto:
+        imposto=imposto_out,
+        # snapshots anteriores (se tiver no modelo, deixe None):
+        unidade_anterior=None,
+        preco_anterior=None,
+        preco_tonelada_anterior=None,
+        validade_tabela_anterior=None,
+    )
 
 def update_produto(db: Session, produto_id: int, payload: ProdutoV2Update, imposto: Optional[ImpostoV2Create]) -> ProdutoV2Out:
     obj = db.query(ProdutoV2).filter(ProdutoV2.id == produto_id).one_or_none()
