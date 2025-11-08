@@ -154,7 +154,9 @@ async function copyToClipboard(text) {
 }
 
 function apiBase() {
-  return (typeof window.API_BASE === "string" && window.API_BASE) ? window.API_BASE : "";
+  if (typeof window.API_BASE === "string" && window.API_BASE) return window.API_BASE.replace(/\/+$/, "");
+  if (window.__CFG && window.__CFG.API_BASE_URL) return String(window.__CFG.API_BASE_URL).replace(/\/+$/, "");
+  return "";
 }
 
 function getCodigoClienteHidden() {
@@ -167,8 +169,9 @@ function getCodigoClienteHidden() {
 }
 
 
-async function gerarLinkCurtoNoServidor({ tabelaId, comFrete, dataPrevistaISO  }) {
-  const url  = apiBase() ? `${apiBase()}/link_pedido/gerar` : "/link_pedido/gerar";
+async function gerarLinkCurtoNoServidor({ tabelaId, comFrete, dataPrevistaISO }) {
+  const base = apiBase();
+  const url  = base ? `${base}/api/link_pedido/gerar` : "/api/link_pedido/gerar";
   const resp = await fetch(url, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
@@ -176,12 +179,13 @@ async function gerarLinkCurtoNoServidor({ tabelaId, comFrete, dataPrevistaISO  }
       tabela_id: tabelaId,
       com_frete: comFrete,
       data_prevista: (isISODate(dataPrevistaISO) ? dataPrevistaISO : null),
-     codigo_cliente: getCodigoClienteHidden() }),
-      
+      codigo_cliente: getCodigoClienteHidden()
+    }),
   });
   if (!resp.ok) {
-    const msg = await resp.text();
-    throw new Error(`Falha ao gerar link: ${msg}`);
+    let detail = await resp.text();
+    try { detail = (await resp.json())?.detail || detail; } catch {}
+    throw new Error(`Falha ao gerar link: ${detail}`);
   }
   const data = await resp.json();
   return data.url; // ex.: https://.../p/<code>
