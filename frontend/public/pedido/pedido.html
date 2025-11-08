@@ -10,7 +10,12 @@
 
   <!-- CSS específico da página -->
   <link rel="stylesheet" href="pedido.css">
-
+  <script>
+    window.__CFG_LOADED = fetch('/config.json', { cache: 'no-store' })
+      .then(r => r.json())
+      .then(cfg => { window.__CFG = cfg; window.API_BASE = (cfg.API_BASE_URL || '').replace(/\/+$/,''); })
+      .catch(() => { window.API_BASE = (window.API_BASE || '').replace(/\/+$/,''); });
+</script>
   <!-- Navbar SEMPRE por último, para garantir o padding-top do header fixo -->
   <link rel="stylesheet" href="../navbar.css">
 

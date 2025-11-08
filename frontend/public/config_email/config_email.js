@@ -1,3 +1,14 @@
+// Lê a base do backend (se existir) e normaliza
+window.API_BASE = (window.API_BASE && window.API_BASE.replace(/\/+$/,'')) ||
+                  (window.__CFG && (window.__CFG.API_BASE_URL || '').replace(/\/+$/,'')) ||
+                  '';
+
+function withBase(p) {
+  const b = window.API_BASE || '';
+  return b ? `${b}${p.startsWith('/') ? p : `/${p}`}` : p; // se não houver base, mantém relativo
+}
+
+
 // ================== AUTO-DETECÇÃO DE ENDPOINTS ==================
 const CANDIDATES = [
  "/admin/config_email", 
@@ -8,6 +19,13 @@ const CANDIDATES = [
   "/email/config",
   "/config_email"
 ];
+
+// gera candidatos absolutos + relativos
+function getCandidates() {
+  const abs = RELATIVE_CANDS.map(withBase);
+  // mantém também os relativos como fallback (ex.: debug local)
+  return [...abs, ...RELATIVE_CANDS];
+}
 
 let ENDPOINTS = null;
 
@@ -26,7 +44,7 @@ async function probeBase(base) {
 }
 
 async function detectEndpoints() {
-  for (const base of CANDIDATES) {
+  for (const base of getCandidates) {
     if (await probeBase(base)) {
       console.info("[config_email] usando base:", base);
       ENDPOINTS = {
@@ -94,6 +112,17 @@ async function init() {
   document.getElementById("btnSalvarSMTP").addEventListener("click", salvarSMTP);
   document.getElementById("btnTestarSMTP").addEventListener("click", testarSMTP);
 
+  // Normalização de senha (remove espaços enquanto digita)
+  const senhaInput = document.getElementById('smtp_senha');
+  if (senhaInput) {
+    senhaInput.addEventListener('input', (e) => {
+      const cur = e.target.selectionStart || 0;
+      e.target.value = normalizeAppPassword(e.target.value);
+      // recoloca o cursor na mesma posição
+      try { e.target.setSelectionRange(cur, cur); } catch {}
+    });
+  }
+
   // Carregar dados
   await Promise.allSettled([carregarMensagem(), carregarSMTP()]);
 }
@@ -110,29 +139,26 @@ async function carregarMensagem() {
 }
 
 async function salvarMensagem() {
- const payload = {
-  smtp_host: hostInput.value?.trim(),
-  smtp_port: Number(portInput.value),
-  smtp_user: userInput.value?.trim(),
-  smtp_senha: normalizeAppPassword(senhaInput.value),  // <-- NOVO
-  usar_tls: tlsCheckbox.checked
-};
-  try { await putJSON(ENDPOINTS.mensagem, payload); toast(true, "Mensagem salva."); }
-  catch (e) { console.error(e); toast(false, "Falha ao salvar mensagem."); }
+  const payload = {
+    destinatario_interno: getVal("destinatario_interno"),
+    assunto_padrao:       getVal("assunto_padrao"),
+    corpo_html:           getVal("corpo_html"),
+    enviar_para_cliente:  getCheck("enviar_para_cliente"),
+  };
+  try {
+    await putJSON(ENDPOINTS.mensagem, payload);
+    toast(true, "Mensagem salva.");
+  } catch (e) {
+    console.error(e);
+    toast(false, "Falha ao salvar mensagem.");
+  }
 }
-
 async function testarEnvio() {
   try {
     const r = await fetch(ENDPOINTS.testarEnvio, { method:"POST" });
     toast(r.ok, r.ok ? "E-mail de teste enviado." : "Falha no teste de envio.");
   } catch(e){ console.error(e); toast(false, "Erro ao testar envio."); }
 }
-
-senhaInput.addEventListener('input', (e) => {
-  const cur = e.target.selectionStart;
-  e.target.value = normalizeAppPassword(e.target.value);
-  e.target.setSelectionRange(cur, cur);
-});
 
 // === SMTP ========================================================
 async function carregarSMTP() {

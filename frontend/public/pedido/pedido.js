@@ -1,11 +1,44 @@
 // base do backend FastAPI publicado no Render
-const API_BASE = "https://ordersync-backend-edjq.onrender.com";
+window.API_BASE = (window.API_BASE && window.API_BASE.replace(/\/+$/,'')) ||
+                  (window.__CFG && (window.__CFG.API_BASE_URL || '').replace(/\/+$/,'')) ||
+                  '';
 
-const API = {
-  list:   `${API_BASE}/api/pedidos`,
-  status: `${API_BASE}/api/pedidos/status`,
-  resumo: (id) => `${API_BASE}/api/pedidos/${id}/resumo`,
-};
+function apiBase(){ return window.API_BASE || ''; }
+function apiUrl(path){
+  const b = apiBase();
+  const p = path.startsWith('/') ? path : `/${path}`;
+  return `${b}${p}`;
+}
+
+// Endpoints desta tela (sempre calcule a partir da base atual)
+function getAPI(){
+  const b = apiBase();
+  return {
+    list:   `${b}/api/pedidos`,
+    status: `${b}/api/pedidos/status`,
+    resumo: (id) => `${b}/api/pedidos/${id}/resumo`,
+  };
+}
+
+async function fetchJSON(u, opt = {}) {
+  const r = await fetch(u, opt);
+  if (!r.ok) {
+    let payload;
+    try { payload = await r.json(); } catch { payload = { detail: await r.text() }; }
+    const err = new Error(payload?.detail || `HTTP ${r.status}`);
+    err.status = r.status;
+    err.payload = payload;
+    throw err;
+  }
+  return r.json();
+}
+
+// (opcional) padrão de alerta único
+function showHttpError(e, prefix = 'Falha') {
+  const id = e?.payload?.error_id ? ` (erro ${e.payload.error_id})` : '';
+  alert(`${prefix}:${id}\n${e?.message || ''}`);
+  console.error(prefix, e);
+}
 
 let state = { page: 1, pageSize: 25, total: 0 };
 
@@ -38,7 +71,7 @@ function addDays(baseDate, days) {
 
 // ---------------------- carregar status ----------------------
 async function loadStatus() {
-  const r = await fetch(API.status, { cache: "no-store" });
+  const r = await fetch(getAPI().status, { cache: "no-store" });
   if (!r.ok) {
     console.error("Falha ao carregar status:", r.status, await r.text());
     return;
@@ -181,7 +214,7 @@ let toISO_  = toISO(fTo);
   params.set("limit", state.pageSize);
   params.set("offset", String((state.page - 1) * state.pageSize));
 
-  const url = `${API.list}?${params.toString()}`;
+  const url = `${getAPI().list}?${params.toString()}`;
   console.log("GET", url);
 
   const r = await fetch(url, { cache: "no-store" });
@@ -272,7 +305,7 @@ function renderPager() {
 
 // ---------------------- drawer de resumo ----------------------
 async function openResumo(id) {
-  const r = await fetch(API.resumo(id), { cache: "no-store" });
+  const r = await fetch(getAPI().resumo(id), { cache: "no-store" });
   if (!r.ok) return;
 
   const p = await r.json();

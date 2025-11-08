@@ -7,10 +7,16 @@
   <meta http-equiv="Pragma" content="no-cache" />
   <meta http-equiv="Expires" content="0" />
   <link rel="stylesheet" href="/static/config_email/config_email.css?v=tab-1" />
- <script>
-  // 🔧 Force base do backend da Configuração de E-mail
-  window.CONFIG_EMAIL_BASE = "/admin/config_email";  // <-- troque se seu router usar outro prefixo
-</script>
+ <!-- Loader do config.json: define window.API_BASE em runtime (dev/prod) -->
+  <script>
+    window.__CFG_LOADED = fetch('/config.json', { cache: 'no-store' })
+      .then(r => r.json())
+      .then(cfg => { window.__CFG = cfg; window.API_BASE = (cfg.API_BASE_URL || '').replace(/\/+$/,''); })
+      .catch(() => { window.API_BASE = (window.API_BASE || '').replace(/\/+$/,''); });
+
+    // Prefixo do router desta página (mantém como fallback relativo)
+    window.CONFIG_EMAIL_BASE = window.CONFIG_EMAIL_BASE || "/admin/config_email";
+  </script>
   <script defer src="/static/config_email/config_email.js?v=tab-2"></script>
 </head>
 <body>
