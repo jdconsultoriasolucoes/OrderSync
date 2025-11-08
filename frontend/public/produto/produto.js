@@ -1,24 +1,38 @@
 // ==================== produto.js ====================
 
-// === Config ===
-const API_BASE = "https://ordersync-backend-edjq.onrender.com";
-window.API_BASE = API_BASE;
+window.API_BASE = (window.API_BASE && window.API_BASE.replace(/\/+$/,'')) ||
+                  (window.__CFG && (window.__CFG.API_BASE_URL || '').replace(/\/+$/,'')) ||
+                  '';
 
-// candidatos de rotas (ordem de preferência)
-const CANDIDATES = [
-  `${API_BASE}/api/produtos`,
-  `${API_BASE}/api/produto`,
-  `${API_BASE}/api/produtos_v2`,
-  `${API_BASE}/api/produto_v2`,
-  `${API_BASE}/produtos`,
-  `${API_BASE}/produto`,
-];
+function apiBase(){ return window.API_BASE || ''; }
+function apiUrl(path){
+  const base = apiBase();
+  const p = path.startsWith('/') ? path : `/${path}`;
+  return `${base}${p}`;
+}
 
-const API = {
-  familias:   `${API_BASE}/api/familias`,
-  tiposGiro:  `${API_BASE}/api/tipos-giro`,
-  status:     `${API_BASE}/api/produtos/status`,
-};
+// candidatos de rotas (calculados em runtime)
+function getCandidates(){
+  const b = apiBase();
+  return [
+    `${b}/api/produtos`,
+    `${b}/api/produto`,
+    `${b}/api/produtos_v2`,
+    `${b}/api/produto_v2`,
+    `${b}/produtos`,
+    `${b}/produto`,
+  ];
+}
+
+// endpoints auxiliares usados nos <select>
+function getAPI(){
+  const b = apiBase();
+  return {
+    familias:  `${b}/api/familias`,
+    tiposGiro: `${b}/api/tipos-giro`,
+    status:    `${b}/api/produtos/status`,
+  };
+}
 
 // cache em memória/localStorage do endpoint resolvido
 let PROD_ENDPOINT = localStorage.getItem('ordersync_prod_endpoint') || null;
@@ -51,7 +65,7 @@ async function fetchJSON(url, opts = {}) {
 async function resolveProdutosEndpoint(force = false) {
   if (!force && PROD_ENDPOINT) return PROD_ENDPOINT;
 
-  for (const base of CANDIDATES) {
+  for (const base of getCandidates) {
     try {
       // tentativa: GET lista com limite pequeno; se 404, tenta o próximo
       const probe = await fetchRaw(`${base}?page=1&pageSize=1`);
@@ -64,7 +78,7 @@ async function resolveProdutosEndpoint(force = false) {
     } catch (_) { /* ignora e tenta próximo */ }
   }
   // fallback (pode 404, mas evita ficar null)
-  PROD_ENDPOINT = CANDIDATES[0];
+  PROD_ENDPOINT = CANDS[0];
   localStorage.setItem('ordersync_prod_endpoint', PROD_ENDPOINT);
   return PROD_ENDPOINT;
 }
@@ -72,7 +86,7 @@ async function resolveProdutosEndpoint(force = false) {
 // wrappers que usam fallback automático quando 404
 async function produtosGET(path = '', qs = '') {
   const tried = new Set();
-  while (tried.size < CANDIDATES.length) {
+  while (tried.size < CANDS.length) {
     const base = await resolveProdutosEndpoint();
     try {
       return await fetchJSON(`${base}${path}${qs}`, { method: 'GET' });
@@ -80,8 +94,8 @@ async function produtosGET(path = '', qs = '') {
       if (e.status === 404) {
         tried.add(base);
         // força resolver para o próximo candidato
-        const idx = CANDIDATES.indexOf(base);
-        const next = CANDIDATES[(idx + 1) % CANDIDATES.length];
+        const idx = CANDS.indexOf(base);
+        const next = CANDS[(idx + 1) % CANDS.length];
         PROD_ENDPOINT = next;
         localStorage.setItem('ordersync_prod_endpoint', next);
         continue;
@@ -90,7 +104,8 @@ async function produtosGET(path = '', qs = '') {
     }
   }
   // última tentativa com o primeiro candidato
-  return fetchJSON(`${CANDIDATES[0]}${path}${qs}`, { method: 'GET' });
+  const fallback = getCandidates()[0];
+  return fetchJSON(`${fallback}${path}${qs}`, { method: 'GET' });
 }
 
 async function produtosPOST(body) {
@@ -100,7 +115,7 @@ async function produtosPOST(body) {
   } catch (e) {
     if (e.status === 404) {
       // tenta os demais
-      for (const cand of CANDIDATES) {
+      for (const cand of getCandidates) {
         if (cand === base) continue;
         try {
           PROD_ENDPOINT = cand;
@@ -125,7 +140,7 @@ async function produtosPATCH(id, body) {
     }
   }
   // tenta outros candidatos
-  for (const cand of CANDIDATES) {
+  for (const cand of getCandidates) {
     try { 
       PROD_ENDPOINT = cand;
       localStorage.setItem('ordersync_prod_endpoint', cand);
@@ -228,6 +243,8 @@ const doSearch = debounce(async ()=>{
 
 // === Carregar selects ===
 async function loadSelects() {
+  const API = getAPI();
+  
   try {
     const fams = await fetchJSON(API.familias);
     setSelect($('familia'), fams, (f) => f.familia, (f) => f.id);
