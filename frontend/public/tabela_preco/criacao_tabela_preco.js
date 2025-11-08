@@ -1,5 +1,9 @@
 // === Config ===
-const API_BASE = "https://ordersync-backend-edjq.onrender.com";
+const API_BASE = (
+  (window.API_BASE && window.API_BASE.replace(/\/$/, '')) ||
+  (window.__CFG && (window.__CFG.API_BASE || '').replace(/\/$/, '')) ||
+  'http://localhost:8000'
+  );
 window.API_BASE = API_BASE;
 const ENDPOINT_VALIDADE = `${API_BASE}/tabela_preco/meta/validade_global`;
 
@@ -1745,17 +1749,8 @@ document.addEventListener('DOMContentLoaded', () => {
     await Promise.all([carregarCondicoes(), carregarDescontos()]);
     
   const temIdNaUrl = !!new URLSearchParams(location.search).get('id');
-
-  // 🔒 Se tem id na URL (edição/visualização), NÃO limpe/restaure snapshot agora
-  if (!temIdNaUrl) {
-    if (__IS_RELOAD) {
-      limparFormularioCabecalho?.();
-    } else {
-      restoreHeaderSnapshotIfNew?.();
-    }
-  }
-
-// Se tem id, NÃO limpa cabeçalho antes de carregar
+  
+  // Se tem id, NÃO limpa cabeçalho antes de carregar
   if (!temIdNaUrl) {
     if (__IS_RELOAD) {
       limparFormularioCabecalho?.();

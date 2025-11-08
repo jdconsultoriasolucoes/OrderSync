@@ -77,7 +77,11 @@
 
   <!-- defina sua API (ajuste para prod) -->
 <script>
-  window.API_BASE = window.API_BASE || "https://ordersync-backend-edjq.onrender.com";
+  // carrega config e expõe API_BASE antes do JS da página
+  window.__CFG_LOADED = fetch('/config.json', {cache:'no-store'})
+    .then(r => r.json())
+    .then(cfg => { window.__CFG = cfg; window.API_BASE = (cfg.API_BASE || '').replace(/\/$/,''); })
+    .catch(() => { window.API_BASE = (window.API_BASE || '').replace(/\/$/,''); });
 </script>
 <script src="/static/tabela_preco/pedido_cliente.js?v=20251012c"></script>
 <!-- resolve o /p/{code} e expõe os globais -->

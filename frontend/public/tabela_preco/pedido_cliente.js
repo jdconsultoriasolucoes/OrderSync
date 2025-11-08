@@ -3,8 +3,20 @@
 // -------------------- Helpers básicos --------------------
 const url = new URL(window.location.href);
 
-// Modo interno (prévia via "Visualizar")
-const IS_MODO_INTERNO = new URLSearchParams(location.search).get("modo") === "interno" || location.hash.replace("#","") === "interno";;
+window.API_BASE = (window.API_BASE && window.API_BASE.replace(/\/+$/, '')) ||
+                  (window.__CFG && (window.__CFG.API_BASE_URL || '').replace(/\/+$/, '')) ||
+                  '';
+
+// Helper para montar URL da API
+function apiUrl(p) {
+  const base = window.API_BASE || '';
+  const path = p.startsWith('/') ? p : `/${p}`;
+  return `${base}${path}`;
+}
+
+// Modo interno (prévia via "Visualizar"): ?modo=interno ou #interno
+const qs = new URLSearchParams(location.search);
+const IS_MODO_INTERNO = (qs.get('modo') === 'interno') || (location.hash.replace('#','') === 'interno');
 // preferir valores vindos do /p/{code} (definidos no HTML), senão cair no querystring
 let tabelaIdParam = (typeof window.currentTabelaId !== "undefined" && window.currentTabelaId !== null)
   ? String(window.currentTabelaId)

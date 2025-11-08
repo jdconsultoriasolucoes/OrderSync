@@ -1,4 +1,13 @@
-const API_BASE = "https://ordersync-backend-edjq.onrender.com";
+const API_BASE = (
+  (window.API_BASE && window.API_BASE.replace(/\/$/, '')) ||
+  (window.__CFG && (window.__CFG.API_BASE || '').replace(/\/$/, '')) ||
+  'http://localhost:8000'
+);
+
+// Aguarda o loader, se existir
+if (window.__CFG_LOADED && typeof window.__CFG_LOADED.then === 'function') {
+  window.__CFG_LOADED.catch(() => {});
+}
 
 let currentPage = 1;
 let pageSize = 25;
@@ -28,11 +37,6 @@ function loadPreselectionFromParent() {
     preSelecionadosCodigos = new Set((arr || []).map(p => p.codigo_tabela || p.codigo));
   } catch { preSelecionadosCodigos = new Set(); }
 }
-function sendBufferBackToParent(selecionados) {
-  const ctx = getCtxId();
-  sessionStorage.setItem(`TP_BUFFER:${ctx}`, JSON.stringify(selecionados || []));
-}
-
 
   // Filtros
   selGrupo?.addEventListener("change",      () => { currentPage = 1; carregarProdutos(); });
