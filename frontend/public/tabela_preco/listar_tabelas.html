@@ -1,6 +1,7 @@
 <!DOCTYPE html>
 <html lang="pt-br">
 <head>
+  <script src="../js/config.js"></script>
   <meta charset="UTF-8">
   <title>Listar Tabelas de Preço</title>
   
@@ -18,12 +19,7 @@
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600&display=swap" rel="stylesheet">
 
   <script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js"></script>
-  <script>
-  window.__CFG_LOADED = fetch('/config.json', {cache:'no-store'})
-    .then(r => r.json())
-    .then(cfg => { window.__CFG = cfg; window.API_BASE = (cfg.API_BASE || '').replace(/\/$/,''); })
-    .catch(() => { window.API_BASE = (window.API_BASE || '').replace(/\/$/,''); });
-  </script>
+
   <script src="listar_tabelas.js" defer></script>
 
 </head>

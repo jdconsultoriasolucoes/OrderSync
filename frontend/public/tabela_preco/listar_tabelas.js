@@ -1,12 +1,16 @@
-const API_BASE = (
-  (window.API_BASE && window.API_BASE.replace(/\/$/, '')) ||
-  (window.__CFG && (window.__CFG.API_BASE || '').replace(/\/$/, '')) ||
-  'http://localhost:8000'
-);
-window.API_BASE = window.API_BASE || API_BASE;
-let tabelaSelecionadaId = null;
+let API_BASE = '';
 
-document.addEventListener("DOMContentLoaded", () => {
+document.addEventListener("DOMContentLoaded", async () => {
+  if (window.__CFG_LOADED && typeof window.__CFG_LOADED.then === 'function') {
+    try { await window.__CFG_LOADED; } catch (e) {}
+  }
+  API_BASE = (
+    (window.API_BASE) ||
+    (window.__CFG && window.__CFG.API_BASE_URL) ||
+    ''
+  ).replace(/\/$/, '') || 'http://localhost:8000';
+  window.API_BASE = API_BASE;
+
   carregarTabelas();
 });
 

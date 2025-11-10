@@ -1,13 +1,7 @@
 <!DOCTYPE html>
 <html lang="pt-br">
 <head>
-  <script>
-  // carrega /config.json e expõe window.API_BASE antes do app
-  window.__CFG_LOADED = fetch('/config.json', {cache:'no-store'})
-    .then(r => r.json())
-    .then(cfg => { window.__CFG = cfg; window.API_BASE = (cfg.API_BASE || '').replace(/\/$/,''); })
-    .catch(() => { window.API_BASE = (window.API_BASE || '').replace(/\/$/,''); });
-  </script>
+  <script src="../js/config.js"></script>
   <meta charset="UTF-8">
   <title>Inserir Produtos</title>
   

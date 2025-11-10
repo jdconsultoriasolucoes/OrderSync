@@ -1,14 +1,17 @@
-const API_BASE = (
-  (window.API_BASE && window.API_BASE.replace(/\/$/, '')) ||
-  (window.__CFG && (window.__CFG.API_BASE || '').replace(/\/$/, '')) ||
-  'http://localhost:8000'
-);
+let API_BASE = '';
 
-// Aguarda o loader, se existir
-if (window.__CFG_LOADED && typeof window.__CFG_LOADED.then === 'function') {
-  window.__CFG_LOADED.catch(() => {});
-}
-
+document.addEventListener("DOMContentLoaded", async () => {
+  // aguarda config.js concluir
+  if (window.__CFG_LOADED && typeof window.__CFG_LOADED.then === 'function') {
+    try { await window.__CFG_LOADED; } catch (e) {}
+  }
+  API_BASE = (
+    (window.API_BASE) ||
+    (window.__CFG && window.__CFG.API_BASE_URL) ||
+    ''
+  ).replace(/\/$/, '') || 'http://localhost:8000';
+  window.API_BASE = API_BASE; // padroniza no global
+  
 let currentPage = 1;
 let pageSize = 25;
 let totalPages = null;
@@ -383,3 +386,4 @@ window.onload = async function () {
   await carregarGrupos();
   await carregarProdutos();
 };
+});

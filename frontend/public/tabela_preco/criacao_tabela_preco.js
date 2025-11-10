@@ -1,12 +1,19 @@
 // === Config ===
-const API_BASE = (
-  (window.API_BASE && window.API_BASE.replace(/\/$/, '')) ||
-  (window.__CFG && (window.__CFG.API_BASE || '').replace(/\/$/, '')) ||
-  'http://localhost:8000'
-  );
-window.API_BASE = API_BASE;
-const ENDPOINT_VALIDADE = `${API_BASE}/tabela_preco/meta/validade_global`;
+let API_BASE = '';
+let ENDPOINT_VALIDADE = '';
 
+document.addEventListener("DOMContentLoaded", async () => {
+  if (window.__CFG_LOADED && typeof window.__CFG_LOADED.then === 'function') {
+    try { await window.__CFG_LOADED; } catch (e) {}
+  }
+  API_BASE = (
+    (window.API_BASE) ||
+    (window.__CFG && window.__CFG.API_BASE_URL) ||
+    ''
+  ).replace(/\/$/, '') || 'http://localhost:8000';
+  window.API_BASE = API_BASE;
+
+  ENDPOINT_VALIDADE = `${API_BASE}/tabela_preco/meta/validade_global`
 // === Estado ===
 const MODE = { NEW:'new', VIEW:'view', EDIT:'edit', DUP:'duplicate' };
 let mapaCondicoes = {}; // { codigo: taxa }
@@ -1898,3 +1905,4 @@ function handleFieldChange(e) {
     }
   }
 }
+});
