@@ -25,8 +25,8 @@ def root():
 
 # ---- Origens permitidas ----
 ALLOWED_ORIGINS = [
-    "https://ordersync-v7kg.onrender.com",  # FRONT (Render) - deixa os dois se alterna
-    "https://ordersync-y7kg.onrender.com",
+    "https://ordersync-qwcl.onrender.com",  # FRONT (Render) - deixa os dois se alterna
+    "https://ordersync-qwcl.onrender.com",
     "http://localhost:5500",                # FRONT local (ex. Live Server)
     "http://127.0.0.1:5500",
     "http://localhost:3000",
@@ -126,12 +126,6 @@ app.mount("/static", StaticFiles(directory=static_dir), name="static")
 def config_email_page():
     # sempre aponta para o HTML dentro do /static
     return RedirectResponse(url="/static/config_email/config_email.html")
-
-
-
-@app.get("/", include_in_schema=False)
-def root():
-    return RedirectResponse(url="/static/index.html")
 
 
 @app.middleware("http")
