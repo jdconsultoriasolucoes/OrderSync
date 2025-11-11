@@ -1,4 +1,4 @@
-const API_BASE = "https://ordersync-backend-edjq.onrender.com";
+const API_BASE = "https://ordersync-backend-59d2.onrender.com";
 
 let currentPage = 1;
 let pageSize = 25;
