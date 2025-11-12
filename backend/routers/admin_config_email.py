@@ -211,7 +211,7 @@ def testar_smtp_conexao(request: Request):
         raise HTTPException(500, f"Falha na conexão SMTP: {type(e).__name__}: {e}")
 
 
-# ===== Testar ENVIO DE E-MAIL =====
+# payload opcional do teste
 class TesteEnvioIn(BaseModel):
     para: Optional[List[str]] = None
     assunto: Optional[str] = "Teste de e-mail - OrderSync"
@@ -219,25 +219,17 @@ class TesteEnvioIn(BaseModel):
 
 @router.post("/teste_envio")
 def testar_envio_email(request: Request, body: Optional[TesteEnvioIn] = None):
-    db = request.state.db
+    db = request.state.db  # sem Depends(get_db)
 
-    # 1) Carrega configs
-    msg_cfg = (
-        db.query(ConfigEmailMensagem)
-        .filter(ConfigEmailMensagem.id == 1)
-        .first()
-    )
-    smtp_cfg = (
-        db.query(ConfigEmailSMTP)
-        .filter(ConfigEmailSMTP.id == 1)
-        .first()
-    )
+    # carrega configs salvas
+    msg_cfg = db.query(ConfigEmailMensagem).filter(ConfigEmailMensagem.id == 1).first()
+    smtp_cfg = db.query(ConfigEmailSMTP).filter(ConfigEmailSMTP.id == 1).first()
     if not smtp_cfg:
         raise HTTPException(400, "Configuração SMTP não encontrada.")
     if not msg_cfg:
         raise HTTPException(400, "Configuração de mensagem não encontrada.")
 
-    # 2) Campos corretos (NADA de smtp_password/email_origem/email_teste)
+    # campos CORRETOS do teu modelo
     host = (smtp_cfg.smtp_host or "").strip()
     port = int(smtp_cfg.smtp_port or 0)
     user = (smtp_cfg.smtp_user or "").strip()
@@ -248,34 +240,34 @@ def testar_envio_email(request: Request, body: Optional[TesteEnvioIn] = None):
     if not host or not port or not from_addr:
         raise HTTPException(400, "Host/porta/remetente inválidos.")
     if not user or not pwd:
-        raise HTTPException(400, "Usuário ou senha SMTP ausentes.")
+        raise HTTPException(400, "Usuário/senha SMTP ausentes.")
 
-    # 3) Destinatários
+    # destinatários: usa body.para se vier; senão, msg_cfg.destinatario_interno; senão, fallback = remetente
     to_list: List[str] = []
     if body and body.para:
         to_list = [e.strip() for e in body.para if e and e.strip()]
     if not to_list and getattr(msg_cfg, "destinatario_interno", None):
         to_list = [e.strip() for e in msg_cfg.destinatario_interno.split(",") if e.strip()]
     if not to_list:
-        to_list = [from_addr]  # fallback para não perder o teste
+        to_list = [from_addr]
 
-    # 4) Monta e-mail (HTML)
     assunto = (body.assunto if body and body.assunto else "Teste de e-mail - OrderSync").strip()
     corpo_html = (body.corpo_html if body and body.corpo_html else "<p>Este é um e-mail de teste do OrderSync.</p>")
 
+    # monta mensagem
     msg = MIMEMultipart("alternative")
     msg["From"] = from_addr
     msg["To"] = ", ".join(to_list)
     msg["Subject"] = assunto
     msg.attach(MIMEText(corpo_html, "html", "utf-8"))
 
-    # 5) Conecta e envia (TLS robusto com server_hostname)
+    # conexão robusta (Gmail): STARTTLS com server_hostname
     ctx = ssl.create_default_context()
     try:
-        if usar_tls:  # STARTTLS (587)
+        if usar_tls:  # 587
             server = smtplib.SMTP(host, port, timeout=20)
             server.ehlo(); server.starttls(context=ctx, server_hostname=host); server.ehlo()
-        else:         # SSL direto (465)
+        else:         # 465
             server = smtplib.SMTP_SSL(host, port, timeout=20, context=ctx)
             server.ehlo()
 
@@ -284,7 +276,8 @@ def testar_envio_email(request: Request, body: Optional[TesteEnvioIn] = None):
         server.quit()
         return {"status": "ok", "to": to_list}
     except smtplib.SMTPAuthenticationError as e:
+        # credenciais erradas / senha de app inválida
         raise HTTPException(401, f"Falha de autenticação SMTP: {e}")
     except Exception as e:
+        # qualquer outra causa vira 500 com detalhe útil
         raise HTTPException(500, f"Falha no teste SMTP: {type(e).__name__}: {e}")
-

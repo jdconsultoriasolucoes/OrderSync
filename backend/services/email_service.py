@@ -68,7 +68,7 @@ def _get_cfg_msg(db: Session) -> ConfigEmailMensagemModel:
 # ------------------------
 # Conexão SMTP
 # ------------------------
-def _abrir_conexao(cfg_smtp) -> smtplib.SMTP:
+def _abrir_conexao(cfg_smtp):
     host = cfg_smtp.smtp_host.strip()
     port = int(cfg_smtp.smtp_port)
     user = (cfg_smtp.smtp_user or "").strip()
@@ -76,14 +76,11 @@ def _abrir_conexao(cfg_smtp) -> smtplib.SMTP:
     usar_tls = bool(getattr(cfg_smtp, "usar_tls", True))
 
     ctx = ssl.create_default_context()
-
-    if usar_tls:  # STARTTLS
+    if usar_tls:
         server = smtplib.SMTP(host, port, timeout=20)
-        server.ehlo()
-        server.starttls(context=ctx, server_hostname=host)  # <- ESSENCIAL
-        server.ehlo()
-    else:         # SSL direto
-        server = smtplib.SMTP_SSL(host, port, timeout=20, context=ctx)  # <- passa context
+        server.ehlo(); server.starttls(context=ctx, server_hostname=host); server.ehlo()
+    else:
+        server = smtplib.SMTP_SSL(host, port, timeout=20, context=ctx)
         server.ehlo()
 
     if user:
