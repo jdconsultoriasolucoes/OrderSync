@@ -135,6 +135,53 @@ async function produtosPATCH(id, body) {
   throw new Error('Não foi possível localizar a rota de PATCH dos produtos.');
 }
 
+// === Importação de lista de preços via PDF ===
+async function uploadListaPdf(file) {
+  if (!file) {
+    toast('Nenhum arquivo selecionado.');
+    return;
+  }
+
+  // resolve qual base está ativa (/api/produto, /api/produtos, etc.)
+  const base = await resolveProdutosEndpoint().catch(() => null);
+  if (!base) {
+    toast('Não consegui resolver o endpoint de produtos.');
+    return;
+  }
+
+  const url = `${base}/importar-lista`;
+  const formData = new FormData();
+  formData.append('file', file);
+
+  try {
+    // IMPORTANTE: aqui NÃO usamos fetchRaw/fetchJSON, pra não setar Content-Type manualmente
+    const res = await fetch(url, {
+      method: 'POST',
+      body: formData,
+    });
+
+    if (!res.ok) {
+      const text = await res.text().catch(() => '');
+      throw new Error(text || res.statusText);
+    }
+
+    const data = await res.json().catch(() => null);
+    if (data) {
+      const total = data.total_linhas ?? 0;
+      const ins   = data.inseridos      ?? 0;
+      const upd   = data.atualizados    ?? 0;
+      toast(`Importação concluída: ${total} linhas (${ins} novos / ${upd} atualizados).`);
+      console.log('[importar-lista] resumo:', data);
+    } else {
+      toast('Importação concluída.');
+    }
+  } catch (e) {
+    console.error(e);
+    toast('Erro ao importar PDF. Veja o console.');
+  }
+}
+
+
 // ---------- cálculos/aux ----------
 function setSelect(el, items, getLabel = (x) => x.label, getValue = (x) => x.value) {
   if (!el) return;
@@ -421,6 +468,31 @@ document.addEventListener('DOMContentLoaded', async () => {
       console.error(e);
     }
   });
+
+    // === Importar PDF de lista de preços ===
+  const btnImportar = $('btn-importar');
+  if (btnImportar) {
+    // input file "invisível", reutilizado sempre
+    const inputFile = document.createElement('input');
+    inputFile.type = 'file';
+    inputFile.accept = 'application/pdf';
+    inputFile.style.display = 'none';
+    document.body.appendChild(inputFile);
+
+    inputFile.addEventListener('change', () => {
+      const file = inputFile.files[0];
+      if (file) {
+        uploadListaPdf(file);
+      }
+      // permite selecionar o mesmo arquivo de novo
+      inputFile.value = '';
+    });
+
+    btnImportar.addEventListener('click', () => {
+      inputFile.click();
+    });
+  }
+
 
   // Modal
   $('search-close')?.addEventListener('click', modal.close);

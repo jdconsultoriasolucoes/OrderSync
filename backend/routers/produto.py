@@ -1,4 +1,4 @@
-from fastapi import APIRouter
+from fastapi import APIRouter, UploadFile, File, HTTPException
 from typing import Optional
 from datetime import date
 from pydantic import BaseModel
@@ -9,8 +9,13 @@ from schemas.produto import (
     ProdutoV2Create, ProdutoV2Update, ProdutoV2Out, ImpostoV2Create
 )
 from services.produto import (
-    create_produto, update_produto, get_produto, list_produtos, get_anteriores
+    create_produto, update_produto, get_produto, list_produtos, get_anteriores,
+    importar_lista_df,  # <-- nova função do service
 )
+
+from utils.pdf_lista_precos import parse_lista_precos  # ajusta o caminho se seu pacote for outro
+import tempfile, shutil, os
+
 
 # deixa a tag mais limpa no Swagger
 router = APIRouter(prefix="/api/produto", tags=["Produtos"])
@@ -107,3 +112,45 @@ def consultar_anteriores(produto_id: int):
         return get_anteriores(db, produto_id)
     finally:
         db.close()
+
+@router.post(
+    "/importar-lista",
+    summary="Importar lista de preços via PDF",
+    description="Recebe um PDF da lista de preços, extrai os itens e faz upsert na base de produtos.",
+)
+async def importar_lista(file: UploadFile = File(...)):
+    if not file:
+        raise HTTPException(status_code=400, detail="Arquivo não enviado.")
+
+    # checagem básica de tipo
+    if file.content_type not in (
+        "application/pdf",
+        "application/x-pdf",
+        "application/octet-stream",
+    ):
+        raise HTTPException(status_code=400, detail="Envie um arquivo PDF.")
+
+    # salva PDF em arquivo temporário
+    with tempfile.NamedTemporaryFile(delete=False, suffix=".pdf") as tmp:
+        shutil.copyfileobj(file.file, tmp)
+        tmp_path = tmp.name
+
+    db = SessionLocal()
+    try:
+        # usa SUA função pra virar DataFrame
+        df = parse_lista_precos(tmp_path)
+
+        if df.empty:
+            return {"total_linhas": 0, "inseridos": 0, "atualizados": 0}
+
+        # chama a função do service pra gravar no banco
+        resumo = importar_lista_df(db, df)
+        return resumo
+
+    finally:
+        db.close()
+        try:
+            os.remove(tmp_path)
+        except OSError:
+            pass
+

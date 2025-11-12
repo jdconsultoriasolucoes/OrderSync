@@ -7,6 +7,8 @@ from datetime import date
 
 from models.produto import ProdutoV2, ImpostoV2
 from schemas.produto import ProdutoV2Create, ProdutoV2Update, ImpostoV2Create, ProdutoV2Out, ImpostoV2Out
+import pandas as pd
+
 
 # ----------------------------
 # Helpers
@@ -185,3 +187,66 @@ def get_anteriores(db: Session, produto_id: int) -> Dict[str, Any]:
     if not row:
         raise HTTPException(404, detail="Produto não encontrado")
     return dict(row)
+
+def importar_lista_df(db: Session, df: pd.DataFrame) -> Dict[str, Any]:
+    """
+    Faz upsert na t_cadastro_produto_v2 a partir do DataFrame da lista de preços.
+    - chave de busca: codigo_supra (vem do campo 'codigo' do DF)
+    - se não existir: cria produto novo com status 'ATIVO'
+    - se existir: atualiza preço / fornecedor
+    """
+    inseridos = 0
+    atualizados = 0
+
+    for row in df.to_dict(orient="records"):
+        codigo = row.get("codigo")
+        descricao = row.get("descricao")
+        fornecedor = row.get("fornecedor")
+        preco_ton = row.get("preco_ton")
+        preco_sc = row.get("preco_sc")
+
+        if not codigo or not descricao:
+            continue
+
+        # procura produto pela chave única codigo_supra
+        obj = (
+            db.query(ProdutoV2)
+            .filter(ProdutoV2.codigo_supra == codigo)
+            .one_or_none()
+        )
+
+        if obj is None:
+            # novo produto
+            obj = ProdutoV2(
+                codigo_supra=codigo,
+                nome_produto=descricao,
+                status_produto="ATIVO",  # se quiser outro padrão, muda aqui
+            )
+            inseridos += 1
+            db.add(obj)
+        else:
+            atualizados += 1
+            # mantém nome existente se você preferir:
+            obj.nome_produto = descricao or obj.nome_produto
+
+        # mapeia campos da lista pros campos do modelo
+        if fornecedor:
+            obj.fornecedor = fornecedor
+
+        if preco_ton is not None:
+            obj.preco_tonelada = preco_ton
+
+        # aqui estou assumindo que preco_sc é o preço "unitário" da tabela
+        if preco_sc is not None:
+            obj.preco = preco_sc
+
+        # se quiser usar 'familia' de texto num campo inteiro depois,
+        # a gente trata num segundo momento (precisa do de-para).
+
+    db.commit()
+
+    return {
+        "total_linhas": int(len(df)),
+        "inseridos": inseridos,
+        "atualizados": atualizados,
+    }
