@@ -192,7 +192,8 @@ def testar_smtp_conexao(request: Request):
             # STARTTLS típico (Gmail: 587)
             server = smtplib.SMTP(host, port, timeout=20)
             server.ehlo()
-            server.starttls(context=ctx, server_hostname=host)  # <- ESSENCIAL
+            # starttls NÃO aceita server_hostname nessa versão
+            server.starttls(context=ctx)
             server.ehlo()
         else:
             # SSL direto (465)
@@ -266,7 +267,9 @@ def testar_envio_email(request: Request, body: Optional[TesteEnvioIn] = None):
     try:
         if usar_tls:  # 587
             server = smtplib.SMTP(host, port, timeout=20)
-            server.ehlo(); server.starttls(context=ctx, server_hostname=host); server.ehlo()
+            server.ehlo()
+            server.starttls(context=ctx)  # <- sem server_hostname
+            server.ehlo()
         else:         # 465
             server = smtplib.SMTP_SSL(host, port, timeout=20, context=ctx)
             server.ehlo()

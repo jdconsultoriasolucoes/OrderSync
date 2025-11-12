@@ -78,7 +78,9 @@ def _abrir_conexao(cfg_smtp):
     ctx = ssl.create_default_context()
     if usar_tls:
         server = smtplib.SMTP(host, port, timeout=20)
-        server.ehlo(); server.starttls(context=ctx, server_hostname=host); server.ehlo()
+        server.ehlo()
+        server.starttls(context=ctx)  # <- sem server_hostname
+        server.ehlo()
     else:
         server = smtplib.SMTP_SSL(host, port, timeout=20, context=ctx)
         server.ehlo()
