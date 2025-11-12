@@ -213,13 +213,12 @@ def testar_smtp_conexao(request: Request):
 
 # ===== Testar ENVIO DE E-MAIL =====
 class TesteEnvioIn(BaseModel):
-    para: Optional[List[str]] = None   # se vazio, usa destinatario_interno salvo
+    para: Optional[List[str]] = None
     assunto: Optional[str] = "Teste de e-mail - OrderSync"
     corpo_html: Optional[str] = "<p>Este é um e-mail de teste do OrderSync.</p>"
 
 @router.post("/teste_envio")
-def testar_envio_email(request: Request,
-    body: Optional[TesteEnvioIn] = None):
+def testar_envio_email(request: Request, body: Optional[TesteEnvioIn] = None):
     db = request.state.db
 
     # 1) Carrega configs
@@ -233,47 +232,59 @@ def testar_envio_email(request: Request,
         .filter(ConfigEmailSMTP.id == 1)
         .first()
     )
-
     if not smtp_cfg:
         raise HTTPException(400, "Configuração SMTP não encontrada.")
     if not msg_cfg:
         raise HTTPException(400, "Configuração de mensagem não encontrada.")
 
-    host, port = smtp_cfg.smtp_host, smtp_cfg.smtp_port
-    user, pwd = smtp_cfg.smtp_user, (smtp_cfg.smtp_password or "")
-    from_addr = (smtp_cfg.email_origem or user or "").strip()
-    to_addr = (smtp_cfg.email_teste or user or "").strip()
-    if not from_addr or not to_addr:
-        raise HTTPException(400, "E-mails de origem/destino inválidos para teste.")
+    # 2) Campos corretos (NADA de smtp_password/email_origem/email_teste)
+    host = (smtp_cfg.smtp_host or "").strip()
+    port = int(smtp_cfg.smtp_port or 0)
+    user = (smtp_cfg.smtp_user or "").strip()
+    pwd  = (smtp_cfg.smtp_senha or "").strip()
+    usar_tls = bool(getattr(smtp_cfg, "usar_tls", True))
+    from_addr = (smtp_cfg.remetente_email or user).strip()
 
-    # 2) Monta mensagem simples (texto puro) – objetivo é só validar conexão/envio
-    subject = "Teste SMTP - OrderSync"
-    body_txt = "OK. Este é um envio de teste do OrderSync."
+    if not host or not port or not from_addr:
+        raise HTTPException(400, "Host/porta/remetente inválidos.")
+    if not user or not pwd:
+        raise HTTPException(400, "Usuário ou senha SMTP ausentes.")
 
-    msg = (
-        f"Subject: {subject}\n"
-        f"From: {from_addr}\n"
-        f"To: {to_addr}\n\n"
-        f"{body_txt}"
-    ).encode("utf-8")
+    # 3) Destinatários
+    to_list: List[str] = []
+    if body and body.para:
+        to_list = [e.strip() for e in body.para if e and e.strip()]
+    if not to_list and getattr(msg_cfg, "destinatario_interno", None):
+        to_list = [e.strip() for e in msg_cfg.destinatario_interno.split(",") if e.strip()]
+    if not to_list:
+        to_list = [from_addr]  # fallback para não perder o teste
 
-    # 3) Envia (TLS robusto)
+    # 4) Monta e-mail (HTML)
+    assunto = (body.assunto if body and body.assunto else "Teste de e-mail - OrderSync").strip()
+    corpo_html = (body.corpo_html if body and body.corpo_html else "<p>Este é um e-mail de teste do OrderSync.</p>")
+
+    msg = MIMEMultipart("alternative")
+    msg["From"] = from_addr
+    msg["To"] = ", ".join(to_list)
+    msg["Subject"] = assunto
+    msg.attach(MIMEText(corpo_html, "html", "utf-8"))
+
+    # 5) Conecta e envia (TLS robusto com server_hostname)
+    ctx = ssl.create_default_context()
     try:
-        if smtp_cfg.usar_tls:
+        if usar_tls:  # STARTTLS (587)
             server = smtplib.SMTP(host, port, timeout=20)
+            server.ehlo(); server.starttls(context=ctx, server_hostname=host); server.ehlo()
+        else:         # SSL direto (465)
+            server = smtplib.SMTP_SSL(host, port, timeout=20, context=ctx)
             server.ehlo()
-            server.starttls()
-            server.ehlo()
-        else:
-            server = smtplib.SMTP_SSL(host, port, timeout=20)
 
-        if user:
-            server.login(user, pwd)
-
-        server.sendmail(from_addr, [to_addr], msg)
+        server.login(user, pwd)
+        server.sendmail(from_addr, to_list, msg.as_string())
         server.quit()
-        return {"status": "ok"}
+        return {"status": "ok", "to": to_list}
+    except smtplib.SMTPAuthenticationError as e:
+        raise HTTPException(401, f"Falha de autenticação SMTP: {e}")
     except Exception as e:
-        # Devolve erro legível para você depurar no painel
         raise HTTPException(500, f"Falha no teste SMTP: {type(e).__name__}: {e}")
 
