@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Request
 from sqlalchemy.orm import Session
 import socket
 import ssl
@@ -16,7 +16,7 @@ from pydantic import BaseModel
 import socket, ssl, smtplib, logging
 from email.mime.multipart import MIMEMultipart
 from email.mime.text import MIMEText
-
+import smtplib
 
 router = APIRouter(
     prefix="/admin/config_email",
@@ -326,11 +326,11 @@ class TesteEnvioIn(BaseModel):
     corpo_html: Optional[str] = "<p>Este é um e-mail de teste do OrderSync.</p>"
 
 @router.post("/teste_envio")
-def testar_envio_email(
-    body: Optional[TesteEnvioIn] = None,
-    db: Session = Depends(get_db),
-):
-    # carrega configs salvas
+def testar_envio_email(request: Request,
+    body: Optional[TesteEnvioIn] = None):
+    db = request.state.db
+
+    # 1) Carrega configs
     msg_cfg = (
         db.query(ConfigEmailMensagem)
         .filter(ConfigEmailMensagem.id == 1)
@@ -341,44 +341,47 @@ def testar_envio_email(
         .filter(ConfigEmailSMTP.id == 1)
         .first()
     )
+
     if not smtp_cfg:
         raise HTTPException(400, "Configuração SMTP não encontrada.")
     if not msg_cfg:
         raise HTTPException(400, "Configuração de mensagem não encontrada.")
 
-    # destinatários
-    to_list: List[str] = []
-    if body and body.para:
-        to_list = body.para
-    else:
-        to_list = [x.strip() for x in (msg_cfg.destinatario_interno or "").split(",") if x.strip()]
+    host, port = smtp_cfg.smtp_host, smtp_cfg.smtp_port
+    user, pwd = smtp_cfg.smtp_user, (smtp_cfg.smtp_password or "")
+    from_addr = (smtp_cfg.email_origem or user or "").strip()
+    to_addr = (smtp_cfg.email_teste or user or "").strip()
+    if not from_addr or not to_addr:
+        raise HTTPException(400, "E-mails de origem/destino inválidos para teste.")
 
-    if not to_list:
-        raise HTTPException(400, "Informe pelo menos um destinatário (ou configure destinatário interno).")
+    # 2) Monta mensagem simples (texto puro) – objetivo é só validar conexão/envio
+    subject = "Teste SMTP - OrderSync"
+    body_txt = "OK. Este é um envio de teste do OrderSync."
 
-    # monta mensagem simples
-    subject = (body.assunto if body and body.assunto else "Teste de e-mail - OrderSync")
-    html    = (body.corpo_html if body and body.corpo_html else "<p>Este é um e-mail de teste do OrderSync.</p>")
+    msg = (
+        f"Subject: {subject}\n"
+        f"From: {from_addr}\n"
+        f"To: {to_addr}\n\n"
+        f"{body_txt}"
+    ).encode("utf-8")
 
-    msg = MIMEMultipart("alternative")
-    msg["From"] = smtp_cfg.remetente_email or smtp_cfg.smtp_user
-    msg["To"] = ", ".join(to_list)
-    msg["Subject"] = subject
-    msg.attach(MIMEText(html, "html", "utf-8"))
-
-    # envia
+    # 3) Envia (TLS robusto)
     try:
         if smtp_cfg.usar_tls:
-            server = smtplib.SMTP(smtp_cfg.smtp_host, smtp_cfg.smtp_port, timeout=20)
+            server = smtplib.SMTP(host, port, timeout=20)
+            server.ehlo()
             server.starttls()
+            server.ehlo()
         else:
-            server = smtplib.SMTP_SSL(smtp_cfg.smtp_host, smtp_cfg.smtp_port, timeout=20)
+            server = smtplib.SMTP_SSL(host, port, timeout=20)
 
-        server.login(smtp_cfg.smtp_user, smtp_cfg.smtp_senha)
-        server.sendmail(msg["From"], to_list, msg.as_string())
+        if user:
+            server.login(user, pwd)
+
+        server.sendmail(from_addr, [to_addr], msg)
         server.quit()
-        return {"ok": True, "message": "E-mail de teste enviado."}
+        return {"status": "ok"}
     except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Erro no envio: {e}")
-    
+        # Devolve erro legível para você depurar no painel
+        raise HTTPException(500, f"Falha no teste SMTP: {type(e).__name__}: {e}")
 

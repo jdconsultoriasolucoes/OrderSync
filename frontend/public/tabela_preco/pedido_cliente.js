@@ -259,7 +259,7 @@ async function carregarPedido() {
     
     if (pathParts[0] === 'p' && lastPart) {
       try {
-        const r = await fetch(`/link_pedido/resolver?code=${encodeURIComponent(lastPart)}`, { cache: "no-store" });
+        const r = await fetch(API(`/link_pedido/resolver?code=${encodeURIComponent(lastPart)}`), { cache: "no-store" });
         if (r.ok) {
           info = await r.json(); 
           window.currentTabelaId = info.tabela_id ?? window.currentTabelaId;
@@ -520,7 +520,8 @@ async function confirmarPedido() {
     }
 
     const data = await resp.json();
-    const pedidoIdConfirmado = data?.id;
+   const pedidoIdConfirmado = data?.id ?? data?.pedido_id;
+   if (!pedidoIdConfirmado) throw new Error("Resposta sem id do pedido.");
 
     if (!pedidoIdConfirmado) {
       throw new Error("Resposta sem id do pedido.");

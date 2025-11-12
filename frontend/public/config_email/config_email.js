@@ -88,6 +88,17 @@ async function init() {
   await detectEndpoints();
   if (!ENDPOINTS) return;
 
+  document.addEventListener("DOMContentLoaded", () => {
+  const senhaInput = document.getElementById("smtp_senha");
+  if (senhaInput) {
+    senhaInput.addEventListener('input', (e) => {
+      const cur = e.target.selectionStart;
+      e.target.value = normalizeAppPassword(e.target.value);
+      e.target.setSelectionRange(cur, cur);
+    });
+  }
+});
+
   // Bind botões
   document.getElementById("btnSalvarMensagem").addEventListener("click", salvarMensagem);
   document.getElementById("btnTestarEnvio").addEventListener("click", testarEnvio);
@@ -110,15 +121,19 @@ async function carregarMensagem() {
 }
 
 async function salvarMensagem() {
- const payload = {
-  smtp_host: hostInput.value?.trim(),
-  smtp_port: Number(portInput.value),
-  smtp_user: userInput.value?.trim(),
-  smtp_senha: normalizeAppPassword(senhaInput.value),  // <-- NOVO
-  usar_tls: tlsCheckbox.checked
-};
-  try { await putJSON(ENDPOINTS.mensagem, payload); toast(true, "Mensagem salva."); }
-  catch (e) { console.error(e); toast(false, "Falha ao salvar mensagem."); }
+  const payload = {
+    destinatario_interno: getVal("destinatario_interno"),
+    assunto_padrao: getVal("assunto_padrao"),
+    corpo_html: getVal("corpo_html"),
+    enviar_para_cliente: getCheck("enviar_para_cliente")
+  };
+  try {
+    await putJSON(ENDPOINTS.mensagem, payload);
+    toast(true, "Mensagem salva.");
+  } catch (e) {
+    console.error(e);
+    toast(false, "Falha ao salvar mensagem.");
+  }
 }
 
 async function testarEnvio() {

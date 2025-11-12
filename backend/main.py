@@ -12,7 +12,7 @@ from pathlib import Path
 # Routers
 from routers.tabela_preco import router_meta, router as router_tabela
 from routers import pedido_preview, link_pedido, admin_config_email, cliente, listas, fiscal,pedidos,net_diag, produto
-
+from database import SessionLocal
 # ---- logging base (simples) ----
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger("ordersync.errors")
@@ -165,3 +165,12 @@ app.add_middleware(
 #     max_age=86400,
 # )
 
+@app.middleware("http")
+async def db_session_middleware(request, call_next):
+    request.state.db = SessionLocal()  # abre sessão por request
+    try:
+        response = await call_next(request)
+        return response
+    finally:
+        # garante fechamento mesmo com exceção
+        request.state.db.close()

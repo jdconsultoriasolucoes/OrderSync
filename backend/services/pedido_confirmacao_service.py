@@ -1,43 +1,44 @@
+# services/pedido_confirmacao_service.py
 from sqlalchemy.orm import Session
-from fastapi import HTTPException
-from services.email_service import enviar_email_notificacao, gerar_pdf_pedido_bytes
-from services.pdf_service import gerar_pdf_pedido
-from models.pedido import Pedido
-from models.cliente import ClienteModel
-from models.pedido_item import PedidoItem
+from typing import Optional, Tuple
 
-def processar_confirmacao_pedido(db: Session, pedido_id: int):
-    """
-    1. Carrega pedido
-    2. Marca como CONFIRMADO
-    3. Gera PDF (BytesIO)
-    4. Dispara e-mail com anexo
-    """
-    # 1) pedido
-    pedido = db.query(Pedido).filter(Pedido.id == pedido_id).first()
+from services.pdf_service import gerar_pdf_pedido_bytes
+from services.email_service import enviar_email_notificacao
+from models.pedido import PedidoModel
+
+def _carregar_pedido(db: Session, pedido_id: int) -> PedidoModel:
+    pedido = db.query(PedidoModel).filter(PedidoModel.id == pedido_id).first()
     if not pedido:
-        raise HTTPException(status_code=404, detail="Pedido não encontrado")
+        raise ValueError(f"Pedido {pedido_id} não encontrado")
+    return pedido
 
-    # 2) status
+def _marcar_confirmado(db: Session, pedido: PedidoModel) -> None:
     pedido.status = "CONFIRMADO"
-    # ex.: pedido.confirmado_em = datetime.utcnow()
+    db.add(pedido)
     db.commit()
     db.refresh(pedido)
 
-    # carregar itens e cliente (ajuste para seu schema)
-    itens = db.query(PedidoItem).filter(PedidoItem.pedido_id == pedido.id).all()
-    cliente = None
+def processar_confirmacao_pedido(db: Session, pedido_id: int) -> Tuple[PedidoModel, Optional[bytes]]:
+    """
+    1) Carrega pedido
+    2) Marca como CONFIRMADO (commit)
+    3) Gera PDF em memória
+    4) Dispara e-mail (sem derrubar o fluxo se falhar)
+    """
+    pedido = _carregar_pedido(db, pedido_id)
+    _marcar_confirmado(db, pedido)
+
+    pdf_bytes = None
     try:
-        # se você salva codigo_cliente no pedido
-        if hasattr(pedido, "codigo_cliente"):
-            cliente = db.query(ClienteModel).filter(ClienteModel.codigo == pedido.codigo_cliente).first()
-    except Exception:
-        cliente = None
+        pdf_bytes = gerar_pdf_pedido_bytes(db, pedido.id)
+    except Exception as e:
+        # Logue e siga (PDF é conveniente, não obrigatório)
+        print(f"[pdf] falhou: {type(e).__name__}: {e}")
 
-    # 3) PDF em memória
-    pdf_bytes = gerar_pdf_pedido_bytes(pedido, itens, cliente)
+    try:
+        enviar_email_notificacao(db, pedido, link_pdf=None, pdf_bytes=pdf_bytes)
+    except Exception as e:
+        # IMPORTANTÍSSIMO: não derrubar a confirmação do cliente
+        print(f"[email] falhou: {type(e).__name__}: {e}")
 
-    # 4) e-mail com anexo
-    enviar_email_notificacao(db, pedido, link_pdf=None, pdf_bytes=pdf_bytes)
-
-    return {"ok": True, "pedido_id": pedido.id}
+    return pedido, pdf_bytes
