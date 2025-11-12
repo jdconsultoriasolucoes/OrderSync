@@ -1,4 +1,4 @@
-console.info("[config_email] build tab-3 carregado");
+console.info("[config_email] build tab-9 carregado");
 
 // ================== AUTO-DETECÇÃO DE ENDPOINTS ==================
 const CANDIDATES = [
@@ -28,27 +28,33 @@ async function probeBase(base) {
 }
 
 async function detectEndpoints() {
-  if (window.CONFIG_EMAIL_BASE && await probeBase(window.CONFIG_EMAIL_BASE)) {
-    ENDPOINTS = {
-      mensagem:    `${window.CONFIG_EMAIL_BASE}/mensagem`,
-      smtp:        `${window.CONFIG_EMAIL_BASE}/smtp`,
-      testarEnvio: `${window.CONFIG_EMAIL_BASE}/teste_envio`,
-      testarSMTP:  `${window.CONFIG_EMAIL_BASE}/smtp/teste`,
-    };
+  // 1) Se o HTML já definiu, usa e sai
+  if (window.CONFIG_EMAIL_ENDPOINTS) {
+    ENDPOINTS = window.CONFIG_EMAIL_ENDPOINTS;
+    console.info("[config_email] endpoints forçados via HTML:", ENDPOINTS);
     return;
   }
-  for (const base of CANDIDATES) {
-    if (await probeBase(base)) {
-      ENDPOINTS = {
-        mensagem:    `${base}/mensagem`,
-        smtp:        `${base}/smtp`,
-        testarEnvio: `${base}/teste_envio`,
-        testarSMTP:  `${base}/smtp/teste`,
-      };
-      return;
+
+  // 2) Caso não tenha sido forçado, roda o autodetector como fallback
+  try {
+    for (const base of CANDIDATES) {
+      const ok = await probeBase(base);
+      if (ok) {
+        ENDPOINTS = {
+          mensagem:    `${base}/mensagem`,
+          smtp:        `${base}/smtp`,
+          testarEnvio: `${base}/teste_envio`,
+          // OBS: não há /smtp/teste no seu backend
+        };
+        console.info("[config_email] autodetect:", ENDPOINTS);
+        return;
+      }
     }
+  } catch (e) {
+    console.error("[config_email] detect erro:", e);
   }
-  console.error("[config_email] Nenhum endpoint válido encontrado.");
+
+  console.error("[config_email] Nenhum endpoint válido encontrado. Ajuste CONFIG_EMAIL_ENDPOINTS no HTML.");
   alert("Não foi possível localizar os endpoints da Configuração de E-mail.");
 }
 
@@ -142,8 +148,13 @@ async function salvarMensagem() {
 async function testarEnvio() {
   try {
     const r = await fetch(ENDPOINTS.testarEnvio, { method:"POST" });
-    toast(r.ok, r.ok ? "E-mail de teste enviado." : "Falha no teste de envio.");
-  } catch(e){ console.error(e); toast(false, "Erro ao testar envio."); }
+    const ok = r.ok;
+    const t  = await r.text().catch(()=> "");
+    toast(ok, ok ? "E-mail de teste enviado." : `Falha no teste de envio. ${t}`);
+  } catch(e){
+    console.error(e);
+    toast(false, "Erro ao testar envio (ver console).");
+  }
 }
 
 // === SMTP ========================================================
@@ -179,9 +190,24 @@ async function salvarSMTP() {
 
 async function testarSMTP() {
   try {
-    const r = await fetch(ENDPOINTS.testarSMTP, { method:"POST" });
-    toast(r.ok, r.ok ? "Conexão SMTP OK." : "Falha no teste SMTP.");
-  } catch(e){ console.error(e); toast(false, "Erro ao testar SMTP."); }
+    const host = getVal("smtp_host");
+    const port = Number(getVal("smtp_port")) || 587;
+
+    if (!host) throw new Error("Informe o host SMTP.");
+    if (!window.NETDIAG_BASE) throw new Error("NETDIAG_BASE não definido no HTML.");
+
+    const url = `${window.NETDIAG_BASE}/netcheck?host=${encodeURIComponent(host)}&port=${port}&timeout=10`;
+    const r = await fetch(url, { cache: "no-store" });
+
+    if (!r.ok) {
+      const t = await r.text().catch(() => "");
+      throw new Error(`HTTP ${r.status} – ${t || "falha no netcheck"}`);
+    }
+    toast(true, "Conexão SMTP OK (netcheck).");
+  } catch (e) {
+    console.error(e);
+    toast(false, `Falha no teste SMTP: ${e.message || e}`);
+  }
 }
 
 document.addEventListener("DOMContentLoaded", init);

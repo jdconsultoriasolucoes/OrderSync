@@ -8,9 +8,18 @@
   <meta http-equiv="Expires" content="0" />
   <link rel="stylesheet" href="/static/config_email/config_email.css?v=tab-1" />
  <script>
-  window.API_BASE = "https://ordersync-backend-59d2.onrender.com";      /* ajuste para local/Render */
-  window.CONFIG_EMAIL_BASE = window.API_BASE + "/admin_config_email";
-</script>
+  window.API_BASE = "https://ordersync-backend-59d2.onrender.com";
+  window.CONFIG_EMAIL_BASE = window.API_BASE + "/admin/config_email";
+  window.NETDIAG_BASE = window.API_BASE + "/admin/netdiag";
+
+  // Use exatamente as rotas do OpenAPI
+  window.CONFIG_EMAIL_ENDPOINTS = {
+    mensagem:    window.CONFIG_EMAIL_BASE + "/mensagem",
+    smtp:        window.CONFIG_EMAIL_BASE + "/smtp",
+    testarEnvio: window.CONFIG_EMAIL_BASE + "/teste_envio"
+    // OBS: não existe /smtp/teste no seu back
+  };
+  </script>
  <script defer src="/static/config_email/config_email.js?v=tab-6"></script>
 </head>
 <body>
