@@ -26,9 +26,7 @@ async function probeBase(base) {
 }
 
 async function detectEndpoints() {
-  // 1) Prioriza base forçada via HTML (window.CONFIG_EMAIL_BASE)
   if (window.CONFIG_EMAIL_BASE && await probeBase(window.CONFIG_EMAIL_BASE)) {
-    console.info("[config_email] usando base (forçada):", window.CONFIG_EMAIL_BASE);
     ENDPOINTS = {
       mensagem:    `${window.CONFIG_EMAIL_BASE}/mensagem`,
       smtp:        `${window.CONFIG_EMAIL_BASE}/smtp`,
@@ -37,10 +35,8 @@ async function detectEndpoints() {
     };
     return;
   }
-  // 2) Tenta candidatos
   for (const base of CANDIDATES) {
     if (await probeBase(base)) {
-      console.info("[config_email] usando base:", base);
       ENDPOINTS = {
         mensagem:    `${base}/mensagem`,
         smtp:        `${base}/smtp`,
@@ -50,11 +46,9 @@ async function detectEndpoints() {
       return;
     }
   }
-  console.error("[config_email] Nenhum endpoint válido encontrado. Ajuste CANDIDATES ou backend.");
+  console.error("[config_email] Nenhum endpoint válido encontrado.");
   alert("Não foi possível localizar os endpoints da Configuração de E-mail.");
 }
-// ================================================================
-
 
 // === Tabs ========================================================
 function initTabs(){
@@ -88,8 +82,6 @@ function setCheck(id, v) { const el = document.getElementById(id); if (el) el.ch
 function getVal(id)      { return (document.getElementById(id)?.value ?? "").trim(); }
 function getCheck(id)    { return !!document.getElementById(id)?.checked; }
 function toast(ok, msg)  { alert(msg || (ok ? "Salvo!" : "Falhou")); }
-
-// --- Helper para normalizar senha (remove QUALQUER espaço) ---
 function normalizeAppPassword(pwd) { return (pwd || "").replace(/\s+/g, ""); }
 
 // === Fluxo principal =============================================
@@ -98,7 +90,7 @@ async function init() {
   await detectEndpoints();
   if (!ENDPOINTS) return;
 
-  // 🔧 liga normalização da senha AQUI (sem variáveis globais)
+  // Normalizador da senha (sem variáveis globais)
   const senhaEl = document.getElementById("smtp_senha");
   if (senhaEl) {
     senhaEl.addEventListener("input", (e) => {
@@ -171,11 +163,16 @@ async function salvarSMTP() {
     smtp_host: getVal("smtp_host"),
     smtp_port: Number(getVal("smtp_port")) || 587,
     smtp_user: getVal("smtp_user"),
-    smtp_senha: getVal("smtp_senha"),
+    smtp_senha: normalizeAppPassword(getVal("smtp_senha")),
     usar_tls: getCheck("usar_tls")
   };
-  try { await putJSON(ENDPOINTS.smtp, payload); toast(true, "Configuração SMTP salva."); }
-  catch (e) { console.error(e); toast(false, "Falha ao salvar SMTP."); }
+  try {
+    await putJSON(ENDPOINTS.smtp, payload);
+    toast(true, "Configuração SMTP salva.");
+  } catch (e) {
+    console.error(e);
+    toast(false, "Falha ao salvar SMTP.");
+  }
 }
 
 async function testarSMTP() {
