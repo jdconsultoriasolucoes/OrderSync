@@ -7,11 +7,11 @@ from typing import Optional
 
 from sqlalchemy.orm import Session
 
-# Tenta importar dos dois jeitos: com/sem pacote "models"
+# ===== IMPORTS CORRETOS =====
 try:
-    from models.cliente import Cliente as ClienteModel  # ajuste para seu nome real de classe
+    from models.cliente import ClienteModel            # <- sua classe real
 except ModuleNotFoundError:
-    from cliente import Cliente as ClienteModel  # fallback se não estiver em models/
+    from cliente import ClienteModel                   # fallback se não houver pacote models
 
 try:
     from models.config_email_mensagem import ConfigEmailMensagem as ConfigEmailMensagemModel
@@ -36,14 +36,14 @@ def render_placeholders(template: str, pedido_info: dict, link_pdf: Optional[str
 
 
 # ------------------------
-# Busca e-mail do cliente (ajuste o campo do código conforme seu schema)
+# Busca e-mail do cliente (usa codigo_da_empresa do seu modelo)
 # ------------------------
 def get_email_cliente_responsavel_compras(db: Session, codigo_cliente) -> Optional[str]:
     if not codigo_cliente:
         return None
     row = (
         db.query(ClienteModel.email_responsavel_compras)
-        .filter(ClienteModel.codigo == codigo_cliente)  # <- mantenha coerente com seu modelo
+        .filter(ClienteModel.codigo_da_empresa == codigo_cliente)  # <- campo correto do seu modelo
         .first()
     )
     return row[0] if row and row[0] else None
@@ -74,11 +74,9 @@ def _abrir_conexao(cfg_smtp: ConfigEmailSMTPModel) -> smtplib.SMTP:
     user = cfg_smtp.smtp_user
     pwd  = cfg_smtp.smtp_senha or ""
 
-    if cfg_smtp.usar_tls:
+    if getattr(cfg_smtp, "usar_tls", True):
         server = smtplib.SMTP(host, port, timeout=20)
-        server.ehlo()
-        server.starttls()
-        server.ehlo()
+        server.ehlo(); server.starttls(); server.ehlo()
     else:
         server = smtplib.SMTP_SSL(host, port, timeout=20)
 
@@ -99,18 +97,17 @@ def enviar_email_notificacao(
     cfg_smtp = _get_cfg_smtp(db)
     cfg_msg  = _get_cfg_msg(db)
 
-    # remetente configurado
-    remetente = (cfg_smtp.remetente_email or cfg_smtp.smtp_user).strip()
+    remetente = (getattr(cfg_smtp, "remetente_email", "") or getattr(cfg_smtp, "smtp_user", "")).strip()
 
-    # destinatários internos (separados por vírgula)
+    # destinatários internos (separados por vírgula) — compatível com sua tela
     destinatarios = []
     if getattr(cfg_msg, "destinatario_interno", None):
         destinatarios = [e.strip() for e in cfg_msg.destinatario_interno.split(",") if e.strip()]
 
-    # opcional: cópia para o responsável de compras do cliente
+    # cópia opcional para o cliente responsável compras
     email_cli = get_email_cliente_responsavel_compras(
         db,
-        getattr(pedido, "codigo_cliente", None)
+        getattr(pedido, "codigo_cliente", None)  # deve casar com codigo_da_empresa do Cliente
     )
     cc = [email_cli] if email_cli else []
 
@@ -120,9 +117,9 @@ def enviar_email_notificacao(
         "total_pedido": getattr(pedido, "total_pedido", ""),
     }
 
-    assunto   = render_placeholders(getattr(cfg_msg, "assunto_padrao", "") or "", pedido_info, link_pdf)
-    corpo_html= render_placeholders(getattr(cfg_msg, "corpo_html", "") or "", pedido_info, link_pdf)
-    corpo_txt = ""  # opcional: se quiser, adicione um campo texto na tabela e use aqui
+    assunto    = render_placeholders(getattr(cfg_msg, "assunto_padrao", "") or "", pedido_info, link_pdf)
+    corpo_html = render_placeholders(getattr(cfg_msg, "corpo_html", "") or "", pedido_info, link_pdf)
+    corpo_txt  = ""  # opcional: adicione um campo texto na config se quiser
 
     msg = MIMEMultipart("mixed")
     msg["From"] = remetente
@@ -146,7 +143,7 @@ def enviar_email_notificacao(
 
     to_all = destinatarios + cc if cc else destinatarios
     if not to_all:
-        to_all = [remetente]  # fallback para não perder o envio
+        to_all = [remetente]  # fallback
 
     with _abrir_conexao(cfg_smtp) as server:
         server.sendmail(remetente, to_all, msg.as_string())
