@@ -1,3 +1,5 @@
+console.info("[config_email] build tab-3 carregado");
+
 // ================== AUTO-DETECÇÃO DE ENDPOINTS ==================
 const CANDIDATES = [
   "/admin/config_email",
