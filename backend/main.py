@@ -17,6 +17,15 @@ from database import SessionLocal
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger("ordersync.errors")
 
+class NoCacheStaticFiles(StaticFiles):
+    async def get_response(self, path, scope):
+        resp = await super().get_response(path, scope)
+        resp.headers["Cache-Control"] = "no-store"  # browser não guarda nada
+        resp.headers["Pragma"] = "no-cache"
+        resp.headers["Expires"] = "0"
+        return resp
+
+
 app = FastAPI()
 
 @app.get("/")
@@ -174,3 +183,5 @@ async def db_session_middleware(request, call_next):
     finally:
         # garante fechamento mesmo com exceção
         request.state.db.close()
+
+        
