@@ -164,9 +164,10 @@ class TesteSMTPIn(BaseModel):
     smtp_senha: Optional[str] = None
     usar_tls: Optional[bool] = None  # se None, vamos inferir pela porta
 
-@router.post("/smtp/teste")
-def testar_smtp_conexao(db: Session = Depends(get_db)):
-    from models.config_email_smtp import ConfigEmailSMTP  # ajuste se o path variar
+def testar_smtp_conexao(request: Request):
+    db = _get_db_from_request(request)
+    # ajuste os imports para seus modelos reais
+    from models.config_email_smtp import ConfigEmailSMTP
     cfg = db.query(ConfigEmailSMTP).first()
     if not cfg:
         raise HTTPException(400, "Configuração SMTP não encontrada.")
@@ -176,29 +177,37 @@ def testar_smtp_conexao(db: Session = Depends(get_db)):
     user = (cfg.smtp_user or "").strip()
     pwd  = cfg.smtp_senha or ""
     usar_tls = bool(getattr(cfg, "usar_tls", True))
+    from_addr = (cfg.remetente_email or user).strip()
 
     if not host or not port:
         raise HTTPException(400, "Host/porta inválidos.")
+    if not user or not from_addr:
+        raise HTTPException(400, "Usuário/Remetente inválidos.")
+
+    logger.info("[SMTP TEST] host=%s port=%s user=%s use_tls=%s", host, port, user, usar_tls)
 
     ctx = ssl.create_default_context()
-
     try:
-        if usar_tls:  # STARTTLS (ex.: 587)
+        if usar_tls:
+            # STARTTLS típico (Gmail: 587)
             server = smtplib.SMTP(host, port, timeout=20)
             server.ehlo()
             server.starttls(context=ctx, server_hostname=host)  # <- ESSENCIAL
             server.ehlo()
-        else:         # SSL direto (ex.: 465)
-            server = smtplib.SMTP_SSL(host, port, timeout=20, context=ctx)  # <- passa context
+        else:
+            # SSL direto (465)
+            server = smtplib.SMTP_SSL(host, port, timeout=20, context=ctx)
             server.ehlo()
 
-        if user:
-            server.login(user, pwd)
-
-        server.noop()
+        server.login(user, pwd)  # se senha de app estiver errada, explode aqui
+        server.noop()            # ping
         server.quit()
         return {"status": "ok"}
+    except smtplib.SMTPAuthenticationError as e:
+        logger.exception("[SMTP TEST] Auth error")
+        raise HTTPException(401, f"Falha de autenticação: {e.smtp_error.decode(errors='ignore') if hasattr(e,'smtp_error') else str(e)}")
     except Exception as e:
+        logger.exception("[SMTP TEST] Falha geral")
         raise HTTPException(500, f"Falha na conexão SMTP: {type(e).__name__}: {e}")
 
 
