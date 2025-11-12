@@ -1,6 +1,6 @@
 // ================== AUTO-DETECÇÃO DE ENDPOINTS ==================
 const CANDIDATES = [
- "/admin/config_email", 
+  "/admin/config_email",
   "/config/email",
   "/admin_config_email",
   "/admin/config_email",
@@ -26,14 +26,26 @@ async function probeBase(base) {
 }
 
 async function detectEndpoints() {
+  // 1) Prioriza base forçada via HTML (window.CONFIG_EMAIL_BASE)
+  if (window.CONFIG_EMAIL_BASE && await probeBase(window.CONFIG_EMAIL_BASE)) {
+    console.info("[config_email] usando base (forçada):", window.CONFIG_EMAIL_BASE);
+    ENDPOINTS = {
+      mensagem:    `${window.CONFIG_EMAIL_BASE}/mensagem`,
+      smtp:        `${window.CONFIG_EMAIL_BASE}/smtp`,
+      testarEnvio: `${window.CONFIG_EMAIL_BASE}/teste_envio`,
+      testarSMTP:  `${window.CONFIG_EMAIL_BASE}/smtp/teste`,
+    };
+    return;
+  }
+  // 2) Tenta candidatos
   for (const base of CANDIDATES) {
     if (await probeBase(base)) {
       console.info("[config_email] usando base:", base);
       ENDPOINTS = {
-        mensagem:     `${base}/mensagem`,
-        smtp:         `${base}/smtp`,
-        testarEnvio:  `${base}/teste_envio`,     // se não existir, botão só falha silencioso
-        testarSMTP:   `${base}/smtp/teste`,      // idem
+        mensagem:    `${base}/mensagem`,
+        smtp:        `${base}/smtp`,
+        testarEnvio: `${base}/teste_envio`,
+        testarSMTP:  `${base}/smtp/teste`,
       };
       return;
     }
@@ -42,6 +54,7 @@ async function detectEndpoints() {
   alert("Não foi possível localizar os endpoints da Configuração de E-mail.");
 }
 // ================================================================
+
 
 // === Tabs ========================================================
 function initTabs(){
@@ -70,17 +83,14 @@ async function putJSON(url, data) {
   if (!r.ok) throw new Error(`HTTP ${r.status} em PUT ${url}`);
   return await r.json().catch(() => ({}));
 }
-function setVal(id, v) { const el = document.getElementById(id); if (el) el.value = v ?? ""; }
+function setVal(id, v)   { const el = document.getElementById(id); if (el) el.value = v ?? ""; }
 function setCheck(id, v) { const el = document.getElementById(id); if (el) el.checked = !!v; }
-function getVal(id) { return (document.getElementById(id)?.value ?? "").trim(); }
-function getCheck(id) { return !!document.getElementById(id)?.checked; }
-function toast(ok, msg){ alert(msg || (ok ? "Salvo!" : "Falhou")); }
+function getVal(id)      { return (document.getElementById(id)?.value ?? "").trim(); }
+function getCheck(id)    { return !!document.getElementById(id)?.checked; }
+function toast(ok, msg)  { alert(msg || (ok ? "Salvo!" : "Falhou")); }
 
 // --- Helper para normalizar senha (remove QUALQUER espaço) ---
-function normalizeAppPassword(pwd) {
-  return (pwd || "").replace(/\s+/g, "");
-}
-
+function normalizeAppPassword(pwd) { return (pwd || "").replace(/\s+/g, ""); }
 
 // === Fluxo principal =============================================
 async function init() {
@@ -88,16 +98,15 @@ async function init() {
   await detectEndpoints();
   if (!ENDPOINTS) return;
 
-  document.addEventListener("DOMContentLoaded", () => {
-  const senhaInput = document.getElementById("smtp_senha");
-  if (senhaInput) {
-    senhaInput.addEventListener('input', (e) => {
+  // 🔧 liga normalização da senha AQUI (sem variáveis globais)
+  const senhaEl = document.getElementById("smtp_senha");
+  if (senhaEl) {
+    senhaEl.addEventListener("input", (e) => {
       const cur = e.target.selectionStart;
       e.target.value = normalizeAppPassword(e.target.value);
       e.target.setSelectionRange(cur, cur);
     });
   }
-});
 
   // Bind botões
   document.getElementById("btnSalvarMensagem").addEventListener("click", salvarMensagem);
@@ -142,12 +151,6 @@ async function testarEnvio() {
     toast(r.ok, r.ok ? "E-mail de teste enviado." : "Falha no teste de envio.");
   } catch(e){ console.error(e); toast(false, "Erro ao testar envio."); }
 }
-
-senhaInput.addEventListener('input', (e) => {
-  const cur = e.target.selectionStart;
-  e.target.value = normalizeAppPassword(e.target.value);
-  e.target.setSelectionRange(cur, cur);
-});
 
 // === SMTP ========================================================
 async function carregarSMTP() {
