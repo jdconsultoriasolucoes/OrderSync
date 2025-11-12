@@ -4,7 +4,7 @@ from email.mime.multipart import MIMEMultipart
 from email.mime.application import MIMEApplication
 from email.mime.text import MIMEText
 from typing import Optional
-
+import ssl, smtplib
 from sqlalchemy.orm import Session
 
 # ===== IMPORTS CORRETOS =====
@@ -68,22 +68,27 @@ def _get_cfg_msg(db: Session) -> ConfigEmailMensagemModel:
 # ------------------------
 # Conexão SMTP
 # ------------------------
-def _abrir_conexao(cfg_smtp: ConfigEmailSMTPModel) -> smtplib.SMTP:
-    host = cfg_smtp.smtp_host
-    port = cfg_smtp.smtp_port
-    user = cfg_smtp.smtp_user
+def _abrir_conexao(cfg_smtp) -> smtplib.SMTP:
+    host = cfg_smtp.smtp_host.strip()
+    port = int(cfg_smtp.smtp_port)
+    user = (cfg_smtp.smtp_user or "").strip()
     pwd  = cfg_smtp.smtp_senha or ""
+    usar_tls = bool(getattr(cfg_smtp, "usar_tls", True))
 
-    if getattr(cfg_smtp, "usar_tls", True):
+    ctx = ssl.create_default_context()
+
+    if usar_tls:  # STARTTLS
         server = smtplib.SMTP(host, port, timeout=20)
-        server.ehlo(); server.starttls(); server.ehlo()
-    else:
-        server = smtplib.SMTP_SSL(host, port, timeout=20)
+        server.ehlo()
+        server.starttls(context=ctx, server_hostname=host)  # <- ESSENCIAL
+        server.ehlo()
+    else:         # SSL direto
+        server = smtplib.SMTP_SSL(host, port, timeout=20, context=ctx)  # <- passa context
+        server.ehlo()
 
     if user:
         server.login(user, pwd)
     return server
-
 
 # ------------------------
 # Envio
