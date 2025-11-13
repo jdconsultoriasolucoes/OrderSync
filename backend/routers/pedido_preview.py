@@ -11,6 +11,7 @@ import json
 from zoneinfo import ZoneInfo
 from services.email_service import enviar_email_notificacao
 import os
+import logging 
 router = APIRouter(prefix="/pedido", tags=["Pedido"])
 TZ = ZoneInfo("America/Sao_Paulo")
 
