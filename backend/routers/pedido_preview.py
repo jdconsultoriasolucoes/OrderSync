@@ -10,7 +10,7 @@ from sqlalchemy.orm import Session
 import json
 from zoneinfo import ZoneInfo
 from services.email_service import enviar_email_notificacao
-
+import os
 router = APIRouter(prefix="/pedido", tags=["Pedido"])
 TZ = ZoneInfo("America/Sao_Paulo")
 
