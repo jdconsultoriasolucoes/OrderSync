@@ -1,17 +1,15 @@
 # routers/pedido_preview.py
 from typing import Optional, List
-from fastapi import APIRouter, Query, HTTPException, Request, Depends
-from pydantic import BaseModel, constr, conlist
-from typing import Optional, List
+from fastapi import APIRouter, Query, HTTPException
+from pydantic import BaseModel
 from sqlalchemy import text
-from database import SessionLocal  
-from datetime import datetime, timezone
-from sqlalchemy.orm import Session
-import json
+from database import SessionLocal
+from datetime import datetime
 from zoneinfo import ZoneInfo
 from services.email_service import enviar_email_notificacao
+import json
 import os
-import logging 
+import logging
 router = APIRouter(prefix="/pedido", tags=["Pedido"])
 TZ = ZoneInfo("America/Sao_Paulo")
 
@@ -129,13 +127,15 @@ def confirmar_pedido(tabela_id: int, body: ConfirmarPedidoRequest):
         link_row = None
         if body.origin_code:
             link_row = db.execute(text("""
-                SELECT code, tabela_id, com_frete, expires_at, data_prevista, uses, first_access_at, last_access_at,created_at, link_url, codigo_cliente
+                SELECT code, tabela_id, com_frete, expires_at, data_prevista, uses,
+                       first_access_at, last_access_at, created_at, link_url, codigo_cliente
                   FROM tb_pedido_link
                  WHERE code = :c
             """), {"c": body.origin_code}).mappings().first()
 
             if not link_row:
                 raise HTTPException(status_code=404, detail="Link não encontrado")
+
             exp = link_row.get("expires_at")
             if exp is not None:
                 if exp.tzinfo is None:
@@ -143,14 +143,15 @@ def confirmar_pedido(tabela_id: int, body: ConfirmarPedidoRequest):
                 agora_sp = datetime.now(TZ)
                 if agora_sp > exp:
                     raise HTTPException(status_code=410, detail="Link expirado")
+
             if int(link_row["tabela_id"]) != int(tabela_id):
                 raise HTTPException(status_code=400, detail="Link e tabela não conferem")
 
             # força o com_frete do link
             body.usar_valor_com_frete = bool(link_row["com_frete"])
-            pedido_created_at = link_row["created_at"]  # instante da GERAÇÃO do link
-            link_url = link_row["link_url"]  # opcional, se você usa no insert
-            
+            pedido_created_at = link_row["created_at"]  # instante da geração do link
+            link_url = link_row["link_url"]             # opcional
+
         # 3) Somar totais no servidor
         peso_total_kg = 0.0
         total_sem_frete = 0.0
@@ -159,7 +160,9 @@ def confirmar_pedido(tabela_id: int, body: ConfirmarPedidoRequest):
             qtd = float(it.quantidade or 0)
             peso_total_kg += float(it.peso_kg or 0) * qtd
             total_sem_frete += float(it.preco_unit or 0) * qtd
-            total_com_frete += float((it.preco_unit_com_frete if it.preco_unit_com_frete is not None else it.preco_unit) or 0) * qtd
+            total_com_frete += float(
+                (it.preco_unit_com_frete if it.preco_unit_com_frete is not None else it.preco_unit) or 0
+            ) * qtd
 
         frete_total = max(0.0, total_com_frete - total_sem_frete)
         total_pedido = total_com_frete if body.usar_valor_com_frete else total_sem_frete
@@ -174,19 +177,17 @@ def confirmar_pedido(tabela_id: int, body: ConfirmarPedidoRequest):
         validade_dias = body.validade_dias
         data_retirada = _parse_date(body.data_retirada) or (link_row["data_prevista"] if link_row else None)
 
-        
         codigo_cliente = (body.codigo_cliente or "").strip() or None
         if link_row:
             link_url = link_row.get("link_url")
         else:
             link_url = None
+
         observacao = (body.observacao or "").strip() or None
         agora = datetime.now(TZ)
-
         link_expira_em = link_row["expires_at"] if link_row else None
-        link_token = body.origin_code
 
-        # 5) Insert
+        # 5) Insert pedido
         insert_sql = text("""
             INSERT INTO tb_pedidos (
                 codigo_cliente, cliente, tabela_preco_id,
@@ -197,7 +198,7 @@ def confirmar_pedido(tabela_id: int, body: ConfirmarPedidoRequest):
                 link_token, link_url, link_enviado_em, link_expira_em, link_status,
                 link_primeiro_acesso_em, link_ultimo_acesso_em, link_qtd_acessos,
                 criado_em, atualizado_em, created_at
-                )
+            )
             VALUES (
                 :codigo_cliente, :cliente, :tabela_preco_id,
                 :validade_ate, :validade_dias, :data_retirada,
@@ -215,37 +216,32 @@ def confirmar_pedido(tabela_id: int, body: ConfirmarPedidoRequest):
             "codigo_cliente": (codigo_cliente or "Não cadastrado")[:80],
             "cliente": (body.cliente or "").strip() or "---",
             "tabela_preco_id": tabela_id,
-
             "validade_ate": validade_ate,
             "validade_dias": validade_dias,
             "data_retirada": data_retirada,
-
             "usar_valor_com_frete": bool(body.usar_valor_com_frete),
             "itens": json.dumps([i.dict() for i in body.produtos]),
-
             "peso_total_kg": round(peso_total_kg, 3),
             "frete_total": round(frete_total, 2),
             "total_sem_frete": round(total_sem_frete, 2),
             "total_com_frete": round(total_com_frete, 2),
             "total_pedido": round(total_pedido, 2),
-
-            "observacoes": (body.observacao or "").strip() or None,
+            "observacoes": observacao,
             "confirmado_em": agora,
-
             "link_token": body.origin_code,
-            "link_url": (link_row.get("link_url") if link_row else None),
+            "link_url": link_url,
             "link_enviado_em": agora,
             "link_expira_em": link_expira_em,
-
             "link_primeiro_acesso_em": link_row.get("first_access_at") if link_row else None,
             "link_ultimo_acesso_em": link_row.get("last_access_at") if link_row else None,
             "link_qtd_acessos": link_row.get("uses") if link_row else None,
-
             "agora": agora,
             "pedido_created_at": (link_row.get("created_at") if link_row else None),
         }
+
         new_id = db.execute(insert_sql, params).scalar()
 
+        # 6) Insert itens
         insert_item_sql = text("""
             INSERT INTO tb_pedidos_itens (
                 id_pedido, codigo, nome, embalagem, peso_kg,
@@ -266,8 +262,8 @@ def confirmar_pedido(tabela_id: int, body: ConfirmarPedidoRequest):
             db.execute(insert_item_sql, {
                 "id_pedido": new_id,
                 "codigo": (it.codigo or "")[:80],
-                "nome": None,        # enviar no futuro se desejar
-                "embalagem": None,   # enviar no futuro se desejar
+                "nome": None,       # pode popular depois
+                "embalagem": None,  # pode popular depois
                 "peso_kg": float(it.peso_kg or 0),
                 "preco_unit": round(p_sem, 2),
                 "preco_unit_frt": round(p_com, 2),
@@ -277,49 +273,41 @@ def confirmar_pedido(tabela_id: int, body: ConfirmarPedidoRequest):
             })
 
         db.commit()
-        
-    
-        pedido_info = {
-        "pedido_id": new_id,
-        "cliente_nome": (body.cliente or "").strip() or "---",
-        "total_pedido": round(total_pedido, 2),
-    }
 
-    # 4) “gato” do e-mail (best-effort) — DENTRO da função
-    EMAIL_MODE = os.getenv("ORDERSYNC_EMAIL_MODE", "best-effort").lower()
-    if EMAIL_MODE == "off":
-        db.execute(_sql_text("""
-            UPDATE public.tb_pedidos
-               SET link_status = 'DESABILITADO',
-                   atualizado_em = :agora
-             WHERE id_pedido = :id
-        """), {"agora": agora, "id": new_id})
-        db.commit()
-    else:
-        try:
-            enviar_email_notificacao(
-                db=db,
-                pedido_info=pedido_info,
-                codigo_cliente=codigo_cliente,
-                link_pdf=None,
-            )
-            db.execute(_sql_text("""
+        # 7) E-mail best-effort
+        EMAIL_MODE = os.getenv("ORDERSYNC_EMAIL_MODE", "best-effort").lower()
+        if EMAIL_MODE == "off":
+            db.execute(text("""
                 UPDATE public.tb_pedidos
-                   SET link_enviado_em = :agora,
-                       link_status     = 'ENVIADO',
-                       atualizado_em   = :agora
-                 WHERE id_pedido = :id
-            """), {"agora": agora, "id": new_id})
-            db.commit()
-        except Exception as e:
-            logging.exception("Falha ao enviar email (ignorada): %s", e)
-            db.execute(_sql_text("""
-                UPDATE public.tb_pedidos
-                   SET link_status   = 'FALHA_ENVIO',
+                   SET link_status = 'DESABILITADO',
                        atualizado_em = :agora
                  WHERE id_pedido = :id
             """), {"agora": agora, "id": new_id})
             db.commit()
+        else:
+            try:
+                enviar_email_notificacao(
+                    db=db,
+                    codigo_cliente=codigo_cliente,
+                    link_pdf=None,
+                )
+                db.execute(text("""
+                    UPDATE public.tb_pedidos
+                       SET link_enviado_em = :agora,
+                           link_status     = 'ENVIADO',
+                           atualizado_em   = :agora
+                     WHERE id_pedido = :id
+                """), {"agora": agora, "id": new_id})
+                db.commit()
+            except Exception as e:
+                logging.exception("Falha ao enviar email (ignorada): %s", e)
+                db.execute(text("""
+                    UPDATE public.tb_pedidos
+                       SET link_status   = 'FALHA_ENVIO',
+                           atualizado_em = :agora
+                     WHERE id_pedido = :id
+                """), {"agora": agora, "id": new_id})
+                db.commit()
 
-    # 5) resposta — SEM expor nada de e-mail
-    return {"id": new_id, "status": "CRIADO"}
+        # 8) resposta — SEM expor nada de e-mail
+        return {"id": new_id, "status": "CRIADO"}
