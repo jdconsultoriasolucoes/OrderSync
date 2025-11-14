@@ -1,15 +1,19 @@
-# routers/pedido_preview.py
 from typing import Optional, List
 from fastapi import APIRouter, Query, HTTPException
 from pydantic import BaseModel
 from sqlalchemy import text
 from database import SessionLocal
-from datetime import datetime
+from datetime import datetime, timezone
 from zoneinfo import ZoneInfo
+
 from services.email_service import enviar_email_notificacao
+from services.pdf_service import gerar_pdf_pedido
+
+from types import SimpleNamespace
 import json
 import os
 import logging
+
 router = APIRouter(prefix="/pedido", tags=["Pedido"])
 TZ = ZoneInfo("America/Sao_Paulo")
 
@@ -99,6 +103,7 @@ async def pedido_preview(
 
 class ConfirmarItem(BaseModel):
     codigo: str
+    descricao: str | None = None
     quantidade: int
     preco_unit: float | None = None
     preco_unit_com_frete: float | None = None
@@ -262,8 +267,8 @@ def confirmar_pedido(tabela_id: int, body: ConfirmarPedidoRequest):
             db.execute(insert_item_sql, {
                 "id_pedido": new_id,
                 "codigo": (it.codigo or "")[:80],
-                "nome": None,       # pode popular depois
-                "embalagem": None,  # pode popular depois
+                "nome": (getattr(it, "descricao", None) or "")[:255] or None,
+                "embalagem": None,   # pode preencher depois se quiser
                 "peso_kg": float(it.peso_kg or 0),
                 "preco_unit": round(p_sem, 2),
                 "preco_unit_frt": round(p_com, 2),
@@ -274,9 +279,33 @@ def confirmar_pedido(tabela_id: int, body: ConfirmarPedidoRequest):
 
         db.commit()
 
-        # 7) E-mail best-effort
+        # 7) Monta um "pedido" mínimo só para o serviço de e-mail
+        class PedidoEmailDummy:
+            """
+            Objeto simples só para entregar para o email_service.
+            Ele só precisa ter:
+              - id
+              - codigo_cliente
+              - cliente_nome / nome_cliente
+              - total_pedido
+            """
+            def __init__(self, id_pedido, codigo_cliente, cliente_nome, total_pedido):
+                self.id = id_pedido
+                self.codigo_cliente = codigo_cliente
+                self.cliente_nome = cliente_nome
+                self.total_pedido = total_pedido
+
+        pedido_email = PedidoEmailDummy(
+            id_pedido=new_id,
+            codigo_cliente=codigo_cliente,
+            cliente_nome=(body.cliente or "").strip() or "---",
+            total_pedido=round(total_pedido, 2),
+        )
+
+        # 8) E-mail best-effort (com PDF)
         EMAIL_MODE = os.getenv("ORDERSYNC_EMAIL_MODE", "best-effort").lower()
         if EMAIL_MODE == "off":
+            # Apenas marca o pedido como "link desabilitado" e segue a vida
             db.execute(text("""
                 UPDATE public.tb_pedidos
                    SET link_status = 'DESABILITADO',
@@ -286,11 +315,22 @@ def confirmar_pedido(tabela_id: int, body: ConfirmarPedidoRequest):
             db.commit()
         else:
             try:
+                # Tenta gerar o PDF do pedido (com todos os detalhes)
+                pdf_bytes = None
+                try:
+                    pdf_bytes = gerar_pdf_pedido(db, new_id)
+                except Exception as e_pdf:
+                    logging.exception("Falha ao gerar PDF (ignorada): %s", e_pdf)
+
+                # Dispara o e-mail usando as configs da tela de Config Email
                 enviar_email_notificacao(
                     db=db,
-                    codigo_cliente=codigo_cliente,
-                    link_pdf=None,
+                    pedido=pedido_email,
+                    link_pdf=None,      # se no futuro você tiver um link público, coloca aqui
+                    pdf_bytes=pdf_bytes # anexo do PDF (se conseguiu gerar)
                 )
+
+                # Se chegou até aqui sem exception, marca como ENVIADO
                 db.execute(text("""
                     UPDATE public.tb_pedidos
                        SET link_enviado_em = :agora,
@@ -300,6 +340,7 @@ def confirmar_pedido(tabela_id: int, body: ConfirmarPedidoRequest):
                 """), {"agora": agora, "id": new_id})
                 db.commit()
             except Exception as e:
+                # QUALQUER erro de e-mail é logado, mas não derruba a confirmação do pedido
                 logging.exception("Falha ao enviar email (ignorada): %s", e)
                 db.execute(text("""
                     UPDATE public.tb_pedidos
@@ -309,5 +350,5 @@ def confirmar_pedido(tabela_id: int, body: ConfirmarPedidoRequest):
                 """), {"agora": agora, "id": new_id})
                 db.commit()
 
-        # 8) resposta — SEM expor nada de e-mail
+        # 9) resposta — SEM expor nada de e-mail
         return {"id": new_id, "status": "CRIADO"}
