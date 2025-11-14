@@ -326,8 +326,8 @@ def confirmar_pedido(tabela_id: int, body: ConfirmarPedidoRequest):
                 enviar_email_notificacao(
                     db=db,
                     pedido=pedido_email,
-                    link_pdf=None,      # se no futuro você tiver um link público, coloca aqui
-                    pdf_bytes=pdf_bytes # anexo do PDF (se conseguiu gerar)
+                    link_pdf=None,
+                    pdf_bytes=pdf_bytes
                 )
 
                 # Se chegou até aqui sem exception, marca como ENVIADO
@@ -340,8 +340,9 @@ def confirmar_pedido(tabela_id: int, body: ConfirmarPedidoRequest):
                 """), {"agora": agora, "id": new_id})
                 db.commit()
             except Exception as e:
-                # QUALQUER erro de e-mail é logado, mas não derruba a confirmação do pedido
                 logging.exception("Falha ao enviar email (ignorada): %s", e)
+                # limpa a transação antes de tentar o UPDATE
+                db.rollback()
                 db.execute(text("""
                     UPDATE public.tb_pedidos
                        SET link_status   = 'FALHA_ENVIO',
