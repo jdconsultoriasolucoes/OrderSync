@@ -315,14 +315,9 @@ def confirmar_pedido(tabela_id: int, body: ConfirmarPedidoRequest):
             db.commit()
         else:
             try:
-                # Tenta gerar o PDF do pedido (com todos os detalhes)
+                # Por enquanto NÃO gera PDF, manda só o e-mail
                 pdf_bytes = None
-                try:
-                    pdf_bytes = gerar_pdf_pedido(db, new_id)
-                except Exception as e_pdf:
-                    logging.exception("Falha ao gerar PDF (ignorada): %s", e_pdf)
 
-                # Dispara o e-mail usando as configs da tela de Config Email
                 enviar_email_notificacao(
                     db=db,
                     pedido=pedido_email,
@@ -339,17 +334,14 @@ def confirmar_pedido(tabela_id: int, body: ConfirmarPedidoRequest):
                      WHERE id_pedido = :id
                 """), {"agora": agora, "id": new_id})
                 db.commit()
-            except Exception as e:
-                logging.exception("Falha ao enviar email (ignorada): %s", e)
-                # limpa a transação antes de tentar o UPDATE
-                db.rollback()
+                # Se chegou até aqui sem exception, marca como ENVIADO
                 db.execute(text("""
                     UPDATE public.tb_pedidos
-                       SET link_status   = 'FALHA_ENVIO',
-                           atualizado_em = :agora
+                       SET link_enviado_em = :agora,
+                           link_status     = 'ENVIADO',
+                           atualizado_em   = :agora
                      WHERE id_pedido = :id
                 """), {"agora": agora, "id": new_id})
                 db.commit()
-
-        # 9) resposta — SEM expor nada de e-mail
+                    # 9) resposta — SEM expor nada de e-mail
         return {"id": new_id, "status": "CRIADO"}
