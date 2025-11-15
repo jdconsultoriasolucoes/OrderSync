@@ -36,14 +36,14 @@ def render_placeholders(template: str, pedido_info: dict, link_pdf: Optional[str
 
 
 # ------------------------
-# Busca e-mail do cliente (usa codigo_da_empresa do seu modelo)
+# Busca e-mail do cliente (usa codigo_cliente do seu modelo)
 # ------------------------
 def get_email_cliente_responsavel_compras(db: Session, codigo_cliente) -> Optional[str]:
     if not codigo_cliente:
         return None
     row = (
         db.query(ClienteModel.email_responsavel_compras)
-        .filter(ClienteModel.codigo_da_empresa == codigo_cliente)  # <- campo correto do seu modelo
+        .filter(ClienteModel.codigo_cliente == codigo_cliente)  # <- campo correto do seu modelo
         .first()
     )
     return row[0] if row and row[0] else None
@@ -111,7 +111,7 @@ def enviar_email_notificacao(
     # cópia opcional para o cliente responsável compras
     email_cli = get_email_cliente_responsavel_compras(
         db,
-        getattr(pedido, "codigo_cliente", None)  # deve casar com codigo_da_empresa do Cliente
+        getattr(pedido, "codigo_cliente", None)  # deve casar com codigo_cliente do Cliente
     )
     cc = [email_cli] if email_cli else []
 

@@ -5,7 +5,7 @@ class ClienteModel(Base):
     __tablename__ = "tb_cadastro_cliente"
 
     id = Column(Integer, primary_key=True, index=True)
-    codigo_da_empresa = Column(String)
+    codigo_cliente = Column(String)
     ativo = Column(Boolean)
     tipo_cliente = Column(String)
     tipo_venda = Column(String)
