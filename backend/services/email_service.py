@@ -104,16 +104,20 @@ def enviar_email_notificacao(
     remetente = (getattr(cfg_smtp, "remetente_email", "") or getattr(cfg_smtp, "smtp_user", "")).strip()
 
     # destinatários internos (separados por vírgula) — compatível com sua tela
+    # destinatários internos (separados por vírgula) — compatível com sua tela
     destinatarios = []
     if getattr(cfg_msg, "destinatario_interno", None):
         destinatarios = [e.strip() for e in cfg_msg.destinatario_interno.split(",") if e.strip()]
 
-    # cópia opcional para o cliente responsável compras
-    email_cli = get_email_cliente_responsavel_compras(
-        db,
-        getattr(pedido, "codigo_cliente", None)  # deve casar com codigo_cliente do Cliente
-    )
-    cc = [email_cli] if email_cli else []
+    # cópia opcional para o cliente responsável compras (controlada pela flag da mensagem)
+    cc = []
+    if getattr(cfg_msg, "enviar_para_cliente", False):
+        email_cli = get_email_cliente_responsavel_compras(
+            db,
+            getattr(pedido, "codigo_cliente", None)  # deve casar com codigo_cliente do Cliente
+        )
+        if email_cli:
+            cc.append(email_cli)
 
     pedido_info = {
         "pedido_id": getattr(pedido, "id", ""),
@@ -130,8 +134,12 @@ def enviar_email_notificacao(
     msg["To"]   = ", ".join(destinatarios) if destinatarios else remetente
     if cc:
         msg["Cc"] = ", ".join(cc)
-    msg["Subject"] = assunto or f"Pedido #{pedido_info['pedido_id']} confirmado"
-
+    base_subject = assunto or "Pedido confirmado"
+    if pedido_info.get("pedido_id"):
+        msg["Subject"] = f"{base_subject} #{pedido_info['pedido_id']}"
+    else:
+        msg["Subject"] = base_subject
+    
     alt = MIMEMultipart("alternative")
     if corpo_txt:
         alt.attach(MIMEText(corpo_txt, "plain", "utf-8"))

@@ -144,14 +144,15 @@ async def no_cache_static_tabela_preco(request, call_next):
     p = request.url.path
 
     no_cache_roots = ("/static/tabela_preco/", "/static/config_email/")
-    if p.startswith("/static/tabela_preco/") and any(
-        p.endswith(ext) for ext in (".js", ".css", ".png", ".jpg", ".jpeg", ".svg", ".webp")
-    ):
+    exts = (".js", ".css", ".png", ".jpg", ".jpeg", ".svg", ".webp")
+
+    if any(p.startswith(root) for root in no_cache_roots) and any(p.endswith(ext) for ext in exts):
         # Mata cache do browser e de proxies/CDNs
         resp.headers["Cache-Control"] = "no-store, no-cache, must-revalidate, max-age=0"
         resp.headers["Pragma"] = "no-cache"
         resp.headers["Expires"] = "0"
     return resp
+
 
 # ---- CORS: adicionar por ÚLTIMO (camada mais externa) ----
 app.add_middleware(
