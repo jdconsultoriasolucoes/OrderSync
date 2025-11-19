@@ -11,8 +11,7 @@ import os
 
 from services.pedido_pdf_data import carregar_pedido_pdf
 
-
-# cor “principal” da Supra (ajusta se quiser outro tom)
+# cores da Supra
 SUPRA_RED = colors.HexColor("#B3001F")
 SUPRA_DARK = colors.black
 
@@ -25,11 +24,13 @@ def _br_number(valor: float, casas: int = 2, sufixo: str = "") -> str:
 
 def gerar_pdf_pedido(db, pedido_id: int, destino_dir: str = "/tmp") -> bytes:
     """
-    Gera o PDF do pedido no layout 'Digitação do Orçamento',
-    usando as cores do cliente e incluindo o logo da Supra.
-    Retorna os bytes do arquivo para anexar no e-mail.
+    Gera o PDF do pedido no layout 'DIGITAÇÃO DO ORÇAMENTO',
+    usando as cores da Supra e incluindo o logo.
+    Compatível com a chamada atual em pedido_preview:
+
+        pdf_bytes = gerar_pdf_pedido(db, new_id)
     """
-    # 1) Carregar dados consolidados
+    # 1) carrega dados consolidados (PedidoPdf)
     pedido = carregar_pedido_pdf(db, pedido_id)
 
     os.makedirs(destino_dir, exist_ok=True)
@@ -42,12 +43,10 @@ def gerar_pdf_pedido(db, pedido_id: int, destino_dir: str = "/tmp") -> bytes:
     margin_y = 2 * cm
     y = height - margin_y
 
-    # ==== LOGO SUPRA + BARRA SUPERIOR ====
-    # tenta achar o logo em frontend/public/tabela_preco/logo.png
+    # ===== LOGO + BARRA SUPERIOR =====
     base_dir = Path(__file__).resolve().parents[2]
     logo_path = base_dir / "frontend" / "public" / "tabela_preco" / "logo.png"
     if not logo_path.exists():
-        # fallback: se você preferir usar outro caminho, ajusta aqui
         logo_env = os.getenv("ORDERSYNC_LOGO_PATH")
         if logo_env and Path(logo_env).exists():
             logo_path = Path(logo_env)
@@ -55,11 +54,9 @@ def gerar_pdf_pedido(db, pedido_id: int, destino_dir: str = "/tmp") -> bytes:
             logo_path = None
 
     barra_altura = 1.2 * cm
-    # barra colorida atrás do título
     c.setFillColor(SUPRA_RED)
     c.rect(0, y - barra_altura + 0.2 * cm, width, barra_altura, fill=1, stroke=0)
 
-    # logo no canto esquerdo, em cima da barra
     if logo_path and logo_path.exists():
         try:
             img = ImageReader(str(logo_path))
@@ -76,15 +73,14 @@ def gerar_pdf_pedido(db, pedido_id: int, destino_dir: str = "/tmp") -> bytes:
                 preserveAspectRatio=True,
             )
         except Exception:
-            # se der pau no logo, só ignora e segue a vida
-            pass
+            pass  # se der pau no logo, ignora
 
-    # título centralizado em branco
+    # título
     c.setFillColor(colors.white)
     c.setFont("Helvetica-Bold", 16)
     c.drawCentredString(width / 2, y, "DIGITAÇÃO DO ORÇAMENTO")
 
-    # data no canto direito
+    # data
     c.setFont("Helvetica", 10)
     data_pedido = pedido.data_pedido
     if isinstance(data_pedido, datetime):
@@ -95,12 +91,10 @@ def gerar_pdf_pedido(db, pedido_id: int, destino_dir: str = "/tmp") -> bytes:
         data_str = ""
     c.drawRightString(width - margin_x, y - 0.1 * cm, data_str)
 
-    # volta a cor de texto padrão
     c.setFillColor(SUPRA_DARK)
-
     y -= 1.6 * cm
 
-    # ==== LINHA CÓDIGO / CLIENTE ====
+    # ===== CÓDIGO / CLIENTE =====
     codigo_cliente = pedido.codigo_cliente or "Não cadastrado"
     cliente = pedido.cliente or ""
 
@@ -116,7 +110,7 @@ def gerar_pdf_pedido(db, pedido_id: int, destino_dir: str = "/tmp") -> bytes:
 
     y -= 0.9 * cm
 
-    # ==== LINHA FRETE / DATA ENTREGA ou RETIRA ====
+    # ===== FRETE / DATA ENTREGA ou RETIRA =====
     frete_total = float(pedido.frete_total or 0)
 
     c.setFont("Helvetica-Bold", 10)
@@ -137,7 +131,7 @@ def gerar_pdf_pedido(db, pedido_id: int, destino_dir: str = "/tmp") -> bytes:
 
     y -= 1.2 * cm
 
-    # ==== TABELA DE ITENS ====
+    # ===== TABELA DE ITENS =====
     header = [
         "Codigo",
         "Produto",
@@ -165,26 +159,24 @@ def gerar_pdf_pedido(db, pedido_id: int, destino_dir: str = "/tmp") -> bytes:
         )
 
     col_widths = [
-        1.8 * cm,  # Código
-        5.0 * cm,  # Produto
-        2.0 * cm,  # Embalagem
-        1.5 * cm,  # Qtd
-        2.7 * cm,  # Cond. Pgto
-        2.7 * cm,  # Tabela Comissão
-        2.0 * cm,  # Valor Retira
-        2.0 * cm,  # Valor Entrega
+        1.8 * cm,
+        5.0 * cm,
+        2.0 * cm,
+        1.5 * cm,
+        2.7 * cm,
+        2.7 * cm,
+        2.0 * cm,
+        2.0 * cm,
     ]
 
     table = Table(data, colWidths=col_widths)
     table.setStyle(
         TableStyle(
             [
-                # cabeçalho com cor da Supra
                 ("BACKGROUND", (0, 0), (-1, 0), SUPRA_RED),
                 ("TEXTCOLOR", (0, 0), (-1, 0), colors.white),
                 ("FONTNAME", (0, 0), (-1, 0), "Helvetica-Bold"),
                 ("FONTSIZE", (0, 0), (-1, 0), 9),
-                # linhas da tabela
                 ("GRID", (0, 0), (-1, -1), 0.5, colors.black),
                 ("BOX", (0, 0), (-1, -1), 0.5, colors.black),
                 ("FONTSIZE", (0, 1), (-1, -1), 8),
@@ -200,7 +192,7 @@ def gerar_pdf_pedido(db, pedido_id: int, destino_dir: str = "/tmp") -> bytes:
     table.drawOn(c, margin_x, y - table_height)
     y = y - table_height - 1.0 * cm
 
-    # ==== FECHAMENTO DO ORÇAMENTO ====
+    # ===== FECHAMENTO DO ORÇAMENTO =====
     total_peso = float(pedido.total_peso_bruto or 0)
     total_valor = float(pedido.total_valor or 0)
 
@@ -229,5 +221,6 @@ def gerar_pdf_pedido(db, pedido_id: int, destino_dir: str = "/tmp") -> bytes:
     c.showPage()
     c.save()
 
+    # devolve bytes para anexar no e-mail
     with open(path, "rb") as f:
         return f.read()
