@@ -38,9 +38,10 @@ def _desenhar_pdf(pedido: PedidoPdf, path: str) -> None:
     width, height = A4
 
     # margens menores e tudo mais "colado" à esquerda
-    margin_x = 1.0 * cm
+    margin_x = 0.7 * cm
     margin_y = 1.0 * cm
     top_y = height - margin_y
+    available_width = width - 2 * margin_x
 
     # ============================
     # LOGO EM CIMA / FAIXA EMBAIXO
@@ -76,7 +77,7 @@ def _desenhar_pdf(pedido: PedidoPdf, path: str) -> None:
         except Exception:
             logo_h = 0  # se der erro no logo, segue sem
 
-    # Faixa vermelha logo abaixo do logo (menos espaço em branco)
+    # Faixa vermelha logo abaixo do logo
     barra_altura = 0.9 * cm
     barra_top = top_y - logo_h - 0.2 * cm
     barra_bottom = barra_top - barra_altura
@@ -87,7 +88,7 @@ def _desenhar_pdf(pedido: PedidoPdf, path: str) -> None:
     # Título alinhado à esquerda e encostado na parte de baixo da faixa
     c.setFillColor(colors.white)
     c.setFont("Helvetica-Bold", 14)
-    titulo_y = barra_bottom + 0.25 * cm  # perto da borda inferior
+    titulo_y = barra_bottom + 0.25 * cm
     c.drawString(margin_x, titulo_y, "DIGITAÇÃO DO ORÇAMENTO")
 
     # Data à direita dentro da faixa
@@ -104,50 +105,53 @@ def _desenhar_pdf(pedido: PedidoPdf, path: str) -> None:
     # volta cor padrão texto
     c.setFillColor(SUPRA_DARK)
 
-    # Próximo bloco começa logo abaixo da faixa (menos espaço ainda)
-    y = barra_bottom - 0.7 * cm
-
     # =======================
-    # CABEÇALHO - CLIENTE
+    # BLOCO CABEÇALHO COM BORDA
     # =======================
     codigo_cliente = pedido.codigo_cliente or "Não cadastrado"
     cliente = pedido.cliente or ""
 
-    c.setFont("Helvetica-Bold", 10)
-    c.drawString(margin_x, y, "Codigo:")
-    c.setFont("Helvetica", 10)
-    c.drawString(margin_x + 38, y, str(codigo_cliente))
-
-    c.setFont("Helvetica-Bold", 10)
-    c.drawString(margin_x + 160, y, "Cliente:")
-    c.setFont("Helvetica", 10)
-    c.drawString(margin_x + 210, y, cliente[:80])
-
-    y -= 0.8 * cm
-
-    # =======================
-    # FRETE / DATA ENTREGA
-    # =======================
     frete_total = float(pedido.frete_total or 0)
-
-    c.setFont("Helvetica-Bold", 10)
-    c.drawString(margin_x, y, "Valor Frete (TO):")
-    c.setFont("Helvetica", 10)
-    c.drawString(margin_x + 105, y, "R$ " + _br_number(frete_total))
-
-    c.setFont("Helvetica-Bold", 10)
-    label = "Data da Entrega ou Retira:"
-    x_label_data = margin_x + 250
-    c.drawString(x_label_data, y, label)
 
     if pedido.data_entrega_ou_retirada:
         data_entrega_str = pedido.data_entrega_ou_retirada.strftime("%d/%m/%Y")
     else:
         data_entrega_str = ""
-    c.setFont("Helvetica", 10)
-    c.drawString(x_label_data + 150, y, data_entrega_str)
 
-    y -= 1.0 * cm
+    # tabela de 2 linhas x 4 colunas, com borda ao redor
+    header_data = [
+        ["Codigo:", str(codigo_cliente), "Cliente:", cliente[:80]],
+        ["Valor Frete (TO):", "R$ " + _br_number(frete_total), "Data da Entrega ou Retira:", data_entrega_str],
+    ]
+
+    header_col_widths = [
+        available_width * 0.12,
+        available_width * 0.23,
+        available_width * 0.20,
+        available_width * 0.45,
+    ]
+
+    header_table = Table(header_data, colWidths=header_col_widths)
+    header_table.setStyle(
+        TableStyle(
+            [
+                ("BACKGROUND", (0, 0), (-1, 0), colors.HexColor("#F2F2F2")),
+                ("FONTNAME", (0, 0), (-1, 0), "Helvetica-Bold"),
+                ("TEXTCOLOR", (0, 0), (-1, 0), SUPRA_DARK),
+                ("FONTSIZE", (0, 0), (-1, -1), 9),
+                ("GRID", (0, 0), (-1, -1), 0.5, colors.black),
+                ("BOX", (0, 0), (-1, -1), 0.5, colors.black),
+                ("VALIGN", (0, 0), (-1, -1), "MIDDLE"),
+                ("ALIGN", (0, 0), (-1, -1), "LEFT"),
+            ]
+        )
+    )
+
+    # posição: logo abaixo da faixa
+    y = barra_bottom - 0.5 * cm
+    header_w, header_h = header_table.wrap(available_width, height)
+    header_table.drawOn(c, margin_x, y - header_h)
+    y = y - header_h - 0.8 * cm
 
     # =======================
     # TABELA DE ITENS
@@ -158,7 +162,7 @@ def _desenhar_pdf(pedido: PedidoPdf, path: str) -> None:
         "Embalagem",
         "Qtd",
         "Cond. Pgto",
-        "Tabela de Comissão",
+        "Comissão",          # <--- trocado aqui
         "Valor Retira",
         "Valor Entrega",
     ]
@@ -182,11 +186,11 @@ def _desenhar_pdf(pedido: PedidoPdf, path: str) -> None:
         1.8 * cm,  # Código
         5.0 * cm,  # Produto
         2.0 * cm,  # Embalagem
-        1.5 * cm,  # Qtd
-        2.7 * cm,  # Cond. Pgto
-        2.7 * cm,  # Tabela Comissão
-        2.0 * cm,  # Valor Retira
-        2.0 * cm,  # Valor Entrega
+        1.4 * cm,  # Qtd
+        2.5 * cm,  # Cond. Pgto
+        1.8 * cm,  # Comissão (menor)
+        2.1 * cm,  # Valor Retira
+        2.1 * cm,  # Valor Entrega
     ]
 
     table = Table(data, colWidths=col_widths)
@@ -210,7 +214,6 @@ def _desenhar_pdf(pedido: PedidoPdf, path: str) -> None:
         )
     )
 
-    available_width = width - 2 * margin_x
     table_width, table_height = table.wrap(available_width, height)
     table.drawOn(c, margin_x, y - table_height)
     y = y - table_height - 0.8 * cm
@@ -254,6 +257,7 @@ def _desenhar_pdf(pedido: PedidoPdf, path: str) -> None:
 
     c.showPage()
     c.save()
+
 
 def gerar_pdf_pedido(*args, destino_dir: str = "/tmp", **kwargs):
     """
