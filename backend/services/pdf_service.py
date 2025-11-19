@@ -37,9 +37,9 @@ def _desenhar_pdf(pedido: PedidoPdf, path: str) -> None:
     c = canvas.Canvas(path, pagesize=A4)
     width, height = A4
 
-    # margens e posicionamento mais "colado" à esquerda
-    margin_x = 1.5 * cm
-    margin_y = 1.5 * cm
+    # margens menores e tudo mais "colado" à esquerda
+    margin_x = 1.0 * cm
+    margin_y = 1.0 * cm
     top_y = height - margin_y
 
     # ============================
@@ -59,7 +59,7 @@ def _desenhar_pdf(pedido: PedidoPdf, path: str) -> None:
     if logo_path and logo_path.exists():
         try:
             img = ImageReader(str(logo_path))
-            logo_w = 3.0 * cm  # tamanho mais discreto
+            logo_w = 3.0 * cm  # tamanho discreto
             iw, ih = img.getSize()
             logo_h = logo_w * ih / iw
             x_logo = width - margin_x - logo_w
@@ -76,18 +76,18 @@ def _desenhar_pdf(pedido: PedidoPdf, path: str) -> None:
         except Exception:
             logo_h = 0  # se der erro no logo, segue sem
 
-    # Faixa vermelha abaixo do logo
-    barra_altura = 1.0 * cm
-    barra_top = top_y - logo_h - 0.4 * cm
+    # Faixa vermelha logo abaixo do logo (menos espaço em branco)
+    barra_altura = 0.9 * cm
+    barra_top = top_y - logo_h - 0.2 * cm
     barra_bottom = barra_top - barra_altura
 
     c.setFillColor(SUPRA_RED)
     c.rect(0, barra_bottom, width, barra_altura, fill=1, stroke=0)
 
-    # Título alinhado à esquerda dentro da faixa
+    # Título alinhado à esquerda e encostado na parte de baixo da faixa
     c.setFillColor(colors.white)
     c.setFont("Helvetica-Bold", 14)
-    titulo_y = barra_bottom + barra_altura / 2 + 0.1 * cm
+    titulo_y = barra_bottom + 0.25 * cm  # perto da borda inferior
     c.drawString(margin_x, titulo_y, "DIGITAÇÃO DO ORÇAMENTO")
 
     # Data à direita dentro da faixa
@@ -104,8 +104,8 @@ def _desenhar_pdf(pedido: PedidoPdf, path: str) -> None:
     # volta cor padrão texto
     c.setFillColor(SUPRA_DARK)
 
-    # Próximo bloco começa logo abaixo da faixa
-    y = barra_bottom - 1.0 * cm
+    # Próximo bloco começa logo abaixo da faixa (menos espaço ainda)
+    y = barra_bottom - 0.7 * cm
 
     # =======================
     # CABEÇALHO - CLIENTE
@@ -116,14 +116,14 @@ def _desenhar_pdf(pedido: PedidoPdf, path: str) -> None:
     c.setFont("Helvetica-Bold", 10)
     c.drawString(margin_x, y, "Codigo:")
     c.setFont("Helvetica", 10)
-    c.drawString(margin_x + 40, y, str(codigo_cliente))
+    c.drawString(margin_x + 38, y, str(codigo_cliente))
 
     c.setFont("Helvetica-Bold", 10)
-    c.drawString(margin_x + 170, y, "Cliente:")
+    c.drawString(margin_x + 160, y, "Cliente:")
     c.setFont("Helvetica", 10)
-    c.drawString(margin_x + 220, y, cliente[:80])
+    c.drawString(margin_x + 210, y, cliente[:80])
 
-    y -= 0.9 * cm
+    y -= 0.8 * cm
 
     # =======================
     # FRETE / DATA ENTREGA
@@ -137,7 +137,7 @@ def _desenhar_pdf(pedido: PedidoPdf, path: str) -> None:
 
     c.setFont("Helvetica-Bold", 10)
     label = "Data da Entrega ou Retira:"
-    x_label_data = margin_x + 260
+    x_label_data = margin_x + 250
     c.drawString(x_label_data, y, label)
 
     if pedido.data_entrega_ou_retirada:
@@ -147,7 +147,7 @@ def _desenhar_pdf(pedido: PedidoPdf, path: str) -> None:
     c.setFont("Helvetica", 10)
     c.drawString(x_label_data + 150, y, data_entrega_str)
 
-    y -= 1.2 * cm
+    y -= 1.0 * cm
 
     # =======================
     # TABELA DE ITENS
@@ -213,39 +213,47 @@ def _desenhar_pdf(pedido: PedidoPdf, path: str) -> None:
     available_width = width - 2 * margin_x
     table_width, table_height = table.wrap(available_width, height)
     table.drawOn(c, margin_x, y - table_height)
-    y = y - table_height - 1.0 * cm
+    y = y - table_height - 0.8 * cm
 
     # =======================
-    # FECHAMENTO DO ORÇAMENTO
+    # FECHAMENTO DO ORÇAMENTO (COM BORDA)
     # =======================
     total_peso = float(pedido.total_peso_bruto or 0)
     total_valor = float(pedido.total_valor or 0)
 
-    c.setFont("Helvetica-Bold", 10)
-    c.drawString(margin_x, y, "Fechamento do Orçamento:")
-    y -= 0.6 * cm
+    data_fech = [
+        ["Fechamento do Orçamento:", ""],
+        ["Total em Peso Bruto:", _br_number(total_peso, 3, " kg")],
+        ["Total em Valor:", "R$ " + _br_number(total_valor)],
+    ]
 
-    c.setFont("Helvetica", 10)
-    c.drawString(
-        margin_x,
-        y,
-        "Total em Peso Bruto: " + _br_number(total_peso, 3, " kg"),
+    fech_table = Table(data_fech, colWidths=[6.0 * cm, 5.0 * cm])
+    fech_table.setStyle(
+        TableStyle(
+            [
+                ("BACKGROUND", (0, 0), (-1, 0), colors.HexColor("#F2F2F2")),
+                ("FONTNAME", (0, 0), (-1, 0), "Helvetica-Bold"),
+                ("TEXTCOLOR", (0, 0), (-1, 0), SUPRA_DARK),
+                ("FONTSIZE", (0, 0), (-1, -1), 9),
+                ("GRID", (0, 0), (-1, -1), 0.5, colors.black),
+                ("BOX", (0, 0), (-1, -1), 0.5, colors.black),
+                ("ALIGN", (0, 0), (0, -1), "LEFT"),
+                ("ALIGN", (1, 1), (1, -1), "RIGHT"),
+                ("VALIGN", (0, 0), (-1, -1), "MIDDLE"),
+            ]
+        )
     )
-    y -= 0.4 * cm
 
-    c.drawString(
-        margin_x,
-        y,
-        "Total em Valor: R$ " + _br_number(total_valor),
-    )
-    y -= 0.8 * cm
+    fech_w, fech_h = fech_table.wrap(available_width, height)
+    fech_table.drawOn(c, margin_x, y - fech_h)
+    y = y - fech_h - 0.5 * cm
 
+    # rodapé
     c.setFont("Helvetica", 8)
     c.drawString(margin_x, y, "Documento gerado automaticamente pelo OrderSync.")
 
     c.showPage()
     c.save()
-
 
 def gerar_pdf_pedido(*args, destino_dir: str = "/tmp", **kwargs):
     """
