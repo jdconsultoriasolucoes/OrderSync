@@ -10,6 +10,7 @@ from pathlib import Path
 import os
 
 from services.pedido_pdf_data import carregar_pedido_pdf
+from models.pedido_pdf import PedidoPdf
 
 # cores da Supra
 SUPRA_RED = colors.HexColor("#B3001F")
@@ -22,20 +23,9 @@ def _br_number(valor: float, casas: int = 2, sufixo: str = "") -> str:
     return txt + sufixo
 
 
-def gerar_pdf_pedido(db, pedido_id: int, destino_dir: str = "/tmp") -> bytes:
-    """
-    Gera o PDF do pedido no layout 'DIGITAÇÃO DO ORÇAMENTO',
-    usando as cores da Supra e incluindo o logo.
-    Compatível com a chamada atual em pedido_preview:
-
-        pdf_bytes = gerar_pdf_pedido(db, new_id)
-    """
-    # 1) carrega dados consolidados (PedidoPdf)
-    pedido = carregar_pedido_pdf(db, pedido_id)
-
-    os.makedirs(destino_dir, exist_ok=True)
-    filename = f"pedido_{pedido.id_pedido}.pdf"
-    path = os.path.join(destino_dir, filename)
+def _desenhar_pdf(pedido: PedidoPdf, path: str) -> None:
+    """Desenha o PDF no arquivo `path` usando o layout bonitinho."""
+    os.makedirs(os.path.dirname(path), exist_ok=True)
 
     c = canvas.Canvas(path, pagesize=A4)
     width, height = A4
@@ -43,7 +33,7 @@ def gerar_pdf_pedido(db, pedido_id: int, destino_dir: str = "/tmp") -> bytes:
     margin_y = 2 * cm
     y = height - margin_y
 
-    # ===== LOGO + BARRA SUPERIOR =====
+    # ==== LOGO + BARRA SUPERIOR ====
     base_dir = Path(__file__).resolve().parents[2]
     logo_path = base_dir / "frontend" / "public" / "tabela_preco" / "logo.png"
     if not logo_path.exists():
@@ -73,7 +63,8 @@ def gerar_pdf_pedido(db, pedido_id: int, destino_dir: str = "/tmp") -> bytes:
                 preserveAspectRatio=True,
             )
         except Exception:
-            pass  # se der pau no logo, ignora
+            # se der pau no logo, ignora e segue
+            pass
 
     # título
     c.setFillColor(colors.white)
@@ -94,7 +85,7 @@ def gerar_pdf_pedido(db, pedido_id: int, destino_dir: str = "/tmp") -> bytes:
     c.setFillColor(SUPRA_DARK)
     y -= 1.6 * cm
 
-    # ===== CÓDIGO / CLIENTE =====
+    # ==== CÓDIGO / CLIENTE ====
     codigo_cliente = pedido.codigo_cliente or "Não cadastrado"
     cliente = pedido.cliente or ""
 
@@ -110,7 +101,7 @@ def gerar_pdf_pedido(db, pedido_id: int, destino_dir: str = "/tmp") -> bytes:
 
     y -= 0.9 * cm
 
-    # ===== FRETE / DATA ENTREGA ou RETIRA =====
+    # ==== FRETE / DATA ENTREGA ou RETIRA ====
     frete_total = float(pedido.frete_total or 0)
 
     c.setFont("Helvetica-Bold", 10)
@@ -131,7 +122,7 @@ def gerar_pdf_pedido(db, pedido_id: int, destino_dir: str = "/tmp") -> bytes:
 
     y -= 1.2 * cm
 
-    # ===== TABELA DE ITENS =====
+    # ==== TABELA DE ITENS ====
     header = [
         "Codigo",
         "Produto",
@@ -169,6 +160,8 @@ def gerar_pdf_pedido(db, pedido_id: int, destino_dir: str = "/tmp") -> bytes:
         2.0 * cm,
     ]
 
+    from reportlab.platypus import Table
+
     table = Table(data, colWidths=col_widths)
     table.setStyle(
         TableStyle(
@@ -192,7 +185,7 @@ def gerar_pdf_pedido(db, pedido_id: int, destino_dir: str = "/tmp") -> bytes:
     table.drawOn(c, margin_x, y - table_height)
     y = y - table_height - 1.0 * cm
 
-    # ===== FECHAMENTO DO ORÇAMENTO =====
+    # ==== FECHAMENTO DO ORÇAMENTO ====
     total_peso = float(pedido.total_peso_bruto or 0)
     total_valor = float(pedido.total_valor or 0)
 
@@ -221,6 +214,48 @@ def gerar_pdf_pedido(db, pedido_id: int, destino_dir: str = "/tmp") -> bytes:
     c.showPage()
     c.save()
 
-    # devolve bytes para anexar no e-mail
+
+def gerar_pdf_pedido(*args, destino_dir: str = "/tmp", **kwargs):
+    """
+    Função compatível com os dois jeitos de uso:
+
+    1) JEITO ANTIGO (código que está no Render agora):
+        pedido_pdf = carregar_pedido_pdf(...)
+        path_pdf = gerar_pdf_pedido(pedido_pdf)
+        # retorna STRING com o caminho do arquivo
+
+    2) JEITO NOVO (que você tem local):
+        pdf_bytes = gerar_pdf_pedido(db, pedido_id)
+        # retorna BYTES para anexar no e-mail
+    """
+    # --- destino_dir pode vir em kwargs ---
+    if "destino_dir" in kwargs and kwargs["destino_dir"]:
+        destino_dir = kwargs["destino_dir"]
+
+    # Caso 1: chamado como gerar_pdf_pedido(pedido_pdf)
+    if len(args) == 1 and isinstance(args[0], PedidoPdf):
+        pedido = args[0]
+        os.makedirs(destino_dir, exist_ok=True)
+        path = os.path.join(destino_dir, f"pedido_{pedido.id_pedido}.pdf")
+        _desenhar_pdf(pedido, path)
+        return path
+
+    # Caso 2: chamado como gerar_pdf_pedido(db, pedido_id) ou via kwargs
+    if len(args) >= 2:
+        db = args[0]
+        pedido_id = args[1]
+    elif "db" in kwargs and "pedido_id" in kwargs:
+        db = kwargs["db"]
+        pedido_id = kwargs["pedido_id"]
+    else:
+        raise TypeError("Uso inválido de gerar_pdf_pedido")
+
+    # carrega os dados a partir do banco e gera o PDF
+    pedido = carregar_pedido_pdf(db, int(pedido_id))
+    os.makedirs(destino_dir, exist_ok=True)
+    path = os.path.join(destino_dir, f"pedido_{pedido.id_pedido}.pdf")
+    _desenhar_pdf(pedido, path)
+
+    # aqui retornamos BYTES (uso novo)
     with open(path, "rb") as f:
         return f.read()
