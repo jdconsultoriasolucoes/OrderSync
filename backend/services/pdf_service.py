@@ -37,7 +37,7 @@ def _desenhar_pdf(pedido: PedidoPdf, path: str) -> None:
     c = canvas.Canvas(path, pagesize=A4)
     width, height = A4
 
-    # margens: menos espaço em cima e à esquerda
+    # margens: pouco espaço em cima e à esquerda
     margin_x = 0.7 * cm
     margin_y = 0.5 * cm
     top_y = height - margin_y
@@ -60,7 +60,7 @@ def _desenhar_pdf(pedido: PedidoPdf, path: str) -> None:
     if logo_path and logo_path.exists():
         try:
             img = ImageReader(str(logo_path))
-            logo_w = 3.0 * cm  # tamanho discreto
+            logo_w = 3.0 * cm
             iw, ih = img.getSize()
             logo_h = logo_w * ih / iw
             x_logo = width - margin_x - logo_w
@@ -75,9 +75,9 @@ def _desenhar_pdf(pedido: PedidoPdf, path: str) -> None:
                 preserveAspectRatio=True,
             )
         except Exception:
-            logo_h = 0  # se der erro no logo, segue sem
+            logo_h = 0
 
-    # Faixa vermelha logo abaixo do logo (mais colada)
+    # Faixa vermelha logo abaixo do logo
     barra_altura = 0.9 * cm
     barra_top = top_y - logo_h - 0.05 * cm
     barra_bottom = barra_top - barra_altura
@@ -85,13 +85,13 @@ def _desenhar_pdf(pedido: PedidoPdf, path: str) -> None:
     c.setFillColor(SUPRA_RED)
     c.rect(0, barra_bottom, width, barra_altura, fill=1, stroke=0)
 
-    # Título alinhado à esquerda e encostado na parte de baixo da faixa
+    # Título
     c.setFillColor(colors.white)
     c.setFont("Helvetica-Bold", 14)
     titulo_y = barra_bottom + 0.25 * cm
     c.drawString(margin_x, titulo_y, "DIGITAÇÃO DO ORÇAMENTO")
 
-    # Data à direita dentro da faixa
+    # Data à direita
     c.setFont("Helvetica", 10)
     data_pedido = pedido.data_pedido
     if isinstance(data_pedido, datetime):
@@ -102,7 +102,6 @@ def _desenhar_pdf(pedido: PedidoPdf, path: str) -> None:
         data_str = ""
     c.drawRightString(width - margin_x, titulo_y, data_str)
 
-    # volta cor padrão texto
     c.setFillColor(SUPRA_DARK)
 
     # =======================
@@ -116,7 +115,7 @@ def _desenhar_pdf(pedido: PedidoPdf, path: str) -> None:
     else:
         data_entrega_str = ""
 
-    # Bloco 1: Código / Cliente (duas linhas)
+    # Bloco 1: Código / Cliente
     bloco1_data = [
         ["Código:", str(codigo_cliente)],
         ["Cliente:", cliente[:80]],
@@ -142,11 +141,11 @@ def _desenhar_pdf(pedido: PedidoPdf, path: str) -> None:
     )
 
     y = barra_bottom - 0.4 * cm
-    b1_w, b1_h = bloco1.wrap(available_width, height)
+    _, b1_h = bloco1.wrap(available_width, height)
     bloco1.drawOn(c, margin_x, y - b1_h)
     y = y - b1_h
 
-    # Bloco 2: Frete / Data (uma linha, 4 colunas)
+    # Bloco 2: Frete / Data
     bloco2_data = [
         ["Valor Frete (TO):", "R$ " + _br_number(frete_total),
          "Data da Entrega ou Retira:", data_entrega_str]
@@ -170,16 +169,13 @@ def _desenhar_pdf(pedido: PedidoPdf, path: str) -> None:
                 ("GRID", (0, 0), (-1, 0), 0.5, colors.black),
                 ("BOX", (0, 0), (-1, 0), 0.5, colors.black),
                 ("VALIGN", (0, 0), (-1, 0), "MIDDLE"),
-                ("ALIGN", (0, 0), (0, 0), "LEFT"),
-                ("ALIGN", (1, 0), (1, 0), "LEFT"),
-                ("ALIGN", (2, 0), (2, 0), "LEFT"),
-                ("ALIGN", (3, 0), (3, 0), "LEFT"),
+                ("ALIGN", (0, 0), (3, 0), "LEFT"),
             ]
         )
     )
 
     y = y - 0.3 * cm
-    b2_w, b2_h = bloco2.wrap(available_width, height)
+    _, b2_h = bloco2.wrap(available_width, height)
     bloco2.drawOn(c, margin_x, y - b2_h)
     y = y - b2_h - 0.7 * cm
 
@@ -212,15 +208,16 @@ def _desenhar_pdf(pedido: PedidoPdf, path: str) -> None:
             ]
         )
 
+    # tabela mais larga (Produto ganhou espaço)
     col_widths = [
-        1.8 * cm,  # Código
-        5.0 * cm,  # Produto
-        2.0 * cm,  # Embalagem
-        1.4 * cm,  # Qtd
-        2.5 * cm,  # Cond. Pgto
-        1.8 * cm,  # Comissão
-        2.1 * cm,  # Valor Retira
-        2.1 * cm,  # Valor Entrega
+        1.8 * cm,   # Código
+        5.7 * cm,   # Produto (era 5.0)
+        2.0 * cm,   # Embalagem
+        1.4 * cm,   # Qtd
+        2.5 * cm,   # Cond. Pgto
+        1.8 * cm,   # Comissão
+        2.1 * cm,   # Valor Retira
+        2.1 * cm,   # Valor Entrega
     ]
 
     table = Table(data, colWidths=col_widths)
@@ -241,9 +238,9 @@ def _desenhar_pdf(pedido: PedidoPdf, path: str) -> None:
         )
     )
 
-    # 1 cm a mais pra direita pra alinhar melhor visualmente
-    itens_x = margin_x + 1.0 * cm
-    table_width, table_height = table.wrap(available_width, height)
+    # agora alinhada com o cabeçalho (sem deslocar)
+    itens_x = margin_x
+    _, table_height = table.wrap(available_width, height)
     table.drawOn(c, itens_x, y - table_height)
     y = y - table_height - 0.8 * cm
 
@@ -276,7 +273,7 @@ def _desenhar_pdf(pedido: PedidoPdf, path: str) -> None:
         )
     )
 
-    fech_w, fech_h = fech_table.wrap(available_width, height)
+    _, fech_h = fech_table.wrap(available_width, height)
     fech_table.drawOn(c, itens_x, y - fech_h)
     y = y - fech_h - 0.5 * cm
 
