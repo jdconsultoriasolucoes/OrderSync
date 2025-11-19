@@ -1,84 +1,233 @@
 # services/pdf_service.py
-
-from reportlab.pdfgen import canvas
 from reportlab.lib.pagesizes import A4
+from reportlab.pdfgen import canvas
 from reportlab.lib.units import cm
+from reportlab.platypus import Table, TableStyle
+from reportlab.lib import colors
+from reportlab.lib.utils import ImageReader
+from datetime import datetime
+from pathlib import Path
 import os
 
-def gerar_pdf_pedido(pedido_pdf, destino_dir="/tmp"):
-    """
-    pedido_pdf = objeto PedidoPdf vindo do endpoint /dados_pdf
-    """
+from services.pedido_pdf_data import carregar_pedido_pdf
 
-    filename = f"pedido_{pedido_pdf.id_pedido}.pdf"
+
+# cor “principal” da Supra (ajusta se quiser outro tom)
+SUPRA_RED = colors.HexColor("#B3001F")
+SUPRA_DARK = colors.black
+
+
+def _br_number(valor: float, casas: int = 2, sufixo: str = "") -> str:
+    txt = f"{valor:,.{casas}f}"
+    txt = txt.replace(",", "X").replace(".", ",").replace("X", ".")
+    return txt + sufixo
+
+
+def gerar_pdf_pedido(db, pedido_id: int, destino_dir: str = "/tmp") -> bytes:
+    """
+    Gera o PDF do pedido no layout 'Digitação do Orçamento',
+    usando as cores do cliente e incluindo o logo da Supra.
+    Retorna os bytes do arquivo para anexar no e-mail.
+    """
+    # 1) Carregar dados consolidados
+    pedido = carregar_pedido_pdf(db, pedido_id)
+
+    os.makedirs(destino_dir, exist_ok=True)
+    filename = f"pedido_{pedido.id_pedido}.pdf"
     path = os.path.join(destino_dir, filename)
 
     c = canvas.Canvas(path, pagesize=A4)
+    width, height = A4
+    margin_x = 2 * cm
+    margin_y = 2 * cm
+    y = height - margin_y
 
-    # CABEÇALHO
-    c.setFont("Helvetica-Bold", 14)
-    c.drawString(2*cm, 28*cm, "DIGITAÇÃO DO ORÇAMENTO")
+    # ==== LOGO SUPRA + BARRA SUPERIOR ====
+    # tenta achar o logo em frontend/public/tabela_preco/logo.png
+    base_dir = Path(__file__).resolve().parents[2]
+    logo_path = base_dir / "frontend" / "public" / "tabela_preco" / "logo.png"
+    if not logo_path.exists():
+        # fallback: se você preferir usar outro caminho, ajusta aqui
+        logo_env = os.getenv("ORDERSYNC_LOGO_PATH")
+        if logo_env and Path(logo_env).exists():
+            logo_path = Path(logo_env)
+        else:
+            logo_path = None
 
-    # Data
+    barra_altura = 1.2 * cm
+    # barra colorida atrás do título
+    c.setFillColor(SUPRA_RED)
+    c.rect(0, y - barra_altura + 0.2 * cm, width, barra_altura, fill=1, stroke=0)
+
+    # logo no canto esquerdo, em cima da barra
+    if logo_path and logo_path.exists():
+        try:
+            img = ImageReader(str(logo_path))
+            logo_w = 3.5 * cm
+            iw, ih = img.getSize()
+            logo_h = logo_w * ih / iw
+            c.drawImage(
+                img,
+                margin_x,
+                y - logo_h + 0.3 * cm,
+                width=logo_w,
+                height=logo_h,
+                mask="auto",
+                preserveAspectRatio=True,
+            )
+        except Exception:
+            # se der pau no logo, só ignora e segue a vida
+            pass
+
+    # título centralizado em branco
+    c.setFillColor(colors.white)
+    c.setFont("Helvetica-Bold", 16)
+    c.drawCentredString(width / 2, y, "DIGITAÇÃO DO ORÇAMENTO")
+
+    # data no canto direito
     c.setFont("Helvetica", 10)
-    c.drawString(16*cm, 28*cm, pedido_pdf.data_pedido.strftime("%d/%m/%Y"))
+    data_pedido = pedido.data_pedido
+    if isinstance(data_pedido, datetime):
+        data_str = data_pedido.strftime("%d/%m/%Y")
+    elif data_pedido:
+        data_str = data_pedido.strftime("%d/%m/%Y")
+    else:
+        data_str = ""
+    c.drawRightString(width - margin_x, y - 0.1 * cm, data_str)
 
-    # Código + Cliente
+    # volta a cor de texto padrão
+    c.setFillColor(SUPRA_DARK)
+
+    y -= 1.6 * cm
+
+    # ==== LINHA CÓDIGO / CLIENTE ====
+    codigo_cliente = pedido.codigo_cliente or "Não cadastrado"
+    cliente = pedido.cliente or ""
+
     c.setFont("Helvetica-Bold", 10)
-    c.drawString(2*cm, 26.5*cm, f"Codigo: {pedido_pdf.codigo_cliente or '---'}")
-    c.drawString(7*cm, 26.5*cm, f"Cliente: {pedido_pdf.cliente}")
+    c.drawString(margin_x, y, "Codigo:")
+    c.setFont("Helvetica", 10)
+    c.drawString(margin_x + 38, y, str(codigo_cliente))
 
-    # Valor Frete
-    c.drawString(2*cm, 25.5*cm, f"Valor Frete (TO): R$ {pedido_pdf.frete_total:,.2f}".replace(",", "X").replace(".", ",").replace("X", "."))
+    c.setFont("Helvetica-Bold", 10)
+    c.drawString(margin_x + 160, y, "Cliente:")
+    c.setFont("Helvetica", 10)
+    c.drawString(margin_x + 210, y, cliente[:80])
 
-    # Data de entrega
-    if pedido_pdf.data_entrega_ou_retirada:
-        c.drawString(
-            12*cm, 25.5*cm,
-            f"Data da Entrega/Retira: {pedido_pdf.data_entrega_ou_retirada.strftime('%d/%m/%Y')}"
+    y -= 0.9 * cm
+
+    # ==== LINHA FRETE / DATA ENTREGA ou RETIRA ====
+    frete_total = float(pedido.frete_total or 0)
+
+    c.setFont("Helvetica-Bold", 10)
+    c.drawString(margin_x, y, "Valor Frete (TO):")
+    c.setFont("Helvetica", 10)
+    c.drawString(margin_x + 95, y, "R$ " + _br_number(frete_total))
+
+    c.setFont("Helvetica-Bold", 10)
+    label = "Data da Entrega ou Retira:"
+    c.drawString(width / 2, y, label)
+
+    if pedido.data_entrega_ou_retirada:
+        data_entrega_str = pedido.data_entrega_ou_retirada.strftime("%d/%m/%Y")
+    else:
+        data_entrega_str = ""
+    c.setFont("Helvetica", 10)
+    c.drawString(width / 2 + 150, y, data_entrega_str)
+
+    y -= 1.2 * cm
+
+    # ==== TABELA DE ITENS ====
+    header = [
+        "Codigo",
+        "Produto",
+        "Embalagem",
+        "Qtd",
+        "Cond. Pgto",
+        "Tabela de Comissão",
+        "Valor Retira",
+        "Valor Entrega",
+    ]
+    data = [header]
+
+    for it in pedido.itens:
+        data.append(
+            [
+                it.codigo,
+                it.produto,
+                it.embalagem or "",
+                f"{it.quantidade:g}",
+                it.condicao_pagamento or "",
+                it.tabela_comissao or "",
+                "R$ " + _br_number(float(it.valor_retira or 0)),
+                "R$ " + _br_number(float(it.valor_entrega or 0)),
+            ]
         )
 
-    # TÍTULOS DA TABELA
-    y = 24*cm
-    c.setFont("Helvetica-Bold", 9)
-    headers = ["Codigo", "Produto", "Embalagem", "Qtd", "Cond. Pgto", "Comissão", "Retira", "Entrega"]
-    x_positions = [2*cm, 4*cm, 9*cm, 12*cm, 14*cm, 16*cm, 18*cm, 19.5*cm]
+    col_widths = [
+        1.8 * cm,  # Código
+        5.0 * cm,  # Produto
+        2.0 * cm,  # Embalagem
+        1.5 * cm,  # Qtd
+        2.7 * cm,  # Cond. Pgto
+        2.7 * cm,  # Tabela Comissão
+        2.0 * cm,  # Valor Retira
+        2.0 * cm,  # Valor Entrega
+    ]
 
-    for h, x in zip(headers, x_positions):
-        c.drawString(x, y, h)
+    table = Table(data, colWidths=col_widths)
+    table.setStyle(
+        TableStyle(
+            [
+                # cabeçalho com cor da Supra
+                ("BACKGROUND", (0, 0), (-1, 0), SUPRA_RED),
+                ("TEXTCOLOR", (0, 0), (-1, 0), colors.white),
+                ("FONTNAME", (0, 0), (-1, 0), "Helvetica-Bold"),
+                ("FONTSIZE", (0, 0), (-1, 0), 9),
+                # linhas da tabela
+                ("GRID", (0, 0), (-1, -1), 0.5, colors.black),
+                ("BOX", (0, 0), (-1, -1), 0.5, colors.black),
+                ("FONTSIZE", (0, 1), (-1, -1), 8),
+                ("VALIGN", (0, 0), (-1, -1), "MIDDLE"),
+                ("ALIGN", (3, 1), (3, -1), "CENTER"),
+                ("ALIGN", (6, 1), (7, -1), "RIGHT"),
+            ]
+        )
+    )
 
-    # ITENS
-    c.setFont("Helvetica", 9)
-    y -= 0.7*cm
+    available_width = width - 2 * margin_x
+    table_width, table_height = table.wrap(available_width, height)
+    table.drawOn(c, margin_x, y - table_height)
+    y = y - table_height - 1.0 * cm
 
-    for item in pedido_pdf.itens:
-        if y < 3*cm:  
-            c.showPage()
-            y = 27*cm
+    # ==== FECHAMENTO DO ORÇAMENTO ====
+    total_peso = float(pedido.total_peso_bruto or 0)
+    total_valor = float(pedido.total_valor or 0)
 
-        c.drawString(2*cm, y, item.codigo)
-        c.drawString(4*cm, y, item.produto[:30])
-        c.drawString(9*cm, y, item.embalagem or "")
-        c.drawString(12*cm, y, str(item.quantidade))
-        c.drawString(14*cm, y, item.condicao_pagamento or "")
-        c.drawString(16*cm, y, item.tabela_comissao or "")
-        c.drawRightString(19*cm, y, f"{item.valor_retira:.2f}")
-        c.drawRightString(21*cm, y, f"{item.valor_entrega:.2f}")
-        y -= 0.6*cm
-
-    # FECHAMENTO
-    y -= 1*cm
     c.setFont("Helvetica-Bold", 10)
-    c.drawString(2*cm, y, "Fechamento do Orçamento:")
+    c.drawString(margin_x, y, "Fechamento do Orçamento:")
+    y -= 0.6 * cm
 
-    y -= 0.8*cm
     c.setFont("Helvetica", 10)
-    c.drawString(2*cm, y, f"Total em Peso Bruto: {pedido_pdf.total_peso_bruto:,.3f} kg".replace(",", "X").replace(".", ",").replace("X", "."))
+    c.drawString(
+        margin_x,
+        y,
+        "Total em Peso Bruto: " + _br_number(total_peso, 3, " kg"),
+    )
+    y -= 0.4 * cm
 
-    y -= 0.6*cm
-    c.drawString(2*cm, y, f"Total em Valor: R$ {pedido_pdf.total_valor:,.2f}".replace(",", "X").replace(".", ",").replace("X", "."))
+    c.drawString(
+        margin_x,
+        y,
+        "Total em Valor: R$ " + _br_number(total_valor),
+    )
+    y -= 0.8 * cm
+
+    c.setFont("Helvetica", 8)
+    c.drawString(margin_x, y, "Documento gerado automaticamente pelo OrderSync.")
 
     c.showPage()
     c.save()
 
-    return path
+    with open(path, "rb") as f:
+        return f.read()
