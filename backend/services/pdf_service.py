@@ -37,9 +37,9 @@ def _desenhar_pdf(pedido: PedidoPdf, path: str) -> None:
     c = canvas.Canvas(path, pagesize=A4)
     width, height = A4
 
-    # margens menores e tudo mais "colado" à esquerda
+    # margens: menos espaço em cima e à esquerda
     margin_x = 0.7 * cm
-    margin_y = 1.0 * cm
+    margin_y = 0.5 * cm
     top_y = height - margin_y
     available_width = width - 2 * margin_x
 
@@ -77,9 +77,9 @@ def _desenhar_pdf(pedido: PedidoPdf, path: str) -> None:
         except Exception:
             logo_h = 0  # se der erro no logo, segue sem
 
-    # Faixa vermelha logo abaixo do logo
+    # Faixa vermelha logo abaixo do logo (mais colada)
     barra_altura = 0.9 * cm
-    barra_top = top_y - logo_h - 0.2 * cm
+    barra_top = top_y - logo_h - 0.05 * cm
     barra_bottom = barra_top - barra_altura
 
     c.setFillColor(SUPRA_RED)
@@ -141,7 +141,7 @@ def _desenhar_pdf(pedido: PedidoPdf, path: str) -> None:
         )
     )
 
-    y = barra_bottom - 0.5 * cm
+    y = barra_bottom - 0.4 * cm
     b1_w, b1_h = bloco1.wrap(available_width, height)
     bloco1.drawOn(c, margin_x, y - b1_h)
     y = y - b1_h
@@ -181,7 +181,7 @@ def _desenhar_pdf(pedido: PedidoPdf, path: str) -> None:
     y = y - 0.3 * cm
     b2_w, b2_h = bloco2.wrap(available_width, height)
     bloco2.drawOn(c, margin_x, y - b2_h)
-    y = y - b2_h - 0.8 * cm
+    y = y - b2_h - 0.7 * cm
 
     # =======================
     # TABELA DE ITENS
@@ -241,8 +241,10 @@ def _desenhar_pdf(pedido: PedidoPdf, path: str) -> None:
         )
     )
 
+    # 1 cm a mais pra direita pra alinhar melhor visualmente
+    itens_x = margin_x + 1.0 * cm
     table_width, table_height = table.wrap(available_width, height)
-    table.drawOn(c, margin_x, y - table_height)
+    table.drawOn(c, itens_x, y - table_height)
     y = y - table_height - 0.8 * cm
 
     # =======================
@@ -275,14 +277,15 @@ def _desenhar_pdf(pedido: PedidoPdf, path: str) -> None:
     )
 
     fech_w, fech_h = fech_table.wrap(available_width, height)
-    fech_table.drawOn(c, margin_x, y - fech_h)
+    fech_table.drawOn(c, itens_x, y - fech_h)
     y = y - fech_h - 0.5 * cm
 
     c.setFont("Helvetica", 8)
-    c.drawString(margin_x, y, "Documento gerado automaticamente pelo OrderSync.")
+    c.drawString(itens_x, y, "Documento gerado automaticamente pelo OrderSync.")
 
     c.showPage()
     c.save()
+
 
 
 
