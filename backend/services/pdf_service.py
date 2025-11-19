@@ -106,52 +106,82 @@ def _desenhar_pdf(pedido: PedidoPdf, path: str) -> None:
     c.setFillColor(SUPRA_DARK)
 
     # =======================
-    # BLOCO CABEÇALHO COM BORDA
+    # DADOS BÁSICOS (2 BLOCOS)
     # =======================
     codigo_cliente = pedido.codigo_cliente or "Não cadastrado"
     cliente = pedido.cliente or ""
-
     frete_total = float(pedido.frete_total or 0)
-
     if pedido.data_entrega_ou_retirada:
         data_entrega_str = pedido.data_entrega_ou_retirada.strftime("%d/%m/%Y")
     else:
         data_entrega_str = ""
 
-    # tabela de 2 linhas x 4 colunas, com borda ao redor
-    header_data = [
-        ["Codigo:", str(codigo_cliente), "Cliente:", cliente[:80]],
-        ["Valor Frete (TO):", "R$ " + _br_number(frete_total), "Data da Entrega ou Retira:", data_entrega_str],
+    # Bloco 1: Código / Cliente (duas linhas)
+    bloco1_data = [
+        ["Código:", str(codigo_cliente)],
+        ["Cliente:", cliente[:80]],
     ]
+    bloco1_col_widths = [available_width * 0.18, available_width * 0.82]
 
-    header_col_widths = [
-        available_width * 0.12,
-        available_width * 0.23,
-        available_width * 0.20,
-        available_width * 0.45,
-    ]
-
-    header_table = Table(header_data, colWidths=header_col_widths)
-    header_table.setStyle(
+    bloco1 = Table(bloco1_data, colWidths=bloco1_col_widths)
+    bloco1.setStyle(
         TableStyle(
             [
                 ("BACKGROUND", (0, 0), (-1, 0), colors.HexColor("#F2F2F2")),
-                ("FONTNAME", (0, 0), (-1, 0), "Helvetica-Bold"),
-                ("TEXTCOLOR", (0, 0), (-1, 0), SUPRA_DARK),
+                ("BACKGROUND", (0, 1), (-1, 1), colors.HexColor("#F2F2F2")),
+                ("FONTNAME", (0, 0), (0, -1), "Helvetica-Bold"),
+                ("TEXTCOLOR", (0, 0), (-1, -1), SUPRA_DARK),
                 ("FONTSIZE", (0, 0), (-1, -1), 9),
                 ("GRID", (0, 0), (-1, -1), 0.5, colors.black),
                 ("BOX", (0, 0), (-1, -1), 0.5, colors.black),
                 ("VALIGN", (0, 0), (-1, -1), "MIDDLE"),
-                ("ALIGN", (0, 0), (-1, -1), "LEFT"),
+                ("ALIGN", (0, 0), (0, -1), "LEFT"),
+                ("ALIGN", (1, 0), (1, -1), "LEFT"),
             ]
         )
     )
 
-    # posição: logo abaixo da faixa
     y = barra_bottom - 0.5 * cm
-    header_w, header_h = header_table.wrap(available_width, height)
-    header_table.drawOn(c, margin_x, y - header_h)
-    y = y - header_h - 0.8 * cm
+    b1_w, b1_h = bloco1.wrap(available_width, height)
+    bloco1.drawOn(c, margin_x, y - b1_h)
+    y = y - b1_h
+
+    # Bloco 2: Frete / Data (uma linha, 4 colunas)
+    bloco2_data = [
+        ["Valor Frete (TO):", "R$ " + _br_number(frete_total),
+         "Data da Entrega ou Retira:", data_entrega_str]
+    ]
+    bloco2_col_widths = [
+        available_width * 0.18,
+        available_width * 0.22,
+        available_width * 0.28,
+        available_width * 0.32,
+    ]
+
+    bloco2 = Table(bloco2_data, colWidths=bloco2_col_widths)
+    bloco2.setStyle(
+        TableStyle(
+            [
+                ("BACKGROUND", (0, 0), (-1, 0), colors.white),
+                ("FONTNAME", (0, 0), (0, 0), "Helvetica-Bold"),
+                ("FONTNAME", (2, 0), (2, 0), "Helvetica-Bold"),
+                ("TEXTCOLOR", (0, 0), (-1, 0), SUPRA_DARK),
+                ("FONTSIZE", (0, 0), (-1, 0), 9),
+                ("GRID", (0, 0), (-1, 0), 0.5, colors.black),
+                ("BOX", (0, 0), (-1, 0), 0.5, colors.black),
+                ("VALIGN", (0, 0), (-1, 0), "MIDDLE"),
+                ("ALIGN", (0, 0), (0, 0), "LEFT"),
+                ("ALIGN", (1, 0), (1, 0), "LEFT"),
+                ("ALIGN", (2, 0), (2, 0), "LEFT"),
+                ("ALIGN", (3, 0), (3, 0), "LEFT"),
+            ]
+        )
+    )
+
+    y = y - 0.3 * cm
+    b2_w, b2_h = bloco2.wrap(available_width, height)
+    bloco2.drawOn(c, margin_x, y - b2_h)
+    y = y - b2_h - 0.8 * cm
 
     # =======================
     # TABELA DE ITENS
@@ -162,7 +192,7 @@ def _desenhar_pdf(pedido: PedidoPdf, path: str) -> None:
         "Embalagem",
         "Qtd",
         "Cond. Pgto",
-        "Comissão",          # <--- trocado aqui
+        "Comissão",
         "Valor Retira",
         "Valor Entrega",
     ]
@@ -188,7 +218,7 @@ def _desenhar_pdf(pedido: PedidoPdf, path: str) -> None:
         2.0 * cm,  # Embalagem
         1.4 * cm,  # Qtd
         2.5 * cm,  # Cond. Pgto
-        1.8 * cm,  # Comissão (menor)
+        1.8 * cm,  # Comissão
         2.1 * cm,  # Valor Retira
         2.1 * cm,  # Valor Entrega
     ]
@@ -197,19 +227,16 @@ def _desenhar_pdf(pedido: PedidoPdf, path: str) -> None:
     table.setStyle(
         TableStyle(
             [
-                # cabeçalho
                 ("BACKGROUND", (0, 0), (-1, 0), SUPRA_RED),
                 ("TEXTCOLOR", (0, 0), (-1, 0), colors.white),
                 ("FONTNAME", (0, 0), (-1, 0), "Helvetica-Bold"),
                 ("FONTSIZE", (0, 0), (-1, 0), 9),
-                # bordas e linhas
                 ("GRID", (0, 0), (-1, -1), 0.5, colors.black),
                 ("BOX", (0, 0), (-1, -1), 0.5, colors.black),
                 ("FONTSIZE", (0, 1), (-1, -1), 8),
                 ("VALIGN", (0, 0), (-1, -1), "MIDDLE"),
-                # alinhamentos
-                ("ALIGN", (3, 1), (3, -1), "CENTER"),   # Qtd
-                ("ALIGN", (6, 1), (7, -1), "RIGHT"),    # Valores
+                ("ALIGN", (3, 1), (3, -1), "CENTER"),
+                ("ALIGN", (6, 1), (7, -1), "RIGHT"),
             ]
         )
     )
@@ -219,7 +246,7 @@ def _desenhar_pdf(pedido: PedidoPdf, path: str) -> None:
     y = y - table_height - 0.8 * cm
 
     # =======================
-    # FECHAMENTO DO ORÇAMENTO (COM BORDA)
+    # FECHAMENTO DO ORÇAMENTO
     # =======================
     total_peso = float(pedido.total_peso_bruto or 0)
     total_valor = float(pedido.total_valor or 0)
@@ -251,12 +278,12 @@ def _desenhar_pdf(pedido: PedidoPdf, path: str) -> None:
     fech_table.drawOn(c, margin_x, y - fech_h)
     y = y - fech_h - 0.5 * cm
 
-    # rodapé
     c.setFont("Helvetica", 8)
     c.drawString(margin_x, y, "Documento gerado automaticamente pelo OrderSync.")
 
     c.showPage()
     c.save()
+
 
 
 def gerar_pdf_pedido(*args, destino_dir: str = "/tmp", **kwargs):
