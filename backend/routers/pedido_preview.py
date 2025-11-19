@@ -8,7 +8,7 @@ from zoneinfo import ZoneInfo
 
 from services.email_service import enviar_email_notificacao
 from services.pdf_service import gerar_pdf_pedido
-
+from services.pedido_pdf_data import carregar_pedido_pdf
 from types import SimpleNamespace
 import json
 import os
@@ -315,13 +315,28 @@ def confirmar_pedido(tabela_id: int, body: ConfirmarPedidoRequest):
             db.commit()
         else:
             try:
-                # Por enquanto NÃO gera PDF, manda só o e-mail
+                # Tenta gerar o PDF do pedido (com todos os detalhes)
                 pdf_bytes = None
+                try:
+                    # 1) carrega os dados do pedido no formato PedidoPdf
+                    pedido_pdf = carregar_pedido_pdf(db, new_id)
 
+                    # 2) gera o arquivo físico em /tmp (ou pasta padrão)
+                    path_pdf = gerar_pdf_pedido(pedido_pdf)
+
+                    # 3) lê o arquivo em bytes para anexar no e-mail
+                    with open(path_pdf, "rb") as f:
+                        pdf_bytes = f.read()
+
+                except Exception as e_pdf:
+                    logging.exception("Falha ao gerar PDF (ignorada): %s", e_pdf)
+                    pdf_bytes = None  # segue sem anexo
+
+                # Dispara o e-mail usando as configs da tela de Config Email
                 enviar_email_notificacao(
                     db=db,
                     pedido=pedido_email,
-                    link_pdf=None,
+                    link_pdf=None,      # se um dia gerar link público, preenche aqui
                     pdf_bytes=pdf_bytes
                 )
 
