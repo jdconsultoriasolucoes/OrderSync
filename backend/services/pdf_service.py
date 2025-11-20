@@ -232,6 +232,7 @@ def _desenhar_pdf(pedido: PedidoPdf, path: str) -> None:
                 ("TEXTCOLOR", (0, 0), (-1, 0), colors.white),
                 ("FONTNAME", (0, 0), (-1, 0), "Helvetica-Bold"),
                 ("FONTSIZE", (0, 0), (-1, 0), 9),
+                ("ALIGN", (0, 0), (-1, 0), "CENTER"),
                 ("GRID", (0, 0), (-1, -1), 0.5, colors.black),
                 ("BOX", (0, 0), (-1, -1), 0.5, colors.black),
                 ("FONTSIZE", (0, 1), (-1, -1), 8),
@@ -280,8 +281,8 @@ def _desenhar_pdf(pedido: PedidoPdf, path: str) -> None:
                 ("FONTSIZE", (0, 0), (-1, -1), 9),
                 ("GRID", (0, 0), (-1, -1), 0.5, colors.black),
                 ("BOX", (0, 0), (-1, -1), 0.5, colors.black),
-                ("ALIGN", (0, 0), (0, -1), "CENTER"),
-                ("ALIGN", (1, 1), (1, -1), "RIGHT"),
+                ("ALIGN", (0, 0), (0, -1), "LEFT"),
+                ("ALIGN", (1, 1), (1, -1), "LEFT"),
                 ("VALIGN", (0, 0), (-1, -1), "MIDDLE"),
             ]
         )
