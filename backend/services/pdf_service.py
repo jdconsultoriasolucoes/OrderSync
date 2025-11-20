@@ -120,7 +120,8 @@ def _desenhar_pdf(pedido: PedidoPdf, path: str) -> None:
         ["Código:", str(codigo_cliente)],
         ["Cliente:", cliente[:80]],
     ]
-    bloco1_col_widths = [available_width * 0.18, available_width * 0.82]
+    label_w = 2.5 * cm
+    bloco1_col_widths = [label_w, available_width - label_w]
 
     bloco1 = Table(bloco1_data, colWidths=bloco1_col_widths)
     bloco1.setStyle(
@@ -134,7 +135,7 @@ def _desenhar_pdf(pedido: PedidoPdf, path: str) -> None:
                 ("GRID", (0, 0), (-1, -1), 0.5, colors.black),
                 ("BOX", (0, 0), (-1, -1), 0.5, colors.black),
                 ("VALIGN", (0, 0), (-1, -1), "MIDDLE"),
-                ("ALIGN", (0, 0), (0, -1), "LEFT"),
+                ("ALIGN", (0, 0), (0, -1), "CENTER"),
                 ("ALIGN", (1, 0), (1, -1), "LEFT"),
             ]
         )
@@ -169,7 +170,10 @@ def _desenhar_pdf(pedido: PedidoPdf, path: str) -> None:
                 ("GRID", (0, 0), (-1, 0), 0.5, colors.black),
                 ("BOX", (0, 0), (-1, 0), 0.5, colors.black),
                 ("VALIGN", (0, 0), (-1, 0), "MIDDLE"),
-                ("ALIGN", (0, 0), (3, 0), "LEFT"),
+                ("ALIGN", (0, 0), (0, 0), "CENTER"),  # "Valor Frete (TO):"
+                ("ALIGN", (2, 0), (2, 0), "CENTER"),  # "Data da Entrega..."
+                ("ALIGN", (1, 0), (1, 0), "LEFT"),
+                ("ALIGN", (3, 0), (3, 0), "LEFT"),
             ]
         )
     )
@@ -276,7 +280,7 @@ def _desenhar_pdf(pedido: PedidoPdf, path: str) -> None:
                 ("FONTSIZE", (0, 0), (-1, -1), 9),
                 ("GRID", (0, 0), (-1, -1), 0.5, colors.black),
                 ("BOX", (0, 0), (-1, -1), 0.5, colors.black),
-                ("ALIGN", (0, 0), (0, -1), "LEFT"),
+                ("ALIGN", (0, 0), (0, -1), "CENTER"),
                 ("ALIGN", (1, 1), (1, -1), "RIGHT"),
                 ("VALIGN", (0, 0), (-1, -1), "MIDDLE"),
             ]
@@ -298,7 +302,7 @@ def _desenhar_pdf(pedido: PedidoPdf, path: str) -> None:
                 ("GRID", (0, 0), (-1, -1), 0.5, colors.black),
                 ("BOX", (0, 0), (-1, -1), 0.5, colors.black),
                 ("VALIGN", (0, 0), (-1, -1), "MIDDLE"),
-                ("ALIGN", (0, 0), (0, 0), "LEFT"),
+                ("ALIGN", (0, 0), (0, 0), "CENTER"),
                 ("ALIGN", (1, 0), (1, 0), "LEFT"),
             ]
         )
