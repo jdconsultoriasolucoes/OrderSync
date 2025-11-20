@@ -243,9 +243,6 @@ def _desenhar_pdf(pedido: PedidoPdf, path: str) -> None:
     table.drawOn(c, itens_x, y - table_height)
     y = y - table_height - 0.8 * cm
 
-    # =======================
-    # OBSERVAÇÕES + FECHAMENTO LADO A LADO
-    # =======================
     obs_text = (
         getattr(pedido, "observacoes", None)
         or getattr(pedido, "observacao", None)
@@ -253,32 +250,11 @@ def _desenhar_pdf(pedido: PedidoPdf, path: str) -> None:
     ).strip()
 
     # largura dos dois blocos na mesma linha
-    obs_block_width = available_width * 0.45
     gap = 0.3 * cm
-    fech_block_width = available_width - obs_block_width - gap
+    fech_block_width = available_width * 0.45   # AGORA FECHAMENTO FICA À ESQUERDA
+    obs_block_width = available_width - fech_block_width - gap
 
-    # Observações (sempre aparece)
-    data_obs = [["Observações:", obs_text]]
-    obs_col_widths = [2.8 * cm, obs_block_width - 2.8 * cm]
-
-    obs_table = Table(data_obs, colWidths=obs_col_widths)
-    obs_table.setStyle(
-        TableStyle(
-            [
-                ("BACKGROUND", (0, 0), (0, 0), colors.HexColor("#F2F2F2")),
-                ("FONTNAME", (0, 0), (0, 0), "Helvetica-Bold"),
-                ("TEXTCOLOR", (0, 0), (-1, -1), SUPRA_DARK),
-                ("FONTSIZE", (0, 0), (-1, -1), 9),
-                ("GRID", (0, 0), (-1, -1), 0.5, colors.black),
-                ("BOX", (0, 0), (-1, -1), 0.5, colors.black),
-                ("VALIGN", (0, 0), (-1, -1), "MIDDLE"),
-                ("ALIGN", (0, 0), (0, 0), "LEFT"),
-                ("ALIGN", (1, 0), (1, 0), "LEFT"),
-            ]
-        )
-    )
-
-    # Fechamento do Orçamento
+    # Fechamento do Orçamento (ESQUERDA)
     total_peso = float(pedido.total_peso_bruto or 0)
     total_valor = float(pedido.total_valor or 0)
 
@@ -307,18 +283,39 @@ def _desenhar_pdf(pedido: PedidoPdf, path: str) -> None:
         )
     )
 
+    # Observações (DIREITA, SEMPRE APARECE)
+    data_obs = [["Observações:", obs_text]]
+    obs_col_widths = [2.8 * cm, obs_block_width - 2.8 * cm]
+
+    obs_table = Table(data_obs, colWidths=obs_col_widths)
+    obs_table.setStyle(
+        TableStyle(
+            [
+                ("BACKGROUND", (0, 0), (0, 0), colors.HexColor("#F2F2F2")),
+                ("FONTNAME", (0, 0), (0, 0), "Helvetica-Bold"),
+                ("TEXTCOLOR", (0, 0), (-1, -1), SUPRA_DARK),
+                ("FONTSIZE", (0, 0), (-1, -1), 9),
+                ("GRID", (0, 0), (-1, -1), 0.5, colors.black),
+                ("BOX", (0, 0), (-1, -1), 0.5, colors.black),
+                ("VALIGN", (0, 0), (-1, -1), "MIDDLE"),
+                ("ALIGN", (0, 0), (0, 0), "LEFT"),
+                ("ALIGN", (1, 0), (1, 0), "LEFT"),
+            ]
+        )
+    )
+
     # desenha lado a lado na mesma "altura"
     y_top = y
-    obs_x = itens_x
-    fech_x = itens_x + obs_block_width + gap
+    fech_x = itens_x
+    obs_x = itens_x + fech_block_width + gap
 
-    _, obs_h = obs_table.wrap(obs_block_width, height)
     _, fech_h = fech_table.wrap(fech_block_width, height)
+    _, obs_h = obs_table.wrap(obs_block_width, height)
 
-    obs_table.drawOn(c, obs_x, y_top - obs_h)
     fech_table.drawOn(c, fech_x, y_top - fech_h)
+    obs_table.drawOn(c, obs_x, y_top - obs_h)
 
-    max_h = max(obs_h, fech_h)
+    max_h = max(fech_h, obs_h)
     y = y_top - max_h - 0.5 * cm
 
     # rodapé
