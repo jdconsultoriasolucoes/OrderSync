@@ -232,51 +232,149 @@ function restoreHeaderSnapshotIfNew() {
   }
 }
 
-async function atualizarPrecosAtuais(){
-  const codigos = Array.from(new Set((itens||[]).map(x=>x.codigo_tabela).filter(Boolean)));
+async function atualizarPrecosAtuais() {
+  // Normaliza os códigos da tabela
+  const codigos = Array.from(
+    new Set(
+      (itens || [])
+        .map(x => x.codigo_tabela)
+        .filter(Boolean)
+        .map(c => String(c).trim())
+    )
+  );
+
   if (!codigos.length) return;
 
-  const mapa = {};
- for (const cod of codigos){
-   try {
-     const r = await fetch(`${API_BASE}/tabela_preco/produtos_filtro?codigo=${encodeURIComponent(cod)}`, { cache: 'no-store' });
-     if (!r.ok) continue;
-     const raw = await r.json();
-     const arr = Array.isArray(raw?.items) ? raw.items
-           : Array.isArray(raw)       ? raw
-           : raw ? [raw] : [];
+  const codigosSet = new Set(codigos);
+  const mapa = {}; // codigo_tabela -> valor_atual
+  const PAGE_SIZE = 5000; // igual ou maior que 25, só que "turbinado"
+  let page = 1;
+  let total = null;
 
-      const p = arr.find(it => {
-        const cands = [
-          it.codigo, it.codigo_tabela, it.codigo_produto_supra, it.CODIGO
-        ].map(x => String(x ?? '').trim());
-        return cands.includes(String(cod).trim());
-      }) || arr[0] || {};
+  while (true) {
+    let url;
+    try {
+      url = new URL(`${API_BASE}/tabela_preco/produtos_filtro`);
+    } catch (e) {
+      console.error("atualizarPrecosAtuais URL inválida:", e);
+      break;
+    }
 
-mapa[cod] = Number(p.valor ?? p.preco ?? p.preco_venda ?? 0);
-   } catch {}
- }
+    url.searchParams.set("page", String(page));
+    url.searchParams.set("page_size", String(PAGE_SIZE));
 
-  // aplica e atualiza a grade
-  let mudou=false;
-  itens = (itens||[]).map(it=>{
-    const novo = mapa[it.codigo_tabela];
-    if (novo!=null && !isNaN(novo) && Number(novo)!==Number(it.valor)){
-      mudou=true; return {...it, valor:Number(novo)};
+    let resp;
+    try {
+      resp = await fetch(url.toString(), { cache: "no-store" });
+    } catch (e) {
+      console.error("atualizarPrecosAtuais fetch erro:", e);
+      break;
+    }
+
+    if (!resp.ok) {
+      console.error("atualizarPrecosAtuais resposta não OK:", resp.status);
+      break;
+    }
+
+    let raw;
+    try {
+      raw = await resp.json();
+    } catch (e) {
+      console.error("atualizarPrecosAtuais json erro:", e);
+      break;
+    }
+
+    const paginado = !Array.isArray(raw) && Array.isArray(raw.items);
+    const arr = paginado ? (raw.items || []) : (Array.isArray(raw) ? raw : []);
+
+    if (paginado) {
+      total = typeof raw.total === "number" ? raw.total : arr.length;
+    }
+
+    // Varre a página e amarra cada código ao seu preço atual
+    for (const p of arr) {
+      const cands = [
+        p.codigo_tabela,
+        p.codigo,
+        p.codigo_produto_supra,
+        p.CODIGO
+      ].map(v => String(v ?? "").trim());
+
+      const chave = cands.find(c => codigosSet.has(c));
+      if (!chave) continue;
+
+      // não sobrescrever se já pegamos esse código de uma página anterior
+      if (Object.prototype.hasOwnProperty.call(mapa, chave)) continue;
+
+      const valorNum = Number(
+        p.valor ??
+        p.preco ??
+        p.preco_venda ??
+        p.valor_produto ??
+        0
+      );
+
+      if (!Number.isNaN(valorNum) && valorNum > 0) {
+        mapa[chave] = valorNum;
+      }
+    }
+
+    // Se já encontramos todos os códigos, podemos parar
+    if (Object.keys(mapa).length >= codigosSet.size) {
+      break;
+    }
+
+    // Se não for paginação (array simples), para na primeira
+    if (!paginado) break;
+
+    const ja = page * PAGE_SIZE;
+    if (total != null && ja >= total) {
+      // já varremos todas as páginas
+      break;
+    }
+
+    page += 1;
+
+    // trava de segurança pra não entrar em loop insano
+    if (page > 50) {
+      console.warn("atualizarPrecosAtuais: limite de páginas excedido");
+      break;
+    }
+  }
+
+  // Se não achamos nenhum preço, não mexe em nada
+  if (!Object.keys(mapa).length) {
+    return;
+  }
+
+  // Aplica os preços encontrados nos itens
+  let mudou = false;
+  itens = (itens || []).map(it => {
+    const key = String(it.codigo_tabela ?? "").trim();
+    const novo = key && Object.prototype.hasOwnProperty.call(mapa, key)
+      ? mapa[key]
+      : null;
+
+    if (novo != null && !Number.isNaN(novo) && Number(novo) !== Number(it.valor)) {
+      mudou = true;
+      return { ...it, valor: Number(novo) };
     }
     return it;
   });
 
-  if (mudou){
-    const rows = Array.from(document.querySelectorAll('#tbody-itens tr'));
-    rows.forEach((tr,i)=>{
-      const tdValor = tr.querySelector('td:nth-child(7)');
-      if (tdValor) tdValor.textContent = fmtMoney(itens[i].valor||0);
-    });
-    await recalcTudo();
-  }
-}
+  if (!mudou) return;
 
+  // Atualiza a coluna de valor na grade (7ª coluna) e recalcula totais
+  const rows = Array.from(document.querySelectorAll("#tbody-itens tr"));
+  rows.forEach((tr, i) => {
+    const tdValor = tr.querySelector("td:nth-child(7)");
+    if (!tdValor) return;
+    const v = itens[i] ? (itens[i].valor || 0) : 0;
+    tdValor.textContent = fmtMoney(v);
+  });
+
+  await recalcTudo();
+}
 // Habilita/desabilita todos os campos e a grade
 function setFormDisabled(disabled) {
   // topo
