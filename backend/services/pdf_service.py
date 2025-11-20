@@ -37,7 +37,7 @@ def _desenhar_pdf(pedido: PedidoPdf, path: str) -> None:
     c = canvas.Canvas(path, pagesize=A4)
     width, height = A4
 
-    # margens: pouco espaço em cima e à esquerda
+    # margens
     margin_x = 0.7 * cm
     margin_y = 0.5 * cm
     top_y = height - margin_y
@@ -208,7 +208,7 @@ def _desenhar_pdf(pedido: PedidoPdf, path: str) -> None:
             ]
         )
 
-    # tabela mais larga (Produto + Valor Entrega 2,3 cm)
+    # Produto largo + Valor Entrega 2,3 cm
     col_widths = [
         1.8 * cm,   # Código
         5.7 * cm,   # Produto
@@ -217,7 +217,7 @@ def _desenhar_pdf(pedido: PedidoPdf, path: str) -> None:
         2.5 * cm,   # Cond. Pgto
         1.8 * cm,   # Comissão
         2.1 * cm,   # Valor Retira
-        2.3 * cm,   # Valor Entrega (ajustado)
+        2.3 * cm,   # Valor Entrega
     ]
 
     table = Table(data, colWidths=col_widths)
@@ -244,7 +244,7 @@ def _desenhar_pdf(pedido: PedidoPdf, path: str) -> None:
     y = y - table_height - 0.8 * cm
 
     # =======================
-    # OBSERVAÇÕES (OPCIONAL)
+    # OBSERVAÇÕES + FECHAMENTO LADO A LADO
     # =======================
     obs_text = (
         getattr(pedido, "observacoes", None)
@@ -252,35 +252,33 @@ def _desenhar_pdf(pedido: PedidoPdf, path: str) -> None:
         or ""
     ).strip()
 
-    if obs_text:
-        # campo menor: rótulo + linha de texto
-        data_obs = [["Observações:", obs_text]]
-        obs_col_widths = [4.0 * cm, available_width - 4.0 * cm]
+    # largura dos dois blocos na mesma linha
+    obs_block_width = available_width * 0.45
+    gap = 0.3 * cm
+    fech_block_width = available_width - obs_block_width - gap
 
-        obs_table = Table(data_obs, colWidths=obs_col_widths)
-        obs_table.setStyle(
-            TableStyle(
-                [
-                    ("BACKGROUND", (0, 0), (0, 0), colors.HexColor("#F2F2F2")),
-                    ("FONTNAME", (0, 0), (0, 0), "Helvetica-Bold"),
-                    ("TEXTCOLOR", (0, 0), (-1, -1), SUPRA_DARK),
-                    ("FONTSIZE", (0, 0), (-1, -1), 9),
-                    ("GRID", (0, 0), (-1, -1), 0.5, colors.black),
-                    ("BOX", (0, 0), (-1, -1), 0.5, colors.black),
-                    ("VALIGN", (0, 0), (-1, -1), "MIDDLE"),
-                    ("ALIGN", (0, 0), (0, 0), "LEFT"),
-                    ("ALIGN", (1, 0), (1, 0), "LEFT"),
-                ]
-            )
+    # Observações (sempre aparece)
+    data_obs = [["Observações:", obs_text]]
+    obs_col_widths = [2.8 * cm, obs_block_width - 2.8 * cm]
+
+    obs_table = Table(data_obs, colWidths=obs_col_widths)
+    obs_table.setStyle(
+        TableStyle(
+            [
+                ("BACKGROUND", (0, 0), (0, 0), colors.HexColor("#F2F2F2")),
+                ("FONTNAME", (0, 0), (0, 0), "Helvetica-Bold"),
+                ("TEXTCOLOR", (0, 0), (-1, -1), SUPRA_DARK),
+                ("FONTSIZE", (0, 0), (-1, -1), 9),
+                ("GRID", (0, 0), (-1, -1), 0.5, colors.black),
+                ("BOX", (0, 0), (-1, -1), 0.5, colors.black),
+                ("VALIGN", (0, 0), (-1, -1), "MIDDLE"),
+                ("ALIGN", (0, 0), (0, 0), "LEFT"),
+                ("ALIGN", (1, 0), (1, 0), "LEFT"),
+            ]
         )
+    )
 
-        _, obs_h = obs_table.wrap(available_width, height)
-        obs_table.drawOn(c, itens_x, y - obs_h)
-        y = y - obs_h - 0.5 * cm
-
-    # =======================
-    # FECHAMENTO DO ORÇAMENTO
-    # =======================
+    # Fechamento do Orçamento
     total_peso = float(pedido.total_peso_bruto or 0)
     total_valor = float(pedido.total_valor or 0)
 
@@ -290,7 +288,9 @@ def _desenhar_pdf(pedido: PedidoPdf, path: str) -> None:
         ["Total em Valor:", "R$ " + _br_number(total_valor)],
     ]
 
-    fech_table = Table(data_fech, colWidths=[6.0 * cm, 5.0 * cm])
+    fech_col_widths = [fech_block_width * 0.6, fech_block_width * 0.4]
+
+    fech_table = Table(data_fech, colWidths=fech_col_widths)
     fech_table.setStyle(
         TableStyle(
             [
@@ -307,18 +307,26 @@ def _desenhar_pdf(pedido: PedidoPdf, path: str) -> None:
         )
     )
 
-    _, fech_h = fech_table.wrap(available_width, height)
-    fech_table.drawOn(c, itens_x, y - fech_h)
-    y = y - fech_h - 0.5 * cm
+    # desenha lado a lado na mesma "altura"
+    y_top = y
+    obs_x = itens_x
+    fech_x = itens_x + obs_block_width + gap
 
+    _, obs_h = obs_table.wrap(obs_block_width, height)
+    _, fech_h = fech_table.wrap(fech_block_width, height)
+
+    obs_table.drawOn(c, obs_x, y_top - obs_h)
+    fech_table.drawOn(c, fech_x, y_top - fech_h)
+
+    max_h = max(obs_h, fech_h)
+    y = y_top - max_h - 0.5 * cm
+
+    # rodapé
     c.setFont("Helvetica", 8)
     c.drawString(itens_x, y, "Documento gerado automaticamente pelo OrderSync.")
 
     c.showPage()
     c.save()
-
-
-
 
 
 def gerar_pdf_pedido(*args, destino_dir: str = "/tmp", **kwargs):
