@@ -208,16 +208,16 @@ def _desenhar_pdf(pedido: PedidoPdf, path: str) -> None:
             ]
         )
 
-    # tabela mais larga (Produto ganhou espaço)
+    # tabela mais larga (Produto + Valor Entrega 2,3 cm)
     col_widths = [
         1.8 * cm,   # Código
-        5.7 * cm,   # Produto (era 5.0)
+        5.7 * cm,   # Produto
         2.0 * cm,   # Embalagem
         1.4 * cm,   # Qtd
         2.5 * cm,   # Cond. Pgto
         1.8 * cm,   # Comissão
         2.1 * cm,   # Valor Retira
-        2.1 * cm,   # Valor Entrega
+        2.3 * cm,   # Valor Entrega (ajustado)
     ]
 
     table = Table(data, colWidths=col_widths)
@@ -238,11 +238,45 @@ def _desenhar_pdf(pedido: PedidoPdf, path: str) -> None:
         )
     )
 
-    # agora alinhada com o cabeçalho (sem deslocar)
     itens_x = margin_x
     _, table_height = table.wrap(available_width, height)
     table.drawOn(c, itens_x, y - table_height)
     y = y - table_height - 0.8 * cm
+
+    # =======================
+    # OBSERVAÇÕES (OPCIONAL)
+    # =======================
+    obs_text = (
+        getattr(pedido, "observacoes", None)
+        or getattr(pedido, "observacao", None)
+        or ""
+    ).strip()
+
+    if obs_text:
+        # campo menor: rótulo + linha de texto
+        data_obs = [["Observações:", obs_text]]
+        obs_col_widths = [4.0 * cm, available_width - 4.0 * cm]
+
+        obs_table = Table(data_obs, colWidths=obs_col_widths)
+        obs_table.setStyle(
+            TableStyle(
+                [
+                    ("BACKGROUND", (0, 0), (0, 0), colors.HexColor("#F2F2F2")),
+                    ("FONTNAME", (0, 0), (0, 0), "Helvetica-Bold"),
+                    ("TEXTCOLOR", (0, 0), (-1, -1), SUPRA_DARK),
+                    ("FONTSIZE", (0, 0), (-1, -1), 9),
+                    ("GRID", (0, 0), (-1, -1), 0.5, colors.black),
+                    ("BOX", (0, 0), (-1, -1), 0.5, colors.black),
+                    ("VALIGN", (0, 0), (-1, -1), "MIDDLE"),
+                    ("ALIGN", (0, 0), (0, 0), "LEFT"),
+                    ("ALIGN", (1, 0), (1, 0), "LEFT"),
+                ]
+            )
+        )
+
+        _, obs_h = obs_table.wrap(available_width, height)
+        obs_table.drawOn(c, itens_x, y - obs_h)
+        y = y - obs_h - 0.5 * cm
 
     # =======================
     # FECHAMENTO DO ORÇAMENTO
@@ -282,6 +316,7 @@ def _desenhar_pdf(pedido: PedidoPdf, path: str) -> None:
 
     c.showPage()
     c.save()
+
 
 
 

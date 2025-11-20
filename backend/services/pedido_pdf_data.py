@@ -14,6 +14,7 @@ def carregar_pedido_pdf(db, pedido_id: int) -> PedidoPdf:
             p.frete_total,
             p.peso_total_kg,
             p.total_pedido,
+            p.observacoes,
             i.codigo           AS item_codigo,
             i.nome             AS item_nome,
             i.embalagem        AS item_embalagem,
@@ -55,5 +56,6 @@ def carregar_pedido_pdf(db, pedido_id: int) -> PedidoPdf:
         frete_total=float(head["frete_total"] or 0),
         total_peso_bruto=float(head["peso_total_kg"] or 0),
         total_valor=float(head["total_pedido"] or 0),
+        observacoes=(head.get("observacoes") or ""),
         itens=itens,
     )

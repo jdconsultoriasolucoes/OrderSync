@@ -23,4 +23,5 @@ class PedidoPdf(BaseModel):
     frete_total: float
     total_peso_bruto: float
     total_valor: float
+    observacoes: Optional[str] = None
     itens: List[PedidoPdfItem]
