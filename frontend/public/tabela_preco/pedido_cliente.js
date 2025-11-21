@@ -501,6 +501,8 @@ async function confirmarPedido() {
           codigo: x.codigo,
           descricao: x.nome ?? null,       // 👈 manda o nome do produto
           embalagem: x.embalagem ?? null,  // 👈 manda a embalagem
+          condicao_pagamento: x.condicao_pagamento ?? null,       // 👈 NOVO
+          tabela_comissao: x.tabela_comissao ?? null,
           quantidade: Number(x.quantidade || 0),
           preco_unit: x.preco_unit ?? x.valor_sem_frete ?? 0,
           preco_unit_com_frete:

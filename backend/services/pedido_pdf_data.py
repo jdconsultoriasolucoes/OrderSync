@@ -19,6 +19,8 @@ def carregar_pedido_pdf(db, pedido_id: int) -> PedidoPdf:
             i.nome             AS item_nome,
             i.embalagem        AS item_embalagem,
             i.quantidade       AS item_quantidade,
+            i.condicao_pagamento AS item_condicao_pagamento,
+            i.tabela_comissao    AS item_tabela_comissao,
             i.preco_unit       AS item_preco_retira,
             i.preco_unit_frt   AS item_preco_entrega
         FROM tb_pedidos p
@@ -41,8 +43,8 @@ def carregar_pedido_pdf(db, pedido_id: int) -> PedidoPdf:
             produto=r["item_nome"] or "",
             embalagem=r["item_embalagem"],
             quantidade=float(r["item_quantidade"] or 0),
-            condicao_pagamento=None,   # por enquanto não temos no banco
-            tabela_comissao=None,
+            condicao_pagamento=r.get("item_condicao_pagamento"),
+            tabela_comissao=r.get("item_tabela_comissao"),
             valor_retira=float(r["item_preco_retira"] or 0),
             valor_entrega=float(r["item_preco_entrega"] or 0),
         ))

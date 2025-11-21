@@ -24,6 +24,7 @@ class ProdutoPedidoPreview(BaseModel):
     embalagem: Optional[str] = None
     peso: Optional[float] = None
     condicao_pagamento: Optional[str] = None
+    tabela_comissao: Optional[str] = None
     valor_sem_frete: float
     valor_com_frete: float
     quantidade: int = 0
@@ -60,6 +61,8 @@ async def pedido_preview(
                 embalagem                  AS embalagem,
                 peso_liquido               AS peso,
                 codigo_plano_pagamento     AS plano_pagamento,
+                codigo_plano_pagamento     AS plano_pagamento,
+                descricao_fator_comissao   AS tabela_comissao,
                 COALESCE(valor_frete, 0)   AS valor_com_frete,
                 COALESCE(valor_s_frete, 0) AS valor_sem_frete
             FROM tb_tabela_preco
@@ -86,6 +89,7 @@ async def pedido_preview(
                 embalagem=r.get("embalagem"),
                 peso=float(r.get("peso") or 0.0),
                 condicao_pagamento=r.get("plano_pagamento"),
+                tabela_comissao=r.get("tabela_comissao"),
                 valor_sem_frete=round(float(r.get("valor_sem_frete") or 0.0), 2),
                 valor_com_frete=round(float(r.get("valor_com_frete") or 0.0), 2),
                 quantidade=1,
@@ -105,6 +109,8 @@ class ConfirmarItem(BaseModel):
     codigo: str
     descricao: str | None = None
     embalagem: str | None = None
+    condicao_pagamento: str | None = None      # 👈 NOVO
+    tabela_comissao: str | None = None 
     quantidade: int
     preco_unit: float | None = None
     preco_unit_com_frete: float | None = None
@@ -266,11 +272,13 @@ def confirmar_pedido(tabela_id: int, body: ConfirmarPedidoRequest):
         # 6) Insert itens
         insert_item_sql = text("""
             INSERT INTO tb_pedidos_itens (
-                id_pedido, codigo, nome, embalagem, peso_kg,
+                id_pedido, codigo, nome, embalagem, peso_kg,,
+                condicao_pagamento, tabela_comissao,
                 preco_unit, preco_unit_frt, quantidade,
                 subtotal_sem_f, subtotal_com_f
             ) VALUES (
                 :id_pedido, :codigo, :nome, :embalagem, :peso_kg,
+                :condicao_pagamento, :tabela_comissao,
                 :preco_unit, :preco_unit_frt, :quantidade,
                 :subtotal_sem_f, :subtotal_com_f
             )
@@ -279,7 +287,9 @@ def confirmar_pedido(tabela_id: int, body: ConfirmarPedidoRequest):
         for it in body.produtos:
             qtd   = float(it.quantidade or 0)
             p_sem = float(it.preco_unit or 0)
-            p_com = float((it.preco_unit_com_frete if it.preco_unit_com_frete is not None else it.preco_unit) or 0)
+            p_com = float((it.preco_unit_com_frete 
+                            if it.preco_unit_com_frete is not None 
+                            else it.preco_unit) or 0)
 
                    
            
@@ -289,6 +299,8 @@ def confirmar_pedido(tabela_id: int, body: ConfirmarPedidoRequest):
                 "nome": (it.descricao or "")[:255] or None,
                 "embalagem": getattr(it, "embalagem", None),
                 "peso_kg": float(it.peso_kg or 0),
+                "condicao_pagamento": it.condicao_pagamento,
+                "tabela_comissao": it.tabela_comissao,
                 "preco_unit": round(p_sem, 2),
                 "preco_unit_frt": round(p_com, 2),
                 "quantidade": qtd,
