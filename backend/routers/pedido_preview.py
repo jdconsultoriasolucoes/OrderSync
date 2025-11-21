@@ -104,6 +104,7 @@ async def pedido_preview(
 class ConfirmarItem(BaseModel):
     codigo: str
     descricao: str | None = None
+    embalagem: str | None = None
     quantidade: int
     preco_unit: float | None = None
     preco_unit_com_frete: float | None = None
@@ -127,6 +128,19 @@ def confirmar_pedido(tabela_id: int, body: ConfirmarPedidoRequest):
         # 1) validação básica
         if not body.produtos:
             raise HTTPException(status_code=400, detail="Nenhum item informado")
+
+# ---  buscar fornecedor da tabela de preço ---
+        fornecedor = db.execute(text("""
+            SELECT fornecedor
+            FROM public.tb_tabela_preco
+            WHERE id_tabela = :tid
+        """), {"tid": tabela_id}).scalar()
+
+        if fornecedor:
+            fornecedor = str(fornecedor)[:255]
+        else:
+            fornecedor = None
+
 
         # 2) Validar o link do token (se veio)
         link_row = None
@@ -202,6 +216,7 @@ def confirmar_pedido(tabela_id: int, body: ConfirmarPedidoRequest):
                 observacoes, status, confirmado_em,
                 link_token, link_url, link_enviado_em, link_expira_em, link_status,
                 link_primeiro_acesso_em, link_ultimo_acesso_em, link_qtd_acessos,
+                fornecedor,          
                 criado_em, atualizado_em, created_at
             )
             VALUES (
@@ -212,6 +227,7 @@ def confirmar_pedido(tabela_id: int, body: ConfirmarPedidoRequest):
                 :observacoes, 'CONFIRMADO', :confirmado_em,
                 :link_token, :link_url, :link_enviado_em, :link_expira_em, 'ABERTO',
                 :link_primeiro_acesso_em, :link_ultimo_acesso_em, :link_qtd_acessos,
+                :fornecedor,         
                 :agora, :agora, :pedido_created_at
             )
             RETURNING id_pedido
@@ -240,6 +256,7 @@ def confirmar_pedido(tabela_id: int, body: ConfirmarPedidoRequest):
             "link_primeiro_acesso_em": link_row.get("first_access_at") if link_row else None,
             "link_ultimo_acesso_em": link_row.get("last_access_at") if link_row else None,
             "link_qtd_acessos": link_row.get("uses") if link_row else None,
+            "fornecedor": fornecedor,
             "agora": agora,
             "pedido_created_at": (link_row.get("created_at") if link_row else None),
         }
@@ -264,11 +281,13 @@ def confirmar_pedido(tabela_id: int, body: ConfirmarPedidoRequest):
             p_sem = float(it.preco_unit or 0)
             p_com = float((it.preco_unit_com_frete if it.preco_unit_com_frete is not None else it.preco_unit) or 0)
 
+                   
+           
             db.execute(insert_item_sql, {
                 "id_pedido": new_id,
                 "codigo": (it.codigo or "")[:80],
-                "nome": (getattr(it, "descricao", None) or "")[:255] or None,
-                "embalagem": None,   # pode preencher depois se quiser
+                "nome": (it.descricao or "")[:255] or None,
+                "embalagem": getattr(it, "embalagem", None),
                 "peso_kg": float(it.peso_kg or 0),
                 "preco_unit": round(p_sem, 2),
                 "preco_unit_frt": round(p_com, 2),

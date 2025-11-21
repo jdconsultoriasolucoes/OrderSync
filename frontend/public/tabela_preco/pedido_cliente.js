@@ -499,17 +499,24 @@ async function confirmarPedido() {
         usar_valor_com_frete: !!usarValorComFrete,
         produtos: itens.map(x => ({
           codigo: x.codigo,
+          descricao: x.nome ?? null,       // 👈 manda o nome do produto
+          embalagem: x.embalagem ?? null,  // 👈 manda a embalagem
           quantidade: Number(x.quantidade || 0),
           preco_unit: x.preco_unit ?? x.valor_sem_frete ?? 0,
-          preco_unit_com_frete: x.preco_unit_com_frete ?? x.valor_com_frete ?? x.preco_unit ?? 0,
+          preco_unit_com_frete:
+            x.preco_unit_com_frete ?? x.valor_com_frete ?? x.preco_unit ?? 0,
           peso_kg: x.peso ?? x.peso_kg ?? null
         })),
         observacao,
         cliente: clienteRazao,
-        validade_ate: (typeof window.validadeGlobalISO === "string" && isISODate(window.validadeGlobalISO)) ? window.validadeGlobalISO : null,
+        validade_ate:
+          (typeof window.validadeGlobalISO === "string" && isISODate(window.validadeGlobalISO))
+            ? window.validadeGlobalISO
+            : null,
         data_retirada: dataRetiradaISO,
         validade_dias: obterValidadeDiasDaTela(),
-        codigo_cliente: (typeof window.codigoClienteHidden === "string" ? window.codigoClienteHidden : null),
+        codigo_cliente:
+          (typeof window.codigoClienteHidden === "string" ? window.codigoClienteHidden : null),
         link_url: location.href
       })
     });
