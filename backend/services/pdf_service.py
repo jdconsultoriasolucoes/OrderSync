@@ -1,5 +1,3 @@
-# backend/services/pdf_service.py
-
 from reportlab.lib.pagesizes import A4, landscape
 from reportlab.pdfgen import canvas
 from reportlab.lib.units import cm
@@ -14,10 +12,10 @@ import os
 from services.pedido_pdf_data import carregar_pedido_pdf
 from models.pedido_pdf import PedidoPdf
 
-# Paleta nova (bege)
-SUPRA_RED = colors.HexColor("#C1AD99")      # cor principal (onde era vermelho)
-SUPRA_DARK = colors.HexColor("#4A4036")    # texto escuro
-SUPRA_BG_LIGHT = colors.HexColor("#F4EFE2")  # fundo claro opcional
+# Paleta de cores (bege / marrom)
+SUPRA_RED = colors.HexColor("#C1AD99")        # cor principal (onde era vermelho)
+SUPRA_DARK = colors.HexColor("#4A4036")      # texto escuro
+SUPRA_BG_LIGHT = colors.HexColor("#F4EFE2")  # fundo claro para caixas
 
 
 def _br_number(valor: float, casas: int = 2, sufixo: str = "") -> str:
@@ -31,8 +29,7 @@ def _br_number(valor: float, casas: int = 2, sufixo: str = "") -> str:
 
 def _desenhar_pdf(pedido: PedidoPdf, path: str) -> None:
     """
-    Desenha o PDF do pedido no arquivo `path`,
-    usando layout corporativo com identidade visual.
+    Desenha o PDF do pedido no arquivo `path`, usando layout corporativo.
     """
     os.makedirs(os.path.dirname(path), exist_ok=True)
 
@@ -88,7 +85,7 @@ def _desenhar_pdf(pedido: PedidoPdf, path: str) -> None:
         except Exception:
             logo_h = 0
 
-    # Faixa superior
+    # Faixa superior logo abaixo do logo
     barra_altura = 0.9 * cm
     barra_top = top_y - logo_h - 0.05 * cm
     barra_bottom = barra_top - barra_altura
@@ -96,7 +93,7 @@ def _desenhar_pdf(pedido: PedidoPdf, path: str) -> None:
     c.setFillColor(SUPRA_RED)
     c.rect(0, barra_bottom, width, barra_altura, fill=1, stroke=0)
 
-    # Título
+    # Título à esquerda
     c.setFillColor(colors.white)
     c.setFont("Helvetica-Bold", 14)
     titulo_y = barra_bottom + 0.25 * cm
@@ -106,8 +103,6 @@ def _desenhar_pdf(pedido: PedidoPdf, path: str) -> None:
     c.setFont("Helvetica", 10)
     data_pedido = pedido.data_pedido
     if isinstance(data_pedido, datetime):
-        data_str = data_pedido.strftime("%d/%m/%Y")
-    elif data_pedido:
         data_str = data_pedido.strftime("%d/%m/%Y")
     else:
         data_str = ""
@@ -126,28 +121,36 @@ def _desenhar_pdf(pedido: PedidoPdf, path: str) -> None:
     else:
         data_entrega_str = ""
 
-    # Bloco 1: Código / Cliente
-    bloco1_data = [
-        ["Código:", str(codigo_cliente)],
-        ["Cliente:", cliente[:80]],
-    ]
-    label_w = 2.5 * cm
-    bloco1_col_widths = [label_w, available_width - label_w]
+    # Bloco 1: Código e Cliente na MESMA linha
+    bloco1_data = [[
+        "Código:", str(codigo_cliente),
+        "Cliente:", cliente[:120],
+    ]]
+
+    # larguras: rótulos fixos e valores proporcionais
+    label_cod_w = 2.5 * cm
+    label_cli_w = 2.0 * cm
+    restante = available_width - (label_cod_w + label_cli_w)
+    cod_val_w = restante * 0.30
+    cli_val_w = restante * 0.70
+    bloco1_col_widths = [label_cod_w, cod_val_w, label_cli_w, cli_val_w]
 
     bloco1 = Table(bloco1_data, colWidths=bloco1_col_widths)
     bloco1.setStyle(
         TableStyle(
             [
                 ("BACKGROUND", (0, 0), (-1, 0), SUPRA_BG_LIGHT),
-                ("BACKGROUND", (0, 1), (-1, 1), SUPRA_BG_LIGHT),
-                ("FONTNAME", (0, 0), (0, -1), "Helvetica-Bold"),
+                ("FONTNAME", (0, 0), (0, 0), "Helvetica-Bold"),
+                ("FONTNAME", (2, 0), (2, 0), "Helvetica-Bold"),
                 ("TEXTCOLOR", (0, 0), (-1, -1), SUPRA_DARK),
                 ("FONTSIZE", (0, 0), (-1, -1), 9),
                 ("GRID", (0, 0), (-1, -1), 0.5, colors.black),
                 ("BOX", (0, 0), (-1, -1), 0.5, colors.black),
                 ("VALIGN", (0, 0), (-1, -1), "MIDDLE"),
-                ("ALIGN", (0, 0), (0, -1), "CENTER"),
-                ("ALIGN", (1, 0), (1, -1), "LEFT"),
+                ("ALIGN", (0, 0), (0, 0), "CENTER"),  # "Código:"
+                ("ALIGN", (1, 0), (1, 0), "LEFT"),    # valor código
+                ("ALIGN", (2, 0), (2, 0), "CENTER"),  # "Cliente:"
+                ("ALIGN", (3, 0), (3, 0), "LEFT"),    # valor cliente
             ]
         )
     )
@@ -223,21 +226,19 @@ def _desenhar_pdf(pedido: PedidoPdf, path: str) -> None:
             ]
         )
 
+    # Larguras base em cm; escala para ocupar a largura inteira
     base_widths_cm = [
-        1.8,  # Código
-        5.7,  # Produto
-        2.0,  # Embalagem
-        1.4,  # Qtd
-        3.2,  # Cond. Pgto  (um pouco maior)
-        3.2,  # Comissão    (um pouco maior)
-        2.1,  # Valor Retira
-        2.3,  # Valor Entrega
+        2.0,  # Código
+        7.0,  # Produto
+        2.5,  # Embalagem
+        1.5,  # Qtd
+        4.0,  # Cond. Pgto
+        4.0,  # Comissão
+        2.2,  # Valor Retira
+        2.2,  # Valor Entrega
     ]
-
     total_base = sum(base_widths_cm)
-    # available_width está calculado lá em cima: width - 2 * margin_x
     scale = (available_width / cm) / total_base
-
     col_widths = [w * scale * cm for w in base_widths_cm]
 
     table = Table(data, colWidths=col_widths)
@@ -269,11 +270,7 @@ def _desenhar_pdf(pedido: PedidoPdf, path: str) -> None:
     # =======================
     # FECHAMENTO + OBSERVAÇÕES
     # =======================
-    obs_text = (
-        getattr(pedido, "observacoes", None)
-        or getattr(pedido, "observacao", None)
-        or ""
-    ).strip()
+    obs_text = (pedido.observacoes or "").strip()
 
     # largura dos dois blocos na mesma linha
     gap = 0.3 * cm
@@ -309,7 +306,7 @@ def _desenhar_pdf(pedido: PedidoPdf, path: str) -> None:
         )
     )
 
-    # Observações (DIREITA, SEMPRE APARECE)
+    # Observações (DIREITA, SEMPRE APARECE) – com quebra de linha automática
     obs_para = Paragraph(obs_text.replace("\n", "<br/>"), obs_style)
 
     data_obs = [["Observações:", obs_para]]
