@@ -272,7 +272,7 @@ def confirmar_pedido(tabela_id: int, body: ConfirmarPedidoRequest):
         # 6) Insert itens
         insert_item_sql = text("""
             INSERT INTO tb_pedidos_itens (
-                id_pedido, codigo, nome, embalagem, peso_kg,,
+                id_pedido, codigo, nome, embalagem, peso_kg,
                 condicao_pagamento, tabela_comissao,
                 preco_unit, preco_unit_frt, quantidade,
                 subtotal_sem_f, subtotal_com_f
