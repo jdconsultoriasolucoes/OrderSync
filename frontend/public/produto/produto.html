@@ -1,13 +1,39 @@
+<input type="hidden" id="id" name="id" />
 <!-- produto.html -->
 <!DOCTYPE html>
-<html lang="pt-BR">
+<html lang="pt-br">
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Cadastro do Produto</title>
-  <link rel="stylesheet" href="./produto.css" />
+  <link rel="stylesheet" href="produto.css">
+  <link rel="stylesheet" href="navbar.css">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600&display=swap" rel="stylesheet">
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+  <script src="https://unpkg.com/imask"></script>
+  <script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js"></script>
 </head>
 <body>
+  <header>
+    <div class="navbar">
+      <button class="menu-btn" id="menu-button">&#9776;</button>
+      <img src="logo.png" alt="Logo" class="logo" />
+    </div>
+  </header>
+
+  <nav class="sidebar" id="sidebar">
+    <ul>
+      <li><a href="/index.html">Home</a></li>
+        <li><a href="/clientes/cliente.html">Cadastrar Cliente</a></li>
+        <li><a href="#">Atualizar Catálogo</a></li>
+        <li><a href="/pedido/pedido.html">Consultar Pedidos</a></li>
+        <li><a href="#">Exportar Relatórios</a></li>
+        <li><a href="/tabela_preco/criacao_tabela_preco.html">Tabela Preço</a></li>
+        <li><a href="/config_email/config_email.html">Configuração E-mail</a></li>
+    </ul>
+  </nav>
+  <div id="overlay"></div>
+
   <div class="page">
     <div class="card">
       <div class="header">
