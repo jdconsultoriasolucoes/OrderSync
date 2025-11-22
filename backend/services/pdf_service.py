@@ -223,17 +223,22 @@ def _desenhar_pdf(pedido: PedidoPdf, path: str) -> None:
             ]
         )
 
-    # Larguras pensadas para A4 paisagem
-    col_widths = [
-        2.0 * cm,   # Código
-        7.0 * cm,   # Produto
-        2.5 * cm,   # Embalagem
-        1.5 * cm,   # Qtd
-        4.0 * cm,   # Cond. Pgto
-        4.0 * cm,   # Comissão
-        2.2 * cm,   # Valor Retira
-        2.2 * cm,   # Valor Entrega
+    base_widths_cm = [
+        1.8,  # Código
+        5.7,  # Produto
+        2.0,  # Embalagem
+        1.4,  # Qtd
+        3.2,  # Cond. Pgto  (um pouco maior)
+        3.2,  # Comissão    (um pouco maior)
+        2.1,  # Valor Retira
+        2.3,  # Valor Entrega
     ]
+
+    total_base = sum(base_widths_cm)
+    # available_width está calculado lá em cima: width - 2 * margin_x
+    scale = (available_width / cm) / total_base
+
+    col_widths = [w * scale * cm for w in base_widths_cm]
 
     table = Table(data, colWidths=col_widths)
     table.setStyle(
