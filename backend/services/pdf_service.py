@@ -1,3 +1,5 @@
+# backend/services/pdf_service.py
+
 from reportlab.lib.pagesizes import A4, landscape
 from reportlab.pdfgen import canvas
 from reportlab.lib.units import cm
@@ -160,42 +162,59 @@ def _desenhar_pdf(pedido: PedidoPdf, path: str) -> None:
     bloco1.drawOn(c, margin_x, y - b1_h)
     y = y - b1_h
 
-    # Bloco 2: Frete / Data
-    bloco2_data = [
-        ["Valor Frete (TO):", "R$ " + _br_number(frete_total),
-         "Data da Entrega ou Retira:", data_entrega_str]
-    ]
-    bloco2_col_widths = [
-        available_width * 0.18,
-        available_width * 0.22,
-        available_width * 0.28,
-        available_width * 0.32,
-    ]
+    # Bloco 2: Frete e Data em dois quadros separados
+    bloco2_gap = 0.3 * cm
+    bloco2_left_w = available_width * 0.45
+    bloco2_right_w = available_width - bloco2_left_w - bloco2_gap
 
-    bloco2 = Table(bloco2_data, colWidths=bloco2_col_widths)
-    bloco2.setStyle(
+    frete_data = [["Valor Frete (TO):", "R$ " + _br_number(frete_total)]]
+    data_data = [["Data da Entrega ou Retira:", data_entrega_str]]
+
+    frete_col_widths = [bloco2_left_w * 0.5, bloco2_left_w * 0.5]
+    data_col_widths = [bloco2_right_w * 0.55, bloco2_right_w * 0.45]
+
+    frete_table = Table(frete_data, colWidths=frete_col_widths)
+    frete_table.setStyle(
         TableStyle(
             [
-                ("BACKGROUND", (0, 0), (-1, 0), colors.white),
+                ("BACKGROUND", (0, 0), (-1, -1), colors.white),
                 ("FONTNAME", (0, 0), (0, 0), "Helvetica-Bold"),
-                ("FONTNAME", (2, 0), (2, 0), "Helvetica-Bold"),
-                ("TEXTCOLOR", (0, 0), (-1, 0), SUPRA_DARK),
-                ("FONTSIZE", (0, 0), (-1, 0), 9),
-                ("GRID", (0, 0), (-1, 0), 0.5, colors.black),
-                ("BOX", (0, 0), (-1, 0), 0.5, colors.black),
-                ("VALIGN", (0, 0), (-1, 0), "MIDDLE"),
-                ("ALIGN", (0, 0), (0, 0), "CENTER"),  # "Valor Frete (TO):"
-                ("ALIGN", (2, 0), (2, 0), "CENTER"),  # "Data da Entrega..."
+                ("TEXTCOLOR", (0, 0), (-1, -1), SUPRA_DARK),
+                ("FONTSIZE", (0, 0), (-1, -1), 9),
+                ("GRID", (0, 0), (-1, -1), 0.5, colors.black),
+                ("BOX", (0, 0), (-1, -1), 0.5, colors.black),
+                ("VALIGN", (0, 0), (-1, -1), "MIDDLE"),
+                ("ALIGN", (0, 0), (0, 0), "CENTER"),
                 ("ALIGN", (1, 0), (1, 0), "LEFT"),
-                ("ALIGN", (3, 0), (3, 0), "LEFT"),
             ]
         )
     )
 
-    y = y - 0.3 * cm
-    _, b2_h = bloco2.wrap(available_width, height)
-    bloco2.drawOn(c, margin_x, y - b2_h)
-    y = y - b2_h - 0.7 * cm
+    data_table = Table(data_data, colWidths=data_col_widths)
+    data_table.setStyle(
+        TableStyle(
+            [
+                ("BACKGROUND", (0, 0), (-1, -1), colors.white),
+                ("FONTNAME", (0, 0), (0, 0), "Helvetica-Bold"),
+                ("TEXTCOLOR", (0, 0), (-1, -1), SUPRA_DARK),
+                ("FONTSIZE", (0, 0), (-1, -1), 9),
+                ("GRID", (0, 0), (-1, -1), 0.5, colors.black),
+                ("BOX", (0, 0), (-1, -1), 0.5, colors.black),
+                ("VALIGN", (0, 0), (-1, -1), "MIDDLE"),
+                ("ALIGN", (0, 0), (0, 0), "CENTER"),
+                ("ALIGN", (1, 0), (1, 0), "LEFT"),
+            ]
+        )
+    )
+
+    y = y - 0.1 * cm
+    _, frete_h = frete_table.wrap(bloco2_left_w, height)
+    _, data_h = data_table.wrap(bloco2_right_w, height)
+    bloco2_h = max(frete_h, data_h)
+
+    frete_table.drawOn(c, margin_x, y - frete_h)
+    data_table.drawOn(c, margin_x + bloco2_left_w + bloco2_gap, y - data_h)
+    y = y - bloco2_h + -0.3 * cm
 
     # =======================
     # TABELA DE ITENS
@@ -265,7 +284,7 @@ def _desenhar_pdf(pedido: PedidoPdf, path: str) -> None:
     itens_x = margin_x
     _, table_height = table.wrap(available_width, height)
     table.drawOn(c, itens_x, y - table_height)
-    y = y - table_height - 0.8 * cm
+    y = y - table_height - 0.5 * cm
 
     # =======================
     # FECHAMENTO + OBSERVAÇÕES
@@ -341,7 +360,7 @@ def _desenhar_pdf(pedido: PedidoPdf, path: str) -> None:
     obs_table.drawOn(c, obs_x, y_top - obs_h)
 
     max_h = max(fech_h, obs_h)
-    y = y_top - max_h - 0.5 * cm
+    y = y_top - max_h - 0.3 * cm
 
     # rodapé
     c.setFont("Helvetica", 8)
