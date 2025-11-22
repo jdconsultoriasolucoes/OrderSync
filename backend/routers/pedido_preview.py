@@ -1,396 +1,394 @@
-from typing import Optional, List
-from fastapi import APIRouter, Query, HTTPException
-from pydantic import BaseModel
-from sqlalchemy import text
-from database import SessionLocal
-from datetime import datetime, timezone
-from zoneinfo import ZoneInfo
+# backend/services/pdf_service.py
 
-from services.email_service import enviar_email_notificacao
-from services.pdf_service import gerar_pdf_pedido
-from services.pedido_pdf_data import carregar_pedido_pdf
-from types import SimpleNamespace
-import json
+from reportlab.lib.pagesizes import A4, landscape
+from reportlab.pdfgen import canvas
+from reportlab.lib.units import cm
+from reportlab.platypus import Table, TableStyle, Paragraph
+from reportlab.lib.styles import getSampleStyleSheet
+from reportlab.lib import colors
+from reportlab.lib.utils import ImageReader
+from datetime import datetime
+from pathlib import Path
 import os
-import logging
 
-router = APIRouter(prefix="/pedido", tags=["Pedido"])
-TZ = ZoneInfo("America/Sao_Paulo")
+from services.pedido_pdf_data import carregar_pedido_pdf
+from models.pedido_pdf import PedidoPdf
 
-# ----- Models de resposta (shape que a tela pedido_cliente já consome) -----
-class ProdutoPedidoPreview(BaseModel):
-    codigo: str                # mapeado a partir de codigo_tabela (você chamou de codigo_supra no SELECT)
-    nome: str
-    embalagem: Optional[str] = None
-    peso: Optional[float] = None
-    condicao_pagamento: Optional[str] = None
-    tabela_comissao: Optional[str] = None
-    valor_sem_frete: float
-    valor_com_frete: float
-    quantidade: int = 0
+# Paleta nova (bege)
+SUPRA_RED = colors.HexColor("#C1AD99")      # cor principal (onde era vermelho)
+SUPRA_DARK = colors.HexColor("#4A4036")    # texto escuro
+SUPRA_BG_LIGHT = colors.HexColor("#F4EFE2")  # fundo claro opcional
 
-class PedidoPreviewResp(BaseModel):
-    tabela_id: int
-    razao_social: Optional[str] = None
-    condicao_pagamento: Optional[str] = None
-    validade: Optional[str] = None
-    tempo_restante: Optional[str] = None
-    usar_valor_com_frete: bool
-    produtos: List[ProdutoPedidoPreview]
 
-@router.get("/preview", response_model=PedidoPreviewResp)
-async def pedido_preview(
-    tabela_id: int = Query(..., description="ID da tabela de preço salva"),
-    com_frete: bool = Query(..., description="true/false: decidir valor com ou sem frete"),
-):
-    with SessionLocal() as db:
-        # Cabeçalho: cliente "como está no banco"
-        cabecalho_sql = text("""
-            SELECT cliente
-            FROM tb_tabela_preco
-            WHERE id_tabela = :tid
-            LIMIT 1
-        """)
-        cliente = db.execute(cabecalho_sql, {"tid": tabela_id}).scalar() or ""
+def _br_number(valor: float, casas: int = 2, sufixo: str = "") -> str:
+    """
+    Formata número no padrão brasileiro, ex: 1234.5 -> '1.234,50'
+    """
+    txt = f"{valor:,.{casas}f}"
+    txt = txt.replace(",", "X").replace(".", ",").replace("X", ".")
+    return txt + sufixo
 
-        itens_sql = text("""
-            SELECT
-                id_tabela,                               -- cabeçalho (retornamos como tabela_id)
-                codigo_produto_supra       AS codigo_supra,
-                descricao_produto          AS nome,
-                embalagem                  AS embalagem,
-                peso_liquido               AS peso,
-                codigo_plano_pagamento     AS plano_pagamento,
-                codigo_plano_pagamento     AS plano_pagamento,
-                descricao_fator_comissao   AS tabela_comissao,
-                COALESCE(valor_frete, 0)   AS valor_com_frete,
-                COALESCE(valor_s_frete, 0) AS valor_sem_frete
-            FROM tb_tabela_preco
-            WHERE id_tabela = :tid AND ativo IS TRUE
-            ORDER BY descricao_produto
-        """)
+
+def _desenhar_pdf(pedido: PedidoPdf, path: str) -> None:
+    """
+    Desenha o PDF do pedido no arquivo `path`,
+    usando layout corporativo com identidade visual.
+    """
+    os.makedirs(os.path.dirname(path), exist_ok=True)
+
+    # Página em modo paisagem (horizontal)
+    pagesize = landscape(A4)
+    c = canvas.Canvas(path, pagesize=pagesize)
+    width, height = pagesize
+
+    # margens
+    margin_x = 0.7 * cm
+    margin_y = 0.5 * cm
+    top_y = height - margin_y
+    available_width = width - 2 * margin_x
+
+    # estilo para textos longos (Observações)
+    styles = getSampleStyleSheet()
+    obs_style = styles["Normal"]
+    obs_style.fontName = "Helvetica"
+    obs_style.fontSize = 9
+    obs_style.leading = 11
+
+    # ============================
+    # LOGO EM CIMA / FAIXA EMBAIXO
+    # ============================
+    base_dir = Path(__file__).resolve().parents[2]
+    logo_path = base_dir / "frontend" / "public" / "tabela_preco" / "logo_cliente_supra.png"
+    if not logo_path.exists():
+        logo_env = os.getenv("ORDERSYNC_LOGO_PATH")
+        if logo_env and Path(logo_env).exists():
+            logo_path = Path(logo_env)
+        else:
+            logo_path = None
+
+    # Logo no canto direito superior (acima da faixa)
+    logo_h = 0
+    if logo_path and logo_path.exists():
         try:
-            rows = db.execute(itens_sql, {"tid": tabela_id}).mappings().all()
-        except Exception as e:
-            raise HTTPException(
-                status_code=500,
-                detail=(f"Falha ao consultar itens da tabela {tabela_id}: {str(e)}. "
-                        f"Verifique se as colunas 'valor_frete' e 'valor_s_frete' já foram criadas.")
+            img = ImageReader(str(logo_path))
+            logo_w = 3.0 * cm
+            iw, ih = img.getSize()
+            logo_h = logo_w * ih / iw
+            x_logo = width - margin_x - logo_w
+            y_logo = top_y - logo_h
+            c.drawImage(
+                img,
+                x_logo,
+                y_logo,
+                width=logo_w,
+                height=logo_h,
+                mask="auto",
+                preserveAspectRatio=True,
             )
+        except Exception:
+            logo_h = 0
 
-        if not rows:
-            raise HTTPException(status_code=404, detail="Tabela sem itens ou não encontrada")
+    # Faixa superior
+    barra_altura = 0.9 * cm
+    barra_top = top_y - logo_h - 0.05 * cm
+    barra_bottom = barra_top - barra_altura
 
-        produtos: List[ProdutoPedidoPreview] = []
-        for r in rows:
-            produtos.append(ProdutoPedidoPreview(
-                codigo=str(r.get("codigo_supra") or ""),
-                nome=r.get("nome") or "",
-                embalagem=r.get("embalagem"),
-                peso=float(r.get("peso") or 0.0),
-                condicao_pagamento=r.get("plano_pagamento"),
-                tabela_comissao=r.get("tabela_comissao"),
-                valor_sem_frete=round(float(r.get("valor_sem_frete") or 0.0), 2),
-                valor_com_frete=round(float(r.get("valor_com_frete") or 0.0), 2),
-                quantidade=1,
-            ))
+    c.setFillColor(SUPRA_RED)
+    c.rect(0, barra_bottom, width, barra_altura, fill=1, stroke=0)
 
-        return PedidoPreviewResp(
-            tabela_id=tabela_id,
-            razao_social=cliente,
-            condicao_pagamento=None,
-            validade=None,
-            tempo_restante=None,
-            usar_valor_com_frete=com_frete,
-            produtos=produtos,
+    # Título
+    c.setFillColor(colors.white)
+    c.setFont("Helvetica-Bold", 14)
+    titulo_y = barra_bottom + 0.25 * cm
+    c.drawString(margin_x, titulo_y, "DIGITAÇÃO DO ORÇAMENTO")
+
+    # Data à direita
+    c.setFont("Helvetica", 10)
+    data_pedido = pedido.data_pedido
+    if isinstance(data_pedido, datetime):
+        data_str = data_pedido.strftime("%d/%m/%Y")
+    elif data_pedido:
+        data_str = data_pedido.strftime("%d/%m/%Y")
+    else:
+        data_str = ""
+    c.drawRightString(width - margin_x, titulo_y, data_str)
+
+    c.setFillColor(SUPRA_DARK)
+
+    # =======================
+    # DADOS BÁSICOS (2 BLOCOS)
+    # =======================
+    codigo_cliente = pedido.codigo_cliente or "Não cadastrado"
+    cliente = pedido.cliente or ""
+    frete_total = float(pedido.frete_total or 0)
+    if pedido.data_entrega_ou_retirada:
+        data_entrega_str = pedido.data_entrega_ou_retirada.strftime("%d/%m/%Y")
+    else:
+        data_entrega_str = ""
+
+    # Bloco 1: Código / Cliente
+    bloco1_data = [
+        ["Código:", str(codigo_cliente)],
+        ["Cliente:", cliente[:80]],
+    ]
+    label_w = 2.5 * cm
+    bloco1_col_widths = [label_w, available_width - label_w]
+
+    bloco1 = Table(bloco1_data, colWidths=bloco1_col_widths)
+    bloco1.setStyle(
+        TableStyle(
+            [
+                ("BACKGROUND", (0, 0), (-1, 0), SUPRA_BG_LIGHT),
+                ("BACKGROUND", (0, 1), (-1, 1), SUPRA_BG_LIGHT),
+                ("FONTNAME", (0, 0), (0, -1), "Helvetica-Bold"),
+                ("TEXTCOLOR", (0, 0), (-1, -1), SUPRA_DARK),
+                ("FONTSIZE", (0, 0), (-1, -1), 9),
+                ("GRID", (0, 0), (-1, -1), 0.5, colors.black),
+                ("BOX", (0, 0), (-1, -1), 0.5, colors.black),
+                ("VALIGN", (0, 0), (-1, -1), "MIDDLE"),
+                ("ALIGN", (0, 0), (0, -1), "CENTER"),
+                ("ALIGN", (1, 0), (1, -1), "LEFT"),
+            ]
+        )
+    )
+
+    y = barra_bottom - 0.4 * cm
+    _, b1_h = bloco1.wrap(available_width, height)
+    bloco1.drawOn(c, margin_x, y - b1_h)
+    y = y - b1_h
+
+    # Bloco 2: Frete / Data
+    bloco2_data = [
+        ["Valor Frete (TO):", "R$ " + _br_number(frete_total),
+         "Data da Entrega ou Retira:", data_entrega_str]
+    ]
+    bloco2_col_widths = [
+        available_width * 0.18,
+        available_width * 0.22,
+        available_width * 0.28,
+        available_width * 0.32,
+    ]
+
+    bloco2 = Table(bloco2_data, colWidths=bloco2_col_widths)
+    bloco2.setStyle(
+        TableStyle(
+            [
+                ("BACKGROUND", (0, 0), (-1, 0), colors.white),
+                ("FONTNAME", (0, 0), (0, 0), "Helvetica-Bold"),
+                ("FONTNAME", (2, 0), (2, 0), "Helvetica-Bold"),
+                ("TEXTCOLOR", (0, 0), (-1, 0), SUPRA_DARK),
+                ("FONTSIZE", (0, 0), (-1, 0), 9),
+                ("GRID", (0, 0), (-1, 0), 0.5, colors.black),
+                ("BOX", (0, 0), (-1, 0), 0.5, colors.black),
+                ("VALIGN", (0, 0), (-1, 0), "MIDDLE"),
+                ("ALIGN", (0, 0), (0, 0), "CENTER"),  # "Valor Frete (TO):"
+                ("ALIGN", (2, 0), (2, 0), "CENTER"),  # "Data da Entrega..."
+                ("ALIGN", (1, 0), (1, 0), "LEFT"),
+                ("ALIGN", (3, 0), (3, 0), "LEFT"),
+            ]
+        )
+    )
+
+    y = y - 0.3 * cm
+    _, b2_h = bloco2.wrap(available_width, height)
+    bloco2.drawOn(c, margin_x, y - b2_h)
+    y = y - b2_h - 0.7 * cm
+
+    # =======================
+    # TABELA DE ITENS
+    # =======================
+    header = [
+        "Codigo",
+        "Produto",
+        "Embalagem",
+        "Qtd",
+        "Cond. Pgto",
+        "Comissão",
+        "Valor Retira",
+        "Valor Entrega",
+    ]
+    data = [header]
+
+    for it in pedido.itens:
+        data.append(
+            [
+                it.codigo,
+                it.produto,
+                it.embalagem or "",
+                f"{it.quantidade:g}",
+                it.condicao_pagamento or "",
+                it.tabela_comissao or "",
+                "R$ " + _br_number(float(it.valor_retira or 0)),
+                "R$ " + _br_number(float(it.valor_entrega or 0)),
+            ]
         )
 
-class ConfirmarItem(BaseModel):
-    codigo: str
-    descricao: str | None = None
-    embalagem: str | None = None
-    condicao_pagamento: str | None = None      # 👈 NOVO
-    tabela_comissao: str | None = None 
-    quantidade: int
-    preco_unit: float | None = None
-    preco_unit_com_frete: float | None = None
-    peso_kg: float | None = None
+    # Larguras pensadas para A4 paisagem
+    col_widths = [
+        2.0 * cm,   # Código
+        7.0 * cm,   # Produto
+        2.5 * cm,   # Embalagem
+        1.5 * cm,   # Qtd
+        4.0 * cm,   # Cond. Pgto
+        4.0 * cm,   # Comissão
+        2.2 * cm,   # Valor Retira
+        2.2 * cm,   # Valor Entrega
+    ]
 
-class ConfirmarPedidoRequest(BaseModel):
-    origin_code: str | None = None              # token do link /p/{code}
-    usar_valor_com_frete: bool = True
-    produtos: list[ConfirmarItem]
-    observacao: str | None = None
-    cliente: str | None = None                  # razão social mostrada
-    validade_ate: str | None = None             # 'YYYY-MM-DD' (opcional)
-    data_retirada: str | None = None            # 'YYYY-MM-DD' (opcional)
-    validade_dias: int | None = None
-    codigo_cliente: str | None = None
-    link_url: str | None = None
+    table = Table(data, colWidths=col_widths)
+    table.setStyle(
+        TableStyle(
+            [
+                ("BACKGROUND", (0, 0), (-1, 0), SUPRA_RED),
+                ("TEXTCOLOR", (0, 0), (-1, 0), colors.white),
+                ("FONTNAME", (0, 0), (-1, 0), "Helvetica-Bold"),
+                ("FONTSIZE", (0, 0), (-1, 0), 9),
+                ("ALIGN", (0, 0), (-1, 0), "CENTER"),
 
-@router.post("/{tabela_id}/confirmar")
-def confirmar_pedido(tabela_id: int, body: ConfirmarPedidoRequest):
-    with SessionLocal() as db:
-        # 1) validação básica
-        if not body.produtos:
-            raise HTTPException(status_code=400, detail="Nenhum item informado")
+                ("GRID", (0, 0), (-1, -1), 0.5, colors.black),
+                ("BOX", (0, 0), (-1, -1), 0.5, colors.black),
 
-# ---  buscar fornecedor da tabela de preço ---
-        fornecedor = db.execute(text("""
-            SELECT fornecedor
-            FROM public.tb_tabela_preco
-            WHERE id_tabela = :tid
-        """), {"tid": tabela_id}).scalar()
-
-        if fornecedor:
-            fornecedor = str(fornecedor)[:255]
-        else:
-            fornecedor = None
-
-
-        # 2) Validar o link do token (se veio)
-        link_row = None
-        if body.origin_code:
-            link_row = db.execute(text("""
-                SELECT code, tabela_id, com_frete, expires_at, data_prevista, uses,
-                       first_access_at, last_access_at, created_at, link_url, codigo_cliente
-                  FROM tb_pedido_link
-                 WHERE code = :c
-            """), {"c": body.origin_code}).mappings().first()
-
-            if not link_row:
-                raise HTTPException(status_code=404, detail="Link não encontrado")
-
-            exp = link_row.get("expires_at")
-            if exp is not None:
-                if exp.tzinfo is None:
-                    exp = exp.replace(tzinfo=TZ)
-                agora_sp = datetime.now(TZ)
-                if agora_sp > exp:
-                    raise HTTPException(status_code=410, detail="Link expirado")
-
-            if int(link_row["tabela_id"]) != int(tabela_id):
-                raise HTTPException(status_code=400, detail="Link e tabela não conferem")
-
-            # força o com_frete do link
-            body.usar_valor_com_frete = bool(link_row["com_frete"])
-            pedido_created_at = link_row["created_at"]  # instante da geração do link
-            link_url = link_row["link_url"]             # opcional
-
-        # 3) Somar totais no servidor
-        peso_total_kg = 0.0
-        total_sem_frete = 0.0
-        total_com_frete = 0.0
-        for it in body.produtos:
-            qtd = float(it.quantidade or 0)
-            peso_total_kg += float(it.peso_kg or 0) * qtd
-            total_sem_frete += float(it.preco_unit or 0) * qtd
-            total_com_frete += float(
-                (it.preco_unit_com_frete if it.preco_unit_com_frete is not None else it.preco_unit) or 0
-            ) * qtd
-
-        frete_total = max(0.0, total_com_frete - total_sem_frete)
-        total_pedido = total_com_frete if body.usar_valor_com_frete else total_sem_frete
-
-        # 4) Datas e campos
-        def _parse_date(s: str | None):
-            if not s:
-                return None
-            return datetime.strptime(s, "%Y-%m-%d").date()
-
-        validade_ate = _parse_date(body.validade_ate)
-        validade_dias = body.validade_dias
-        data_retirada = _parse_date(body.data_retirada) or (link_row["data_prevista"] if link_row else None)
-
-        codigo_cliente = (body.codigo_cliente or "").strip() or None
-        if link_row:
-            link_url = link_row.get("link_url")
-        else:
-            link_url = None
-
-        observacao = (body.observacao or "").strip() or None
-        agora = datetime.now(TZ)
-        link_expira_em = link_row["expires_at"] if link_row else None
-
-        # 5) Insert pedido
-        insert_sql = text("""
-            INSERT INTO tb_pedidos (
-                codigo_cliente, cliente, tabela_preco_id,
-                validade_ate, validade_dias, data_retirada,
-                usar_valor_com_frete, itens,
-                peso_total_kg, frete_total, total_sem_frete, total_com_frete, total_pedido,
-                observacoes, status, confirmado_em,
-                link_token, link_url, link_enviado_em, link_expira_em, link_status,
-                link_primeiro_acesso_em, link_ultimo_acesso_em, link_qtd_acessos,
-                fornecedor,          
-                criado_em, atualizado_em, created_at
-            )
-            VALUES (
-                :codigo_cliente, :cliente, :tabela_preco_id,
-                :validade_ate, :validade_dias, :data_retirada,
-                :usar_valor_com_frete, CAST(:itens AS jsonb),
-                :peso_total_kg, :frete_total, :total_sem_frete, :total_com_frete, :total_pedido,
-                :observacoes, 'CONFIRMADO', :confirmado_em,
-                :link_token, :link_url, :link_enviado_em, :link_expira_em, 'ABERTO',
-                :link_primeiro_acesso_em, :link_ultimo_acesso_em, :link_qtd_acessos,
-                :fornecedor,         
-                :agora, :agora, :pedido_created_at
-            )
-            RETURNING id_pedido
-        """)
-
-        params = {
-            "codigo_cliente": (codigo_cliente or "Não cadastrado")[:80],
-            "cliente": (body.cliente or "").strip() or "---",
-            "tabela_preco_id": tabela_id,
-            "validade_ate": validade_ate,
-            "validade_dias": validade_dias,
-            "data_retirada": data_retirada,
-            "usar_valor_com_frete": bool(body.usar_valor_com_frete),
-            "itens": json.dumps([i.dict() for i in body.produtos]),
-            "peso_total_kg": round(peso_total_kg, 3),
-            "frete_total": round(frete_total, 2),
-            "total_sem_frete": round(total_sem_frete, 2),
-            "total_com_frete": round(total_com_frete, 2),
-            "total_pedido": round(total_pedido, 2),
-            "observacoes": observacao,
-            "confirmado_em": agora,
-            "link_token": body.origin_code,
-            "link_url": link_url,
-            "link_enviado_em": agora,
-            "link_expira_em": link_expira_em,
-            "link_primeiro_acesso_em": link_row.get("first_access_at") if link_row else None,
-            "link_ultimo_acesso_em": link_row.get("last_access_at") if link_row else None,
-            "link_qtd_acessos": link_row.get("uses") if link_row else None,
-            "fornecedor": fornecedor,
-            "agora": agora,
-            "pedido_created_at": (link_row.get("created_at") if link_row else None),
-        }
-
-        new_id = db.execute(insert_sql, params).scalar()
-
-        # 6) Insert itens
-        insert_item_sql = text("""
-            INSERT INTO tb_pedidos_itens (
-                id_pedido, codigo, nome, embalagem, peso_kg,
-                condicao_pagamento, tabela_comissao,
-                preco_unit, preco_unit_frt, quantidade,
-                subtotal_sem_f, subtotal_com_f
-            ) VALUES (
-                :id_pedido, :codigo, :nome, :embalagem, :peso_kg,
-                :condicao_pagamento, :tabela_comissao,
-                :preco_unit, :preco_unit_frt, :quantidade,
-                :subtotal_sem_f, :subtotal_com_f
-            )
-        """)
-
-        for it in body.produtos:
-            qtd   = float(it.quantidade or 0)
-            p_sem = float(it.preco_unit or 0)
-            p_com = float((it.preco_unit_com_frete 
-                            if it.preco_unit_com_frete is not None 
-                            else it.preco_unit) or 0)
-
-                   
-           
-            db.execute(insert_item_sql, {
-                "id_pedido": new_id,
-                "codigo": (it.codigo or "")[:80],
-                "nome": (it.descricao or "")[:255] or None,
-                "embalagem": getattr(it, "embalagem", None),
-                "peso_kg": float(it.peso_kg or 0),
-                "condicao_pagamento": it.condicao_pagamento,
-                "tabela_comissao": it.tabela_comissao,
-                "preco_unit": round(p_sem, 2),
-                "preco_unit_frt": round(p_com, 2),
-                "quantidade": qtd,
-                "subtotal_sem_f": round(p_sem * qtd, 2),
-                "subtotal_com_f": round(p_com * qtd, 2),
-            })
-
-        db.commit()
-
-        # 7) Monta um "pedido" mínimo só para o serviço de e-mail
-        class PedidoEmailDummy:
-            """
-            Objeto simples só para entregar para o email_service.
-            Ele só precisa ter:
-              - id
-              - codigo_cliente
-              - cliente_nome / nome_cliente
-              - total_pedido
-            """
-            def __init__(self, id_pedido, codigo_cliente, cliente_nome, total_pedido):
-                self.id = id_pedido
-                self.codigo_cliente = codigo_cliente
-                self.cliente_nome = cliente_nome
-                self.total_pedido = total_pedido
-
-        pedido_email = PedidoEmailDummy(
-            id_pedido=new_id,
-            codigo_cliente=codigo_cliente,
-            cliente_nome=(body.cliente or "").strip() or "---",
-            total_pedido=round(total_pedido, 2),
+                ("FONTSIZE", (0, 1), (-1, -1), 8),
+                ("VALIGN", (0, 0), (-1, -1), "MIDDLE"),
+                ("ALIGN", (3, 1), (3, -1), "CENTER"),   # Qtd
+                ("ALIGN", (6, 1), (7, -1), "RIGHT"),    # valores
+            ]
         )
+    )
 
-        # 8) E-mail best-effort (com PDF)
-        EMAIL_MODE = os.getenv("ORDERSYNC_EMAIL_MODE", "best-effort").lower()
-        if EMAIL_MODE == "off":
-            # Apenas marca o pedido como "link desabilitado" e segue a vida
-            db.execute(text("""
-                UPDATE public.tb_pedidos
-                   SET link_status = 'DESABILITADO',
-                       atualizado_em = :agora
-                 WHERE id_pedido = :id
-            """), {"agora": agora, "id": new_id})
-            db.commit()
-        else:
-            try:
-                # Tenta gerar o PDF do pedido (com todos os detalhes)
-                pdf_bytes = None
-                try:
-                    # 1) carrega os dados do pedido no formato PedidoPdf
-                    pedido_pdf = carregar_pedido_pdf(db, new_id)
+    itens_x = margin_x
+    _, table_height = table.wrap(available_width, height)
+    table.drawOn(c, itens_x, y - table_height)
+    y = y - table_height - 0.8 * cm
 
-                    # 2) gera o arquivo físico em /tmp (ou pasta padrão)
-                    path_pdf = gerar_pdf_pedido(pedido_pdf)
+    # =======================
+    # FECHAMENTO + OBSERVAÇÕES
+    # =======================
+    obs_text = (
+        getattr(pedido, "observacoes", None)
+        or getattr(pedido, "observacao", None)
+        or ""
+    ).strip()
 
-                    # 3) lê o arquivo em bytes para anexar no e-mail
-                    with open(path_pdf, "rb") as f:
-                        pdf_bytes = f.read()
+    # largura dos dois blocos na mesma linha
+    gap = 0.3 * cm
+    fech_block_width = available_width * 0.45   # fechamento à esquerda
+    obs_block_width = available_width - fech_block_width - gap
 
-                except Exception as e_pdf:
-                    logging.exception("Falha ao gerar PDF (ignorada): %s", e_pdf)
-                    pdf_bytes = None  # segue sem anexo
+    # Fechamento do Orçamento (ESQUERDA)
+    total_peso = float(pedido.total_peso_bruto or 0)
+    total_valor = float(pedido.total_valor or 0)
 
-                # Dispara o e-mail usando as configs da tela de Config Email
-                enviar_email_notificacao(
-                    db=db,
-                    pedido=pedido_email,
-                    link_pdf=None,      # se um dia gerar link público, preenche aqui
-                    pdf_bytes=pdf_bytes
-                )
+    data_fech = [
+        ["Fechamento do Orçamento:", ""],
+        ["Total em Peso Bruto:", _br_number(total_peso, 3, " kg")],
+        ["Total em Valor:", "R$ " + _br_number(total_valor)],
+    ]
 
-                # Se chegou até aqui sem exception, marca como ENVIADO
-                db.execute(text("""
-                    UPDATE public.tb_pedidos
-                       SET link_enviado_em = :agora,
-                           link_status     = 'ENVIADO',
-                           atualizado_em   = :agora
-                     WHERE id_pedido = :id
-                """), {"agora": agora, "id": new_id})
-                db.commit()
-            except Exception as e:
-                logging.exception("Falha ao enviar email (ignorada): %s", e)
-                # limpa a transação antes de tentar o UPDATE
-                db.rollback()
-                db.execute(text("""
-                    UPDATE public.tb_pedidos
-                       SET link_status   = 'FALHA_ENVIO',
-                           atualizado_em = :agora
-                     WHERE id_pedido = :id
-                """), {"agora": agora, "id": new_id})
-                db.commit()
+    fech_col_widths = [fech_block_width * 0.6, fech_block_width * 0.4]
 
-        # 9) resposta — SEM expor nada de e-mail
-        return {"id": new_id, "status": "CRIADO"}
+    fech_table = Table(data_fech, colWidths=fech_col_widths)
+    fech_table.setStyle(
+        TableStyle(
+            [
+                ("BACKGROUND", (0, 0), (-1, 0), SUPRA_BG_LIGHT),
+                ("FONTNAME", (0, 0), (-1, 0), "Helvetica-Bold"),
+                ("TEXTCOLOR", (0, 0), (-1, 0), SUPRA_DARK),
+                ("FONTSIZE", (0, 0), (-1, -1), 9),
+                ("GRID", (0, 0), (-1, -1), 0.5, colors.black),
+                ("BOX", (0, 0), (-1, -1), 0.5, colors.black),
+                ("ALIGN", (0, 0), (0, -1), "LEFT"),
+                ("ALIGN", (1, 1), (1, -1), "LEFT"),
+                ("VALIGN", (0, 0), (-1, -1), "MIDDLE"),
+            ]
+        )
+    )
+
+    # Observações (DIREITA, SEMPRE APARECE)
+    obs_para = Paragraph(obs_text.replace("\n", "<br/>"), obs_style)
+
+    data_obs = [["Observações:", obs_para]]
+    obs_col_widths = [2.8 * cm, obs_block_width - 2.8 * cm]
+
+    obs_table = Table(data_obs, colWidths=obs_col_widths)
+    obs_table.setStyle(
+        TableStyle(
+            [
+                ("BACKGROUND", (0, 0), (0, 0), SUPRA_BG_LIGHT),
+                ("FONTNAME", (0, 0), (0, 0), "Helvetica-Bold"),
+                ("TEXTCOLOR", (0, 0), (-1, -1), SUPRA_DARK),
+                ("FONTSIZE", (0, 0), (-1, -1), 9),
+                ("GRID", (0, 0), (-1, -1), 0.5, colors.black),
+                ("BOX", (0, 0), (-1, -1), 0.5, colors.black),
+                ("VALIGN", (0, 0), (-1, -1), "MIDDLE"),
+                ("ALIGN", (0, 0), (0, 0), "CENTER"),
+                ("ALIGN", (1, 0), (1, 0), "LEFT"),
+            ]
+        )
+    )
+
+    # desenha lado a lado na mesma "altura"
+    y_top = y
+    fech_x = itens_x
+    obs_x = itens_x + fech_block_width + gap
+
+    _, fech_h = fech_table.wrap(fech_block_width, height)
+    _, obs_h = obs_table.wrap(obs_block_width, height)
+
+    fech_table.drawOn(c, fech_x, y_top - fech_h)
+    obs_table.drawOn(c, obs_x, y_top - obs_h)
+
+    max_h = max(fech_h, obs_h)
+    y = y_top - max_h - 0.5 * cm
+
+    # rodapé
+    c.setFont("Helvetica", 8)
+    c.drawString(itens_x, y, "Documento gerado automaticamente pelo OrderSync.")
+
+    c.showPage()
+    c.save()
+
+
+def gerar_pdf_pedido(*args, destino_dir: str = "/tmp", **kwargs):
+    """
+    Wrapper compatível com os dois jeitos de uso:
+
+    1) JEITO ANTIGO:
+        pedido_pdf = carregar_pedido_pdf(db, pedido_id)
+        path_pdf = gerar_pdf_pedido(pedido_pdf)
+        -> retorna STRING com o caminho do PDF
+
+    2) JEITO NOVO:
+        pdf_bytes = gerar_pdf_pedido(db, pedido_id)
+        -> retorna BYTES do PDF (pronto pra anexar)
+    """
+    # permite sobrescrever destino_dir via kwargs
+    if "destino_dir" in kwargs and kwargs["destino_dir"]:
+        destino_dir = kwargs["destino_dir"]
+
+    # Caso 1: gerar_pdf_pedido(pedido_pdf)
+    if len(args) == 1 and isinstance(args[0], PedidoPdf):
+        pedido = args[0]
+        os.makedirs(destino_dir, exist_ok=True)
+        path = os.path.join(destino_dir, f"pedido_{pedido.id_pedido}.pdf")
+        _desenhar_pdf(pedido, path)
+        return path
+
+    # Caso 2: gerar_pdf_pedido(db, pedido_id)
+    if len(args) >= 2:
+        db = args[0]
+        pedido_id = args[1]
+    elif "db" in kwargs and "pedido_id" in kwargs:
+        db = kwargs["db"]
+        pedido_id = kwargs["pedido_id"]
+    else:
+        raise TypeError("Uso inválido de gerar_pdf_pedido")
+
+    pedido = carregar_pedido_pdf(db, int(pedido_id))
+    os.makedirs(destino_dir, exist_ok=True)
+    path = os.path.join(destino_dir, f"pedido_{pedido.id_pedido}.pdf")
+    _desenhar_pdf(pedido, path)
+
+    # no jeito novo, devolve bytes (pra anexo de e-mail)
+    with open(path, "rb") as f:
+        return f.read()
