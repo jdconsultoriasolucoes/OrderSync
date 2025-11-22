@@ -1,9 +1,10 @@
 # backend/services/pdf_service.py
 
-from reportlab.lib.pagesizes import A4
+from reportlab.lib.pagesizes import A4, landscape
 from reportlab.pdfgen import canvas
 from reportlab.lib.units import cm
-from reportlab.platypus import Table, TableStyle
+from reportlab.platypus import Table, TableStyle, Paragraph
+from reportlab.lib.styles import getSampleStyleSheet
 from reportlab.lib import colors
 from reportlab.lib.utils import ImageReader
 from datetime import datetime
@@ -13,9 +14,10 @@ import os
 from services.pedido_pdf_data import carregar_pedido_pdf
 from models.pedido_pdf import PedidoPdf
 
-# Cor principal da Supra (pode ajustar se quiser outro tom)
-SUPRA_RED = colors.HexColor("#B3001F")
-SUPRA_DARK = colors.black
+# Paleta nova (bege)
+SUPRA_RED = colors.HexColor("#C1AD99")      # cor principal (onde era vermelho)
+SUPRA_DARK = colors.HexColor("#4A4036")    # texto escuro
+SUPRA_BG_LIGHT = colors.HexColor("#F4EFE2")  # fundo claro opcional
 
 
 def _br_number(valor: float, casas: int = 2, sufixo: str = "") -> str:
@@ -30,18 +32,27 @@ def _br_number(valor: float, casas: int = 2, sufixo: str = "") -> str:
 def _desenhar_pdf(pedido: PedidoPdf, path: str) -> None:
     """
     Desenha o PDF do pedido no arquivo `path`,
-    usando layout corporativo com identidade da Supra.
+    usando layout corporativo com identidade visual.
     """
     os.makedirs(os.path.dirname(path), exist_ok=True)
 
-    c = canvas.Canvas(path, pagesize=A4)
-    width, height = A4
+    # Página em modo paisagem (horizontal)
+    pagesize = landscape(A4)
+    c = canvas.Canvas(path, pagesize=pagesize)
+    width, height = pagesize
 
     # margens
     margin_x = 0.7 * cm
     margin_y = 0.5 * cm
     top_y = height - margin_y
     available_width = width - 2 * margin_x
+
+    # estilo para textos longos (Observações)
+    styles = getSampleStyleSheet()
+    obs_style = styles["Normal"]
+    obs_style.fontName = "Helvetica"
+    obs_style.fontSize = 9
+    obs_style.leading = 11
 
     # ============================
     # LOGO EM CIMA / FAIXA EMBAIXO
@@ -77,7 +88,7 @@ def _desenhar_pdf(pedido: PedidoPdf, path: str) -> None:
         except Exception:
             logo_h = 0
 
-    # Faixa vermelha logo abaixo do logo
+    # Faixa superior
     barra_altura = 0.9 * cm
     barra_top = top_y - logo_h - 0.05 * cm
     barra_bottom = barra_top - barra_altura
@@ -127,8 +138,8 @@ def _desenhar_pdf(pedido: PedidoPdf, path: str) -> None:
     bloco1.setStyle(
         TableStyle(
             [
-                ("BACKGROUND", (0, 0), (-1, 0), colors.HexColor("#F2F2F2")),
-                ("BACKGROUND", (0, 1), (-1, 1), colors.HexColor("#F2F2F2")),
+                ("BACKGROUND", (0, 0), (-1, 0), SUPRA_BG_LIGHT),
+                ("BACKGROUND", (0, 1), (-1, 1), SUPRA_BG_LIGHT),
                 ("FONTNAME", (0, 0), (0, -1), "Helvetica-Bold"),
                 ("TEXTCOLOR", (0, 0), (-1, -1), SUPRA_DARK),
                 ("FONTSIZE", (0, 0), (-1, -1), 9),
@@ -212,16 +223,16 @@ def _desenhar_pdf(pedido: PedidoPdf, path: str) -> None:
             ]
         )
 
-    # Produto largo + Valor Entrega 2,3 cm
+    # Larguras pensadas para A4 paisagem
     col_widths = [
-        1.8 * cm,   # Código
-        5.7 * cm,   # Produto
-        2.0 * cm,   # Embalagem
-        1.4 * cm,   # Qtd
-        2.5 * cm,   # Cond. Pgto
-        1.8 * cm,   # Comissão
-        2.1 * cm,   # Valor Retira
-        2.3 * cm,   # Valor Entrega
+        2.0 * cm,   # Código
+        7.0 * cm,   # Produto
+        2.5 * cm,   # Embalagem
+        1.5 * cm,   # Qtd
+        4.0 * cm,   # Cond. Pgto
+        4.0 * cm,   # Comissão
+        2.2 * cm,   # Valor Retira
+        2.2 * cm,   # Valor Entrega
     ]
 
     table = Table(data, colWidths=col_widths)
@@ -233,12 +244,14 @@ def _desenhar_pdf(pedido: PedidoPdf, path: str) -> None:
                 ("FONTNAME", (0, 0), (-1, 0), "Helvetica-Bold"),
                 ("FONTSIZE", (0, 0), (-1, 0), 9),
                 ("ALIGN", (0, 0), (-1, 0), "CENTER"),
+
                 ("GRID", (0, 0), (-1, -1), 0.5, colors.black),
                 ("BOX", (0, 0), (-1, -1), 0.5, colors.black),
+
                 ("FONTSIZE", (0, 1), (-1, -1), 8),
                 ("VALIGN", (0, 0), (-1, -1), "MIDDLE"),
-                ("ALIGN", (3, 1), (3, -1), "CENTER"),
-                ("ALIGN", (6, 1), (7, -1), "RIGHT"),
+                ("ALIGN", (3, 1), (3, -1), "CENTER"),   # Qtd
+                ("ALIGN", (6, 1), (7, -1), "RIGHT"),    # valores
             ]
         )
     )
@@ -248,6 +261,9 @@ def _desenhar_pdf(pedido: PedidoPdf, path: str) -> None:
     table.drawOn(c, itens_x, y - table_height)
     y = y - table_height - 0.8 * cm
 
+    # =======================
+    # FECHAMENTO + OBSERVAÇÕES
+    # =======================
     obs_text = (
         getattr(pedido, "observacoes", None)
         or getattr(pedido, "observacao", None)
@@ -256,7 +272,7 @@ def _desenhar_pdf(pedido: PedidoPdf, path: str) -> None:
 
     # largura dos dois blocos na mesma linha
     gap = 0.3 * cm
-    fech_block_width = available_width * 0.45   # AGORA FECHAMENTO FICA À ESQUERDA
+    fech_block_width = available_width * 0.45   # fechamento à esquerda
     obs_block_width = available_width - fech_block_width - gap
 
     # Fechamento do Orçamento (ESQUERDA)
@@ -275,7 +291,7 @@ def _desenhar_pdf(pedido: PedidoPdf, path: str) -> None:
     fech_table.setStyle(
         TableStyle(
             [
-                ("BACKGROUND", (0, 0), (-1, 0), colors.HexColor("#F2F2F2")),
+                ("BACKGROUND", (0, 0), (-1, 0), SUPRA_BG_LIGHT),
                 ("FONTNAME", (0, 0), (-1, 0), "Helvetica-Bold"),
                 ("TEXTCOLOR", (0, 0), (-1, 0), SUPRA_DARK),
                 ("FONTSIZE", (0, 0), (-1, -1), 9),
@@ -289,14 +305,16 @@ def _desenhar_pdf(pedido: PedidoPdf, path: str) -> None:
     )
 
     # Observações (DIREITA, SEMPRE APARECE)
-    data_obs = [["Observações:", obs_text]]
+    obs_para = Paragraph(obs_text.replace("\n", "<br/>"), obs_style)
+
+    data_obs = [["Observações:", obs_para]]
     obs_col_widths = [2.8 * cm, obs_block_width - 2.8 * cm]
 
     obs_table = Table(data_obs, colWidths=obs_col_widths)
     obs_table.setStyle(
         TableStyle(
             [
-                ("BACKGROUND", (0, 0), (0, 0), colors.HexColor("#F2F2F2")),
+                ("BACKGROUND", (0, 0), (0, 0), SUPRA_BG_LIGHT),
                 ("FONTNAME", (0, 0), (0, 0), "Helvetica-Bold"),
                 ("TEXTCOLOR", (0, 0), (-1, -1), SUPRA_DARK),
                 ("FONTSIZE", (0, 0), (-1, -1), 9),
@@ -335,12 +353,12 @@ def gerar_pdf_pedido(*args, destino_dir: str = "/tmp", **kwargs):
     """
     Wrapper compatível com os dois jeitos de uso:
 
-    1) JEITO ANTIGO (ainda pode existir em algum lugar do código):
-        pedido_pdf = carregar_pedido_pdf(db, pedido_id)   # ou outra função
+    1) JEITO ANTIGO:
+        pedido_pdf = carregar_pedido_pdf(db, pedido_id)
         path_pdf = gerar_pdf_pedido(pedido_pdf)
         -> retorna STRING com o caminho do PDF
 
-    2) JEITO NOVO (que usamos na confirmação para anexo de e-mail):
+    2) JEITO NOVO:
         pdf_bytes = gerar_pdf_pedido(db, pedido_id)
         -> retorna BYTES do PDF (pronto pra anexar)
     """
@@ -348,9 +366,7 @@ def gerar_pdf_pedido(*args, destino_dir: str = "/tmp", **kwargs):
     if "destino_dir" in kwargs and kwargs["destino_dir"]:
         destino_dir = kwargs["destino_dir"]
 
-    # -------------------------
     # Caso 1: gerar_pdf_pedido(pedido_pdf)
-    # -------------------------
     if len(args) == 1 and isinstance(args[0], PedidoPdf):
         pedido = args[0]
         os.makedirs(destino_dir, exist_ok=True)
@@ -358,9 +374,7 @@ def gerar_pdf_pedido(*args, destino_dir: str = "/tmp", **kwargs):
         _desenhar_pdf(pedido, path)
         return path
 
-    # -------------------------
     # Caso 2: gerar_pdf_pedido(db, pedido_id)
-    # -------------------------
     if len(args) >= 2:
         db = args[0]
         pedido_id = args[1]
