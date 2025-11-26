@@ -243,6 +243,7 @@ def listar_tabelas():
               nome_tabela,
               cliente,
               fornecedor,
+              MAX(frete_kg) AS frete_kg,
               MAX(criado_em) AS criado_em
             FROM tb_tabela_preco
             WHERE ativo is TRUE

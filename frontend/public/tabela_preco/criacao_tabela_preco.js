@@ -1157,7 +1157,7 @@ function buildFiscalInputsFromRow(tr) {
   // Preço base (espelha sua lógica da tela): valor + acrescimo(condição) - desconto(fator)
   const valor           = Number(item?.valor || 0);
   const descontoValor   = valor * Number(fator || 0);
-  const liquido       = Math.max(0, valor - descontoValor);
+  const liquido       =  Math.max(0, valor - descontoValor);
   const acrescimoCond   = liquido * Number(taxaCond || 0);
   
   const precoBase       = liquido + acrescimoCond;
@@ -1172,7 +1172,7 @@ function buildFiscalInputsFromRow(tr) {
   ramo_juridico: ramoJuridico,
   peso_kg: Number(peso_kg || 0),
   tipo: tipo,
-  preco_unit: Number(liquido  || 0),
+  preco_unit: Number(precoBase  || 0),
   quantidade: 1,
   desconto_linha: 0,
   frete_linha: Number(frete_linha || 0),

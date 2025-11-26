@@ -25,7 +25,13 @@ async function carregarTabelas() {
       <td>
           <button onclick="window.location.href='criacao_tabela_preco.html?id=${encodeURIComponent(tabela.id)}'">Editar</button>
           <button onclick="abrirModalDelecao(${tabela.id})">Excluir</button>
-          <button class="btn-enviar-link" data-id="${tabela.id}">Enviar</button>
+          <button
+            class="btn-enviar-link"
+            data-id="${tabela.id}"
+            data-frete-kg="${tabela.frete_kg !== undefined && tabela.frete_kg !== null ? tabela.frete_kg : ''}"
+          >
+            Enviar
+          </button>
       </td>
       `;
 
@@ -117,10 +123,24 @@ document.getElementById("pesquisa").addEventListener("keyup", function() {
 document.addEventListener("click", (e) => {
   const btn = e.target.closest(".btn-enviar-link");
   if (!btn) return;
+
   const tabelaId = btn.dataset.id;
+
+  // pega o frete que veio da API (data-frete-kg)
+  const freteStr = btn.dataset.freteKg; // data-frete-kg => freteKg
+  const freteKg =
+    freteStr === undefined || freteStr === null || freteStr === ""
+      ? null
+      : Number(String(freteStr).replace(",", "."));
+
   if (!tabelaId) return alert("ID da tabela não encontrado.");
   if (typeof window.__showGerarLinkModal !== "function") {
     return alert("Módulo de gerar link não carregado. Verifique o import em listar_tabelas.html.");
   }
-  window.__showGerarLinkModal({ tabelaId, pedidoClientePath: "/tabela_preco/pedido_cliente.html" });
+
+  window.__showGerarLinkModal({
+    tabelaId,
+    freteKg,
+    pedidoClientePath: "/tabela_preco/pedido_cliente.html",
+  });
 });
