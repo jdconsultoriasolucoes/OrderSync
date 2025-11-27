@@ -25,4 +25,4 @@ class PedidoPdf(BaseModel):
     total_peso_bruto: float = 0.0
     total_valor: float = 0.0
     observacoes: str = ""
-    itens: List[PedidoPdfItem] = []
+    itens: List[PedidoPdfItem] = [] 
