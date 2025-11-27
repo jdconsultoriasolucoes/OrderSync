@@ -388,7 +388,7 @@ async function carregarPedido() {
             ...p,
             valor_com_frete: Number(p.valor_com_frete) || 0,
             valor_sem_frete: Number(p.valor_sem_frete) || 0,
-            quantidade: Number(p.quantidade) || 1,
+            quantidade: Number(p.quantidade) || 0,
           }))
         : [];
 
