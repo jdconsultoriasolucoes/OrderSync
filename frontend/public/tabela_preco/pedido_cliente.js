@@ -130,16 +130,16 @@ function renderTabela() {
       <td>${item.codigo ?? ""}</td>
       <td>${item.nome ?? ""}</td>
       <td>${item.embalagem ?? ""}</td>
-      <td>${item.condicao_pagamento ?? ""}</td>
+      <td><input type="number" min="0" step="1" value="${item.quantidade || 0}" data-index="${i}" class="qtd" /></td>
       <td class="celula-peso" data-peso-unit="${Number(item.peso ?? 0)}"></td>
       <td>${fmtBRL.format(valorUnitario)}</td>
-      <td><input type="number" min="0" step="1" value="${item.quantidade || 1}" data-index="${i}" class="qtd" /></td>
+      <td>${item.condicao_pagamento ?? ""}</td>
       <td id="subtotal-${i}">${fmtBRL.format(subtotal)}</td>
     `;
     tbody.appendChild(tr);
     // Peso total inicial (peso unitário × quantidade inicial)
     const pesoUnit = Number(item.peso ?? 0);
-    const qtdInicial = Number(item.quantidade) || 1;
+    const qtdInicial = Number(item.quantidade) || 0;
     const pesoCell = tr.querySelector('.celula-peso');
       if (pesoCell) {
       const pesoTotal = pesoUnit * qtdInicial;
@@ -229,7 +229,11 @@ function atualizarResumoFreteEPeso() {
   // escreve na tela
   const elPeso = document.getElementById('totalPesoPedido');
   const elFrete = document.getElementById('totalFretePedido');
-  if (elPeso) elPeso.textContent = (Number.isFinite(pesoTotal) ? pesoTotal : 0).toLocaleString('pt-BR');
+  
+  if (elPeso) {
+  const pesoArredondado = Number.isFinite(pesoTotal) ? Math.round(pesoTotal) : 0;
+  elPeso.textContent = pesoArredondado.toLocaleString('pt-BR');
+  }
   if (elFrete) elFrete.textContent = window.usarValorComFrete === true ? fmtBRL.format(freteTotal) : fmtBRL.format(0);
 }
 

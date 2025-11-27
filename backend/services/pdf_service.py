@@ -296,16 +296,24 @@ def _desenhar_pdf(pedido: PedidoPdf, path: str) -> None:
     fech_block_width = available_width * 0.45   # fechamento à esquerda
     obs_block_width = available_width - fech_block_width - gap
 
-    # Fechamento do Orçamento (ESQUERDA)
-    total_peso = float(pedido.total_peso_bruto or 0)
+    # Peso bruto total – arredondar "regra de escola": 65,4 -> 65 | 65,5 -> 66
+    total_peso_raw = float(pedido.total_peso_bruto or 0)
+
+    if total_peso_raw >= 0:
+        total_peso_kg = int(total_peso_raw + 0.5)
+    else:
+        # se um dia vier negativo, mantém a mesma lógica para baixo
+        total_peso_kg = int(total_peso_raw - 0.5)
+
     total_valor = float(pedido.total_valor or 0)
 
     data_fech = [
         ["Fechamento do Orçamento:", ""],
-        ["Total em Peso Bruto:", _br_number(total_peso, 3, " kg")],
+        # sem casas decimais no PDF
+        ["Total em Peso Bruto:", _br_number(total_peso_kg, 0, " kg")],
         ["Total em Valor:", "R$ " + _br_number(total_valor)],
     ]
-
+    
     fech_col_widths = [fech_block_width * 0.6, fech_block_width * 0.4]
 
     fech_table = Table(data_fech, colWidths=fech_col_widths)
