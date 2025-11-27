@@ -10,18 +10,19 @@ class PedidoPdfItem(BaseModel):
     quantidade: float
     condicao_pagamento: Optional[str] = None
     tabela_comissao: Optional[str] = None
-    valor_retira: float      # pode ser unitário ou subtotal, você escolhe
-    valor_entrega: float     # idem
+    valor_retira: float
+    valor_entrega: float
 
 
 class PedidoPdf(BaseModel):
     id_pedido: int
-    codigo_cliente: Optional[str] = None
+    codigo_cliente: str
     cliente: str
-    data_pedido: datetime
-    data_entrega_ou_retirada: Optional[date] = None
-    frete_total: float
-    total_peso_bruto: float
-    total_valor: float
-    observacoes: Optional[str] = None
-    itens: List[PedidoPdfItem]
+    nome_fantasia: str = "Sem Nome Fantasia"  # 👈 novo campo
+    data_pedido: Optional[datetime] = None
+    data_entrega_ou_retirada: Optional[datetime] = None
+    frete_total: float = 0.0
+    total_peso_bruto: float = 0.0
+    total_valor: float = 0.0
+    observacoes: str = ""
+    itens: List[PedidoPdfItem] = []
