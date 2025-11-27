@@ -258,6 +258,7 @@ def listar_tabelas():
                 "nome_tabela": r["nome_tabela"],
                 "cliente": r["cliente"],
                 "fornecedor": r["fornecedor"],
+                "frete_kg": float(r["frete_kg"] or 0),
             }
             for r in rows
         ]
