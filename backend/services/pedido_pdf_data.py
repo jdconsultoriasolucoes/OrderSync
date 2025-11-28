@@ -9,7 +9,6 @@ def carregar_pedido_pdf(db, pedido_id: int) -> PedidoPdf:
             p.id_pedido,
             p.codigo_cliente,
             p.cliente,
-
             CASE
                 WHEN c.nome_fantasia IS NULL
                   OR c.nome_fantasia = 'nan'
@@ -17,14 +16,12 @@ def carregar_pedido_pdf(db, pedido_id: int) -> PedidoPdf:
                 THEN 'Sem Nome Fantasia'
                 ELSE c.nome_fantasia
             END AS nome_fantasia,
-
             p.confirmado_em,
             p.data_retirada,
             p.frete_total,
             p.peso_total_kg,
             p.total_pedido,
             p.observacoes,
-
             i.codigo              AS item_codigo,
             i.nome                AS item_nome,
             i.embalagem           AS item_embalagem,
@@ -35,7 +32,7 @@ def carregar_pedido_pdf(db, pedido_id: int) -> PedidoPdf:
             i.preco_unit_frt      AS item_preco_entrega
         FROM tb_pedidos p
         LEFT JOIN public.t_cadastro_cliente c
-               ON c.codigo = p.codigo_cliente
+               ON c.codigo::text = p.codigo_cliente
         JOIN tb_pedidos_itens i
           ON i.id_pedido = p.id_pedido
         WHERE p.id_pedido = :pid
