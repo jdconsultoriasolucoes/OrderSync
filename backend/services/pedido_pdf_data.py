@@ -3,12 +3,15 @@ from sqlalchemy import text
 from database import SessionLocal
 from models.pedido_pdf import PedidoPdf, PedidoPdfItem
 
+
 def carregar_pedido_pdf(db, pedido_id: int) -> PedidoPdf:
     sql = text("""
         SELECT
             p.id_pedido,
             p.codigo_cliente,
             p.cliente,
+
+            -- Nome fantasia tratado
             CASE
                 WHEN c.nome_fantasia IS NULL
                   OR c.nome_fantasia = 'nan'
@@ -16,12 +19,17 @@ def carregar_pedido_pdf(db, pedido_id: int) -> PedidoPdf:
                 THEN 'Sem Nome Fantasia'
                 ELSE c.nome_fantasia
             END AS nome_fantasia,
+
+            -- frete por tonelada vindo da tabela de preço
+            t.frete_kg AS frete_kg,  
+
             p.confirmado_em,
             p.data_retirada,
             p.frete_total,
             p.peso_total_kg,
             p.total_pedido,
             p.observacoes,
+
             i.codigo              AS item_codigo,
             i.nome                AS item_nome,
             i.embalagem           AS item_embalagem,
@@ -33,6 +41,8 @@ def carregar_pedido_pdf(db, pedido_id: int) -> PedidoPdf:
         FROM tb_pedidos p
         LEFT JOIN public.t_cadastro_cliente c
                ON c.codigo::text = p.codigo_cliente
+        LEFT JOIN tb_tabela_preco t
+               ON t.id_tabela = p.tabela_preco_id
         JOIN tb_pedidos_itens i
           ON i.id_pedido = p.id_pedido
         WHERE p.id_pedido = :pid
@@ -66,6 +76,7 @@ def carregar_pedido_pdf(db, pedido_id: int) -> PedidoPdf:
         data_pedido=head["confirmado_em"],
         data_entrega_ou_retirada=head["data_retirada"],
         frete_total=float(head["frete_total"] or 0),
+        frete_kg=float(head.get("frete_kg") or 0),
         total_peso_bruto=float(head["peso_total_kg"] or 0),
         total_valor=float(head["total_pedido"] or 0),
         observacoes=(head.get("observacoes") or ""),

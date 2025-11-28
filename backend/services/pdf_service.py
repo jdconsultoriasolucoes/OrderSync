@@ -125,12 +125,7 @@ def _desenhar_pdf(pedido: PedidoPdf, path: str) -> None:
 
     frete_total = float(pedido.frete_total or 0)
     # peso real em kg (não arredondado) – usado para calcular R$/ton
-    peso_total_kg_real = float(pedido.total_peso_bruto or 0)
-
-    if peso_total_kg_real > 0:
-        frete_por_ton = frete_total * 1000.0 / peso_total_kg_real
-    else:
-        frete_por_ton = 0.0
+    frete_por_ton = float(getattr(pedido, "frete_kg", 0) or 0)
 
     if pedido.data_entrega_ou_retirada:
         data_entrega_str = pedido.data_entrega_ou_retirada.strftime("%d/%m/%Y")
