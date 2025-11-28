@@ -35,7 +35,7 @@ def carregar_pedido_pdf(db, pedido_id: int) -> PedidoPdf:
             i.preco_unit_frt      AS item_preco_entrega
         FROM tb_pedidos p
         LEFT JOIN public.t_cadastro_cliente c
-               ON c.codigo_cliente = p.codigo_cliente
+               ON c.codigo = p.codigo_cliente
         JOIN tb_pedidos_itens i
           ON i.id_pedido = p.id_pedido
         WHERE p.id_pedido = :pid
