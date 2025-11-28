@@ -145,14 +145,14 @@ def _desenhar_pdf(pedido: PedidoPdf, path: str) -> None:
     ]]
 
     # larguras em cm (aprox.):
-    label_cod_w = 2.0 * cm
-    cod_val_w   = 5.0 * cm        # código ~5 cm
-    label_cli_w = 2.5 * cm
-    label_raz_w = 3.0 * cm
+    label_cod_w = 1.4 * cm
+    cod_val_w   = 3.5 * cm        # código ~5 cm
+    label_cli_w = 2.0 * cm
+    label_raz_w = 2.3 * cm
 
     restante    = available_width - (label_cod_w + cod_val_w + label_cli_w + label_raz_w)
-    cli_val_w   = max(restante * 0.5, 4.0 * cm)
-    raz_val_w   = max(restante * 0.5, 4.0 * cm)
+    cli_val_w   = max(restante * 0.55, 6.0 * cm)
+    raz_val_w   = max(restante * 0.45, 5.0 * cm)
 
     bloco1_col_widths = [
         label_cod_w, cod_val_w,
@@ -193,8 +193,8 @@ def _desenhar_pdf(pedido: PedidoPdf, path: str) -> None:
     frete_data = [["Valor por Tonelada:", "R$ " + _br_number(frete_por_ton)]]
     data_data = [["Data da Entrega ou Retira:", data_entrega_str]]
 
-    frete_col_widths = [bloco2_left_w * 0.5, bloco2_left_w * 0.5]
-    data_col_widths = [bloco2_right_w * 0.55, bloco2_right_w * 0.45]
+    frete_col_widths = [bloco2_left_w * 0.35, bloco2_left_w * 0.65]
+    data_col_widths = [bloco2_right_w * 0.40, bloco2_right_w * 0.60]
 
     frete_table = Table(frete_data, colWidths=frete_col_widths)
     frete_table.setStyle(
@@ -270,14 +270,14 @@ def _desenhar_pdf(pedido: PedidoPdf, path: str) -> None:
 
     # Larguras base em cm; escala para ocupar a largura inteira
     base_widths_cm = [
-        2.0,  # Código
-        7.0,  # Produto
-        2.5,  # Embalagem
+        1.5,  # Código
+        8.5,  # Produto
+        1.8,  # Embalagem
         1.5,  # Qtd
-        4.0,  # Cond. Pgto
-        4.0,  # Comissão
-        2.2,  # Valor Retira
-        2.2,  # Valor Entrega
+        5.5,  # Cond. Pgto
+        2.7,  # Comissão
+        2.5,  # Valor Retira
+        2.5,  # Valor Entrega
     ]
     total_base = sum(base_widths_cm)
     scale = (available_width / cm) / total_base
