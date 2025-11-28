@@ -116,58 +116,81 @@ def _desenhar_pdf(pedido: PedidoPdf, path: str) -> None:
     # DADOS BÁSICOS (2 BLOCOS)
     # =======================
     codigo_cliente = pedido.codigo_cliente or "Não cadastrado"
+
+    # Nome do cliente que já vinha do pedido
     cliente = pedido.cliente or ""
+
+    # Razão social / fantasia vinda do cadastro
+    razao_social = getattr(pedido, "nome_fantasia", None) or "Sem Nome Fantasia"
+
     frete_total = float(pedido.frete_total or 0)
+    # peso real em kg (não arredondado) – usado para calcular R$/ton
+    peso_total_kg_real = float(pedido.total_peso_bruto or 0)
+
+    if peso_total_kg_real > 0:
+        frete_por_ton = frete_total * 1000.0 / peso_total_kg_real
+    else:
+        frete_por_ton = 0.0
+
     if pedido.data_entrega_ou_retirada:
         data_entrega_str = pedido.data_entrega_ou_retirada.strftime("%d/%m/%Y")
     else:
         data_entrega_str = ""
 
-    # Bloco 1: Código e Cliente na MESMA linha
+    # Bloco 1: Código + Cliente + Razão Social
     bloco1_data = [[
         "Código:", str(codigo_cliente),
         "Cliente:", cliente[:120],
+        "Razão Social:", razao_social[:80],
     ]]
 
-    # larguras: rótulos fixos e valores proporcionais
-    label_cod_w = 2.5 * cm
-    label_cli_w = 2.0 * cm
-    restante = available_width - (label_cod_w + label_cli_w)
-    cod_val_w = restante * 0.30
-    cli_val_w = restante * 0.70
-    bloco1_col_widths = [label_cod_w, cod_val_w, label_cli_w, cli_val_w]
+    # larguras em cm (aprox.):
+    label_cod_w = 2.0 * cm
+    cod_val_w   = 5.0 * cm        # código ~5 cm
+    label_cli_w = 2.5 * cm
+    label_raz_w = 3.0 * cm
+
+    restante    = available_width - (label_cod_w + cod_val_w + label_cli_w + label_raz_w)
+    cli_val_w   = max(restante * 0.5, 4.0 * cm)
+    raz_val_w   = max(restante * 0.5, 4.0 * cm)
+
+    bloco1_col_widths = [
+        label_cod_w, cod_val_w,
+        label_cli_w, cli_val_w,
+        label_raz_w, raz_val_w,
+    ]
 
     bloco1 = Table(bloco1_data, colWidths=bloco1_col_widths)
-    bloco1.setStyle(
-        TableStyle(
-            [
-                ("BACKGROUND", (0, 0), (-1, 0), SUPRA_BG_LIGHT),
-                ("FONTNAME", (0, 0), (0, 0), "Helvetica-Bold"),
-                ("FONTNAME", (2, 0), (2, 0), "Helvetica-Bold"),
-                ("TEXTCOLOR", (0, 0), (-1, -1), SUPRA_DARK),
-                ("FONTSIZE", (0, 0), (-1, -1), 9),
-                ("GRID", (0, 0), (-1, -1), 0.5, colors.black),
-                ("BOX", (0, 0), (-1, -1), 0.5, colors.black),
-                ("VALIGN", (0, 0), (-1, -1), "MIDDLE"),
-                ("ALIGN", (0, 0), (0, 0), "CENTER"),  # "Código:"
-                ("ALIGN", (1, 0), (1, 0), "LEFT"),    # valor código
-                ("ALIGN", (2, 0), (2, 0), "CENTER"),  # "Cliente:"
-                ("ALIGN", (3, 0), (3, 0), "LEFT"),    # valor cliente
-            ]
-        )
-    )
+    bloco1.setStyle(TableStyle([
+        ("BACKGROUND", (0, 0), (-1, 0), SUPRA_BG_LIGHT),
+        ("FONTNAME", (0, 0), (0, 0), "Helvetica-Bold"),  # Código:
+        ("FONTNAME", (2, 0), (2, 0), "Helvetica-Bold"),  # Cliente:
+        ("FONTNAME", (4, 0), (4, 0), "Helvetica-Bold"),  # Razão Social:
+        ("TEXTCOLOR", (0, 0), (-1, -1), SUPRA_DARK),
+        ("FONTSIZE", (0, 0), (-1, -1), 9),
+        ("GRID", (0, 0), (-1, -1), 0.5, colors.black),
+        ("BOX", (0, 0), (-1, -1), 0.5, colors.black),
+        ("VALIGN", (0, 0), (-1, -1), "MIDDLE"),
+        ("ALIGN", (0, 0), (0, 0), "CENTER"),
+        ("ALIGN", (1, 0), (1, 0), "LEFT"),
+        ("ALIGN", (2, 0), (2, 0), "CENTER"),
+        ("ALIGN", (3, 0), (3, 0), "LEFT"),
+        ("ALIGN", (4, 0), (4, 0), "CENTER"),
+        ("ALIGN", (5, 0), (5, 0), "LEFT"),
+    ]))
 
     y = barra_bottom - 0.4 * cm
     _, b1_h = bloco1.wrap(available_width, height)
     bloco1.drawOn(c, margin_x, y - b1_h)
     y = y - b1_h
 
-    # Bloco 2: Frete e Data em dois quadros separados
+    # Bloco 2: Frete por tonelada e Data em dois quadros separados
     bloco2_gap = 0.3 * cm
     bloco2_left_w = available_width * 0.45
     bloco2_right_w = available_width - bloco2_left_w - bloco2_gap
 
-    frete_data = [["Valor Frete (TO):", "R$ " + _br_number(frete_total)]]
+    # >> AQUI: mostra valor por tonelada no lugar do antigo "Valor Frete (TO)"
+    frete_data = [["Valor por Tonelada:", "R$ " + _br_number(frete_por_ton)]]
     data_data = [["Data da Entrega ou Retira:", data_entrega_str]]
 
     frete_col_widths = [bloco2_left_w * 0.5, bloco2_left_w * 0.5]
@@ -222,7 +245,7 @@ def _desenhar_pdf(pedido: PedidoPdf, path: str) -> None:
     header = [
         "Codigo",
         "Produto",
-        "Embalagem",
+        "Embal",
         "Qtd",
         "Cond. Pgto",
         "Comissão",
@@ -307,13 +330,14 @@ def _desenhar_pdf(pedido: PedidoPdf, path: str) -> None:
 
     total_valor = float(pedido.total_valor or 0)
 
+    # >> AQUI: frete total vai para o fechamento, logo abaixo do peso bruto
     data_fech = [
         ["Fechamento do Orçamento:", ""],
-        # sem casas decimais no PDF
         ["Total em Peso Bruto:", _br_number(total_peso_kg, 0, " kg")],
+        ["Valor Frete:", "R$ " + _br_number(frete_total)],
         ["Total em Valor:", "R$ " + _br_number(total_valor)],
     ]
-    
+
     fech_col_widths = [fech_block_width * 0.6, fech_block_width * 0.4]
 
     fech_table = Table(data_fech, colWidths=fech_col_widths)
