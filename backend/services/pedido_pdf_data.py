@@ -11,17 +11,15 @@ def carregar_pedido_pdf(db, pedido_id: int) -> PedidoPdf:
             p.codigo_cliente,
             p.cliente,
 
-            -- Nome fantasia tratado
             CASE
                 WHEN c.nome_fantasia IS NULL
-                  OR c.nome_fantasia = 'nan'
-                  OR c.nome_fantasia = ''
+                OR c.nome_fantasia = 'nan'
+                OR c.nome_fantasia = ''
                 THEN 'Sem Nome Fantasia'
                 ELSE c.nome_fantasia
             END AS nome_fantasia,
 
-            -- frete por tonelada vindo da tabela de preço
-            t.frete_kg AS frete_kg,  
+            t.frete_kg AS frete_kg,
 
             p.confirmado_em,
             p.data_retirada,
@@ -38,15 +36,26 @@ def carregar_pedido_pdf(db, pedido_id: int) -> PedidoPdf:
             i.tabela_comissao     AS item_tabela_comissao,
             i.preco_unit          AS item_preco_retira,
             i.preco_unit_frt      AS item_preco_entrega
+
         FROM tb_pedidos p
         LEFT JOIN public.t_cadastro_cliente c
-               ON c.codigo::text = p.codigo_cliente
-        LEFT JOIN tb_tabela_preco t
-               ON t.id_tabela = p.tabela_preco_id
+            ON c.codigo::text = p.codigo_cliente
+
+        -- AQUI o pulo do gato: "condensa" a tabela de preço em 1 linha por tabela
+        LEFT JOIN (
+            SELECT
+                id_tabela,
+                MAX(frete_kg) AS frete_kg
+            FROM tb_tabela_preco
+            GROUP BY id_tabela
+        ) t
+            ON t.id_tabela = p.tabela_preco_id
+
         JOIN tb_pedidos_itens i
-          ON i.id_pedido = p.id_pedido
+            ON i.id_pedido = p.id_pedido
+
         WHERE p.id_pedido = :pid
-        ORDER BY i.id_item
+        ORDER BY i.id_item;
     """)
 
     rows = db.execute(sql, {"pid": pedido_id}).mappings().all()
