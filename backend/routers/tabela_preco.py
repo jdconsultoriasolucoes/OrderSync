@@ -31,7 +31,7 @@ def filtrar_produtos_para_tabela_preco(
     fornecedor: Optional[str] = Query(None),
     q: Optional[str] = Query(None, description="Busca em código, descrição, grupo/marca, unidade/tipo"),
     page: int = Query(1, ge=1),
-    page_size: int = Query(25, ge=1, le=100),
+    page_size: int = Query(25, ge=1, le=1000),
 ):
     try:
         base_sql = """

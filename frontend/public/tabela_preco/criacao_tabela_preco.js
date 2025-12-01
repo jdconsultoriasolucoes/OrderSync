@@ -247,7 +247,7 @@ async function atualizarPrecosAtuais() {
 
   const codigosSet = new Set(codigos);
   const mapa = {}; // codigo_tabela -> valor_atual
-  const PAGE_SIZE = 5000; // igual ou maior que 25, só que "turbinado"
+  const PAGE_SIZE = 1000; // igual ou maior que 25, só que "turbinado"
   let page = 1;
   let total = null;
 
@@ -1237,7 +1237,7 @@ async function recalcLinha(tr) {
   const taxaCond = mapaCondicoes[codCond] ?? 0;
 
   // base comercial (sem imposto)
-  const { acrescimoCond, freteValor, descontoValor, liquido  } =
+  const { acrescimoCond, freteValor, descontoValor, precoBase, liquido  } =
     calcularLinha(item, fator, taxaCond, freteKg);
 
   // pinta colunas comerciais
@@ -1251,7 +1251,7 @@ async function recalcLinha(tr) {
     const built = buildFiscalInputsFromRow(tr);
 
     // usa exatamente o que JÁ calculamos nesta função
-    built.payload.preco_unit  = liquido;   // já calculado acima
+    built.payload.preco_unit  = precoBase;   // já calculado acima
     built.payload.frete_linha = freteValor;  // já calculado acima
 
     const f = await previewFiscalLinha(built.payload);
@@ -1276,7 +1276,7 @@ async function recalcLinha(tr) {
     const totalFiscal = Number(f.total_linha_com_st ?? f.total_linha ?? 0);
 
     // ✅ aplica CONDIÇÃO (R$) sobre o líquido e soma no total final exibido
-    const totalComercial = totalFiscal + Number(acrescimoCond || 0);
+    const totalComercial = totalFiscal;
     
     const totalSemFrete = totalComercial - Number(freteValor || 0);
     const tdSemFrete = tr.querySelector('.col-total-sem-frete');
