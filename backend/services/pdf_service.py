@@ -16,9 +16,10 @@ from models.pedido_pdf import PedidoPdf
 
 
 # Paleta de cores (ajuste se quiser)
-SUPRA_RED = colors.Color(0.8, 0.0, 0.0)       # vermelho principal
-SUPRA_DARK = colors.Color(0.1, 0.1, 0.1)      # texto escuro
-SUPRA_BG_LIGHT = colors.Color(0.95, 0.95, 0.95)  # fundo clarinho
+# OBS: aqui NÃO é mais vermelho; é um bege/marrom próximo do layout antigo
+SUPRA_RED = colors.Color(0.78, 0.70, 0.60)       # faixa e cabeçalho da tabela
+SUPRA_DARK = colors.Color(0.1, 0.1, 0.1)        # texto escuro
+SUPRA_BG_LIGHT = colors.Color(0.95, 0.95, 0.95) # fundo clarinho
 
 
 def _br_number(value, decimals=2, suffix=""):
@@ -112,11 +113,19 @@ def _desenhar_pdf(pedido: PedidoPdf, path: str) -> None:
     # Texto na faixa
     c.setFillColor(colors.white)
     c.setFont("Helvetica-Bold", 14)
-    c.drawString(margin_x + 0.3 * cm, faixa_y - faixa_h + 0.35 * cm, "Orçamento de Pedido")
+    c.drawString(
+        margin_x + 0.3 * cm,
+        faixa_y - faixa_h + 0.35 * cm,
+        "DIGITAÇÃO DO ORÇAMENTO"
+    )
 
     c.setFont("Helvetica", 9)
     data_str = datetime.now().strftime("%d/%m/%Y %H:%M")
-    c.drawRightString(width - margin_x - 0.3 * cm, faixa_y - faixa_h + 0.35 * cm, f"Gerado em: {data_str}")
+    c.drawRightString(
+        width - margin_x - 0.3 * cm,
+        faixa_y - faixa_h + 0.35 * cm,
+        f"{data_str}"
+    )
 
     # Atualiza y para baixo da faixa
     y = faixa_y - faixa_h - 0.5 * cm
@@ -179,28 +188,20 @@ def _desenhar_pdf(pedido: PedidoPdf, path: str) -> None:
     # BLOCO 2 - FRETE / DATA
     # =======================
     frete_total = float(pedido.frete_total or 0)
-    # peso real em kg (não arredondado) – usado para calcular R$/ton
-    frete_por_ton = float(getattr(pedido, "frete_kg", 0) or 0)
 
     if pedido.data_entrega_ou_retirada:
         data_entrega_str = pedido.data_entrega_ou_retirada.strftime("%d/%m/%Y")
     else:
         data_entrega_str = ""
 
-    # Bloco 1: Código + Cliente + Razão Social
-    # (já construído acima)
-
-    # FRETE
+    # FRETE (apenas total – sem "frete por kg")
     if frete_total > 0:
         frete_str = "R$ " + _br_number(frete_total)
-        frete_ton_str = _br_number(frete_por_ton, 2, " R$/kg") if frete_por_ton else "-"
     else:
-        frete_str = "-"
-        frete_ton_str = "-"
+        frete_str = "R$ 0,00"
 
     frete_data = [
         ["Frete Total:", frete_str],
-        ["Frete por kg:", frete_ton_str],
     ]
     frete_col_widths = [3.0 * cm, 4.0 * cm]
 
@@ -385,12 +386,10 @@ def _desenhar_pdf(pedido: PedidoPdf, path: str) -> None:
     if total_peso_raw >= 0:
         total_peso_kg = int(total_peso_raw + 0.5)
     else:
-        # se um dia vier negativo, mantém a mesma lógica para baixo
         total_peso_kg = int(total_peso_raw - 0.5)
 
     total_valor = float(pedido.total_valor or 0)
 
-    # >> AQUI: frete total vai para o fechamento, logo abaixo do peso bruto
     data_fech = [
         ["Fechamento do Orçamento:", ""],
         ["Total em Peso Bruto:", _br_number(total_peso_kg, 0, " kg")],
