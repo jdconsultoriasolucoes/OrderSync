@@ -38,6 +38,8 @@ class TabelaPreco(Base):
     icms_st = Column(Numeric(14, 2), nullable=False)  # R$
     iva_st = Column(Numeric(14, 2), nullable=False)   # R$
 
+    calcula_st = Column(Boolean, nullable=False, default=False)
+    
     ativo = Column(Boolean, nullable=False, default=True)
 
     criado_em = Column(DateTime, nullable=True)

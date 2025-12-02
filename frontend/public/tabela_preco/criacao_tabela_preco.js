@@ -844,7 +844,29 @@ async function carregarItens() {
       document.getElementById('codigo_cliente').value = t.codigo_cliente || '';
       document.getElementById('ramo_juridico').value = t.ramo_juridico || '';
 
-      // >>> NOVO: preencher frete/condição (se existirem) e inferir do item[0] se faltar
+      // NOVO: aplicar flag de ST que veio do backend
+      const ivaChk = document.getElementById('iva_st_toggle');
+      const flagSt = !!t.calcula_st;
+
+      if (ivaChk) {
+        ivaChk.checked = flagSt;
+        window.ivaStAtivo = flagSt;
+      }
+
+      // NOVO: marcar cliente livre x cadastrado para o lock do checkbox
+      if (t.codigo_cliente) {
+        // tem código → tratamos como cadastrado
+        window.isClienteLivreSelecionado = false;
+      } else {
+        // sem código → cliente livre (flag vem da tabela)
+        window.isClienteLivreSelecionado = true;
+      }
+
+      // NOVO: aplica a regra de travar/destravar conforme tipo de cliente
+      if (typeof enforceIvaLockByCliente === 'function') {
+        enforceIvaLockByCliente();
+      }
+      
       const first = (Array.isArray(t.produtos) && t.produtos.length) ? t.produtos[0] : null;
       const freteInput = document.getElementById('frete_kg');
       const planoSel = document.getElementById('plano_pagamento');
@@ -898,7 +920,9 @@ async function carregarItens() {
      
      }));
       renderTabela();
-     
+     if (typeof recalcTudo === 'function') {
+        await Promise.resolve(recalcTudo()).catch(() => {});
+      }
       
       // Atualiza a pill e recálculo
       atualizarPillTaxa();
@@ -1466,10 +1490,11 @@ async function salvarTabela() {
 
   const fornecedorHeader = inferirFornecedorDaGrade();
   const codigo_cliente = (document.getElementById('codigo_cliente')?.value || '').trim() || null;
-  const payload = {nome_tabela, cliente, codigo_cliente: (codigo_cliente || "Não cadastrado"), ramo_juridico,fornecedor: fornecedorHeader, produtos};
+  const calcula_st = !!document.getElementById('iva_st_toggle')?.checked;
+  const payload = {nome_tabela, cliente, codigo_cliente: (codigo_cliente || "Não cadastrado"), ramo_juridico,fornecedor: fornecedorHeader, calcula_st,produtos};
   try {
     const resp = await salvarTabelaPreco(payload);
-    return resp;                                     // <<<<<< FUNDAMENTAL
+    return resp;                                     
   } catch (e) {
     console.error(e);
     alert(e.message || 'Erro ao salvar a tabela.');
