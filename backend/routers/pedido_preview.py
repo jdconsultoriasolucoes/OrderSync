@@ -92,7 +92,7 @@ async def pedido_preview(
                 tabela_comissao=r.get("tabela_comissao"),
                 valor_sem_frete=round(float(r.get("valor_sem_frete") or 0.0), 2),
                 valor_com_frete=round(float(r.get("valor_com_frete") or 0.0), 2),
-                quantidade=1,
+                quantidade=0,
             ))
 
         return PedidoPreviewResp(

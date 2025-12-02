@@ -14,19 +14,28 @@ import os
 from services.pedido_pdf_data import carregar_pedido_pdf
 from models.pedido_pdf import PedidoPdf
 
-# Paleta de cores (bege / marrom)
-SUPRA_RED = colors.HexColor("#C1AD99")        # cor principal (onde era vermelho)
-SUPRA_DARK = colors.HexColor("#4A4036")      # texto escuro
-SUPRA_BG_LIGHT = colors.HexColor("#F4EFE2")  # fundo claro para caixas
+
+# Paleta de cores (ajuste se quiser)
+SUPRA_RED = colors.Color(0.8, 0.0, 0.0)       # vermelho principal
+SUPRA_DARK = colors.Color(0.1, 0.1, 0.1)      # texto escuro
+SUPRA_BG_LIGHT = colors.Color(0.95, 0.95, 0.95)  # fundo clarinho
 
 
-def _br_number(valor: float, casas: int = 2, sufixo: str = "") -> str:
+def _br_number(value, decimals=2, suffix=""):
     """
-    Formata número no padrão brasileiro, ex: 1234.5 -> '1.234,50'
+    Formata número no padrão brasileiro.
     """
-    txt = f"{valor:,.{casas}f}"
-    txt = txt.replace(",", "X").replace(".", ",").replace("X", ".")
-    return txt + sufixo
+    if value is None:
+        value = 0
+    try:
+        value = float(value)
+    except (TypeError, ValueError):
+        value = 0.0
+
+    fmt = f"{{:,.{decimals}f}}"
+    s = fmt.format(value)
+    s = s.replace(",", "X").replace(".", ",").replace("X", ".")
+    return s + suffix
 
 
 def _desenhar_pdf(pedido: PedidoPdf, path: str) -> None:
@@ -58,10 +67,17 @@ def _desenhar_pdf(pedido: PedidoPdf, path: str) -> None:
     # ============================
     base_dir = Path(__file__).resolve().parents[2]
     logo_path = base_dir / "frontend" / "public" / "tabela_preco" / "logo_cliente_supra.png"
+
     if not logo_path.exists():
-        logo_env = os.getenv("ORDERSYNC_LOGO_PATH")
-        if logo_env and Path(logo_env).exists():
-            logo_path = Path(logo_env)
+        # fallback genérico
+        static_dir = base_dir / "frontend" / "public"
+        for candidate in [
+            static_dir / "logo_cliente_supra.png",
+            static_dir / "logo.png",
+        ]:
+            if candidate.exists():
+                logo_path = candidate
+                break
         else:
             logo_path = None
 
@@ -81,63 +97,36 @@ def _desenhar_pdf(pedido: PedidoPdf, path: str) -> None:
                 y_logo,
                 width=logo_w,
                 height=logo_h,
-                mask="auto",
                 preserveAspectRatio=True,
+                mask="auto",
             )
         except Exception:
             logo_h = 0
 
-    # Faixa superior logo abaixo do logo
-    barra_altura = 0.9 * cm
-    barra_top = top_y - logo_h - 0.05 * cm
-    barra_bottom = barra_top - barra_altura
-
+    # Faixa horizontal (header corporativo)
+    faixa_h = 1.2 * cm
+    faixa_y = top_y - logo_h - 0.2 * cm
     c.setFillColor(SUPRA_RED)
-    c.rect(0, barra_bottom, width, barra_altura, fill=1, stroke=0)
+    c.rect(margin_x, faixa_y - faixa_h, available_width, faixa_h, stroke=0, fill=1)
 
-    # Título à esquerda
+    # Texto na faixa
     c.setFillColor(colors.white)
     c.setFont("Helvetica-Bold", 14)
-    titulo_y = barra_bottom + 0.25 * cm
-    c.drawString(margin_x, titulo_y, "DIGITAÇÃO DO ORÇAMENTO")
+    c.drawString(margin_x + 0.3 * cm, faixa_y - faixa_h + 0.35 * cm, "Orçamento de Pedido")
 
-    # Data à direita
-    c.setFont("Helvetica", 10)
-    data_pedido = pedido.data_pedido
-    if isinstance(data_pedido, datetime):
-        data_str = data_pedido.strftime("%d/%m/%Y")
-    else:
-        data_str = ""
-    c.drawRightString(width - margin_x, titulo_y, data_str)
+    c.setFont("Helvetica", 9)
+    data_str = datetime.now().strftime("%d/%m/%Y %H:%M")
+    c.drawRightString(width - margin_x - 0.3 * cm, faixa_y - faixa_h + 0.35 * cm, f"Gerado em: {data_str}")
 
-    c.setFillColor(SUPRA_DARK)
+    # Atualiza y para baixo da faixa
+    y = faixa_y - faixa_h - 0.5 * cm
 
     # =======================
-    # DADOS BÁSICOS (2 BLOCOS)
+    # BLOCO 1 - DADOS CLIENTE
     # =======================
-    codigo_cliente = pedido.codigo_cliente or "Não cadastrado"
-
-    # Nome do cliente que já vinha do pedido
+    codigo_cliente = pedido.codigo_cliente or ""
     cliente = pedido.cliente or ""
-
-    # Razão social / fantasia vinda do cadastro
-    razao_social = getattr(pedido, "nome_fantasia", None) or "Sem Nome Fantasia"
-
-    frete_total = float(pedido.frete_total or 0)
-    # peso real em kg (não arredondado) – usado para calcular R$/ton
-    frete_por_ton = float(getattr(pedido, "frete_kg", 0) or 0)
-
-    if pedido.data_entrega_ou_retirada:
-        data_entrega_str = pedido.data_entrega_ou_retirada.strftime("%d/%m/%Y")
-    else:
-        data_entrega_str = ""
-
-    # Bloco 1: Código + Cliente + Razão Social
-    bloco1_data = [[
-        "Código:", str(codigo_cliente),
-        "Cliente:", cliente[:120],
-        "Razão Social:", razao_social[:80],
-    ]]
+    razao_social = pedido.nome_fantasia or ""
 
     # larguras em cm (aprox.):
     label_cod_w = 1.4 * cm
@@ -155,65 +144,95 @@ def _desenhar_pdf(pedido: PedidoPdf, path: str) -> None:
         label_raz_w, raz_val_w,
     ]
 
-    bloco1 = Table(bloco1_data, colWidths=bloco1_col_widths)
-    bloco1.setStyle(TableStyle([
-        ("BACKGROUND", (0, 0), (-1, 0), SUPRA_BG_LIGHT),
-        ("FONTNAME", (0, 0), (0, 0), "Helvetica-Bold"),  # Código:
-        ("FONTNAME", (2, 0), (2, 0), "Helvetica-Bold"),  # Cliente:
-        ("FONTNAME", (4, 0), (4, 0), "Helvetica-Bold"),  # Razão Social:
-        ("TEXTCOLOR", (0, 0), (-1, -1), SUPRA_DARK),
-        ("FONTSIZE", (0, 0), (-1, -1), 9),
-        ("GRID", (0, 0), (-1, -1), 0.5, colors.black),
-        ("BOX", (0, 0), (-1, -1), 0.5, colors.black),
-        ("VALIGN", (0, 0), (-1, -1), "MIDDLE"),
-        ("ALIGN", (0, 0), (0, 0), "CENTER"),
-        ("ALIGN", (1, 0), (1, 0), "LEFT"),
-        ("ALIGN", (2, 0), (2, 0), "CENTER"),
-        ("ALIGN", (3, 0), (3, 0), "LEFT"),
-        ("ALIGN", (4, 0), (4, 0), "CENTER"),
-        ("ALIGN", (5, 0), (5, 0), "LEFT"),
-    ]))
+    bloco1_data = [[
+        "Código:", str(codigo_cliente),
+        "Cliente:", cliente[:120],
+        "Razão Social:", razao_social[:80],
+    ]]
 
-    y = barra_bottom - 0.4 * cm
-    _, b1_h = bloco1.wrap(available_width, height)
-    bloco1.drawOn(c, margin_x, y - b1_h)
-    y = y - b1_h
+    bloco1_table = Table(bloco1_data, colWidths=bloco1_col_widths)
+    bloco1_table.setStyle(
+        TableStyle(
+            [
+                ("BACKGROUND", (0, 0), (-1, -1), SUPRA_BG_LIGHT),
+                ("TEXTCOLOR", (0, 0), (-1, -1), SUPRA_DARK),
+                ("FONTNAME", (0, 0), (-1, -1), "Helvetica"),
+                ("FONTSIZE", (0, 0), (-1, -1), 9),
+                ("VALIGN", (0, 0), (-1, -1), "MIDDLE"),
+                ("ALIGN", (0, 0), (0, 0), "RIGHT"),  # "Código:"
+                ("ALIGN", (2, 0), (2, 0), "RIGHT"),  # "Cliente:"
+                ("ALIGN", (4, 0), (4, 0), "RIGHT"),  # "Razão Social:"
+                ("LEFTPADDING", (0, 0), (-1, -1), 3),
+                ("RIGHTPADDING", (0, 0), (-1, -1), 3),
+                ("TOPPADDING", (0, 0), (-1, -1), 2),
+                ("BOTTOMPADDING", (0, 0), (-1, -1), 2),
+                ("GRID", (0, 0), (-1, -1), 0.5, colors.black),
+            ]
+        )
+    )
 
-    # Bloco 2: Frete por tonelada e Data em dois quadros separados
-    bloco2_gap = 0.3 * cm
-    bloco2_left_w = available_width * 0.45
-    bloco2_right_w = available_width - bloco2_left_w - bloco2_gap
+    _, bloco1_h = bloco1_table.wrap(available_width, height)
+    bloco1_table.drawOn(c, margin_x, y - bloco1_h)
+    y = y - bloco1_h - 0.3 * cm
 
-    # >> AQUI: mostra valor por tonelada no lugar do antigo "Valor Frete (TO)"
-    frete_data = [["Valor por Tonelada:", "R$ " + _br_number(frete_por_ton)]]
-    data_data = [["Data da Entrega ou Retira:", data_entrega_str]]
+    # =======================
+    # BLOCO 2 - FRETE / DATA
+    # =======================
+    frete_total = float(pedido.frete_total or 0)
+    # peso real em kg (não arredondado) – usado para calcular R$/ton
+    frete_por_ton = float(getattr(pedido, "frete_kg", 0) or 0)
 
-    frete_col_widths = [bloco2_left_w * 0.35, bloco2_left_w * 0.65]
-    data_col_widths = [bloco2_right_w * 0.40, bloco2_right_w * 0.60]
+    if pedido.data_entrega_ou_retirada:
+        data_entrega_str = pedido.data_entrega_ou_retirada.strftime("%d/%m/%Y")
+    else:
+        data_entrega_str = ""
+
+    # Bloco 1: Código + Cliente + Razão Social
+    # (já construído acima)
+
+    # FRETE
+    if frete_total > 0:
+        frete_str = "R$ " + _br_number(frete_total)
+        frete_ton_str = _br_number(frete_por_ton, 2, " R$/kg") if frete_por_ton else "-"
+    else:
+        frete_str = "-"
+        frete_ton_str = "-"
+
+    frete_data = [
+        ["Frete Total:", frete_str],
+        ["Frete por kg:", frete_ton_str],
+    ]
+    frete_col_widths = [3.0 * cm, 4.0 * cm]
 
     frete_table = Table(frete_data, colWidths=frete_col_widths)
     frete_table.setStyle(
         TableStyle(
             [
-                ("BACKGROUND", (0, 0), (-1, -1), colors.white),
-                ("FONTNAME", (0, 0), (0, 0), "Helvetica-Bold"),
+                ("BACKGROUND", (0, 0), (-1, -1), SUPRA_BG_LIGHT),
+                ("FONTNAME", (0, 0), (-1, -1), "Helvetica-Bold"),
                 ("TEXTCOLOR", (0, 0), (-1, -1), SUPRA_DARK),
                 ("FONTSIZE", (0, 0), (-1, -1), 9),
                 ("GRID", (0, 0), (-1, -1), 0.5, colors.black),
                 ("BOX", (0, 0), (-1, -1), 0.5, colors.black),
                 ("VALIGN", (0, 0), (-1, -1), "MIDDLE"),
-                ("ALIGN", (0, 0), (0, 0), "CENTER"),
-                ("ALIGN", (1, 0), (1, 0), "LEFT"),
+                ("ALIGN", (0, 0), (0, -1), "RIGHT"),
+                ("ALIGN", (1, 0), (1, -1), "LEFT"),
             ]
         )
     )
+
+    # DATA DE RETIRADA/ENTREGA
+    data_data = [
+        ["Data Retirada/Entrega:", data_entrega_str],
+    ]
+    data_col_widths = [4.0 * cm, 5.0 * cm]
 
     data_table = Table(data_data, colWidths=data_col_widths)
     data_table.setStyle(
         TableStyle(
             [
-                ("BACKGROUND", (0, 0), (-1, -1), colors.white),
-                ("FONTNAME", (0, 0), (0, 0), "Helvetica-Bold"),
+                ("BACKGROUND", (0, 0), (-1, -1), SUPRA_BG_LIGHT),
+                ("FONTNAME", (0, 0), (-1, -1), "Helvetica-Bold"),
                 ("TEXTCOLOR", (0, 0), (-1, -1), SUPRA_DARK),
                 ("FONTSIZE", (0, 0), (-1, -1), 9),
                 ("GRID", (0, 0), (-1, -1), 0.5, colors.black),
@@ -226,6 +245,10 @@ def _desenhar_pdf(pedido: PedidoPdf, path: str) -> None:
     )
 
     y = y - 0.1 * cm
+    bloco2_left_w = frete_col_widths[0] + frete_col_widths[1]
+    bloco2_right_w = data_col_widths[0] + data_col_widths[1]
+    bloco2_gap = available_width - bloco2_left_w - bloco2_right_w
+
     _, frete_h = frete_table.wrap(bloco2_left_w, height)
     _, data_h = data_table.wrap(bloco2_right_w, height)
     bloco2_h = max(frete_h, data_h)
@@ -235,7 +258,7 @@ def _desenhar_pdf(pedido: PedidoPdf, path: str) -> None:
     y = y - bloco2_h + -0.3 * cm
 
     # =======================
-    # TABELA DE ITENS
+    # TABELA DE ITENS (multi-página)
     # =======================
     header = [
         "Codigo",
@@ -247,10 +270,18 @@ def _desenhar_pdf(pedido: PedidoPdf, path: str) -> None:
         "Valor Retira",
         "Valor Entrega",
     ]
-    data = [header]
 
-    for it in pedido.itens:
-        data.append(
+    # ordena itens por quantidade (maior -> menor)
+    itens_ordenados = sorted(
+        pedido.itens,
+        key=lambda it: float(getattr(it, "quantidade", 0) or 0),
+        reverse=True,
+    )
+
+    # converte itens em linhas da tabela
+    all_rows = []
+    for it in itens_ordenados:
+        all_rows.append(
             [
                 it.codigo,
                 it.produto,
@@ -278,31 +309,65 @@ def _desenhar_pdf(pedido: PedidoPdf, path: str) -> None:
     scale = (available_width / cm) / total_base
     col_widths = [w * scale * cm for w in base_widths_cm]
 
-    table = Table(data, colWidths=col_widths)
-    table.setStyle(
-        TableStyle(
-            [
-                ("BACKGROUND", (0, 0), (-1, 0), SUPRA_RED),
-                ("TEXTCOLOR", (0, 0), (-1, 0), colors.white),
-                ("FONTNAME", (0, 0), (-1, 0), "Helvetica-Bold"),
-                ("FONTSIZE", (0, 0), (-1, 0), 9),
-                ("ALIGN", (0, 0), (-1, 0), "CENTER"),
+    # estilo da tabela de itens (reutilizado em todas as páginas)
+    itens_table_style = TableStyle(
+        [
+            ("BACKGROUND", (0, 0), (-1, 0), SUPRA_RED),
+            ("TEXTCOLOR", (0, 0), (-1, 0), colors.white),
+            ("FONTNAME", (0, 0), (-1, 0), "Helvetica-Bold"),
+            ("FONTSIZE", (0, 0), (-1, 0), 9),
+            ("ALIGN", (0, 0), (-1, 0), "CENTER"),
 
-                ("GRID", (0, 0), (-1, -1), 0.5, colors.black),
-                ("BOX", (0, 0), (-1, -1), 0.5, colors.black),
+            ("GRID", (0, 0), (-1, -1), 0.5, colors.black),
+            ("BOX", (0, 0), (-1, -1), 0.5, colors.black),
 
-                ("FONTSIZE", (0, 1), (-1, -1), 8),
-                ("VALIGN", (0, 0), (-1, -1), "MIDDLE"),
-                ("ALIGN", (3, 1), (3, -1), "CENTER"),   # Qtd
-                ("ALIGN", (6, 1), (7, -1), "RIGHT"),    # valores
-            ]
-        )
+            ("FONTSIZE", (0, 1), (-1, -1), 8),
+            ("VALIGN", (0, 0), (-1, -1), "MIDDLE"),
+            ("ALIGN", (3, 1), (3, -1), "CENTER"),   # Qtd
+            ("ALIGN", (6, 1), (7, -1), "RIGHT"),    # valores
+        ]
     )
 
     itens_x = margin_x
-    _, table_height = table.wrap(available_width, height)
-    table.drawOn(c, itens_x, y - table_height)
-    y = y - table_height - 0.5 * cm
+    current_y = y  # posição vertical atual para itens
+
+    # quebra em várias páginas, se necessário
+    rows_buffer = []
+
+    def _desenhar_tabela_pagina(rows, y_top):
+        if not rows:
+            return y_top
+        data_page = [header] + rows
+        table = Table(data_page, colWidths=col_widths)
+        table.setStyle(itens_table_style)
+        _, table_height = table.wrap(available_width, height)
+        table.drawOn(c, itens_x, y_top - table_height)
+        return y_top - table_height - 0.5 * cm
+
+    for row in all_rows:
+        # testa se cabe adicionar mais uma linha nesta página
+        teste_rows = rows_buffer + [row]
+        data_test = [header] + teste_rows
+        table_test = Table(data_test, colWidths=col_widths)
+        table_test.setStyle(itens_table_style)
+        _, test_height = table_test.wrap(available_width, height)
+
+        if current_y - test_height < margin_y:
+            # não cabe -> desenha o que já temos nesta página
+            current_y = _desenhar_tabela_pagina(rows_buffer, current_y)
+            rows_buffer = []
+
+            # nova página somente com continuação dos itens (sem cabeçalho do pedido)
+            c.showPage()
+            current_y = height - margin_y
+
+        rows_buffer.append(row)
+
+    # desenha o resto (última página de itens)
+    current_y = _desenhar_tabela_pagina(rows_buffer, current_y)
+
+    # atualiza y global para a próxima seção (fechamento/observações)
+    y = current_y
 
     # =======================
     # FECHAMENTO + OBSERVAÇÕES
@@ -339,15 +404,15 @@ def _desenhar_pdf(pedido: PedidoPdf, path: str) -> None:
     fech_table.setStyle(
         TableStyle(
             [
-                ("BACKGROUND", (0, 0), (-1, 0), SUPRA_BG_LIGHT),
-                ("FONTNAME", (0, 0), (-1, 0), "Helvetica-Bold"),
-                ("TEXTCOLOR", (0, 0), (-1, 0), SUPRA_DARK),
+                ("BACKGROUND", (0, 0), (-1, -1), SUPRA_BG_LIGHT),
+                ("FONTNAME", (0, 0), (0, 0), "Helvetica-Bold"),
+                ("TEXTCOLOR", (0, 0), (-1, -1), SUPRA_DARK),
                 ("FONTSIZE", (0, 0), (-1, -1), 9),
                 ("GRID", (0, 0), (-1, -1), 0.5, colors.black),
                 ("BOX", (0, 0), (-1, -1), 0.5, colors.black),
-                ("ALIGN", (0, 0), (0, -1), "LEFT"),
-                ("ALIGN", (1, 1), (1, -1), "LEFT"),
                 ("VALIGN", (0, 0), (-1, -1), "MIDDLE"),
+                ("ALIGN", (0, 0), (0, 0), "CENTER"),
+                ("ALIGN", (1, 0), (1, 0), "LEFT"),
             ]
         )
     )
@@ -382,11 +447,18 @@ def _desenhar_pdf(pedido: PedidoPdf, path: str) -> None:
 
     _, fech_h = fech_table.wrap(fech_block_width, height)
     _, obs_h = obs_table.wrap(obs_block_width, height)
+    max_h = max(fech_h, obs_h)
+
+    # se não couber na página atual, joga fechamento/obs para a próxima página
+    if y_top - max_h < margin_y:
+        c.showPage()
+        y_top = height - margin_y
+        fech_x = itens_x
+        obs_x = itens_x + fech_block_width + gap
 
     fech_table.drawOn(c, fech_x, y_top - fech_h)
     obs_table.drawOn(c, obs_x, y_top - obs_h)
 
-    max_h = max(fech_h, obs_h)
     y = y_top - max_h - 0.3 * cm
 
     # rodapé
@@ -407,22 +479,18 @@ def gerar_pdf_pedido(*args, destino_dir: str = "/tmp", **kwargs):
         -> retorna STRING com o caminho do PDF
 
     2) JEITO NOVO:
-        pdf_bytes = gerar_pdf_pedido(db, pedido_id)
-        -> retorna BYTES do PDF (pronto pra anexar)
+        pdf_bytes = gerar_pdf_pedido(db, pedido_id, destino_dir=...)
+        -> retorna BYTES do PDF
     """
-    # permite sobrescrever destino_dir via kwargs
-    if "destino_dir" in kwargs and kwargs["destino_dir"]:
-        destino_dir = kwargs["destino_dir"]
-
-    # Caso 1: gerar_pdf_pedido(pedido_pdf)
     if len(args) == 1 and isinstance(args[0], PedidoPdf):
+        # JEITO ANTIGO: gerar a partir de um PedidoPdf já carregado
         pedido = args[0]
         os.makedirs(destino_dir, exist_ok=True)
         path = os.path.join(destino_dir, f"pedido_{pedido.id_pedido}.pdf")
         _desenhar_pdf(pedido, path)
         return path
 
-    # Caso 2: gerar_pdf_pedido(db, pedido_id)
+    # JEITO NOVO: (db, pedido_id)
     if len(args) >= 2:
         db = args[0]
         pedido_id = args[1]

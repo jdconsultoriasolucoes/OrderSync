@@ -277,6 +277,15 @@ def busca_cliente(
 ):
     try:
         db = SessionLocal()
+
+        # texto original digitado/colado
+        q_raw = (q or "").strip()
+        like = f"%{q_raw}%"
+
+        # só dígitos (para CNPJ/CPF), mesmo se vier "7769327000171 - DISPET ..."
+        cnpj_digits = re.sub(r"\D", "", q_raw)
+        cnpj_like = f"%{cnpj_digits}%" if cnpj_digits else None
+
         base_sql = """
             SELECT
               codigo,
@@ -285,14 +294,24 @@ def busca_cliente(
               ramo_juridico
             FROM public.t_cadastro_cliente
             WHERE
-              (:q = '' OR nome_empresarial ILIKE :like OR cnpj_cpf_faturamento ILIKE :like)
+              (
+                :q = ''
+                OR nome_empresarial ILIKE :like
+                OR (
+                    :cnpj_like IS NOT NULL
+                    AND cnpj_cpf_faturamento ILIKE :cnpj_like
+                  )
+              )
         """
+
         params = {
-            "q": q,
-            "like": f"%{q}%",
+            "q": q_raw,
+            "like": like,
+            "cnpj_like": cnpj_like,
             "offset": (page - 1) * page_size,
             "limit": page_size,
         }
+
         if ramo:
             base_sql += " AND ramo_juridico = :ramo"
             params["ramo"] = ramo
