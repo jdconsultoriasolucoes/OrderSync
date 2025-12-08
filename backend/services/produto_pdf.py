@@ -1,4 +1,5 @@
 # services/produtos_v2_service.py
+
 from typing import Any, Dict, List, Optional, Tuple
 from sqlalchemy.orm import Session
 from sqlalchemy import text
@@ -6,7 +7,13 @@ from fastapi import HTTPException
 from datetime import date
 
 from models.produto import ProdutoV2, ImpostoV2
-from schemas.produto import ProdutoV2Create, ProdutoV2Update, ImpostoV2Create, ProdutoV2Out, ImpostoV2Out
+from schemas.produto import (
+    ProdutoV2Create,
+    ProdutoV2Update,
+    ImpostoV2Create,
+    ProdutoV2Out,
+    ImpostoV2Out,
+)
 import pandas as pd
 
 
@@ -20,6 +27,7 @@ def _row_to_out(db: Session, row: Dict[str, Any], include_imposto: bool = True) 
         if imp:
             data["imposto"] = ImpostoV2Out.model_validate(imp)
     return ProdutoV2Out(**data)
+
 
 def _validate_business(update: Dict[str, Any]):
     # já validamos no Pydantic; aqui reforçamos regra de datas (caso PATCH parcial sem fim chegar setado)
@@ -36,10 +44,11 @@ def _validate_business(update: Dict[str, Any]):
         if v is not None and v < 0:
             raise HTTPException(422, detail=f"{campo} não pode ser negativo")
 
+
 # ----------------------------
 # CRUD via ORM + leitura pela VIEW
 # ----------------------------
-def create_produto(db, produto_in, imposto_in=None):
+def create_produto(db: Session, produto_in: ProdutoV2Create, imposto_in: Optional[ImpostoV2Create] = None) -> ProdutoV2Out:
     try:
         # 1) INSERT produto base
         obj = ProdutoV2(**produto_in.dict(exclude_unset=True))
@@ -68,12 +77,11 @@ def create_produto(db, produto_in, imposto_in=None):
         ).mappings().first()
         if row:
             return ProdutoV2Out(**row)
-    except Exception as e:
+    except Exception:
         # print(f"[create_produto] view fallback: {e}")
         pass
 
     # 4) Fallback: monta resposta a partir do ORM (sem view)
-    #    (ajuste os campos conforme seu schema)
     imposto_out = None
     if obj.imposto:  # relacionamento 1–1
         imposto_out = ImpostoV2Out.from_orm(obj.imposto)
@@ -116,7 +124,13 @@ def create_produto(db, produto_in, imposto_in=None):
         validade_tabela_anterior=None,
     )
 
-def update_produto(db: Session, produto_id: int, payload: ProdutoV2Update, imposto: Optional[ImpostoV2Create]) -> ProdutoV2Out:
+
+def update_produto(
+    db: Session,
+    produto_id: int,
+    payload: ProdutoV2Update,
+    imposto: Optional[ImpostoV2Create],
+) -> ProdutoV2Out:
     obj = db.query(ProdutoV2).filter(ProdutoV2.id == produto_id).one_or_none()
     if not obj:
         raise HTTPException(404, detail="Produto não encontrado")
@@ -137,14 +151,22 @@ def update_produto(db: Session, produto_id: int, payload: ProdutoV2Update, impos
 
     db.commit()
 
-    row = db.execute(text("SELECT * FROM v_produto_v2_preco WHERE id = :id"), {"id": produto_id}).mappings().first()
+    row = db.execute(
+        text("SELECT * FROM v_produto_v2_preco WHERE id = :id"),
+        {"id": produto_id},
+    ).mappings().first()
     return _row_to_out(db, row)
 
+
 def get_produto(db: Session, produto_id: int) -> ProdutoV2Out:
-    row = db.execute(text("SELECT * FROM v_produto_v2_preco WHERE id = :id"), {"id": produto_id}).mappings().first()
+    row = db.execute(
+        text("SELECT * FROM v_produto_v2_preco WHERE id = :id"),
+        {"id": produto_id},
+    ).mappings().first()
     if not row:
         raise HTTPException(404, detail="Produto não encontrado")
     return _row_to_out(db, row)
+
 
 def list_produtos(
     db: Session,
@@ -153,7 +175,7 @@ def list_produtos(
     familia: Optional[int],
     vigencia_em: Optional[date],
     limit: int,
-    offset: int
+    offset: int,
 ) -> List[ProdutoV2Out]:
     base = "SELECT * FROM v_produto_v2_preco WHERE 1=1"
     params: Dict[str, Any] = {}
@@ -178,15 +200,22 @@ def list_produtos(
     rows = db.execute(text(base), params).mappings().all()
     return [_row_to_out(db, r, include_imposto=False) for r in rows]
 
+
 def get_anteriores(db: Session, produto_id: int) -> Dict[str, Any]:
     # lê direto da tabela base (não da view)
-    row = db.execute(text("""
+    row = db.execute(
+        text(
+            """
         SELECT preco_anterior, unidade_anterior, preco_tonelada_anterior, validade_tabela_anterior
         FROM t_cadastro_produto_v2 WHERE id = :id
-    """), {"id": produto_id}).mappings().first()
+    """
+        ),
+        {"id": produto_id},
+    ).mappings().first()
     if not row:
         raise HTTPException(404, detail="Produto não encontrado")
     return dict(row)
+
 
 def importar_lista_df(db: Session, df: pd.DataFrame) -> Dict[str, Any]:
     """
@@ -250,3 +279,113 @@ def importar_lista_df(db: Session, df: pd.DataFrame) -> Dict[str, Any]:
         "inseridos": inseridos,
         "atualizados": atualizados,
     }
+
+
+# ----------------------------------------------------------------------
+# Tabela intermediária t_preco_produto_pdf + fluxo de importação
+# ----------------------------------------------------------------------
+def limpar_preco_pdf_por_tipo(
+    db: Session,
+    lista: str,
+    fornecedor: Optional[str] = None,
+) -> None:
+    """
+    Apaga registros antigos da t_preco_produto_pdf
+    para o mesmo tipo de lista (INSUMOS / PET) e,
+    opcionalmente, mesmo fornecedor.
+    """
+    lista = lista.upper().strip()
+    conds = ["lista = :lista"]
+    params: Dict[str, Any] = {"lista": lista}
+
+    if fornecedor:
+        conds.append("fornecedor = :fornecedor")
+        params["fornecedor"] = fornecedor
+
+    where_sql = " AND ".join(conds)
+    sql = text(f"DELETE FROM t_preco_produto_pdf_v2 WHERE {where_sql}")
+    db.execute(sql, params)
+    db.commit()
+
+
+def salvar_t_preco_produto_pdf(db: Session, df: pd.DataFrame) -> None:
+    """
+    Insere o DataFrame na tabela t_preco_produto_pdf_v2.
+    Agora também grava validade_tabela (se vier no DF).
+    """
+    if df.empty:
+        return
+
+    sql = text(
+        """
+        INSERT INTO t_preco_produto_pdf_v2 (
+            fornecedor,
+            lista,
+            familia,
+            codigo,
+            descricao,
+            preco_ton,
+            preco_sc,
+            page,
+            validade_tabela,
+            data_ingestao
+        )
+        VALUES (
+            :fornecedor,
+            :lista,
+            :familia,
+            :codigo,
+            :descricao,
+            :preco_ton,
+            :preco_sc,
+            :page,
+            :validade_tabela,
+            :data_ingestao
+        )
+        """
+    )
+
+    registros = df.to_dict(orient="records")
+
+    for row in registros:
+        # garante data_ingestao
+        row.setdefault("data_ingestao", date.today())
+        # garante validade_tabela (pode vir None)
+        row.setdefault("validade_tabela", None)
+
+        db.execute(sql, row)
+
+    db.commit()
+
+def importar_pdf_para_produto(db: Session, df: pd.DataFrame) -> Dict[str, Any]:
+    """
+    Fluxo completo para importação da lista:
+      1) limpar t_preco_produto_pdf do mesmo tipo
+      2) salvar a nova ingestão
+      3) aplicar na t_cadastro_produto_v2 via importar_lista_df
+    """
+    if df.empty:
+        return {"total_linhas": 0, "inseridos": 0, "atualizados": 0}
+
+    # assume que toda a lista tem o mesmo "lista"/"fornecedor"
+    lista = str(df["lista"].iloc[0]).upper().strip()
+    fornecedor = None
+    if "fornecedor" in df.columns and not pd.isna(df["fornecedor"].iloc[0]):
+        fornecedor = str(df["fornecedor"].iloc[0]).strip() or None
+
+    # 1) limpa a tabela intermediária para esse tipo
+    limpar_preco_pdf_por_tipo(db, lista=lista, fornecedor=fornecedor)
+
+    # 2) grava de novo
+    salvar_t_preco_produto_pdf(db, df)
+
+    # 3) aplica na tabela de produtos (upsert)
+    resumo = importar_lista_df(db, df)
+    resumo["lista"] = lista
+    if fornecedor:
+        resumo["fornecedor"] = fornecedor
+
+    # só para manter simetria, devolve também o total de linhas do DF
+    resumo.setdefault("total_linhas", int(len(df)))
+
+    return resumo

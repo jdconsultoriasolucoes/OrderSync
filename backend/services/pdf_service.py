@@ -188,6 +188,7 @@ def _desenhar_pdf(pedido: PedidoPdf, path: str) -> None:
     # BLOCO 2 - FRETE / DATA
     # =======================
     frete_total = float(pedido.frete_total or 0)
+    frete_kg = float(pedido.frete_kg or 0)
 
     if pedido.data_entrega_ou_retirada:
         data_entrega_str = pedido.data_entrega_ou_retirada.strftime("%d/%m/%Y")
@@ -196,7 +197,7 @@ def _desenhar_pdf(pedido: PedidoPdf, path: str) -> None:
 
     # FRETE (apenas total – sem "frete por kg")
     if frete_total > 0:
-        frete_str = "R$ " + _br_number(frete_total)
+        frete_str = "R$ " + _br_number(frete_kg)
     else:
         frete_str = "R$ 0,00"
 
@@ -297,8 +298,8 @@ def _desenhar_pdf(pedido: PedidoPdf, path: str) -> None:
 
     # Larguras base em cm; escala para ocupar a largura inteira
     base_widths_cm = [
-        1.5,  # Código
-        8.5,  # Produto
+        1.7,  # Código
+        8.3,  # Produto
         1.8,  # Embalagem
         1.5,  # Qtd
         5.5,  # Cond. Pgto

@@ -14,495 +14,653 @@ const CANDIDATES = [
   `${API_BASE}/produto`,
 ];
 
-const API = {
-  familias:   `${API_BASE}/api/familias`,
-  tiposGiro:  `${API_BASE}/api/tipos-giro`,
-  status:     `${API_BASE}/api/produtos/status`,
+const ENDPOINTS_AUX = {
+  familias: `${API_BASE}/api/familias`,
+  tiposGiro: `${API_BASE}/api/tipos-giro`,
+  unidades: `${API_BASE}/api/unidades`,
 };
 
-// cache em memória/localStorage do endpoint resolvido
-let PROD_ENDPOINT = localStorage.getItem('ordersync_prod_endpoint') || null;
+let PROD_ENDPOINT = null;
+let CURRENT_ID = null;
 
-// === Utils ===
+// === Helpers básicos ===
 const $ = (id) => document.getElementById(id);
-const toast = (msg) => {
-  const t = $('toast');
-  if (!t) return alert(msg);
-  t.textContent = msg;
-  t.style.display = 'block';
-  setTimeout(() => (t.style.display = 'none'), 2400);
-};
 
-async function fetchRaw(url, opts = {}) {
-  return fetch(url, { headers: { 'Content-Type': 'application/json' }, ...opts });
+function toast(msg) {
+  const t = $("toast");
+  if (!t) {
+    alert(msg);
+    return;
+  }
+  t.textContent = msg;
+  t.classList.add("show");
+  t.style.display = "block";
+  setTimeout(() => {
+    t.classList.remove("show");
+    t.style.display = "none";
+  }, 2500);
 }
-async function fetchJSON(url, opts = {}) {
-  const res = await fetchRaw(url, opts);
-  if (!res.ok) {
-    const body = await res.text().catch(()=> '');
-    const err = new Error(body || res.statusText);
-    err.status = res.status;
+
+function debounce(fn, delay = 400) {
+  let timer;
+  return (...args) => {
+    clearTimeout(timer);
+    timer = setTimeout(() => fn(...args), delay);
+  };
+}
+
+async function fetchRaw(url, options = {}) {
+  const opts = {
+    credentials: "include",
+    ...options,
+  };
+  return fetch(url, opts);
+}
+
+async function fetchJSON(url, options = {}) {
+  const headers = options.headers || {};
+  const opts = {
+    credentials: "include",
+    ...options,
+    headers: {
+      "Content-Type": "application/json",
+      ...headers,
+    },
+  };
+
+  const r = await fetch(url, opts);
+  const text = await r.text().catch(() => "");
+
+  let data = {};
+  if (text) {
+    try {
+      data = JSON.parse(text);
+    } catch (_) {
+      data = {};
+    }
+  }
+
+  if (!r.ok) {
+    const msg = data.detail || data.message || r.statusText || "Erro na requisição.";
+    const err = new Error(msg);
+    err.status = r.status;
+    err.data = data;
     throw err;
   }
-  return res.json();
+
+  return data;
 }
 
-// ---------- Descoberta do endpoint de produtos ----------
 async function resolveProdutosEndpoint(force = false) {
   if (!force && PROD_ENDPOINT) return PROD_ENDPOINT;
 
+  const cached = !force && localStorage.getItem("ordersync_prod_endpoint");
+  if (cached) {
+    PROD_ENDPOINT = cached;
+    return cached;
+  }
+
   for (const base of CANDIDATES) {
     try {
-      // tentativa: GET lista com limite pequeno; se 404, tenta o próximo
-      const probe = await fetchRaw(`${base}?page=1&pageSize=1`);
+      const probe = await fetchRaw(`${base}?limit=1&offset=0`, { method: "GET" });
       if (probe.status !== 404) {
         PROD_ENDPOINT = base;
-        localStorage.setItem('ordersync_prod_endpoint', base);
-        console.log('[produto] endpoint resolvido:', base);
+        localStorage.setItem("ordersync_prod_endpoint", base);
+        console.log("[produto] endpoint resolvido:", base);
         return base;
       }
-    } catch (_) { /* ignora e tenta próximo */ }
+    } catch (e) {
+      // ignora e tenta o próximo
+    }
   }
-  // fallback (pode 404, mas evita ficar null)
+
+  // fallback bruto: assume o primeiro
   PROD_ENDPOINT = CANDIDATES[0];
-  localStorage.setItem('ordersync_prod_endpoint', PROD_ENDPOINT);
+  localStorage.setItem("ordersync_prod_endpoint", PROD_ENDPOINT);
   return PROD_ENDPOINT;
 }
 
 // wrappers que usam fallback automático quando 404
-async function produtosGET(path = '', qs = '') {
+async function produtosGET(path = "", qs = "") {
   const tried = new Set();
   while (tried.size < CANDIDATES.length) {
     const base = await resolveProdutosEndpoint();
     try {
-      return await fetchJSON(`${base}${path}${qs}`, { method: 'GET' });
+      return await fetchJSON(`${base}${path}${qs}`, { method: "GET" });
     } catch (e) {
       if (e.status === 404) {
         tried.add(base);
-        // força resolver para o próximo candidato
-        const idx = CANDIDATES.indexOf(base);
-        const next = CANDIDATES[(idx + 1) % CANDIDATES.length];
-        PROD_ENDPOINT = next;
-        localStorage.setItem('ordersync_prod_endpoint', next);
+        PROD_ENDPOINT = null;
+        localStorage.removeItem("ordersync_prod_endpoint");
         continue;
       }
       throw e;
     }
   }
-  // última tentativa com o primeiro candidato
-  return fetchJSON(`${CANDIDATES[0]}${path}${qs}`, { method: 'GET' });
+  // se tudo falhar, taca-lhe exceção
+  throw new Error("Não foi possível localizar o endpoint de produtos.");
 }
 
 async function produtosPOST(body) {
   const base = await resolveProdutosEndpoint();
-  try {
-    return await fetchJSON(base, { method: 'POST', body: JSON.stringify(body) });
-  } catch (e) {
-    if (e.status === 404) {
-      // tenta os demais
-      for (const cand of CANDIDATES) {
-        if (cand === base) continue;
-        try {
-          PROD_ENDPOINT = cand;
-          localStorage.setItem('ordersync_prod_endpoint', cand);
-          return await fetchJSON(cand, { method: 'POST', body: JSON.stringify(body) });
-        } catch (ee) { if (ee.status !== 404) throw ee; }
-      }
-    }
-    throw e;
-  }
-}
-
-async function produtosPATCH(id, body) {
-  const base = await resolveProdutosEndpoint();
-  const paths = [`${base}/${id}`];
-  // se a rota for singular sem /{id}, não há muito o que fazer; mantemos /{id}
-  for (const p of [ `${base}/${id}`, `${base}/${encodeURIComponent(id)}` ]) {
-    try { return await fetchJSON(p, { method: 'PATCH', body: JSON.stringify(body) }); }
-    catch (e) {
+  const paths = ["", "/"]; // alguns endpoints podem ser /api/produto, outros /api/produto/
+  for (const p of paths) {
+    try {
+      return await fetchJSON(`${base}${p}`, {
+        method: "POST",
+        body: JSON.stringify(body),
+      });
+    } catch (e) {
       if (e.status === 404) continue;
       throw e;
     }
   }
-  // tenta outros candidatos
-  for (const cand of CANDIDATES) {
-    try { 
-      PROD_ENDPOINT = cand;
-      localStorage.setItem('ordersync_prod_endpoint', cand);
-      return await fetchJSON(`${cand}/${id}`, { method: 'PATCH', body: JSON.stringify(body) });
-    } catch (e) { if (e.status !== 404) throw e; }
-  }
-  throw new Error('Não foi possível localizar a rota de PATCH dos produtos.');
+  // tudo falhou → tenta no base simples
+  return await fetchJSON(base, { method: "POST", body: JSON.stringify(body) });
 }
 
-// === Importação de lista de preços via PDF ===
-async function uploadListaPdf(file) {
-  if (!file) {
-    toast('Nenhum arquivo selecionado.');
-    return;
-  }
-
-  // resolve qual base está ativa (/api/produto, /api/produtos, etc.)
-  const base = await resolveProdutosEndpoint().catch(() => null);
-  if (!base) {
-    toast('Não consegui resolver o endpoint de produtos.');
-    return;
-  }
-
-  const url = `${base}/importar-lista`;
-  const formData = new FormData();
-  formData.append('file', file);
-
-  try {
-    // IMPORTANTE: aqui NÃO usamos fetchRaw/fetchJSON, pra não setar Content-Type manualmente
-    const res = await fetch(url, {
-      method: 'POST',
-      body: formData,
-    });
-
-    if (!res.ok) {
-      const text = await res.text().catch(() => '');
-      throw new Error(text || res.statusText);
+async function produtosPATCH(id, body) {
+  const base = await resolveProdutosEndpoint();
+  for (const p of [`${base}/${id}`, `${base}/${encodeURIComponent(id)}`]) {
+    try {
+      return await fetchJSON(p, {
+        method: "PATCH",
+        body: JSON.stringify(body),
+      });
+    } catch (e) {
+      if (e.status === 404) continue;
+      throw e;
     }
+  }
+  throw new Error("Não foi possível atualizar o produto.");
+}
 
-    const data = await res.json().catch(() => null);
-    if (data) {
-      const total = data.total_linhas ?? 0;
-      const ins   = data.inseridos      ?? 0;
-      const upd   = data.atualizados    ?? 0;
-      toast(`Importação concluída: ${total} linhas (${ins} novos / ${upd} atualizados).`);
-      console.log('[importar-lista] resumo:', data);
+// ---------- leitura / preenchimento formulário ----------
+function getValue(id) {
+  const el = $(id);
+  if (!el) return "";
+  if (el.type === "number") {
+    return el.value;
+  }
+  return el.value != null ? el.value : "";
+}
+
+function getNumber(id) {
+  const v = getValue(id).replace(",", ".").trim();
+  if (v === "") return undefined;
+  const n = Number(v);
+  return Number.isNaN(n) ? undefined : n;
+}
+
+function getInt(id) {
+  const v = getValue(id).trim();
+  if (v === "") return undefined;
+  const n = parseInt(v, 10);
+  return Number.isNaN(n) ? undefined : n;
+}
+
+function getDateValue(id) {
+  const v = getValue(id).trim();
+  return v === "" ? undefined : v;
+}
+
+function readForm() {
+  const produto = {
+    codigo_supra: getValue("codigo_supra") || undefined,
+    nome_produto: getValue("nome_produto") || undefined,
+    status_produto: getValue("status_produto") || undefined,
+    tipo_giro: getValue("tipo_giro") || undefined,
+
+    linha: getValue("linha") || undefined,
+    familia: getInt("familia"),
+    filhos: getInt("filhos"),
+
+    unidade: getValue("unidade") || undefined,
+    unidade_anterior: getValue("unidade_anterior") || undefined,
+    peso: getNumber("peso"),
+    peso_bruto: getNumber("peso_bruto"),
+    embalagem_venda: getValue("embalagem_venda") || undefined,
+    unidade_embalagem: getValue("unidade_embalagem") || undefined,
+
+    estoque_disponivel: getInt("estoque_disponivel"),
+    estoque_ideal: getInt("estoque_ideal"),
+
+    codigo_ean: getValue("codigo_ean") || undefined,
+    codigo_embalagem: getValue("codigo_embalagem") || undefined,
+    ncm: getValue("ncm") || undefined,
+
+    fornecedor: getValue("fornecedor") || undefined,
+
+    preco: getNumber("preco"),
+    preco_tonelada: getNumber("preco_tonelada"),
+    validade_tabela: getDateValue("validade_tabela"),
+
+    preco_anterior: getNumber("preco_anterior"),
+    preco_tonelada_anterior: getNumber("preco_tonelada_anterior"),
+    validade_tabela_anterior: getDateValue("validade_tabela_anterior"),
+
+    desconto_valor_tonelada: getNumber("desconto_valor_tonelada"),
+    data_desconto_inicio: getDateValue("data_desconto_inicio"),
+    data_desconto_fim: getDateValue("data_desconto_fim"),
+  };
+
+  Object.keys(produto).forEach((k) => {
+    if (produto[k] === undefined) delete produto[k];
+  });
+
+  const imposto = {
+    ipi: getNumber("ipi"),
+    icms: getNumber("icms"),
+    iva_st: getNumber("iva_st"),
+    cbs: getNumber("cbs"),
+    ibs: getNumber("ibs"),
+  };
+  Object.keys(imposto).forEach((k) => {
+    if (imposto[k] === undefined) delete imposto[k];
+  });
+
+  const impostoOut = Object.keys(imposto).length ? imposto : null;
+
+  return { produto, imposto: impostoOut };
+}
+
+function fillForm(p) {
+  if (!p) return;
+
+  const set = (id, v) => {
+    const el = $(id);
+    if (!el) return;
+    if (el.type === "number" && typeof v === "number") {
+      el.value = String(v);
     } else {
-      toast('Importação concluída.');
+      el.value = v != null ? v : "";
     }
-  } catch (e) {
-    console.error(e);
-    toast('Erro ao importar PDF. Veja o console.');
+  };
+
+  CURRENT_ID = p.id || null;
+
+  set("codigo_supra", p.codigo_supra);
+  set("nome_produto", p.nome_produto);
+  set("status_produto", p.status_produto);
+  set("tipo_giro", p.tipo_giro);
+
+  set("linha", p.linha);
+  set("familia", p.familia);
+  set("filhos", p.filhos);
+
+  set("unidade", p.unidade);
+  set("unidade_anterior", p.unidade_anterior);
+  set("peso", p.peso);
+  set("peso_bruto", p.peso_bruto);
+  set("embalagem_venda", p.embalagem_venda);
+  set("unidade_embalagem", p.unidade_embalagem);
+
+  set("estoque_disponivel", p.estoque_disponivel);
+  set("estoque_ideal", p.estoque_ideal);
+
+  set("codigo_ean", p.codigo_ean);
+  set("codigo_embalagem", p.codigo_embalagem);
+  set("ncm", p.ncm);
+
+  set("fornecedor", p.fornecedor);
+
+  set("preco", p.preco);
+  set("preco_tonelada", p.preco_tonelada);
+  set("validade_tabela", p.validade_tabela);
+
+  set("preco_anterior", p.preco_anterior);
+  set("preco_tonelada_anterior", p.preco_tonelada_anterior);
+  set("validade_tabela_anterior", p.validade_tabela_anterior);
+
+  set("desconto_valor_tonelada", p.desconto_valor_tonelada);
+  set("data_desconto_inicio", p.data_desconto_inicio);
+  set("data_desconto_fim", p.data_desconto_fim);
+
+  if ($("reajuste")) {
+    $("reajuste").textContent =
+      p.reajuste_percentual != null ? `${p.reajuste_percentual.toFixed(2)}%` : "—";
   }
+  if ($("vigencia")) {
+    $("vigencia").textContent = p.vigencia_ativa ? "Sim" : "Não";
+  }
+
+  const imp = p.imposto || {};
+  set("ipi", imp.ipi);
+  set("icms", imp.icms);
+  set("iva_st", imp.iva_st);
+  set("cbs", imp.cbs);
+  set("ibs", imp.ibs);
 }
 
+function clearForm() {
+  const root = document.querySelector(".card");
+  if (!root) return;
+  root.querySelectorAll("input, select, textarea").forEach((el) => {
+    if (el.type === "checkbox" || el.type === "radio") {
+      el.checked = false;
+    } else {
+      el.value = "";
+    }
+  });
 
-// ---------- cálculos/aux ----------
+  if ($("reajuste")) $("reajuste").textContent = "—";
+  if ($("vigencia")) $("vigencia").textContent = "—";
+  CURRENT_ID = null;
+}
+
+// ---------- cálculo/aux ----------
 function setSelect(el, items, getLabel = (x) => x.label, getValue = (x) => x.value) {
   if (!el) return;
-  el.innerHTML = '<option value="">— selecione —</option>' +
-    (items || []).map((it) => `<option value="${getValue(it)}">${getLabel(it)}</option>`).join('');
+  el.innerHTML =
+    '<option value="">— selecione —</option>' +
+    (items || [])
+      .map((it) => `<option value="${getValue(it)}">${getLabel(it)}</option>`)
+      .join("");
 }
+
 function reajustePercentual(atual, anterior) {
-  if (!Number.isFinite(anterior) || anterior === 0 || !Number.isFinite(atual)) return null;
+  if (anterior == null || anterior === 0 || atual == null) return null;
   return ((atual - anterior) / anterior) * 100;
 }
-function vigenciaAtiva(validadeISO) {
-  if (!validadeISO) return null;
-  const hoje = new Date();
-  const d = new Date(`${validadeISO}T00:00:00`);
-  return hoje >= d;
+
+function parseDateBrToISO(input) {
+  const v = (input || "").trim();
+  const m = v.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})$/);
+  if (!m) return null;
+  let [, d, M, y] = m;
+  if (d.length === 1) d = "0" + d;
+  if (M.length === 1) M = "0" + M;
+  return `${y}-${M}-${d}`;
 }
 
-// ===== Modal helpers (defensivo) =====
-const modal = {
-  open()  {
-    const m = $('search-modal');
-    if (!m) { console.warn('search-modal não encontrado no HTML'); return; }
-    m.classList.remove('hidden');
-    const inp = $('search-input');
-    if (inp) setTimeout(()=>inp.focus(), 30);
-  },
-  close() {
-    const m = $('search-modal');
-    if (!m) return;
-    m.classList.add('hidden');
-    const box = $('search-results');
-    if (box) box.innerHTML = '';
-    const inp = $('search-input');
-    if (inp) inp.value = '';
-  }
-};
-function debounce(fn, ms=300){ let t; return (...a)=>{ clearTimeout(t); t=setTimeout(()=>fn(...a), ms); }; }
-
-function renderResults(list){
-  const box = $('search-results');
+// ---------- busca / modal ----------
+function renderSearchResults(items) {
+  const box = $("search-results");
   if (!box) return;
-  if (!list || !list.length){
-    box.innerHTML = `<div class="empty">Nada encontrado.</div>`;
+
+  if (!items || !items.length) {
+    box.innerHTML = `<div class="empty">Nenhum produto encontrado.</div>`;
     return;
   }
-  const rows = list.map(p => `
+
+  const rows = items
+    .map(
+      (p) => `
     <tr data-id="${p.id}">
-      <td style="width:160px"><strong>${p.codigo_supra ?? ''}</strong></td>
-      <td>${p.nome_produto ?? ''}</td>
-      <td style="width:120px; text-align:right">R$ ${Number(p.preco ?? 0).toFixed(2)}</td>
-      <td style="width:120px">${p.unidade ?? ''}</td>
-      <td style="width:140px">${p.status_produto ?? ''}</td>
+      <td>${p.codigo_supra || ""}</td>
+      <td>${p.nome_produto || ""}</td>
+      <td>${p.preco != null ? p.preco.toFixed(2) : ""}</td>
+      <td>${p.unidade || ""}</td>
+      <td>${p.status_produto || ""}</td>
     </tr>
-  `).join('');
+  `
+    )
+    .join("");
+
   box.innerHTML = `
     <table>
-      <thead><tr>
-        <th>Código</th><th>Descrição</th><th>Preço</th><th>Unid.</th><th>Status</th>
-      </tr></thead>
+      <thead>
+        <tr>
+          <th>Código</th>
+          <th>Descrição</th>
+          <th>Preço</th>
+          <th>Unid.</th>
+          <th>Status</th>
+        </tr>
+      </thead>
       <tbody>${rows}</tbody>
     </table>
   `;
-  box.querySelectorAll('tbody tr').forEach(tr=>{
-    tr.addEventListener('click', async ()=>{
-      const id = tr.getAttribute('data-id');
-      try{
+
+  box.querySelectorAll("tbody tr").forEach((tr) => {
+    tr.addEventListener("click", async () => {
+      const id = tr.getAttribute("data-id");
+      try {
         const base = await resolveProdutosEndpoint();
         const data = await fetchJSON(`${base}/${id}`);
         fillForm(data);
-        modal.close();
-        toast('Produto carregado.');
-      } catch(e){ toast('Erro ao abrir item.'); console.error(e); }
+        const modal = $("search-modal");
+        if (modal && modal.close) modal.close();
+        else modal?.classList.add("hidden");
+      } catch (e) {
+        console.error(e);
+        toast("Erro ao abrir item.");
+      }
     });
   });
 }
 
-const doSearch = debounce(async ()=>{
-  const inp = $('search-input');
-  const box = $('search-results');
+const doSearch = debounce(async () => {
+  const inp = $("search-input");
+  const box = $("search-results");
   if (!inp || !box) return;
+
   const q = inp.value.trim();
-  if (!q){ box.innerHTML = `<div class="empty">Digite parte do código ou descrição…</div>`; return; }
-  try{
-    const list = await produtosGET('', `?q=${encodeURIComponent(q)}&page=1&pageSize=25`);
-    renderResults(list);
-  }catch(e){
+  if (!q) {
+    box.innerHTML = `<div class="empty">Digite parte do código ou descrição…</div>`;
+    return;
+  }
+
+  try {
+    const base = await resolveProdutosEndpoint();
+    const url = `${base}?q=${encodeURIComponent(q)}&limit=50&offset=0`;
+    const data = await fetchJSON(url);
+    renderSearchResults(data);
+  } catch (e) {
     console.error(e);
-    box.innerHTML = `<div class="empty">Erro ao buscar.</div>`;
+    box.innerHTML = `<div class="empty">Erro ao buscar produtos.</div>`;
   }
-}, 300);
+}, 400);
 
-// === Carregar selects ===
-async function loadSelects() {
-  try {
-    const fams = await fetchJSON(API.familias);
-    setSelect($('familia'), fams, (f) => f.familia, (f) => f.id);
-    const linhas = Array.from(new Map(
-      (fams || []).map(f => [f.tipo, { label: f.tipo, value: f.tipo }])
-    ).values());
-    setSelect($('linha'), linhas);
-  } catch {
-    setSelect($('familia'), [{ label: 'DIVERSOS', value: 1 }], x => x.label, x => x.value);
-    setSelect($('linha'), [{ label: 'INSUMOS', value: 'INSUMOS' }], x => x.label, x => x.value);
-  }
+// ---------- Importar PDF (INS/PET + validade) ----------
+function setupImportarPdf() {
+  const btnImportar = $("btn-importar");
+  if (!btnImportar) return;
 
-  try {
-    const stats = await fetchJSON(API.status);
-    setSelect($('status_produto'), stats, (s) => s.label, (s) => s.value);
-  } catch {
-    setSelect($('status_produto'), [
-      { label: 'ATIVO', value: 'ATIVO' },
-      { label: 'INATIVO', value: 'INATIVO' },
-    ]);
-  }
+  const inputFile = document.createElement("input");
+  inputFile.type = "file";
+  inputFile.accept = "application/pdf";
+  inputFile.style.display = "none";
+  document.body.appendChild(inputFile);
 
-  try {
-    const tg = await fetchJSON(API.tiposGiro);
-    setSelect($('tipo_giro'), tg, (s) => s.label, (s) => s.value);
-  } catch {
-    setSelect($('tipo_giro'), [
-      { label: 'Encomenda', value: 'Encomenda' },
-      { label: 'Estoque', value: 'Estoque' },
-    ]);
-  }
-}
+  btnImportar.addEventListener("click", () => {
+    let tipo = window.prompt("Qual lista será importada? (INSUMOS ou PET)");
+    if (!tipo) return;
 
-// === Leitura do formulário ===
-function readForm() {
-  const v = (id) => ($(id)?.value ?? '').trim();
-  const n = (id) => { const raw = v(id); return raw === '' ? null : Number(raw); };
+    tipo = tipo.trim().toUpperCase();
+    if (["INS", "INSUMO"].includes(tipo)) {
+      tipo = "INSUMOS";
+    } else if (["PET", "PETS"].includes(tipo)) {
+      tipo = "PET";
+    }
 
-  return {
-    codigo_supra: v('codigo_supra') || null,
-    nome_produto: v('nome_produto') || null,
-    status_produto: v('status_produto') || null,
-    tipo_giro: v('tipo_giro') || null,
-    familia: $('familia')?.value ? Number($('familia').value) : null,
-    filhos: $('filhos')?.value ? Number($('filhos').value) : null,
-
-    unidade: v('unidade') || null,
-    unidade_anterior: v('unidade_anterior') || null,
-    peso: n('peso'),
-    peso_bruto: n('peso_bruto'),
-    embalagem_venda: v('embalagem_venda') || null,
-    unidade_embalagem: n('unidade_embalagem'),
-
-    ncm: v('ncm') || null,
-    estoque_disponivel: n('estoque_disponivel'),
-    estoque_ideal: n('estoque_ideal'),
-
-    codigo_ean: v('codigo_ean') || null,
-    codigo_embalagem: v('codigo_embalagem') || null,
-    fornecedor: v('fornecedor') || null,
-
-    preco: n('preco'),
-    preco_tonelada: n('preco_tonelada'),
-    validade_tabela: v('validade_tabela') || null,
-
-    desconto_valor_tonelada: n('desconto_valor_tonelada'),
-    data_desconto_inicio: v('data_desconto_inicio') || null,
-    data_desconto_fim: v('data_desconto_fim') || null,
-  };
-}
-
-function readImposto() {
-  const n = (id) => { const raw = ($(id)?.value ?? '').trim(); return raw === '' ? 0 : Number(raw); };
-  return { ipi: n('ipi'), icms: n('icms'), iva_st: n('iva_st'), cbs: n('cbs'), ibs: n('ibs') };
-}
-
-// === Preencher form ===
-let CURRENT_ID = null;
-function fillForm(p) {
-  const set = (id, v) => { if ($(id)) $(id).value = (v ?? ''); };
-  set('codigo_supra', p.codigo_supra);
-  set('nome_produto', p.nome_produto);
-  set('status_produto', p.status_produto);
-  set('tipo_giro', p.tipo_giro);
-  set('familia', p.familia);
-  set('filhos', p.filhos);
-  set('unidade', p.unidade);
-  set('unidade_anterior', p.unidade_anterior);
-  set('peso', p.peso);
-  set('peso_bruto', p.peso_bruto);
-  set('embalagem_venda', p.embalagem_venda);
-  set('unidade_embalagem', p.unidade_embalagem);
-  set('ncm', p.ncm);
-  set('estoque_disponivel', p.estoque_disponivel);
-  set('estoque_ideal', p.estoque_ideal);
-  set('codigo_ean', p.codigo_ean);
-  set('codigo_embalagem', p.codigo_embalagem);
-  set('fornecedor', p.fornecedor);
-  set('preco', p.preco);
-  set('preco_tonelada', p.preco_tonelada);
-  set('validade_tabela', p.validade_tabela);
-
-  set('preco_anterior', p.preco_anterior);
-  set('preco_tonelada_anterior', p.preco_tonelada_anterior);
-  set('validade_tabela_anterior', p.validade_tabela_anterior);
-  if ($('unidade_anterior_ro')) $('unidade_anterior_ro').value = p.unidade_anterior ?? '';
-
-  set('desconto_valor_tonelada', p.desconto_valor_tonelada);
-  set('data_desconto_inicio', p.data_desconto_inicio);
-  set('data_desconto_fim', p.data_desconto_fim);
-  set('preco_final', p.preco_final);
-
-  const r = reajustePercentual(Number(p.preco ?? 0), Number(p.preco_anterior ?? 0));
-  if ('reajuste' in window && $('reajuste')) $('reajuste').textContent = r == null ? '—' : r.toFixed(2) + '%';
-
-  const vig = vigenciaAtiva(p.validade_tabela);
-  if ($('vigencia')) {
-    $('vigencia').textContent = vig == null ? '—' : (vig ? 'ATIVA' : 'FUTURA');
-    $('vigencia').className = 'pill ' + (vig ? 'ok' : '');
-  }
-
-  CURRENT_ID = p?.id ?? null;
-}
-
-// ====== Eventos ======
-document.addEventListener('DOMContentLoaded', async () => {
-  await resolveProdutosEndpoint().catch(()=>{});
-  loadSelects().catch(console.error);
-
-  $('btn-novo')?.addEventListener('click', () => {
-    document.querySelectorAll('input').forEach((i) => (i.value = ''));
-    document.querySelectorAll('select').forEach((s) => (s.value = ''));
-    CURRENT_ID = null;
-    toast('Formulário limpo.');
-  });
-
-  $('btn-buscar')?.addEventListener('click', () => {
-    modal.open();
-    const box = $('search-results');
-    if (box) box.innerHTML = `<div class="empty">Digite para buscar…</div>`;
-  });
-
-  $('btn-editar')?.addEventListener('click', async () => {
-    const q = prompt('Código ou descrição para editar:');
-    if (!q) return;
-    try {
-      const list = await produtosGET('', `?q=${encodeURIComponent(q)}&limit=1`);
-      if (!list.length) { toast('Nenhum produto encontrado.'); return; }
-      fillForm(list[0]);
-      toast('Modo edição: produto carregado.');
-    } catch (e) { toast('Erro ao carregar para edição.'); console.error(e); }
-  });
-
-  $('btn-salvar')?.addEventListener('click', async () => {
-    const produto = readForm();
-    if (produto.desconto_valor_tonelada != null &&
-        (!produto.data_desconto_inicio || !produto.data_desconto_fim)) {
-      toast('Preencha início e fim do desconto.');
+    if (!["INSUMOS", "PET"].includes(tipo)) {
+      alert("Tipo inválido. Use INSUMOS ou PET.");
       return;
     }
-    const imposto = readImposto();
 
+    let validadeBr = window.prompt(
+      "Informe a data de validade da tabela (dd/mm/aaaa):"
+    );
+    if (!validadeBr) return;
+
+    const validadeISO = parseDateBrToISO(validadeBr);
+    if (!validadeISO) {
+      alert("Data de validade inválida. Use o formato dd/mm/aaaa.");
+      return;
+    }
+
+    inputFile.onchange = async () => {
+      const file = inputFile.files[0];
+      inputFile.value = "";
+      if (!file) return;
+
+      try {
+        const base = await resolveProdutosEndpoint().catch(() => null);
+        if (!base) {
+          toast("Não consegui resolver o endpoint de produtos.");
+          return;
+        }
+
+        const url = `${base}/importar-lista`;
+        const formData = new FormData();
+        formData.append("tipo_lista", tipo);
+        formData.append("validade_tabela", validadeISO);
+        formData.append("file", file);
+
+        const resp = await fetch(url, {
+          method: "POST",
+          body: formData,
+        });
+
+        let data = {};
+        try {
+          data = await resp.json();
+        } catch (_) {
+          data = {};
+        }
+
+        if (!resp.ok) {
+          const msg =
+            data.detail ||
+            data.message ||
+            resp.statusText ||
+            "Erro ao importar PDF.";
+          alert(msg);
+          return;
+        }
+
+        const {
+          total_linhas_pdf,
+          inseridos,
+          atualizados,
+          lista,
+          fornecedor,
+        } = data;
+
+        alert(
+          [
+            `Arquivo: ${file.name}`,
+            `Tipo: ${lista || tipo}`,
+            fornecedor ? `Fornecedor: ${fornecedor}` : null,
+            `Validade da tabela: ${validadeISO}`,
+            `Linhas no PDF: ${total_linhas_pdf}`,
+            `Produtos novos: ${inseridos}`,
+            `Produtos atualizados: ${atualizados}`,
+          ]
+            .filter(Boolean)
+            .join("\n")
+        );
+      } catch (err) {
+        console.error(err);
+        alert(err.message || "Erro inesperado ao importar PDF.");
+      }
+    };
+
+    inputFile.click();
+  });
+}
+
+// ---------- Init ----------
+document.addEventListener("DOMContentLoaded", async () => {
+  try {
+    await resolveProdutosEndpoint();
+  } catch (e) {
+    console.warn("[produto] não foi possível resolver endpoint ainda:", e);
+  }
+
+  $("btn-novo")?.addEventListener("click", () => {
+    clearForm();
+    toast("Novo produto em edição.");
+  });
+
+  $("btn-salvar")?.addEventListener("click", async () => {
+    const { produto, imposto } = readForm();
     try {
       if (CURRENT_ID) {
         const res = await produtosPATCH(CURRENT_ID, { produto, imposto });
         fillForm(res);
-        toast('Produto atualizado.');
+        toast("Produto atualizado.");
         return;
       }
 
-      // probe por código -> decide PATCH vs POST
       let alvoId = null;
       if (produto.codigo_supra) {
         try {
-          const probe = await produtosGET('', `?q=${encodeURIComponent(produto.codigo_supra)}&limit=1`);
-          alvoId = (probe && probe.length && probe[0].id) ? probe[0].id : null;
+          const probe = await produtosGET(
+            "",
+            `?q=${encodeURIComponent(produto.codigo_supra)}&limit=1`
+          );
+          alvoId = probe && probe.length && probe[0].id ? probe[0].id : null;
         } catch {}
       }
 
       if (alvoId) {
         const res = await produtosPATCH(alvoId, { produto, imposto });
         fillForm(res);
-        toast('Produto atualizado.');
+        toast("Produto atualizado.");
       } else {
         const res = await produtosPOST({ produto, imposto });
         fillForm(res);
-        toast('Produto criado.');
+        toast("Produto criado.");
       }
     } catch (e) {
-      toast('Erro ao salvar. Veja o console.');
+      toast("Erro ao salvar. Veja o console.");
       console.error(e);
     }
   });
 
-    // === Importar PDF de lista de preços ===
-  const btnImportar = $('btn-importar');
-  if (btnImportar) {
-    // input file "invisível", reutilizado sempre
-    const inputFile = document.createElement('input');
-    inputFile.type = 'file';
-    inputFile.accept = 'application/pdf';
-    inputFile.style.display = 'none';
-    document.body.appendChild(inputFile);
+  $("btn-editar")?.addEventListener("click", () => {
+    toast("Você já pode editar os campos e salvar.");
+  });
 
-    inputFile.addEventListener('change', () => {
-      const file = inputFile.files[0];
-      if (file) {
-        uploadListaPdf(file);
-      }
-      // permite selecionar o mesmo arquivo de novo
-      inputFile.value = '';
-    });
+  $("btn-pesquisar")?.addEventListener("click", () => {
+    const modal = $("search-modal");
+    if (modal && modal.showModal) {
+      modal.showModal();
+    } else {
+      modal?.classList.remove("hidden");
+    }
+    const box = $("search-results");
+    if (box) {
+      box.innerHTML = `<div class="empty">Digite parte do código ou descrição…</div>`;
+    }
+    const inp = $("search-input");
+    inp && inp.focus();
+  });
 
-    btnImportar.addEventListener('click', () => {
-      inputFile.click();
-    });
-  }
-
-
-  // Modal
-  $('search-close')?.addEventListener('click', modal.close);
-  $('search-cancel')?.addEventListener('click', modal.close);
-  $('search-input')?.addEventListener('input', doSearch);
-  $('search-input')?.addEventListener('keydown', (ev)=>{
-    if (ev.key === 'Escape'){ modal.close(); }
-    if (ev.key === 'Enter'){
-      const first = document.querySelector('#search-results tbody tr');
+  const modal = $("search-modal");
+  $("search-close")?.addEventListener("click", () => {
+    if (modal && modal.close) modal.close();
+    else modal?.classList.add("hidden");
+  });
+  $("search-cancel")?.addEventListener("click", () => {
+    if (modal && modal.close) modal.close();
+    else modal?.classList.add("hidden");
+  });
+  $("search-input")?.addEventListener("input", doSearch);
+  $("search-input")?.addEventListener("keydown", (ev) => {
+    if (ev.key === "Escape") {
+      if (modal && modal.close) modal.close();
+      else modal?.classList.add("hidden");
+    }
+    if (ev.key === "Enter") {
+      const first = document.querySelector("#search-results tbody tr");
       if (first) first.click();
     }
   });
+
+  setupImportarPdf();
+
+  try {
+    const url = new URL(window.location.href);
+    const id = url.searchParams.get("id");
+    if (id) {
+      const base = await resolveProdutosEndpoint();
+      const data = await fetchJSON(`${base}/${id}`);
+      fillForm(data);
+    }
+  } catch (e) {
+    console.warn("[produto] não foi possível carregar produto inicial:", e);
+  }
 });

@@ -1,4 +1,4 @@
-from fastapi import APIRouter, UploadFile, File, HTTPException
+from fastapi import APIRouter, UploadFile, File, Form, HTTPException
 from typing import Optional
 from datetime import date
 from pydantic import BaseModel
@@ -6,23 +6,29 @@ from pydantic import BaseModel
 from database import SessionLocal
 
 from schemas.produto import (
-    ProdutoV2Create, ProdutoV2Update, ProdutoV2Out, ImpostoV2Create
+    ProdutoV2Create,
+    ProdutoV2Update,
+    ProdutoV2Out,
+    ImpostoV2Create,
 )
-from services.produto import (
-    create_produto, update_produto, get_produto, list_produtos, get_anteriores,
-    importar_lista_df,  # <-- nova função do service
+from services.produto_pdf import (
+    create_produto,
+    update_produto,
+    get_produto,
+    list_produtos,
+    get_anteriores,
+    importar_pdf_para_produto,
 )
-
-from utils.pdf_lista_precos import parse_lista_precos  # ajusta o caminho se seu pacote for outro
-import tempfile, shutil, os
 
 
 # deixa a tag mais limpa no Swagger
 router = APIRouter(prefix="/api/produto", tags=["Produtos"])
 
+
 class ProdutoCreatePayload(BaseModel):
     produto: ProdutoV2Create
     imposto: Optional[ImpostoV2Create] = None
+
 
 @router.get(
     "",
@@ -53,6 +59,7 @@ def listar_produtos(
     finally:
         db.close()
 
+
 @router.post(
     "",
     response_model=ProdutoV2Out,
@@ -61,12 +68,13 @@ def listar_produtos(
     description="Cria um novo produto (e imposto, se informado) e retorna o registro consolidado.",
     operation_id="produtos_criar",
 )
-def criar_produto(payload: ProdutoCreatePayload):
+def criar_produto_endpoint(payload: ProdutoCreatePayload):
     db = SessionLocal()
     try:
         return create_produto(db, payload.produto, payload.imposto)
     finally:
         db.close()
+
 
 @router.get(
     "/{produto_id}",
@@ -75,12 +83,13 @@ def criar_produto(payload: ProdutoCreatePayload):
     description="Retorna os dados consolidados do produto a partir do ID.",
     operation_id="produtos_obter_por_id",
 )
-def obter_produto(produto_id: int):
+def obter_produto_endpoint(produto_id: int):
     db = SessionLocal()
     try:
         return get_produto(db, produto_id)
     finally:
         db.close()
+
 
 @router.patch(
     "/{produto_id}",
@@ -89,16 +98,17 @@ def obter_produto(produto_id: int):
     description="Atualiza campos informados do produto (e imposto, se enviado) e retorna o consolidado.",
     operation_id="produtos_atualizar_parcial",
 )
-def atualizar_produto(
+def atualizar_produto_endpoint(
     produto_id: int,
     produto: ProdutoV2Update,
-    imposto: Optional[ImpostoV2Create] = None
+    imposto: Optional[ImpostoV2Create] = None,
 ):
     db = SessionLocal()
     try:
         return update_produto(db, produto_id, produto, imposto)
     finally:
         db.close()
+
 
 @router.get(
     "/{produto_id}/anteriores",
@@ -113,44 +123,58 @@ def consultar_anteriores(produto_id: int):
     finally:
         db.close()
 
+
 @router.post(
     "/importar-lista",
     summary="Importar lista de preços via PDF",
-    description="Recebe um PDF da lista de preços, extrai os itens e faz upsert na base de produtos.",
 )
-async def importar_lista(file: UploadFile = File(...)):
-    if not file:
-        raise HTTPException(status_code=400, detail="Arquivo não enviado.")
+async def importar_lista(
+    tipo_lista: str = Form(..., description="Tipo de lista: INSUMOS ou PET"),
+    validade_tabela: Optional[date] = Form(None),
+    file: UploadFile = File(...),
+    db: Session = Depends(get_db),
+):
+    if not file.filename.lower().endswith(".pdf"):
+        raise HTTPException(status_code=400, detail="O arquivo precisa ser um PDF.")
 
-    # checagem básica de tipo
-    if file.content_type not in (
-        "application/pdf",
-        "application/x-pdf",
-        "application/octet-stream",
-    ):
-        raise HTTPException(status_code=400, detail="Envie um arquivo PDF.")
+    tipo = tipo_lista.upper().strip()
+    if tipo in ("INS", "INSUMO"):
+        tipo = "INSUMOS"
+    elif tipo in ("PET", "PETS"):
+        tipo = "PET"
+    else:
+        raise HTTPException(
+            status_code=400,
+            detail="Tipo de lista inválido. Use INSUMOS ou PET.",
+        )
 
-    # salva PDF em arquivo temporário
-    with tempfile.NamedTemporaryFile(delete=False, suffix=".pdf") as tmp:
-        shutil.copyfileobj(file.file, tmp)
-        tmp_path = tmp.name
-
-    db = SessionLocal()
     try:
-        # usa SUA função pra virar DataFrame
-        df = parse_lista_precos(tmp_path)
+        df = parse_lista_precos(file.file, tipo_lista=tipo)
+    except Exception as e:
+        raise HTTPException(status_code=400, detail=f"Erro ao ler PDF: {e}")
 
-        if df.empty:
-            return {"total_linhas": 0, "inseridos": 0, "atualizados": 0}
+    if df.empty:
+        raise HTTPException(
+            status_code=400,
+            detail="Nenhuma linha válida encontrada no PDF.",
+        )
 
-        # chama a função do service pra gravar no banco
-        resumo = importar_lista_df(db, df)
-        return resumo
+    # <<< AQUI: aplica a validade vinda do front em todas as linhas >>>
+    if validade_tabela is not None:
+        df["validade_tabela"] = validade_tabela
+    else:
+        df["validade_tabela"] = None
 
-    finally:
-        db.close()
-        try:
-            os.remove(tmp_path)
-        except OSError:
-            pass
+    resumo = importar_pdf_para_produto(db, df)
 
+    return {
+        "arquivo": file.filename,
+        "tipo_lista": tipo,
+        "validade_tabela": validade_tabela,
+        "total_linhas_pdf": int(len(df)),
+        "total_linhas": resumo.get("total_linhas", int(len(df))),
+        "inseridos": resumo.get("inseridos", 0),
+        "atualizados": resumo.get("atualizados", 0),
+        "lista": resumo.get("lista"),
+        "fornecedor": resumo.get("fornecedor"),
+    }
