@@ -452,115 +452,143 @@ const doSearch = debounce(async () => {
   }
 }, 400);
 
-// ---------- Importar PDF (INS/PET + validade) ----------
-function setupImportarPdf() {
-  const btnImportar = $("btn-importar");
-  if (!btnImportar) return;
+// ---------- Importar PDF (INS/PET + validade via modal) ----------
+async function uploadListaPdf(file) {
+  if (!file) {
+    toast("Selecione um arquivo PDF.");
+    return;
+  }
 
-  const inputFile = document.createElement("input");
-  inputFile.type = "file";
-  inputFile.accept = "application/pdf";
-  inputFile.style.display = "none";
-  document.body.appendChild(inputFile);
+  const tipoEl = $("import_tipo_lista");
+  const validadeEl = $("import_validade");
 
-  btnImportar.addEventListener("click", () => {
-    let tipo = window.prompt("Qual lista será importada? (INSUMOS ou PET)");
-    if (!tipo) return;
+  const tipo = tipoEl ? tipoEl.value : "";
+  const validadeISO = validadeEl ? validadeEl.value : "";
 
-    tipo = tipo.trim().toUpperCase();
-    if (["INS", "INSUMO"].includes(tipo)) {
-      tipo = "INSUMOS";
-    } else if (["PET", "PETS"].includes(tipo)) {
-      tipo = "PET";
+  if (!tipo) {
+    toast("Informe o tipo da lista (INSUMOS ou PET).");
+    return;
+  }
+
+  if (!validadeISO) {
+    toast("Informe a validade da tabela.");
+    return;
+  }
+
+  const base = await resolveProdutosEndpoint().catch(() => null);
+  if (!base) {
+    toast("Não consegui resolver o endpoint de produtos.");
+    return;
+  }
+
+  const url = `${base}/importar-lista`;
+  const formData = new FormData();
+  formData.append("tipo_lista", tipo);           // "INSUMOS" ou "PET"
+  formData.append("validade_tabela", validadeISO); // yyyy-mm-dd do input date
+  formData.append("file", file);
+
+  try {
+    const res = await fetch(url, {
+      method: "POST",
+      body: formData,
+    });
+
+    let data = {};
+    try {
+      data = await res.json();
+    } catch (_) {
+      data = {};
     }
 
-    if (!["INSUMOS", "PET"].includes(tipo)) {
-      alert("Tipo inválido. Use INSUMOS ou PET.");
-      return;
+    if (!res.ok) {
+      const msg =
+        data.detail ||
+        data.message ||
+        res.statusText ||
+        "Erro ao importar PDF.";
+      throw new Error(msg);
     }
 
-    let validadeBr = window.prompt(
-      "Informe a data de validade da tabela (dd/mm/aaaa):"
+    const {
+      total_linhas_pdf,
+      inseridos,
+      atualizados,
+      lista,
+      fornecedor,
+      validade_tabela,
+    } = data;
+
+    alert(
+      [
+        `Arquivo: ${file.name}`,
+        `Tipo: ${lista || tipo}`,
+        fornecedor ? `Fornecedor: ${fornecedor}` : null,
+        `Validade da tabela: ${validade_tabela || validadeISO}`,
+        `Linhas no PDF: ${total_linhas_pdf ?? "—"}`,
+        `Produtos novos: ${inseridos ?? "—"}`,
+        `Produtos atualizados: ${atualizados ?? "—"}`,
+      ]
+        .filter(Boolean)
+        .join("\n")
     );
-    if (!validadeBr) return;
-
-    const validadeISO = parseDateBrToISO(validadeBr);
-    if (!validadeISO) {
-      alert("Data de validade inválida. Use o formato dd/mm/aaaa.");
-      return;
-    }
-
-    inputFile.onchange = async () => {
-      const file = inputFile.files[0];
-      inputFile.value = "";
-      if (!file) return;
-
-      try {
-        const base = await resolveProdutosEndpoint().catch(() => null);
-        if (!base) {
-          toast("Não consegui resolver o endpoint de produtos.");
-          return;
-        }
-
-        const url = `${base}/importar-lista`;
-        const formData = new FormData();
-        formData.append("tipo_lista", tipo);
-        formData.append("validade_tabela", validadeISO);
-        formData.append("file", file);
-
-        const resp = await fetch(url, {
-          method: "POST",
-          body: formData,
-        });
-
-        let data = {};
-        try {
-          data = await resp.json();
-        } catch (_) {
-          data = {};
-        }
-
-        if (!resp.ok) {
-          const msg =
-            data.detail ||
-            data.message ||
-            resp.statusText ||
-            "Erro ao importar PDF.";
-          alert(msg);
-          return;
-        }
-
-        const {
-          total_linhas_pdf,
-          inseridos,
-          atualizados,
-          lista,
-          fornecedor,
-        } = data;
-
-        alert(
-          [
-            `Arquivo: ${file.name}`,
-            `Tipo: ${lista || tipo}`,
-            fornecedor ? `Fornecedor: ${fornecedor}` : null,
-            `Validade da tabela: ${validadeISO}`,
-            `Linhas no PDF: ${total_linhas_pdf}`,
-            `Produtos novos: ${inseridos}`,
-            `Produtos atualizados: ${atualizados}`,
-          ]
-            .filter(Boolean)
-            .join("\n")
-        );
-      } catch (err) {
-        console.error(err);
-        alert(err.message || "Erro inesperado ao importar PDF.");
-      }
-    };
-
-    inputFile.click();
-  });
+  } catch (e) {
+    console.error(e);
+    toast(e.message || "Erro ao importar PDF.");
+  }
 }
 
+function setupImportarPdf() {
+  const btnImportar = $("btn-importar");
+  const modal = $("import-modal");
+  const btnClose = $("import-close");
+  const btnCancel = $("import-cancel");
+  const btnConfirm = $("import-confirm");
+  const inputArquivo = $("import_arquivo");
+  const selectTipo = $("import_tipo_lista");
+  const inputValidade = $("import_validade");
+
+  if (!btnImportar || !modal || !inputArquivo) {
+    console.warn("[produto] elementos do modal de importação não encontrados.");
+    return;
+  }
+
+  const openModal = () => {
+    if (selectTipo) selectTipo.value = "";
+    if (inputValidade) inputValidade.value = "";
+    inputArquivo.value = "";
+    modal.classList.remove("hidden");
+  };
+
+  const closeModal = () => {
+    modal.classList.add("hidden");
+  };
+
+  btnImportar.addEventListener("click", () => {
+    openModal();
+  });
+
+  btnClose?.addEventListener("click", () => {
+    closeModal();
+  });
+
+  btnCancel?.addEventListener("click", () => {
+    closeModal();
+  });
+
+  // clicar fora da caixa fecha o modal
+  modal.addEventListener("click", (ev) => {
+    if (ev.target === modal) {
+      closeModal();
+    }
+  });
+
+  btnConfirm?.addEventListener("click", async () => {
+    const file = inputArquivo.files && inputArquivo.files[0];
+    await uploadListaPdf(file);
+    // se não der erro, uploadListaPdf mostra alert; aqui só fechamos
+    closeModal();
+  });
+}
 // ---------- Init ----------
 document.addEventListener("DOMContentLoaded", async () => {
   try {

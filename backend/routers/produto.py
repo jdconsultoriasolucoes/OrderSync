@@ -145,10 +145,11 @@ async def importar_lista(
     if not file.filename.lower().endswith(".pdf"):
         raise HTTPException(status_code=400, detail="O arquivo precisa ser um PDF.")
 
-    tipo = tipo_lista.upper().strip()
-    if tipo in ("INS", "INSUMO"):
+    tipo_raw = tipo_lista.upper().strip()
+
+    if tipo_raw in ("INS", "INSUMO", "INSUMOS"):
         tipo = "INSUMOS"
-    elif tipo in ("PET", "PETS"):
+    elif tipo_raw in ("PET", "PETS", "PET"):
         tipo = "PET"
     else:
         raise HTTPException(

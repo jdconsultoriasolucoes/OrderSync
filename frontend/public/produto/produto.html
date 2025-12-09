@@ -199,6 +199,47 @@
     </div>
   </div>
 
+  <!-- Modal de importação de lista de preços -->
+  <div id="import-modal" class="modal hidden">
+    <div class="modal-dialog">
+      <div class="modal-header">
+        <div class="modal-title">Importar lista de preços (PDF)</div>
+        <button id="import-close" class="icon-btn" title="Fechar">✕</button>
+      </div>
+
+      <div class="modal-body">
+        <div class="grid row">
+          <div class="col-4">
+            <label for="import_tipo_lista">Tipo da lista</label>
+            <select id="import_tipo_lista">
+              <option value="">Selecione...</option>
+              <option value="INSUMOS">INSUMOS</option>
+              <option value="PET">PET</option>
+            </select>
+          </div>
+
+          <div class="col-4">
+            <label for="import_validade">Validade da tabela</label>
+            <input id="import_validade" type="date" />
+          </div>
+
+          <div class="col-4">
+            <label for="import_arquivo">Arquivo PDF</label>
+            <input id="import_arquivo" type="file" accept="application/pdf" />
+          </div>
+        </div>
+        <div class="hint">
+          Selecione o PDF da Votorantim, defina o tipo da lista e a validade da tabela antes de importar.
+        </div>
+      </div>
+
+      <div class="modal-footer">
+        <button id="import-cancel" class="ghost">Cancelar</button>
+        <button id="import-confirm" class="primary">Importar</button>
+      </div>
+    </div>
+  </div>
+
   <!-- Modal de pesquisa -->
   <div id="search-modal" class="modal hidden">
     <div class="modal-dialog">
