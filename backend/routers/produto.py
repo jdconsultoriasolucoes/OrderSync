@@ -1,9 +1,13 @@
-from fastapi import APIRouter, UploadFile, File, Form, HTTPException
+from fastapi import APIRouter, UploadFile, File, Form, HTTPException, Request
 from typing import Optional
 from datetime import date
 from pydantic import BaseModel
 
 from database import SessionLocal
+from sqlalchemy.orm import Session
+
+from services.produto_pdf_data import parse_lista_precos
+from services.produto_pdf import importar_pdf_para_produto
 
 from schemas.produto import (
     ProdutoV2Create,
@@ -127,13 +131,17 @@ def consultar_anteriores(produto_id: int):
 @router.post(
     "/importar-lista",
     summary="Importar lista de preços via PDF",
+    description="Importa PDF (INSUMOS/PET), grava na t_preco_produto_pdf_v2 e atualiza produtos.",
 )
 async def importar_lista(
+    request: Request,
     tipo_lista: str = Form(..., description="Tipo de lista: INSUMOS ou PET"),
     validade_tabela: Optional[date] = Form(None),
     file: UploadFile = File(...),
-    db: Session = Depends(get_db),
 ):
+    # pega a sessão criada pelo middleware (database.SessionLocal)
+    db: Session = request.state.db
+
     if not file.filename.lower().endswith(".pdf"):
         raise HTTPException(status_code=400, detail="O arquivo precisa ser um PDF.")
 
@@ -159,11 +167,8 @@ async def importar_lista(
             detail="Nenhuma linha válida encontrada no PDF.",
         )
 
-    # <<< AQUI: aplica a validade vinda do front em todas as linhas >>>
-    if validade_tabela is not None:
-        df["validade_tabela"] = validade_tabela
-    else:
-        df["validade_tabela"] = None
+    # aplica a validade vinda do front em todas as linhas da lista
+    df["validade_tabela"] = validade_tabela
 
     resumo = importar_pdf_para_produto(db, df)
 
