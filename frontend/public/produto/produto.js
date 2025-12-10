@@ -511,12 +511,31 @@ async function uploadListaPdf(file) {
 
     const {
       total_linhas_pdf,
-      inseridos,
-      atualizados,
       lista,
       fornecedor,
       validade_tabela,
+      sync,
     } = data;
+
+    // Compatibilidade com API nova (sync) e antiga (inseridos/atualizados na raiz)
+    let inseridos = data.inseridos ?? 0;
+    let atualizados = data.atualizados ?? 0;
+    let inativados = 0;
+
+    if (sync && Array.isArray(sync.grupos)) {
+      inseridos = sync.grupos.reduce(
+        (acc, g) => acc + (g.inseridos || 0),
+        0
+      );
+      atualizados = sync.grupos.reduce(
+        (acc, g) => acc + (g.atualizados || 0),
+        0
+      );
+      inativados = sync.grupos.reduce(
+        (acc, g) => acc + (g.inativados || 0),
+        0
+      );
+    }
 
     alert(
       [
@@ -525,8 +544,9 @@ async function uploadListaPdf(file) {
         fornecedor ? `Fornecedor: ${fornecedor}` : null,
         `Validade da tabela: ${validade_tabela || validadeISO}`,
         `Linhas no PDF: ${total_linhas_pdf ?? "—"}`,
-        `Produtos novos: ${inseridos ?? "—"}`,
-        `Produtos atualizados: ${atualizados ?? "—"}`,
+        `Produtos novos: ${inseridos || 0}`,
+        `Produtos atualizados: ${atualizados || 0}`,
+        `Produtos inativados: ${inativados || 0}`,
       ]
         .filter(Boolean)
         .join("\n")

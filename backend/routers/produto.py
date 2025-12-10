@@ -7,7 +7,6 @@ from database import SessionLocal
 from sqlalchemy.orm import Session
 
 from services.produto_pdf_data import parse_lista_precos
-from services.produto_pdf import importar_pdf_para_produto
 
 from schemas.produto import (
     ProdutoV2Create,
@@ -168,19 +167,27 @@ async def importar_lista(
             detail="Nenhuma linha válida encontrada no PDF.",
         )
 
-    # aplica a validade vinda do front em todas as linhas da lista
+    
     df["validade_tabela"] = validade_tabela
 
-    resumo = importar_pdf_para_produto(db, df)
+    
+    resumo = importar_pdf_para_produto(
+        db,
+        df,
+        nome_arquivo=file.filename,
+        usuario="IMPORT_MANUAL",  # depois trocar pelo usuário logado
+    )
+
+    sync = resumo.get("sync", {})
 
     return {
         "arquivo": file.filename,
         "tipo_lista": tipo,
         "validade_tabela": validade_tabela,
         "total_linhas_pdf": int(len(df)),
-        "total_linhas": resumo.get("total_linhas", int(len(df))),
-        "inseridos": resumo.get("inseridos", 0),
-        "atualizados": resumo.get("atualizados", 0),
+        "total_linhas": resumo.get("total_linhas"),
         "lista": resumo.get("lista"),
         "fornecedor": resumo.get("fornecedor"),
+        # detalhamento da sincronização
+        "sync": sync,
     }

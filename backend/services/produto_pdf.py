@@ -5,7 +5,7 @@ from sqlalchemy.orm import Session
 from sqlalchemy import text
 from fastapi import HTTPException
 from datetime import date
-
+from services.produto_regras import sincronizar_produtos_com_listas_ativas
 from models.produto import ProdutoV2, ImpostoV2
 from schemas.produto import (
     ProdutoV2Create,
@@ -290,9 +290,9 @@ def limpar_preco_pdf_por_tipo(
     fornecedor: Optional[str] = None,
 ) -> None:
     """
-    Apaga registros antigos da t_preco_produto_pdf
-    para o mesmo tipo de lista (INSUMOS / PET) e,
-    opcionalmente, mesmo fornecedor.
+    Em vez de DELETAR, marca como inativas (ativo = FALSE)
+    todas as linhas da t_preco_produto_pdf_v2
+    para o mesmo (lista, fornecedor).
     """
     lista = lista.upper().strip()
     conds = ["lista = :lista"]
@@ -303,22 +303,38 @@ def limpar_preco_pdf_por_tipo(
         params["fornecedor"] = fornecedor
 
     where_sql = " AND ".join(conds)
-    sql = text(f"DELETE FROM t_preco_produto_pdf_v2 WHERE {where_sql}")
+
+    sql = text(
+        f"""
+        UPDATE public.t_preco_produto_pdf_v2
+           SET ativo = FALSE
+         WHERE {where_sql}
+           AND ativo = TRUE
+        """
+    )
+
     db.execute(sql, params)
     db.commit()
 
 
-def salvar_t_preco_produto_pdf(db: Session, df: pd.DataFrame) -> None:
+def salvar_t_preco_produto_pdf(
+    db: Session,
+    df: pd.DataFrame,
+    nome_arquivo: Optional[str] = None,
+    usuario: Optional[str] = None,
+) -> None:
     """
     Insere o DataFrame na tabela t_preco_produto_pdf_v2.
-    Agora também grava validade_tabela (se vier no DF).
+    - Mantém histórico por data_ingestao.
+    - Usa flag 'ativo' para marcar a carga atual.
+    - Guarda nome do arquivo e usuário.
     """
     if df.empty:
         return
 
     sql = text(
         """
-        INSERT INTO t_preco_produto_pdf_v2 (
+        INSERT INTO public.t_preco_produto_pdf_v2 (
             fornecedor,
             lista,
             familia,
@@ -328,7 +344,10 @@ def salvar_t_preco_produto_pdf(db: Session, df: pd.DataFrame) -> None:
             preco_sc,
             page,
             validade_tabela,
-            data_ingestao
+            data_ingestao,
+            nome_arquivo,
+            ativo,
+            usuario
         )
         VALUES (
             :fornecedor,
@@ -340,7 +359,10 @@ def salvar_t_preco_produto_pdf(db: Session, df: pd.DataFrame) -> None:
             :preco_sc,
             :page,
             :validade_tabela,
-            :data_ingestao
+            :data_ingestao,
+            :nome_arquivo,
+            :ativo,
+            :usuario
         )
         """
     )
@@ -348,24 +370,32 @@ def salvar_t_preco_produto_pdf(db: Session, df: pd.DataFrame) -> None:
     registros = df.to_dict(orient="records")
 
     for row in registros:
-        # garante data_ingestao
-        row.setdefault("data_ingestao", date.today())
-        # garante validade_tabela (pode vir None)
+        # defaults
         row.setdefault("validade_tabela", None)
+        row.setdefault("data_ingestao", date.today())
+        row.setdefault("nome_arquivo", nome_arquivo)
+        row.setdefault("ativo", True)
+        row.setdefault("usuario", usuario)
 
         db.execute(sql, row)
 
     db.commit()
 
-def importar_pdf_para_produto(db: Session, df: pd.DataFrame) -> Dict[str, Any]:
+def importar_pdf_para_produto(
+    db: Session,
+    df: pd.DataFrame,
+    nome_arquivo: Optional[str] = None,
+    usuario: Optional[str] = None,
+) -> Dict[str, Any]:
     """
     Fluxo completo para importação da lista:
-      1) limpar t_preco_produto_pdf do mesmo tipo
-      2) salvar a nova ingestão
-      3) aplicar na t_cadastro_produto_v2 via importar_lista_df
+      1) marcar como inativas as linhas antigas da t_preco_produto_pdf_v2
+         para o mesmo (fornecedor, lista)
+      2) salvar a nova ingestão (ativo = TRUE)
+      3) sincronizar com t_cadastro_produto_v2 (atualizar, inativar, inserir)
     """
     if df.empty:
-        return {"total_linhas": 0, "inseridos": 0, "atualizados": 0}
+        return {"total_linhas": 0, "lista": None, "fornecedor": None, "sync": {}}
 
     # assume que toda a lista tem o mesmo "lista"/"fornecedor"
     lista = str(df["lista"].iloc[0]).upper().strip()
@@ -373,19 +403,28 @@ def importar_pdf_para_produto(db: Session, df: pd.DataFrame) -> Dict[str, Any]:
     if "fornecedor" in df.columns and not pd.isna(df["fornecedor"].iloc[0]):
         fornecedor = str(df["fornecedor"].iloc[0]).strip() or None
 
-    # 1) limpa a tabela intermediária para esse tipo
+    # 1) desativar cargas antigas daquele (fornecedor, lista)
     limpar_preco_pdf_por_tipo(db, lista=lista, fornecedor=fornecedor)
 
-    # 2) grava de novo
-    salvar_t_preco_produto_pdf(db, df)
+    # 2) salvar nova ingestão na intermediária, marcando ativo = TRUE
+    salvar_t_preco_produto_pdf(
+        db,
+        df,
+        nome_arquivo=nome_arquivo,
+        usuario=usuario,
+    )
 
-    # 3) aplica na tabela de produtos (upsert)
-    resumo = importar_lista_df(db, df)
-    resumo["lista"] = lista
-    if fornecedor:
-        resumo["fornecedor"] = fornecedor
+    # 3) sincronizar produtos com a lista ativa
+    resumo_sync = sincronizar_produtos_com_listas_ativas(
+        db,
+        fornecedor=fornecedor,
+        lista=lista,
+    )
 
-    # só para manter simetria, devolve também o total de linhas do DF
-    resumo.setdefault("total_linhas", int(len(df)))
+    return {
+        "lista": lista,
+        "fornecedor": fornecedor,
+        "total_linhas": int(len(df)),
+        "sync": resumo_sync,
+    }
 
-    return resumo

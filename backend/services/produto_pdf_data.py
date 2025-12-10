@@ -12,15 +12,24 @@ import pandas as pd
 
 def normalize_num(s):
     """
-    Converte string com formato brasileiro (1.234,56) para float.
-    Se não conseguir, retorna None.
+    Converte valores do PDF para número, entendendo:
+      - 3.457      -> 3457
+      - 3.457,89   -> 3457.89
+      - 3457       -> 3457
+      - "3 457,00" -> 3457.00
     """
     if s is None:
         return None
     s = str(s).strip()
     if not s:
         return None
+
+    # remove espaços “esquisitos”
+    s = s.replace(" ", "")
+
+    # remove pontos de milhar e troca vírgula por ponto
     s = s.replace(".", "").replace(",", ".")
+
     try:
         return float(s)
     except ValueError:
