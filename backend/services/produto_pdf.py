@@ -397,6 +397,36 @@ def importar_pdf_para_produto(
     if df.empty:
         return {"total_linhas": 0, "lista": None, "fornecedor": None, "sync": {}}
 
+    chaves = ["lista", "fornecedor", "codigo"]
+    for col in chaves:
+        if col not in df.columns:
+            raise HTTPException(
+                status_code=400,
+                detail={
+                    "tipo": "ERRO_COLUNAS",
+                    "mensagem": f"Coluna obrigatória ausente no PDF: {col}",
+                },
+            )
+
+    dups = df[df.duplicated(subset=chaves, keep=False)].copy()
+
+    if not dups.empty:
+        resumo = (
+            dups.groupby(chaves)
+            .size()
+            .reset_index(name="qtd")
+            .to_dict(orient="records")
+        )
+
+        raise HTTPException(
+            status_code=400,
+            detail={
+                "tipo": "DUPLICIDADE_PDF",
+                "mensagem": "Existem códigos duplicados na mesma lista/fornecedor no PDF.",
+                "erros": resumo,
+            },
+        )
+    
     # assume que toda a lista tem o mesmo "lista"/"fornecedor"
     lista = str(df["lista"].iloc[0]).upper().strip()
     fornecedor = None
