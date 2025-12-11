@@ -1,13 +1,14 @@
-from fastapi import APIRouter, UploadFile, File, Form, HTTPException, Request
+from fastapi import APIRouter, UploadFile, File, Form, HTTPException, Request, Query
 from typing import Optional
 from datetime import date
 from pydantic import BaseModel
+from fastapi.responses import Response
 
 from database import SessionLocal
 from sqlalchemy.orm import Session
 
 from services.produto_pdf_data import parse_lista_precos
-
+from services.produto_relatorio import gerar_pdf_relatorio_lista
 from schemas.produto import (
     ProdutoV2Create,
     ProdutoV2Update,
@@ -191,3 +192,19 @@ async def importar_lista(
         # detalhamento da sincronização
         "sync": sync,
     }
+
+@router.get("/relatorio-lista", response_class=Response)
+async def relatorio_lista(
+    request: Request,
+    fornecedor: str = Query(...),
+    lista: str = Query(...),
+):
+    db: Session = request.state.db
+    pdf_bytes = gerar_pdf_relatorio_lista(db, fornecedor, lista)
+    return Response(
+        content=pdf_bytes,
+        media_type="application/pdf",
+        headers={
+            "Content-Disposition": f'inline; filename="relatorio_{fornecedor}_{lista}.pdf"'
+        },
+    )

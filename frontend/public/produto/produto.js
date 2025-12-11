@@ -537,20 +537,30 @@ async function uploadListaPdf(file) {
       );
     }
 
-    alert(
-      [
-        `Arquivo: ${file.name}`,
-        `Tipo: ${lista || tipo}`,
-        fornecedor ? `Fornecedor: ${fornecedor}` : null,
-        `Validade da tabela: ${validade_tabela || validadeISO}`,
-        `Linhas no PDF: ${total_linhas_pdf ?? "—"}`,
-        `Produtos novos: ${inseridos || 0}`,
-        `Produtos atualizados: ${atualizados || 0}`,
-        `Produtos inativados: ${inativados || 0}`,
-      ]
-        .filter(Boolean)
-        .join("\n")
+    // --- mensagem no frontend ---
+    const totalLinhas = total_linhas_pdf ?? 0;
+    toast(
+      `Ingestão realizada com sucesso: ${totalLinhas} linhas (${inseridos} novos / ${atualizados} atualizados / ${inativados} inativados).`
     );
+
+    // --- opção de baixar o relatório em PDF ---
+    const listaFinal = lista || tipo;
+    const fornecedorFinal = fornecedor || "";
+
+    if (listaFinal && fornecedorFinal) {
+      const relatorioUrl = `${base}/relatorio-lista?fornecedor=${encodeURIComponent(
+        fornecedorFinal
+      )}&lista=${encodeURIComponent(listaFinal)}`;
+
+      const querPdf = confirm(
+        "Ingestão realizada com sucesso.\n\nDeseja baixar o relatório em PDF desta lista?"
+      );
+
+      if (querPdf) {
+        window.open(relatorioUrl, "_blank");
+      }
+    }
+    
   } catch (e) {
     console.error(e);
     toast(e.message || "Erro ao importar PDF.");
