@@ -481,7 +481,12 @@ async function uploadListaPdf(file) {
     return;
   }
 
-  const url = `${base}/importar-lista`;
+  const importBase = base
+    .replace("/produtos_v2", "/produto_v2")
+    .replace("/produtos", "/produto");
+
+  const url = `${importBase}/importar-lista`;
+
   const formData = new FormData();
   formData.append("tipo_lista", tipo);           // "INSUMOS" ou "PET"
   formData.append("validade_tabela", validadeISO); // yyyy-mm-dd do input date
@@ -548,7 +553,7 @@ async function uploadListaPdf(file) {
     const fornecedorFinal = fornecedor || "";
 
     if (listaFinal && fornecedorFinal) {
-      const relatorioUrl = `${base}/relatorio-lista?fornecedor=${encodeURIComponent(
+      const relatorioUrl = `${importBase}/relatorio-lista?fornecedor=${encodeURIComponent(
         fornecedorFinal
       )}&lista=${encodeURIComponent(listaFinal)}`;
 
@@ -572,6 +577,155 @@ function setupImportarPdf() {
   const btnImportar = $("btn-importar");
   if (!btnImportar) return;
 
+  // evita duplicar listeners se setupImportarPdf for chamado mais de 1x
+  if (btnImportar.dataset.wiredImportPdf === "1") return;
+  btnImportar.dataset.wiredImportPdf = "1";
+
+  // ---------- Helpers locais ----------
+  const normalizeTipo = (tipoRaw) => {
+    if (!tipoRaw) return null;
+    let tipo = String(tipoRaw).trim().toUpperCase();
+    if (["INS", "INSUMO"].includes(tipo)) tipo = "INSUMOS";
+    else if (["PET", "PETS"].includes(tipo)) tipo = "PET";
+    if (!["INSUMOS", "PET"].includes(tipo)) return null;
+    return tipo;
+  };
+
+  const normalizeValidISO = (val) => {
+    if (!val) return null;
+    const s = String(val).trim();
+    // se vier do input type="date", já é yyyy-mm-dd
+    if (/^\d{4}-\d{2}-\d{2}$/.test(s)) return s;
+    // se vier dd/mm/aaaa (seu parse já existe)
+    return parseDateBrToISO(s);
+  };
+
+  const doImport = async ({ tipo, validadeISO, file }) => {
+    if (!tipo) {
+      alert("Tipo inválido. Use INSUMOS ou PET.");
+      return;
+    }
+    if (!validadeISO) {
+      alert("Data de validade inválida. Use dd/mm/aaaa ou selecione no calendário.");
+      return;
+    }
+    if (!file) {
+      alert("Selecione um arquivo PDF.");
+      return;
+    }
+
+    try {
+      const base = await resolveProdutosEndpoint().catch(() => null);
+      if (!base) {
+        toast("Não consegui resolver o endpoint de produtos.");
+        return;
+      }
+
+      // força usar /produto em vez de /produtos para a importação
+      const importBase = base
+        .replace("/produtos_v2", "/produto_v2")
+        .replace("/produtos", "/produto");
+
+      const url = `${importBase}/importar-lista`;
+      const formData = new FormData();
+      formData.append("tipo_lista", tipo);
+      formData.append("validade_tabela", validadeISO); // yyyy-mm-dd
+      formData.append("file", file);
+
+      const resp = await fetch(url, { method: "POST", body: formData });
+
+      let data = {};
+      try { data = await resp.json(); } catch (_) { data = {}; }
+
+      if (!resp.ok) {
+        const msg = data.detail || data.message || resp.statusText || "Erro ao importar PDF.";
+        alert(msg);
+        return;
+      }
+
+      const { total_linhas_pdf, lista, fornecedor, sync } = data;
+
+      // Compatibilidade com API nova (sync) e antiga (inseridos/atualizados na raiz)
+      let inseridos = data.inseridos ?? 0;
+      let atualizados = data.atualizados ?? 0;
+      let inativados = 0;
+
+      if (sync && Array.isArray(sync.grupos)) {
+        inseridos = sync.grupos.reduce((acc, g) => acc + (g.inseridos || 0), 0);
+        atualizados = sync.grupos.reduce((acc, g) => acc + (g.atualizados || 0), 0);
+        inativados = sync.grupos.reduce((acc, g) => acc + (g.inativados || 0), 0);
+      }
+
+      const totalLinhas = total_linhas_pdf ?? 0;
+      toast(
+        `Ingestão realizada com sucesso: ${totalLinhas} linhas (${inseridos} novos / ${atualizados} atualizados / ${inativados} inativados).`
+      );
+
+      // opção de baixar o relatório em PDF
+      const listaFinal = lista || tipo;
+      const fornecedorFinal = fornecedor || "";
+
+      if (listaFinal && fornecedorFinal) {
+        const relatorioUrl = `${importBase}/relatorio-lista?fornecedor=${encodeURIComponent(
+          fornecedorFinal
+        )}&lista=${encodeURIComponent(listaFinal)}`;
+
+        const querPdf = confirm(
+          "Ingestão realizada com sucesso.\n\nDeseja baixar o relatório em PDF desta lista?"
+        );
+
+        if (querPdf) window.open(relatorioUrl, "_blank");
+      }
+
+      return true;
+    } catch (err) {
+      console.error(err);
+      alert(err.message || "Erro inesperado ao importar PDF.");
+      return false;
+    }
+  };
+
+  // ---------- Caminho NOVO (modal), se existir ----------
+  const modal = $("import-modal");
+  const modalTipo = $("import_tipo_lista");
+  const modalValidade = $("import_validade");
+  const modalArquivo = $("import_arquivo");
+  const modalConfirm = $("import-confirm");
+  const modalCancel = $("import-cancel");
+  const modalClose = $("import-close");
+
+  const openModal = () => modal?.classList.remove("hidden");
+  const closeModal = () => modal?.classList.add("hidden");
+
+  if (modal && modalTipo && modalValidade && modalArquivo && modalConfirm) {
+    btnImportar.addEventListener("click", () => {
+      // opcional: limpar ao abrir
+      // modalTipo.value = "";
+      // modalValidade.value = "";
+      // modalArquivo.value = "";
+      openModal();
+    });
+
+    modalCancel?.addEventListener("click", closeModal);
+    modalClose?.addEventListener("click", closeModal);
+
+    modalConfirm.addEventListener("click", async () => {
+      const tipo = normalizeTipo(modalTipo.value);
+      const validadeISO = normalizeValidISO(modalValidade.value);
+      const file = modalArquivo.files?.[0];
+
+      const ok = await doImport({ tipo, validadeISO, file });
+      if (ok) {
+        // opcional: fecha e reseta se deu certo
+        modalArquivo.value = "";
+        closeModal();
+      }
+    });
+
+    return; // IMPORTANTÍSSIMO: se tem modal, não monta o fluxo antigo
+  }
+
+  // ---------- Caminho ANTIGO (fallback): prompt + input invisível ----------
   const inputFile = document.createElement("input");
   inputFile.type = "file";
   inputFile.accept = "application/pdf";
@@ -579,135 +733,26 @@ function setupImportarPdf() {
   document.body.appendChild(inputFile);
 
   btnImportar.addEventListener("click", () => {
-    let tipo = window.prompt("Qual lista será importada? (INSUMOS ou PET)");
-    if (!tipo) return;
-
-    tipo = tipo.trim().toUpperCase();
-    if (["INS", "INSUMO"].includes(tipo)) {
-      tipo = "INSUMOS";
-    } else if (["PET", "PETS"].includes(tipo)) {
-      tipo = "PET";
-    }
-
-    if (!["INSUMOS", "PET"].includes(tipo)) {
-      alert("Tipo inválido. Use INSUMOS ou PET.");
+    let tipoRaw = window.prompt("Qual lista será importada? (INSUMOS ou PET)");
+    const tipo = normalizeTipo(tipoRaw);
+    if (!tipo) {
+      if (tipoRaw != null) alert("Tipo inválido. Use INSUMOS ou PET.");
       return;
     }
 
-    let validadeBr = window.prompt(
-      "Informe a data de validade da tabela (dd/mm/aaaa):"
-    );
-    if (!validadeBr) {
-      alert("Data de validade é obrigatória.");
-      return;
-    }
-
-    validadeBr = validadeBr.trim();
-    const validadeISO = parseDateBrToISO(validadeBr);
+    let validadeBr = window.prompt("Informe a data de validade da tabela (dd/mm/aaaa):");
+    const validadeISO = normalizeValidISO(validadeBr);
     if (!validadeISO) {
       alert("Data de validade inválida. Use o formato dd/mm/aaaa.");
       return;
     }
 
     inputFile.onchange = async () => {
-      const file = inputFile.files[0];
+      const file = inputFile.files?.[0];
       inputFile.value = "";
       if (!file) return;
 
-      try {
-        const base = await resolveProdutosEndpoint().catch(() => null);
-        if (!base) {
-          toast("Não consegui resolver o endpoint de produtos.");
-          return;
-        }
-
-        // força usar /produto em vez de /produtos para a importação
-        const importBase = base
-          .replace("/produtos_v2", "/produto_v2")
-          .replace("/produtos", "/produto");
-
-        const url = `${importBase}/importar-lista`;
-        const formData = new FormData();
-        formData.append("tipo_lista", tipo);
-        formData.append("validade_tabela", validadeISO); // yyyy-mm-dd
-        formData.append("file", file);
-
-        const resp = await fetch(url, {
-          method: "POST",
-          body: formData,
-        });
-
-        let data = {};
-        try {
-          data = await resp.json();
-        } catch (_) {
-          data = {};
-        }
-
-        if (!resp.ok) {
-          const msg =
-            data.detail ||
-            data.message ||
-            resp.statusText ||
-            "Erro ao importar PDF.";
-          alert(msg);
-          return;
-        }
-
-        const {
-          total_linhas_pdf,
-          lista,
-          fornecedor,
-          validade_tabela,
-          sync,
-        } = data;
-
-        // Compatibilidade com API nova (sync) e antiga (inseridos/atualizados na raiz)
-        let inseridos = data.inseridos ?? 0;
-        let atualizados = data.atualizados ?? 0;
-        let inativados = 0;
-
-        if (sync && Array.isArray(sync.grupos)) {
-          inseridos = sync.grupos.reduce(
-            (acc, g) => acc + (g.inseridos || 0),
-            0
-          );
-          atualizados = sync.grupos.reduce(
-            (acc, g) => acc + (g.atualizados || 0),
-            0
-          );
-          inativados = sync.grupos.reduce(
-            (acc, g) => acc + (g.inativados || 0),
-            0
-          );
-        }
-
-        const totalLinhas = total_linhas_pdf ?? 0;
-        toast(
-          `Ingestão realizada com sucesso: ${totalLinhas} linhas (${inseridos} novos / ${atualizados} atualizados / ${inativados} inativados).`
-        );
-
-        // opção de baixar o relatório em PDF
-        const listaFinal = lista || tipo;
-        const fornecedorFinal = fornecedor || "";
-
-        if (listaFinal && fornecedorFinal) {
-          const relatorioUrl = `${importBase}/relatorio-lista?fornecedor=${encodeURIComponent(
-            fornecedorFinal
-          )}&lista=${encodeURIComponent(listaFinal)}`;
-
-          const querPdf = confirm(
-            "Ingestão realizada com sucesso.\n\nDeseja baixar o relatório em PDF desta lista?"
-          );
-
-          if (querPdf) {
-            window.open(relatorioUrl, "_blank");
-          }
-        }
-      } catch (err) {
-        console.error(err);
-        alert(err.message || "Erro inesperado ao importar PDF.");
-      }
+      await doImport({ tipo, validadeISO, file });
     };
 
     inputFile.click();
@@ -767,7 +812,7 @@ document.addEventListener("DOMContentLoaded", async () => {
     toast("Você já pode editar os campos e salvar.");
   });
 
-  $("btn-pesquisar")?.addEventListener("click", () => {
+  $("btn-buscar")?.addEventListener("click", () => {
     const modal = $("search-modal");
     if (modal && modal.showModal) {
       modal.showModal();
