@@ -570,7 +570,7 @@ async function uploadListaPdf(file) {
         window.open(relatorioUrl, "_blank");
       }
     }
-    
+
   } catch (e) {
     console.error(e);
     toast(e.message || "Erro ao importar PDF.");
@@ -675,11 +675,13 @@ function setupImportarPdf() {
           fornecedorFinal
         )}&lista=${encodeURIComponent(listaFinal)}`;
 
-        const querPdf = confirm(
-          "Ingestão realizada com sucesso.\n\nDeseja baixar o relatório em PDF desta lista?"
-        );
-
-        if (querPdf) window.open(relatorioUrl, "_blank");
+        // CHAMA NOVA UI DE SUCESSO
+        handleSuccessModal({
+          total: totalLinhas,
+          novos: inseridos,
+          atualizados: atualizados,
+          inativados: inativados
+        }, relatorioUrl);
       }
 
       return true;
@@ -795,7 +797,7 @@ document.addEventListener("DOMContentLoaded", async () => {
             `?q=${encodeURIComponent(produto.codigo_supra)}&limit=1`
           );
           alvoId = probe && probe.length && probe[0].id ? probe[0].id : null;
-        } catch {}
+        } catch { }
       }
 
       if (alvoId) {
@@ -867,3 +869,51 @@ document.addEventListener("DOMContentLoaded", async () => {
     console.warn("[produto] não foi possível carregar produto inicial:", e);
   }
 });
+
+// ---------- FUNÇÃO AUXILIAR: MODAL DE SUCESSO ----------
+function handleSuccessModal(stats, relatorioUrl) {
+  const successModal = document.getElementById("import-success-modal");
+  if (!successModal) return;
+
+  if (document.getElementById("resumo-total")) document.getElementById("resumo-total").innerText = stats.total;
+  if (document.getElementById("resumo-inseridos")) document.getElementById("resumo-inseridos").innerText = stats.novos;
+  if (document.getElementById("resumo-atualizados")) document.getElementById("resumo-atualizados").innerText = stats.atualizados;
+  if (document.getElementById("resumo-inativados")) document.getElementById("resumo-inativados").innerText = stats.inativados;
+
+  successModal.classList.remove("hidden");
+
+  const btnClose = document.getElementById("import-success-close");
+  const btnCancel = document.getElementById("import-success-cancel"); // botão "Fechar"
+  const btnDownload = document.getElementById("import-success-download");
+
+  const closeAction = () => successModal.classList.add("hidden");
+
+  // Limpa ouvintes antigos (clones) para não acumular
+  if (btnClose) {
+    const newBtn = btnClose.cloneNode(true);
+    btnClose.parentNode.replaceChild(newBtn, btnClose);
+    newBtn.addEventListener("click", closeAction);
+  }
+  if (btnCancel) {
+    const newBtn = btnCancel.cloneNode(true);
+    btnCancel.parentNode.replaceChild(newBtn, btnCancel);
+    newBtn.addEventListener("click", closeAction);
+  }
+
+  if (btnDownload) {
+    const newBtn = btnDownload.cloneNode(true);
+    btnDownload.parentNode.replaceChild(newBtn, btnDownload);
+
+    newBtn.addEventListener("click", () => {
+      // Link temporário para download
+      const a = document.createElement('a');
+      a.href = relatorioUrl;
+      a.download = `relatorio_importacao_${new Date().getTime()}.pdf`;
+      a.target = '_blank';
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      // Não fecha, deixa o usuário fechar
+    });
+  }
+}

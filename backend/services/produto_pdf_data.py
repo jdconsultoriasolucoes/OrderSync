@@ -177,8 +177,8 @@ def parse_lista_precos(
     df = pd.DataFrame(linhas)
 
     if not df.empty:
-        df["lista"] = df["lista"].fillna(lista)
-        df["fornecedor"] = df["fornecedor"].fillna(fornecedor)
+        df["lista"] = df["lista"].fillna(value=lista or "DESCONHECIDO")
+        df["fornecedor"] = df["fornecedor"].fillna(value=fornecedor or "DESCONHECIDO")
         df["data_ingestao"] = date.today()
 
     return df

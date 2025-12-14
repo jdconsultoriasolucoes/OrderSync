@@ -34,6 +34,23 @@ class ProdutoCreatePayload(BaseModel):
     imposto: Optional[ImpostoV2Create] = None
 
 
+@router.get("/relatorio-lista", response_class=Response)
+async def relatorio_lista(
+    request: Request,
+    fornecedor: str = Query(...),
+    lista: str = Query(...),
+):
+    db: Session = request.state.db
+    pdf_bytes = gerar_pdf_relatorio_lista(db, fornecedor, lista)
+    return Response(
+        content=pdf_bytes,
+        media_type="application/pdf",
+        headers={
+            "Content-Disposition": f'inline; filename="relatorio_{fornecedor}_{lista}.pdf"'
+        },
+    )
+
+
 @router.get(
     "",
     response_model=list[ProdutoV2Out],
@@ -193,18 +210,3 @@ async def importar_lista(
         "sync": sync,
     }
 
-@router.get("/relatorio-lista", response_class=Response)
-async def relatorio_lista(
-    request: Request,
-    fornecedor: str = Query(...),
-    lista: str = Query(...),
-):
-    db: Session = request.state.db
-    pdf_bytes = gerar_pdf_relatorio_lista(db, fornecedor, lista)
-    return Response(
-        content=pdf_bytes,
-        media_type="application/pdf",
-        headers={
-            "Content-Disposition": f'inline; filename="relatorio_{fornecedor}_{lista}.pdf"'
-        },
-    )
