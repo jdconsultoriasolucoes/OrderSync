@@ -96,8 +96,13 @@ async function resolveProdutosEndpoint(force = false) {
 
   const cached = !force && localStorage.getItem("ordersync_prod_endpoint");
   if (cached) {
-    PROD_ENDPOINT = cached;
-    return cached;
+    // se o cache for de outro ambiente (DEV), joga fora
+    if (!cached.startsWith(API_BASE)) {
+      localStorage.removeItem("ordersync_prod_endpoint");
+    } else {
+      PROD_ENDPOINT = cached;
+      return cached;
+    }
   }
 
   for (const base of CANDIDATES) {

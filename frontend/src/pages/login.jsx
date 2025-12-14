@@ -1,6 +1,10 @@
+import { useNavigate } from 'react-router-dom'
+
 function Login() {
+  const navigate = useNavigate()
+
   const entrar = () => {
-    window.location.href = "/clientes"
+    navigate('/dashboard')
   }
 
   return (
