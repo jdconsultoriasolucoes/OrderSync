@@ -233,267 +233,274 @@ def coletar_dados_relatorio_lista(
 # -------------------------------------------------
 # Geração de PDF
 # -------------------------------------------------
+# -------------------------------------------------
+# Geração de PDF (Estilo "Pedidão" / Clássico)
+# -------------------------------------------------
+from reportlab.platypus import Table, TableStyle, SimpleDocTemplate, Paragraph, Spacer, Image
+from reportlab.lib.styles import getSampleStyleSheet
+from reportlab.lib import colors
+from reportlab.lib.pagesizes import A4, portrait
+from pathlib import Path
+
+# Paleta "Clássica" (igual pdf_service.py)
+SUPRA_RED = colors.Color(0.78, 0.70, 0.60)       # Bege/Marrom ("Red" no nome legado)
+SUPRA_DARK = colors.Color(0.1, 0.1, 0.1)
+SUPRA_BG_LIGHT = colors.Color(0.95, 0.95, 0.95)
+
 def gerar_pdf_relatorio_lista(
     db: Session,
     fornecedor: str,
     lista: str,
 ) -> bytes:
     """
-    Gera um PDF (bytes) com o relatório de alterações de preço
-    para a combinação (fornecedor, lista).
+    Gera PDF com visual tabular (clean/spreadsheet style) similar ao de Pedidos.
     """
     dados = coletar_dados_relatorio_lista(db, fornecedor, lista)
-
+    
     buffer = BytesIO()
-    c = canvas.Canvas(buffer, pagesize=A4)
-    width, height = A4
+    doc = SimpleDocTemplate(
+        buffer,
+        pagesize=A4,
+        rightMargin=2*cm,
+        leftMargin=2*cm,
+        topMargin=2*cm,
+        bottomMargin=2*cm
+    )
+    
+    elements = []
+    styles = getSampleStyleSheet()
+    
+    # --- LOGO (tentativa de encontrar) ---
+    base_dir = Path(__file__).resolve().parents[2] # backend/../
+    logo_path = None
+    candidates = [
+        base_dir / "frontend" / "public" / "tabela_preco" / "logo_cliente_supra.png",
+        base_dir / "frontend" / "public" / "logo_cliente_supra.png", 
+        base_dir / "frontend" / "public" / "logo.png"
+    ]
+    for cand in candidates:
+        if cand.exists():
+            logo_path = cand
+            break
+            
+    if logo_path:
+        # Logo redimensionado (max width 4cm, max height 2cm)
+        im = Image(str(logo_path))
+        im_w, im_h = im.imageWidth, im.imageHeight
+        aspect = im_h / float(im_w)
+        target_w = 4 * cm
+        target_h = target_w * aspect
+        im.drawWidth = target_w
+        im.drawHeight = target_h
+        im.hAlign = 'RIGHT'
+        elements.append(im)
+        elements.append(Spacer(1, 0.5 * cm))
 
-    # Margens
-    margem_esq = 2 * cm
-    margem_top = height - 2 * cm
-    linha_altura = 14  # px approx
-
-    def nova_pagina():
-        c.showPage()
-
-    # Cabeçalho
-    y = margem_top
-
-    titulo = "Relatório de Alterações de Lista de Preços"
-    c.setFont("Helvetica-Bold", 14)
-    c.drawString(margem_esq, y, titulo)
-    y -= 20
-
-    c.setFont("Helvetica", 10)
-    c.drawString(margem_esq, y, f"Fornecedor: {dados.get('fornecedor') or '-'}")
-    y -= linha_altura
-    c.drawString(margem_esq, y, f"Lista: {dados.get('lista') or '-'}")
-    y -= linha_altura
-
+    # --- TÍTULO ---
+    title_style = styles["Heading1"]
+    title_style.alignment = 1 # Center
+    elements.append(Paragraph("Relatório de Alterações de Lista de Preços", title_style))
+    elements.append(Spacer(1, 0.5 * cm))
+    
+    # --- CABEÇALHO (Metadados) ---
+    # Faremos uma tabela simples de 2 colunas para ficar organizado
     validade = dados.get("validade_tabela")
-    if isinstance(validade, datetime):
-        validade_str = validade.strftime("%d/%m/%Y")
-    elif isinstance(validade, (str,)):
-        validade_str = str(validade)
-    elif validade is not None:
-        try:
-            validade_str = validade.strftime("%d/%m/%Y")  # date
-        except Exception:
-            validade_str = str(validade)
-    else:
-        validade_str = "-"
-
+    val_str = validade.strftime("%d/%m/%Y") if isinstance(validade, datetime) or hasattr(validade, 'strftime') else str(validade or "-")
+    
     data_ing = dados.get("data_ingestao")
-    if isinstance(data_ing, datetime):
-        data_ing_str = data_ing.strftime("%d/%m/%Y %H:%M")
-    elif data_ing is not None:
-        try:
-            data_ing_str = data_ing.strftime("%d/%m/%Y")
-        except Exception:
-            data_ing_str = str(data_ing)
-    else:
-        data_ing_str = "-"
+    ing_str = data_ing.strftime("%d/%m/%Y") if isinstance(data_ing, datetime) or hasattr(data_ing, 'strftime') else str(data_ing or "-")
 
-    c.drawString(margem_esq, y, f"Validade da tabela: {validade_str}")
-    y -= linha_altura
-    c.drawString(margem_esq, y, f"Data da ingestão: {data_ing_str}")
-    y -= linha_altura
-
-    nome_arquivo = dados.get("nome_arquivo") or "-"
-    c.drawString(margem_esq, y, f"Arquivo importado: {nome_arquivo}")
-    y -= linha_altura
-
-    total_itens = dados.get("total_itens_lista") or 0
-    c.drawString(margem_esq, y, f"Itens na lista ativa: {total_itens}")
-    y -= linha_altura * 2
-
-    # Resumo estatístico
+    meta_data = [
+        ["Fornecedor:", dados.get("fornecedor") or "-"],
+        ["Lista:", dados.get("lista") or "-"],
+        ["Validade Tabela:", val_str],
+        ["Data Ingestão:", ing_str],
+        ["Arquivo:", dados.get("nome_arquivo") or "-"],
+        ["Itens Hoje:", str(dados.get("total_itens_lista") or 0)],
+    ]
+    
+    table_meta = Table(meta_data, colWidths=[4*cm, 10*cm])
+    table_meta.setStyle(TableStyle([
+        # ('GRID', (0,0), (-1,-1), 0.5, colors.grey),
+        ('FONTNAME', (0,0), (0,-1), 'Helvetica-Bold'),
+        ('ALIGN', (0,0), (0,-1), 'RIGHT'),
+        ('ALIGN', (1,0), (1,-1), 'LEFT'),
+        ('BOTTOMPADDING', (0,0), (-1,-1), 6),
+    ]))
+    elements.append(table_meta)
+    elements.append(Spacer(1, 1*cm))
+    
+    # --- RESUMO (Box destacado) ---
     aumentos = dados["aumentos"]
     reducoes = dados["reducoes"]
     novos = dados["novos"]
     inativados = dados["inativados"]
-
-    c.setFont("Helvetica-Bold", 11)
-    c.drawString(margem_esq, y, "Resumo:")
-    y -= linha_altura
-
-    c.setFont("Helvetica", 10)
-    c.drawString(
-        margem_esq,
-        y,
-        f"Produtos com aumento: {len(aumentos)}",
-    )
-    y -= linha_altura
-    c.drawString(
-        margem_esq,
-        y,
-        f"Produtos com redução: {len(reducoes)}",
-    )
-    y -= linha_altura
-    c.drawString(
-        margem_esq,
-        y,
-        f"Produtos novos: {len(novos)}",
-    )
-    y -= linha_altura
-    c.drawString(
-        margem_esq,
-        y,
-        f"Produtos inativados: {len(inativados)}",
-    )
-    y -= linha_altura * 2
-
-    # Helper para desenhar tabelas simples com quebra de página
-    def desenhar_tabela(
-        titulo_secao: str,
-        colunas: List[str],
-        linhas: List[List[str]],
-    ):
-        nonlocal y
-
-        if not linhas:
+    
+    summary_data = [
+        ["RESUMO DAS ALTERAÇÕES", ""],
+        ["Produtos com Aumento:", str(len(aumentos))],
+        ["Produtos com Redução:", str(len(reducoes))],
+        ["Produtos Novos:", str(len(novos))],
+        ["Produtos Inativados:", str(len(inativados))],
+    ]
+    
+    table_summary = Table(summary_data, colWidths=[6*cm, 3*cm], hAlign='LEFT')
+    table_summary.setStyle(TableStyle([
+        ('BACKGROUND', (0,0), (-1,0), SUPRA_RED),
+        ('TEXTCOLOR', (0,0), (-1,0), colors.white),
+        ('FONTNAME', (0,0), (-1,0), 'Helvetica-Bold'),
+        ('GRID', (0,0), (-1,-1), 0.5, colors.black),
+        ('BOX', (0,0), (-1,-1), 1, colors.black),
+        ('ALIGN', (1,1), (1,-1), 'CENTER'),
+        ('BACKGROUND', (0,1), (-1,-1), SUPRA_BG_LIGHT),
+    ]))
+    elements.append(table_summary)
+    elements.append(Spacer(1, 1*cm))
+    
+    # --- FUNÇÃO AUXILIAR PARA TABELAS DE DADOS ---
+    def add_data_section(title, rows, col_names, col_widths):
+        if not rows:
             return
 
-        # Título da seção
-        if y < 4 * linha_altura:
-            nova_pagina()
-            y = margem_top
+        elements.append(Paragraph(title, styles["Heading3"]))
+        elements.append(Spacer(1, 0.2*cm))
+        
+        # Prepara dados (Header + Rows)
+        table_data = [col_names] + rows
+        
+        t = Table(table_data, colWidths=col_widths, repeatRows=1)
+        
+        # Estilo "Pedidão"
+        ts = TableStyle([
+            ('BACKGROUND', (0,0), (-1,0), SUPRA_RED),
+            ('TEXTCOLOR', (0,0), (-1,0), colors.white),
+            ('FONTNAME', (0,0), (-1,0), 'Helvetica-Bold'),
+            ('FONTSIZE', (0,0), (-1,0), 9),
+            ('ALIGN', (0,0), (-1,0), 'CENTER'),
+            
+            ('GRID', (0,0), (-1,-1), 0.5, colors.black),
+            ('FONTNAME', (0,1), (-1,-1), 'Helvetica'),
+            ('FONTSIZE', (0,1), (-1,-1), 8),
+            ('VALIGN', (0,0), (-1,-1), 'MIDDLE'),
+        ])
+        
+        # Alinhamento específico (assumindo colunas de valores no final)
+        # Ex: Cod(0), Nome(1), Val(2), Val(3), %(4) -> 2,3,4 align RIGHT
+        # Vamos generalizar: colunas > 1 são números geralmente (exceto inativados que tem "-" no meio)
+        # Mas vamos fixar pelo nome das colunas se possível, ou pelo índice fixo dos templates abaixo.
+        
+        t.setStyle(ts)
+        elements.append(t)
+        elements.append(Spacer(1, 0.8*cm))
 
-        c.setFont("Helvetica-Bold", 11)
-        c.drawString(margem_esq, y, titulo_secao)
-        y -= linha_altura
+    # --- TABELA AUMENTOS ---
+    # Cols: Código, Nome, Anterior, Novo, Var%
+    rows_aum = [[
+        i["codigo"], 
+        i["nome"][:55], 
+        _fmt_moeda(i["preco_anterior"]), 
+        _fmt_moeda(i["preco_novo"]), 
+        _fmt_pct(i["var_pct"])
+    ] for i in aumentos]
+    
+    if rows_aum:
+        t = Table([["Código", "Produto", "Anterior", "Novo", "Var %"]] + rows_aum, 
+                  colWidths=[2.5*cm, 7.5*cm, 2.5*cm, 2.5*cm, 2*cm])
+        t.setStyle(TableStyle([
+            ('BACKGROUND', (0,0), (-1,0), SUPRA_RED),
+            ('TEXTCOLOR', (0,0), (-1,0), colors.white),
+            ('FONTNAME', (0,0), (-1,0), 'Helvetica-Bold'),
+            ('FONTSIZE', (0,0), (-1,0), 9),
+            ('ALIGN', (0,0), (-1,0), 'CENTER'),
+            ('GRID', (0,0), (-1,-1), 0.5, colors.black),
+            ('FONTSIZE', (0,1), (-1,-1), 8),
+            ('ALIGN', (2,1), (-1,-1), 'RIGHT'), # Valores à direita
+        ]))
+        elements.append(Paragraph("Produtos com AUMENTO", styles["Heading3"]))
+        elements.append(Spacer(1, 0.2*cm))
+        elements.append(t)
+        elements.append(Spacer(1, 0.8*cm))
 
-        # Cabeçalho
-        c.setFont("Helvetica-Bold", 9)
-        x = margem_esq
-        larguras = [4 * cm, 8 * cm, 3 * cm, 3 * cm, 2.5 * cm]  # ajusta p/ 5 colunas
+    # --- TABELA REDUÇÕES ---
+    rows_red = [[
+        i["codigo"], 
+        i["nome"][:55], 
+        _fmt_moeda(i["preco_anterior"]), 
+        _fmt_moeda(i["preco_novo"]), 
+        _fmt_pct(i["var_pct"])
+    ] for i in reducoes]
+    
+    if rows_red:
+        t = Table([["Código", "Produto", "Anterior", "Novo", "Var %"]] + rows_red, 
+                  colWidths=[2.5*cm, 7.5*cm, 2.5*cm, 2.5*cm, 2*cm])
+        t.setStyle(TableStyle([
+            ('BACKGROUND', (0,0), (-1,0), SUPRA_RED), # ou verde? melhor manter padrão
+            ('TEXTCOLOR', (0,0), (-1,0), colors.white),
+            ('FONTNAME', (0,0), (-1,0), 'Helvetica-Bold'),
+            ('FONTSIZE', (0,0), (-1,0), 9),
+            ('ALIGN', (0,0), (-1,0), 'CENTER'),
+            ('GRID', (0,0), (-1,-1), 0.5, colors.black),
+            ('FONTSIZE', (0,1), (-1,-1), 8),
+            ('ALIGN', (2,1), (-1,-1), 'RIGHT'),
+        ]))
+        elements.append(Paragraph("Produtos com REDUÇÃO", styles["Heading3"]))
+        elements.append(Spacer(1, 0.2*cm))
+        elements.append(t)
+        elements.append(Spacer(1, 0.8*cm))
 
-        for i, col in enumerate(colunas):
-            if i < len(larguras):
-                c.drawString(x, y, col)
-                x += larguras[i]
-            else:
-                c.drawString(x, y, col)
-                x += 3 * cm
-        y -= linha_altura
+    # --- TABELA NOVOS ---
+    rows_new = [[
+        i["codigo"], 
+        i["nome"][:60], 
+        _fmt_moeda(i["preco_novo"])
+    ] for i in novos]
+    
+    if rows_new:
+        t = Table([["Código", "Produto", "Novo Preço"]] + rows_new, 
+                  colWidths=[3*cm, 10*cm, 4*cm], hAlign='LEFT')
+        t.setStyle(TableStyle([
+            ('BACKGROUND', (0,0), (-1,0), SUPRA_RED),
+            ('TEXTCOLOR', (0,0), (-1,0), colors.white),
+            ('FONTNAME', (0,0), (-1,0), 'Helvetica-Bold'),
+            ('FONTSIZE', (0,0), (-1,0), 9),
+            ('ALIGN', (0,0), (-1,0), 'CENTER'),
+            ('GRID', (0,0), (-1,-1), 0.5, colors.black),
+            ('FONTSIZE', (0,1), (-1,-1), 8),
+            ('ALIGN', (2,1), (-1,-1), 'RIGHT'),
+        ]))
+        elements.append(Paragraph("Produtos NOVOS", styles["Heading3"]))
+        elements.append(Spacer(1, 0.2*cm))
+        elements.append(t)
+        elements.append(Spacer(1, 0.8*cm))
+        
+    # --- TABELA INATIVADOS ---
+    rows_ina = [[
+        i["codigo"], 
+        i["nome"][:60], 
+        _fmt_moeda(i["preco_ultimo"])
+    ] for i in inativados]
+    
+    if rows_ina:
+        t = Table([["Código", "Produto", "Último Preço"]] + rows_ina, 
+                  colWidths=[3*cm, 10*cm, 4*cm], hAlign='LEFT')
+        t.setStyle(TableStyle([
+            ('BACKGROUND', (0,0), (-1,0), SUPRA_RED),
+            ('TEXTCOLOR', (0,0), (-1,0), colors.white),
+            ('FONTNAME', (0,0), (-1,0), 'Helvetica-Bold'),
+            ('FONTSIZE', (0,0), (-1,0), 9),
+            ('ALIGN', (0,0), (-1,0), 'CENTER'),
+            ('GRID', (0,0), (-1,-1), 0.5, colors.black),
+            ('FONTSIZE', (0,1), (-1,-1), 8),
+            ('ALIGN', (2,1), (-1,-1), 'RIGHT'),
+        ]))
+        elements.append(Paragraph("Produtos INATIVADOS (Saíram da lista)", styles["Heading3"]))
+        elements.append(Spacer(1, 0.2*cm))
+        elements.append(t)
+        elements.append(Spacer(1, 0.8*cm))
 
-        c.setFont("Helvetica", 8)
-
-        for linha in linhas:
-            if y < 2 * linha_altura:
-                nova_pagina()
-                y = margem_top - linha_altura
-                # redesenha cabeçalho
-                c.setFont("Helvetica-Bold", 9)
-                x = margem_esq
-                for i, col in enumerate(colunas):
-                    if i < len(larguras):
-                        c.drawString(x, y, col)
-                        x += larguras[i]
-                    else:
-                        c.drawString(x, y, col)
-                        x += 3 * cm
-                y -= linha_altura
-                c.setFont("Helvetica", 8)
-
-            x = margem_esq
-            for i, val in enumerate(linha):
-                txt = (val or "")[:40]
-                if i < len(larguras):
-                    c.drawString(x, y, txt)
-                    x += larguras[i]
-                else:
-                    c.drawString(x, y, txt)
-                    x += 3 * cm
-            y -= linha_altura
-
-        y -= linha_altura  # espaço extra após a tabela
-
-    # --------------------------
-    # Tabela: Aumentos
-    # --------------------------
-    linhas_aumento: List[List[str]] = []
-    for it in aumentos:
-        linhas_aumento.append(
-            [
-                it["codigo"],
-                it["nome"],
-                _fmt_moeda(it["preco_anterior"]),
-                _fmt_moeda(it["preco_novo"]),
-                _fmt_pct(it["var_pct"]),
-            ]
-        )
-
-    desenhar_tabela(
-        "Produtos com AUMENTO de preço",
-        ["Código", "Nome", "Preço ant.", "Preço novo", "% var."],
-        linhas_aumento,
-    )
-
-    # --------------------------
-    # Tabela: Reduções
-    # --------------------------
-    linhas_reducao: List[List[str]] = []
-    for it in reducoes:
-        linhas_reducao.append(
-            [
-                it["codigo"],
-                it["nome"],
-                _fmt_moeda(it["preco_anterior"]),
-                _fmt_moeda(it["preco_novo"]),
-                _fmt_pct(it["var_pct"]),
-            ]
-        )
-
-    desenhar_tabela(
-        "Produtos com REDUÇÃO de preço",
-        ["Código", "Nome", "Preço ant.", "Preço novo", "% var."],
-        linhas_reducao,
-    )
-
-    # --------------------------
-    # Tabela: Novos
-    # --------------------------
-    linhas_novos: List[List[str]] = []
-    for it in novos:
-        linhas_novos.append(
-            [
-                it["codigo"],
-                it["nome"],
-                "-",
-                _fmt_moeda(it["preco_novo"]),
-                "-",  # não há variação %
-            ]
-        )
-
-    desenhar_tabela(
-        "Produtos NOVOS",
-        ["Código", "Nome", "Preço ant.", "Preço novo", "% var."],
-        linhas_novos,
-    )
-
-    # --------------------------
-    # Tabela: Inativados
-    # --------------------------
-    linhas_inativados: List[List[str]] = []
-    for it in inativados:
-        linhas_inativados.append(
-            [
-                it["codigo"],
-                it["nome"],
-                _fmt_moeda(it["preco_ultimo"]),
-                "-",  # deixou de existir na lista
-                "-",  # sem variação %
-            ]
-        )
-
-    desenhar_tabela(
-        "Produtos INATIVADOS",
-        ["Código", "Nome", "Último preço", "Preço novo", "% var."],
-        linhas_inativados,
-    )
-
-    c.save()
+    # Build PDF
+    doc.build(elements)
+    
     pdf_bytes = buffer.getvalue()
     buffer.close()
     return pdf_bytes
