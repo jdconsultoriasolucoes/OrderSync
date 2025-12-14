@@ -96,11 +96,14 @@ def parse_lista_precos(
             if "PET" in up_lista:
                 lista = "PET"
 
-        # --- fornecedor padronizado ---
-        if "VOTORANTIM" in up_lista:
+        if "VOTORANTIM" in up_lista or "VOTORANTIM" in header_text.upper():
             fornecedor = "VOTORANTIM"
+        elif any(k in up_lista or k in header_text.upper() for k in ["SUPRA", "ALISUL"]):
+            fornecedor = "SUPRA"
         else:
-            fornecedor = up_lista if up_lista else None
+            # Fallback: se não achou no texto, mas tem tipo definido, assume SUPRA
+            # (Geralmente listas PET/INSUMOS são da Supra se não especificado)
+            fornecedor = "SUPRA"
 
         # === percorre páginas/tabelas ===
         for page_idx, page in enumerate(pdf.pages, start=1):

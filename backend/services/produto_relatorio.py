@@ -155,13 +155,14 @@ def coletar_dados_relatorio_lista(
         dif = preco_novo - preco_ant
         var_pct = None
         if preco_ant not in (0, None):
-            var_pct = (dif / preco_ant) * 100.0
+            # cast to float to prevent "Decimal * float" error
+            var_pct = float(dif / preco_ant) * 100.0
 
         dif_ton = None
         var_pct_ton = None
         if preco_ton_ant not in (0, None) and preco_ton_novo not in (None,):
             dif_ton = preco_ton_novo - preco_ton_ant
-            var_pct_ton = (dif_ton / preco_ton_ant) * 100.0
+            var_pct_ton = float(dif_ton / preco_ton_ant) * 100.0
 
         info = {
             "codigo": codigo,
