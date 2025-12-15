@@ -815,8 +815,8 @@ async function loadOptions() {
 // ---------- Controle de Estado (Readonly vs Edit) ----------
 function setFormState(enabled) {
   // Seleciona todos inputs/selects dentro das áreas de dados
-  // Excluindo search e botões de comando
-  const inputs = document.querySelectorAll("input:not([type='search']):not([type='file']), select");
+  // Excluindo explicitamente o campo de busca (#search-input) e arquivos
+  const inputs = document.querySelectorAll("input:not(#search-input):not([type='file']), select");
   inputs.forEach(el => {
     // Ignora inputs hidden se necessário, ou específicos
     el.disabled = !enabled;
