@@ -19,10 +19,10 @@ def normalize_num(s):
       - "3 457,00" -> 3457.00
     """
     if s is None:
-        return None
+        return 0.0
     s = str(s).strip()
     if not s:
-        return None
+        return 0.0
 
     # remove espaços “esquisitos”
     s = s.replace(" ", "")
@@ -33,7 +33,7 @@ def normalize_num(s):
     try:
         return float(s)
     except ValueError:
-        return None
+        return 0.0
 
 
 def clean_markers(s: Optional[str]) -> Optional[str]:

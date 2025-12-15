@@ -152,17 +152,28 @@ def coletar_dados_relatorio_lista(
             # sem preço novo, não entra em variação; podemos ignorar
             continue
 
-        dif = preco_novo - preco_ant
+        try:
+            dif = preco_novo - preco_ant
+        except Exception:
+            # Se der erro de operação (ex: decimal invalido), assume sem diferença
+            dif = 0
+
         var_pct = None
         if preco_ant not in (0, None):
-            # cast to float to prevent "Decimal * float" error
-            var_pct = float(dif / preco_ant) * 100.0
+            try:
+                # cast to float to prevent "Decimal * float" error or InvalidOperation
+                var_pct = float(dif / preco_ant) * 100.0
+            except Exception:
+                var_pct = 0.0
 
         dif_ton = None
         var_pct_ton = None
         if preco_ton_ant not in (0, None) and preco_ton_novo not in (None,):
-            dif_ton = preco_ton_novo - preco_ton_ant
-            var_pct_ton = float(dif_ton / preco_ton_ant) * 100.0
+            try:
+                dif_ton = preco_ton_novo - preco_ton_ant
+                var_pct_ton = float(dif_ton / preco_ton_ant) * 100.0
+            except Exception:
+                var_pct_ton = 0.0
 
         info = {
             "codigo": codigo,
