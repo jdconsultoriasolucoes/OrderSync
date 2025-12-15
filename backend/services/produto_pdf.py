@@ -293,33 +293,7 @@ def get_product_options(db: Session) -> Dict[str, List[str]]:
         "fornecedor": _distinct__list(ProdutoV2.fornecedor),
     }
 
-        if obj is None:
-            # novo produto
-            obj = ProdutoV2(
-                codigo_supra=codigo,
-                nome_produto=descricao,
-                status_produto="ATIVO",  # se quiser outro padrão, muda aqui
-            )
-            inseridos += 1
-            db.add(obj)
-        else:
-            atualizados += 1
-            # mantém nome existente se você preferir:
-            obj.nome_produto = descricao or obj.nome_produto
 
-        # mapeia campos da lista pros campos do modelo
-        if fornecedor:
-            obj.fornecedor = fornecedor
-
-        if preco_ton is not None:
-            obj.preco_tonelada = preco_ton
-
-        # aqui estou assumindo que preco_sc é o preço "unitário" da tabela
-        if preco_sc is not None:
-            obj.preco = preco_sc
-
-        # se quiser usar 'familia' de texto num campo inteiro depois,
-        # a gente trata num segundo momento (precisa do de-para).
 
     db.commit()
 
