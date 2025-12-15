@@ -167,6 +167,13 @@ def parse_lista_precos(
                     if not codigo or not re.match(r"^[0-9A-Z]", codigo):
                         continue
 
+                    # FILTRO DE LIXO / TABELAS DE PRAZO
+                    # O PDF contém uma tabelinha no rodapé com "PRAZO | COEF" ou "7 DD | 0,000"
+                    # Devemos ignorar isso para não sujar o banco de produtos.
+                    code_upper = codigo.upper()
+                    if "PRAZO" in code_upper or "COEF" in code_upper or re.search(r"\d+\s*DD", code_upper):
+                        continue
+
                     if lista == "PET":
                         # Layout PET: COL2=Embalagem, COL3=Preço(7DD)
                         emb = c2
