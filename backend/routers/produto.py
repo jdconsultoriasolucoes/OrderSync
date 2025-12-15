@@ -141,6 +141,22 @@ def consultar_anteriores(produto_id: int):
     db = SessionLocal()
     try:
         return get_anteriores(db, produto_id)
+    try:
+        return get_anteriores(db, produto_id)
+    finally:
+        db.close()
+
+
+@router.get(
+    "/opcoes",
+    summary="Obter opções de filtros",
+    description="Retorna listas de valores distintos para preencher selects (Status, Giro, Família, etc).",
+)
+def obter_opcoes_endpoint():
+    db = SessionLocal()
+    try:
+        from services.produto_pdf import get_product_options
+        return get_product_options(db)
     finally:
         db.close()
 

@@ -20,6 +20,7 @@ class ProdutoV2(Base):
     status_produto = Column(Text, nullable=False)        # Status
     nome_produto = Column(Text, nullable=False)          # Descrição
     tipo_giro = Column(Text)
+    tipo = Column(Text)                                  # 'INSUMOS' ou 'PET'
 
     # Estoque / unidade / pesos
     estoque_disponivel = Column(Integer)

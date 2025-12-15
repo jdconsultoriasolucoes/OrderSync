@@ -249,6 +249,49 @@ def importar_lista_df(db: Session, df: pd.DataFrame) -> Dict[str, Any]:
             .filter(ProdutoV2.codigo_supra == codigo)
             .one_or_none()
         )
+        if obj:
+            # Atualiza
+            atualizados += 1
+            # Se quiser atualizar descrição/preço sempre que aparecer, descomente:
+            # obj.nome_produto = descricao
+            # obj.fornecedor = fornecedor
+            obj.preco_tonelada = preco_ton
+            obj.preco = preco_sc
+            # Trigger DB atualiza updated_at
+        else:
+            # Cria novo
+            inseridos += 1
+            novo = ProdutoV2(
+                codigo_supra=codigo,
+                status_produto="ATIVO",
+                nome_produto=descricao,
+                fornecedor=fornecedor,
+                preco_tonelada=preco_ton,
+                preco=preco_sc,
+            )
+            db.add(novo)
+
+    db.commit()
+    return {"inseridos": inseridos, "atualizados": atualizados}
+
+
+def get_product_options(db: Session) -> Dict[str, List[str]]:
+    """
+    Retorna listas de valores únicos para preencher comboboxes no frontend.
+    """
+    def _distinct__list(col):
+        # query distinct, filter not null, order by value
+        rows = db.query(col).distinct().filter(col != None).order_by(col).all()
+        return [r[0] for r in rows if r[0]]
+
+    return {
+        "status_produto": _distinct__list(ProdutoV2.status_produto),
+        "tipo_giro": _distinct__list(ProdutoV2.tipo_giro),
+        "familia": _distinct__list(ProdutoV2.familia),
+        "tipo": ["INSUMOS", "PET"], # Opções fixas
+        "unidade": _distinct__list(ProdutoV2.unidade),
+        "fornecedor": _distinct__list(ProdutoV2.fornecedor),
+    }
 
         if obj is None:
             # novo produto

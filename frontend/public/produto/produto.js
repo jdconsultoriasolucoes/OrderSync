@@ -213,11 +213,11 @@ function readForm() {
   const produto = {
     codigo_supra: getValue("codigo_supra") || undefined,
     nome_produto: getValue("nome_produto") || undefined,
-    status_produto: getValue("status_produto") || undefined,
+    status_produto: getValue("status_produto") || "ATIVO",
     tipo_giro: getValue("tipo_giro") || undefined,
 
-    linha: getValue("linha") || undefined,
-    familia: getInt("familia"),
+    tipo: getValue("linha") || undefined, // Mapped to 'linha' UI input
+    familia: getValue("familia") || undefined,
     filhos: getInt("filhos"),
 
     unidade: getValue("unidade") || undefined,
@@ -289,7 +289,7 @@ function fillForm(p) {
   set("status_produto", p.status_produto);
   set("tipo_giro", p.tipo_giro);
 
-  set("linha", p.linha);
+  set("linha", p.tipo); // Map backend 'tipo' to frontend 'linha' input
   set("familia", p.familia);
   set("filhos", p.filhos);
 
@@ -766,10 +766,56 @@ function setupImportarPdf() {
   });
 }
 
+// ---------- Carregar Opções (Selects) ----------
+async function loadOptions() {
+  try {
+    const base = await resolveProdutosEndpoint();
+    // Endpoint novo: /api/produto/opcoes
+    // verify if base ends with /, remove if yes to avoid double slash if endpoint adds one, 
+    // but here we just append /opcoes. 
+    // Wait, resolveProdutosEndpoint() returns e.g. "http://.../api/produto"
+    const url = `${base}/opcoes`;
+    const data = await fetchJSON(url);
+
+    // Helper to fill select
+    const fill = (id, list) => {
+      const el = $(id);
+      if (!el) return;
+      el.innerHTML = '<option value="">Selecione...</option>';
+      if (Array.isArray(list)) {
+        list.forEach(item => {
+          const opt = document.createElement("option");
+          opt.value = item;
+          opt.innerText = item;
+          el.appendChild(opt);
+        });
+      }
+    };
+
+    fill("status_produto", data.status_produto);
+    fill("tipo_giro", data.tipo_giro);
+    fill("linha", data.tipo); // Use 'tipo' options for 'linha' select
+
+    // Familia é especial, as vezes o usuario quer digitar uma nova.
+    // Mas se é select, só seleciona. Se for input com datalist...
+    // O html é select.
+    fill("familia", data.familia);
+
+    // Fornecedor é input type="text" no HTML? Ou Select?
+    // User image shows "Fornecedor" as text input visually (no arrow), but let's check HTML if we can.
+    // Assuming Select for now based on context, or maybe DataList needed.
+    // Step 902 showed status_produto is select.
+
+  } catch (e) {
+    console.warn("Erro ao carregar opções:", e);
+  }
+}
+
 // ---------- Init ----------
 document.addEventListener("DOMContentLoaded", async () => {
   try {
     await resolveProdutosEndpoint();
+    await loadOptions();
   } catch (e) {
     console.warn("[produto] não foi possível resolver endpoint ainda:", e);
   }
