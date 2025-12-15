@@ -38,7 +38,7 @@ class ProdutoV2Base(BaseModel):
     ncm: Optional[str] = None
     fornecedor: Optional[str] = None
     filhos: Optional[int] = None
-    familia: Optional[int] = None
+    familia: Optional[str] = None
 
     preco: Optional[float] = None                      # Valor Tabela Atual (oficial)
     preco_tonelada: Optional[float] = None
