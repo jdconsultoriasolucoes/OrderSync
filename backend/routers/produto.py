@@ -170,7 +170,7 @@ def consultar_anteriores(produto_id: int):
 async def importar_lista(
     request: Request,
     tipo_lista: str = Form(..., description="Tipo de lista: INSUMOS ou PET"),
-    validade_tabela: Optional[date] = Form(None),
+    validade_tabela: Optional[str] = Form(None),
     file: UploadFile = File(...),
 ):
     # pega a sessão criada pelo middleware (database.SessionLocal)
@@ -191,6 +191,25 @@ async def importar_lista(
             detail="Tipo de lista inválido. Use INSUMOS ou PET.",
         )
 
+    # Validar Data Manualmente para evitar 400 genérico do Pydantic/FastAPI
+    dt_validade: Optional[date] = None
+    if validade_tabela and validade_tabela.strip():
+        try:
+            # Tenta ISO primeiro
+            dt_validade = date.fromisoformat(validade_tabela.strip())
+        except ValueError:
+            # Se falhar, tenta ignorar ou lançar erro específico
+            # Vamos lançar erro específico para ajudar o usuário
+            try:
+                # Tenta parse básico caso venha formato estranho que não ISO (o front manda ISO, mas vai saber)
+                from datetime import datetime
+                dt_validade = datetime.strptime(validade_tabela.strip(), "%Y-%m-%d").date()
+            except:
+                raise HTTPException(
+                    status_code=400, 
+                    detail=f"Data de validade inválida: {validade_tabela}. Use o formato AAAA-MM-DD."
+                )
+
     try:
         df = parse_lista_precos(file.file, tipo_lista=tipo, filename=file.filename)
     except Exception as e:
@@ -203,7 +222,7 @@ async def importar_lista(
         )
 
     
-    df["validade_tabela"] = validade_tabela
+    df["validade_tabela"] = dt_validade
 
     
     resumo = importar_pdf_para_produto(
@@ -218,7 +237,7 @@ async def importar_lista(
     return {
         "arquivo": file.filename,
         "tipo_lista": tipo,
-        "validade_tabela": validade_tabela,
+        "validade_tabela": dt_validade,
         "total_linhas_pdf": int(len(df)),
         "total_linhas": resumo.get("total_linhas"),
         "lista": resumo.get("lista"),

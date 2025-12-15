@@ -517,6 +517,10 @@ async function uploadListaPdf(file) {
         data.message ||
         res.statusText ||
         "Erro ao importar PDF.";
+      // Show explicit alert if detail is present, as toasts might be too quick or small for long errors
+      if (data.detail) {
+        alert(`Erro na importação: ${data.detail}`);
+      }
       throw new Error(msg);
     }
 
@@ -645,7 +649,12 @@ function setupImportarPdf() {
 
       if (!resp.ok) {
         const msg = data.detail || data.message || resp.statusText || "Erro ao importar PDF.";
-        alert(msg);
+        // Show explicit alert if detail is present
+        if (data.detail) {
+          alert(`Erro na importação: ${data.detail}`);
+        } else {
+          alert(msg);
+        }
         return;
       }
 
