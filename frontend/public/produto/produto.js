@@ -271,6 +271,7 @@ function readForm() {
 
 function fillForm(p) {
   if (!p) return;
+  setFormState(false); // Carregou dados -> Readonly por padrão
 
   const set = (id, v) => {
     const el = $(id);
@@ -811,6 +812,20 @@ async function loadOptions() {
   }
 }
 
+// ---------- Controle de Estado (Readonly vs Edit) ----------
+function setFormState(enabled) {
+  // Seleciona todos inputs/selects dentro das áreas de dados
+  // Excluindo search e botões de comando
+  const inputs = document.querySelectorAll("input:not([type='search']):not([type='file']), select");
+  inputs.forEach(el => {
+    // Ignora inputs hidden se necessário, ou específicos
+    el.disabled = !enabled;
+  });
+
+  const btnSalvar = $("btn-salvar");
+  if (btnSalvar) btnSalvar.disabled = !enabled;
+}
+
 // ---------- Init ----------
 document.addEventListener("DOMContentLoaded", async () => {
   try {
@@ -822,6 +837,7 @@ document.addEventListener("DOMContentLoaded", async () => {
 
   $("btn-novo")?.addEventListener("click", () => {
     clearForm();
+    setFormState(true); // Novo = Habilitado
     toast("Novo produto em edição.");
   });
 
@@ -849,10 +865,12 @@ document.addEventListener("DOMContentLoaded", async () => {
       if (alvoId) {
         const res = await produtosPATCH(alvoId, { produto, imposto });
         fillForm(res);
+        setFormState(false); // Volta para readonly após salvar
         toast("Produto atualizado.");
       } else {
         const res = await produtosPOST({ produto, imposto });
         fillForm(res);
+        setFormState(false); // Volta para readonly após salvar
         toast("Produto criado.");
       }
     } catch (e) {
@@ -862,8 +880,12 @@ document.addEventListener("DOMContentLoaded", async () => {
   });
 
   $("btn-editar")?.addEventListener("click", () => {
-    toast("Você já pode editar os campos e salvar.");
+    setFormState(true); // Habilita edição
+    toast("Edição habilitada.");
   });
+
+  // Inicializa inputs desabilitados (exceto Search/Novo que tem suas regras)
+  setFormState(false);
 
   $("btn-buscar")?.addEventListener("click", () => {
     const modal = $("search-modal");
