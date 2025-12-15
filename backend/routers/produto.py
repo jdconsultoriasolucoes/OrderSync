@@ -52,6 +52,20 @@ async def relatorio_lista(
 
 
 @router.get(
+    "/opcoes",
+    summary="Obter opções de filtros",
+    description="Retorna listas de valores distintos para preencher selects (Status, Giro, Família, etc).",
+)
+def obter_opcoes_endpoint():
+    db = SessionLocal()
+    try:
+        from services.produto_pdf import get_product_options
+        return get_product_options(db)
+    finally:
+        db.close()
+
+
+@router.get(
     "",
     response_model=list[ProdutoV2Out],
     summary="Listar produtos",
@@ -145,18 +159,7 @@ def consultar_anteriores(produto_id: int):
         db.close()
 
 
-@router.get(
-    "/opcoes",
-    summary="Obter opções de filtros",
-    description="Retorna listas de valores distintos para preencher selects (Status, Giro, Família, etc).",
-)
-def obter_opcoes_endpoint():
-    db = SessionLocal()
-    try:
-        from services.produto_pdf import get_product_options
-        return get_product_options(db)
-    finally:
-        db.close()
+
 
 
 @router.post(
