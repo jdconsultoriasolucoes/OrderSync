@@ -718,15 +718,27 @@ function setupImportarPdf() {
     modalClose?.addEventListener("click", closeModal);
 
     modalConfirm.addEventListener("click", async () => {
-      const tipo = normalizeTipo(modalTipo.value);
-      const validadeISO = normalizeValidISO(modalValidade.value);
-      const file = modalArquivo.files?.[0];
+      // Feedback de carregamento
+      const originalText = modalConfirm.textContent;
+      modalConfirm.textContent = "Importando...";
+      modalConfirm.disabled = true;
+      toast("Iniciando importação... aguarde.");
 
-      const ok = await doImport({ tipo, validadeISO, file });
-      if (ok) {
-        // opcional: fecha e reseta se deu certo
-        modalArquivo.value = "";
-        closeModal();
+      try {
+        const tipo = normalizeTipo(modalTipo.value);
+        const validadeISO = normalizeValidISO(modalValidade.value);
+        const file = modalArquivo.files?.[0];
+
+        const ok = await doImport({ tipo, validadeISO, file });
+        if (ok) {
+          // opcional: fecha e reseta se deu certo
+          modalArquivo.value = "";
+          closeModal();
+        }
+      } finally {
+        // Restaura botão
+        modalConfirm.textContent = originalText;
+        modalConfirm.disabled = false;
       }
     });
 
@@ -816,7 +828,8 @@ async function loadOptions() {
 function setFormState(enabled) {
   // Seleciona todos inputs/selects dentro das áreas de dados
   // Excluindo explicitamente o campo de busca (#search-input) e arquivos
-  const inputs = document.querySelectorAll("input:not(#search-input):not([type='file']), select");
+  // Scoping to .page-container to avoid locking modal inputs
+  const inputs = document.querySelectorAll(".page-container input:not(#search-input):not([type='file']), .page-container select");
   inputs.forEach(el => {
     // Ignora inputs hidden se necessário, ou específicos
     el.disabled = !enabled;
