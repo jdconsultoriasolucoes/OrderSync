@@ -141,8 +141,6 @@ def consultar_anteriores(produto_id: int):
     db = SessionLocal()
     try:
         return get_anteriores(db, produto_id)
-    try:
-        return get_anteriores(db, produto_id)
     finally:
         db.close()
 
