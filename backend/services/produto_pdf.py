@@ -431,24 +431,12 @@ def importar_pdf_para_produto(
                 },
             )
 
-    dups = df[df.duplicated(subset=chaves, keep=False)].copy()
+    # Remove DUPLICATAS silenciosamente (mantém a primeira ocorrência)
+    # Motivo: usuários relataram erro de duplicidade que impedia importação de arquivos válidos (ex: cabeçalhos repetidos ou dados sujos).
+    df.drop_duplicates(subset=chaves, keep="first", inplace=True)
 
-    if not dups.empty:
-        resumo = (
-            dups.groupby(chaves)
-            .size()
-            .reset_index(name="qtd")
-            .to_dict(orient="records")
-        )
-
-        raise HTTPException(
-            status_code=400,
-            detail={
-                "tipo": "DUPLICIDADE_PDF",
-                "mensagem": "Existem códigos duplicados na mesma lista/fornecedor no PDF.",
-                "erros": resumo,
-            },
-        )
+    # REMOVIDO: Strict duplicate check
+    # if not dups.empty: ...
     
     # assume que toda a lista tem o mesmo "lista"/"fornecedor"
     lista = str(df["lista"].iloc[0]).upper().strip()
