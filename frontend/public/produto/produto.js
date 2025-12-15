@@ -652,7 +652,8 @@ function setupImportarPdf() {
         const msg = data.detail || data.message || resp.statusText || "Erro ao importar PDF.";
         // Show explicit alert if detail is present
         if (data.detail) {
-          alert(`Erro na importação: ${data.detail}`);
+          const detailStr = typeof data.detail === 'object' ? JSON.stringify(data.detail, null, 2) : data.detail;
+          alert(`Erro na importação: ${detailStr}`);
         } else {
           alert(msg);
         }
