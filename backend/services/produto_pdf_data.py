@@ -171,7 +171,15 @@ def parse_lista_precos(
                     # O PDF contém uma tabelinha no rodapé com "PRAZO | COEF" ou "7 DD | 0,000"
                     # Devemos ignorar isso para não sujar o banco de produtos.
                     code_upper = codigo.upper()
-                    if "PRAZO" in code_upper or "COEF" in code_upper or re.search(r"\d+\s*DD", code_upper):
+                    # 1. "PRAZO", "COEF"
+                    # 2. "7 DD", "14 DD" etc
+                    # 3. "7/14/21/28" (sem DD, mas é prazo)
+                    if (
+                        "PRAZO" in code_upper 
+                        or "COEF" in code_upper 
+                        or re.search(r"\d+\s*DD", code_upper)
+                        or re.search(r"\d+/\d+", code_upper) # Captura 7/14/21...
+                    ):
                         continue
 
                     if lista == "PET":
