@@ -397,7 +397,7 @@ def salvar_t_preco_produto_pdf(
         row.setdefault("validade_tabela", None)
         row.setdefault("data_ingestao", date.today())
         row.setdefault("nome_arquivo", nome_arquivo)
-        row.setdefault("ativo", True)
+        row["ativo"] = True # Força sempre True na nova ingestão
         row.setdefault("usuario", usuario)
 
         db.execute(sql, row)
