@@ -206,4 +206,4 @@ def parse_lista_precos(
         df["data_ingestao"] = date.today()
 
     return df
-```
+
