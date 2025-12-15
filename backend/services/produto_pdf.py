@@ -197,8 +197,14 @@ def list_produtos(
     params["limit"] = limit
     params["offset"] = offset
 
-    rows = db.execute(text(base), params).mappings().all()
-    return [_row_to_out(db, r, include_imposto=False) for r in rows]
+    try:
+        rows = db.execute(text(base), params).mappings().all()
+        return [_row_to_out(db, r, include_imposto=False) for r in rows]
+    except Exception as e:
+        import traceback
+        with open("search_error.log", "w") as f:
+            f.write(traceback.format_exc())
+        raise e
 
 
 def get_anteriores(db: Session, produto_id: int) -> Dict[str, Any]:

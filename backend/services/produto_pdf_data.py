@@ -55,27 +55,16 @@ def clean_markers(s: Optional[str]) -> Optional[str]:
 def parse_lista_precos(
     file_obj: BinaryIO,
     tipo_lista: Optional[str] = None,  # "INSUMOS" ou "PET"
+    filename: Optional[str] = None,
 ) -> pd.DataFrame:
     """
-    Lê o PDF da lista de preços (INS/PET VOTORANTIM 15) a partir de um file-like
-    (ex.: UploadFile.file) e devolve um DataFrame no formato da tabela
-    t_preco_produto_pdf.
-
-    Colunas geradas:
-      - fornecedor
-      - lista
-      - familia
-      - codigo
-      - descricao
-      - preco_ton
-      - preco_sc
-      - page
-      - data_ingestao
+    Lê o PDF da lista de preços (INS/PET VOTORANTIM 15) a partir de um file-like.
+    Prioriza Filename para identificar Fornecedor/Lista, depois Header.
     """
     linhas = []
 
     with pdfplumber.open(file_obj) as pdf:
-        # === pega texto bruto da LISTA (primeira página) ===
+        # === Leitura Inicial (Header) ===
         header_text = pdf.pages[0].extract_text() or ""
         m = re.search(
             r"LISTA:\s*(.+?)(?:\s{2,}|VALIDADE|BATIDA|PÁG|$)",
@@ -85,27 +74,54 @@ def parse_lista_precos(
         raw_lista = m.group(1).strip() if m else ""
         up_lista = raw_lista.upper()
 
-        # --- define "lista" (INSUMOS / PET) ---
+        # === 1. Definição do TIPO (INSUMOS/PET) ===
         lista = None
         if tipo_lista:
             lista = tipo_lista.upper()
-        else:
-            # fallback: tenta inferir pelo cabeçalho
-            if "INS" in up_lista:
+        
+        # Fallback pelo Filename
+        if not lista and filename:
+            fname_up = filename.upper()
+            if "PET" in fname_up:
+                lista = "PET"
+            elif "INS" in fname_up:
                 lista = "INSUMOS"
+
+        # Fallback pelo Header
+        if not lista:
             if "PET" in up_lista:
                 lista = "PET"
+            elif "INS" in up_lista:
+                lista = "INSUMOS"
+        
+        # Default final
+        if not lista:
+            lista = "INSUMOS"
 
-        if "VOTORANTIM" in up_lista or "VOTORANTIM" in header_text.upper():
-            fornecedor = "VOTORANTIM"
-        elif any(k in up_lista or k in header_text.upper() for k in ["SUPRA", "ALISUL"]):
-            fornecedor = "SUPRA"
-        else:
-            # Fallback: se não achou no texto, mas tem tipo definido, assume SUPRA
-            # (Geralmente listas PET/INSUMOS são da Supra se não especificado)
-            fornecedor = "SUPRA"
+        # === 2. Definição do FORNECEDOR ===
+        fornecedor = None
+        
+        # Estrategia A: Filename (Prioridade Solicitada)
+        if filename:
+            match_fn = re.search(r"(?:INS|PET|INSUMOS)\s+(.+?)(?:\s+\d+|\.pdf|$)", filename, re.IGNORECASE)
+            if match_fn:
+                cand = match_fn.group(1).strip().upper()
+                cand = re.sub(r"\s+\d+$", "", cand) 
+                if cand:
+                    fornecedor = cand
 
-        # === percorre páginas/tabelas ===
+        # Estrategia B: Header (Fallback)
+        if not fornecedor:
+            if "VOTORANTIM" in up_lista or "VOTORANTIM" in header_text.upper():
+                fornecedor = "VOTORANTIM"
+            elif "ALISUL" in up_lista or "ALISUL" in header_text.upper():
+                fornecedor = "ALISUL"
+            elif "RIO CLARO" in up_lista or "RIO CLARO" in header_text.upper():
+                 fornecedor = "RIO CLARO"
+            elif up_lista and "LISTA" not in up_lista:
+                fornecedor = up_lista
+
+        # === 3. Extração de Dados ===
         for page_idx, page in enumerate(pdf.pages, start=1):
             tables = page.extract_tables()
             if not tables:
@@ -118,49 +134,52 @@ def parse_lista_precos(
                 familia_atual: Optional[str] = None
 
                 for row in table:
-                    # garante 4 colunas (para layout INS e PET simplificado)
-                    row = list(row) + [None] * (4 - len(row))
-                    c0 = (row[0] or "").strip()
-                    c1 = (row[1] or "").strip()
-                    c2 = (row[2] or "").strip()
-                    c3 = (row[3] or "").strip()
+                    # Normaliza row
+                    row_safe = list(row) + [None] * (max(0, 6 - len(row)))
+                    c0 = (row_safe[0] or "").strip()
+                    c1 = (row_safe[1] or "").strip()
+                    c2 = (row_safe[2] or "").strip()
+                    c3 = (row_safe[3] or "").strip()
 
-                    # linha toda vazia
+                    # Linha vazia?
                     if not any([c0, c1, c2, c3]):
                         continue
 
                     joined = " ".join(x for x in [c0, c1, c2, c3] if x).upper()
 
-                    # --- linha de família ---
-                    if (
-                        c0
-                        and not c1
-                        and not c2
-                        and not c3
-                        and not any(
-                            k in joined
-                            for k in ["CÓD", "COD", "PRODUTO", "R$/TON", "R$/SC"]
-                        )
-                    ):
-                        familia_atual = clean_markers(c0)
+                    # Familia Header
+                    if (c0 and not c1 and not c2 and not c3):
+                         # Validação simples
+                        if len(c0) > 3 and "PÁG" not in c0.upper():
+                            familia_atual = clean_markers(c0)
                         continue
 
-                    # --- cabeçalho da tabela ---
-                    if ("CÓD" in joined or "COD" in joined) and "PROD" in joined:
-                        # ex.: CÓD. | PRODUTO | R$/TON | R$/SC
+                    # Table Header Skip
+                    if ("COD" in joined or "CÓD" in joined) and ("PROD" in joined):
                         continue
 
-                    # --- item ---
+                    # === Lógica Diferenciada por TIPO ===
                     codigo = clean_markers(c0)
                     descricao = clean_markers(c1)
-                    preco_ton = normalize_num(c2)
-                    preco_sc = normalize_num(c3)
+                    preco_ton = None
+                    preco_sc = None
+                    
+                    if not codigo or not re.match(r"^[0-9A-Z]", codigo):
+                        continue
 
-                    # filtros básicos
-                    if not codigo or not descricao:
-                        continue
-                    if not re.match(r"^[0-9A-Z]", codigo):
-                        continue
+                    if lista == "PET":
+                        # Layout PET: COL2=Embalagem, COL3=Preço(7DD)
+                        emb = c2
+                        if emb and emb not in descricao:
+                            descricao = f"{descricao} - {emb}"
+                        
+                        preco_sc = normalize_num(c3)
+                        preco_ton = None
+                    else:
+                        # Layout INSUMOS (Default)
+                        preco_ton = normalize_num(c2)
+                        preco_sc = normalize_num(c3)
+
                     if preco_ton is None and preco_sc is None:
                         continue
 

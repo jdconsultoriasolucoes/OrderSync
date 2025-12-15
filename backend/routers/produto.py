@@ -175,7 +175,7 @@ async def importar_lista(
         )
 
     try:
-        df = parse_lista_precos(file.file, tipo_lista=tipo)
+        df = parse_lista_precos(file.file, tipo_lista=tipo, filename=file.filename)
     except Exception as e:
         raise HTTPException(status_code=400, detail=f"Erro ao ler PDF: {e}")
 
