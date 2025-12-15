@@ -135,7 +135,7 @@ def update_produto(
     if not obj:
         raise HTTPException(404, detail="Produto não encontrado")
 
-    update = payload.model_dump(exclude_unset=True)
+    update = payload.dict(exclude_unset=True)
     _validate_business(update)
 
     for k, v in update.items():
@@ -144,10 +144,10 @@ def update_produto(
     if imposto is not None:
         imp = db.query(ImpostoV2).filter(ImpostoV2.produto_id == produto_id).one_or_none()
         if imp:
-            for k, v in imposto.model_dump(exclude_unset=True).items():
+            for k, v in imposto.dict(exclude_unset=True).items():
                 setattr(imp, k, v)
         else:
-            db.add(ImpostoV2(produto_id=produto_id, **imposto.model_dump(exclude_unset=True)))
+            db.add(ImpostoV2(produto_id=produto_id, **imposto.dict(exclude_unset=True)))
 
     db.commit()
 
