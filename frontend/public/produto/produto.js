@@ -341,7 +341,7 @@ function fillForm(p) {
   // setTimeout para garantir que os valores entraram no DOM se houver async
   setTimeout(() => {
     calculateFinalPrice();
-    updateReajusteUI();
+    // updateReajusteUI(); // calculateFinalPrice chama agora com argumentos corretos
   }, 50);
 }
 
@@ -501,24 +501,42 @@ function calculateFinalPrice() {
 
   // Exibe na tela (Cria ou atualiza label)
   updateFinalPriceUI(finalPrice, isPromoActive);
+  updateReajusteUI(finalPrice, preco);
 }
 
-function updateReajusteUI() {
-  const atual = getNumber("preco");
-  const anterior = getNumber("preco_anterior");
+function updateReajusteUI(finalPrice, basePrice) {
   const el = $("reajuste");
-
   if (!el) return;
 
-  if (atual != null && anterior != null && anterior !== 0) {
-    const p = ((atual - anterior) / anterior) * 100;
+  // Se não foi passado (chamada manual antiga?), tenta pegar do DOM
+  if (finalPrice === undefined || basePrice === undefined) {
+    // Fallback ou limpar
+    // Melhor limpar para não mostrar dados errados
+    // Mas se for init, talvez não tenha calcs ainda.
+    return;
+  }
+
+  if (basePrice != null && basePrice !== 0) {
+    // Fórmula: ((Final - Base) / Base) * 100
+    // Ex: Base 100, Final 90 -> -10%
+    const p = ((finalPrice - basePrice) / basePrice) * 100;
+
     el.textContent = `${p.toFixed(2)}%`;
-    // Visual cue for increase/decrease?
-    if (p > 0) el.style.color = "#c0392b"; // Red for increase (inflation) or Green? Usually increase in price is bad for buyer, good for seller?
-    // Let's stick to neutral or standard text color, maybe just bold.
+
+    // Cor: Negativo (Desconto) = Verde (Bom pra quem compra? ou Bom pra venda?)
+    // Contexto de "Reajuste": geralmente Cliente quer ver quanto ganhou de desconto?
+    // User pediu verde se positivo e vermelho se negativo no chat anterior?
+    // Não, ele disse "o reajuste tem que ser com base na diferença..."
+    // Vou usar uma cor neutra ou lógica padrão:
+    // Se p < 0 (Desconto) -> Verde?
+    // Se p > 0 (Acrescimento) -> Vermelho?
+
+    if (p < 0) el.style.color = "#27ae60"; // Verde (Desconto)
+    else if (p > 0) el.style.color = "#c0392b"; // Vermelho (Aumento)
+    else el.style.color = ""; // Zero
+
     el.style.fontWeight = "bold";
-    el.style.color = p >= 0 ? "#27ae60" : "#c0392b"; // Green for positive markup? Or inverted?
-    // Let's keep it simple: Green if positive (standard profit logic), Red if negative.
+
   } else {
     el.textContent = "—";
     el.style.color = "";
@@ -559,7 +577,7 @@ function setupCalcListeners() {
     if (el) {
       el.addEventListener("input", calculateFinalPrice);
       if (id === "preco") {
-        el.addEventListener("input", updateReajusteUI);
+        // el.addEventListener("input", updateReajusteUI); // Removido, calculateFinalPrice já chama
       }
     }
   });

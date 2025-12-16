@@ -57,40 +57,40 @@ def _row_to_out(db: Session, row: Dict[str, Any], include_imposto: bool = True) 
     # --- Lógica de campos calculados (se não vierem da View/DB) ---
     
     # 1) Reajuste Percentual
-    # Tenta calcular pelo preço (saco/unidade). Se não tiver variação, tenta pelo preço_tonelada (pode ser mais preciso ou o único alterado).
+    # 1) Reajuste Percentual (Agora significando % de Desconto Efetivo)
+    # Contexto UI: ((Preço Final - Preço Tabela) / Preço Tabela) * 100
     if data.get("reajuste_percentual") is None:
         p_atual = data.get("preco")
-        p_ant = data.get("preco_anterior")
+        p_peso = data.get("peso")
         
-        # Helper interno
-        def calc_var(a, b):
-            if a is not None and b is not None and b != 0:
-                return ((a - b) / b) * 100
-            return 0.0
-
-        p_var = calc_var(p_atual, p_ant)
+        # Parâmetros de desconto
+        desc_ton = data.get("desconto_valor_tonelada") or 0
+        dt_ini = data.get("data_desconto_inicio")
+        dt_fim = data.get("data_desconto_fim")
         
-        data["reajuste_percentual"] = p_var
+        # Validar vigência para calcular o preço final "teórico" de hoje
+        # Nota: O front usa 'new Date()', aqui usamos 'date.today()'
+        is_active = False
+        if desc_ton > 0 and dt_ini and dt_fim and p_peso:
+            if isinstance(dt_ini, str): dt_ini = date.fromisoformat(dt_ini)
+            if isinstance(dt_fim, str): dt_fim = date.fromisoformat(dt_fim)
+            today = date.today()
+            if dt_ini <= today <= dt_fim:
+                is_active = True
         
-        # Se deu 0, tenta validar pelo preço tonelada
-        if abs(p_var) < 0.0001:
-            t_atual = data.get("preco_tonelada")
-            t_ant = data.get("preco_tonelada_anterior")
-            # Se a view não trouxe o anterior de tonelada, tenta buscar do DB se já não buscamos
-            if t_ant is None and product_id:
-                # Consulta pontual, se precisar. Nota: o SELECT acima buscou 'preco_anterior' e 'validade_tabela'.
-                # Vamos assumir que se o user quer precisão, a view deveria trazer.
-                # Mas podemos usar os valores do 'res' se tiverem lá.
-                # O SELECT anterior foi: "SELECT preco, preco_anterior, validade_tabela ..."
-                # Vamos expandir o SELECT do fallback ali em cima se quisermos robustez total,
-                # mas por hora, vamos manter simples. Se 0, é 0.
-                pass
+        if is_active and p_atual and p_atual > 0:
+            # Calculo do Preço Final
+            # DescontoUnitario = (DescTon / 1000) * Peso
+            desc_unit = (desc_ton / 1000.0) * p_peso
+            p_final = p_atual - desc_unit
+            if p_final < 0: p_final = 0
             
-            # Se tivermos os dados de tonelada:
-            if t_atual is not None and t_ant is not None and t_ant != 0:
-                t_var = calc_var(t_atual, t_ant)
-                if abs(t_var) > 0.0001:
-                    data["reajuste_percentual"] = t_var
+            # Reajuste (Variação)
+            data["reajuste_percentual"] = ((p_final - p_atual) / p_atual) * 100
+        else:
+            # Sem desconto ativo, reajuste é 0% ou None?
+            # Se a intenção é mostrar o impacto do desconto, é 0%.
+            data["reajuste_percentual"] = 0.0
 
     # 2) Vigência Ativa
     # Contexto da UI: Está dentro do bloco "Desconto por Tonelada".
