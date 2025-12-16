@@ -511,10 +511,10 @@ function updateFinalPriceUI(val, active) {
 
   if (active) {
     display.value = val.toFixed(2);
-    // Podemos mudar a cor da borda ou algo assim para indicar promo?
-    display.style.border = "2px solid #e74c3c";
-    display.style.color = "#c0392b";
-    display.title = "Preço Promocional Ativo";
+    // User requested to remove red warning style
+    display.style.border = "";
+    display.style.color = "";
+    // display.title = "Preço Promocional Ativo";
   } else {
     // Se não tem promo, o "Preço Final" é o próprio preço atual? 
     // Ou deveria ficar vazio?

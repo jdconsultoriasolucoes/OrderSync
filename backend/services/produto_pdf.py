@@ -23,6 +23,31 @@ import pandas as pd
 def _row_to_out(db: Session, row: Dict[str, Any], include_imposto: bool = True) -> ProdutoV2Out:
     data = dict(row)
     
+    # --- Recuperação de dados faltantes (se a View não trouxer) ---
+    product_id = data.get("id")
+    if product_id:
+        # Se 'preco_anterior' ou 'validade_tabela' estiverem ausentes logicamente da view,
+        # buscamos na tabela física para garantir cálculo correto de indicadores.
+        # Verifica se chaves existem mas são None, ou se nem existem.
+        needs_fetch = False
+        if data.get("preco_anterior") is None: needs_fetch = True
+        if data.get("validade_tabela") is None: needs_fetch = True
+
+        if needs_fetch:
+            # Consulta fallback leve
+            res = db.execute(
+                text("SELECT preco, preco_anterior, validade_tabela FROM t_cadastro_produto_v2 WHERE id = :id"),
+                {"id": product_id}
+            ).mappings().first()
+            if res:
+                if data.get("preco_anterior") is None:
+                    data["preco_anterior"] = res["preco_anterior"]
+                if data.get("validade_tabela") is None:
+                    data["validade_tabela"] = res["validade_tabela"]
+                # Podemos garantir o preço atual também, caso a view esteja estranha
+                if data.get("preco") is None:
+                    data["preco"] = res["preco"]
+
     # --- Lógica de campos calculados (se não vierem da View/DB) ---
     
     # 1) Reajuste Percentual
@@ -33,7 +58,7 @@ def _row_to_out(db: Session, row: Dict[str, Any], include_imposto: bool = True) 
         if p_atual is not None and p_ant is not None and p_ant != 0:
             data["reajuste_percentual"] = ((p_atual - p_ant) / p_ant) * 100
         else:
-            data["reajuste_percentual"] = None
+            data["reajuste_percentual"] = None # 0.0? 
 
     # 2) Vigência Ativa
     # validade_tabela <= Hoje (já entrou em vigor)
