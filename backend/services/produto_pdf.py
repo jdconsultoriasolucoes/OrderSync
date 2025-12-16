@@ -81,12 +81,17 @@ def _row_to_out(db: Session, row: Dict[str, Any], include_imposto: bool = True) 
         if is_active and p_atual and p_atual > 0:
             # Calculo do Preço Final
             # DescontoUnitario = (DescTon / 1000) * Peso
-            desc_unit = (desc_ton / 1000.0) * p_peso
-            p_final = p_atual - desc_unit
-            if p_final < 0: p_final = 0
+            # Convert values to float to avoid Decimal vs Float errors
+            desc_ton_f = float(desc_ton)
+            p_peso_f = float(p_peso)
+            p_atual_f = float(p_atual)
+
+            desc_unit = (desc_ton_f / 1000.0) * p_peso_f
+            p_final = p_atual_f - desc_unit
+            if p_final < 0: p_final = 0.0
             
             # Reajuste (Variação)
-            data["reajuste_percentual"] = ((p_final - p_atual) / p_atual) * 100
+            data["reajuste_percentual"] = ((p_final - p_atual_f) / p_atual_f) * 100
         else:
             # Sem desconto ativo, reajuste é 0% ou None?
             # Se a intenção é mostrar o impacto do desconto, é 0%.
