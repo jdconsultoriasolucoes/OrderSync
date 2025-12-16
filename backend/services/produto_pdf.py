@@ -123,7 +123,7 @@ def _row_to_out(db: Session, row: Dict[str, Any], include_imposto: bool = True) 
     if include_imposto and "id" in data:
         imp = db.query(ImpostoV2).filter(ImpostoV2.produto_id == data["id"]).one_or_none()
         if imp:
-            data["imposto"] = ImpostoV2Out.model_validate(imp)
+            data["imposto"] = ImpostoV2Out.from_orm(imp)
             
     return ProdutoV2Out(**data)
 
