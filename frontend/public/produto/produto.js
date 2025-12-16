@@ -501,37 +501,28 @@ function calculateFinalPrice() {
 }
 
 function updateFinalPriceUI(val, active) {
-  let display = $("display-preco-final");
-  if (!display) {
-    // Tenta encontrar onde inserir (abaixo do preço ou desconto)
-    const ref = $("preco")?.parentNode;
-    if (ref) {
-      const div = document.createElement("div");
-      div.id = "display-preco-final";
-      div.style.marginTop = "5px";
-      div.style.fontWeight = "bold";
-      div.style.color = "#2ecc71"; // Green
-      ref.appendChild(div);
-      display = div;
-    }
-  }
+  const display = $("preco_final");
+  if (!display) return;
 
-  if (display) {
-    if (active) {
-      display.textContent = `Preço Final (Promo): R$ ${val.toFixed(2)}`;
-      display.style.color = "#e74c3c"; // Red/Orange for promo effect
-    } else {
-      display.textContent = `Preço Final: R$ ${val.toFixed(2)}`;
-      display.style.color = "#2ecc71"; // Normal green
-    }
-    // Mostra/Esconde aviso se desconto existe mas expirou/futuro
-    const desc = getNumber("desconto_valor_tonelada");
-    if (desc > 0 && !active) {
-      const msg = document.createElement("small");
-      msg.style.color = "#999";
-      msg.innerText = " (Desconto fora da vigência)";
-      // display.appendChild(msg); // simple append
-    }
+  // Se ativo (promo), mostramos o valor calculado
+  // Se não ativo, mostramos o preço normal? 
+  // O label diz "Preço Final (Ton.)", mas o cálculo do user é unitário (R$ 52.64 vs R$ 77.64). 
+  // Vou manter a consistência com o pedido do usuário (jogar o valor calculado ali).
+
+  if (active) {
+    display.value = val.toFixed(2);
+    // Podemos mudar a cor da borda ou algo assim para indicar promo?
+    display.style.border = "2px solid #e74c3c";
+    display.style.color = "#c0392b";
+    display.title = "Preço Promocional Ativo";
+  } else {
+    // Se não tem promo, o "Preço Final" é o próprio preço atual? 
+    // Ou deveria ficar vazio?
+    // Pela lógica de "Preço Final", se não tem desconto, é cheio.
+    display.value = val.toFixed(2);
+    display.style.border = "";
+    display.style.color = "";
+    display.title = "";
   }
 }
 

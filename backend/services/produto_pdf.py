@@ -22,10 +22,38 @@ import pandas as pd
 # ----------------------------
 def _row_to_out(db: Session, row: Dict[str, Any], include_imposto: bool = True) -> ProdutoV2Out:
     data = dict(row)
+    
+    # --- Lógica de campos calculados (se não vierem da View/DB) ---
+    
+    # 1) Reajuste Percentual
+    # ((atual - anterior) / anterior) * 100
+    if data.get("reajuste_percentual") is None:
+        p_atual = data.get("preco")
+        p_ant = data.get("preco_anterior")
+        if p_atual is not None and p_ant is not None and p_ant != 0:
+            data["reajuste_percentual"] = ((p_atual - p_ant) / p_ant) * 100
+        else:
+            data["reajuste_percentual"] = None
+
+    # 2) Vigência Ativa
+    # validade_tabela <= Hoje (já entrou em vigor)
+    if data.get("vigencia_ativa") is None:
+        val = data.get("validade_tabela")
+        if val:
+            # val pode ser str (iso) ou date object dependendo do driver/ORM
+            if isinstance(val, str):
+                val = date.fromisoformat(val)
+            today = date.today()
+            # Se a validade é data de INÍCIO ("a partir de"), então está ativa se (val <= today)
+            data["vigencia_ativa"] = (val <= today)
+        else:
+            data["vigencia_ativa"] = False
+
     if include_imposto and "id" in data:
         imp = db.query(ImpostoV2).filter(ImpostoV2.produto_id == data["id"]).one_or_none()
         if imp:
             data["imposto"] = ImpostoV2Out.model_validate(imp)
+            
     return ProdutoV2Out(**data)
 
 
