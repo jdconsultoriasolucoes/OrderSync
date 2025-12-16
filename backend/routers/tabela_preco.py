@@ -31,7 +31,7 @@ def filtrar_produtos_para_tabela_preco(
     fornecedor: Optional[str] = Query(None),
     q: Optional[str] = Query(None, description="Busca em código, descrição, grupo/marca, unidade/tipo"),
     page: int = Query(1, ge=1),
-    page_size: int = Query(25, ge=1, le=100),
+    page_size: int = Query(25, ge=1, le=1000),
 ):
     try:
         base_sql = """
@@ -141,13 +141,13 @@ def salvar_tabela_preco(body: TabelaSalvar):
               codigo_produto_supra, descricao_produto, embalagem, peso_liquido, valor_produto,
               comissao_aplicada, ajuste_pagamento, descricao_fator_comissao, codigo_plano_pagamento,
               valor_frete_aplicado, frete_kg, valor_frete, valor_s_frete, grupo, departamento,
-              ipi, icms_st, iva_st
+              ipi, icms_st, iva_st, calcula_st
             ) VALUES (
               :id_tabela, :nome_tabela, :fornecedor, :codigo_cliente, :cliente,
               :codigo_produto_supra, :descricao_produto, :embalagem, :peso_liquido, :valor_produto,
               :comissao_aplicada, :ajuste_pagamento, :descricao_fator_comissao, :codigo_plano_pagamento,
               :valor_frete_aplicado, :frete_kg, :valor_frete, :valor_s_frete, :grupo, :departamento,
-              :ipi, :icms_st, :iva_st
+              :ipi, :icms_st, :iva_st, :calcula_st
             )
             RETURNING id_linha
         """)
@@ -188,6 +188,7 @@ def salvar_tabela_preco(body: TabelaSalvar):
                 "ipi":     float(getattr(produto, "ipi", 0) or 0),
                 "icms_st": float(getattr(produto, "icms_st", 0) or 0),
                 "iva_st":  float(getattr(produto, "iva_st", 0) or 0),
+                "calcula_st": bool(getattr(body, "calcula_st", False)),
             }
 
             logger.info("[/salvar] item %s params=%s", i, params)
@@ -243,6 +244,8 @@ def listar_tabelas():
               nome_tabela,
               cliente,
               fornecedor,
+              MAX(frete_kg) AS frete_kg,
+              BOOL_OR(calcula_st) AS calcula_st,
               MAX(criado_em) AS criado_em
             FROM tb_tabela_preco
             WHERE ativo is TRUE
@@ -257,6 +260,8 @@ def listar_tabelas():
                 "nome_tabela": r["nome_tabela"],
                 "cliente": r["cliente"],
                 "fornecedor": r["fornecedor"],
+                "frete_kg": float(r["frete_kg"] or 0),
+                "calcula_st": bool(r["calcula_st"]),
             }
             for r in rows
         ]
@@ -272,6 +277,15 @@ def busca_cliente(
 ):
     try:
         db = SessionLocal()
+
+        # texto original digitado/colado
+        q_raw = (q or "").strip()
+        like = f"%{q_raw}%"
+
+        # só dígitos (para CNPJ/CPF), mesmo se vier "7769327000171 - DISPET ..."
+        cnpj_digits = re.sub(r"\D", "", q_raw)
+        cnpj_like = f"%{cnpj_digits}%" if cnpj_digits else None
+
         base_sql = """
             SELECT
               codigo,
@@ -280,14 +294,24 @@ def busca_cliente(
               ramo_juridico
             FROM public.t_cadastro_cliente
             WHERE
-              (:q = '' OR nome_empresarial ILIKE :like OR cnpj_cpf_faturamento ILIKE :like)
+              (
+                :q = ''
+                OR nome_empresarial ILIKE :like
+                OR (
+                    :cnpj_like IS NOT NULL
+                    AND cnpj_cpf_faturamento ILIKE :cnpj_like
+                  )
+              )
         """
+
         params = {
-            "q": q,
-            "like": f"%{q}%",
+            "q": q_raw,
+            "like": like,
+            "cnpj_like": cnpj_like,
             "offset": (page - 1) * page_size,
             "limit": page_size,
         }
+
         if ramo:
             base_sql += " AND ramo_juridico = :ramo"
             params["ramo"] = ramo
@@ -309,12 +333,18 @@ def obter_tabela(id_tabela: int):
 
         itens = db.query(TabelaPrecoModel).filter_by(id_tabela=id_tabela, ativo=True).all()
 
+         # se por algum motivo tiver divergência entre linhas, faz um OR
+        calcula_st = any(bool(getattr(p, "calcula_st", False)) for p in itens) or bool(
+            getattr(cab, "calcula_st", False)
+        )
+
         return {
             "id": id_tabela,
             "nome_tabela": cab.nome_tabela,
             "cliente": cab.cliente,
             "codigo_cliente": getattr(cab, "codigo_cliente", None) or getattr(cab, "cliente_codigo", None),
             "fornecedor": cab.fornecedor,
+            "calcula_st": calcula_st,
             "produtos": [
                 {
                 "codigo_produto_supra": p.codigo_produto_supra,     
@@ -421,6 +451,7 @@ def atualizar_tabela(id_tabela: int, body: TabelaSalvar):
             r.cliente        = body.cliente
             r.codigo_cliente = body.codigo_cliente or "Não cadastrado"
             r.fornecedor     = body.fornecedor or ""
+            r.calcula_st     = bool(getattr(body, "calcula_st", False))
             r.editado_em     = now
 
         # ✅ filtra itens "lixo" do Swagger/exemplo
@@ -474,6 +505,8 @@ def atualizar_tabela(id_tabela: int, body: TabelaSalvar):
                 target.ipi                      = (p.ipi or 0)
                 target.icms_st                  = (p.icms_st or 0)
                 target.iva_st                   = (p.iva_st or 0)
+                target.calcula_st               = bool(getattr(body, "calcula_st", False))
+                
                 if not target.ativo:
                     target.ativo = True
                     target.deletado_em = None
@@ -509,6 +542,7 @@ def atualizar_tabela(id_tabela: int, body: TabelaSalvar):
                     ipi                  = (p.ipi or 0),
                     icms_st              = (p.icms_st or 0),
                     iva_st               = (p.iva_st or 0),
+                    calcula_st           = bool(getattr(body, "calcula_st", False)),
                     ativo                = True,
                     deletado_em          = None,
                     editado_em           = now,

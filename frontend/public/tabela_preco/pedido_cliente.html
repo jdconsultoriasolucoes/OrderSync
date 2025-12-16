@@ -32,10 +32,10 @@
             <th>Código</th>
             <th>Produto</th>
             <th>Embal.</th>
-            <th>Condição de Pagamento</th>
+            <th>Qtd</th>
             <th>Peso</th> <!-- Retirado por pedido do Edson, o campo continua sendo calculado, para retornar ele necessario retirar do CSS regra de ocultar -->
             <th>Valor <span id="tituloValorFrete">c/ Frete</span></th>
-            <th>Qtd</th>
+            <th>Condição de Pagamento</th>
             <th>Subtotal</th> <!-- Retirado por pedido do Edson, o campo continua sendo calculado, para retornar ele necessario retirar do CSS regra de ocultar -->
           </tr>
         </thead>
@@ -77,13 +77,9 @@
 
   <!-- defina sua API (ajuste para prod) -->
 <script>
-  // carrega config e expõe API_BASE antes do JS da página
-  window.__CFG_LOADED = fetch('/config.json', {cache:'no-store'})
-    .then(r => r.json())
-    .then(cfg => { window.__CFG = cfg; window.API_BASE = (cfg.API_BASE || '').replace(/\/$/,''); })
-    .catch(() => { window.API_BASE = (window.API_BASE || '').replace(/\/$/,''); });
+  window.API_BASE = "https://ordersync-backend-59d2.onrender.com";
 </script>
-<script src="/static/tabela_preco/pedido_cliente.js?v=20251012c"></script>
+<script src="/static/tabela_preco/pedido_cliente.js?v=tab-5"></script>
 <!-- resolve o /p/{code} e expõe os globais -->
 <script>
   window.addEventListener('DOMContentLoaded', () => {

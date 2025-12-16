@@ -20,6 +20,7 @@ class ProdutoV2(Base):
     status_produto = Column(Text, nullable=False)        # Status
     nome_produto = Column(Text, nullable=False)          # Descrição
     tipo_giro = Column(Text)
+    tipo = Column(Text)                                  # 'INSUMOS' ou 'PET'
 
     # Estoque / unidade / pesos
     estoque_disponivel = Column(Integer)
@@ -37,7 +38,7 @@ class ProdutoV2(Base):
     ncm = Column(Text)                                   # NCM/SH (só leitura na tela)
     fornecedor = Column(Text)
     filhos = Column(Integer)                             # Filho nº (int)
-    familia = Column(Integer)                            # FK p/ t_familia_produtos.id (join manual na leitura)
+    familia = Column(Text)                               # Nome da Família (era ID, mas agora é Texto vindo do PDF)
 
     # Preços e vigências
     preco = Column(Numeric(14, 4))                       # Valor Tabela Atual (oficial)

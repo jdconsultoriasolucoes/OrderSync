@@ -1,27 +1,16 @@
 // === Config ===
-let API_BASE = '';
-let ENDPOINT_VALIDADE = '';
+const API_BASE = "https://ordersync-backend-edjq.onrender.com";
+window.API_BASE = API_BASE;
+const ENDPOINT_VALIDADE = `${API_BASE}/tabela_preco/meta/validade_global`;
 
-document.addEventListener("DOMContentLoaded", async () => {
-  if (window.__CFG_LOADED && typeof window.__CFG_LOADED.then === 'function') {
-    try { await window.__CFG_LOADED; } catch (e) {}
-  }
-  API_BASE = (
-    (window.API_BASE) ||
-    (window.__CFG && window.__CFG.API_BASE_URL) ||
-    ''
-  ).replace(/\/$/, '') || 'http://localhost:8000';
-  window.API_BASE = API_BASE;
-
-  ENDPOINT_VALIDADE = `${API_BASE}/tabela_preco/meta/validade_global`
 // === Estado ===
-const MODE = { NEW:'new', VIEW:'view', EDIT:'edit', DUP:'duplicate' };
+const MODE = { NEW: 'new', VIEW: 'view', EDIT: 'edit', DUP: 'duplicate' };
 let mapaCondicoes = {}; // { codigo: taxa }
 let mapaDescontos = {}; // { codigo: fator }
 let itens = []; // itens carregados
 let currentMode = 'new';       // 'new' | 'view' | 'edit' | 'duplicate'
 let currentTabelaId = null;
-let sourceTabelaId  = null;
+let sourceTabelaId = null;
 let ivaStAtivo = !!document.getElementById('iva_st_toggle')?.checked;
 let __recalcRunning = false;
 let __recalcPending = false;
@@ -35,21 +24,21 @@ const __IS_RELOAD = (() => {
 })();
 
 if (__IS_RELOAD) {
-  try { sessionStorage.removeItem('criacao_tabela_preco_produtos'); } catch {}
+  try { sessionStorage.removeItem('criacao_tabela_preco_produtos'); } catch { }
   // limpe também snapshots/ponte por contexto, se usar TP_CTX_ID
   Object.keys(sessionStorage).forEach(k => {
     if (k.startsWith('TP_HEADER_SNAPSHOT:')) sessionStorage.removeItem(k);
-    if (k.startsWith('TP_ATUAL:'))           sessionStorage.removeItem(k);
-    if (k.startsWith('TP_BUFFER:'))          sessionStorage.removeItem(k);
+    if (k.startsWith('TP_ATUAL:')) sessionStorage.removeItem(k);
+    if (k.startsWith('TP_BUFFER:')) sessionStorage.removeItem(k);
   });
 }
 
 window.isClienteLivreSelecionado = false;
 
-function parseBool(v){
+function parseBool(v) {
   if (typeof v === 'boolean') return v;
   if (typeof v === 'number') return v === 1;
-  if (typeof v === 'string') return ['s','sim','true','1','y','yes'].includes(v.trim().toLowerCase());
+  if (typeof v === 'string') return ['s', 'sim', 'true', '1', 'y', 'yes'].includes(v.trim().toLowerCase());
   return false;
 }
 
@@ -66,7 +55,7 @@ const RequiredValidator = (() => {
   const CLS_ERR = 'field-error';
   const CLS_MSG = 'field-error-msg';
 
-  function clear(root=document) {
+  function clear(root = document) {
     root.querySelectorAll('.' + CLS_ERR).forEach(el => el.classList.remove(CLS_ERR));
     root.querySelectorAll('.' + CLS_MSG).forEach(el => el.remove());
   }
@@ -81,13 +70,13 @@ const RequiredValidator = (() => {
 
   // 👇 aqui é CONST interna (não use RequiredValidator.* aqui)
   const REQUIRED_FIELDS = {
-    '#nome_tabela':  'Informe o nome da tabela.',
+    '#nome_tabela': 'Informe o nome da tabela.',
     '#cliente_nome': 'Informe/selecione o cliente.',
-    '#tbody-itens tr td:nth-child(8) select':  'Selecione a classificação para todos os itens.',
+    '#tbody-itens tr td:nth-child(8) select': 'Selecione a classificação para todos os itens.',
     '#tbody-itens tr td:nth-child(10) select': 'Selecione a condição de pagamento para todos os itens.'
   };
 
-  function check(config = REQUIRED_FIELDS, root=document) {
+  function check(config = REQUIRED_FIELDS, root = document) {
     clear(root);
     const missing = [];
 
@@ -122,23 +111,23 @@ function getCtxId() {
 function getHeaderSnapshot() {
   const $ = (id) => document.getElementById(id);
   const val = (id) => ($(`${id}`)?.value ?? "").trim();
-  const on  = (id) => !!$(`${id}`)?.checked;
+  const on = (id) => !!$(`${id}`)?.checked;
 
   return {
     // visuais
-    nome_tabela:     val("nome_tabela"),
-    cliente:         val("cliente_nome"),   // texto mostrado no input
+    nome_tabela: val("nome_tabela"),
+    cliente: val("cliente_nome"),   // texto mostrado no input
     // ocultos/importantes
-    codigo_cliente:  val("codigo_cliente"),
-    ramo_juridico:   val("ramo_juridico"),
-    
+    codigo_cliente: val("codigo_cliente"),
+    ramo_juridico: val("ramo_juridico"),
+
     // toggles/parametrizações
-    iva_st:          on("iva_st_toggle"),
-    frete_kg:        val("frete_kg") || "0",
+    iva_st: on("iva_st_toggle"),
+    frete_kg: val("frete_kg") || "0",
     plano_pagamento: val("plano_pagamento"),
     desconto_global: val("desconto_global"),
-    cliente_livre:   !!window.isClienteLivreSelecionado,   
-    iva_enabled:     !$("iva_st_toggle")?.disabled
+    cliente_livre: !!window.isClienteLivreSelecionado,
+    iva_enabled: !$("iva_st_toggle")?.disabled
   };
 }
 
@@ -163,11 +152,11 @@ function restoreHeaderSnapshotIfNew() {
     };
 
     // ---- Cabeçalho básico
-    set('nome_tabela',     snap.nome_tabela);
-    set('cliente_nome',    snap.cliente);
-    set('codigo_cliente',  snap.codigo_cliente);
-    set('ramo_juridico',   snap.ramo_juridico);
-    set('frete_kg',        snap.frete_kg);
+    set('nome_tabela', snap.nome_tabela);
+    set('cliente_nome', snap.cliente);
+    set('codigo_cliente', snap.codigo_cliente);
+    set('ramo_juridico', snap.ramo_juridico);
+    set('frete_kg', snap.frete_kg);
 
     // ---- Selects (este método deve ser chamado DEPOIS de carregarCondicoes/Descontos)
     set('plano_pagamento', snap.plano_pagamento || '');
@@ -176,7 +165,7 @@ function restoreHeaderSnapshotIfNew() {
     // ---- IVA_ST e flags do cliente livre
     const ivaChk = document.getElementById('iva_st_toggle');
     if (ivaChk) {
-      ivaChk.checked  = !!snap.iva_st;
+      ivaChk.checked = !!snap.iva_st;
       ivaChk.disabled = !snap.iva_enabled;   // se estava habilitado, volta habilitado
       window.ivaStAtivo = ivaChk.checked;
     }
@@ -196,25 +185,25 @@ function restoreHeaderSnapshotIfNew() {
 }
 
 
- // === Ponte Pai–Filho (contexto de itens) ===
- function clearPickerBridgeFor(ctx) {
-  try { sessionStorage.removeItem(`TP_ATUAL:${ctx}`); } catch {}
-  try { sessionStorage.removeItem(`TP_BUFFER:${ctx}`); } catch {}
- }
+// === Ponte Pai–Filho (contexto de itens) ===
+function clearPickerBridgeFor(ctx) {
+  try { sessionStorage.removeItem(`TP_ATUAL:${ctx}`); } catch { }
+  try { sessionStorage.removeItem(`TP_BUFFER:${ctx}`); } catch { }
+}
 
- function preparePickerBridgeBeforeNavigate() {
+function preparePickerBridgeBeforeNavigate() {
   const ctx = getCtxId();
   sessionStorage.setItem('TP_CTX_ID', ctx);
   sessionStorage.setItem(`TP_RETURN_MODE:${ctx}`, currentMode);
-  try { sessionStorage.removeItem(`TP_BUFFER:${ctx}`); } catch {}
+  try { sessionStorage.removeItem(`TP_BUFFER:${ctx}`); } catch { }
   // salva itens atuais do pai para pré‑marcação no picker
   sessionStorage.setItem(`TP_ATUAL:${ctx}`, JSON.stringify(itens || []));
   if (currentMode === MODE.DUP && sourceTabelaId) {
-   sessionStorage.setItem('TP_SOURCE_ID', String(sourceTabelaId));
- }
+    sessionStorage.setItem('TP_SOURCE_ID', String(sourceTabelaId));
+  }
 }
 
- async function mergeBufferFromPickerIfAny() {
+async function mergeBufferFromPickerIfAny() {
   const ctx = getCtxId();
   const raw = sessionStorage.getItem(`TP_BUFFER:${ctx}`);
   if (!raw) return;
@@ -226,7 +215,7 @@ function restoreHeaderSnapshotIfNew() {
     if (currentMode === MODE.VIEW && !pretendEdit) {
       sessionStorage.removeItem(`TP_BUFFER:${ctx}`);
       return;
-  }
+    }
     const recebidos = JSON.parse(raw) || [];
     const map = new Map((itens || []).map(x => [x.codigo_tabela, x]));
     for (const p of recebidos) {
@@ -236,64 +225,162 @@ function restoreHeaderSnapshotIfNew() {
     renderTabela();
 
     await atualizarPrecosAtuais();
-    queueMicrotask(() => Promise.resolve(recalcTudo()).catch(()=>{}));
-  } catch {}
+    queueMicrotask(() => Promise.resolve(recalcTudo()).catch(() => { }));
+  } catch { }
   finally {
-    try { sessionStorage.removeItem(`TP_BUFFER:${ctx}`); } catch {}
+    try { sessionStorage.removeItem(`TP_BUFFER:${ctx}`); } catch { }
   }
 }
 
-async function atualizarPrecosAtuais(){
-  const codigos = Array.from(new Set((itens||[]).map(x=>x.codigo_tabela).filter(Boolean)));
+async function atualizarPrecosAtuais() {
+  // Normaliza os códigos da tabela
+  const codigos = Array.from(
+    new Set(
+      (itens || [])
+        .map(x => x.codigo_tabela)
+        .filter(Boolean)
+        .map(c => String(c).trim())
+    )
+  );
+
   if (!codigos.length) return;
 
-  const mapa = {};
- for (const cod of codigos){
-   try {
-     const r = await fetch(`${API_BASE}/tabela_preco/produtos_filtro?codigo=${encodeURIComponent(cod)}`, { cache: 'no-store' });
-     if (!r.ok) continue;
-     const raw = await r.json();
-     const arr = Array.isArray(raw?.items) ? raw.items
-           : Array.isArray(raw)       ? raw
-           : raw ? [raw] : [];
+  const codigosSet = new Set(codigos);
+  const mapa = {}; // codigo_tabela -> valor_atual
+  const PAGE_SIZE = 1000; // igual ou maior que 25, só que "turbinado"
+  let page = 1;
+  let total = null;
 
-      const p = arr.find(it => {
-        const cands = [
-          it.codigo, it.codigo_tabela, it.codigo_produto_supra, it.CODIGO
-        ].map(x => String(x ?? '').trim());
-        return cands.includes(String(cod).trim());
-      }) || arr[0] || {};
+  while (true) {
+    let url;
+    try {
+      url = new URL(`${API_BASE}/tabela_preco/produtos_filtro`);
+    } catch (e) {
+      console.error("atualizarPrecosAtuais URL inválida:", e);
+      break;
+    }
 
-mapa[cod] = Number(p.valor ?? p.preco ?? p.preco_venda ?? 0);
-   } catch {}
- }
+    url.searchParams.set("page", String(page));
+    url.searchParams.set("page_size", String(PAGE_SIZE));
 
-  // aplica e atualiza a grade
-  let mudou=false;
-  itens = (itens||[]).map(it=>{
-    const novo = mapa[it.codigo_tabela];
-    if (novo!=null && !isNaN(novo) && Number(novo)!==Number(it.valor)){
-      mudou=true; return {...it, valor:Number(novo)};
+    let resp;
+    try {
+      resp = await fetch(url.toString(), { cache: "no-store" });
+    } catch (e) {
+      console.error("atualizarPrecosAtuais fetch erro:", e);
+      break;
+    }
+
+    if (!resp.ok) {
+      console.error("atualizarPrecosAtuais resposta não OK:", resp.status);
+      break;
+    }
+
+    let raw;
+    try {
+      raw = await resp.json();
+    } catch (e) {
+      console.error("atualizarPrecosAtuais json erro:", e);
+      break;
+    }
+
+    const paginado = !Array.isArray(raw) && Array.isArray(raw.items);
+    const arr = paginado ? (raw.items || []) : (Array.isArray(raw) ? raw : []);
+
+    if (paginado) {
+      total = typeof raw.total === "number" ? raw.total : arr.length;
+    }
+
+    // Varre a página e amarra cada código ao seu preço atual
+    for (const p of arr) {
+      const cands = [
+        p.codigo_tabela,
+        p.codigo,
+        p.codigo_produto_supra,
+        p.CODIGO
+      ].map(v => String(v ?? "").trim());
+
+      const chave = cands.find(c => codigosSet.has(c));
+      if (!chave) continue;
+
+      // não sobrescrever se já pegamos esse código de uma página anterior
+      if (Object.prototype.hasOwnProperty.call(mapa, chave)) continue;
+
+      const valorNum = Number(
+        p.valor ??
+        p.preco ??
+        p.preco_venda ??
+        p.valor_produto ??
+        0
+      );
+
+      if (!Number.isNaN(valorNum) && valorNum > 0) {
+        mapa[chave] = valorNum;
+      }
+    }
+
+    // Se já encontramos todos os códigos, podemos parar
+    if (Object.keys(mapa).length >= codigosSet.size) {
+      break;
+    }
+
+    // Se não for paginação (array simples), para na primeira
+    if (!paginado) break;
+
+    const ja = page * PAGE_SIZE;
+    if (total != null && ja >= total) {
+      // já varremos todas as páginas
+      break;
+    }
+
+    page += 1;
+
+    // trava de segurança pra não entrar em loop insano
+    if (page > 50) {
+      console.warn("atualizarPrecosAtuais: limite de páginas excedido");
+      break;
+    }
+  }
+
+  // Se não achamos nenhum preço, não mexe em nada
+  if (!Object.keys(mapa).length) {
+    return;
+  }
+
+  // Aplica os preços encontrados nos itens
+  let mudou = false;
+  itens = (itens || []).map(it => {
+    const key = String(it.codigo_tabela ?? "").trim();
+    const novo = key && Object.prototype.hasOwnProperty.call(mapa, key)
+      ? mapa[key]
+      : null;
+
+    if (novo != null && !Number.isNaN(novo) && Number(novo) !== Number(it.valor)) {
+      mudou = true;
+      return { ...it, valor: Number(novo) };
     }
     return it;
   });
 
-  if (mudou){
-    const rows = Array.from(document.querySelectorAll('#tbody-itens tr'));
-    rows.forEach((tr,i)=>{
-      const tdValor = tr.querySelector('td:nth-child(7)');
-      if (tdValor) tdValor.textContent = fmtMoney(itens[i].valor||0);
-    });
-    await recalcTudo();
-  }
-}
+  if (!mudou) return;
 
+  // Atualiza a coluna de valor na grade (7ª coluna) e recalcula totais
+  const rows = Array.from(document.querySelectorAll("#tbody-itens tr"));
+  rows.forEach((tr, i) => {
+    const tdValor = tr.querySelector("td:nth-child(7)");
+    if (!tdValor) return;
+    const v = itens[i] ? (itens[i].valor || 0) : 0;
+    tdValor.textContent = fmtMoney(v);
+  });
+
+  await recalcTudo();
+}
 // Habilita/desabilita todos os campos e a grade
 function setFormDisabled(disabled) {
   // topo
   document.querySelectorAll('input, select').forEach(el => {
     // não travar o botão, só inputs/selects
-    if (['BUTTON','A'].includes(el.tagName)) return;
+    if (['BUTTON', 'A'].includes(el.tagName)) return;
     if (el.id === 'iva_st_toggle' && !disabled) return;
     el.disabled = disabled;
   });
@@ -315,21 +402,21 @@ function onDuplicar() {
 
   // 🧽 Limpa TODO o cabeçalho (nome e cliente)
   const nome = document.getElementById('nome_tabela');
-  const cli  = document.getElementById('cliente_nome');
-  const cod  = document.getElementById('codigo_cliente');
+  const cli = document.getElementById('cliente_nome');
+  const cod = document.getElementById('codigo_cliente');
   const ramo = document.getElementById('ramo_juridico');
-  const frete= document.getElementById('frete_kg');
+  const frete = document.getElementById('frete_kg');
   const cond = document.getElementById('plano_pagamento');
   const desc = document.getElementById('desconto_global');
 
   if (nome) nome.value = '';
-  if (cli)  cli.value  = '';
-  if (cod)  cod.value  = '';
+  if (cli) cli.value = '';
+  if (cod) cod.value = '';
   if (ramo) ramo.value = '';
 
   if (frete) frete.value = 0;
-  if (cond)  cond.value  = '';
-  if (desc)  desc.value  = '';
+  if (cond) cond.value = '';
+  if (desc) desc.value = '';
 
   // flags de cliente “livre” e travas do IVA
   window.isClienteLivreSelecionado = false;
@@ -350,9 +437,9 @@ function toggleToolbarByMode() {
     el.classList.toggle('hidden', !visible);
   };
 
-  const hasId       = !!currentTabelaId;
-  const isView      = currentMode === MODE.VIEW;
-  const isEditLike  = currentMode === MODE.EDIT || currentMode === MODE.DUP || currentMode === MODE.NEW;
+  const hasId = !!currentTabelaId;
+  const isView = currentMode === MODE.VIEW;
+  const isEditLike = currentMode === MODE.EDIT || currentMode === MODE.DUP || currentMode === MODE.NEW;
   const isEditOrDup = currentMode === MODE.EDIT || currentMode === MODE.DUP;
 
   // Listar: APENAS quando NÃO há id (tela nova)
@@ -362,12 +449,12 @@ function toggleToolbarByMode() {
   show('btn-buscar', isEditLike);
 
   // Editar/Duplicar: apenas em VIEW com id
-  show('btn-editar',   isView && hasId);
+  show('btn-editar', isView && hasId);
   show('btn-duplicar', isView && hasId);
 
   // Remover/Salvar: em NEW/EDIT/DUP
   show('btn-remover-selecionados', isEditLike);
-  show('btn-salvar',               isEditLike);
+  show('btn-salvar', isEditLike);
 
   // Cancelar:
   //  - visível em EDIT/DUP
@@ -376,7 +463,7 @@ function toggleToolbarByMode() {
 }
 
 // AÇÕES DE BOTÃO
-function onEditar(){
+function onEditar() {
   if (currentTabelaId) sessionStorage.setItem('TP_LAST_VIEW_ID', String(currentTabelaId));
   setMode(MODE.EDIT);
 }
@@ -396,20 +483,20 @@ const fmtPct = (v) => (Number(v || 0)).toLocaleString('pt-BR', { minimumFraction
 
 function calcularLinha(item, fator, taxaCond, freteKg) {
   const valor = Number(item.valor || 0);
-  const peso  = Number(item.peso_liquido || 0);
+  const peso = Number(item.peso_liquido || 0);
 
   // 1) DESCONTO/FATOR → base líquida
   const descontoValor = valor * Number(fator || 0);
-  const liquido       = Math.max(0, valor - descontoValor);
+  const liquido = Math.max(0, valor - descontoValor);
 
   // 2) Condição SOBRE o líquido
   const acrescimoCond = liquido * Number(taxaCond || 0);
 
   // 3) Frete (continua por KG — só soma no total)
-  const freteValor    = (Number(freteKg || 0) / 1000) * peso;
+  const freteValor = (Number(freteKg || 0) / 1000) * peso;
 
   // 4) Preço comercial sem impostos (líquido + condição)
-  const precoBase     = liquido + acrescimoCond;
+  const precoBase = liquido + acrescimoCond;
 
   return { acrescimoCond, freteValor, descontoValor, precoBase, liquido }
 }
@@ -422,24 +509,24 @@ async function previewFiscalLinha(payload) {
     body: JSON.stringify(payload),
   });
   if (!r.ok) {
-    const txt = await r.text().catch(()=> '');
+    const txt = await r.text().catch(() => '');
     throw new Error(txt || 'Falha ao calcular preview fiscal');
   }
   return r.json();
 }
 
-function normaliza(s){ return String(s||'').normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase(); }
+function normaliza(s) { return String(s || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase(); }
 
 // formata CNPJ/CPF para exibir bonito
-function fmtDoc(s){
-  const d = String(s||'').replace(/\D/g,'');
-  if (d.length===14) return d.replace(/^(\d{2})(\d{3})(\d{3})(\d{4})(\d{2})$/,'$1.$2.$3/$4-$5');
-  if (d.length===11) return d.replace(/^(\d{3})(\d{3})(\d{3})(\d{2})$/,'$1.$2.$3-$4');
-  return s||'';
+function fmtDoc(s) {
+  const d = String(s || '').replace(/\D/g, '');
+  if (d.length === 14) return d.replace(/^(\d{2})(\d{3})(\d{3})(\d{4})(\d{2})$/, '$1.$2.$3/$4-$5');
+  if (d.length === 11) return d.replace(/^(\d{3})(\d{3})(\d{3})(\d{2})$/, '$1.$2.$3-$4');
+  return s || '';
 }
 
 // chamada única ao backend (aceita q= ou query=)
-async function buscarClientes(term){
+async function buscarClientes(term) {
   const q = (term || '').trim();
   if (q.length < 2) return [];
 
@@ -448,193 +535,194 @@ async function buscarClientes(term){
     `${api}/tabela_preco/busca_cliente`,
     `${api}/tabela_preco/busca_cliente/`,
   ];
-  const params = ['q','query','nome','term','busca'];
+  const params = ['q', 'query', 'nome', 'term', 'busca'];
 
   // tenta GET com várias chaves (?q=, ?query=, etc) e normaliza a resposta
-  for (const base of bases){
-    for (const k of params){
-      try{
+  for (const base of bases) {
+    for (const k of params) {
+      try {
         const r = await fetch(`${base}?${k}=${encodeURIComponent(q)}`, { cache: 'no-store' });
         if (!r.ok) continue;
 
         const data = await r.json();
         const arr =
-          Array.isArray(data)             ? data :
-          Array.isArray(data?.results)    ? data.results :
-          Array.isArray(data?.clientes)   ? data.clientes :
-          Array.isArray(data?.items)      ? data.items :
-          (data && (data.nome || data.cnpj)) ? [data] : [];
+          Array.isArray(data) ? data :
+            Array.isArray(data?.results) ? data.results :
+              Array.isArray(data?.clientes) ? data.clientes :
+                Array.isArray(data?.items) ? data.items :
+                  (data && (data.nome || data.cnpj)) ? [data] : [];
 
         if (arr.length) return arr;
-      }catch{/* tenta próximo */}
+      } catch {/* tenta próximo */ }
     }
   }
 
   // fallback: GET sem query e filtro no front (SÓ por nome/CNPJ)
-  try{
+  try {
     const r2 = await fetch(bases[0], { cache: 'no-store' });
     if (!r2.ok) return [];
     const all = await r2.json();
 
-    const nq   = normaliza(q);
+    const nq = normaliza(q);
     const qCnj = q.replace(/\D/g, '');
     return (all || []).filter(c => {
       const nome = normaliza(c.nome_cliente || c.razao || c.razao_social || c.fantasia || c.NOME || '');
       const cnpj = String(c.cnpj || c.CNPJ || '').replace(/\D/g, '');
       return (nome.includes(nq) || (qCnj && cnpj.includes(qCnj)));
     });
-  }catch{ return []; }
+  } catch { return []; }
 }
 
-function setupClienteAutocomplete(){
+function setupClienteAutocomplete() {
   const input = document.getElementById('cliente_nome');
-  const box   = document.getElementById('cliente_suggestions');
+  const box = document.getElementById('cliente_suggestions');
   if (!input || !box) return;
 
-  let items=[], idx=-1, timer=null;
+  let items = [], idx = -1, timer = null;
 
-  function render(){
-    box.innerHTML = items.map((c,i)=>{
-      if (c.__raw){
-        return `<div class="suggest ${i===idx?'active':''}" data-i="${i}" style="padding:6px 8px;cursor:pointer">
+  function render() {
+    box.innerHTML = items.map((c, i) => {
+      if (c.__raw) {
+        return `<div class="suggest ${i === idx ? 'active' : ''}" data-i="${i}" style="padding:6px 8px;cursor:pointer">
                   <div>Usar: <strong>"${c.nome}"</strong></div>
                   <small style="opacity:.7">não encontrado — gravar como texto</small>
                 </div>`;
       }
       const linha = [fmtDoc(c.cnpj), c.nome].filter(Boolean).join(' - ');
-      return `<div class="suggest ${i===idx?'active':''}" data-i="${i}" style="padding:6px 8px;cursor:pointer">
+      return `<div class="suggest ${i === idx ? 'active' : ''}" data-i="${i}" style="padding:6px 8px;cursor:pointer">
                 <div>${linha}</div>
               </div>`;
     }).join('');
     box.style.display = items.length ? 'block' : 'none';
   }
 
-  function selectItem(i){
-  const c = items[i]; if (!c) return;
+  function selectItem(i) {
+    const c = items[i]; if (!c) return;
 
-  const nomeEl = document.getElementById('cliente_nome');
-  const codEl  = document.getElementById('codigo_cliente');
-  const ramoEl = document.getElementById('ramo_juridico');
-  const ivaChk = document.getElementById('iva_st_toggle');
-  if (ivaChk) { ivaChk.checked = false; ivaChk.disabled = true; window.ivaStAtivo = false; }
-  window.isClienteLivreSelecionado = false;
+    const nomeEl = document.getElementById('cliente_nome');
+    const codEl = document.getElementById('codigo_cliente');
+    const ramoEl = document.getElementById('ramo_juridico');
+    const ivaChk = document.getElementById('iva_st_toggle');
+    if (ivaChk) { ivaChk.checked = false; ivaChk.disabled = true; window.ivaStAtivo = false; }
+    window.isClienteLivreSelecionado = false;
 
-  enforceIvaLockByCliente();
+    enforceIvaLockByCliente();
 
-  if (c.__raw){
-  // cliente “livre” (gravar como texto)
-  if (nomeEl) nomeEl.value = c.nome;
-  if (codEl)  codEl.value  = '';          // sem código
-  if (ramoEl) ramoEl.value = '';
+    if (c.__raw) {
+      // cliente “livre” (gravar como texto)
+      if (nomeEl) nomeEl.value = c.nome;
+      if (codEl) codEl.value = '';          // sem código
+      if (ramoEl) ramoEl.value = '';
 
-  window.isClienteLivreSelecionado = true;
-  if (ivaChk){
-    ivaChk.disabled = false;              // ✅ habilita para você decidir
-    // não marco/desmarco aqui — decisão manual
-  }
-  saveHeaderSnapshot?.();
+      window.isClienteLivreSelecionado = true;
+      if (ivaChk) {
+        ivaChk.disabled = false;              // ✅ habilita para você decidir
+        // não marco/desmarco aqui — decisão manual
+      }
+      saveHeaderSnapshot?.();
 
-} else {
-  // cliente cadastrado
-  if (nomeEl) nomeEl.value = [fmtDoc(c.cnpj), c.nome].filter(Boolean).join(' - ');
-  if (codEl)  codEl.value  = c.codigo ?? '';
-  if (ramoEl) ramoEl.value = c.ramo_juridico ?? c.ramo ?? '';
+    } else {
+      // cliente cadastrado
+      if (nomeEl) nomeEl.value = [fmtDoc(c.cnpj), c.nome].filter(Boolean).join(' - ');
+      if (codEl) codEl.value = c.codigo ?? '';
+      if (ramoEl) ramoEl.value = c.ramo_juridico ?? c.ramo ?? '';
 
-  // aplica preferência vinda do cadastro, mas TRAVADO
-  const pref = c.iva_st ?? c.usa_iva_st ?? c.st ?? c.calcula_st ?? null;
-  if (ivaChk){
-    if (pref != null) ivaChk.checked = parseBool(pref);
-    ivaChk.disabled = true;              // 🔒 travado para cliente cadastrado
-  }
-  window.isClienteLivreSelecionado = false;
-  saveHeaderSnapshot?.();
-}
+      // aplica preferência vinda do cadastro, mas TRAVADO
+      const pref = c.iva_st ?? c.usa_iva_st ?? c.st ?? c.calcula_st ?? null;
+      if (ivaChk) {
+        if (pref != null) ivaChk.checked = parseBool(pref);
+        ivaChk.disabled = true;              // 🔒 travado para cliente cadastrado
+      }
+      window.isClienteLivreSelecionado = false;
+      saveHeaderSnapshot?.();
+    }
 
-function ensureHasId(){
-  if (!currentTabelaId) {
-    const q = new URLSearchParams(location.search);
-    const idUrl = q.get('id');
-    const cand = idUrl || sourceTabelaId;
-    if (cand) currentTabelaId = String(cand);
-  }
-}
+    function ensureHasId() {
+      if (!currentTabelaId) {
+        const q = new URLSearchParams(location.search);
+        const idUrl = q.get('id');
+        const cand = idUrl || sourceTabelaId;
+        if (cand) currentTabelaId = String(cand);
+      }
+    }
 
-// fecha sugestões e recalcula
-box.innerHTML = '';
-box.style.display = 'none';
-Promise.resolve(recalcTudo()).catch(() => {});}
-
-
-  async function doSearch(q){
-  const typed = (q || '').trim();
-  if (typed.length < 2){ items = []; render(); return; }
-
-  const data = await buscarClientes(typed);
-
-  // mapeia campos do back
-// mapeia campos do back (pega várias chaves possíveis)
-const mapped = (data || []).map(c => ({
-  // captura o código do cliente com várias variações comuns
-  codigo: c.codigo ?? c.id ?? c.id_cliente ?? c.codigo_cliente ?? c.codigoCliente ?? c.CODIGO ?? c.COD_CLIENTE ?? c.cod ?? null,
-  nome:   c.nome_cliente ?? c.nomeCliente ?? c.NOME_CLIENTE ?? c.nome ?? c.razao ?? c.razao_social ?? c.razaoSocial ?? c.fantasia ?? '',
-  cnpj:   c.cnpj ?? c.CNPJ ?? c.cnpj_cpf ?? c.cnpjCpf ?? '',
-  ramo_juridico: c.ramo_juridico ?? ''
-})).filter(c => (c.nome || c.cnpj));
-
-  // 🔎 filtro FINAL no front (sempre), por nome ou CNPJ
-  const nq   = normaliza(typed);
-  const qCnj = typed.replace(/\D/g, '');
-  items = mapped.filter(c => {
-    const nomeNorm    = normaliza(c.nome || '');
-    const cnpjDigits  = String(c.cnpj || '').replace(/\D/g, '');
-    return (nomeNorm.includes(nq) || (qCnj && cnpjDigits.includes(qCnj)));
-  });
-
-  if (!items.length){
-    // nada casou → oferece “usar o que digitei”
-    items = [{ __raw:true, nome: typed }];
+    // fecha sugestões e recalcula
+    box.innerHTML = '';
+    box.style.display = 'none';
+    Promise.resolve(recalcTudo()).catch(() => { });
   }
 
-  idx = -1;
-  render();
-}
 
-  input.addEventListener('input', ()=>{
+  async function doSearch(q) {
+    const typed = (q || '').trim();
+    if (typed.length < 2) { items = []; render(); return; }
+
+    const data = await buscarClientes(typed);
+
+    // mapeia campos do back
+    // mapeia campos do back (pega várias chaves possíveis)
+    const mapped = (data || []).map(c => ({
+      // captura o código do cliente com várias variações comuns
+      codigo: c.codigo ?? c.id ?? c.id_cliente ?? c.codigo_cliente ?? c.codigoCliente ?? c.CODIGO ?? c.COD_CLIENTE ?? c.cod ?? null,
+      nome: c.nome_cliente ?? c.nomeCliente ?? c.NOME_CLIENTE ?? c.nome ?? c.razao ?? c.razao_social ?? c.razaoSocial ?? c.fantasia ?? '',
+      cnpj: c.cnpj ?? c.CNPJ ?? c.cnpj_cpf ?? c.cnpjCpf ?? '',
+      ramo_juridico: c.ramo_juridico ?? ''
+    })).filter(c => (c.nome || c.cnpj));
+
+    // 🔎 filtro FINAL no front (sempre), por nome ou CNPJ
+    const nq = normaliza(typed);
+    const qCnj = typed.replace(/\D/g, '');
+    items = mapped.filter(c => {
+      const nomeNorm = normaliza(c.nome || '');
+      const cnpjDigits = String(c.cnpj || '').replace(/\D/g, '');
+      return (nomeNorm.includes(nq) || (qCnj && cnpjDigits.includes(qCnj)));
+    });
+
+    if (!items.length) {
+      // nada casou → oferece “usar o que digitei”
+      items = [{ __raw: true, nome: typed }];
+    }
+
+    idx = -1;
+    render();
+  }
+
+  input.addEventListener('input', () => {
     clearTimeout(timer);
-    timer = setTimeout(()=>{ doSearch(input.value); }, 250);
+    timer = setTimeout(() => { doSearch(input.value); }, 250);
   });
   input.addEventListener('keydown', (e) => {
-  if (e.key === 'ArrowDown' && items.length){ idx = (idx + 1) % items.length; render(); e.preventDefault(); }
-  else if (e.key === 'ArrowUp'   && items.length){ idx = (idx - 1 + items.length) % items.length; render(); e.preventDefault(); }
-  else if (e.key === 'Enter'){
-    e.preventDefault();
-    if (items.length && idx >= 0){
-      selectItem(idx);
-    } else {
-      // aceita o que foi digitado
-      const val = (input.value || '').trim();
-      if (!val) return;
-      items = [{ __raw:true, nome: val }];
-      selectItem(0);
+    if (e.key === 'ArrowDown' && items.length) { idx = (idx + 1) % items.length; render(); e.preventDefault(); }
+    else if (e.key === 'ArrowUp' && items.length) { idx = (idx - 1 + items.length) % items.length; render(); e.preventDefault(); }
+    else if (e.key === 'Enter') {
+      e.preventDefault();
+      if (items.length && idx >= 0) {
+        selectItem(idx);
+      } else {
+        // aceita o que foi digitado
+        const val = (input.value || '').trim();
+        if (!val) return;
+        items = [{ __raw: true, nome: val }];
+        selectItem(0);
+      }
+    } else if (e.key === 'Escape') {
+      box.innerHTML = ''; box.style.display = 'none';
     }
-  } else if (e.key === 'Escape'){
-    box.innerHTML = ''; box.style.display = 'none';
-  }
-});
-  box.addEventListener('mousedown', e=>{
-    const el = e.target.closest('.suggest'); if (!el) return;
-    selectItem(Number(el.dataset.i)||0);
   });
-  input.addEventListener('blur', ()=> setTimeout(()=>{ box.innerHTML=''; box.style.display='none'; }, 150));
+  box.addEventListener('mousedown', e => {
+    const el = e.target.closest('.suggest'); if (!el) return;
+    selectItem(Number(el.dataset.i) || 0);
+  });
+  input.addEventListener('blur', () => setTimeout(() => { box.innerHTML = ''; box.style.display = 'none'; }, 150));
 }
 
 // PATCH: bloqueio/controle do IVA_ST conforme cliente (livre x cadastrado)
-function enforceIvaLockByCliente(){
-  const ivaChk  = document.getElementById('iva_st_toggle');
-  const codigo  = (document.getElementById('codigo_cliente')?.value || '').trim();
+function enforceIvaLockByCliente() {
+  const ivaChk = document.getElementById('iva_st_toggle');
+  const codigo = (document.getElementById('codigo_cliente')?.value || '').trim();
   if (!ivaChk) return;
 
-  if (codigo){                         // cliente cadastrado
+  if (codigo) {                         // cliente cadastrado
     ivaChk.disabled = true;            // 🔒 travado
     // não muda o checked aqui (pode já ter vindo do cadastro)
   } else {
@@ -663,15 +751,15 @@ async function salvarTabelaPreco(payload) {
   });
 
   const raw = await resp.text();
-  let data = null; try { data = JSON.parse(raw); } catch {}
+  let data = null; try { data = JSON.parse(raw); } catch { }
 
   if (!resp.ok) {
     // trata 422 bonitinho, se vier
     try {
       const j = JSON.parse(raw);
       if (j?.detail) throw new Error(typeof j.detail === 'string' ? j.detail
-                             : j.detail.map(d => `• ${d.loc?.join('.')}: ${d.msg}`).join('\n'));
-    } catch {}
+        : j.detail.map(d => `• ${d.loc?.join('.')}: ${d.msg}`).join('\n'));
+    } catch { }
     throw new Error(`Falha ao salvar (${resp.status}). ${raw}`);
   }
   return data;
@@ -701,11 +789,11 @@ async function carregarDescontos() {
   const sel = document.getElementById('desconto_global');
   sel.innerHTML = '';
   sel.appendChild(option('Selecione…', ''));
-  
-  data.forEach(d => { 
-  const frac = Number(d.percentual) || 0;        // mantém como fração 0–1
-  mapaDescontos[d.codigo] = frac;
-  sel.appendChild(option(`${d.codigo} - ${(frac*100).toFixed(2)}`, d.codigo));
+
+  data.forEach(d => {
+    const frac = Number(d.percentual) || 0;        // mantém como fração 0–1
+    mapaDescontos[d.codigo] = frac;
+    sel.appendChild(option(`${d.codigo} - ${(frac * 100).toFixed(2)}`, d.codigo));
   });
   atualizarPillDesconto();
 }
@@ -723,7 +811,7 @@ function atualizarPillDesconto() {
   const code = document.getElementById('desconto_global')?.value || '';
   const fator = mapaDescontos[code];
   const el = document.getElementById('pill-fator');
-  if (el) el.textContent = (fator != null && !isNaN(fator)) ? `${(Number(fator)*100).toFixed(2)}` : '—';
+  if (el) el.textContent = (fator != null && !isNaN(fator)) ? `${(Number(fator) * 100).toFixed(2)}` : '—';
 }
 
 function obterItensDaSessao() {
@@ -757,7 +845,29 @@ async function carregarItens() {
       document.getElementById('codigo_cliente').value = t.codigo_cliente || '';
       document.getElementById('ramo_juridico').value = t.ramo_juridico || '';
 
-      // >>> NOVO: preencher frete/condição (se existirem) e inferir do item[0] se faltar
+      // NOVO: aplicar flag de ST que veio do backend
+      const ivaChk = document.getElementById('iva_st_toggle');
+      const flagSt = !!t.calcula_st;
+
+      if (ivaChk) {
+        ivaChk.checked = flagSt;
+        window.ivaStAtivo = flagSt;
+      }
+
+      // NOVO: marcar cliente livre x cadastrado para o lock do checkbox
+      if (t.codigo_cliente) {
+        // tem código → tratamos como cadastrado
+        window.isClienteLivreSelecionado = false;
+      } else {
+        // sem código → cliente livre (flag vem da tabela)
+        window.isClienteLivreSelecionado = true;
+      }
+
+      // NOVO: aplica a regra de travar/destravar conforme tipo de cliente
+      if (typeof enforceIvaLockByCliente === 'function') {
+        enforceIvaLockByCliente();
+      }
+
       const first = (Array.isArray(t.produtos) && t.produtos.length) ? t.produtos[0] : null;
       const freteInput = document.getElementById('frete_kg');
       const planoSel = document.getElementById('plano_pagamento');
@@ -776,46 +886,49 @@ async function carregarItens() {
         const freteVal = first?.frete_kg ?? 0;
         freteInput.value = String(freteVal);
       }
-      
-     itens = (t.produtos || []).map(p => ({
-      // chaves que a grade espera:
-      id_linha:           p.id_linha ?? p.idLinha ?? null, 
-      codigo_tabela:      p.codigo_produto_supra ?? p.codigo_tabela ?? '',
-      descricao:          p.descricao_produto    ?? p.descricao     ?? '',
-      embalagem:          p.embalagem            ?? '',
-      peso_liquido:       Number(p.peso_liquido ?? 0),
-      valor:              Number(p.valor_produto ?? p.valor ?? 0),
 
-      // comerciais/fiscais
-      desconto:           Number(p.comissao_aplicada ?? 0),      // mantém em R$ pra exibir
-      acrescimo:          Number(p.ajuste_pagamento  ?? 0),      // mantém em R$ pra exibir
-      plano_pagamento:    p.codigo_plano_pagamento   ?? p.plano_pagamento ?? null,
-      frete_kg:           Number(p.frete_kg ?? 0),
-      ipi:                Number(p.ipi     ?? 0),
-      icms_st:            Number(p.icms_st ?? 0),
-      iva_st:             Number(p.iva_st  ?? 0),
-      grupo:              p.grupo ?? null,
-      departamento:       p.departamento ?? null,
+      itens = (t.produtos || []).map(p => ({
+        // chaves que a grade espera:
+        id_linha: p.id_linha ?? p.idLinha ?? null,
+        codigo_tabela: p.codigo_produto_supra ?? p.codigo_tabela ?? '',
+        descricao: p.descricao_produto ?? p.descricao ?? '',
+        embalagem: p.embalagem ?? '',
+        peso_liquido: Number(p.peso_liquido ?? 0),
+        valor: Number(p.valor_produto ?? p.valor ?? 0),
 
-      // totais que você já exibe na tela
-      total_sem_frete:    Number(p.valor_s_frete ?? p.total_sem_frete ?? 0),
+        // comerciais/fiscais
+        desconto: Number(p.comissao_aplicada ?? 0),      // mantém em R$ pra exibir
+        acrescimo: Number(p.ajuste_pagamento ?? 0),      // mantém em R$ pra exibir
+        plano_pagamento: p.codigo_plano_pagamento ?? p.plano_pagamento ?? null,
+        frete_kg: Number(p.frete_kg ?? 0),
+        ipi: Number(p.ipi ?? 0),
+        icms_st: Number(p.icms_st ?? 0),
+        iva_st: Number(p.iva_st ?? 0),
+        grupo: p.grupo ?? null,
+        departamento: p.departamento ?? null,
 
-      // guarda para reaproveitar na hora do POST
-      __descricao_fator_label:    p.descricao_fator_comissao || null,
-      __plano_pagto_label:        p.codigo_plano_pagamento   || null, // já vem "COD - desc" às vezes
-      fornecedor: t.fornecedor || ''
+        // totais que você já exibe na tela
+        total_sem_frete: Number(p.valor_s_frete ?? p.total_sem_frete ?? 0),
+
+        // guarda para reaproveitar na hora do POST
+        __descricao_fator_label: p.descricao_fator_comissao || null,
+        __plano_pagto_label: p.codigo_plano_pagamento || null, // já vem "COD - desc" às vezes
+        fornecedor: t.fornecedor || ''
       }));
-      
-     itens = itens.map(p => ({...p,peso_liquido: Number(p.peso_liquido ?? p.peso ??  p.peso_kg ?? p.pesoLiquido ??  0 ),
-                                 tipo: p.tipo ?? p.grupo ?? p.departamento ?? null
-     
-     }));
+
+      itens = itens.map(p => ({
+        ...p, peso_liquido: Number(p.peso_liquido ?? p.peso ?? p.peso_kg ?? p.pesoLiquido ?? 0),
+        tipo: p.tipo ?? p.grupo ?? p.departamento ?? null
+
+      }));
       renderTabela();
-     
-      
+      if (typeof recalcTudo === 'function') {
+        await Promise.resolve(recalcTudo()).catch(() => { });
+      }
+
       // Atualiza a pill e recálculo
       atualizarPillTaxa();
-      
+
 
       // >>> NOVO: fator global (se todos iguais)
       const dg = document.getElementById('desconto_global');
@@ -864,13 +977,14 @@ async function carregarItens() {
   const novos = obterItensDaSessao();              // o que veio do picker nesta volta
   itens = mergeItensExistentesENovos(itens, novos); // ✅ MESCLA em vez de substituir
   itens = itens.map(p => ({ ...p, ipi: Number(p.ipi ?? 0), iva_st: Number(p.iva_st ?? 0) }));
-  itens = itens.map(p => ({...p,peso_liquido: Number(p.peso_liquido ?? p.peso ??  p.peso_kg ?? p.pesoLiquido ??  0 ),
-                                tipo: p.tipo ?? p.grupo ?? p.departamento ?? null
-                              }));
+  itens = itens.map(p => ({
+    ...p, peso_liquido: Number(p.peso_liquido ?? p.peso ?? p.peso_kg ?? p.pesoLiquido ?? 0),
+    tipo: p.tipo ?? p.grupo ?? p.departamento ?? null
+  }));
   // (opcional, mas recomendado) já limpa o buffer legado para não reaplicar depois
-  try { sessionStorage.removeItem('criacao_tabela_preco_produtos'); } catch {}
+  try { sessionStorage.removeItem('criacao_tabela_preco_produtos'); } catch { }
   renderTabela();
-  setMode('new'); 
+  setMode('new');
 }
 
 function criarLinha(item, idx) {
@@ -894,129 +1008,129 @@ function criarLinha(item, idx) {
 
   // popula com o mesmo dicionário do cabeçalho (mapaDescontos: {codigo -> fração 0..1})
   Object.entries(mapaDescontos).forEach(([cod, frac]) => {
-    selPercent.appendChild(option(`${cod} - ${(Number(frac)*100).toFixed(2)}`, cod));
-});
+    selPercent.appendChild(option(`${cod} - ${(Number(frac) * 100).toFixed(2)}`, cod));
+  });
 
 
-(() => {
-  // 1) Se veio um label do back (ex.: "15 - 0"), priorize-o, mesmo se o percentual for 0
-  const lbl = (item.__descricao_fator_label || '').trim();
-  if (lbl) {
-    const codeFromLbl = lbl.split(' - ')[0].trim(); // "15" em "15 - 0"
-    if (codeFromLbl && Object.prototype.hasOwnProperty.call(mapaDescontos, codeFromLbl)) {
-      selPercent.value = codeFromLbl;
+  (() => {
+    // 1) Se veio um label do back (ex.: "15 - 0"), priorize-o, mesmo se o percentual for 0
+    const lbl = (item.__descricao_fator_label || '').trim();
+    if (lbl) {
+      const codeFromLbl = lbl.split(' - ')[0].trim(); // "15" em "15 - 0"
+      if (codeFromLbl && Object.prototype.hasOwnProperty.call(mapaDescontos, codeFromLbl)) {
+        selPercent.value = codeFromLbl;
+      }
     }
-  }
 
-  // 2) Se não marcou ainda, tente pelo valor numérico do fator (aceitando 0)
-  if (!selPercent.value && item.fator_comissao != null && !isNaN(item.fator_comissao)) {
-    const match = Object.entries(mapaDescontos).find(([, f]) => Number(f) === Number(item.fator_comissao));
-    if (match) selPercent.value = match[0];
-  }
-
-  // 3) Último fallback: inferir por razão desconto/valor (aceitando 0)
-  if (!selPercent.value && Number(item.valor || 0) > 0) {
-  const fatorInferido = Number(item.desconto || 0) / Number(item.valor || 1);
-  if (fatorInferido > 1e-6) { // evita 0
-    const match = Object.entries(mapaDescontos).find(([, f]) =>
-      Math.abs(Number(f) - fatorInferido) < 1e-6
-    );
-    if (match) selPercent.value = match[0];
-  }
-}
-})();
-
-selPercent.addEventListener('change', () => {
-  const code  = selPercent.value || '';
-  const frac  = (Object.prototype.hasOwnProperty.call(mapaDescontos, code) ? Number(mapaDescontos[code]) : 0);
-  itens[idx].fator_comissao = (!isNaN(frac) ? frac : 0);
-  itens[idx].__fator_codigo = code; // <-- guarda o código (ex.: "15")
-  itens[idx].__descricao_fator_label = selPercent.options[selPercent.selectedIndex]?.textContent?.trim() || '';
-  itens[idx].__overridePercent = true;
-  recalcLinha(tr);
-
-  try {
-    const selsPct = Array.from(document.querySelectorAll('#tbody-itens tr td:nth-child(8) select'));
-    const vals    = new Set(selsPct.map(s => (s.value || '').trim()).filter(v => v !== ''));
-    const hdr     = document.getElementById('desconto_global');
-    if (hdr && hdr.dataset.userEdited !== '1') {
-      hdr.value = (vals.size === 1) ? [...vals][0] : '';
-      atualizarPillDesconto?.();
-      saveHeaderSnapshot?.();
+    // 2) Se não marcou ainda, tente pelo valor numérico do fator (aceitando 0)
+    if (!selPercent.value && item.fator_comissao != null && !isNaN(item.fator_comissao)) {
+      const match = Object.entries(mapaDescontos).find(([, f]) => Number(f) === Number(item.fator_comissao));
+      if (match) selPercent.value = match[0];
     }
-  } catch {}
-});
 
-tdPercent.appendChild(selPercent);
+    // 3) Último fallback: inferir por razão desconto/valor (aceitando 0)
+    if (!selPercent.value && Number(item.valor || 0) > 0) {
+      const fatorInferido = Number(item.desconto || 0) / Number(item.valor || 1);
+      if (fatorInferido > 1e-6) { // evita 0
+        const match = Object.entries(mapaDescontos).find(([, f]) =>
+          Math.abs(Number(f) - fatorInferido) < 1e-6
+        );
+        if (match) selPercent.value = match[0];
+      }
+    }
+  })();
 
- // Condição por linha (código) — NOVO
+  selPercent.addEventListener('change', () => {
+    const code = selPercent.value || '';
+    const frac = (Object.prototype.hasOwnProperty.call(mapaDescontos, code) ? Number(mapaDescontos[code]) : 0);
+    itens[idx].fator_comissao = (!isNaN(frac) ? frac : 0);
+    itens[idx].__fator_codigo = code; // <-- guarda o código (ex.: "15")
+    itens[idx].__descricao_fator_label = selPercent.options[selPercent.selectedIndex]?.textContent?.trim() || '';
+    itens[idx].__overridePercent = true;
+    recalcLinha(tr);
+
+    try {
+      const selsPct = Array.from(document.querySelectorAll('#tbody-itens tr td:nth-child(8) select'));
+      const vals = new Set(selsPct.map(s => (s.value || '').trim()).filter(v => v !== ''));
+      const hdr = document.getElementById('desconto_global');
+      if (hdr && hdr.dataset.userEdited !== '1') {
+        hdr.value = (vals.size === 1) ? [...vals][0] : '';
+        atualizarPillDesconto?.();
+        saveHeaderSnapshot?.();
+      }
+    } catch { }
+  });
+
+  tdPercent.appendChild(selPercent);
+
+  // Condição por linha (código) — NOVO
   const tdCondCod = document.createElement('td');
-  const selCond   = document.createElement('select');
+  const selCond = document.createElement('select');
   selCond.appendChild(option('—', ''));
-    
+
   //código + descrição (igual ao cabeçalho)---------------
   const selHdr = document.getElementById('plano_pagamento');
-    Array.from(selHdr?.options || []).forEach(o => {
-  if (o.value) selCond.appendChild(option(o.textContent, o.value));
+  Array.from(selHdr?.options || []).forEach(o => {
+    if (o.value) selCond.appendChild(option(o.textContent, o.value));
   });
-  
+
   //só a descrição-----------
-//  const selHdr = document.getElementById('plano_pagamento');
-//  Array.from(selHdr?.options || []).forEach(o => {
-//  if (!o.value) return; // pula "Selecione…"
-//  const partes = (o.textContent || '').split(' - ');
-//  const desc   = partes.slice(1).join(' - ') || o.textContent; // robusto
-//  selCond.appendChild(option(desc, o.value));
-//  });
+  //  const selHdr = document.getElementById('plano_pagamento');
+  //  Array.from(selHdr?.options || []).forEach(o => {
+  //  if (!o.value) return; // pula "Selecione…"
+  //  const partes = (o.textContent || '').split(' - ');
+  //  const desc   = partes.slice(1).join(' - ') || o.textContent; // robusto
+  //  selCond.appendChild(option(desc, o.value));
+  //  });
 
 
-     //Só o codigo ----------
+  //Só o codigo ----------
   //Object.keys(mapaCondicoes).forEach(cod => {
   //selCond.appendChild(option(cod, cod));
-//});
-    
+  //});
+
   const codCondLinha = String(item.plano_pagamento || '').split(' - ')[0].trim();
   selCond.value = codCondLinha || '';
-  
+
   tdCondCod.appendChild(selCond);
 
   selCond.addEventListener('change', () => {
-  itens[idx].plano_pagamento = selCond.value || null;
-  recalcLinha(tr);
+    itens[idx].plano_pagamento = selCond.value || null;
+    recalcLinha(tr);
 
-  try {
-    const sels = Array.from(document.querySelectorAll('#tbody-itens tr td:nth-child(10) select'));
-    const vals = new Set(sels.map(s => (s.value || '').trim()).filter(v => v !== ''));
-    const hdr  = document.getElementById('plano_pagamento');
-    if (hdr && hdr.dataset.userEdited !== '1') {
-      hdr.value = (vals.size === 1) ? [...vals][0] : '';
-      atualizarPillTaxa?.();
-      saveHeaderSnapshot?.();
-    }
-  } catch {}
+    try {
+      const sels = Array.from(document.querySelectorAll('#tbody-itens tr td:nth-child(10) select'));
+      const vals = new Set(sels.map(s => (s.value || '').trim()).filter(v => v !== ''));
+      const hdr = document.getElementById('plano_pagamento');
+      if (hdr && hdr.dataset.userEdited !== '1') {
+        hdr.value = (vals.size === 1) ? [...vals][0] : '';
+        atualizarPillTaxa?.();
+        saveHeaderSnapshot?.();
+      }
+    } catch { }
   });
 
-  const tdCondVal   = document.createElement('td'); tdCondVal.className = 'num'; tdCondVal.textContent = '0,00';
+  const tdCondVal = document.createElement('td'); tdCondVal.className = 'num'; tdCondVal.textContent = '0,00';
   const tdFrete = document.createElement('td'); tdFrete.className = 'num'; tdFrete.textContent = '0,00';
   const tdDescAplic = document.createElement('td'); tdDescAplic.className = 'num'; tdDescAplic.textContent = '0,00';
-  
+
   // IPI e IVA_ST (%) — NOVOS
-  const tdIpiR$     = document.createElement('td'); tdIpiR$.className     = 'num col-ipi';              tdIpiR$.textContent     = '0,00';
-  const tdBaseStR$  = document.createElement('td'); tdBaseStR$.className  = 'num col-base-st';         tdBaseStR$.textContent  = '0,00';
-  const tdIcmsProp$ = document.createElement('td'); tdIcmsProp$.className = 'num col-icms-proprio';    tdIcmsProp$.textContent = '0,00';
-  const tdIcmsCheio$= document.createElement('td'); tdIcmsCheio$.className= 'num col-icms-st-cheio';   tdIcmsCheio$.textContent= '0,00';
-  const tdIcmsReter$= document.createElement('td'); tdIcmsReter$.className= 'num col-icms-st-reter';   tdIcmsReter$.textContent= '0,00';
+  const tdIpiR$ = document.createElement('td'); tdIpiR$.className = 'num col-ipi'; tdIpiR$.textContent = '0,00';
+  const tdBaseStR$ = document.createElement('td'); tdBaseStR$.className = 'num col-base-st'; tdBaseStR$.textContent = '0,00';
+  const tdIcmsProp$ = document.createElement('td'); tdIcmsProp$.className = 'num col-icms-proprio'; tdIcmsProp$.textContent = '0,00';
+  const tdIcmsCheio$ = document.createElement('td'); tdIcmsCheio$.className = 'num col-icms-st-cheio'; tdIcmsCheio$.textContent = '0,00';
+  const tdIcmsReter$ = document.createElement('td'); tdIcmsReter$.className = 'num col-icms-st-reter'; tdIcmsReter$.textContent = '0,00';
 
   const tdGrupo = document.createElement('td'); tdGrupo.textContent = [item.grupo, item.departamento].filter(Boolean).join(' / ');
-  const tdFinal = document.createElement('td'); tdFinal.className = 'num col-total'; tdFinal.textContent = fmtMoney(item.valor || 0);tr.appendChild(tdFinal);
-  const tdTotalSemFrete = document.createElement('td');tdTotalSemFrete.className = 'num col-total-sem-frete';tdTotalSemFrete.textContent = '0,00';tr.appendChild(tdTotalSemFrete);
-  
+  const tdFinal = document.createElement('td'); tdFinal.className = 'num col-total'; tdFinal.textContent = fmtMoney(item.valor || 0); tr.appendChild(tdFinal);
+  const tdTotalSemFrete = document.createElement('td'); tdTotalSemFrete.className = 'num col-total-sem-frete'; tdTotalSemFrete.textContent = '0,00'; tr.appendChild(tdTotalSemFrete);
+
   tr.append(
-  tdSel, tdCod, tdDesc, tdEmb, tdGrupo,
-  tdPeso, tdValor, tdPercent,tdDescAplic,
-  tdCondCod, tdCondVal, tdFrete, 
-  tdIpiR$, tdBaseStR$, tdIcmsProp$, tdIcmsCheio$, tdIcmsReter$, tdFinal, tdTotalSemFrete
-);
+    tdSel, tdCod, tdDesc, tdEmb, tdGrupo,
+    tdPeso, tdValor, tdPercent, tdDescAplic,
+    tdCondCod, tdCondVal, tdFrete,
+    tdIpiR$, tdBaseStR$, tdIcmsProp$, tdIcmsCheio$, tdIcmsReter$, tdFinal, tdTotalSemFrete
+  );
   return tr;
 }
 
@@ -1035,7 +1149,7 @@ async function recalcularLinhaComFiscal(item, codigo_cliente, forcarST, frete_li
 
   const r = await fetch(`${API_BASE}/fiscal/preview-linha`, {
     method: "POST",
-    headers: {"Content-Type": "application/json"},
+    headers: { "Content-Type": "application/json" },
     body: JSON.stringify(payload),
   });
   const out = await r.json();
@@ -1047,49 +1161,49 @@ async function recalcularLinhaComFiscal(item, codigo_cliente, forcarST, frete_li
 }
 
 function buildFiscalInputsFromRow(tr) {
-  const idx  = Number(tr.dataset.idx);
+  const idx = Number(tr.dataset.idx);
   const item = (itens || [])[idx] || {};
 
   // DOM: fator por linha e condição (código)
   const fatorPct = Number(tr.querySelector('td:nth-child(8) select')?.value || 0);
-  const fator    = fatorPct / 100;
-  const codCond  = tr.querySelector('td:nth-child(10) select')?.value || '';
+  const fator = fatorPct / 100;
+  const codCond = tr.querySelector('td:nth-child(10) select')?.value || '';
   const taxaCond = (window.mapaCondicoes && window.mapaCondicoes[codCond]) ?? 0;
 
   // DOM: frete global e toggles
-  const freteKg       = Number(document.getElementById('frete_kg')?.value || 0); // R$/kg
+  const freteKg = Number(document.getElementById('frete_kg')?.value || 0); // R$/kg
   const codigo_cliente = (document.getElementById('codigo_cliente')?.value || '').trim() || null;
-  const ramoJuridico  = (document.getElementById('ramo_juridico')?.value || '').trim() || null;
-  const forcarST      = !!document.getElementById('iva_st_toggle')?.checked;
+  const ramoJuridico = (document.getElementById('ramo_juridico')?.value || '').trim() || null;
+  const forcarST = !!document.getElementById('iva_st_toggle')?.checked;
 
   // Item básico
   const produtoId = (tr.querySelector('td:nth-child(2)')?.textContent || '').trim();
   const tipo = String(item?.tipo || item?.grupo || item?.departamento || '').trim();
-  const peso_kg   = Number(item?.peso_liquido ?? item?.peso ?? item?.peso_kg ?? item?.pesoLiquido ?? 0);
+  const peso_kg = Number(item?.peso_liquido ?? item?.peso ?? item?.peso_kg ?? item?.pesoLiquido ?? 0);
 
   // Preço base (espelha sua lógica da tela): valor + acrescimo(condição) - desconto(fator)
-  const valor           = Number(item?.valor || 0);
-  const descontoValor   = valor * Number(fator || 0);
-  const liquido       = Math.max(0, valor - descontoValor);
-  const acrescimoCond   = liquido * Number(taxaCond || 0);
-  
-  const precoBase       = liquido + acrescimoCond;
+  const valor = Number(item?.valor || 0);
+  const descontoValor = valor * Number(fator || 0);
+  const liquido = Math.max(0, valor - descontoValor);
+  const acrescimoCond = liquido * Number(taxaCond || 0);
+
+  const precoBase = liquido + acrescimoCond;
 
   // Frete por linha (usando kg diretamente)
-  const frete_linha = Number(freteKg || 0) * Number(peso_kg || 0); 
+  const frete_linha = Number(freteKg || 0) * Number(peso_kg || 0);
 
   const payload = {
-  codigo_cliente: codigo_cliente,
-  forcar_iva_st: forcarST,
-  produto_id: produtoId,
-  ramo_juridico: ramoJuridico,
-  peso_kg: Number(peso_kg || 0),
-  tipo: tipo,
-  preco_unit: Number(liquido  || 0),
-  quantidade: 1,
-  desconto_linha: 0,
-  frete_linha: Number(frete_linha || 0),
-};
+    codigo_cliente: codigo_cliente,
+    forcar_iva_st: forcarST,
+    produto_id: produtoId,
+    ramo_juridico: ramoJuridico,
+    peso_kg: Number(peso_kg || 0),
+    tipo: tipo,
+    preco_unit: Number(precoBase || 0),
+    quantidade: 1,
+    desconto_linha: 0,
+    frete_linha: Number(frete_linha || 0),
+  };
 
   return {
     produto_id: produtoId,
@@ -1108,12 +1222,12 @@ function renderTabela() {
 
   // === Inferir cabeçalho a partir da grade (uniformidade) ===
   try {
-    const selsPct  = Array.from(document.querySelectorAll('#tbody-itens tr td:nth-child(8) select'));
+    const selsPct = Array.from(document.querySelectorAll('#tbody-itens tr td:nth-child(8) select'));
     const selsCond = Array.from(document.querySelectorAll('#tbody-itens tr td:nth-child(10) select'));
 
     // Fator (%)
     const valsPct = new Set(selsPct.map(s => (s.value || '').trim()).filter(v => v !== ''));
-    const hdrPct  = document.getElementById('desconto_global');
+    const hdrPct = document.getElementById('desconto_global');
     if (hdrPct && hdrPct.dataset.userEdited !== '1') {
       hdrPct.value = (valsPct.size === 1) ? [...valsPct][0] : '';
       atualizarPillDesconto?.();
@@ -1121,76 +1235,76 @@ function renderTabela() {
 
     // Condição de pagamento
     const valsCond = new Set(selsCond.map(s => (s.value || '').trim()).filter(v => v !== ''));
-    const hdrCond  = document.getElementById('plano_pagamento');
+    const hdrCond = document.getElementById('plano_pagamento');
     if (hdrCond && hdrCond.dataset.userEdited !== '1') {
       hdrCond.value = (valsCond.size === 1) ? [...valsCond][0] : '';
       atualizarPillTaxa?.();
     }
-  } catch {}
+  } catch { }
 }
 
 async function recalcLinha(tr) {
-    
-  const idx  = Number(tr.dataset.idx);
+
+  const idx = Number(tr.dataset.idx);
   const item = itens[idx]; if (!item) return;
 
   const nextId = (Number(tr.dataset.reqId || 0) + 1);
   tr.dataset.reqId = String(nextId);
   const myId = String(nextId);
 
-  const selPct   = tr.querySelector('td:nth-child(8) select');
-  const codePct  = selPct ? (selPct.value || '') : '';
-  const fator    = (mapaDescontos[codePct] != null) ? Number(mapaDescontos[codePct]) : 0;
+  const selPct = tr.querySelector('td:nth-child(8) select');
+  const codePct = selPct ? (selPct.value || '') : '';
+  const fator = (mapaDescontos[codePct] != null) ? Number(mapaDescontos[codePct]) : 0;
 
-  const freteKg  = Number(document.getElementById('frete_kg').value || 0);
+  const freteKg = Number(document.getElementById('frete_kg').value || 0);
 
   // Condição por linha → taxa
-  const selCond  = tr.querySelector('td:nth-child(10) select');
-  const codCond  = selCond ? selCond.value : '';
+  const selCond = tr.querySelector('td:nth-child(10) select');
+  const codCond = selCond ? selCond.value : '';
   const taxaCond = mapaCondicoes[codCond] ?? 0;
 
   // base comercial (sem imposto)
-  const { acrescimoCond, freteValor, descontoValor, liquido  } =
+  const { acrescimoCond, freteValor, descontoValor, precoBase, liquido } =
     calcularLinha(item, fator, taxaCond, freteKg);
 
   // pinta colunas comerciais
   tr.querySelector('td:nth-child(9)').textContent = fmtMoney(descontoValor); // Desc. aplicado
   tr.querySelector('td:nth-child(11)').textContent = fmtMoney(acrescimoCond); // Cond. (R$)
   tr.querySelector('td:nth-child(12)').textContent = fmtMoney(freteValor);    // Frete (R$)
-  
 
-  
+
+
   try {
     const built = buildFiscalInputsFromRow(tr);
 
     // usa exatamente o que JÁ calculamos nesta função
-    built.payload.preco_unit  = liquido;   // já calculado acima
+    built.payload.preco_unit = precoBase;   // já calculado acima
     built.payload.frete_linha = freteValor;  // já calculado acima
 
     const f = await previewFiscalLinha(built.payload);
-   item.ipi     = Number((f.ipi          ?? 0).toFixed(2));
-   item.iva_st  = Number((f.base_st      ?? 0).toFixed(2));
-   item.icms_st = Number((f.icms_proprio ?? 0).toFixed(2));
-    
-   if (tr.dataset.reqId !== myId) return;
-   
+    item.ipi = Number((f.ipi ?? 0).toFixed(2));
+    item.iva_st = Number((f.base_st ?? 0).toFixed(2));
+    item.icms_st = Number((f.icms_proprio ?? 0).toFixed(2));
+
+    if (tr.dataset.reqId !== myId) return;
+
     const setCell = (sel, val) => {
       const el = tr.querySelector(sel);
       if (el) el.textContent = fmtMoney(val);
     };
-   
-    setCell('.col-ipi',            f.ipi);
-    setCell('.col-base-st',        f.base_st);
-    setCell('.col-icms-proprio',   f.icms_proprio);
-    setCell('.col-icms-st-cheio',  f.icms_st_cheio);
-    setCell('.col-icms-st-reter',  f.icms_st_reter);
-    setCell('.col-total',          f.total_linha_com_st); // ou total_linha
+
+    setCell('.col-ipi', f.ipi);
+    setCell('.col-base-st', f.base_st);
+    setCell('.col-icms-proprio', f.icms_proprio);
+    setCell('.col-icms-st-cheio', f.icms_st_cheio);
+    setCell('.col-icms-st-reter', f.icms_st_reter);
+    setCell('.col-total', f.total_linha_com_st); // ou total_linha
 
     const totalFiscal = Number(f.total_linha_com_st ?? f.total_linha ?? 0);
 
     // ✅ aplica CONDIÇÃO (R$) sobre o líquido e soma no total final exibido
-    const totalComercial = totalFiscal + Number(acrescimoCond || 0);
-    
+    const totalComercial = totalFiscal;
+
     const totalSemFrete = totalComercial - Number(freteValor || 0);
     const tdSemFrete = tr.querySelector('.col-total-sem-frete');
     if (tdSemFrete) tdSemFrete.textContent = fmtMoney(totalSemFrete);
@@ -1201,17 +1315,17 @@ async function recalcLinha(tr) {
     item.total_sem_frete = Math.max(0, item._totalComercial - item._freteValor);
 
     const td = tr.querySelector('.col-total-sem-frete');
-      if (td) td.textContent = fmtMoney(item.total_sem_frete || 0);
+    if (td) td.textContent = fmtMoney(item.total_sem_frete || 0);
 
   } catch (e) {
-  if (tr.dataset.reqId === myId && tr.isConnected) {
-    const msg = String(e && (e.name || e.message || e));
-    const isAbort = /abort|aborted|cancel|canceled|cancelled/i.test(msg);
+    if (tr.dataset.reqId === myId && tr.isConnected) {
+      const msg = String(e && (e.name || e.message || e));
+      const isAbort = /abort|aborted|cancel|canceled|cancelled/i.test(msg);
 
-    if (!isAbort) {
-      console.warn('[Fiscal ERROR ignorado]', msg);
-      // ⚠️ Não zera mais os valores já exibidos
-    }
+      if (!isAbort) {
+        console.warn('[Fiscal ERROR ignorado]', msg);
+        // ⚠️ Não zera mais os valores já exibidos
+      }
     }
   }
 }
@@ -1257,7 +1371,7 @@ async function aplicarFatorGlobal() {
     // 🔑 dispara o mesmo fluxo do usuário (atualiza itens[idx] e recalcula)
     sel.dispatchEvent(new Event('change', { bubbles: true }));
   });
-  await Promise.resolve(recalcTudo()).catch(()=>{});
+  await Promise.resolve(recalcTudo()).catch(() => { });
   const hdr = document.getElementById('desconto_global');
   if (hdr) { hdr.dataset.userEdited = ''; } // destrava
   atualizarPillDesconto();
@@ -1281,7 +1395,7 @@ function removerSelecionados() {
   });
   itens = novas;
   renderTabela();
- // ✅ mantém o picker alinhado após remoção
+  // ✅ mantém o picker alinhado após remoção
   snapshotSelecionadosParaPicker();
   // reset visual e estado dos botões
   const chkAll = document.getElementById('chk-all');
@@ -1302,102 +1416,104 @@ async function salvarTabela() {
     document.querySelector('#busca_produto, #nome_tabela')?.focus();
     return;
   }
-  
+
   const { ok } = RequiredValidator.check(RequiredValidator.REQUIRED_FIELDS, document);
   if (!ok) {
     alert('Existem campos obrigatórios pendentes. Corrija os destaques em vermelho.');
     return;
-  } 
-  
-  const nome_tabela   = document.getElementById('nome_tabela').value.trim();
-  const cliente       = document.getElementById('cliente_nome').value.trim();
-  const frete_kg      = Number(document.getElementById('frete_kg').value || 0);
+  }
+
+  const nome_tabela = document.getElementById('nome_tabela').value.trim();
+  const cliente = document.getElementById('cliente_nome').value.trim();
+  const frete_kg = Number(document.getElementById('frete_kg').value || 0);
   const ramo_juridico = document.getElementById('ramo_juridico').value || null;
 
   const produtos = Array.from(document.querySelectorAll('#tbody-itens tr'))
-  .map(tr => {
-    const idx  = Number(tr.dataset.idx);
-    const item = itens[idx];
+    .map(tr => {
+      const idx = Number(tr.dataset.idx);
+      const item = itens[idx];
 
-    const selPct  = tr.querySelector('td:nth-child(8) select');
-    const codePct = selPct ? selPct.value : '';
-    const fator   = (mapaDescontos[codePct] != null) ? Number(mapaDescontos[codePct]) : 0;
-    
-    const selCond   = tr.querySelector('td:nth-child(10) select');
-    const codCond   = selCond ? (selCond.value || '') : '';
-    const condLabel = (selCond?.options[selCond.selectedIndex]?.textContent || '').trim();
+      const selPct = tr.querySelector('td:nth-child(8) select');
+      const codePct = selPct ? selPct.value : '';
+      const fator = (mapaDescontos[codePct] != null) ? Number(mapaDescontos[codePct]) : 0;
 
-    const taxaCond = mapaCondicoes[codCond] || 0;
-    const { acrescimoCond, freteValor, descontoValor } =
-      calcularLinha(item, fator, taxaCond, frete_kg /* ivaStAtivo é ignorado aqui */);
+      const selCond = tr.querySelector('td:nth-child(10) select');
+      const codCond = selCond ? (selCond.value || '') : '';
+      const condLabel = (selCond?.options[selCond.selectedIndex]?.textContent || '').trim();
 
-    const fatorLabel = selPct ? (selPct.options[selPct.selectedIndex]?.textContent || '').trim() : '';
-    
-    let planoToSave = condLabel || '';
-    if (codCond) {
-      if (!planoToSave || !planoToSave.startsWith(codCond)) {
-        planoToSave = planoToSave ? `${codCond} - ${planoToSave}` : codCond;
+      const taxaCond = mapaCondicoes[codCond] || 0;
+      const { acrescimoCond, freteValor, descontoValor } =
+        calcularLinha(item, fator, taxaCond, frete_kg /* ivaStAtivo é ignorado aqui */);
+
+      const fatorLabel = selPct ? (selPct.options[selPct.selectedIndex]?.textContent || '').trim() : '';
+
+      let planoToSave = condLabel || '';
+      if (codCond) {
+        if (!planoToSave || !planoToSave.startsWith(codCond)) {
+          planoToSave = planoToSave ? `${codCond} - ${planoToSave}` : codCond;
+        }
       }
-    }
-    // objeto do item (NÃO coloque nome_tabela/cliente/fornecedor aqui)
-    const produto = {
-      codigo_produto_supra: item.codigo_tabela,
-      descricao_produto:    item.descricao,
-      embalagem:            item.embalagem || '',
-      peso_liquido:         Number(item.peso_liquido ?? 0),
+      // objeto do item (NÃO coloque nome_tabela/cliente/fornecedor aqui)
+      const produto = {
+        codigo_produto_supra: item.codigo_tabela,
+        descricao_produto: item.descricao,
+        embalagem: item.embalagem || '',
+        peso_liquido: Number(item.peso_liquido ?? 0),
 
-      valor_produto:            Number(item.valor || 0),
-      comissao_aplicada:        Number(descontoValor.toFixed(2)),
-      ajuste_pagamento:         Number(acrescimoCond.toFixed(2)),
-      descricao_fator_comissao: fatorLabel,
-      codigo_plano_pagamento:  planoToSave,                 
+        valor_produto: Number(item.valor || 0),
+        comissao_aplicada: Number(descontoValor.toFixed(2)),
+        ajuste_pagamento: Number(acrescimoCond.toFixed(2)),
+        descricao_fator_comissao: fatorLabel,
+        codigo_plano_pagamento: planoToSave,
 
-      valor_frete_aplicado:     Number(freteValor.toFixed(2)),
-      frete_kg:                 Number(frete_kg || 0),
-      valor_frete:              Number((item._totalComercial || 0).toFixed(2)),
-      valor_s_frete:            Number((item.total_sem_frete || 0).toFixed(2)),
+        valor_frete_aplicado: Number(freteValor.toFixed(2)),
+        frete_kg: Number(frete_kg || 0),
+        valor_frete: Number((item._totalComercial || 0).toFixed(2)),
+        valor_s_frete: Number((item.total_sem_frete || 0).toFixed(2)),
 
-      grupo:        item.grupo || null,
-      departamento: item.departamento || null,
-      ipi:          Number(item.ipi     || 0),
-      icms_st:      Number(item.icms_st || 0),
-      iva_st:       Number(item.iva_st  || 0)
-    };
+        grupo: item.grupo || null,
+        departamento: item.departamento || null,
+        ipi: Number(item.ipi || 0),
+        icms_st: Number(item.icms_st || 0),
+        iva_st: Number(item.iva_st || 0)
+      };
 
-    // id_linha: DOM primeiro; fallback pro array
-    if (tr.dataset.idLinha) {
-      produto.id_linha = Number(tr.dataset.idLinha);
-    } else if (itens[idx]?.id_linha != null) {
-      produto.id_linha = itens[idx].id_linha;
-    }
+      // id_linha: DOM primeiro; fallback pro array
+      if (tr.dataset.idLinha) {
+        produto.id_linha = Number(tr.dataset.idLinha);
+      } else if (itens[idx]?.id_linha != null) {
+        produto.id_linha = itens[idx].id_linha;
+      }
 
-    return produto; // ✅ dentro do map
-  })
-  .filter(p => p.codigo_produto_supra && p.descricao_produto);
+      return produto; // ✅ dentro do map
+    })
+    .filter(p => p.codigo_produto_supra && p.descricao_produto);
 
-  console.table(produtos.map(p => ({ id_linha: p.id_linha, codigo: p.codigo_produto_supra, valor: p.valor_produto, plano: p.codigo_plano_pagamento})));
+  console.table(produtos.map(p => ({ id_linha: p.id_linha, codigo: p.codigo_produto_supra, valor: p.valor_produto, plano: p.codigo_plano_pagamento })));
 
   const fornecedorHeader = inferirFornecedorDaGrade();
   const codigo_cliente = (document.getElementById('codigo_cliente')?.value || '').trim() || null;
-  const payload = {nome_tabela, cliente, codigo_cliente: (codigo_cliente || "Não cadastrado"), ramo_juridico,fornecedor: fornecedorHeader, produtos};
+  const calcula_st = !!document.getElementById('iva_st_toggle')?.checked;
+  const payload = { nome_tabela, cliente, codigo_cliente: (codigo_cliente || "Não cadastrado"), ramo_juridico, fornecedor: fornecedorHeader, calcula_st, produtos };
   try {
     const resp = await salvarTabelaPreco(payload);
-    return resp;                                     // <<<<<< FUNDAMENTAL
+    return resp;
   } catch (e) {
     console.error(e);
     alert(e.message || 'Erro ao salvar a tabela.');
     return null;
-  }}
-  
+  }
+}
 
- function validarCabecalhoMinimo() {
-  const nome   = document.getElementById('nome_tabela')?.value?.trim();
+
+function validarCabecalhoMinimo() {
+  const nome = document.getElementById('nome_tabela')?.value?.trim();
   const cliente = document.getElementById('cliente_nome')?.value?.trim();
-  
-  if (!nome || !cliente ) return false;
+
+  if (!nome || !cliente) return false;
 
   // valida ordem das datas (se ambos presentes)
- 
+
   return true;
 }
 
@@ -1410,7 +1526,7 @@ function refreshToolbarEnablement() {
   const btnSalvar = document.getElementById('btn-salvar');
   const btnRemover = document.getElementById('btn-remover-selecionados');
 
-  if (btnSalvar)  btnSalvar.disabled  = !(temLinhas && cabecalhoOk);
+  if (btnSalvar) btnSalvar.disabled = !(temLinhas && cabecalhoOk);
   if (btnRemover) btnRemover.disabled = !algumaMarcada;
 }
 function limparFormularioCabecalho() {
@@ -1429,7 +1545,7 @@ function limparFormularioCabecalho() {
   const descGlobal = document.getElementById('desconto_global');
   if (descGlobal) descGlobal.value = '';
 
-    // Pill de taxa
+  // Pill de taxa
   const pill = document.getElementById('pill-taxa');
   if (pill) pill.textContent = '—';
 
@@ -1439,7 +1555,7 @@ function limparFormularioCabecalho() {
 }
 
 function limparGradeProdutos() {
-  try { sessionStorage.removeItem('criacao_tabela_preco_produtos'); } catch (e) {}
+  try { sessionStorage.removeItem('criacao_tabela_preco_produtos'); } catch (e) { }
 
   // Zera fonte de dados e DOM
   if (Array.isArray(itens)) itens = [];
@@ -1472,27 +1588,27 @@ async function onCancelar(e) {
   if (currentMode === MODE.NEW) {
     if (typeof limparFormularioCabecalho === 'function') limparFormularioCabecalho();
     if (typeof limparGradeProdutos === 'function') limparGradeProdutos();
-    
+
     setMode(MODE.NEW);
     return;
   }
 
   // EDIT → VIEW (mesma tabela, travada)
   if (currentMode === MODE.EDIT) {
-  if (!currentTabelaId) {
-    const idUrl = getIdFromUrl();
-    const mem   = sessionStorage.getItem('TP_LAST_VIEW_ID');
-    const ctx   = sessionStorage.getItem('TP_CTX_ID');
-    const cand  = idUrl || (mem && mem !== 'new' ? mem : null) || (ctx && ctx !== 'new' ? ctx : null);
-    if (cand) currentTabelaId = String(cand);
+    if (!currentTabelaId) {
+      const idUrl = getIdFromUrl();
+      const mem = sessionStorage.getItem('TP_LAST_VIEW_ID');
+      const ctx = sessionStorage.getItem('TP_CTX_ID');
+      const cand = idUrl || (mem && mem !== 'new' ? mem : null) || (ctx && ctx !== 'new' ? ctx : null);
+      if (cand) currentTabelaId = String(cand);
+    }
+    setMode(MODE.VIEW);
+    if (typeof setFormDisabled === 'function') setFormDisabled(true);
+    if (typeof toggleToolbarByMode === 'function') toggleToolbarByMode();
+    if (typeof refreshToolbarEnablement === 'function') refreshToolbarEnablement();
+    sessionStorage.removeItem('TP_LAST_VIEW_ID');
+    return;
   }
-  setMode(MODE.VIEW);
-  if (typeof setFormDisabled === 'function') setFormDisabled(true);
-  if (typeof toggleToolbarByMode === 'function') toggleToolbarByMode();
-  if (typeof refreshToolbarEnablement === 'function') refreshToolbarEnablement();
-  sessionStorage.removeItem('TP_LAST_VIEW_ID');
-  return;
-}
 
   // DUP → VIEW (tabela ORIGEM, travada) — sem navegar
   if (currentMode === MODE.DUP) {
@@ -1503,10 +1619,10 @@ async function onCancelar(e) {
           const t = await r.json();
 
           // repõe cabeçalho
-          document.getElementById('nome_tabela').value     = t.nome_tabela || '';
+          document.getElementById('nome_tabela').value = t.nome_tabela || '';
           document.getElementById('cliente_nome').value = t.cliente_nome || t.cliente || '';
           document.getElementById('codigo_cliente').value = t.codigo_cliente || '';
-          
+
           // repõe itens e re-renderiza grade
           itens = Array.isArray(t.produtos) ? t.produtos.map(p => ({ ...p })) : [];
           if (typeof renderTabela === 'function') renderTabela();
@@ -1520,21 +1636,21 @@ async function onCancelar(e) {
         console.warn('Cancelar DUP: erro ao recarregar a origem:', err);
       }
     }
-    
-   if (!currentTabelaId) {
-     const srcMem = sessionStorage.getItem('TP_SOURCE_ID');
-     const last   = sessionStorage.getItem('TP_LAST_VIEW_ID');
-     const url    = getIdFromUrl();
-     const ctx    = sessionStorage.getItem('TP_CTX_ID');
-     const cand   = sourceTabelaId || (srcMem && srcMem !== 'new' ? srcMem : null)
-                   || (last && last !== 'new' ? last : null)
-                   || url || (ctx && ctx !== 'new' ? ctx : null);
-     if (cand) currentTabelaId = String(cand);
-   }
-   sourceTabelaId = null;
-   sessionStorage.removeItem('TP_SOURCE_ID');
 
-    
+    if (!currentTabelaId) {
+      const srcMem = sessionStorage.getItem('TP_SOURCE_ID');
+      const last = sessionStorage.getItem('TP_LAST_VIEW_ID');
+      const url = getIdFromUrl();
+      const ctx = sessionStorage.getItem('TP_CTX_ID');
+      const cand = sourceTabelaId || (srcMem && srcMem !== 'new' ? srcMem : null)
+        || (last && last !== 'new' ? last : null)
+        || url || (ctx && ctx !== 'new' ? ctx : null);
+      if (cand) currentTabelaId = String(cand);
+    }
+    sourceTabelaId = null;
+    sessionStorage.removeItem('TP_SOURCE_ID');
+
+
     // trava e mostra botões de decisão (Editar/Duplicar)
     setMode(MODE.VIEW);
     if (typeof setFormDisabled === 'function') setFormDisabled(true);
@@ -1547,22 +1663,22 @@ async function onCancelar(e) {
     if (currentTabelaId) {
       currentTabelaId = null; sourceTabelaId = null;
       limparFormularioCabecalho?.(); limparGradeProdutos?.();
-    return setMode(MODE.NEW);
+      return setMode(MODE.NEW);
     }
-  
-  // Sem id (tela em branco) → aí sim limpa para NEW
-  if (typeof limparFormularioCabecalho === 'function') limparFormularioCabecalho();
-  if (typeof limparGradeProdutos === 'function') limparGradeProdutos();
-  currentTabelaId = null;
-  sourceTabelaId  = null;
 
-  
-  setMode(MODE.NEW);
-  if (typeof setFormDisabled === 'function') setFormDisabled(false);
-  if (typeof toggleToolbarByMode === 'function') toggleToolbarByMode();
-  if (typeof refreshToolbarEnablement === 'function') refreshToolbarEnablement();
-  return;
-}
+    // Sem id (tela em branco) → aí sim limpa para NEW
+    if (typeof limparFormularioCabecalho === 'function') limparFormularioCabecalho();
+    if (typeof limparGradeProdutos === 'function') limparGradeProdutos();
+    currentTabelaId = null;
+    sourceTabelaId = null;
+
+
+    setMode(MODE.NEW);
+    if (typeof setFormDisabled === 'function') setFormDisabled(false);
+    if (typeof toggleToolbarByMode === 'function') toggleToolbarByMode();
+    if (typeof refreshToolbarEnablement === 'function') refreshToolbarEnablement();
+    return;
+  }
 }
 
 function goToListarTabelas() {
@@ -1594,8 +1710,8 @@ async function atualizarValidadeCabecalhoGlobal() {
     if (elDias) {
       const n = data.dias_restantes;
       if (n == null) { elDias.value = '—'; elDias.dataset.status = 'nao_definida'; }
-      else if (n >= 0) { elDias.value = `Faltam ${n} dia${n===1?'':'s'}`; elDias.dataset.status = n<=7?'alerta':'ok'; }
-      else { const k = Math.abs(n); elDias.value = `Expirada há ${k} dia${k===1?'':'s'}`; elDias.dataset.status = 'expirada'; }
+      else if (n >= 0) { elDias.value = `Faltam ${n} dia${n === 1 ? '' : 's'}`; elDias.dataset.status = n <= 7 ? 'alerta' : 'ok'; }
+      else { const k = Math.abs(n); elDias.value = `Expirada há ${k} dia${k === 1 ? '' : 's'}`; elDias.dataset.status = 'expirada'; }
     }
   } catch (e) {
     console.error('validade_global:', e);
@@ -1607,60 +1723,60 @@ document.addEventListener('DOMContentLoaded', () => {
   // Eventos globais
   setMode(MODE.NEW);
   document.getElementById('btn-listar')?.addEventListener('click', () => { goToListarTabelas(); });
-  
+
   document.getElementById('btn-aplicar-todos')?.addEventListener('click', aplicarFatorGlobal);
-  
+
   document.getElementById('plano_pagamento')?.addEventListener('change', (e) => {
-  // 👇 marca que o usuário editou manualmente o header
-  e.currentTarget.dataset.userEdited = '1';
-  atualizarPillTaxa(); recalcTudo(); refreshToolbarEnablement(); saveHeaderSnapshot();
-});
+    // 👇 marca que o usuário editou manualmente o header
+    e.currentTarget.dataset.userEdited = '1';
+    atualizarPillTaxa(); recalcTudo(); refreshToolbarEnablement(); saveHeaderSnapshot();
+  });
   document.getElementById('frete_kg')?.addEventListener('input', () => {
     recalcTudo();
-    refreshToolbarEnablement();  
-        
+    refreshToolbarEnablement();
+
   });
   // Habilitar/Desabilitar "Remover selecionados" ao marcar/desmarcar linhas individuais
   document.getElementById('tbody-itens')?.addEventListener('change', (e) => {
-  if (e.target && e.target.classList.contains('chk-linha')) {
-    // Atualiza o estado do botão
-    if (typeof refreshToolbarEnablement === 'function') refreshToolbarEnablement();
+    if (e.target && e.target.classList.contains('chk-linha')) {
+      // Atualiza o estado do botão
+      if (typeof refreshToolbarEnablement === 'function') refreshToolbarEnablement();
 
-    // Sincroniza o "selecionar todos"
-    const all   = document.querySelectorAll('#tbody-itens .chk-linha');
-    const marked= document.querySelectorAll('#tbody-itens .chk-linha:checked');
-    const chkAll= document.getElementById('chk-all');
-    if (chkAll) chkAll.checked = (all.length > 0 && marked.length === all.length);
-  }
- });
+      // Sincroniza o "selecionar todos"
+      const all = document.querySelectorAll('#tbody-itens .chk-linha');
+      const marked = document.querySelectorAll('#tbody-itens .chk-linha:checked');
+      const chkAll = document.getElementById('chk-all');
+      if (chkAll) chkAll.checked = (all.length > 0 && marked.length === all.length);
+    }
+  });
 
- atualizarValidadeCabecalhoGlobal();
+  atualizarValidadeCabecalhoGlobal();
 
- // Selecionar todos — robusto (funciona em click e change)
- (function bindChkAll(){
-  const chkAll = document.getElementById('chk-all');
-  if (!chkAll) return;
+  // Selecionar todos — robusto (funciona em click e change)
+  (function bindChkAll() {
+    const chkAll = document.getElementById('chk-all');
+    if (!chkAll) return;
 
-  const toggleAll = (e) => {
-    const checked = (e && e.currentTarget) ? !!e.currentTarget.checked : !!chkAll.checked;
-    document.querySelectorAll('#tbody-itens .chk-linha')
-      .forEach(cb => { cb.checked = checked; });
+    const toggleAll = (e) => {
+      const checked = (e && e.currentTarget) ? !!e.currentTarget.checked : !!chkAll.checked;
+      document.querySelectorAll('#tbody-itens .chk-linha')
+        .forEach(cb => { cb.checked = checked; });
 
-    // Atualiza habilitação do botão "Remover selecionados"
-    if (typeof refreshToolbarEnablement === 'function') refreshToolbarEnablement();
-  };
+      // Atualiza habilitação do botão "Remover selecionados"
+      if (typeof refreshToolbarEnablement === 'function') refreshToolbarEnablement();
+    };
 
-  // Usa os dois eventos para não depender do timing do 'change'
-  chkAll.addEventListener('click',  toggleAll);
-  chkAll.addEventListener('change', toggleAll);
- })();
+    // Usa os dois eventos para não depender do timing do 'change'
+    chkAll.addEventListener('click', toggleAll);
+    chkAll.addEventListener('change', toggleAll);
+  })();
 
   document.getElementById('btn-buscar')?.addEventListener('click', () => {
-  saveHeaderSnapshot();  // <-- salva topo
-  preparePickerBridgeBeforeNavigate(); // (ver tópico 3)
-  snapshotSelecionadosParaPicker();
-  window.location.href = 'tabela_preco.html';
- });
+    saveHeaderSnapshot();  // <-- salva topo
+    preparePickerBridgeBeforeNavigate(); // (ver tópico 3)
+    snapshotSelecionadosParaPicker();
+    window.location.href = 'tabela_preco.html';
+  });
 
   document.getElementById('btn-remover-selecionados')?.addEventListener('click', () => {
     removerSelecionados();
@@ -1669,117 +1785,126 @@ document.addEventListener('DOMContentLoaded', () => {
   });
 
   // handler único (sem aninhar addEventListener dentro de outro)
-(() => {
-  const btn = document.getElementById('btn-salvar');
-  if (!btn) return;
+  (() => {
+    const btn = document.getElementById('btn-salvar');
+    if (!btn) return;
 
-  btn.type = 'button';
-  let saving = false;
+    btn.type = 'button';
+    let saving = false;
 
-  btn.addEventListener('click', async (e) => {
-    e.preventDefault();
-    if (saving) return;
-    saving = true;
-    btn.disabled = true;
+    btn.addEventListener('click', async (e) => {
+      e.preventDefault();
+      if (saving) return;
+      saving = true;
+      btn.disabled = true;
 
-    try {
-      const resp = await salvarTabela(); // agora retorna JSON
-      if (!resp) return;
-      const qtd = resp?.itens_inseridos ?? resp?.qtd_produtos ?? itens.length;
-      alert(`Tabela salva! ${qtd} produtos incluídos.`);
-      
+      try {
+        const resp = await salvarTabela(); // agora retorna JSON
+        if (!resp) return;
+        const qtd = resp?.itens_inseridos ?? resp?.qtd_produtos ?? itens.length;
+        alert(`Tabela salva! ${qtd} produtos incluídos.`);
 
-      // pegue o ID
-      const tabelaId = resp?.tabela_id || resp?.id_tabela || resp?.id || window.currentTabelaId;
-      if (!tabelaId) {
-        alert("Tabela salva, mas o ID não veio no retorno do backend. Ajuste o /tabela_preco/salvar para devolver o id.");
-        return;
-      }
 
-      // pergunta de decisão
-      const querEnviar = confirm("Deseja mandar o link do orçamento?");
-       if (querEnviar) {
-        if (typeof window.__showGerarLinkModal === "function") {
-         window.__showGerarLinkModal({
-         tabelaId,
-         pedidoClientePath: "/tabela_preco/pedido_cliente.html",
-         });
+        // pegue o ID
+        const tabelaId = resp?.tabela_id || resp?.id_tabela || resp?.id || window.currentTabelaId;
+        if (!tabelaId) {
+          alert("Tabela salva, mas o ID não veio no retorno do backend. Ajuste o /tabela_preco/salvar para devolver o id.");
+          return;
+        }
+
+        // pergunta de decisão
+        const querEnviar = confirm("Deseja mandar o link do orçamento?");
+        if (querEnviar) {
+          if (typeof window.__showGerarLinkModal === "function") {
+            window.__showGerarLinkModal({
+              tabelaId,
+              pedidoClientePath: "/tabela_preco/pedido_cliente.html",
+            });
           } else {
-    alert("Módulo de gerar link não carregado (../js/gerar_link_pedido.js).");
-  }
-} else {
-  // >>> Cancelou o envio do link: volta ao estado inicial (sem id, modo original)
-  currentTabelaId = '';
-  sourceTabelaId  = '';
-  window.currentTabelaId = '';
-  window.sourceTabelaId  = '';
+            alert("Módulo de gerar link não carregado (../js/gerar_link_pedido.js).");
+          }
+        } else {
+          // >>> Cancelou o envio do link: volta ao estado inicial (sem id, modo original)
+          currentTabelaId = '';
+          sourceTabelaId = '';
+          window.currentTabelaId = '';
+          window.sourceTabelaId = '';
 
-  // limpa URL (?id=)
-  try {
-    const u = new URL(location.href);
-    u.searchParams.delete('id');
-    history.replaceState(null, '', u.toString());
-  } catch {}
+          // limpa URL (?id=)
+          try {
+            const u = new URL(location.href);
+            u.searchParams.delete('id');
+            history.replaceState(null, '', u.toString());
+          } catch { }
 
-  // limpa cabeçalho + grade e volta pro modo original (inputs habilitados)
-  if (typeof limparFormularioCabecalho === 'function') limparFormularioCabecalho();
-  if (typeof limparGradeProdutos === 'function') limparGradeProdutos();
+          // limpa cabeçalho + grade e volta pro modo original (inputs habilitados)
+          if (typeof limparFormularioCabecalho === 'function') limparFormularioCabecalho();
+          if (typeof limparGradeProdutos === 'function') limparGradeProdutos();
 
-  if (typeof setMode === 'function') setMode(MODE.NEW); // ou o seu "modo inicial" da tela
-  if (typeof setFormDisabled === 'function') setFormDisabled(false);
+          if (typeof setMode === 'function') setMode(MODE.NEW); // ou o seu "modo inicial" da tela
+          if (typeof setFormDisabled === 'function') setFormDisabled(false);
 
-  if (typeof toggleToolbarByMode === 'function') toggleToolbarByMode();
-  if (typeof refreshToolbarEnablement === 'function') refreshToolbarEnablement();
+          if (typeof toggleToolbarByMode === 'function') toggleToolbarByMode();
+          if (typeof refreshToolbarEnablement === 'function') refreshToolbarEnablement();
 
-}
+        }
 
       } catch (err) {
-      // mostra 422 legível, se vier no formato FastAPI
-      const msg = (err && err.message) ? err.message : 'Erro ao salvar a tabela.';
-      alert(msg);
-      console.error(err);
-    } finally {
-      saving = false;
-      btn.disabled = false;
-      toggleToolbarByMode?.();
-      refreshToolbarEnablement?.();
-    }
-  });
-})();
-  
+        // mostra 422 legível, se vier no formato FastAPI
+        const msg = (err && err.message) ? err.message : 'Erro ao salvar a tabela.';
+        alert(msg);
+        console.error(err);
+      } finally {
+        saving = false;
+        btn.disabled = false;
+        toggleToolbarByMode?.();
+        refreshToolbarEnablement?.();
+      }
+    });
+  })();
+
   document.getElementById('btn-cancelar')?.addEventListener('click', onCancelar);
   document.getElementById('btn-editar')?.addEventListener('click', onEditar);
-  document.getElementById('btn-duplicar')?.addEventListener('click', onDuplicar); 
-  
-  // Init
-  (async function init(){
-    await Promise.all([carregarCondicoes(), carregarDescontos()]);
-    
-  const temIdNaUrl = !!new URLSearchParams(location.search).get('id');
-  
-  // Se tem id, NÃO limpa cabeçalho antes de carregar
-  if (!temIdNaUrl) {
-    if (__IS_RELOAD) {
-      limparFormularioCabecalho?.();
-    } else {
-      restoreHeaderSnapshotIfNew?.();
-    }
-  }
+  document.getElementById('btn-duplicar')?.addEventListener('click', onDuplicar);
 
-   await carregarItens();                       // carrega itens salvos/edição
-   const q = new URLSearchParams(location.search);
-   const action = q.get('action') || q.get('mode') || q.get('modo');
-   let modeRestored = false;
-   if (!action) {
-     const ctx = sessionStorage.getItem('TP_CTX_ID') || getCtxId();
-     const ret = sessionStorage.getItem(`TP_RETURN_MODE:${ctx}`);
-     if (ret) {
-       if (ret === MODE.EDIT)      setMode(MODE.EDIT);
-       else if (ret === MODE.DUP)  setMode(MODE.DUP);
-       else if (ret === MODE.NEW)  setMode(MODE.NEW);
-       sessionStorage.removeItem(`TP_RETURN_MODE:${ctx}`);
-       modeRestored = true;
-     }
+  // Init
+  (async function init() {
+    await Promise.all([carregarCondicoes(), carregarDescontos()]);
+
+    const temIdNaUrl = !!new URLSearchParams(location.search).get('id');
+
+    // 🔒 Se tem id na URL (edição/visualização), NÃO limpe/restaure snapshot agora
+    if (!temIdNaUrl) {
+      if (__IS_RELOAD) {
+        limparFormularioCabecalho?.();
+      } else {
+        restoreHeaderSnapshotIfNew?.();
+      }
+    }
+
+    // Se tem id, NÃO limpa cabeçalho antes de carregar
+    if (!temIdNaUrl) {
+      if (__IS_RELOAD) {
+        limparFormularioCabecalho?.();
+      } else {
+        restoreHeaderSnapshotIfNew?.();
+      }
+    }
+
+    await carregarItens();                       // carrega itens salvos/edição
+    const q = new URLSearchParams(location.search);
+    const action = q.get('action') || q.get('mode') || q.get('modo');
+    let modeRestored = false;
+    if (!action) {
+      const ctx = sessionStorage.getItem('TP_CTX_ID') || getCtxId();
+      const ret = sessionStorage.getItem(`TP_RETURN_MODE:${ctx}`);
+      if (ret) {
+        if (ret === MODE.EDIT) setMode(MODE.EDIT);
+        else if (ret === MODE.DUP) setMode(MODE.DUP);
+        else if (ret === MODE.NEW) setMode(MODE.NEW);
+        sessionStorage.removeItem(`TP_RETURN_MODE:${ctx}`);
+        modeRestored = true;
+      }
     }
     if (!modeRestored) {
       if (currentTabelaId) {
@@ -1794,69 +1919,69 @@ document.addEventListener('DOMContentLoaded', () => {
     // ✅ agora sim, com o modo correto, mescla o buffer do picker
     if (!__IS_RELOAD) await mergeBufferFromPickerIfAny?.();
 
-   await Promise.resolve(recalcTudo()).catch(()=>{});
-   refreshToolbarEnablement?.();
-   setupClienteAutocomplete();
-   enforceIvaLockByCliente();
-       
-   // —— quando o usuário editar manualmente o NOME do cliente ——
-   const inpNome   = document.getElementById('cliente_nome');
-   const hidCodigo = document.getElementById('codigo_cliente');
-   const hidRamo   = document.getElementById('ramo_juridico');
+    await Promise.resolve(recalcTudo()).catch(() => { });
+    refreshToolbarEnablement?.();
+    setupClienteAutocomplete();
+    enforceIvaLockByCliente();
 
-   inpNome?.addEventListener('input', () => {
-   // Se o campo ficar vazio, não considere mais “cliente cadastrado”
-   if (!inpNome.value.trim()) {
-     if (hidCodigo) hidCodigo.value = '';
-     if (hidRamo)   hidRamo.value   = '';
-    recalcTudo();                         // dispara o preview em todas as linhas
-   }
-     enforceIvaLockByCliente();
-     saveHeaderSnapshot?.();  
-   });
+    // —— quando o usuário editar manualmente o NOME do cliente ——
+    const inpNome = document.getElementById('cliente_nome');
+    const hidCodigo = document.getElementById('codigo_cliente');
+    const hidRamo = document.getElementById('ramo_juridico');
 
-   // Se algum outro código limpar/alterar esses campos, recalcule também
-   hidCodigo?.addEventListener('change', () => {
-    enforceIvaLockByCliente();   // 👈 acrescenta
-    saveHeaderSnapshot?.();      // 👈 acrescenta
-    recalcTudo();
-     });
-
-   hidRamo?.addEventListener('change', () => {
-    saveHeaderSnapshot?.();      // 👈 opcional
-    recalcTudo();
+    inpNome?.addEventListener('input', () => {
+      // Se o campo ficar vazio, não considere mais “cliente cadastrado”
+      if (!inpNome.value.trim()) {
+        if (hidCodigo) hidCodigo.value = '';
+        if (hidRamo) hidRamo.value = '';
+        recalcTudo();                         // dispara o preview em todas as linhas
+      }
+      enforceIvaLockByCliente();
+      saveHeaderSnapshot?.();
     });
 
-      
+    // Se algum outro código limpar/alterar esses campos, recalcule também
+    hidCodigo?.addEventListener('change', () => {
+      enforceIvaLockByCliente();   // 👈 acrescenta
+      saveHeaderSnapshot?.();      // 👈 acrescenta
+      recalcTudo();
+    });
+
+    hidRamo?.addEventListener('change', () => {
+      saveHeaderSnapshot?.();      // 👈 opcional
+      recalcTudo();
+    });
+
+
     if (!action) {
-    const ctx = sessionStorage.getItem('TP_CTX_ID') || getCtxId();
-    const ret = sessionStorage.getItem(`TP_RETURN_MODE:${ctx}`);
-     if (ret) {
-      if (ret === MODE.EDIT)      setMode(MODE.EDIT);
-      else if (ret === MODE.DUP)  setMode(MODE.DUP);
-      else if (ret === MODE.NEW)  setMode(MODE.NEW);
-      sessionStorage.removeItem(`TP_RETURN_MODE:${ctx}`);
-      modeRestored = true;
-  }
-}
-
-  if (!modeRestored) {
-    if (currentTabelaId) {
-      if (action === 'edit') setMode(MODE.EDIT);
-      else if (action === 'duplicate') onDuplicar(); // usa o fluxo que guarda a origem
-      else setMode(MODE.VIEW);
-    } else {
-      setMode(MODE.NEW);
+      const ctx = sessionStorage.getItem('TP_CTX_ID') || getCtxId();
+      const ret = sessionStorage.getItem(`TP_RETURN_MODE:${ctx}`);
+      if (ret) {
+        if (ret === MODE.EDIT) setMode(MODE.EDIT);
+        else if (ret === MODE.DUP) setMode(MODE.DUP);
+        else if (ret === MODE.NEW) setMode(MODE.NEW);
+        sessionStorage.removeItem(`TP_RETURN_MODE:${ctx}`);
+        modeRestored = true;
+      }
     }
-   
-  }
-    refreshToolbarEnablement();
-    await Promise.resolve(recalcTudo()).catch(()=>{});
-  })();
- });
- 
 
- document.getElementById('btn-aplicar-condicao-todos')?.addEventListener('click', () => {
+    if (!modeRestored) {
+      if (currentTabelaId) {
+        if (action === 'edit') setMode(MODE.EDIT);
+        else if (action === 'duplicate') onDuplicar(); // usa o fluxo que guarda a origem
+        else setMode(MODE.VIEW);
+      } else {
+        setMode(MODE.NEW);
+      }
+
+    }
+    refreshToolbarEnablement();
+    await Promise.resolve(recalcTudo()).catch(() => { });
+  })();
+});
+
+
+document.getElementById('btn-aplicar-condicao-todos')?.addEventListener('click', () => {
   const cod = document.getElementById('plano_pagamento')?.value || '';
   document.querySelectorAll('#tbody-itens tr').forEach(tr => {
     const sel = tr.querySelector('td:nth-child(10) select');
@@ -1865,28 +1990,29 @@ document.addEventListener('DOMContentLoaded', () => {
     // 🔑 garante persistência em itens[idx] + recálculo
     sel.dispatchEvent(new Event('change', { bubbles: true }));
   });
-    setTimeout(() => {
-    Promise.resolve(recalcTudo()).catch(()=>{});
+  setTimeout(() => {
+    Promise.resolve(recalcTudo()).catch(() => { });
   }, 0);
-    const hdr = document.getElementById('plano_pagamento');
-    if (hdr) hdr.dataset.userEdited = '';
-    snapshotSelecionadosParaPicker?.();
- });
- document.getElementById('iva_st_toggle')?.addEventListener('change', (e) => {
+  const hdr = document.getElementById('plano_pagamento');
+  if (hdr) hdr.dataset.userEdited = '';
+  snapshotSelecionadosParaPicker?.();
+});
+document.getElementById('iva_st_toggle')?.addEventListener('change', (e) => {
   ivaStAtivo = !!e.target.checked;
   Promise.resolve(recalcTudo()).catch(err => console.debug('recalcTudo falhou:', err));
-   });
+});
 
- document.getElementById('desconto_global')?.addEventListener('change', (e) => {
+document.getElementById('desconto_global')?.addEventListener('change', (e) => {
   // 👇 marca que o usuário editou manualmente o header
   e.currentTarget.dataset.userEdited = '1';
   atualizarPillDesconto();
   saveHeaderSnapshot();
 });
 
- window.addEventListener('pageshow', () => {
+window.addEventListener('pageshow', () => {
   if (typeof recalcTudo === 'function') {
-      queueMicrotask(() => Promise.resolve(recalcTudo()).catch(() => {}));  }
+    queueMicrotask(() => Promise.resolve(recalcTudo()).catch(() => { }));
+  }
 });
 
 document.addEventListener('input', handleFieldChange, true);
@@ -1905,4 +2031,3 @@ function handleFieldChange(e) {
     }
   }
 }
-});

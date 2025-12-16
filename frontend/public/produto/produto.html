@@ -1,27 +1,56 @@
-<!-- produto.html -->
 <!DOCTYPE html>
 <html lang="pt-BR">
+
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Cadastro do Produto</title>
+
+  <!-- Bootstrap 5 -->
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+
+  <!-- CSS Global e Navbar -->
+  <link rel="stylesheet" href="../navbar.css">
   <link rel="stylesheet" href="./produto.css" />
 
-  <script>
-    window.__CFG_LOADED = fetch('/config.json', { cache: 'no-store' })
-      .then(r => r.json())
-      .then(cfg => { window.__CFG = cfg; window.API_BASE = (cfg.API_BASE_URL || '').replace(/\/+$/,''); })
-      .catch(() => { window.API_BASE = (window.API_BASE || '').replace(/\/+$/,''); });
-  </script>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600&display=swap" rel="stylesheet">
 </head>
+
 <body>
-  <div class="page">
-    <div class="card">
+
+  <!-- Header (Faixa Superior) -->
+  <header>
+    <div class="navbar">
+      <button class="menu-btn" id="menu-button">&#9776;</button>
+      <img src="../logo.png" alt="Logo" class="logo" />
+    </div>
+  </header>
+
+  <!-- Sidebar -->
+  <nav class="sidebar" id="sidebar">
+    <ul>
+      <li><a href="/index.html">Home</a></li>
+      <li><a href="/clientes/cliente.html">Cadastrar Cliente</a></li>
+      <li><a href="#">Atualizar Catálogo</a></li>
+      <li><a href="/pedido/pedido.html">Consultar Pedidos</a></li>
+      <li><a href="#">Exportar Relatórios</a></li>
+      <li><a href="/tabela_preco/criacao_tabela_preco.html">Tabela Preço</a></li>
+      <li><a href="/config_email/config_email.html">Configuração E-mail</a></li>
+    </ul>
+  </nav>
+  <div id="overlay"></div>
+
+  <!-- Main Content Wrapper -->
+  <div class="page-container">
+    <div class="card" style="margin-top: 20px;">
       <div class="header">
         <div class="title">CADASTRO DO PRODUTO</div>
         <div class="toolbar">
           <button id="btn-novo" class="ghost">Novo</button>
           <button id="btn-buscar" class="ghost">Pesquisar</button>
+          <button id="btn-importar" class="ghost">Importar PDF</button>
           <button id="btn-editar" class="ghost">Editar</button>
           <button id="btn-salvar" class="primary">Salvar</button>
         </div>
@@ -29,12 +58,12 @@
 
       <!-- Identificação -->
       <div class="section-title">Identificação</div>
-      <div class="grid row">
-        <div class="col-3">
+      <div class="row g-2">
+        <div class="col-2">
           <label for="codigo_supra">Código</label>
-          <input id="codigo_supra" type="text" placeholder="Ex.: 667E12*0.45" />
+          <input id="codigo_supra" type="text" placeholder="Ex.: 667E12" />
         </div>
-        <div class="col-5">
+        <div class="col-6">
           <label for="nome_produto">Descrição</label>
           <input id="nome_produto" type="text" placeholder="Nome do produto" />
         </div>
@@ -47,7 +76,7 @@
           <select id="tipo_giro"></select>
         </div>
       </div>
-      <div class="grid row">
+      <div class="row g-2">
         <div class="col-3">
           <label for="linha">Linha</label>
           <select id="linha"></select>
@@ -56,11 +85,11 @@
           <label for="familia">Família</label>
           <select id="familia"></select>
         </div>
-        <div class="col-2">
-          <label for="filhos">Filho nº</label>
+        <div class="col-1">
+          <label for="filhos">Filho</label>
           <input id="filhos" type="number" min="0" step="1" />
         </div>
-        <div class="col-2">
+        <div class="col-3">
           <label for="fornecedor">Fornecedor</label>
           <input id="fornecedor" type="text" />
         </div>
@@ -68,7 +97,7 @@
 
       <!-- Unidade / Embalagem / Pesos -->
       <div class="section-title">Unidade / Embalagem / Pesos</div>
-      <div class="grid row">
+      <div class="row g-2">
         <div class="col-2">
           <label for="unidade">Unidade de Venda</label>
           <input id="unidade" type="text" placeholder="CX/UN" />
@@ -97,7 +126,7 @@
 
       <!-- Estoque / Códigos -->
       <div class="section-title">Estoque / Códigos</div>
-      <div class="grid row">
+      <div class="row g-2">
         <div class="col-2">
           <label for="estoque_disponivel">Estoque Físico</label>
           <input id="estoque_disponivel" type="number" step="1" min="0" />
@@ -115,7 +144,7 @@
           <input id="codigo_embalagem" type="text" />
         </div>
       </div>
-      <div class="grid row">
+      <div class="row g-2">
         <div class="col-3">
           <label for="ncm">NCM / SH</label>
           <input id="ncm" type="text" placeholder="NN.NN.NN.NN" />
@@ -124,17 +153,18 @@
 
       <!-- Impostos -->
       <div class="section-title">Impostos</div>
-      <div class="grid row">
+      <div class="row g-2">
         <div class="col-2"><label for="ipi">IPI (%)</label><input id="ipi" type="number" step="0.01" min="0" /></div>
         <div class="col-2"><label for="icms">ICMS (%)</label><input id="icms" type="number" step="0.01" min="0" /></div>
-        <div class="col-3"><label for="iva_st">Substituição Tributária (%)</label><input id="iva_st" type="number" step="0.01" min="0" /></div>
+        <div class="col-3"><label for="iva_st">Substituição Tributária (%)</label><input id="iva_st" type="number"
+            step="0.01" min="0" /></div>
         <div class="col-2"><label for="cbs">CBS (%)</label><input id="cbs" type="number" step="0.01" min="0" /></div>
         <div class="col-2"><label for="ibs">IBS (%)</label><input id="ibs" type="number" step="0.01" min="0" /></div>
       </div>
 
       <!-- Preços — Tabela Atual -->
       <div class="section-title">Preços — Tabela Atual</div>
-      <div class="grid row">
+      <div class="row g-2">
         <div class="col-3">
           <label for="preco">Valor Tabela Atual (R$)</label>
           <input id="preco" type="number" step="0.01" min="0" />
@@ -155,7 +185,7 @@
 
       <!-- Preços — Anteriores (somente leitura) -->
       <div class="section-title">Preços — Anteriores (somente leitura)</div>
-      <div class="grid row">
+      <div class="row g-2">
         <div class="col-3">
           <label for="preco_anterior">Valor Tabela Anterior (R$)</label>
           <input id="preco_anterior" type="number" step="0.01" class="readonly" readonly />
@@ -176,7 +206,7 @@
 
       <!-- Desconto por Tonelada -->
       <div class="section-title">Desconto por Tonelada</div>
-      <div class="grid row">
+      <div class="row g-2">
         <div class="col-3">
           <label for="desconto_valor_tonelada">Desconto por Tonelada (R$)</label>
           <input id="desconto_valor_tonelada" type="number" step="0.01" min="0" />
@@ -201,21 +231,105 @@
     </div>
   </div>
 
+  <!-- Modal de importação de lista de preços -->
+  <div id="import-modal" class="custom-modal hidden">
+    <div class="custom-modal-dialog">
+      <div class="custom-modal-header">
+        <div class="custom-modal-title">Comparar lista de preços (PDF)</div>
+        <button id="import-close" class="icon-btn" title="Fechar">✕</button>
+      </div>
+
+      <div class="custom-modal-body">
+        <div class="row g-2">
+          <div class="col-6">
+            <label for="import_tipo_lista">Tipo da lista</label>
+            <select id="import_tipo_lista">
+              <option value="">Selecione...</option>
+              <option value="INSUMOS">INSUMOS</option>
+              <option value="PET">PET</option>
+            </select>
+          </div>
+
+          <div class="col-6">
+            <label for="import_validade">Validade da tabela</label>
+            <input id="import_validade" type="date" />
+          </div>
+
+          <div class="col-12">
+            <label for="import_arquivo">Arquivo PDF</label>
+            <input id="import_arquivo" type="file" accept="application/pdf" />
+          </div>
+        </div>
+        <div class="hint">
+          Selecione o PDF da Votorantim, defina o tipo da lista e a validade da tabela antes de importar.
+        </div>
+      </div>
+
+      <div class="custom-modal-footer">
+        <button id="import-cancel" class="ghost">Cancelar</button>
+        <button id="import-confirm" class="primary">Importar</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal de SUCESSO da importação (NOVA) -->
+  <div id="import-success-modal" class="custom-modal hidden">
+    <div class="custom-modal-dialog" style="max-width: 500px;">
+      <div class="custom-modal-header" style="background: #d1fae5; color: #065f46;">
+        <div class="custom-modal-title">Ingestão Concluída!</div>
+        <button id="import-success-close" class="icon-btn">✕</button>
+      </div>
+      <div class="custom-modal-body">
+        <div style="text-align: center; margin: 16px 0;">
+          <div style="font-size: 48px;">✅</div>
+          <h3 style="margin-top: 8px; color: #333;">Importação realizada com sucesso</h3>
+          <p style="color: #666;">Os dados foram processados e sincronizados.</p>
+        </div>
+
+        <div style="background: #f9fafb; padding: 16px; border-radius: 8px; font-size: 14px;">
+          <div style="display: flex; justify-content: space-between; margin-bottom: 8px;">
+            <span>Total de linhas no PDF:</span>
+            <strong id="resumo-total">0</strong>
+          </div>
+          <hr style="border: 0; border-top: 1px solid #e5e7eb; margin: 8px 0;">
+          <div style="display: flex; justify-content: space-between; color: #059669;">
+            <span>Novos produtos:</span>
+            <strong id="resumo-inseridos">0</strong>
+          </div>
+          <div style="display: flex; justify-content: space-between; color: #2563eb;">
+            <span>Preços atualizados:</span>
+            <strong id="resumo-atualizados">0</strong>
+          </div>
+          <div style="display: flex; justify-content: space-between; color: #dc2626;">
+            <span>Inativados:</span>
+            <strong id="resumo-inativados">0</strong>
+          </div>
+        </div>
+      </div>
+      <div class="custom-modal-footer" style="justify-content: space-between;">
+        <button id="import-success-cancel" class="ghost">Fechar</button>
+        <button id="import-success-download" class="primary" style="background-color: #059669;">
+          📄 Baixar Relatório PDF
+        </button>
+      </div>
+    </div>
+  </div>
+
   <!-- Modal de pesquisa -->
-  <div id="search-modal" class="modal hidden">
-    <div class="modal-dialog">
-      <div class="modal-header">
-        <div class="modal-title">Pesquisar produto</div>
+  <div id="search-modal" class="custom-modal hidden">
+    <div class="custom-modal-dialog">
+      <div class="custom-modal-header">
+        <div class="custom-modal-title">Pesquisar produto</div>
         <button id="search-close" class="icon-btn" title="Fechar">✕</button>
       </div>
 
-      <div class="modal-body">
+      <div class="custom-modal-body">
         <input id="search-input" type="text" placeholder="Código ou descrição..." />
         <div id="search-hint" class="hint">Digite para buscar • Enter: selecionar • Esc: fechar</div>
         <div id="search-results" class="results"></div>
       </div>
 
-      <div class="modal-footer">
+      <div class="custom-modal-footer">
         <button id="search-cancel" class="ghost">Cancelar</button>
       </div>
     </div>
@@ -224,5 +338,24 @@
   <div id="toast" class="toast"></div>
 
   <script src="./produto.js"></script>
+
+  <!-- Script do Menu/Sidebar -->
+  <script>
+    const menuButton = document.getElementById("menu-button");
+    const sidebar = document.getElementById("sidebar");
+    const overlay = document.getElementById("overlay");
+
+    if (menuButton && sidebar && overlay) {
+      menuButton.addEventListener("click", () => {
+        sidebar.classList.toggle("active");
+        overlay.style.display = sidebar.classList.contains("active") ? "block" : "none";
+      });
+      overlay.addEventListener("click", () => {
+        sidebar.classList.remove("active");
+        overlay.style.display = "none";
+      });
+    }
+  </script>
 </body>
+
 </html>

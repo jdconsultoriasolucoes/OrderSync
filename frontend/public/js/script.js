@@ -1,19 +1,6 @@
 // script.js atualizado para cliente_simples.html
 
-(function ensureApiBase(){
-  if (window.API_BASE) { window.API_BASE = window.API_BASE.replace(/\/+$/, ""); return; }
-  if (window.__CFG && window.__CFG.API_BASE_URL) {
-    window.API_BASE = String(window.__CFG.API_BASE_URL).replace(/\/+$/, "");
-  } else {
-    window.API_BASE = "";
-  }
-})();
-
-function apiUrlCliente(id = "") {
-  const base = window.API_BASE || "";
-  const path = id ? `/api/cliente/${encodeURIComponent(id)}` : `/api/cliente`;
-  return base ? `${base}${path}` : path;
-}
+const API_URL = "http://127.0.0.1:8000/cliente";
 
 // Aplica máscaras
 window.addEventListener("DOMContentLoaded", () => {

@@ -3,20 +3,8 @@
 // -------------------- Helpers básicos --------------------
 const url = new URL(window.location.href);
 
-window.API_BASE = (window.API_BASE && window.API_BASE.replace(/\/+$/, '')) ||
-                  (window.__CFG && (window.__CFG.API_BASE_URL || '').replace(/\/+$/, '')) ||
-                  '';
-
-// Helper para montar URL da API
-function apiUrl(p) {
-  const base = window.API_BASE || '';
-  const path = p.startsWith('/') ? p : `/${p}`;
-  return `${base}${path}`;
-}
-
-// Modo interno (prévia via "Visualizar"): ?modo=interno ou #interno
-const qs = new URLSearchParams(location.search);
-const IS_MODO_INTERNO = (qs.get('modo') === 'interno') || (location.hash.replace('#','') === 'interno');
+// Modo interno (prévia via "Visualizar")
+const IS_MODO_INTERNO = new URLSearchParams(location.search).get("modo") === "interno" || location.hash.replace("#","") === "interno";;
 // preferir valores vindos do /p/{code} (definidos no HTML), senão cair no querystring
 let tabelaIdParam = (typeof window.currentTabelaId !== "undefined" && window.currentTabelaId !== null)
   ? String(window.currentTabelaId)
@@ -142,16 +130,16 @@ function renderTabela() {
       <td>${item.codigo ?? ""}</td>
       <td>${item.nome ?? ""}</td>
       <td>${item.embalagem ?? ""}</td>
-      <td>${item.condicao_pagamento ?? ""}</td>
+      <td><input type="number" min="0" step="1" value="${item.quantidade || 0}" data-index="${i}" class="qtd" /></td>
       <td class="celula-peso" data-peso-unit="${Number(item.peso ?? 0)}"></td>
       <td>${fmtBRL.format(valorUnitario)}</td>
-      <td><input type="number" min="0" step="1" value="${item.quantidade || 1}" data-index="${i}" class="qtd" /></td>
+      <td>${item.condicao_pagamento ?? ""}</td>
       <td id="subtotal-${i}">${fmtBRL.format(subtotal)}</td>
     `;
     tbody.appendChild(tr);
     // Peso total inicial (peso unitário × quantidade inicial)
     const pesoUnit = Number(item.peso ?? 0);
-    const qtdInicial = Number(item.quantidade) || 1;
+    const qtdInicial = Number(item.quantidade) || 0;
     const pesoCell = tr.querySelector('.celula-peso');
       if (pesoCell) {
       const pesoTotal = pesoUnit * qtdInicial;
@@ -241,7 +229,11 @@ function atualizarResumoFreteEPeso() {
   // escreve na tela
   const elPeso = document.getElementById('totalPesoPedido');
   const elFrete = document.getElementById('totalFretePedido');
-  if (elPeso) elPeso.textContent = (Number.isFinite(pesoTotal) ? pesoTotal : 0).toLocaleString('pt-BR');
+  
+  if (elPeso) {
+  const pesoArredondado = Number.isFinite(pesoTotal) ? Math.round(pesoTotal) : 0;
+  elPeso.textContent = pesoArredondado.toLocaleString('pt-BR');
+  }
   if (elFrete) elFrete.textContent = window.usarValorComFrete === true ? fmtBRL.format(freteTotal) : fmtBRL.format(0);
 }
 
@@ -271,7 +263,7 @@ async function carregarPedido() {
     
     if (pathParts[0] === 'p' && lastPart) {
       try {
-        const r = await fetch(`/link_pedido/resolver?code=${encodeURIComponent(lastPart)}`, { cache: "no-store" });
+        const r = await fetch(API(`/link_pedido/resolver?code=${encodeURIComponent(lastPart)}`), { cache: "no-store" });
         if (r.ok) {
           info = await r.json(); 
           window.currentTabelaId = info.tabela_id ?? window.currentTabelaId;
@@ -345,7 +337,7 @@ async function carregarPedido() {
         ...p,
         valor_com_frete: Number(p.valor_com_frete) || 0,
         valor_sem_frete: Number(p.valor_sem_frete) || 0,
-        quantidade: Number(p.quantidade) || 1
+        quantidade: Number(p.quantidade) || 0
       }));
       renderTabela();
       atualizarResumoFreteEPeso();
@@ -396,7 +388,7 @@ async function carregarPedido() {
             ...p,
             valor_com_frete: Number(p.valor_com_frete) || 0,
             valor_sem_frete: Number(p.valor_sem_frete) || 0,
-            quantidade: Number(p.quantidade) || 1,
+            quantidade: Number(p.quantidade) || 0,
           }))
         : [];
 
@@ -511,17 +503,26 @@ async function confirmarPedido() {
         usar_valor_com_frete: !!usarValorComFrete,
         produtos: itens.map(x => ({
           codigo: x.codigo,
+          descricao: x.nome ?? null,       // 👈 manda o nome do produto
+          embalagem: x.embalagem ?? null,  // 👈 manda a embalagem
+          condicao_pagamento: x.condicao_pagamento ?? null,       // 👈 NOVO
+          tabela_comissao: x.tabela_comissao ?? null,
           quantidade: Number(x.quantidade || 0),
           preco_unit: x.preco_unit ?? x.valor_sem_frete ?? 0,
-          preco_unit_com_frete: x.preco_unit_com_frete ?? x.valor_com_frete ?? x.preco_unit ?? 0,
+          preco_unit_com_frete:
+            x.preco_unit_com_frete ?? x.valor_com_frete ?? x.preco_unit ?? 0,
           peso_kg: x.peso ?? x.peso_kg ?? null
         })),
         observacao,
         cliente: clienteRazao,
-        validade_ate: (typeof window.validadeGlobalISO === "string" && isISODate(window.validadeGlobalISO)) ? window.validadeGlobalISO : null,
+        validade_ate:
+          (typeof window.validadeGlobalISO === "string" && isISODate(window.validadeGlobalISO))
+            ? window.validadeGlobalISO
+            : null,
         data_retirada: dataRetiradaISO,
         validade_dias: obterValidadeDiasDaTela(),
-        codigo_cliente: (typeof window.codigoClienteHidden === "string" ? window.codigoClienteHidden : null),
+        codigo_cliente:
+          (typeof window.codigoClienteHidden === "string" ? window.codigoClienteHidden : null),
         link_url: location.href
       })
     });
@@ -532,7 +533,8 @@ async function confirmarPedido() {
     }
 
     const data = await resp.json();
-    const pedidoIdConfirmado = data?.id;
+   const pedidoIdConfirmado = data?.id ?? data?.pedido_id;
+   if (!pedidoIdConfirmado) throw new Error("Resposta sem id do pedido.");
 
     if (!pedidoIdConfirmado) {
       throw new Error("Resposta sem id do pedido.");

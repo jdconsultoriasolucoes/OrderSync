@@ -99,6 +99,12 @@ function ensureModalInjected() {
   #glpOpen{background:#1f73f1}
   #glpWhats{background:#25D366}
   .glp-hint{font-size:12px;color:#555;margin-top:8px;min-height:1.2em}
+  
+  .glp-option.glp-disabled,
+  .glp-seg.glp-disabled{
+    opacity: .5;
+    cursor: not-allowed;
+  }
 
   /* Responsivo */
   @media (max-width:520px){
@@ -154,9 +160,7 @@ async function copyToClipboard(text) {
 }
 
 function apiBase() {
-  if (typeof window.API_BASE === "string" && window.API_BASE) return window.API_BASE.replace(/\/+$/, "");
-  if (window.__CFG && window.__CFG.API_BASE_URL) return String(window.__CFG.API_BASE_URL).replace(/\/+$/, "");
-  return "";
+  return (typeof window.API_BASE === "string" && window.API_BASE) ? window.API_BASE : "";
 }
 
 function getCodigoClienteHidden() {
@@ -169,9 +173,8 @@ function getCodigoClienteHidden() {
 }
 
 
-async function gerarLinkCurtoNoServidor({ tabelaId, comFrete, dataPrevistaISO }) {
-  const base = apiBase();
-  const url  = base ? `${base}/api/link_pedido/gerar` : "/api/link_pedido/gerar";
+async function gerarLinkCurtoNoServidor({ tabelaId, comFrete, dataPrevistaISO  }) {
+  const url  = apiBase() ? `${apiBase()}/link_pedido/gerar` : "/link_pedido/gerar";
   const resp = await fetch(url, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
@@ -179,13 +182,12 @@ async function gerarLinkCurtoNoServidor({ tabelaId, comFrete, dataPrevistaISO })
       tabela_id: tabelaId,
       com_frete: comFrete,
       data_prevista: (isISODate(dataPrevistaISO) ? dataPrevistaISO : null),
-      codigo_cliente: getCodigoClienteHidden()
-    }),
+     codigo_cliente: getCodigoClienteHidden() }),
+      
   });
   if (!resp.ok) {
-    let detail = await resp.text();
-    try { detail = (await resp.json())?.detail || detail; } catch {}
-    throw new Error(`Falha ao gerar link: ${detail}`);
+    const msg = await resp.text();
+    throw new Error(`Falha ao gerar link: ${msg}`);
   }
   const data = await resp.json();
   return data.url; // ex.: https://.../p/<code>
@@ -229,7 +231,7 @@ function aplicarEntregaNaUrl(urlCurta, entregaISO) {
  * @param {Object} opts
  * @param {number|string} opts.tabelaId
  */
-export function showGerarLinkModal({ tabelaId }) {
+export function showGerarLinkModal({ tabelaId, freteKg }) {
   if (!tabelaId && tabelaId !== 0) {
     console.warn("showGerarLinkModal: tabelaId ausente");
     alert("Não foi possível gerar o link: ID da tabela ausente.");
@@ -239,35 +241,79 @@ export function showGerarLinkModal({ tabelaId }) {
   ensureModalInjected();
   showModal();
 
-  const modal    = document.getElementById("modalGerarLinkPedido");
-  const linkBox  = modal.querySelector(".glp-linkbox");
-  const input    = modal.querySelector("#glpLinkInput");
-  const hint     = modal.querySelector("#glpHint");
-  const buttons  = Array.from(modal.querySelectorAll(".glp-option"));
-  const dateInp  = modal.querySelector("#glpDate");
+  const modal   = document.getElementById("modalGerarLinkPedido");
+  const input   = modal.querySelector("#glpLinkInput");
+  const hint    = modal.querySelector("#glpHint");
+  const buttons = Array.from(modal.querySelectorAll(".glp-option"));
+  const dateInp = modal.querySelector("#glpDate");
 
-  // padrão: COM frete
-  let currentComFrete = true;
+  // --- Pega o frete: prioridade = valor passado; fallback = campo da tela ---
+  function obterFreteKg() {
+    // 1) se veio freteKg na chamada (listar_tabelas), usa ele
+    if (typeof freteKg === "number" && !Number.isNaN(freteKg)) {
+      return freteKg;
+    }
+
+    // 2) senão, tenta ler o campo da tela de criação de tabela
+    const el =
+      document.getElementById("frete_kg") ||
+      document.querySelector('input[name="frete_kg"]');
+
+    if (!el) return null;
+
+    const raw = String(el.value || "").replace(",", ".");
+    const num = Number(raw);
+    return Number.isFinite(num) ? num : null;
+  }
+
+  const freteAtual = obterFreteKg();
+  const temFrete   = freteAtual != null && freteAtual > 0;
+
+  // se tem frete -> COM frete; se não tem -> SEM frete
+  let currentComFrete = !!temFrete;
+
+  // se não tem frete, desabilita visualmente o botão "COM frete"
+  const btnComFrete = buttons.find((b) => b.dataset.frete === "1");
+  if (!temFrete && btnComFrete) {
+    btnComFrete.classList.add("glp-disabled");
+    btnComFrete.setAttribute("aria-disabled", "true");
+  }
 
   const setBusy = (busy) => {
-    buttons.forEach(b => b.disabled = busy);
+    buttons.forEach((b) => (b.disabled = busy));
     if (dateInp) dateInp.disabled = busy;
     if (busy) hint.textContent = "Gerando link...";
   };
 
   async function regenerate(comFrete) {
+    // se NÃO tem frete configurado, sempre força SEM frete
+    if (!temFrete) {
+      comFrete = false;
+    }
+
     currentComFrete = !!comFrete;
-    buttons.forEach(b => b.classList.toggle("is-active", (b.dataset.frete === "1") === currentComFrete));
+
+    buttons.forEach((b) =>
+      b.classList.toggle(
+        "is-active",
+        (b.dataset.frete === "1") === currentComFrete
+      )
+    );
 
     const entregaISO = normalizarEntregaISO(dateInp?.value || "");
     if (dateInp && dateInp.value && !entregaISO) {
-      hint.textContent = "Data inválida ou no passado. Corrija ou deixe em branco.";
+      hint.textContent =
+        "Data inválida ou no passado. Corrija ou deixe em branco.";
       return;
     }
 
     try {
       setBusy(true);
-      const urlCurta = await gerarLinkCurtoNoServidor({ tabelaId, comFrete: currentComFrete,dataPrevistaISO: entregaISO });
+      const urlCurta = await gerarLinkCurtoNoServidor({
+        tabelaId,
+        comFrete: currentComFrete,
+        dataPrevistaISO: entregaISO,
+      });
       input.value = urlCurta;
       hint.textContent = currentComFrete
         ? "Este link exibirá os preços COM frete."
@@ -280,18 +326,30 @@ export function showGerarLinkModal({ tabelaId }) {
     }
   }
 
-  // Gera inicialmente com COM frete
-  regenerate(true);
+  // Gera inicialmente:
+  // - se tem frete -> COM frete
+  // - se não tem -> SEM frete
+  regenerate(temFrete);
 
   // Trocar COM/SEM frete
   buttons.forEach((btn) => {
-    btn.onclick = () => regenerate(btn.dataset.frete === "1");
+    btn.onclick = () => {
+      const isCom = btn.dataset.frete === "1";
+
+      // se não há frete configurado, ignora cliques em "COM frete"
+      if (!temFrete && isCom) {
+        return;
+      }
+      regenerate(isCom);
+    };
   });
 
   // Regerar quando a data mudar
   if (dateInp) {
     dateInp.addEventListener("change", () => regenerate(currentComFrete));
-    dateInp.addEventListener("input",  () => {/* deixa o usuário digitar sem travar */});
+    dateInp.addEventListener("input", () => {
+      /* deixa o usuário digitar sem travar */
+    });
   }
 
   // Ações
@@ -303,20 +361,19 @@ export function showGerarLinkModal({ tabelaId }) {
       : "Não foi possível copiar. Copie manualmente.";
   };
 
- modal.querySelector("#glpOpen").onclick = () => {
-  if (!input.value) return;
-  try {
-    const u = new URL(input.value);
-    u.searchParams.set("modo", "interno");
-    // acrescenta hash para sobreviver a redirects que removem a query
-    u.hash = "interno";
-    window.open(u.toString(), "_blank", "noopener,noreferrer");
-  } catch {
-    const sep = input.value.includes("?") ? "&" : "?";
-    const url = `${input.value}${sep}modo=interno#interno`;
-    window.open(url, "_blank", "noopener,noreferrer");
-  }
-};
+  modal.querySelector("#glpOpen").onclick = () => {
+    if (!input.value) return;
+    try {
+      const u = new URL(input.value);
+      u.searchParams.set("modo", "interno");
+      u.hash = "interno";
+      window.open(u.toString(), "_blank", "noopener,noreferrer");
+    } catch {
+      const sep = input.value.includes("?") ? "&" : "?";
+      const url = `${input.value}${sep}modo=interno#interno`;
+      window.open(url, "_blank", "noopener,noreferrer");
+    }
+  };
 
   modal.querySelector("#glpWhats").onclick = () => {
     if (!input.value) return;

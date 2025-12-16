@@ -1,0 +1,596 @@
+# services/produtos_v2_service.py
+
+from typing import Any, Dict, List, Optional, Tuple
+from sqlalchemy.orm import Session
+from sqlalchemy import text
+from fastapi import HTTPException
+from datetime import date
+from services.produto_regras import sincronizar_produtos_com_listas_ativas
+from models.produto import ProdutoV2, ImpostoV2
+from schemas.produto import (
+    ProdutoV2Create,
+    ProdutoV2Update,
+    ImpostoV2Create,
+    ProdutoV2Out,
+    ImpostoV2Out,
+)
+import pandas as pd
+
+
+# ----------------------------
+# Helpers
+# ----------------------------
+def _row_to_out(db: Session, row: Dict[str, Any], include_imposto: bool = True) -> ProdutoV2Out:
+    data = dict(row)
+    
+    # --- Recuperação de dados faltantes (se a View não trouxer) ---
+    product_id = data.get("id")
+    if product_id:
+        # Se 'preco_anterior' ou 'validade_tabela' estiverem ausentes logicamente da view,
+        # buscamos na tabela física para garantir cálculo correto de indicadores.
+        # Verifica se chaves existem mas são None, ou se nem existem.
+        needs_fetch = False
+        if data.get("preco_anterior") is None: needs_fetch = True
+        if data.get("validade_tabela") is None: needs_fetch = True
+
+        if needs_fetch:
+            # Consulta fallback leve
+            res = db.execute(
+                text("SELECT preco, preco_anterior, validade_tabela, preco_tonelada, preco_tonelada_anterior FROM t_cadastro_produto_v2 WHERE id = :id"),
+                {"id": product_id}
+            ).mappings().first()
+            if res:
+                if data.get("preco_anterior") is None:
+                    data["preco_anterior"] = res["preco_anterior"]
+                if data.get("validade_tabela") is None:
+                    data["validade_tabela"] = res["validade_tabela"]
+                
+                # Garante atuais/anteriores de tonelada para calculo de reajuste preciso
+                if data.get("preco_tonelada_anterior") is None:
+                    data["preco_tonelada_anterior"] = res["preco_tonelada_anterior"]
+                
+                if data.get("preco") is None:
+                    data["preco"] = res["preco"]
+                if data.get("preco_tonelada") is None:
+                    data["preco_tonelada"] = res["preco_tonelada"]
+
+    # --- Lógica de campos calculados (se não vierem da View/DB) ---
+    
+    # 1) Reajuste Percentual
+    # 1) Reajuste Percentual (Agora significando % de Desconto Efetivo)
+    # Contexto UI: ((Preço Final - Preço Tabela) / Preço Tabela) * 100
+    if data.get("reajuste_percentual") is None:
+        p_atual = data.get("preco")
+        p_peso = data.get("peso")
+        
+        # Parâmetros de desconto
+        desc_ton = data.get("desconto_valor_tonelada") or 0
+        dt_ini = data.get("data_desconto_inicio")
+        dt_fim = data.get("data_desconto_fim")
+        
+        # Validar vigência para calcular o preço final "teórico" de hoje
+        # Nota: O front usa 'new Date()', aqui usamos 'date.today()'
+        is_active = False
+        if desc_ton > 0 and dt_ini and dt_fim and p_peso:
+            if isinstance(dt_ini, str): dt_ini = date.fromisoformat(dt_ini)
+            if isinstance(dt_fim, str): dt_fim = date.fromisoformat(dt_fim)
+            today = date.today()
+            if dt_ini <= today <= dt_fim:
+                is_active = True
+        
+        if is_active and p_atual and p_atual > 0:
+            # Calculo do Preço Final
+            # DescontoUnitario = (DescTon / 1000) * Peso
+            # Convert values to float to avoid Decimal vs Float errors
+            desc_ton_f = float(desc_ton)
+            p_peso_f = float(p_peso)
+            p_atual_f = float(p_atual)
+
+            desc_unit = (desc_ton_f / 1000.0) * p_peso_f
+            p_final = p_atual_f - desc_unit
+            if p_final < 0: p_final = 0.0
+            
+            # Reajuste (Variação inverdida: Positivo = Desconto)
+            data["reajuste_percentual"] = (((p_final - p_atual_f) / p_atual_f) * 100) * -1
+        else:
+            # Sem desconto ativo, reajuste é 0% ou None?
+            # Se a intenção é mostrar o impacto do desconto, é 0%.
+            data["reajuste_percentual"] = 0.0
+
+    # 2) Vigência Ativa
+    # Contexto da UI: Está dentro do bloco "Desconto por Tonelada".
+    # Então refere-se à vigência do DESCONTO (Inicio <= Hoje <= Fim).
+    
+    # Se a view já trouxe, confiamos? 
+    # A view original provavelmente olhava 'validade_tabela' (preço). Vamos sobrescrever para garantir 
+    # que bata com o contexto visual, ou criamos uma lógica nova se for None.
+    # Dado que o user reclamou, melhor forçar a lógica do desconto.
+    
+    # OBS: O front mostra p.vigencia_ativa.
+    
+    ini = data.get("data_desconto_inicio")
+    fim = data.get("data_desconto_fim")
+    
+    if ini and fim:
+        if isinstance(ini, str): ini = date.fromisoformat(ini)
+        if isinstance(fim, str): fim = date.fromisoformat(fim)
+        today = date.today()
+        data["vigencia_ativa"] = (ini <= today <= fim)
+    else:
+        # Se não tem datas de desconto, não tem vigência ativa de desconto.
+        data["vigencia_ativa"] = False
+
+    if include_imposto and "id" in data:
+        imp = db.query(ImpostoV2).filter(ImpostoV2.produto_id == data["id"]).one_or_none()
+        if imp:
+            data["imposto"] = ImpostoV2Out.from_orm(imp)
+            
+    return ProdutoV2Out(**data)
+
+
+def _validate_business(update: Dict[str, Any]):
+    # já validamos no Pydantic; aqui reforçamos regra de datas (caso PATCH parcial sem fim chegar setado)
+    ini = update.get("data_desconto_inicio")
+    fim = update.get("data_desconto_fim")
+
+    if (ini and not fim) or (fim and not ini):
+        raise HTTPException(422, detail="Preencha data_desconto_inicio e data_desconto_fim juntos")
+    if ini and fim and ini > fim:
+        raise HTTPException(422, detail="data_desconto_inicio deve ser <= data_desconto_fim")
+
+    for campo in ("preco", "preco_tonelada", "desconto_valor_tonelada"):
+        v = update.get(campo)
+        if v is not None and v < 0:
+            raise HTTPException(422, detail=f"{campo} não pode ser negativo")
+
+
+# ----------------------------
+# CRUD via ORM + leitura pela VIEW
+# ----------------------------
+def create_produto(db: Session, produto_in: ProdutoV2Create, imposto_in: Optional[ImpostoV2Create] = None) -> ProdutoV2Out:
+    try:
+        # 1) INSERT produto base
+        obj = ProdutoV2(**produto_in.dict(exclude_unset=True))
+        db.add(obj)
+        db.flush()  # garante obj.id
+
+        # 2) imposto (opcional)
+        if imposto_in:
+            imp = ImpostoV2(produto_id=obj.id, **imposto_in.dict(exclude_unset=True))
+            db.add(imp)
+
+        db.commit()
+        db.refresh(obj)
+
+    except Exception as e:
+        db.rollback()
+        # logue o erro para saber a raiz:
+        # print(f"[create_produto] commit error: {e}")
+        raise
+
+    # 3) Tentar montar o retorno pela VIEW (se existir)
+    try:
+        row = db.execute(
+            text("SELECT * FROM v_produto_v2_preco WHERE id = :id"),
+            {"id": obj.id},
+        ).mappings().first()
+        if row:
+            return ProdutoV2Out(**row)
+    except Exception:
+        # print(f"[create_produto] view fallback: {e}")
+        pass
+
+    # 4) Fallback: monta resposta a partir do ORM (sem view)
+    imposto_out = None
+    if obj.imposto:  # relacionamento 1–1
+        imposto_out = ImpostoV2Out.from_orm(obj.imposto)
+
+    return ProdutoV2Out(
+        id=obj.id,
+        codigo_supra=obj.codigo_supra,
+        status_produto=obj.status_produto,
+        nome_produto=obj.nome_produto,
+        tipo_giro=obj.tipo_giro,
+        estoque_disponivel=obj.estoque_disponivel,
+        unidade=obj.unidade,
+        peso=obj.peso,
+        peso_bruto=obj.peso_bruto,
+        estoque_ideal=obj.estoque_ideal,
+        embalagem_venda=obj.embalagem_venda,
+        unidade_embalagem=obj.unidade_embalagem,
+        codigo_ean=obj.codigo_ean,
+        codigo_embalagem=obj.codigo_embalagem,
+        ncm=obj.ncm,
+        fornecedor=obj.fornecedor,
+        filhos=obj.filhos,
+        familia=obj.familia,
+        preco=obj.preco,
+        preco_tonelada=obj.preco_tonelada,
+        validade_tabela=obj.validade_tabela,
+        desconto_valor_tonelada=obj.desconto_valor_tonelada,
+        data_desconto_inicio=obj.data_desconto_inicio,
+        data_desconto_fim=obj.data_desconto_fim,
+        # calculados ficam None se não vierem da view/trigger:
+        preco_final=None,
+        reajuste_percentual=None,
+        vigencia_ativa=None,
+        # imposto:
+        imposto=imposto_out,
+        # snapshots anteriores (se tiver no modelo, deixe None):
+        unidade_anterior=None,
+        preco_anterior=None,
+        preco_tonelada_anterior=None,
+        validade_tabela_anterior=None,
+    )
+
+
+def update_produto(
+    db: Session,
+    produto_id: int,
+    payload: ProdutoV2Update,
+    imposto: Optional[ImpostoV2Create],
+) -> ProdutoV2Out:
+    obj = db.query(ProdutoV2).filter(ProdutoV2.id == produto_id).one_or_none()
+    if not obj:
+        raise HTTPException(404, detail="Produto não encontrado")
+
+    update = payload.dict(exclude_unset=True)
+    _validate_business(update)
+
+    # Lógica de Rotação de Histórico (Regra 2)
+    # Se mudar o preço atual, o antigo vira "anterior"
+    # Se mudar validade, a antiga vira "anterior"
+    new_preco = update.get("preco")
+    new_preco_ton = update.get("preco_tonelada")
+    new_validade = update.get("validade_tabela")
+
+    # Flag para saber se precisamos rotacionar
+    should_rotate = False
+    
+    # Verifica mudanças de valor
+    # Nota: comparamos com obj.preco (valor atual no banco)
+    if new_preco is not None and new_preco != obj.preco:
+        should_rotate = True
+    elif new_preco_ton is not None and new_preco_ton != obj.preco_tonelada:
+        should_rotate = True
+    
+    # Se houver rotação de preço, salvamos o estado ATUAL como ANTERIOR
+    if should_rotate:
+        obj.preco_anterior = obj.preco
+        obj.preco_tonelada_anterior = obj.preco_tonelada
+        obj.validade_tabela_anterior = obj.validade_tabela
+
+        # E forçamos a atualização da validade anterior se ela também mudou agora
+        # (na verdade o obj.validade_tabela acima já pegou o que estava no banco)
+
+    for k, v in update.items():
+        setattr(obj, k, v)
+
+    if imposto is not None:
+        imp = db.query(ImpostoV2).filter(ImpostoV2.produto_id == produto_id).one_or_none()
+        if imp:
+            for k, v in imposto.dict(exclude_unset=True).items():
+                setattr(imp, k, v)
+        else:
+            db.add(ImpostoV2(produto_id=produto_id, **imposto.dict(exclude_unset=True)))
+
+    db.commit()
+
+    row = db.execute(
+        text("SELECT * FROM v_produto_v2_preco WHERE id = :id"),
+        {"id": produto_id},
+    ).mappings().first()
+    return _row_to_out(db, row)
+
+
+def get_produto(db: Session, produto_id: int) -> ProdutoV2Out:
+    row = db.execute(
+        text("SELECT * FROM v_produto_v2_preco WHERE id = :id"),
+        {"id": produto_id},
+    ).mappings().first()
+    if not row:
+        raise HTTPException(404, detail="Produto não encontrado")
+    return _row_to_out(db, row)
+
+
+def list_produtos(
+    db: Session,
+    q: Optional[str],
+    status: Optional[str],
+    familia: Optional[int],
+    vigencia_em: Optional[date],
+    limit: int,
+    offset: int,
+) -> List[ProdutoV2Out]:
+    base = "SELECT * FROM v_produto_v2_preco WHERE 1=1"
+    params: Dict[str, Any] = {}
+
+    if q:
+        base += " AND (nome_produto ILIKE :q OR codigo_supra ILIKE :q)"
+        params["q"] = f"%{q}%"
+    if status:
+        base += " AND status_produto = :status"
+        params["status"] = status
+    if familia is not None:
+        base += " AND familia = :familia"
+        params["familia"] = familia
+    if vigencia_em:
+        base += " AND validade_tabela <= :vig"
+        params["vig"] = vigencia_em
+
+    base += " ORDER BY id DESC LIMIT :limit OFFSET :offset"
+    params["limit"] = limit
+    params["offset"] = offset
+
+    try:
+        rows = db.execute(text(base), params).mappings().all()
+        return [_row_to_out(db, r, include_imposto=False) for r in rows]
+    except Exception as e:
+        import traceback
+        with open("search_error.log", "w") as f:
+            f.write(traceback.format_exc())
+        raise e
+
+
+def get_anteriores(db: Session, produto_id: int) -> Dict[str, Any]:
+    # lê direto da tabela base (não da view)
+    row = db.execute(
+        text(
+            """
+        SELECT preco_anterior, unidade_anterior, preco_tonelada_anterior, validade_tabela_anterior
+        FROM t_cadastro_produto_v2 WHERE id = :id
+    """
+        ),
+        {"id": produto_id},
+    ).mappings().first()
+    if not row:
+        raise HTTPException(404, detail="Produto não encontrado")
+    return dict(row)
+
+
+def importar_lista_df(db: Session, df: pd.DataFrame) -> Dict[str, Any]:
+    """
+    Faz upsert na t_cadastro_produto_v2 a partir do DataFrame da lista de preços.
+    - chave de busca: codigo_supra (vem do campo 'codigo' do DF)
+    - se não existir: cria produto novo com status 'ATIVO'
+    - se existir: atualiza preço / fornecedor
+    """
+    inseridos = 0
+    atualizados = 0
+
+    for row in df.to_dict(orient="records"):
+        codigo = row.get("codigo")
+        descricao = row.get("descricao")
+        fornecedor = row.get("fornecedor")
+        preco_ton = row.get("preco_ton")
+        preco_sc = row.get("preco_sc")
+
+        if not codigo or not descricao:
+            continue
+
+        # procura produto pela chave única codigo_supra
+        obj = (
+            db.query(ProdutoV2)
+            .filter(ProdutoV2.codigo_supra == codigo)
+            .one_or_none()
+        )
+        if obj:
+            # Atualiza
+            atualizados += 1
+            # Se quiser atualizar descrição/preço sempre que aparecer, descomente:
+            # obj.nome_produto = descricao
+            # obj.fornecedor = fornecedor
+            obj.preco_tonelada = preco_ton
+            obj.preco = preco_sc
+            # Trigger DB atualiza updated_at
+        else:
+            # Cria novo
+            inseridos += 1
+            novo = ProdutoV2(
+                codigo_supra=codigo,
+                status_produto="ATIVO",
+                nome_produto=descricao,
+                fornecedor=fornecedor,
+                preco_tonelada=preco_ton,
+                preco=preco_sc,
+            )
+            db.add(novo)
+
+    db.commit()
+    return {"inseridos": inseridos, "atualizados": atualizados}
+
+
+def get_product_options(db: Session) -> Dict[str, List[str]]:
+    """
+    Retorna listas de valores únicos para preencher comboboxes no frontend.
+    """
+    def _distinct__list(col):
+        # query distinct, filter not null, order by value
+        rows = db.query(col).distinct().filter(col != None).order_by(col).all()
+        return [r[0] for r in rows if r[0]]
+
+    return {
+        "status_produto": _distinct__list(ProdutoV2.status_produto),
+        "tipo_giro": _distinct__list(ProdutoV2.tipo_giro),
+        "familia": _distinct__list(ProdutoV2.familia),
+        "tipo": ["INSUMOS", "PET"], # Opções fixas
+        "unidade": _distinct__list(ProdutoV2.unidade),
+        "fornecedor": _distinct__list(ProdutoV2.fornecedor),
+    }
+
+
+
+    db.commit()
+
+    return {
+        "total_linhas": int(len(df)),
+        "inseridos": inseridos,
+        "atualizados": atualizados,
+    }
+
+
+# ----------------------------------------------------------------------
+# Tabela intermediária t_preco_produto_pdf + fluxo de importação
+# ----------------------------------------------------------------------
+def limpar_preco_pdf_por_tipo(
+    db: Session,
+    lista: str,
+    fornecedor: Optional[str] = None,
+) -> None:
+    """
+    Em vez de DELETAR, marca como inativas (ativo = FALSE)
+    todas as linhas da t_preco_produto_pdf_v2
+    para o mesmo (lista, fornecedor).
+    """
+    lista = lista.upper().strip()
+    conds = ["lista = :lista"]
+    params: Dict[str, Any] = {"lista": lista}
+
+    if fornecedor:
+        conds.append("fornecedor = :fornecedor")
+        params["fornecedor"] = fornecedor
+
+    where_sql = " AND ".join(conds)
+
+    sql = text(
+        f"""
+        UPDATE public.t_preco_produto_pdf_v2
+           SET ativo = FALSE
+         WHERE {where_sql}
+           AND ativo = TRUE
+        """
+    )
+
+    db.execute(sql, params)
+    db.commit()
+
+
+def salvar_t_preco_produto_pdf(
+    db: Session,
+    df: pd.DataFrame,
+    nome_arquivo: Optional[str] = None,
+    usuario: Optional[str] = None,
+) -> None:
+    """
+    Insere o DataFrame na tabela t_preco_produto_pdf_v2.
+    - Mantém histórico por data_ingestao.
+    - Usa flag 'ativo' para marcar a carga atual.
+    - Guarda nome do arquivo e usuário.
+    """
+    if df.empty:
+        return
+
+    sql = text(
+        """
+        INSERT INTO public.t_preco_produto_pdf_v2 (
+            fornecedor,
+            lista,
+            familia,
+            codigo,
+            descricao,
+            preco_ton,
+            preco_sc,
+            page,
+            validade_tabela,
+            data_ingestao,
+            nome_arquivo,
+            ativo,
+            usuario
+        )
+        VALUES (
+            :fornecedor,
+            :lista,
+            :familia,
+            :codigo,
+            :descricao,
+            :preco_ton,
+            :preco_sc,
+            :page,
+            :validade_tabela,
+            :data_ingestao,
+            :nome_arquivo,
+            :ativo,
+            :usuario
+        )
+        """
+    )
+
+    registros = df.to_dict(orient="records")
+
+    for row in registros:
+        # defaults
+        row.setdefault("validade_tabela", None)
+        row.setdefault("data_ingestao", date.today())
+        row.setdefault("nome_arquivo", nome_arquivo)
+        row["ativo"] = True # Força sempre True na nova ingestão
+        row.setdefault("usuario", usuario)
+
+        db.execute(sql, row)
+
+    db.commit()
+
+def importar_pdf_para_produto(
+    db: Session,
+    df: pd.DataFrame,
+    nome_arquivo: Optional[str] = None,
+    usuario: Optional[str] = None,
+) -> Dict[str, Any]:
+    """
+    Fluxo completo para importação da lista:
+      1) marcar como inativas as linhas antigas da t_preco_produto_pdf_v2
+         para o mesmo (fornecedor, lista)
+      2) salvar a nova ingestão (ativo = TRUE)
+      3) sincronizar com t_cadastro_produto_v2 (atualizar, inativar, inserir)
+    """
+    if df.empty:
+        return {"total_linhas": 0, "lista": None, "fornecedor": None, "sync": {}}
+
+    chaves = ["lista", "fornecedor", "codigo"]
+    for col in chaves:
+        if col not in df.columns:
+            raise HTTPException(
+                status_code=400,
+                detail={
+                    "tipo": "ERRO_COLUNAS",
+                    "mensagem": f"Coluna obrigatória ausente no PDF: {col}",
+                },
+            )
+
+    # Remove DUPLICATAS silenciosamente (mantém a primeira ocorrência)
+    # Motivo: usuários relataram erro de duplicidade que impedia importação de arquivos válidos (ex: cabeçalhos repetidos ou dados sujos).
+    df.drop_duplicates(subset=chaves, keep="first", inplace=True)
+
+    # REMOVIDO: Strict duplicate check
+    # if not dups.empty: ...
+    
+    # assume que toda a lista tem o mesmo "lista"/"fornecedor"
+    lista = str(df["lista"].iloc[0]).upper().strip()
+    fornecedor = None
+    if "fornecedor" in df.columns and not pd.isna(df["fornecedor"].iloc[0]):
+        fornecedor = str(df["fornecedor"].iloc[0]).strip() or None
+
+    # 1) desativar cargas antigas daquele (fornecedor, lista)
+    limpar_preco_pdf_por_tipo(db, lista=lista, fornecedor=fornecedor)
+
+    # 2) salvar nova ingestão na intermediária, marcando ativo = TRUE
+    salvar_t_preco_produto_pdf(
+        db,
+        df,
+        nome_arquivo=nome_arquivo,
+        usuario=usuario,
+    )
+
+    # 3) sincronizar produtos com a lista ativa
+    resumo_sync = sincronizar_produtos_com_listas_ativas(
+        db,
+        fornecedor=fornecedor,
+        lista=lista,
+    )
+
+    return {
+        "lista": lista,
+        "fornecedor": fornecedor,
+        "total_linhas": int(len(df)),
+        "sync": resumo_sync,
+    }
+

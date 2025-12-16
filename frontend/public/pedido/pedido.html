@@ -10,19 +10,16 @@
 
   <!-- CSS específico da página -->
   <link rel="stylesheet" href="pedido.css">
-  <script>
-    window.__CFG_LOADED = fetch('/config.json', { cache: 'no-store' })
-      .then(r => r.json())
-      .then(cfg => { window.__CFG = cfg; window.API_BASE = (cfg.API_BASE_URL || '').replace(/\/+$/,''); })
-      .catch(() => { window.API_BASE = (window.API_BASE || '').replace(/\/+$/,''); });
-</script>
+
   <!-- Navbar SEMPRE por último, para garantir o padding-top do header fixo -->
   <link rel="stylesheet" href="../navbar.css">
 
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600&display=swap" rel="stylesheet">
-
+  <script>
+  window.API_BASE = window.API_BASE || "https://ordersync-backend-59d2.onrender.com";
+  </script>
 </head>
 <body class="orc-page">
     <header>

@@ -26,6 +26,7 @@ class ProdutoV2Base(BaseModel):
     nome_produto: str
 
     tipo_giro: Optional[str] = None
+    tipo: Optional[str] = None
     estoque_disponivel: Optional[int] = None
     unidade: Optional[str] = None
     peso: Optional[float] = None
@@ -38,7 +39,7 @@ class ProdutoV2Base(BaseModel):
     ncm: Optional[str] = None
     fornecedor: Optional[str] = None
     filhos: Optional[int] = None
-    familia: Optional[int] = None
+    familia: Optional[str] = None
 
     preco: Optional[float] = None                      # Valor Tabela Atual (oficial)
     preco_tonelada: Optional[float] = None

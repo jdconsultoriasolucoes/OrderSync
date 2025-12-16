@@ -89,7 +89,7 @@ class TabelaPrecoCompleta(BaseModel):
     cliente: str
     fornecedor: Optional[str] = None
     produtos: List[TabelaPreco]
-
+    calcula_st: bool = False
 StatusValidade = Literal["ok", "alerta", "expirada", "nao_definida"]
 
 class ValidadeGlobalResp(BaseModel):
@@ -145,6 +145,8 @@ class TabelaSalvar(BaseModel):
     # Se o frete/kg vier no header e você replicar nos itens
     frete_kg: Optional[float] = None
 
+    calcula_st: bool = False
+    
     produtos: List[ProdutoSalvar]
 
     class Config:

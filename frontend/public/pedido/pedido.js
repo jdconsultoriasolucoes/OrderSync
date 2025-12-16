@@ -1,44 +1,11 @@
 // base do backend FastAPI publicado no Render
-window.API_BASE = (window.API_BASE && window.API_BASE.replace(/\/+$/,'')) ||
-                  (window.__CFG && (window.__CFG.API_BASE_URL || '').replace(/\/+$/,'')) ||
-                  '';
+const API_BASE = "https://ordersync-backend-edjq.onrender.com";
 
-function apiBase(){ return window.API_BASE || ''; }
-function apiUrl(path){
-  const b = apiBase();
-  const p = path.startsWith('/') ? path : `/${path}`;
-  return `${b}${p}`;
-}
-
-// Endpoints desta tela (sempre calcule a partir da base atual)
-function getAPI(){
-  const b = apiBase();
-  return {
-    list:   `${b}/api/pedidos`,
-    status: `${b}/api/pedidos/status`,
-    resumo: (id) => `${b}/api/pedidos/${id}/resumo`,
-  };
-}
-
-async function fetchJSON(u, opt = {}) {
-  const r = await fetch(u, opt);
-  if (!r.ok) {
-    let payload;
-    try { payload = await r.json(); } catch { payload = { detail: await r.text() }; }
-    const err = new Error(payload?.detail || `HTTP ${r.status}`);
-    err.status = r.status;
-    err.payload = payload;
-    throw err;
-  }
-  return r.json();
-}
-
-// (opcional) padrão de alerta único
-function showHttpError(e, prefix = 'Falha') {
-  const id = e?.payload?.error_id ? ` (erro ${e.payload.error_id})` : '';
-  alert(`${prefix}:${id}\n${e?.message || ''}`);
-  console.error(prefix, e);
-}
+const API = {
+  list: `${API_BASE}/api/pedidos`,
+  status: `${API_BASE}/api/pedidos/status`,
+  resumo: (id) => `${API_BASE}/api/pedidos/${id}/resumo`,
+};
 
 let state = { page: 1, pageSize: 25, total: 0 };
 
@@ -71,7 +38,7 @@ function addDays(baseDate, days) {
 
 // ---------------------- carregar status ----------------------
 async function loadStatus() {
-  const r = await fetch(getAPI().status, { cache: "no-store" });
+  const r = await fetch(API.status, { cache: "no-store" });
   if (!r.ok) {
     console.error("Falha ao carregar status:", r.status, await r.text());
     return;
@@ -160,17 +127,17 @@ async function loadList(page = 1) {
 
   const { fFrom, fTo, fTabela, fCliente, fFornecedor, selStatus } = getFilters();
 
-let fromISO = toISO(fFrom);
-let toISO_  = toISO(fTo);
+  let fromISO = toISO(fFrom);
+  let toISO_ = toISO(fTo);
 
-// só faz fallback se NÃO tem nenhuma das duas datas
+  // só faz fallback se NÃO tem nenhuma das duas datas
   if (!fromISO && !toISO_) {
     const hoje = new Date();
-    const inicio = new Date(hoje); 
+    const inicio = new Date(hoje);
     inicio.setDate(hoje.getDate() - 30);
 
-    fromISO = inicio.toISOString().slice(0,10);
-    toISO_  = hoje.toISOString().slice(0,10);
+    fromISO = inicio.toISOString().slice(0, 10);
+    toISO_ = hoje.toISOString().slice(0, 10);
 
 
   }
@@ -180,11 +147,11 @@ let toISO_  = toISO(fTo);
 
   // datas — enviamos vários nomes para garantir compat
   params.set("from", fromISO);
-  params.set("to",   toISO_);
+  params.set("to", toISO_);
   params.set("date_from", fromISO);
-  params.set("date_to",   toISO_);
+  params.set("date_to", toISO_);
   params.set("inicio", toBR(fromISO));
-  params.set("fim",    toBR(toISO_));
+  params.set("fim", toBR(toISO_));
 
   // status — só manda se tiver selecionado (se “Todos”, fica vazio)
   if (selStatus && selStatus.length) {
@@ -214,7 +181,7 @@ let toISO_  = toISO(fTo);
   params.set("limit", state.pageSize);
   params.set("offset", String((state.page - 1) * state.pageSize));
 
-  const url = `${getAPI().list}?${params.toString()}`;
+  const url = `${API.list}?${params.toString()}`;
   console.log("GET", url);
 
   const r = await fetch(url, { cache: "no-store" });
@@ -249,14 +216,14 @@ function renderTable(rows) {
     const id = row.numero_pedido ?? row.id_pedido ?? row.pedido_id ?? row.id ?? row.numero ?? row.num_pedido ?? row.codigo_pedido;
 
     const dataPedido = row.data_pedido || row.created_at || row.data || row.dt || row.data_emissao;
-    const cliente    = row.cliente_nome || row.cliente || row.nome_cliente || row.cliente_fantasia || "---";
+    const cliente = row.cliente_nome || row.cliente || row.nome_cliente || row.cliente_fantasia || "---";
     const modalidade = row.modalidade ?? (row.usar_valor_com_frete ? "ENTREGA" : (row.usar_valor_com_frete === false ? "RETIRADA" : "---"));
-    const valor      = row.valor_total ?? row.total_pedido ?? row.total ?? row.valor ?? 0;
-    const status     = row.status_codigo ?? row.status ?? row.situacao ?? row.sit ?? "---";
-    const tabela     = row.tabela_preco_nome ?? row.tabela ?? row.tabela_nome ?? "---";
+    const valor = row.valor_total ?? row.total_pedido ?? row.total ?? row.valor ?? 0;
+    const status = row.status_codigo ?? row.status ?? row.situacao ?? row.sit ?? "---";
+    const tabela = row.tabela_preco_nome ?? row.tabela ?? row.tabela_nome ?? "---";
     const fornecedor = row.fornecedor ?? row.fornecedor_nome ?? row.fornecedor_fantasia ?? "---";
-    const link       = row.link_url ?? row.link ?? row.pedido_link_url ?? null;
-    const linkSent   = row.link_enviado ?? row.link_status === "ENVIADO";
+    const link = row.link_url ?? row.link ?? row.pedido_link_url ?? null;
+    const linkSent = row.link_enviado ?? row.link_status === "ENVIADO";
 
     const tr = document.createElement("tr");
     tr.classList.add("row-click");
@@ -272,14 +239,13 @@ function renderTable(rows) {
       <td>${tabela}</td>
       <td>${fornecedor}</td>
       <td>
-        ${
-          link
-            ? `<div class="flex-gap">
+        ${link
+        ? `<div class="flex-gap">
                  <a class="btn" href="${link}" target="_blank" rel="noopener">Abrir</a>
                  <button class="btn-copy" data-url="${link}">${linkSent ? "Copiar (Enviado)" : "Copiar (Gerado)"}</button>
                </div>`
-            : "<span class='muted'>—</span>"
-        }
+        : "<span class='muted'>—</span>"
+      }
       </td>
     `;
 
@@ -305,7 +271,7 @@ function renderPager() {
 
 // ---------------------- drawer de resumo ----------------------
 async function openResumo(id) {
-  const r = await fetch(getAPI().resumo(id), { cache: "no-store" });
+  const r = await fetch(API.resumo(id), { cache: "no-store" });
   if (!r.ok) return;
 
   const p = await r.json();
@@ -342,17 +308,17 @@ async function openResumo(id) {
         <b>Itens</b>
         <div class="itens">
           ${p.itens
-            .map(
-              (i) => `
+      .map(
+        (i) => `
             <div class="item">
               <div><b>${i.codigo}</b> — ${i.nome ?? ""} <small>${i.embalagem ?? ""}</small></div>
               <div>${i.quantidade} × ${fmtMoney(i.preco_unit)} = <b>${fmtMoney(
-                i.subtotal
-              )}</b></div>
+          i.subtotal
+        )}</b></div>
             </div>
           `
-            )
-            .join("")}
+      )
+      .join("")}
         </div>
       </div>
 
@@ -365,15 +331,14 @@ async function openResumo(id) {
         <b>Link</b>
         <div class="kv">
           <div class="truncate">${p.link_url ?? "-"}</div>
-          ${
-            p.link_url
-              ? `<button id="copyResumo" class="btn">Copiar</button>`
-              : ""
-          }
+          ${p.link_url
+      ? `<button id="copyResumo" class="btn">Copiar</button>`
+      : ""
+    }
         </div>
         <small>Status: ${p.link_status ?? "-"} • Primeiro acesso: ${fmtDate(
-    p.link_primeiro_acesso_em
-  )}</small>
+      p.link_primeiro_acesso_em
+    )}</small>
       </div>
     </div>
   `;
@@ -384,7 +349,7 @@ async function openResumo(id) {
       await navigator.clipboard.writeText(p.link_url);
       btn.textContent = "Copiado!";
       setTimeout(() => (btn.textContent = "Copiar"), 1500);
-    } catch {}
+    } catch { }
   });
 
   document.getElementById("drawer").classList.remove("hidden");
@@ -421,11 +386,11 @@ function bindUI() {
 
 document.addEventListener('DOMContentLoaded', () => {
   const menuButton = document.getElementById('menu-button');
-  const sidebar    = document.getElementById('sidebar');
-  const overlay    = document.getElementById('overlay');
+  const sidebar = document.getElementById('sidebar');
+  const overlay = document.getElementById('overlay');
   if (!menuButton || !sidebar || !overlay) return;
 
-  const open  = () => { sidebar.classList.add('active'); overlay.style.display = 'block'; };
+  const open = () => { sidebar.classList.add('active'); overlay.style.display = 'block'; };
   const close = () => { sidebar.classList.remove('active'); overlay.style.display = 'none'; };
 
   menuButton.addEventListener('click', (e) => {
@@ -435,7 +400,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
   overlay.addEventListener('click', close);
   document.addEventListener('keydown', (e) => { if (e.key === 'Escape') close(); });
-  });
+});
 
 // ---------------------- aplica período e já busca ----------------------
 function aplicarPeriodoRapido() {

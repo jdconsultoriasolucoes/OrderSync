@@ -7,17 +7,20 @@
   <meta http-equiv="Pragma" content="no-cache" />
   <meta http-equiv="Expires" content="0" />
   <link rel="stylesheet" href="/static/config_email/config_email.css?v=tab-1" />
- <!-- Loader do config.json: define window.API_BASE em runtime (dev/prod) -->
-  <script>
-    window.__CFG_LOADED = fetch('/config.json', { cache: 'no-store' })
-      .then(r => r.json())
-      .then(cfg => { window.__CFG = cfg; window.API_BASE = (cfg.API_BASE_URL || '').replace(/\/+$/,''); })
-      .catch(() => { window.API_BASE = (window.API_BASE || '').replace(/\/+$/,''); });
+ <script>
+  window.API_BASE = "https://ordersync-backend-59d2.onrender.com";
+  window.CONFIG_EMAIL_BASE = window.API_BASE + "/admin/config_email";
+  window.NETDIAG_BASE = window.API_BASE + "/admin/netdiag";
 
-    // Prefixo do router desta página (mantém como fallback relativo)
-    window.CONFIG_EMAIL_BASE = window.CONFIG_EMAIL_BASE || "/admin/config_email";
+  // Use exatamente as rotas do OpenAPI
+  window.CONFIG_EMAIL_ENDPOINTS = {
+    mensagem:    window.CONFIG_EMAIL_BASE + "/mensagem",
+    smtp:        window.CONFIG_EMAIL_BASE + "/smtp",
+    testarEnvio: window.CONFIG_EMAIL_BASE + "/teste_envio"
+    // OBS: não existe /smtp/teste no seu back
+  };
   </script>
-  <script defer src="/static/config_email/config_email.js?v=tab-2"></script>
+ <script defer src="/static/config_email/config_email.js?v=tab-6"></script>
 </head>
 <body>
   <header class="topbar">

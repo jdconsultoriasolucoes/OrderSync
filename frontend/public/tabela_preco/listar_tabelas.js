@@ -1,16 +1,8 @@
-let API_BASE = '';
+const API_BASE = "https://ordersync-backend-edjq.onrender.com";
+window.API_BASE = window.API_BASE || API_BASE;
+let tabelaSelecionadaId = null;
 
-document.addEventListener("DOMContentLoaded", async () => {
-  if (window.__CFG_LOADED && typeof window.__CFG_LOADED.then === 'function') {
-    try { await window.__CFG_LOADED; } catch (e) {}
-  }
-  API_BASE = (
-    (window.API_BASE) ||
-    (window.__CFG && window.__CFG.API_BASE_URL) ||
-    ''
-  ).replace(/\/$/, '') || 'http://localhost:8000';
-  window.API_BASE = API_BASE;
-
+document.addEventListener("DOMContentLoaded", () => {
   carregarTabelas();
 });
 
@@ -33,21 +25,27 @@ async function carregarTabelas() {
       <td>
           <button onclick="window.location.href='criacao_tabela_preco.html?id=${encodeURIComponent(tabela.id)}'">Editar</button>
           <button onclick="abrirModalDelecao(${tabela.id})">Excluir</button>
-          <button class="btn-enviar-link" data-id="${tabela.id}">Enviar</button>
+          <button
+            class="btn-enviar-link"
+            data-id="${tabela.id}"
+            data-frete-kg="${tabela.frete_kg !== undefined && tabela.frete_kg !== null ? tabela.frete_kg : ''}"
+          >
+            Enviar
+          </button>
       </td>
       `;
 
       tr.addEventListener("click", () => {
-             document.querySelectorAll("#lista-tabelas-body tr")
-             .forEach(row => row.classList.remove("selected"));
-             tr.classList.add("selected");
-             tabelaSelecionadaId = tabela.id;
+        document.querySelectorAll("#lista-tabelas-body tr")
+          .forEach(row => row.classList.remove("selected"));
+        tr.classList.add("selected");
+        tabelaSelecionadaId = tabela.id;
 
-      // ✅ Habilita os botões se existirem na página
-       const btnEditar  = document.getElementById("btn-editar");
-       const btnExcluir = document.getElementById("btn-excluir");
-       if (btnEditar)  btnEditar.disabled  = false;
-       if (btnExcluir) btnExcluir.disabled = false;
+        // ✅ Habilita os botões se existirem na página
+        const btnEditar = document.getElementById("btn-editar");
+        const btnExcluir = document.getElementById("btn-excluir");
+        if (btnEditar) btnEditar.disabled = false;
+        if (btnExcluir) btnExcluir.disabled = false;
       });
 
       tbody.appendChild(tr);
@@ -112,7 +110,7 @@ function abrirModalDelecao(id) {
   modal.style.display = "flex";
 }
 
-document.getElementById("pesquisa").addEventListener("keyup", function() {
+document.getElementById("pesquisa").addEventListener("keyup", function () {
   let filtro = this.value.toLowerCase();
   let linhas = document.querySelectorAll("#lista-tabelas-body tr");
 
@@ -125,10 +123,24 @@ document.getElementById("pesquisa").addEventListener("keyup", function() {
 document.addEventListener("click", (e) => {
   const btn = e.target.closest(".btn-enviar-link");
   if (!btn) return;
+
   const tabelaId = btn.dataset.id;
+
+  // pega o frete que veio da API (data-frete-kg)
+  const freteStr = btn.dataset.freteKg; // data-frete-kg => freteKg
+  const freteKg =
+    freteStr === undefined || freteStr === null || freteStr === ""
+      ? null
+      : Number(String(freteStr).replace(",", "."));
+
   if (!tabelaId) return alert("ID da tabela não encontrado.");
   if (typeof window.__showGerarLinkModal !== "function") {
     return alert("Módulo de gerar link não carregado. Verifique o import em listar_tabelas.html.");
   }
-  window.__showGerarLinkModal({ tabelaId, pedidoClientePath: "/tabela_preco/pedido_cliente.html" });
+
+  window.__showGerarLinkModal({
+    tabelaId,
+    freteKg,
+    pedidoClientePath: "/tabela_preco/pedido_cliente.html",
+  });
 });

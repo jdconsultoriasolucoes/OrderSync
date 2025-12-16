@@ -1,17 +1,8 @@
-// Lê a base do backend (se existir) e normaliza
-window.API_BASE = (window.API_BASE && window.API_BASE.replace(/\/+$/,'')) ||
-                  (window.__CFG && (window.__CFG.API_BASE_URL || '').replace(/\/+$/,'')) ||
-                  '';
-
-function withBase(p) {
-  const b = window.API_BASE || '';
-  return b ? `${b}${p.startsWith('/') ? p : `/${p}`}` : p; // se não houver base, mantém relativo
-}
-
+console.info("[config_email] build tab-9 carregado");
 
 // ================== AUTO-DETECÇÃO DE ENDPOINTS ==================
 const CANDIDATES = [
- "/admin/config_email", 
+  "/admin/config_email",
   "/config/email",
   "/admin_config_email",
   "/admin/config_email",
@@ -19,13 +10,6 @@ const CANDIDATES = [
   "/email/config",
   "/config_email"
 ];
-
-// gera candidatos absolutos + relativos
-function getCandidates() {
-  const abs = RELATIVE_CANDS.map(withBase);
-  // mantém também os relativos como fallback (ex.: debug local)
-  return [...abs, ...RELATIVE_CANDS];
-}
 
 let ENDPOINTS = null;
 
@@ -44,22 +28,35 @@ async function probeBase(base) {
 }
 
 async function detectEndpoints() {
-  for (const base of getCandidates) {
-    if (await probeBase(base)) {
-      console.info("[config_email] usando base:", base);
-      ENDPOINTS = {
-        mensagem:     `${base}/mensagem`,
-        smtp:         `${base}/smtp`,
-        testarEnvio:  `${base}/teste_envio`,     // se não existir, botão só falha silencioso
-        testarSMTP:   `${base}/smtp/teste`,      // idem
-      };
-      return;
-    }
+  // 1) Se o HTML já definiu, usa e sai
+  if (window.CONFIG_EMAIL_ENDPOINTS) {
+    ENDPOINTS = window.CONFIG_EMAIL_ENDPOINTS;
+    console.info("[config_email] endpoints forçados via HTML:", ENDPOINTS);
+    return;
   }
-  console.error("[config_email] Nenhum endpoint válido encontrado. Ajuste CANDIDATES ou backend.");
+
+  // 2) Caso não tenha sido forçado, roda o autodetector como fallback
+  try {
+    for (const base of CANDIDATES) {
+      const ok = await probeBase(base);
+      if (ok) {
+        ENDPOINTS = {
+          mensagem:    `${base}/mensagem`,
+          smtp:        `${base}/smtp`,
+          testarEnvio: `${base}/teste_envio`,
+          // OBS: não há /smtp/teste no seu backend
+        };
+        console.info("[config_email] autodetect:", ENDPOINTS);
+        return;
+      }
+    }
+  } catch (e) {
+    console.error("[config_email] detect erro:", e);
+  }
+
+  console.error("[config_email] Nenhum endpoint válido encontrado. Ajuste CONFIG_EMAIL_ENDPOINTS no HTML.");
   alert("Não foi possível localizar os endpoints da Configuração de E-mail.");
 }
-// ================================================================
 
 // === Tabs ========================================================
 function initTabs(){
@@ -88,17 +85,12 @@ async function putJSON(url, data) {
   if (!r.ok) throw new Error(`HTTP ${r.status} em PUT ${url}`);
   return await r.json().catch(() => ({}));
 }
-function setVal(id, v) { const el = document.getElementById(id); if (el) el.value = v ?? ""; }
+function setVal(id, v)   { const el = document.getElementById(id); if (el) el.value = v ?? ""; }
 function setCheck(id, v) { const el = document.getElementById(id); if (el) el.checked = !!v; }
-function getVal(id) { return (document.getElementById(id)?.value ?? "").trim(); }
-function getCheck(id) { return !!document.getElementById(id)?.checked; }
-function toast(ok, msg){ alert(msg || (ok ? "Salvo!" : "Falhou")); }
-
-// --- Helper para normalizar senha (remove QUALQUER espaço) ---
-function normalizeAppPassword(pwd) {
-  return (pwd || "").replace(/\s+/g, "");
-}
-
+function getVal(id)      { return (document.getElementById(id)?.value ?? "").trim(); }
+function getCheck(id)    { return !!document.getElementById(id)?.checked; }
+function toast(ok, msg)  { alert(msg || (ok ? "Salvo!" : "Falhou")); }
+function normalizeAppPassword(pwd) { return (pwd || "").replace(/\s+/g, ""); }
 
 // === Fluxo principal =============================================
 async function init() {
@@ -106,22 +98,21 @@ async function init() {
   await detectEndpoints();
   if (!ENDPOINTS) return;
 
+  // Normalizador da senha (sem variáveis globais)
+  const senhaEl = document.getElementById("smtp_senha");
+  if (senhaEl) {
+    senhaEl.addEventListener("input", (e) => {
+      const cur = e.target.selectionStart;
+      e.target.value = normalizeAppPassword(e.target.value);
+      e.target.setSelectionRange(cur, cur);
+    });
+  }
+
   // Bind botões
   document.getElementById("btnSalvarMensagem").addEventListener("click", salvarMensagem);
   document.getElementById("btnTestarEnvio").addEventListener("click", testarEnvio);
   document.getElementById("btnSalvarSMTP").addEventListener("click", salvarSMTP);
   document.getElementById("btnTestarSMTP").addEventListener("click", testarSMTP);
-
-  // Normalização de senha (remove espaços enquanto digita)
-  const senhaInput = document.getElementById('smtp_senha');
-  if (senhaInput) {
-    senhaInput.addEventListener('input', (e) => {
-      const cur = e.target.selectionStart || 0;
-      e.target.value = normalizeAppPassword(e.target.value);
-      // recoloca o cursor na mesma posição
-      try { e.target.setSelectionRange(cur, cur); } catch {}
-    });
-  }
 
   // Carregar dados
   await Promise.allSettled([carregarMensagem(), carregarSMTP()]);
@@ -141,9 +132,9 @@ async function carregarMensagem() {
 async function salvarMensagem() {
   const payload = {
     destinatario_interno: getVal("destinatario_interno"),
-    assunto_padrao:       getVal("assunto_padrao"),
-    corpo_html:           getVal("corpo_html"),
-    enviar_para_cliente:  getCheck("enviar_para_cliente"),
+    assunto_padrao: getVal("assunto_padrao"),
+    corpo_html: getVal("corpo_html"),
+    enviar_para_cliente: getCheck("enviar_para_cliente")
   };
   try {
     await putJSON(ENDPOINTS.mensagem, payload);
@@ -153,11 +144,17 @@ async function salvarMensagem() {
     toast(false, "Falha ao salvar mensagem.");
   }
 }
+
 async function testarEnvio() {
   try {
     const r = await fetch(ENDPOINTS.testarEnvio, { method:"POST" });
-    toast(r.ok, r.ok ? "E-mail de teste enviado." : "Falha no teste de envio.");
-  } catch(e){ console.error(e); toast(false, "Erro ao testar envio."); }
+    const ok = r.ok;
+    const t  = await r.text().catch(()=> "");
+    toast(ok, ok ? "E-mail de teste enviado." : `Falha no teste de envio. ${t}`);
+  } catch(e){
+    console.error(e);
+    toast(false, "Erro ao testar envio (ver console).");
+  }
 }
 
 // === SMTP ========================================================
@@ -179,18 +176,38 @@ async function salvarSMTP() {
     smtp_host: getVal("smtp_host"),
     smtp_port: Number(getVal("smtp_port")) || 587,
     smtp_user: getVal("smtp_user"),
-    smtp_senha: getVal("smtp_senha"),
+    smtp_senha: normalizeAppPassword(getVal("smtp_senha")),
     usar_tls: getCheck("usar_tls")
   };
-  try { await putJSON(ENDPOINTS.smtp, payload); toast(true, "Configuração SMTP salva."); }
-  catch (e) { console.error(e); toast(false, "Falha ao salvar SMTP."); }
+  try {
+    await putJSON(ENDPOINTS.smtp, payload);
+    toast(true, "Configuração SMTP salva.");
+  } catch (e) {
+    console.error(e);
+    toast(false, "Falha ao salvar SMTP.");
+  }
 }
 
 async function testarSMTP() {
   try {
-    const r = await fetch(ENDPOINTS.testarSMTP, { method:"POST" });
-    toast(r.ok, r.ok ? "Conexão SMTP OK." : "Falha no teste SMTP.");
-  } catch(e){ console.error(e); toast(false, "Erro ao testar SMTP."); }
+    const host = getVal("smtp_host");
+    const port = Number(getVal("smtp_port")) || 587;
+
+    if (!host) throw new Error("Informe o host SMTP.");
+    if (!window.NETDIAG_BASE) throw new Error("NETDIAG_BASE não definido no HTML.");
+
+    const url = `${window.NETDIAG_BASE}/netcheck?host=${encodeURIComponent(host)}&port=${port}&timeout=10`;
+    const r = await fetch(url, { cache: "no-store" });
+
+    if (!r.ok) {
+      const t = await r.text().catch(() => "");
+      throw new Error(`HTTP ${r.status} – ${t || "falha no netcheck"}`);
+    }
+    toast(true, "Conexão SMTP OK (netcheck).");
+  } catch (e) {
+    console.error(e);
+    toast(false, `Falha no teste SMTP: ${e.message || e}`);
+  }
 }
 
 document.addEventListener("DOMContentLoaded", init);
