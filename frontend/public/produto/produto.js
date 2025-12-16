@@ -517,22 +517,19 @@ function updateReajusteUI(finalPrice, basePrice) {
   }
 
   if (basePrice != null && basePrice !== 0) {
-    // Fórmula: ((Final - Base) / Base) * 100
-    // Ex: Base 100, Final 90 -> -10%
-    const p = ((finalPrice - basePrice) / basePrice) * 100;
+    // Fórmula: ((Final - Base) / Base) * 100 * -1
+    // User requested to invert sign so discounts show as positive numbers.
+    // Ex: Base 100, Final 90 -> -10% becomes 10%
+    const p = ((finalPrice - basePrice) / basePrice) * 100 * -1;
 
     el.textContent = `${p.toFixed(2)}%`;
 
-    // Cor: Negativo (Desconto) = Verde (Bom pra quem compra? ou Bom pra venda?)
-    // Contexto de "Reajuste": geralmente Cliente quer ver quanto ganhou de desconto?
-    // User pediu verde se positivo e vermelho se negativo no chat anterior?
-    // Não, ele disse "o reajuste tem que ser com base na diferença..."
-    // Vou usar uma cor neutra ou lógica padrão:
-    // Se p < 0 (Desconto) -> Verde?
-    // Se p > 0 (Acrescimento) -> Vermelho?
+    // Cor
+    // Se p > 0 (Desconto) -> Verde
+    // Se p < 0 (Aumento) -> Vermelho
 
-    if (p < 0) el.style.color = "#27ae60"; // Verde (Desconto)
-    else if (p > 0) el.style.color = "#c0392b"; // Vermelho (Aumento)
+    if (p > 0) el.style.color = "#27ae60"; // Verde (Desconto)
+    else if (p < 0) el.style.color = "#c0392b"; // Vermelho (Aumento)
     else el.style.color = ""; // Zero
 
     el.style.fontWeight = "bold";

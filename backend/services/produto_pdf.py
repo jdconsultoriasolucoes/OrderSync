@@ -90,8 +90,8 @@ def _row_to_out(db: Session, row: Dict[str, Any], include_imposto: bool = True) 
             p_final = p_atual_f - desc_unit
             if p_final < 0: p_final = 0.0
             
-            # Reajuste (Variação)
-            data["reajuste_percentual"] = ((p_final - p_atual_f) / p_atual_f) * 100
+            # Reajuste (Variação inverdida: Positivo = Desconto)
+            data["reajuste_percentual"] = (((p_final - p_atual_f) / p_atual_f) * 100) * -1
         else:
             # Sem desconto ativo, reajuste é 0% ou None?
             # Se a intenção é mostrar o impacto do desconto, é 0%.
