@@ -36,7 +36,7 @@ def _row_to_out(db: Session, row: Dict[str, Any], include_imposto: bool = True) 
         if needs_fetch:
             # Consulta fallback leve
             res = db.execute(
-                text("SELECT preco, preco_anterior, validade_tabela FROM t_cadastro_produto_v2 WHERE id = :id"),
+                text("SELECT preco, preco_anterior, validade_tabela, preco_tonelada, preco_tonelada_anterior FROM t_cadastro_produto_v2 WHERE id = :id"),
                 {"id": product_id}
             ).mappings().first()
             if res:
@@ -44,35 +44,76 @@ def _row_to_out(db: Session, row: Dict[str, Any], include_imposto: bool = True) 
                     data["preco_anterior"] = res["preco_anterior"]
                 if data.get("validade_tabela") is None:
                     data["validade_tabela"] = res["validade_tabela"]
-                # Podemos garantir o preço atual também, caso a view esteja estranha
+                
+                # Garante atuais/anteriores de tonelada para calculo de reajuste preciso
+                if data.get("preco_tonelada_anterior") is None:
+                    data["preco_tonelada_anterior"] = res["preco_tonelada_anterior"]
+                
                 if data.get("preco") is None:
                     data["preco"] = res["preco"]
+                if data.get("preco_tonelada") is None:
+                    data["preco_tonelada"] = res["preco_tonelada"]
 
     # --- Lógica de campos calculados (se não vierem da View/DB) ---
     
     # 1) Reajuste Percentual
-    # ((atual - anterior) / anterior) * 100
+    # Tenta calcular pelo preço (saco/unidade). Se não tiver variação, tenta pelo preço_tonelada (pode ser mais preciso ou o único alterado).
     if data.get("reajuste_percentual") is None:
         p_atual = data.get("preco")
         p_ant = data.get("preco_anterior")
-        if p_atual is not None and p_ant is not None and p_ant != 0:
-            data["reajuste_percentual"] = ((p_atual - p_ant) / p_ant) * 100
-        else:
-            data["reajuste_percentual"] = None # 0.0? 
+        
+        # Helper interno
+        def calc_var(a, b):
+            if a is not None and b is not None and b != 0:
+                return ((a - b) / b) * 100
+            return 0.0
+
+        p_var = calc_var(p_atual, p_ant)
+        
+        data["reajuste_percentual"] = p_var
+        
+        # Se deu 0, tenta validar pelo preço tonelada
+        if abs(p_var) < 0.0001:
+            t_atual = data.get("preco_tonelada")
+            t_ant = data.get("preco_tonelada_anterior")
+            # Se a view não trouxe o anterior de tonelada, tenta buscar do DB se já não buscamos
+            if t_ant is None and product_id:
+                # Consulta pontual, se precisar. Nota: o SELECT acima buscou 'preco_anterior' e 'validade_tabela'.
+                # Vamos assumir que se o user quer precisão, a view deveria trazer.
+                # Mas podemos usar os valores do 'res' se tiverem lá.
+                # O SELECT anterior foi: "SELECT preco, preco_anterior, validade_tabela ..."
+                # Vamos expandir o SELECT do fallback ali em cima se quisermos robustez total,
+                # mas por hora, vamos manter simples. Se 0, é 0.
+                pass
+            
+            # Se tivermos os dados de tonelada:
+            if t_atual is not None and t_ant is not None and t_ant != 0:
+                t_var = calc_var(t_atual, t_ant)
+                if abs(t_var) > 0.0001:
+                    data["reajuste_percentual"] = t_var
 
     # 2) Vigência Ativa
-    # validade_tabela <= Hoje (já entrou em vigor)
-    if data.get("vigencia_ativa") is None:
-        val = data.get("validade_tabela")
-        if val:
-            # val pode ser str (iso) ou date object dependendo do driver/ORM
-            if isinstance(val, str):
-                val = date.fromisoformat(val)
-            today = date.today()
-            # Se a validade é data de INÍCIO ("a partir de"), então está ativa se (val <= today)
-            data["vigencia_ativa"] = (val <= today)
-        else:
-            data["vigencia_ativa"] = False
+    # Contexto da UI: Está dentro do bloco "Desconto por Tonelada".
+    # Então refere-se à vigência do DESCONTO (Inicio <= Hoje <= Fim).
+    
+    # Se a view já trouxe, confiamos? 
+    # A view original provavelmente olhava 'validade_tabela' (preço). Vamos sobrescrever para garantir 
+    # que bata com o contexto visual, ou criamos uma lógica nova se for None.
+    # Dado que o user reclamou, melhor forçar a lógica do desconto.
+    
+    # OBS: O front mostra p.vigencia_ativa.
+    
+    ini = data.get("data_desconto_inicio")
+    fim = data.get("data_desconto_fim")
+    
+    if ini and fim:
+        if isinstance(ini, str): ini = date.fromisoformat(ini)
+        if isinstance(fim, str): fim = date.fromisoformat(fim)
+        today = date.today()
+        data["vigencia_ativa"] = (ini <= today <= fim)
+    else:
+        # Se não tem datas de desconto, não tem vigência ativa de desconto.
+        data["vigencia_ativa"] = False
 
     if include_imposto and "id" in data:
         imp = db.query(ImpostoV2).filter(ImpostoV2.produto_id == data["id"]).one_or_none()

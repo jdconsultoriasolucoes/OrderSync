@@ -339,7 +339,10 @@ function fillForm(p) {
 
   // Recalcula visualização
   // setTimeout para garantir que os valores entraram no DOM se houver async
-  setTimeout(calculateFinalPrice, 50);
+  setTimeout(() => {
+    calculateFinalPrice();
+    updateReajusteUI();
+  }, 50);
 }
 
 function clearForm() {
@@ -500,6 +503,28 @@ function calculateFinalPrice() {
   updateFinalPriceUI(finalPrice, isPromoActive);
 }
 
+function updateReajusteUI() {
+  const atual = getNumber("preco");
+  const anterior = getNumber("preco_anterior");
+  const el = $("reajuste");
+
+  if (!el) return;
+
+  if (atual != null && anterior != null && anterior !== 0) {
+    const p = ((atual - anterior) / anterior) * 100;
+    el.textContent = `${p.toFixed(2)}%`;
+    // Visual cue for increase/decrease?
+    if (p > 0) el.style.color = "#c0392b"; // Red for increase (inflation) or Green? Usually increase in price is bad for buyer, good for seller?
+    // Let's stick to neutral or standard text color, maybe just bold.
+    el.style.fontWeight = "bold";
+    el.style.color = p >= 0 ? "#27ae60" : "#c0392b"; // Green for positive markup? Or inverted?
+    // Let's keep it simple: Green if positive (standard profit logic), Red if negative.
+  } else {
+    el.textContent = "—";
+    el.style.color = "";
+  }
+}
+
 function updateFinalPriceUI(val, active) {
   const display = $("preco_final");
   if (!display) return;
@@ -531,7 +556,12 @@ function setupCalcListeners() {
   const ids = ["preco", "peso", "desconto_valor_tonelada", "data_desconto_inicio", "data_desconto_fim"];
   ids.forEach(id => {
     const el = $(id);
-    if (el) el.addEventListener("input", calculateFinalPrice);
+    if (el) {
+      el.addEventListener("input", calculateFinalPrice);
+      if (id === "preco") {
+        el.addEventListener("input", updateReajusteUI);
+      }
+    }
   });
 }
 // Call this setup in DOMContentLoaded or manually later if needed.
