@@ -192,49 +192,49 @@ function getValue(id) {
 
 function getNumber(id) {
   const v = getValue(id).replace(",", ".").trim();
-  if (v === "") return undefined;
+  if (v === "") return null;
   const n = Number(v);
-  return Number.isNaN(n) ? undefined : n;
+  return Number.isNaN(n) ? null : n;
 }
 
 function getInt(id) {
   const v = getValue(id).trim();
-  if (v === "") return undefined;
+  if (v === "") return null;
   const n = parseInt(v, 10);
-  return Number.isNaN(n) ? undefined : n;
+  return Number.isNaN(n) ? null : n;
 }
 
 function getDateValue(id) {
   const v = getValue(id).trim();
-  return v === "" ? undefined : v;
+  return v === "" ? null : v;
 }
 
 function readForm() {
   const produto = {
-    codigo_supra: getValue("codigo_supra") || undefined,
-    nome_produto: getValue("nome_produto") || undefined,
+    codigo_supra: getValue("codigo_supra") || null,
+    nome_produto: getValue("nome_produto") || null,
     status_produto: getValue("status_produto") || "ATIVO",
-    tipo_giro: getValue("tipo_giro") || undefined,
+    tipo_giro: getValue("tipo_giro") || null,
 
-    tipo: getValue("linha") || undefined, // Mapped to 'linha' UI input
-    familia: getValue("familia") || undefined,
+    tipo: getValue("linha") || null, // Mapped to 'linha' UI input
+    familia: getValue("familia") || null,
     filhos: getInt("filhos"),
 
-    unidade: getValue("unidade") || undefined,
-    unidade_anterior: getValue("unidade_anterior") || undefined,
+    unidade: getValue("unidade") || null,
+    unidade_anterior: getValue("unidade_anterior") || null,
     peso: getNumber("peso"),
     peso_bruto: getNumber("peso_bruto"),
-    embalagem_venda: getValue("embalagem_venda") || undefined,
-    unidade_embalagem: getValue("unidade_embalagem") || undefined,
+    embalagem_venda: getValue("embalagem_venda") || null,
+    unidade_embalagem: getValue("unidade_embalagem") || null,
 
     estoque_disponivel: getInt("estoque_disponivel"),
     estoque_ideal: getInt("estoque_ideal"),
 
-    codigo_ean: getValue("codigo_ean") || undefined,
-    codigo_embalagem: getValue("codigo_embalagem") || undefined,
-    ncm: getValue("ncm") || undefined,
+    codigo_ean: getValue("codigo_ean") || null,
+    codigo_embalagem: getValue("codigo_embalagem") || null,
+    ncm: getValue("ncm") || null,
 
-    fornecedor: getValue("fornecedor") || undefined,
+    fornecedor: getValue("fornecedor") || null,
 
     preco: getNumber("preco"),
     preco_tonelada: getNumber("preco_tonelada"),
