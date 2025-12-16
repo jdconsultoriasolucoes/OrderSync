@@ -138,6 +138,32 @@ def update_produto(
     update = payload.dict(exclude_unset=True)
     _validate_business(update)
 
+    # Lógica de Rotação de Histórico (Regra 2)
+    # Se mudar o preço atual, o antigo vira "anterior"
+    # Se mudar validade, a antiga vira "anterior"
+    new_preco = update.get("preco")
+    new_preco_ton = update.get("preco_tonelada")
+    new_validade = update.get("validade_tabela")
+
+    # Flag para saber se precisamos rotacionar
+    should_rotate = False
+    
+    # Verifica mudanças de valor
+    # Nota: comparamos com obj.preco (valor atual no banco)
+    if new_preco is not None and new_preco != obj.preco:
+        should_rotate = True
+    elif new_preco_ton is not None and new_preco_ton != obj.preco_tonelada:
+        should_rotate = True
+    
+    # Se houver rotação de preço, salvamos o estado ATUAL como ANTERIOR
+    if should_rotate:
+        obj.preco_anterior = obj.preco
+        obj.preco_tonelada_anterior = obj.preco_tonelada
+        obj.validade_tabela_anterior = obj.validade_tabela
+
+        # E forçamos a atualização da validade anterior se ela também mudou agora
+        # (na verdade o obj.validade_tabela acima já pegou o que estava no banco)
+
     for k, v in update.items():
         setattr(obj, k, v)
 

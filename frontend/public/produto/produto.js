@@ -336,6 +336,10 @@ function fillForm(p) {
   set("iva_st", imp.iva_st);
   set("cbs", imp.cbs);
   set("ibs", imp.ibs);
+
+  // Recalcula visualização
+  // setTimeout para garantir que os valores entraram no DOM se houver async
+  setTimeout(calculateFinalPrice, 50);
 }
 
 function clearForm() {
@@ -457,6 +461,90 @@ const doSearch = debounce(async () => {
     box.innerHTML = `<div class="empty">Erro ao buscar produtos.</div>`;
   }
 }, 400);
+
+// ---------- Cálculo de Preço Final (Promoção) ----------
+function calculateFinalPrice() {
+  // Fórmula: Preço Final = Preço - ((Desconto_ton / 1000) * Peso)
+  // Regra: Só aplica se estiver dentro do período (Inicio <= Hoje <= Fim)
+
+  const preco = getNumber("preco") || 0;
+  const peso = getNumber("peso") || 0;
+  const descontoTon = getNumber("desconto_valor_tonelada") || 0;
+
+  if (preco === 0) return; // Nada a fazer
+
+  let finalPrice = preco;
+  let isPromoActive = false;
+
+  // Verifica validade
+  const inicioStr = getDateValue("data_desconto_inicio");
+  const fimStr = getDateValue("data_desconto_fim");
+
+  if (descontoTon > 0 && inicioStr && fimStr) {
+    const hoje = new Date().toISOString().split("T")[0]; // yyyy-mm-dd
+    if (hoje >= inicioStr && hoje <= fimStr) {
+      isPromoActive = true;
+    }
+  }
+
+  if (isPromoActive) {
+    // Calculo do desconto unitário
+    // (Desconto_ton / 1000) = Desconto por KG
+    // * Peso = Desconto total na unidade
+    const descontoUnitario = (descontoTon / 1000) * peso;
+    finalPrice = preco - descontoUnitario;
+    if (finalPrice < 0) finalPrice = 0;
+  }
+
+  // Exibe na tela (Cria ou atualiza label)
+  updateFinalPriceUI(finalPrice, isPromoActive);
+}
+
+function updateFinalPriceUI(val, active) {
+  let display = $("display-preco-final");
+  if (!display) {
+    // Tenta encontrar onde inserir (abaixo do preço ou desconto)
+    const ref = $("preco")?.parentNode;
+    if (ref) {
+      const div = document.createElement("div");
+      div.id = "display-preco-final";
+      div.style.marginTop = "5px";
+      div.style.fontWeight = "bold";
+      div.style.color = "#2ecc71"; // Green
+      ref.appendChild(div);
+      display = div;
+    }
+  }
+
+  if (display) {
+    if (active) {
+      display.textContent = `Preço Final (Promo): R$ ${val.toFixed(2)}`;
+      display.style.color = "#e74c3c"; // Red/Orange for promo effect
+    } else {
+      display.textContent = `Preço Final: R$ ${val.toFixed(2)}`;
+      display.style.color = "#2ecc71"; // Normal green
+    }
+    // Mostra/Esconde aviso se desconto existe mas expirou/futuro
+    const desc = getNumber("desconto_valor_tonelada");
+    if (desc > 0 && !active) {
+      const msg = document.createElement("small");
+      msg.style.color = "#999";
+      msg.innerText = " (Desconto fora da vigência)";
+      // display.appendChild(msg); // simple append
+    }
+  }
+}
+
+// Hook listeners
+function setupCalcListeners() {
+  const ids = ["preco", "peso", "desconto_valor_tonelada", "data_desconto_inicio", "data_desconto_fim"];
+  ids.forEach(id => {
+    const el = $(id);
+    if (el) el.addEventListener("input", calculateFinalPrice);
+  });
+}
+// Call this setup in DOMContentLoaded or manually later if needed.
+// We'll call it inside the main init.
 
 // ---------- Importar PDF (INS/PET + validade via modal) ----------
 async function uploadListaPdf(file) {
@@ -960,6 +1048,8 @@ document.addEventListener("DOMContentLoaded", async () => {
   } catch (e) {
     console.warn("[produto] não foi possível carregar produto inicial:", e);
   }
+
+  setupCalcListeners(); // Init calculation listeners
 });
 
 // ---------- FUNÇÃO AUXILIAR: MODAL DE SUCESSO ----------
