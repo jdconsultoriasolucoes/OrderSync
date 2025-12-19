@@ -161,7 +161,8 @@ async function carregarGrupos() {
     selectGrupo.innerHTML = "<option value=''>Todos os grupos</option>";
 
     grupos.forEach(item => {
-      const grupo = item.grupo || item;
+      const grupo = item.grupo || "";
+      if (!grupo) return;
       const opt = document.createElement("option");
       opt.value = grupo;
       opt.textContent = grupo;

@@ -42,6 +42,7 @@ def filtrar_produtos_para_tabela_preco(
                     WHEN UPPER(p.embalagem_venda) IN ('SC', 'SACO') THEN 'SACO'
                     WHEN UPPER(p.embalagem_venda) IN ('CX', 'CAIXA') THEN 'CAIXA'
                     WHEN UPPER(p.embalagem_venda) IN ('FD', 'FARDO') THEN 'FARDO'
+                    WHEN UPPER(p.embalagem_venda) IN ('PC', 'PACOTE') THEN 'PACOTE'
                     WHEN UPPER(p.embalagem_venda) IN ('UN', 'UNIDADE', 'UNI') THEN 'UNIDADE'
                     ELSE COALESCE(p.embalagem_venda, 'UN')
                 END AS embalagem,
@@ -119,7 +120,7 @@ def condicoes_pagamento():
 def filtro_grupo_produto():
     try:
         db = SessionLocal()
-        query = text("select distinct marca as grupo from t_cadastro_produto_v2 order by marca")
+        query = text("select distinct marca as grupo from t_cadastro_produto_v2 WHERE marca IS NOT NULL AND marca != '' order by marca")
         resultado = db.execute(query).fetchall()
         return [{"grupo": row.grupo} for row in resultado]
     finally:
