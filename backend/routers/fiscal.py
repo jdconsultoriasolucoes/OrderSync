@@ -36,9 +36,49 @@ class LinhaPreviewIn(BaseModel):
         extra = "ignore"
 
 class LinhaPreviewOut(BaseModel):
-# ... (rest of Schema)
+    aplica_iva_st: bool
+    motivos_iva_st: List[str]
 
-# ... (get_db and carregar_cliente helper remains same, but we will protect usage below)
+    subtotal_mercadoria: float
+    base_ipi: float
+    ipi: float
+    base_icms_proprio: float
+    icms_proprio: float
+    base_st: float
+    icms_st_cheio: float
+    icms_st_reter: float
+
+    desconto_linha: float
+    frete_linha: float
+
+    # Por padrão mantemos a UI usando o total SEM ST (como é comum hoje),
+    # mas devolvemos também o COM ST para você poder alternar facilmente.
+    total_linha: float             # = total_sem_st
+    total_linha_com_st: float
+    total_impostos_linha: float
+
+# --------- DB session ---------
+def get_db():
+    db = SessionLocal()
+    try:
+        yield db
+    finally:
+        db.close()
+
+# --------- Data access (mesmas fontes dos seus endpoints) ---------
+# ---- em routers/fiscal.py ----
+def carregar_cliente(db: Session, codigo: Optional[int]) -> dict:
+    if not codigo:
+        return {}
+    row = db.execute(text("""
+        SELECT
+          codigo,
+          ramo_juridico
+        FROM public.t_cadastro_cliente
+        WHERE codigo = :cod
+        LIMIT 1
+    """), {"cod": codigo}).mappings().first()
+    return dict(row) if row else {}
 
 @router.post("/fiscal/preview-linha", response_model=LinhaPreviewOut)
 def preview_linha(payload: LinhaPreviewIn, db: Session = Depends(get_db)):
