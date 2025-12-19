@@ -218,7 +218,6 @@ function readForm() {
 
     tipo: getValue("linha") || null, // Mapped to 'linha' UI input
     familia: getValue("familia") || null,
-    marca: getValue("marca") || null,
     filhos: getInt("filhos"),
 
     unidade: getValue("unidade") || null,
@@ -293,7 +292,6 @@ function fillForm(p) {
 
   set("linha", p.tipo); // Map backend 'tipo' to frontend 'linha' input
   set("familia", p.familia);
-  set("marca", p.marca);
   set("filhos", p.filhos);
 
   set("unidade", p.unidade);

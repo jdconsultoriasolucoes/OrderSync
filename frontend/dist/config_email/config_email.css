@@ -1,0 +1,36 @@
+:root { --bg:#0f1115; --card:#fff; --ink:#1b1f2a; --muted:#6b7280; --brand:#111827; --line:#e5e7eb; --blue:#2563eb; }
+* { box-sizing: border-box; }
+html, body { margin:0; padding:0; font-family: system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif; color:var(--ink); background:#fafafa; }
+.topbar { background:var(--brand); color:#fff; padding:10px 16px; }
+.topbar .brand { display:flex; align-items:center; gap:10px; font-weight:600; letter-spacing:.5px; }
+.logo { height:18px; display:block; }
+
+.container { max-width: 980px; margin: 24px auto 56px; padding: 0 16px; }
+h1 { font-size: 28px; margin: 8px 0 18px; }
+
+.tabs { display:flex; gap:8px; border-bottom:1px solid var(--line); margin-bottom:16px; }
+.tab { appearance:none; border:1px solid var(--line); border-bottom:none; background:#f9fafb; padding:10px 14px; border-radius:8px 8px 0 0; cursor:pointer; color:#111827; }
+.tab.active { background:#fff; font-weight:600; }
+
+.tab-panel { display:none; background:#fff; border:1px solid var(--line); border-radius:0 8px 8px 8px; padding:18px; }
+.tab-panel.active { display:block; }
+
+.form { display:block; }
+.field { margin-bottom:14px; }
+.field > label { display:block; font-weight:600; margin-bottom:6px; }
+.field > small, .help { color:var(--muted); font-size:12px; }
+.field.checkbox { display:flex; align-items:center; gap:8px; }
+.field.checkbox > label { margin:0; font-weight:500; }
+
+input[type="text"], input[type="email"], input[type="number"], input[type="password"], textarea {
+  width:100%; padding:10px 12px; border:1px solid var(--line); border-radius:8px; background:#fff; outline:none;
+}
+textarea { resize: vertical; }
+
+.grid-2 { display:grid; grid-template-columns: repeat(2, minmax(0,1fr)); gap:12px; }
+@media (max-width: 720px) { .grid-2 { grid-template-columns: 1fr; } }
+
+.actions { display:flex; gap:10px; margin-top:6px; }
+.btn { padding:10px 14px; border:1px solid var(--line); border-radius:8px; background:#f3f4f6; cursor:pointer; }
+.btn.primary { background:var(--blue); color:#fff; border-color:var(--blue); }
+.btn:disabled { opacity:.6; cursor:not-allowed; }

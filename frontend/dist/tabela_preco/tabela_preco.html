@@ -1,0 +1,123 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+  <meta charset="UTF-8">
+  <title>Inserir Produtos</title>
+  
+  <!-- Bootstrap igual à tela de cliente -->
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+
+  <!-- CSS específico da página -->
+  <link rel="stylesheet" href="tabela_preco.css">
+
+  <!-- Navbar SEMPRE por último, para garantir o padding-top do header fixo -->
+  <link rel="stylesheet" href="../navbar.css">
+
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600&display=swap" rel="stylesheet">
+
+  <script src="tabela_preco.js"></script>
+
+  <script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js"></script>
+</head>
+<body>
+
+ <header>
+    <div class="navbar">
+      <button class="menu-btn" id="menu-button">&#9776;</button>
+      <img src="../logo.png" alt="Logo" class="logo" />
+    </div>
+  </header>
+
+    <nav class="sidebar" id="sidebar">
+      <ul>
+        <li><a href="/index.html">Home</a></li>
+        <li><a href="/clientes/cliente.html">Cadastrar Cliente</a></li>
+        <li><a href="#">Atualizar Catálogo</a></li>
+        <li><a href="/pedido/pedido.html">Consultar Pedidos</a></li>
+        <li><a href="#">Exportar Relatórios</a></li>
+        <li><a href="/tabela_preco/criacao_tabela_preco.html">Tabela Preço</a></li>
+        <li><a href="/config_email/config_email.html">Configuração E-mail</a></li>
+        </ul>
+    </nav>
+    <div id="overlay"></div>
+
+  <main class="page-container">
+    <h1>Inserir Produtos</h1>
+
+    <!-- Filtros mínimos (somente Grupo) -->
+  <div id="toolbar-filtros" class="toolbar">
+    <div class="field">
+      <label for="grupo">Grupo:</label>
+      <select id="grupo"></select>
+    </div>
+
+    <div class="field">
+      <label for="filtro-fornecedor">Fornecedor:</label>
+      <select id="filtro-fornecedor"></select>
+    </div>
+
+    <div class="field grow">
+      <label for="filtro-palavra">&nbsp;</label>
+      <input id="filtro-palavra" type="text" placeholder="Buscar por código, descrição...">
+    </div>
+
+  <div class="actions">
+      <button id="btn-limpar" class="btn btn-secundario" type="button">Limpar</button>
+      <button class="btn btn-primario" id="btn-adicionar-selecionados">Adicionar selecionados</button>
+      <button class="btn btn-neutro" id="btn-cancelar">Cancelar</button>
+    </div>
+</div>
+
+    <div class="table-wrap">
+      <h2 class="subtitulo">Produtos Disponíveis</h2>
+      <table id="tabela_produtos" class="data-table">
+        <thead>
+          <tr>
+            <th class="center" style="width:72px">Selecionar</th>
+            <th style="min-width:110px">Código</th>
+            <th style="min-width:320px">Descrição</th>
+            <th style="min-width:120px">Embalagem</th>
+            <th class="num" style="min-width:120px">Peso Líquido</th>
+            <th class="num" style="min-width:110px">Valor</th>
+          </tr>
+        </thead>
+        <tbody id="tabela-produtos-body"></tbody>
+      </table>
+    </div>
+
+    <!-- Paginação -->
+    <div class="paginacao" style="display:flex; gap:12px; align-items:center; margin-top:10px;">
+      <label>Itens por página:
+        <select id="page_size">
+          <option>10</option>
+          <option selected>20</option>
+          <option>30</option>
+          <option>60</option>
+        </select>
+      </label>
+      <button type="button" class="btn" id="btn-prev" onclick="gotoPrevPage()">◀ Anterior</button>
+      <span id="pagina-info"></span>
+      <button type="button" class="btn" id="btn-next" onclick="gotoNextPage()">Próxima ▶</button>
+    </div>
+
+  </main>
+
+  <script src="tabela_preco.js"></script>
+  <script>
+    const menuButton = document.getElementById("menu-button");
+    const sidebar = document.getElementById("sidebar");
+    const overlay = document.getElementById("overlay");
+
+    menuButton.addEventListener("click", () => {
+      sidebar.classList.toggle("active");
+      overlay.style.display = sidebar.classList.contains("active") ? "block" : "none";
+    });
+    overlay.addEventListener("click", () => {
+      sidebar.classList.remove("active");
+      overlay.style.display = "none";
+    });
+  </script>
+</body>
+</html>

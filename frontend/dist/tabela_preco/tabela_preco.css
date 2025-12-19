@@ -1,0 +1,326 @@
+body {
+  font-size: 14px;
+  zoom: 100%; /* ajusta o tamanho geral da tela */
+}
+
+/* Caixa do formulário */
+.form-container {
+  width: 100%;
+  max-width: 2000px;
+  margin: 0 auto;
+  background-color: #fafafa;
+  padding: 30px 40px;
+  border-radius: 10px;
+  box-sizing: border-box;
+}
+
+/* Títulos */
+h2 {
+  font-size: 18px;
+}
+
+/* Inputs e selects */
+input, select {
+  padding: 6px 10px;
+  font-size: 14px;
+}
+
+/* Botões de navegação por aba */
+.tab-button {
+  font-size: 13px;
+  padding: 6px 14px;
+  margin-right: 8px;
+}
+
+
+main {
+    padding: 2rem;
+}
+
+h1 {
+    text-align: left;
+    color: #0D0D0D;
+    font-size: 18px;
+}
+
+.tabs {
+  display: grid;
+  grid-template-columns: repeat(6, 1fr); /* 6 abas */
+  gap: 0.5rem;
+  margin-bottom: 1rem;
+}
+
+
+.tab {
+    background-color: #f4ecf8;
+    border: none;
+    padding: 0.7rem 1rem;
+    cursor: pointer;
+    border-radius: 6px;
+    font-weight: 600;
+    color: #8e44ad;
+}
+
+.tab.active {
+    background-color: #dcd6f7;
+    color: #4b0082;
+}
+
+.tab-content {
+    display: none;
+}
+
+.tab-content.active {
+    display: block;
+}
+
+.checkbox-container {
+  display: flex;
+  align-items: center;
+  gap: 0px; /* Espaço entre label e checkbox */
+}
+
+
+form {
+    background: #fafafa;
+    border: 1px solid #e0e0e0;
+    padding: 1.5rem;
+    border-radius: 8px;
+}
+
+.form-grid-2col {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 1rem;
+  margin-bottom: 2rem;
+}
+
+label {
+    display: flex;
+    flex-direction: column;
+    font-weight: 500;
+    color: #333;
+}
+
+input[type="text"], select {
+    padding: 0.5rem;
+    border-radius: 4px;
+    border: 1px solid #ccc;
+}
+
+.form-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+  gap: 1.5rem;
+}
+
+.form-grid label {
+  display: block;
+  font-weight: 500;
+  margin-bottom: 0.5rem;
+}
+
+.form-grid input,
+.form-grid select {
+  width: 100%;
+  padding: 0.5rem;
+  border: 1px solid #ccc;
+  border-radius: 5px;
+}
+
+.form-grid-2col input,
+.form-grid-2col select {
+  width: 100%;
+  padding: 0.5rem;
+  box-sizing: border-box;
+}
+
+
+.form-grid-2col label {
+  font-weight: 500;
+  display: block;
+  margin-bottom: 4px;
+}
+
+
+
+.btn-editar {
+  background-color: #a855f7 !important;
+}
+
+.btn-cancelar {
+  background-color: #9ca3af !important;
+}
+
+.btn-salvar {
+  background-color: #10b981 !important;
+}
+
+.btn-excluir {
+  background-color: #ef4444 !important;
+}
+
+.btn-listar {
+  background-color: #6366f1 !important;
+}
+
+.btn:hover {
+  opacity: 0.85;
+}
+
+/* Botão base e variações */
+.btn{
+  border: 0;
+  border-radius: 10px;
+  padding: 10px 14px;
+  font-weight: 600;
+  line-height: 1;
+  box-shadow: 0 1px 2px rgba(0,0,0,.06);
+  transition: transform .02s, box-shadow .2s, background-color .2s;
+  cursor: pointer;
+}
+.btn:active{ transform: translateY(1px); }
+
+.btn-primario{ background:#111827; color:#fff; }
+.btn-primario:hover{ background:#0f172a; }
+
+.btn-neutro{ background:#f3f4f6; color:#374151; }
+.btn-neutro:hover{ background:#e5e7eb; }
+
+
+.btn-secundario {
+  background-color: #e0e0e0;
+  color: #333;
+  padding: 8px 14px;
+  border: none;
+  border-radius: 6px;
+  font-weight: 600;
+  text-decoration: none;
+  cursor: pointer;
+  transition: background-color 0.3s ease;
+}
+
+.btn-secundario:hover {
+  background-color: #d5d5d5;
+}
+
+.table-wrap{
+  overflow-x: auto;           /* scroll limpo no horizontal em telas menores */
+}
+
+/* Cabeçalho alinhado à esquerda */
+.data-table thead th {
+  text-align: left;
+  font-weight: 600;
+  padding: 12px 14px;
+  border-bottom: 2px solid var(--line); /* Linha mais evidente no header */
+  background: var(--head-bg);
+}
+
+/* Corpo com linhas suaves */
+.data-table tbody td {
+  padding: 12px 14px;
+  border-bottom: 1px solid #ddd; /* Linha cinza clara */
+}
+
+/* Zebra */
+.data-table tbody tr:nth-child(odd) {
+  background: #fafafa;
+}
+
+/* Hover mais visível */
+.data-table tbody tr:hover {
+  background: #f0f4f8;
+}
+
+/* Números alinhados e sempre com duas casas decimais */
+.data-table .num {
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+
+/* Força valores numéricos a terem duas casas */
+.data-table .num::after {
+  content: "";
+}
+
+/* Toolbar em linha, podendo quebrar */
+.toolbar{
+  display:flex;
+  align-items:flex-end;
+  gap:12px;
+  flex-wrap:wrap;
+}
+
+/* Campos */
+.toolbar .field{ display:flex; flex-direction:column; gap:4px; }
+.toolbar select,
+.toolbar input[type="text"]{ height:36px; padding:6px 10px; border:1px solid #ccc; border-radius:8px; }
+
+/* 🔧 Busca não ocupa tudo: largura dinâmica controlada */
+.toolbar .grow{ flex:0 1 auto; }                                 /* não “estica” a linha inteira */
+.toolbar .grow input{ width:clamp(240px, 40vw, 520px); }          /* min 240px, cresce até 40vw, máx 520px */
+
+/* Botão alinhado pela base e perto do input */
+.toolbar .btn{ height:36px; padding:0 14px; border-radius:8px; }
+
+/* Ações no topo, à direita */
+.toolbar .actions{
+  margin-left: auto;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+
+.toolbar .grow { 
+  flex: 0 0 auto;
+}
+
+/* Define uma largura fixa só para o input de busca */
+#filtro-palavra {
+  height: 25px;          /* deixe igual aos selects ou no tamanho que preferir */
+  max-height: 180px;      /* garante que não passe disso */
+}
+.ja-adicionado { opacity: .6; } .ja-adicionado td { text-decoration: none; }
+
+/* Barra superior com search à esquerda e botões à direita */
+.acoes-topo{
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:16px;
+  margin:16px 0 8px;
+}
+
+/* mantém proporção bonita do input em telas diferentes */
+.acoes-topo #pesquisa{
+  width: clamp(220px, 28vw, 420px);
+  padding: 8px 10px;
+  border:1px solid #ccc;
+  border-radius:6px;
+}
+
+/* grupo de botões alinhado e compacto */
+.acoes-right{
+  display:flex;
+  align-items:center;
+  gap:10px;
+}
+
+.acoes-right button{
+  padding:8px 12px;
+}
+
+/* responsivo: empilha quando a tela for estreita */
+@media (max-width: 768px){
+  .acoes-topo{
+    flex-direction:column;
+    align-items:stretch;
+    gap:12px;
+  }
+  .acoes-right{
+    justify-content:flex-end;
+  }
+}
+

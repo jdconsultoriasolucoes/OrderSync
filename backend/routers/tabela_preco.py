@@ -42,31 +42,31 @@ def filtrar_produtos_para_tabela_preco(
                     WHEN p.unidade IN ('SC','SACO') THEN 'SACO'
                     WHEN p.unidade IN ('FD')       THEN 'FARDO'
                     WHEN p.unidade IN ('CX')       THEN 'CAIXA'
-                    ELSE p.unidade
+                    ELSE COALESCE(p.unidade, 'UN')
                 END AS embalagem,
                 p.peso AS peso_liquido,
-                p.preco_lista_supra AS valor,
-                p.ipi AS ipi,
-                p.iva_st AS iva_st,
-                p.marca AS grupo,
-                f.familia AS departamento,
+                p.preco AS valor,
+                p.ipi,
+                p.iva_st,
+                p.familia AS grupo,
+                p.familia AS departamento,
+                p.marca,
+                p.id_familia,
                 p.fornecedor,
-                f.tipo,
+                p.tipo,
                 p.icms,
                 p.validade_tabela
-            FROM t_cadastro_produto p
-            LEFT JOIN t_familia_produtos f 
-              ON CAST(p.familia AS INT) = CAST(f.id AS INT)
+            FROM v_produto_v2_preco p
             WHERE p.status_produto = 'ATIVO'
-              AND (:grupo IS NULL OR p.marca = :grupo)
+              AND (:grupo IS NULL OR p.familia = :grupo)
               AND (:fornecedor IS NULL OR p.fornecedor = :fornecedor)
               AND (
                     :q IS NULL
                  OR  p.codigo_supra::text ILIKE :like
                  OR  p.nome_produto       ILIKE :like
-                 OR  COALESCE(p.marca,'') ILIKE :like
+                 OR  COALESCE(p.familia,'') ILIKE :like
                  OR  COALESCE(p.unidade,'') ILIKE :like
-                 OR  COALESCE(f.tipo,'')  ILIKE :like
+                 OR  COALESCE(p.tipo,'')  ILIKE :like
               )
         """
 
@@ -118,7 +118,7 @@ def condicoes_pagamento():
 def filtro_grupo_produto():
     try:
         db = SessionLocal()
-        query = text("select distinct marca as grupo from  t_cadastro_produto order by marca")
+        query = text("select distinct familia as grupo from  t_cadastro_produto_v2 order by familia")
         resultado = db.execute(query).fetchall()
         return [{"grupo": row.grupo} for row in resultado]
     finally:
@@ -378,7 +378,7 @@ def validade_global():
         with SessionLocal() as db:
             v = db.execute(text("""
                 SELECT MAX(CAST(p.validade_tabela AS DATE)) AS max_validade
-                FROM t_cadastro_produto p
+                FROM t_cadastro_produto_v2 p
                 WHERE p.status_produto = 'ATIVO'
             """)).scalar()
 

@@ -1,0 +1,335 @@
+/* ====== Tema claro igual criação_tabela_preco ====== */
+:root {
+  --bg: #f8fafc;          /* fundo geral */
+  --card: #ffffff;        /* card branco */
+  --muted: #475569;       /* cinza do label */
+  --text: #0f172a;        /* texto escuro */
+  --accent: #22c55e;
+  --accent-2: #3b82f6;
+  --danger: #ef4444;
+  --border: #e5e7eb;
+}
+
+/* Reset básico */
+* { box-sizing: border-box; }
+html, body { height: 100%; }
+
+body {
+  margin: 0;
+  font-family: system-ui, -apple-system, Segoe UI, Roboto, Ubuntu, Cantarell, Noto Sans, Helvetica, Arial, "Apple Color Emoji", "Segoe UI Emoji";
+  background: var(--bg);
+  color: var(--text);
+  font-size: 14px;
+}
+
+/* CARD branco arredondado = mesmo feeling do "Dados principais" na criação */
+.orc-card {
+  width: min(1200px, calc(100% - 48px));
+  margin: 24px auto;
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  box-shadow: 0 6px 18px rgba(0,0,0,.06);
+  padding: 16px;
+}
+
+/* Header/filtros */
+.orc-header {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.orc-title {
+  margin: 0;
+  font-size: 28px;
+  font-weight: 800;
+  letter-spacing: -0.03em;
+  color: var(--text);
+}
+
+.filters {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 16px;
+  align-items: end;
+}
+
+.filters label {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  font-size: .82rem;
+  color: var(--muted);
+  min-width: 190px;
+}
+
+/* bloco do período rápido */
+.filtro-bloco {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  font-size: .82rem;
+  color: var(--muted);
+  min-width: 190px;
+}
+
+/* Campos / selects / status */
+.filters input[type="date"],
+.filters input[type="text"],
+.filters select,
+#fStatus {
+  width: 220px;
+  padding: 10px 12px;
+  border-radius: 10px;
+  background: #ffffff;
+  border: 1px solid var(--border);
+  color: var(--text);
+  font-size: .9rem;
+  outline: none;
+  transition: border-color .15s ease, box-shadow .15s ease;
+}
+
+#fStatus {
+  width: 220px;
+  height: auto;
+  min-height: 42px;
+  resize: none;
+}
+
+.filters input:focus,
+.filters select:focus,
+#fStatus:focus {
+  border-color: var(--accent-2);
+  box-shadow: 0 0 0 3px rgba(59,130,246,.15);
+}
+
+/* Botões */
+.btn {
+  appearance: none;
+  border: 1px solid var(--border);
+  background: #ffffff;
+  color: var(--text);
+  padding: 10px 14px;
+  border-radius: 10px;
+  cursor: pointer;
+  font-weight: 600;
+  font-size: .9rem;
+  line-height: 1.2;
+  transition: border-color .15s ease, box-shadow .15s ease, transform .02s ease;
+}
+
+.btn:hover {
+  border-color: var(--accent-2);
+  box-shadow: 0 1px 0 rgba(59,130,246,.2);
+}
+
+.btn:active { transform: translateY(1px); }
+
+.btn-primary {
+  background: linear-gradient(180deg, rgba(59,130,246,.12), rgba(59,130,246,.06));
+  border-color: rgba(59,130,246,.4);
+}
+
+.btn[disabled],
+button[disabled] {
+  opacity: .5;
+  cursor: not-allowed;
+}
+
+/* ====== tabela ====== */
+.table-wrap {
+  margin-top: 16px;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  background: var(--card);
+  overflow-x: auto;
+}
+
+.orc-table {
+  width: 100%;
+  border-collapse: collapse;
+  background: var(--card);
+}
+
+.orc-table th {
+  text-align: left;
+  font-weight: 600;
+  font-size: .8rem;
+  color: var(--muted);
+  padding: 12px;
+  border-bottom: 1px solid var(--border);
+  background: #fff;
+  position: sticky;
+  top: 0;
+  z-index: 1;
+}
+
+.orc-table td {
+  padding: 10px 12px;
+  border-bottom: 1px dashed rgba(2,6,23,.08);
+  color: var(--text);
+  vertical-align: middle;
+  font-size: .9rem;
+}
+
+.orc-table tr.row-click { cursor: pointer; }
+.orc-table tr.row-click:hover { background: rgba(2,6,23,.03); }
+
+.tar { text-align: right; }
+
+/* paginação */
+.pagination {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  justify-content: flex-end;
+  padding: 12px;
+}
+
+.pagination button {
+  min-width: 36px;
+  min-height: 32px;
+  border-radius: 8px;
+  font-size: .9rem;
+  font-weight: 600;
+  border: 1px solid var(--border);
+  background: #fff;
+  color: var(--text);
+  cursor: pointer;
+  transition: border-color .15s ease, box-shadow .15s ease, transform .02s ease;
+}
+
+.pagination button:hover {
+  border-color: var(--accent-2);
+  box-shadow: 0 1px 0 rgba(59,130,246,.2);
+}
+
+.pagination button:active {
+  transform: translateY(1px);
+}
+
+/* drawer lateral do resumo do pedido */
+.drawer {
+  position: fixed;
+  top: 0;
+  right: 0;
+  width: 520px;
+  height: 100vh;
+  background: var(--card);
+  border-left: 1px solid var(--border);
+  padding: 16px;
+  overflow: auto;
+  box-shadow: -20px 0 40px rgba(0,0,0,.08);
+  z-index: 9999;
+}
+
+.drawer.hidden { display: none; }
+
+.drawer-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 10px;
+}
+
+.drawer-head h2 {
+  font-size: 1rem;
+  font-weight: 700;
+  margin: 0;
+  color: var(--text);
+}
+
+.drawer-head button {
+  border: 1px solid var(--border);
+  background: #fff;
+  border-radius: 8px;
+  cursor: pointer;
+  font-size: .9rem;
+  line-height: 1;
+  padding: 6px 10px;
+}
+
+.drawer-content {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  font-size: .9rem;
+  color: var(--text);
+}
+
+.block {
+  padding: 8px 0;
+  border-top: 1px dashed var(--border);
+}
+
+.stack {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.kv {
+  display: flex;
+  gap: 16px;
+  justify-content: space-between;
+  font-size: .9rem;
+  color: var(--text);
+}
+
+.itens .item {
+  display: flex;
+  justify-content: space-between;
+  padding: 6px 0;
+  border-bottom: 1px dotted var(--border);
+}
+
+.truncate {
+  max-width: 320px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.badge {
+  padding: 2px 8px;
+  border-radius: 12px;
+  font-size: 12px;
+  background: #f1f5f9;
+  border: 1px solid var(--border);
+  color: var(--muted);
+}
+
+/* acessibilidade */
+:focus-visible {
+  outline: 2px solid rgba(59,130,246,.6);
+  outline-offset: 2px;
+}
+
+/* ====== OVERRIDE DO TEMA ESCURO ANTIGO ====== */
+
+/* bloco de filtros lá em cima */
+.orc-header {
+  background: var(--card) !important;         /* fundo branco */
+  color: var(--text) !important;              /* texto escuro */
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 16px;
+}
+
+/* título "Pedidos" dentro desse bloco */
+.orc-header .orc-title {
+  color: var(--text) !important;
+}
+
+/* botão Buscar que ainda tá aparecendo azulão escuro */
+#btnBuscar {
+  background: linear-gradient(180deg, rgba(59,130,246,.12), rgba(59,130,246,.06)) !important;
+  border: 1px solid rgba(59,130,246,.4) !important;
+  color: var(--text) !important;
+  border-radius: 10px;
+  padding: 10px 14px;
+  font-weight: 600;
+  font-size: .9rem;
+  line-height: 1.2;
+}

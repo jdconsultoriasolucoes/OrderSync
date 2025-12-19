@@ -81,15 +81,13 @@ def carregar_produto(db: Session, produto_id: str) -> dict:
         row = db.execute(text("""
             SELECT
               b.codigo_supra,
-              a.tipo,
-              COALESCE(b.peso,   0)    AS peso_kg,   -- alias certo
-              COALESCE(b.iva_st, 0)    AS iva_st,
-              COALESCE(b.ipi,    0)    AS ipi,
-              COALESCE(b.icms,   0.18) AS icms
-            FROM public.t_familia_produtos a
-            JOIN public.t_cadastro_produto b
-              ON b.familia = a.id
-            WHERE status_produto = 'ATIVO' and b.codigo_supra::text = :pid
+              b.tipo,
+              b.peso    AS peso_kg,
+              b.iva_st,
+              b.ipi,
+              b.icms
+            FROM public.v_produto_v2_preco b
+            WHERE b.status_produto = 'ATIVO' and b.codigo_supra::text = :pid
             LIMIT 1
         """), {"pid": produto_id}).mappings().first()
     except Exception as e:

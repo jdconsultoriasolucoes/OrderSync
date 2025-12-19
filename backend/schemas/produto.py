@@ -40,6 +40,8 @@ class ProdutoV2Base(BaseModel):
     fornecedor: Optional[str] = None
     filhos: Optional[int] = None
     familia: Optional[str] = None
+    marca: Optional[str] = None
+    id_familia: Optional[int] = None
 
     preco: Optional[float] = None                      # Valor Tabela Atual (oficial)
     preco_tonelada: Optional[float] = None

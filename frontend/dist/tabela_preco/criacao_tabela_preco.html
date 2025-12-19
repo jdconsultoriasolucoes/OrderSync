@@ -1,0 +1,189 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Criação de Tabela de Preço</title>
+
+  <!-- Bootstrap igual à tela de cliente -->
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+
+  <!-- CSS específico da página -->
+  <link rel="stylesheet" href="criacao_tabela_preco.css">
+
+  <!-- Navbar SEMPRE por último, para garantir o padding-top do header fixo -->
+  <link rel="stylesheet" href="../navbar.css">
+
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600&display=swap" rel="stylesheet">
+  <script src="criacao_tabela_preco.js" defer></script>
+
+
+</head>
+
+
+<body>
+   <header>
+      <div class="navbar">
+        <button class="menu-btn" id="menu-button">&#9776;</button>
+        <img src="../logo.png" alt="Logo" class="logo" />
+      </div>
+    </header>
+
+    <nav class="sidebar" id="sidebar">
+      <ul>
+        <li><a href="/index.html">Home</a></li>
+        <li><a href="/clientes/cliente.html">Cadastrar Cliente</a></li>
+        <li><a href="#">Atualizar Catálogo</a></li>
+        <li><a href="/pedido/pedido.html">Consultar Pedidos</a></li>
+        <li><a href="#">Exportar Relatórios</a></li>
+        <li><a href="/tabela_preco/criacao_tabela_preco.html">Tabela Preço</a></li>
+        <li><a href="/config_email/config_email.html">Configuração E-mail</a></li>
+        </ul>
+    </nav>
+    <div id="overlay"></div>
+
+  <div class="page-container">
+    
+    <!-- <h1>Criação de Tabela de Preço <span class="subtle">(etapa de conferência)</span></h1> -->
+    <!-- TOPO: Cabeçalho e parâmetros globais -->
+     <h1> Criação de Tabela de Preço </h1>
+
+    <section class="card pad" aria-labelledby="sec-topo">
+      <h2 id="sec-topo" class="section-title">Dados principais</h2>
+      <div class="grid grid-4 grid-gap">
+        <div class="field">
+          <label for="nome_tabela">Nome da Tabela</label>
+          <input id="nome_tabela" type="text" placeholder="Ex.: Tabela Promocional Set/25" />
+        </div>
+        <div class="field">
+          <label for="cliente_nome">Cliente</label>
+          <input id="cliente_nome" type="text" autocomplete="off" placeholder="Digite o nome ou CNPJ..." />
+          <input id="codigo_cliente" type="hidden" />
+          <input id="ramo_juridico" type="hidden" />
+          <!-- container do autocomplete (fica logo após o input) -->
+          <div id="cliente_suggestions" class="suggestions"></div>
+        </div>
+        <div class="field">
+          <label for="iva_st_toggle">IVA_ST</label>
+          <div class="inline">
+              <input id="iva_st_toggle" type="checkbox" disabled  />
+              <span class="hint">IVA_ST (Sim / Não) </span>
+          </div>
+        </div>
+        <div class="field row-2">
+            <label for="validade_tabela">Validade da Tabela</label>
+            <input id="validade_tabela" type="text" readonly />
+        </div>
+        <div class="field row-2">
+            <label for="dias_restantes">Tempo restante</label>
+            <input id="dias_restantes" type="text" readonly />
+        </div>
+      </div>
+
+      <div class="grid grid-3 grid-gap">
+        <div class="field">
+          <label for="frete_kg">Frete por KG <span class="hint">(aplica-se por linha)</span></label>
+          <input id="frete_kg" type="number" step="0" min="0" value="0" />
+        </div>
+        <div class="field">
+          <label for="plano_pagamento">Condição de Pagamento</label>
+          <select id="plano_pagamento"></select>
+          <div class="hint" id="hint-condicao">Carregando condições…</div>
+        </div>
+        <div class="toolbar left-gap">
+         <button class="btn" id="btn-aplicar-condicao-todos">Aplicar condição a todos</button>
+         <span class="pill"><span>Taxa Condição:</span><strong id="pill-taxa">—</strong></span>
+        </div>
+        <div class="field">
+          <label for="desconto_global">Desconto / Fator de Comissão %</label>
+          <!--<div class="inline">-->
+            <select id="desconto_global" class="grow"></select>
+            <span class="pill"><span>Taxa do fator:</span><strong id="pill-fator">—</strong><span> %</span></span>
+          <!--</div>-->
+          <div class="hint">Selecione um desconto para <b>aplicar a todos</b> abaixo.</div>
+          <div class="toolbar left-gap">
+            <button class="btn" id="btn-aplicar-todos">Aplicar fator a todos</button>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <div class="divider"></div>
+
+    <!-- BASE: Tabela de itens selecionados -->
+    <section class="card pad" aria-labelledby="sec-itens">
+      <h2 id="sec-itens" class="section-title">Produtos selecionados</h2>
+      
+      <div class="toolbar" id="toolbar-acoes">
+        <button id="btn-listar" class="btn">Listar Tabelas</button>
+        <button id="btn-buscar" class="btn btn-primary">Buscar Produtos</button>
+        <button id="btn-editar" class="btn hidden">Editar</button>
+        <button id="btn-duplicar" class="btn hidden">Duplicar</button>
+        <button id="btn-remover-selecionados" class="btn btn-danger">Remover selecionados</button>
+        <button id="btn-salvar" class="btn btn-green">Salvar Tabela</button>
+        <button id="btn-cancelar" class="btn hidden">Cancelar</button>
+      </div>
+
+      <div class="table-wrap">
+        <table id="tabela-itens">
+          <thead>
+            <tr>
+              <th><input id="chk-all" type="checkbox" /></th>
+              <th>Código</th>
+              <th>Descrição</th>
+              <th>Embalagem</th>
+              <th>Grupo / Depto.</th>
+              <th class="right">Peso Líq.</th>
+              <th class="right">Valor Unitário</th>
+              <th class="right">Fator Comissão/Desconto %</th>
+              <th class="right">Desc. aplicado (R$)</th>
+              <th>Cond. Pagto (cód)</th><!-- NOVO (editável por linha) -->
+              <th class="right">Cond. Pagto (R$)</th>
+              <th class="right">Frete (R$)</th>
+              <th class="right">IPI (R$)</th>          <!-- foi IPI (%) -->
+              <th class="th-st">
+              <label class="st-toggle-in-th" title="Mostrar/ocultar detalhes de ST">
+                <input id="st-toggle" type="checkbox" />
+                <span class="st-title">Base ST (R$)</span>
+                <span class="chevron">▶</span>
+              </label>
+              </th>      <!-- novo, no lugar do IVA_ST (%) -->
+              <th class="right">ICMS próprio (R$)</th> <!-- novo -->
+              <th class="right">ICMS ST cheio (R$)</th><!-- novo -->
+              <th class="right">ICMS ST a reter (R$)</th><!-- novo -->
+              <th class="right">Valor Final (R$)</th>
+              <th class="right">Valor s/ Frete (R$)</th>
+            </tr>
+          </thead>
+          <tbody id="tbody-itens"></tbody>
+        </table>
+      </div>
+    </section>
+  </div>
+  <!-- Lógica totalmente externa -->
+  <script type="module">
+      import { showGerarLinkModal } from "../js/gerar_link_pedido.js";
+      window.__showGerarLinkModal = showGerarLinkModal;
+   </script> 
+  
+  <script>
+    const menuButton = document.getElementById("menu-button");
+    const sidebar = document.getElementById("sidebar");
+    const overlay = document.getElementById("overlay");
+
+    menuButton.addEventListener("click", () => {
+      sidebar.classList.toggle("active");
+      overlay.style.display = sidebar.classList.contains("active") ? "block" : "none";
+    });
+
+    overlay.addEventListener("click", () => {
+      sidebar.classList.remove("active");
+      overlay.style.display = "none";
+    });
+  </script>
+
+    
+</body>
+</html>

@@ -29,7 +29,6 @@ def _row_to_out(db: Session, row: Dict[str, Any], include_imposto: bool = True) 
         # Se 'preco_anterior' ou 'validade_tabela' estiverem ausentes logicamente da view,
         # buscamos na tabela física para garantir cálculo correto de indicadores.
         # Verifica se chaves existem mas são None, ou se nem existem.
-        needs_fetch = False
         if data.get("preco_anterior") is None: needs_fetch = True
         if data.get("validade_tabela") is None: needs_fetch = True
 
