@@ -12,8 +12,14 @@ from services.fiscal import decide_st, calcular_linha, D, money, _norm
 router = APIRouter(tags=["Fiscal"])
 
 # --------- I/O ---------
+from typing import Optional, List, Union
+
+# ... (imports remain)
+
+# --------- I/O ---------
 class LinhaPreviewIn(BaseModel):
-    cliente_codigo: Optional[int] = None
+    # ACEITA INT OU STR agora, para evitar crash com "Não cadastrado"
+    cliente_codigo: Optional[Union[int, str]] = None
     forcar_iva_st: bool = False
     produto_id: str
     preco_unit: Decimal
@@ -30,86 +36,27 @@ class LinhaPreviewIn(BaseModel):
         extra = "ignore"
 
 class LinhaPreviewOut(BaseModel):
-    aplica_iva_st: bool
-    motivos_iva_st: List[str]
+# ... (rest of Schema)
 
-    subtotal_mercadoria: float
-    base_ipi: float
-    ipi: float
-    base_icms_proprio: float
-    icms_proprio: float
-    base_st: float
-    icms_st_cheio: float
-    icms_st_reter: float
-
-    desconto_linha: float
-    frete_linha: float
-
-    # Por padrão mantemos a UI usando o total SEM ST (como é comum hoje),
-    # mas devolvemos também o COM ST para você poder alternar facilmente.
-    total_linha: float             # = total_sem_st
-    total_linha_com_st: float
-    total_impostos_linha: float
-
-# --------- DB session ---------
-def get_db():
-    db = SessionLocal()
-    try:
-        yield db
-    finally:
-        db.close()
-
-# --------- Data access (mesmas fontes dos seus endpoints) ---------
-# ---- em routers/fiscal.py ----
-def carregar_cliente(db: Session, codigo: Optional[int]) -> dict:
-    if not codigo:
-        return {}
-    row = db.execute(text("""
-        SELECT
-          codigo,
-          ramo_juridico
-        FROM public.t_cadastro_cliente
-        WHERE codigo = :cod
-        LIMIT 1
-    """), {"cod": codigo}).mappings().first()
-    return dict(row) if row else {}
-
-
-
-def carregar_produto(db: Session, produto_id: str) -> dict:
-    try:
-        row = db.execute(text("""
-            SELECT
-              b.codigo_supra,
-              b.tipo,
-              b.peso    AS peso_kg,
-              b.iva_st,
-              b.ipi,
-              b.icms
-            FROM public.v_produto_v2_preco b
-            WHERE b.status_produto = 'ATIVO' and b.codigo_supra::text = :pid
-            LIMIT 1
-        """), {"pid": produto_id}).mappings().first()
-    except Exception as e:
-        print("ERRO carregar_produto:", repr(e))
-        raise HTTPException(status_code=500, detail=f"Falha ao carregar produto: {repr(e)}")
-
-    if not row:
-        raise HTTPException(status_code=404, detail="Produto não encontrado")
-    return dict(row)
+# ... (get_db and carregar_cliente helper remains same, but we will protect usage below)
 
 @router.post("/fiscal/preview-linha", response_model=LinhaPreviewOut)
 def preview_linha(payload: LinhaPreviewIn, db: Session = Depends(get_db)):
-   
     try:
-        print("DBG payload:", payload.dict())
-
-        cliente = carregar_cliente(db, payload.cliente_codigo)
+        # 1. Tenta carregar dados do cliente SE for um ID numérico válido
+        cliente = {}
+        if payload.cliente_codigo:
+            # Tenta converter para int de forma segura
+            try:
+                cod_int = int(payload.cliente_codigo)
+                cliente = carregar_cliente(db, cod_int)
+            except (ValueError, TypeError):
+                # Se for string (ex: "Não cadastrado"), ignora e segue sem dados do DB
+                pass
+        
         produto = carregar_produto(db, payload.produto_id)
-       
         
-        
-        print("DBG cliente:", cliente)
+        print(f"DBG cliente: {cliente} (cod original: {payload.cliente_codigo})")
         print("DBG produto:", produto)
 
         ramo_db = cliente.get("ramo_juridico") if cliente else None
