@@ -105,24 +105,32 @@ def carregar_produto(db: Session, produto_id: str) -> dict:
 @router.post("/fiscal/preview-linha", response_model=LinhaPreviewOut)
 def preview_linha(payload: LinhaPreviewIn, db: Session = Depends(get_db)):
     try:
+        print(f"--- PREVIEW LINHA DEBUG ---")
+        print(f"Payload input: cliente_codigo={payload.cliente_codigo!r} (type {type(payload.cliente_codigo)}), forcar={payload.forcar_iva_st}, produto={payload.produto_id}")
+
         # 1. Tenta carregar dados do cliente SE for um ID numérico válido
         cliente = {}
         if payload.cliente_codigo:
-            # Tenta converter para int de forma segura
             try:
-                cod_int = int(payload.cliente_codigo)
-                cliente = carregar_cliente(db, cod_int)
-            except (ValueError, TypeError):
-                # Se for string (ex: "Não cadastrado"), ignora e segue sem dados do DB
+                # remove espaços se for string e converte
+                val_str = str(payload.cliente_codigo).strip()
+                if val_str.isdigit():
+                    cod_int = int(val_str)
+                    cliente = carregar_cliente(db, cod_int)
+                else:
+                    print(f"cliente_codigo '{val_str}' nao é numérico, ignorando DB lookup.")
+            except Exception as ex:
+                print(f"Erro ao converter cliente_codigo: {ex}")
                 pass
         
         produto = carregar_produto(db, payload.produto_id)
         
-        print(f"DBG cliente: {cliente} (cod original: {payload.cliente_codigo})")
-        print("DBG produto:", produto)
+        print(f"Cliente DB: {cliente}")
+        print(f"Produto DB: {produto.get('codigo_supra')} - {produto.get('tipo')} - IVA: {produto.get('iva_st')}")
 
         ramo_db = cliente.get("ramo_juridico") if cliente else None
         ramo = ramo_db or getattr(payload, "ramo_juridico", None)
+        print(f"Ramo Final: {ramo!r} (DB: {ramo_db!r}, Payload: {getattr(payload, 'ramo_juridico', None)!r})")
 
         tipo = produto.get("tipo") or getattr(payload, "tipo", None)
 
@@ -140,6 +148,7 @@ def preview_linha(payload: LinhaPreviewIn, db: Session = Depends(get_db)):
             ramo_juridico=ramo,
             forcar_iva_st=payload.forcar_iva_st
         )
+        print(f"DECIDE ST: Aplica={aplica}, Motivos={motivos}")
 
         comp = calcular_linha(
             preco_unit=payload.preco_unit,
@@ -149,6 +158,9 @@ def preview_linha(payload: LinhaPreviewIn, db: Session = Depends(get_db)):
             ipi=ipi, icms=icms, iva_st=iva_st,
             aplica_st=aplica
         )
+        
+        print(f"TOTAL COM ST: {comp['total_com_st']}")
+        print(f"---------------------------")
 
         return LinhaPreviewOut(
             aplica_iva_st=aplica, motivos_iva_st=motivos,
