@@ -80,6 +80,28 @@ def carregar_cliente(db: Session, codigo: Optional[int]) -> dict:
     """), {"cod": codigo}).mappings().first()
     return dict(row) if row else {}
 
+def carregar_produto(db: Session, produto_id: str) -> dict:
+    try:
+        row = db.execute(text("""
+            SELECT
+              b.codigo_supra,
+              b.tipo,
+              b.peso    AS peso_kg,
+              b.iva_st,
+              b.ipi,
+              b.icms
+            FROM public.v_produto_v2_preco b
+            WHERE b.status_produto = 'ATIVO' and b.codigo_supra::text = :pid
+            LIMIT 1
+        """), {"pid": produto_id}).mappings().first()
+    except Exception as e:
+        print("ERRO carregar_produto:", repr(e))
+        raise HTTPException(status_code=500, detail=f"Falha ao carregar produto: {repr(e)}")
+
+    if not row:
+        raise HTTPException(status_code=404, detail="Produto não encontrado")
+    return dict(row)
+
 @router.post("/fiscal/preview-linha", response_model=LinhaPreviewOut)
 def preview_linha(payload: LinhaPreviewIn, db: Session = Depends(get_db)):
     try:
