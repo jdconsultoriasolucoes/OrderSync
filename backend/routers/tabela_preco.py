@@ -39,16 +39,17 @@ def filtrar_produtos_para_tabela_preco(
                 p.codigo_supra AS codigo_tabela,
                 p.nome_produto AS descricao,
                 CASE 
-                    WHEN p.unidade IN ('SC','SACO') THEN 'SACO'
-                    WHEN p.unidade IN ('FD')       THEN 'FARDO'
-                    WHEN p.unidade IN ('CX')       THEN 'CAIXA'
-                    ELSE COALESCE(p.unidade, 'UN')
+                    WHEN UPPER(p.embalagem_venda) IN ('SC', 'SACO') THEN 'SACO'
+                    WHEN UPPER(p.embalagem_venda) IN ('CX', 'CAIXA') THEN 'CAIXA'
+                    WHEN UPPER(p.embalagem_venda) IN ('FD', 'FARDO') THEN 'FARDO'
+                    WHEN UPPER(p.embalagem_venda) IN ('UN', 'UNIDADE', 'UNI') THEN 'UNIDADE'
+                    ELSE COALESCE(p.embalagem_venda, 'UN')
                 END AS embalagem,
                 p.peso AS peso_liquido,
                 p.preco AS valor,
                 p.ipi,
                 p.iva_st,
-                p.familia AS grupo,
+                p.marca AS grupo,
                 p.familia AS departamento,
                 p.marca,
                 p.id_familia,
@@ -58,13 +59,13 @@ def filtrar_produtos_para_tabela_preco(
                 p.validade_tabela
             FROM v_produto_v2_preco p
             WHERE p.status_produto = 'ATIVO'
-              AND (:grupo IS NULL OR p.familia = :grupo)
+              AND (:grupo IS NULL OR p.marca = :grupo)
               AND (:fornecedor IS NULL OR p.fornecedor = :fornecedor)
               AND (
                     :q IS NULL
                  OR  p.codigo_supra::text ILIKE :like
                  OR  p.nome_produto       ILIKE :like
-                 OR  COALESCE(p.familia,'') ILIKE :like
+                 OR  COALESCE(p.marca,'')   ILIKE :like
                  OR  COALESCE(p.unidade,'') ILIKE :like
                  OR  COALESCE(p.tipo,'')  ILIKE :like
               )
@@ -118,7 +119,7 @@ def condicoes_pagamento():
 def filtro_grupo_produto():
     try:
         db = SessionLocal()
-        query = text("select distinct familia as grupo from  t_cadastro_produto_v2 order by familia")
+        query = text("select distinct marca as grupo from t_cadastro_produto_v2 order by marca")
         resultado = db.execute(query).fetchall()
         return [{"grupo": row.grupo} for row in resultado]
     finally:
