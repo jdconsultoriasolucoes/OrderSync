@@ -630,7 +630,17 @@ function setupClienteAutocomplete() {
       // aplica preferência vinda do cadastro, mas TRAVADO
       const pref = c.iva_st ?? c.usa_iva_st ?? c.st ?? c.calcula_st ?? null;
       if (ivaChk) {
-        if (pref != null) ivaChk.checked = parseBool(pref);
+        if (pref != null) {
+          ivaChk.checked = parseBool(pref);
+        } else {
+          // Null preference fallback: check Ramo
+          const r = (c.ramo_juridico || c.ramo || '').toLowerCase();
+          if (r.includes('revenda')) {
+            ivaChk.checked = true;
+          } else {
+            ivaChk.checked = false;
+          }
+        }
         ivaChk.disabled = true;              // 🔒 travado para cliente cadastrado
       }
       window.isClienteLivreSelecionado = false;
@@ -1494,7 +1504,8 @@ async function salvarTabela() {
   const fornecedorHeader = inferirFornecedorDaGrade();
   const codigo_cliente = (document.getElementById('codigo_cliente')?.value || '').trim() || null;
   const calcula_st = !!document.getElementById('iva_st_toggle')?.checked;
-  const payload = { nome_tabela, cliente, codigo_cliente: (codigo_cliente || "Não cadastrado"), ramo_juridico, fornecedor: fornecedorHeader, calcula_st, produtos };
+  // Se codigo_cliente for nulo, mande null (não grave "Não cadastrado" string)
+  const payload = { nome_tabela, cliente, codigo_cliente, ramo_juridico, fornecedor: fornecedorHeader, calcula_st, produtos };
   try {
     const resp = await salvarTabelaPreco(payload);
     return resp;
