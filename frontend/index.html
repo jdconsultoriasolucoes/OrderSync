@@ -13,10 +13,9 @@
 </head>
 <script src="public/js/auth.js"></script>
 <script>
+    // Auth.checkAuth() will handle redirect if needed
     if (window.Auth) {
         window.Auth.checkAuth();
-    } else {
-        window.location.href = "public/login/login.html";
     }
 </script>
 
@@ -36,8 +35,11 @@
             <li><a href="/pedido/pedido.html">Consultar Pedidos</a></li>
             <li><a href="#">Exportar Relatórios</a></li>
             <li><a href="/tabela_preco/criacao_tabela_preco.html">Tabela Preço</a></li>
+            <li><a href="/produto/produto.html">Produtos</a></li>
+            <li><a href="/usuarios.html">Usuários</a></li>
             <li><a href="https://ordersync-backend-edjq.onrender.com/static/config_email/config_email.html">Configuração
                     E-mail</a></li>
+            <li><a href="#" onclick="window.Auth.logout()">Sair</a></li>
         </ul>
     </nav>
     <div id="overlay"></div>
@@ -86,6 +88,13 @@
                 <a href="/produto/produto.html" class="card card-produto">
                     <span class="card-text">Cadastrar Produto</span>
                     <img src="icons/price-tag.png" alt="Ícone Produto">
+                </a>
+            </section>
+
+            <section class="card card-usuarios">
+                <a href="/usuarios.html" class="card card-usuarios">
+                    <span class="card-text">Gerenciar Usuários</span>
+                    <img src="icons/cliente.png" alt="Ícone Usuários">
                 </a>
             </section>
 

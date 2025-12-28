@@ -1,5 +1,22 @@
 const AUTH_TOKEN_KEY = "ordersync_token";
-const LOGIN_URL = "/public/login/login.html";
+
+// Dynamic LOGIN_URL based on auth.js location
+function getLoginUrl() {
+    const scripts = document.getElementsByTagName('script');
+    for (let script of scripts) {
+        if (script.src.includes('auth.js')) {
+            // script.src is absolute (http://.../public/js/auth.js)
+            // We want to go from /public/js/auth.js to /public/login/login.html
+            // So: up one level (../js) -> up one level (../public) -> down (login/login.html)
+            // Wait: auth.js is in public/js/. login is in public/login/.
+            // So ../login/login.html relative to auth.js
+            return new URL('../login/login.html', script.src).href;
+        }
+    }
+    return "/public/login/login.html"; // Fallback
+}
+
+const LOGIN_URL = getLoginUrl();
 
 const Auth = {
     // Save token
@@ -29,7 +46,7 @@ const Auth = {
         const path = window.location.pathname;
 
         // Allow public pages
-        if (path.includes("/login/") || path.includes("/login.html")) {
+        if (window.location.href.includes("/login/") || window.location.href.includes("login.html")) {
             return;
         }
 
