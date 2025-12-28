@@ -28,6 +28,41 @@ class NoCacheStaticFiles(StaticFiles):
 
 app = FastAPI()
 
+# --- STARTUP: Garantir usuario Admin ---
+@app.on_event("startup")
+def startup_ensure_admin():
+    from database import SessionLocal
+    from models.usuario import UsuarioModel
+    from core.security import get_password_hash
+    
+    db = SessionLocal()
+    try:
+        email = "admin@ordersync.com"
+        # Reset force
+        user = db.query(UsuarioModel).filter(UsuarioModel.email == email).first()
+        if user:
+            user.senha_hash = get_password_hash("admin123")
+            user.ativo = True
+            user.funcao = "admin"
+            logger.info("ADMIN PASSWORD RESET TO 'admin123'")
+        else:
+            new_user = UsuarioModel(
+                email=email, 
+                nome="Admin", 
+                senha_hash=get_password_hash("admin123"), 
+                funcao="admin", 
+                ativo=True
+            )
+            db.add(new_user)
+            logger.info("ADMIN USER CREATED: admin123")
+            
+        db.commit()
+    except Exception as e:
+        logger.error(f"Startup Admin Reset Failed: {e}")
+    finally:
+        db.close()
+
+
 @app.get("/")
 def root():
     return {"mensagem": "API do OrderSync está rodando"}
