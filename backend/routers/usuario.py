@@ -8,7 +8,7 @@ from jose import JWTError, jwt
 
 from database import SessionLocal
 from models.usuario import UsuarioModel
-from schemas.usuario import UsuarioCreate, UsuarioPublic, UsuarioUpdateSenha, UsuarioResetSenha
+from schemas.usuario import UsuarioCreate, UsuarioPublic, UsuarioUpdateSenha, UsuarioResetSenha, UsuarioUpdate
 from core.security import get_password_hash, SECRET_KEY, ALGORITHM, verify_password
 
 # Dependency for Token
@@ -129,3 +129,49 @@ def resetar_senha_usuario(
     target_user.senha_hash = get_password_hash(dados.senha_nova)
     db.commit()
     return {"message": f"Senha do usuário {target_user.email} resetada com sucesso"}
+
+@router.put("/{user_id}", response_model=UsuarioPublic)
+def update_user(
+    user_id: int,
+    dados: UsuarioUpdate,
+    db: Session = Depends(get_db),
+    current_user: UsuarioModel = Depends(get_current_user)
+):
+    # Only Admin
+    if current_user.funcao != "admin":
+        raise HTTPException(status_code=403, detail="Apenas administradores podem editar usuários")
+
+    user = db.query(UsuarioModel).filter(UsuarioModel.id == user_id).first()
+    if not user:
+        raise HTTPException(status_code=404, detail="Usuário não encontrado")
+
+    if dados.nome is not None: user.nome = dados.nome
+    if dados.email is not None: user.email = dados.email
+    if dados.funcao is not None: user.funcao = dados.funcao
+    if dados.ativo is not None: user.ativo = dados.ativo
+
+    db.commit()
+    db.refresh(user)
+    return user
+
+@router.delete("/{user_id}")
+def delete_user(
+    user_id: int,
+    db: Session = Depends(get_db),
+    current_user: UsuarioModel = Depends(get_current_user)
+):
+    # Only Admin
+    if current_user.funcao != "admin":
+        raise HTTPException(status_code=403, detail="Apenas administradores podem excluir usuários")
+
+    user = db.query(UsuarioModel).filter(UsuarioModel.id == user_id).first()
+    if not user:
+        raise HTTPException(status_code=404, detail="Usuário não encontrado")
+    
+    # Prevent self-deletion
+    if user.id == current_user.id:
+        raise HTTPException(status_code=400, detail="Você não pode excluir sua própria conta")
+
+    db.delete(user)
+    db.commit()
+    return {"message": "Usuário excluído com sucesso"}

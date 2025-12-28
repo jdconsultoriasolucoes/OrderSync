@@ -160,21 +160,23 @@
             </div>
             <div class="custom-modal-body">
                 <form id="form-novo-usuario">
+                    <input type="hidden" name="user_id" id="user-id">
                     <div class="mb-3">
                         <label class="form-label">Nome</label>
-                        <input type="text" class="form-control" name="nome" required>
+                        <input type="text" class="form-control" name="nome" id="input-nome" required>
                     </div>
                     <div class="mb-3">
                         <label class="form-label">Email</label>
-                        <input type="email" class="form-control" name="email" required>
+                        <input type="email" class="form-control" name="email" id="input-email" required>
                     </div>
                     <div class="mb-3">
-                        <label class="form-label">Senha Inicial</label>
-                        <input type="text" class="form-control" name="senha" value="123" required>
+                        <label class="form-label">Senha Inicial <small class="text-muted">(Apenas na
+                                criação)</small></label>
+                        <input type="text" class="form-control" name="senha" id="input-senha" value="123">
                     </div>
                     <div class="mb-3">
                         <label class="form-label">Função</label>
-                        <select class="form-select" name="funcao">
+                        <select class="form-select" name="funcao" id="input-funcao">
                             <option value="vendedor">Vendedor</option>
                             <option value="gerente">Gerente</option>
                             <option value="admin">Admin</option>

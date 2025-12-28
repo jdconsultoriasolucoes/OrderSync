@@ -4,21 +4,37 @@ document.addEventListener("DOMContentLoaded", () => {
     carregarUsuarios();
 
     // Novo Usuário Form
+    // Novo/Editar Usuário Form
     document.getElementById("form-novo-usuario").addEventListener("submit", async (e) => {
         e.preventDefault();
         const fd = new FormData(e.target);
         const data = Object.fromEntries(fd.entries());
-        data.ativo = true; // Default
+        data.ativo = true;
+        const isEdit = !!data.user_id;
 
-        if (confirm(`Criar usuário ${data.nome}?`)) {
+        const actionText = isEdit ? `Atualizar usuário ${data.nome}?` : `Criar usuário ${data.nome}?`;
+
+        if (confirm(actionText)) {
             try {
-                const res = await fetch(`${API_URL}/usuarios/`, {
-                    method: "POST",
+                let url = `${API_URL}/usuarios/`;
+                let method = "POST";
+
+                if (isEdit) {
+                    url += data.user_id;
+                    method = "PUT";
+                    // No password update here, only create
+                    delete data.senha;
+                }
+
+                const res = await fetch(url, {
+                    method: method,
                     headers: { "Content-Type": "application/json" },
                     body: JSON.stringify(data)
                 });
-                if (!res.ok) throw new Error((await res.json()).detail || "Erro ao criar");
-                alert("Usuário criado com sucesso!");
+
+                if (!res.ok) throw new Error((await res.json()).detail || "Erro na operação");
+
+                alert(isEdit ? "Usuário atualizado!" : "Usuário criado!");
                 document.getElementById("modal-novo").style.display = "none";
                 e.target.reset();
                 carregarUsuarios();
@@ -77,8 +93,9 @@ async function carregarUsuarios() {
                 <td><span class="badge bg-secondary">${u.funcao}</span></td>
                 <td>${u.ativo ? '<span class="text-success">Ativo</span>' : '<span class="text-danger">Inativo</span>'}</td>
                 <td>
-                    <button class="btn btn-sm btn-warning" onclick="abrirModalReset(${u.id}, '${u.email}')">Resetar Senha</button>
-                    <!-- <button class="btn btn-sm btn-danger">Inativar</button> (To be implemented) -->
+                    <button class="btn btn-sm btn-primary" onclick='abrirModalEditar(${JSON.stringify(u)})'>✏️</button>
+                    <button class="btn btn-sm btn-warning" onclick="abrirModalReset(${u.id}, '${u.email}')">🔑</button>
+                    <button class="btn btn-sm btn-danger" onclick="excluirUsuario(${u.id})">🗑️</button>
                 </td>
             `;
             tbody.appendChild(tr);
@@ -91,9 +108,42 @@ async function carregarUsuarios() {
     }
 }
 
-// Global functions for HTML access
+// Global functions
 window.abrirModalNovoUsuario = () => {
+    document.getElementById("user-id").value = "";
+    document.getElementById("form-novo-usuario").reset();
+    document.querySelector(".custom-modal-title").innerText = "Novo Usuário";
+    document.getElementById("input-senha").disabled = false;
     document.getElementById("modal-novo").style.display = "flex";
+};
+
+window.abrirModalEditar = (u) => {
+    document.getElementById("user-id").value = u.id;
+    document.getElementById("input-nome").value = u.nome || "";
+    document.getElementById("input-email").value = u.email;
+    document.getElementById("input-funcao").value = u.funcao;
+
+    // Password cannot be changed here
+    const pwInput = document.getElementById("input-senha");
+    pwInput.value = "";
+    pwInput.placeholder = "Senha inalterada na edição";
+    pwInput.disabled = true;
+
+    document.querySelector(".custom-modal-title").innerText = "Editar Usuário";
+    document.getElementById("modal-novo").style.display = "flex";
+};
+
+window.excluirUsuario = async (id) => {
+    if (confirm("Tem certeza que deseja excluir este usuário? Esta ação não pode ser desfeita.")) {
+        try {
+            const res = await fetch(`${API_URL}/usuarios/${id}`, { method: "DELETE" });
+            if (!res.ok) throw new Error((await res.json()).detail || "Erro ao excluir");
+            alert("Usuário excluído!");
+            carregarUsuarios();
+        } catch (err) {
+            alert("Erro: " + err.message);
+        }
+    }
 };
 
 window.abrirModalReset = (id, email) => {

@@ -40,3 +40,9 @@ class UsuarioUpdateSenha(BaseModel):
 
 class UsuarioResetSenha(BaseModel):
     senha_nova: str
+
+class UsuarioUpdate(BaseModel):
+    nome: Optional[str] = None
+    email: Optional[str] = None
+    funcao: Optional[str] = None
+    ativo: Optional[bool] = None
