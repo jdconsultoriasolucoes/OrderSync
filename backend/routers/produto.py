@@ -21,8 +21,12 @@ from services.produto_pdf import (
     get_produto,
     list_produtos,
     get_anteriores,
+    get_anteriores,
     importar_pdf_para_produto,
 )
+from fastapi import Depends
+from core.deps import get_current_user
+from models.usuario import UsuarioModel
 
 
 # deixa a tag mais limpa no Swagger
@@ -103,9 +107,13 @@ def listar_produtos(
     description="Cria um novo produto (e imposto, se informado) e retorna o registro consolidado.",
     operation_id="produtos_criar",
 )
-def criar_produto_endpoint(payload: ProdutoCreatePayload):
+def criar_produto_endpoint(payload: ProdutoCreatePayload, current_user: UsuarioModel = Depends(get_current_user)):
     db = SessionLocal()
     try:
+        user_email = current_user.email
+        # Modificar o payload antes de passar pro service
+        payload.produto.criado_por = user_email
+        payload.produto.atualizado_por = user_email
         return create_produto(db, payload.produto, payload.imposto)
     finally:
         db.close()
@@ -137,9 +145,11 @@ def atualizar_produto_endpoint(
     produto_id: int,
     produto: ProdutoV2Update,
     imposto: Optional[ImpostoV2Create] = None,
+    current_user: UsuarioModel = Depends(get_current_user),
 ):
     db = SessionLocal()
     try:
+        produto.atualizado_por = current_user.email
         return update_produto(db, produto_id, produto, imposto)
     finally:
         db.close()
@@ -172,6 +182,9 @@ async def importar_lista(
     tipo_lista: str = Form(..., description="Tipo de lista: INSUMOS ou PET"),
     validade_tabela: Optional[str] = Form(None),
     file: UploadFile = File(...),
+    # Note: Using Depends in Form/File upload might be tricky if not done right, 
+    # but Depends(get_current_user) works fine with OAuth2 header.
+    current_user: UsuarioModel = Depends(get_current_user),
 ):
     # pega a sessão criada pelo middleware (database.SessionLocal)
     db: Session = request.state.db
@@ -229,7 +242,7 @@ async def importar_lista(
         db,
         df,
         nome_arquivo=file.filename,
-        usuario="IMPORT_MANUAL",  # depois trocar pelo usuário logado
+        usuario=current_user.email,
     )
 
     sync = resumo.get("sync", {})

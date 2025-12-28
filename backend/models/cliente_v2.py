@@ -150,3 +150,6 @@ class ClienteModelV2(Base):
     # Meta
     data_criacao = Column(DateTime)
     data_atualizacao = Column(DateTime)
+
+    criado_por = Column(String, nullable=True)
+    atualizado_por = Column(String, nullable=True)

@@ -8,6 +8,9 @@ from services.cliente import (
     atualizar_cliente,
     deletar_cliente
 )
+from fastapi import Depends
+from core.deps import get_current_user
+from models.usuario import UsuarioModel
 
 router = APIRouter()
 
@@ -30,12 +33,17 @@ def delete_cliente(codigo_da_empresa: str):
     return cliente
 
 @router.post("/", response_model=ClienteCompleto)
-def post_cliente(cliente: ClienteCompleto):
-    return criar_cliente(cliente.model_dump())
+def post_cliente(cliente: ClienteCompleto, current_user: UsuarioModel = Depends(get_current_user)):
+    data = cliente.model_dump()
+    data["criado_por"] = current_user.email
+    data["atualizado_por"] = current_user.email
+    return criar_cliente(data)
 
 @router.put("/{codigo_da_empresa}", response_model=ClienteCompleto)
-def put_cliente(codigo_da_empresa: str, cliente: ClienteCompleto):
-    atualizado = atualizar_cliente(codigo_da_empresa, cliente.model_dump())
+def put_cliente(codigo_da_empresa: str, cliente: ClienteCompleto, current_user: UsuarioModel = Depends(get_current_user)):
+    data = cliente.model_dump()
+    data["atualizado_por"] = current_user.email
+    atualizado = atualizar_cliente(codigo_da_empresa, data)
     if not atualizado:
         raise HTTPException(status_code=404, detail="Cliente não encontrado")
     return atualizado

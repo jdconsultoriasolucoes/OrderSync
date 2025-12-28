@@ -16,3 +16,4 @@ class PedidoLink(Base):
     first_access_at = Column(DateTime(timezone=True), nullable=True)
     last_access_at  = Column(DateTime(timezone=True), nullable=True)
     link_url = Column(String(512), nullable=True)
+    criado_por = Column(String, nullable=True)

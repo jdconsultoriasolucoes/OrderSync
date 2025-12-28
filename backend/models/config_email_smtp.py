@@ -12,3 +12,4 @@ class ConfigEmailSMTP(Base):
     smtp_user       = Column(Text, nullable=False)
     smtp_senha      = Column(Text, nullable=False)  # depois podemos criptografar / esconder
     usar_tls        = Column(Boolean, nullable=False, default=True)
+    atualizado_por  = Column(Text, nullable=True)

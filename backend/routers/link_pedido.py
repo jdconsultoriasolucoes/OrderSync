@@ -8,13 +8,16 @@ from models.pedido_link import PedidoLink
 from pathlib import Path
 from datetime import datetime
 from sqlalchemy import update
+from fastapi import Depends
+from core.deps import get_current_user
+from models.usuario import UsuarioModel
 
 router = APIRouter(prefix="/link_pedido", tags=["Link Pedido"])
 
 PEDIDO_HTML = Path("/opt/render/project/src/frontend/public/tabela_preco/pedido_cliente.html")
 
 @router.post("/gerar")
-def gerar_link(body: dict, request: Request):
+def gerar_link(body: dict, request: Request, current_user: UsuarioModel = Depends(get_current_user)):
     # abre sessão local (sem Depends)
     with SessionLocal() as db:
         tabela_id = int(body["tabela_id"])
@@ -32,7 +35,7 @@ def gerar_link(body: dict, request: Request):
         db.execute(
             update(PedidoLink)
             .where(PedidoLink.code == code)
-            .values(link_url=url)
+            .values(link_url=url, criado_por=current_user.email)
         )
         db.commit()
 

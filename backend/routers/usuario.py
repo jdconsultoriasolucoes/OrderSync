@@ -11,15 +11,7 @@ from models.usuario import UsuarioModel
 from schemas.usuario import UsuarioCreate, UsuarioPublic, UsuarioUpdateSenha, UsuarioResetSenha, UsuarioUpdate
 from core.security import get_password_hash, SECRET_KEY, ALGORITHM, verify_password
 
-# Dependency for Token
-oauth2_scheme = OAuth2PasswordBearer(tokenUrl="token")
-
-def get_db():
-    db = SessionLocal()
-    try:
-        yield db
-    finally:
-        db.close()
+from core.deps import get_db, get_current_user, oauth2_scheme
 
 async def get_current_user_role(token: str = Depends(oauth2_scheme)):
     credentials_exception = HTTPException(
@@ -36,25 +28,6 @@ async def get_current_user_role(token: str = Depends(oauth2_scheme)):
     except JWTError:
         raise credentials_exception
 
-async def get_current_user(token: str = Depends(oauth2_scheme), db: Session = Depends(get_db)):
-    credentials_exception = HTTPException(
-        status_code=status.HTTP_401_UNAUTHORIZED,
-        detail="Could not validate credentials",
-        headers={"WWW-Authenticate": "Bearer"},
-    )
-    try:
-        payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
-        email: str = payload.get("sub")
-        if email is None:
-            raise credentials_exception
-    except JWTError:
-        raise credentials_exception
-    
-    user = db.query(UsuarioModel).filter(UsuarioModel.email == email).first()
-    if user is None:
-        raise credentials_exception
-    return user
-
 # Router
 router = APIRouter(prefix="/usuarios", tags=["usuarios"])
 
@@ -62,9 +35,14 @@ router = APIRouter(prefix="/usuarios", tags=["usuarios"])
 def create_user(
     usuario: UsuarioCreate, 
     db: Session = Depends(get_db),
-    current_role: str = Depends(get_current_user_role)
+    current_user: UsuarioModel = Depends(get_current_user)
 ):
     # Only Admin or Gerente can create users
+    # Check Role from user object
+    if current_user.funcao not in ["admin", "gerente"]:
+         raise HTTPException(status_code=403, detail="Not authorized to create users")
+    
+    current_user_email = current_user.email
     if current_role not in ["admin", "gerente"]:
          raise HTTPException(status_code=403, detail="Not authorized to create users")
 
@@ -78,7 +56,8 @@ def create_user(
         email=usuario.email,
         senha_hash=hashed_pw,
         funcao=usuario.funcao,
-        ativo=usuario.ativo
+        ativo=usuario.ativo,
+        criado_por=current_user_email
     )
     db.add(db_user)
     db.commit()

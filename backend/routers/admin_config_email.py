@@ -5,6 +5,8 @@ import ssl
 from database import SessionLocal
 from models.config_email_mensagem import ConfigEmailMensagem
 from models.config_email_smtp import ConfigEmailSMTP
+from core.deps import get_current_user, get_db
+from models.usuario import UsuarioModel
 from schemas.config_email import (
     ConfigEmailMensagemOut,
     ConfigEmailMensagemBase,
@@ -25,12 +27,8 @@ router = APIRouter(
     # Ex.: dependencies=[Depends(verify_admin_user)]
 )
 logger = logging.getLogger("ordersync.smtp_test")
-def get_db():
-    db = SessionLocal()
-    try:
-        yield db
-    finally:
-        db.close()
+
+# -------------------------
 
 
 # -------------------------
@@ -60,6 +58,7 @@ def get_mensagem_cfg(db: Session = Depends(get_db)):
 def update_mensagem_cfg(
     data: ConfigEmailMensagemBase,
     db: Session = Depends(get_db),
+    current_user: UsuarioModel = Depends(get_current_user),
 ):
     cfg = (
         db.query(ConfigEmailMensagem)
@@ -75,6 +74,7 @@ def update_mensagem_cfg(
             assunto_padrao=data.assunto_padrao,
             corpo_html=data.corpo_html,
             enviar_para_cliente=data.enviar_para_cliente,
+            atualizado_por=current_user.email,
         )
         db.add(cfg)
     else:
@@ -82,6 +82,7 @@ def update_mensagem_cfg(
         cfg.assunto_padrao = data.assunto_padrao
         cfg.corpo_html = data.corpo_html
         cfg.enviar_para_cliente = data.enviar_para_cliente
+        cfg.atualizado_por = current_user.email
 
     db.commit()
     db.refresh(cfg)
@@ -116,6 +117,7 @@ def get_smtp_cfg(db: Session = Depends(get_db)):
 def update_smtp_cfg(
     data: ConfigEmailSMTPUpdate,
     db: Session = Depends(get_db),
+    current_user: UsuarioModel = Depends(get_current_user),
 ):
     data.smtp_host = (data.smtp_host or "").strip()
     data.smtp_user = (data.smtp_user or "").strip()
@@ -140,6 +142,7 @@ def update_smtp_cfg(
             smtp_user=data.smtp_user,
             smtp_senha=(data.smtp_senha or ""),  # inicia a senha
             usar_tls=data.usar_tls,
+            atualizado_por=current_user.email,
         )
         db.add(cfg)
     else:
@@ -150,6 +153,7 @@ def update_smtp_cfg(
         if data.smtp_senha:  # só troca se veio algo
             cfg.smtp_senha = data.smtp_senha
         cfg.usar_tls = data.usar_tls
+        cfg.atualizado_por = current_user.email
 
     db.commit()
     db.refresh(cfg)

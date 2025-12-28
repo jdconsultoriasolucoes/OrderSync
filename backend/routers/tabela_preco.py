@@ -14,6 +14,9 @@ from pydantic import BaseModel
 import logging
 from sqlalchemy.exc import SQLAlchemyError, IntegrityError, DataError
 import re
+from fastapi import Depends
+from core.deps import get_current_user, get_db
+from models.usuario import UsuarioModel
 
 logger = logging.getLogger("tabela_preco")
 
@@ -127,9 +130,12 @@ def filtro_grupo_produto():
         db.close()
 
 @router.post("/salvar")
-def salvar_tabela_preco(body: TabelaSalvar):
+def salvar_tabela_preco(body: TabelaSalvar, current_user: UsuarioModel = Depends(get_current_user)):
     db: Session = SessionLocal()
     try:
+        # 0) Audit info
+        usuario_email = current_user.email
+
         # 1) Gera id_tabela com fallback
         try:
             id_tabela = db.execute(text("SELECT nextval('seq_tabela_preco_id_tabela')")).scalar()
@@ -143,13 +149,13 @@ def salvar_tabela_preco(body: TabelaSalvar):
               codigo_produto_supra, descricao_produto, embalagem, peso_liquido, valor_produto,
               comissao_aplicada, ajuste_pagamento, descricao_fator_comissao, codigo_plano_pagamento,
               valor_frete_aplicado, frete_kg, valor_frete, valor_s_frete, grupo, departamento,
-              ipi, icms_st, iva_st, calcula_st
+              ipi, icms_st, iva_st, calcula_st, criacao_usuario, alteracao_usuario
             ) VALUES (
               :id_tabela, :nome_tabela, :fornecedor, :codigo_cliente, :cliente,
               :codigo_produto_supra, :descricao_produto, :embalagem, :peso_liquido, :valor_produto,
               :comissao_aplicada, :ajuste_pagamento, :descricao_fator_comissao, :codigo_plano_pagamento,
               :valor_frete_aplicado, :frete_kg, :valor_frete, :valor_s_frete, :grupo, :departamento,
-              :ipi, :icms_st, :iva_st, :calcula_st
+              :ipi, :icms_st, :iva_st, :calcula_st, :criacao_usuario, :alteracao_usuario
             )
             RETURNING id_linha
         """)
@@ -191,6 +197,8 @@ def salvar_tabela_preco(body: TabelaSalvar):
                 "icms_st": float(getattr(produto, "icms_st", 0) or 0),
                 "iva_st":  float(getattr(produto, "iva_st", 0) or 0),
                 "calcula_st": bool(getattr(body, "calcula_st", False)),
+                "criacao_usuario": usuario_email,
+                "alteracao_usuario": usuario_email,
             }
 
             logger.info("[/salvar] item %s params=%s", i, params)
@@ -435,9 +443,11 @@ def only_code(v):
     return str(v).strip().split(" - ", 1)[0]
 
 @router.put("/{id_tabela}")
-def atualizar_tabela(id_tabela: int, body: TabelaSalvar):
+def atualizar_tabela(id_tabela: int, body: TabelaSalvar, current_user: UsuarioModel = Depends(get_current_user)):
     now = datetime.utcnow()
-    with SessionLocal() as db:
+    usuario_email = current_user.email
+    db = SessionLocal() # Using manual session as original code did
+    try:
         existentes = db.query(TabelaPrecoModel).filter(
             TabelaPrecoModel.id_tabela == id_tabela
         ).all()
@@ -516,6 +526,7 @@ def atualizar_tabela(id_tabela: int, body: TabelaSalvar):
                 else:
                     atualizados += 1
                 target.editado_em = now
+                target.alteracao_usuario = usuario_email
             else:
                 # INSERT novo
                 db.add(TabelaPrecoModel(
@@ -548,6 +559,8 @@ def atualizar_tabela(id_tabela: int, body: TabelaSalvar):
                     ativo                = True,
                     deletado_em          = None,
                     editado_em           = now,
+                    criacao_usuario      = usuario_email,
+                    alteracao_usuario    = usuario_email,
                 ))
                 novos += 1
 
@@ -575,3 +588,8 @@ def atualizar_tabela(id_tabela: int, body: TabelaSalvar):
             "atualizados": atualizados,
             "removidos": removidos
         }
+    except Exception as e:
+        db.rollback()
+        raise e
+    finally:
+        db.close()

@@ -1,5 +1,6 @@
 <!DOCTYPE html>
 <html lang="pt-br">
+
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
@@ -17,38 +18,38 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600&display=swap" rel="stylesheet">
+  <script src="../js/config.js"></script>
+  <script src="../js/auth.js"></script>
   <script src="criacao_tabela_preco.js" defer></script>
-
-
 </head>
 
 
 <body>
-   <header>
-      <div class="navbar">
-        <button class="menu-btn" id="menu-button">&#9776;</button>
-        <img src="../logo.png" alt="Logo" class="logo" />
-      </div>
-    </header>
+  <header>
+    <div class="navbar">
+      <button class="menu-btn" id="menu-button">&#9776;</button>
+      <img src="../logo.png" alt="Logo" class="logo" />
+    </div>
+  </header>
 
-    <nav class="sidebar" id="sidebar">
-      <ul>
-        <li><a href="/index.html">Home</a></li>
-        <li><a href="/clientes/cliente.html">Cadastrar Cliente</a></li>
-        <li><a href="#">Atualizar Catálogo</a></li>
-        <li><a href="/pedido/pedido.html">Consultar Pedidos</a></li>
-        <li><a href="#">Exportar Relatórios</a></li>
-        <li><a href="/tabela_preco/criacao_tabela_preco.html">Tabela Preço</a></li>
-        <li><a href="/config_email/config_email.html">Configuração E-mail</a></li>
-        </ul>
-    </nav>
-    <div id="overlay"></div>
+  <nav class="sidebar" id="sidebar">
+    <ul>
+      <li><a href="/index.html">Home</a></li>
+      <li><a href="/clientes/cliente.html">Cadastrar Cliente</a></li>
+      <li><a href="#">Atualizar Catálogo</a></li>
+      <li><a href="/pedido/pedido.html">Consultar Pedidos</a></li>
+      <li><a href="#">Exportar Relatórios</a></li>
+      <li><a href="/tabela_preco/criacao_tabela_preco.html">Tabela Preço</a></li>
+      <li><a href="/config_email/config_email.html">Configuração E-mail</a></li>
+    </ul>
+  </nav>
+  <div id="overlay"></div>
 
   <div class="page-container">
-    
+
     <!-- <h1>Criação de Tabela de Preço <span class="subtle">(etapa de conferência)</span></h1> -->
     <!-- TOPO: Cabeçalho e parâmetros globais -->
-     <h1> Criação de Tabela de Preço </h1>
+    <h1> Criação de Tabela de Preço </h1>
 
     <section class="card pad" aria-labelledby="sec-topo">
       <h2 id="sec-topo" class="section-title">Dados principais</h2>
@@ -68,17 +69,17 @@
         <div class="field">
           <label for="iva_st_toggle">IVA_ST</label>
           <div class="inline">
-              <input id="iva_st_toggle" type="checkbox" disabled  />
-              <span class="hint">IVA_ST (Sim / Não) </span>
+            <input id="iva_st_toggle" type="checkbox" disabled />
+            <span class="hint">IVA_ST (Sim / Não) </span>
           </div>
         </div>
         <div class="field row-2">
-            <label for="validade_tabela">Validade da Tabela</label>
-            <input id="validade_tabela" type="text" readonly />
+          <label for="validade_tabela">Validade da Tabela</label>
+          <input id="validade_tabela" type="text" readonly />
         </div>
         <div class="field row-2">
-            <label for="dias_restantes">Tempo restante</label>
-            <input id="dias_restantes" type="text" readonly />
+          <label for="dias_restantes">Tempo restante</label>
+          <input id="dias_restantes" type="text" readonly />
         </div>
       </div>
 
@@ -93,14 +94,14 @@
           <div class="hint" id="hint-condicao">Carregando condições…</div>
         </div>
         <div class="toolbar left-gap">
-         <button class="btn" id="btn-aplicar-condicao-todos">Aplicar condição a todos</button>
-         <span class="pill"><span>Taxa Condição:</span><strong id="pill-taxa">—</strong></span>
+          <button class="btn" id="btn-aplicar-condicao-todos">Aplicar condição a todos</button>
+          <span class="pill"><span>Taxa Condição:</span><strong id="pill-taxa">—</strong></span>
         </div>
         <div class="field">
           <label for="desconto_global">Desconto / Fator de Comissão %</label>
           <!--<div class="inline">-->
-            <select id="desconto_global" class="grow"></select>
-            <span class="pill"><span>Taxa do fator:</span><strong id="pill-fator">—</strong><span> %</span></span>
+          <select id="desconto_global" class="grow"></select>
+          <span class="pill"><span>Taxa do fator:</span><strong id="pill-fator">—</strong><span> %</span></span>
           <!--</div>-->
           <div class="hint">Selecione um desconto para <b>aplicar a todos</b> abaixo.</div>
           <div class="toolbar left-gap">
@@ -115,7 +116,7 @@
     <!-- BASE: Tabela de itens selecionados -->
     <section class="card pad" aria-labelledby="sec-itens">
       <h2 id="sec-itens" class="section-title">Produtos selecionados</h2>
-      
+
       <div class="toolbar" id="toolbar-acoes">
         <button id="btn-listar" class="btn">Listar Tabelas</button>
         <button id="btn-buscar" class="btn btn-primary">Buscar Produtos</button>
@@ -142,14 +143,14 @@
               <th>Cond. Pagto (cód)</th><!-- NOVO (editável por linha) -->
               <th class="right">Cond. Pagto (R$)</th>
               <th class="right">Frete (R$)</th>
-              <th class="right">IPI (R$)</th>          <!-- foi IPI (%) -->
+              <th class="right">IPI (R$)</th> <!-- foi IPI (%) -->
               <th class="th-st">
-              <label class="st-toggle-in-th" title="Mostrar/ocultar detalhes de ST">
-                <input id="st-toggle" type="checkbox" />
-                <span class="st-title">Base ST (R$)</span>
-                <span class="chevron">▶</span>
-              </label>
-              </th>      <!-- novo, no lugar do IVA_ST (%) -->
+                <label class="st-toggle-in-th" title="Mostrar/ocultar detalhes de ST">
+                  <input id="st-toggle" type="checkbox" />
+                  <span class="st-title">Base ST (R$)</span>
+                  <span class="chevron">▶</span>
+                </label>
+              </th> <!-- novo, no lugar do IVA_ST (%) -->
               <th class="right">ICMS próprio (R$)</th> <!-- novo -->
               <th class="right">ICMS ST cheio (R$)</th><!-- novo -->
               <th class="right">ICMS ST a reter (R$)</th><!-- novo -->
@@ -164,10 +165,10 @@
   </div>
   <!-- Lógica totalmente externa -->
   <script type="module">
-      import { showGerarLinkModal } from "../js/gerar_link_pedido.js";
-      window.__showGerarLinkModal = showGerarLinkModal;
-   </script> 
-  
+    import { showGerarLinkModal } from "../js/gerar_link_pedido.js";
+    window.__showGerarLinkModal = showGerarLinkModal;
+  </script>
+
   <script>
     const menuButton = document.getElementById("menu-button");
     const sidebar = document.getElementById("sidebar");
@@ -184,6 +185,7 @@
     });
   </script>
 
-    
+
 </body>
+
 </html>
