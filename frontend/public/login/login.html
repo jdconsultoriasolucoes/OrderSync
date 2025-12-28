@@ -5,7 +5,8 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>OrderSync - Login</title>
-    <link rel="stylesheet" href="styles.css">
+    <!-- Adjust paths to root CSS -->
+    <link rel="stylesheet" href="../styles.css">
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600&display=swap" rel="stylesheet">
     <style>
         body {
@@ -15,6 +16,7 @@
             align-items: center;
             height: 100vh;
             font-family: 'Inter', sans-serif;
+            margin: 0;
         }
 
         .login-card {
@@ -56,6 +58,8 @@
             border-radius: 6px;
             outline: none;
             transition: border-color 0.2s;
+            box-sizing: border-box;
+            /* Fix padding issue */
         }
 
         .form-group input:focus {
@@ -84,6 +88,10 @@
             margin-bottom: 1rem;
             font-size: 0.875rem;
             display: none;
+            background: #fef2f2;
+            padding: 0.75rem;
+            border-radius: 6px;
+            border: 1px solid #fee2e2;
         }
 
         .footer-link {
@@ -120,8 +128,9 @@
         </div>
     </div>
 
-    <script src="js/auth.js"></script>
-    <script src="js/login.js"></script>
+    <!-- Auth is shared, one level up in js/ -->
+    <script src="../js/auth.js"></script>
+    <script src="login.js"></script>
 </body>
 
 </html>

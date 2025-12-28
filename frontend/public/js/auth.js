@@ -1,5 +1,5 @@
 const AUTH_TOKEN_KEY = "ordersync_token";
-const LOGIN_URL = "/public/login.html"; // Considering simple file server structure
+const LOGIN_URL = "/public/login/login.html";
 
 const Auth = {
     // Save token
@@ -26,13 +26,15 @@ const Auth = {
 
     // Enforce auth on protected pages
     checkAuth: () => {
-        // Allow public pages (login, public links)
         const path = window.location.pathname;
-        if (path.includes("login.html") || path.includes("/public/")) {
+
+        // Allow public pages
+        if (path.includes("/login/") || path.includes("/login.html")) {
             return;
         }
 
         if (!Auth.isAuthenticated()) {
+            console.log("Not authenticated, redirecting to:", LOGIN_URL);
             window.location.href = LOGIN_URL;
         }
     }
