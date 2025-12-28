@@ -1,4 +1,5 @@
-const API_URL = "http://127.0.0.1:8000";
+// Use global API_BASE from config.js or fallback
+const API_URL = window.API_BASE || "http://127.0.0.1:8000";
 
 document.getElementById("login-form").addEventListener("submit", async (e) => {
     e.preventDefault();
@@ -9,6 +10,7 @@ document.getElementById("login-form").addEventListener("submit", async (e) => {
     const btnSubmit = document.getElementById("btn-submit");
 
     errorBox.style.display = "none";
+    errorBox.innerText = "";
     btnSubmit.disabled = true;
     btnSubmit.innerText = "Entrando...";
 
@@ -16,6 +18,8 @@ document.getElementById("login-form").addEventListener("submit", async (e) => {
         const formData = new URLSearchParams();
         formData.append("username", email);
         formData.append("password", password);
+
+        console.log(`Attempting login to ${API_URL}/token...`);
 
         const response = await fetch(`${API_URL}/token`, {
             method: "POST",
@@ -26,19 +30,27 @@ document.getElementById("login-form").addEventListener("submit", async (e) => {
         });
 
         if (!response.ok) {
-            throw new Error("Credenciais inválidas");
+            const errData = await response.json().catch(() => ({}));
+            throw new Error(errData.detail || "Credenciais inválidas");
         }
 
         const data = await response.json();
         const token = data.access_token;
 
+        console.log("Login successful! Saving token...");
         // Use global Auth from auth.js
         window.Auth.login(token);
 
     } catch (err) {
-        errorBox.innerText = "Erro: Usuário ou senha incorretos.";
-        errorBox.style.display = "block";
+        console.error("Login Error:", err);
         btnSubmit.disabled = false;
         btnSubmit.innerText = "Entrar";
+
+        errorBox.style.display = "block";
+        if (err.message.includes("Failed to fetch")) {
+            errorBox.innerText = "Erro de Conexão: O servidor backend parece estar offline.";
+        } else {
+            errorBox.innerText = `Erro: ${err.message}`;
+        }
     }
 });
