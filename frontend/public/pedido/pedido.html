@@ -1,11 +1,12 @@
 <!DOCTYPE html>
 <html lang="pt-BR">
+
 <head>
   <meta charset="utf-8" />
   <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>Pedidos</title>
-    <!-- Bootstrap igual à tela de cliente -->
+  <!-- Bootstrap igual à tela de cliente -->
   <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
 
   <!-- CSS específico da página -->
@@ -18,29 +19,36 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600&display=swap" rel="stylesheet">
   <script>
-  window.API_BASE = window.API_BASE || "https://ordersync-backend-59d2.onrender.com";
+    window.API_BASE = window.API_BASE || "https://ordersync-backend-59d2.onrender.com";
   </script>
 </head>
-<body class="orc-page">
-    <header>
-      <div class="navbar">
-        <button class="menu-btn" id="menu-button">&#9776;</button>
-        <img src="../logo.png" alt="Logo" class="logo" />
-      </div>
-    </header>
+<script src="../js/auth.js"></script>
+<script>
+  if (window.Auth) {
+    window.Auth.checkAuth();
+  }
+</script>
 
-    <nav class="sidebar" id="sidebar">
-      <ul>
-        <li><a href="/index.html">Home</a></li>
-        <li><a href="/clientes/cliente.html">Cadastrar Cliente</a></li>
-        <li><a href="#">Atualizar Catálogo</a></li>
-        <li><a href="/pedido/pedido.html">Consultar Pedidos</a></li>
-        <li><a href="#">Exportar Relatórios</a></li>
-        <li><a href="/tabela_preco/criacao_tabela_preco.html">Tabela Preço</a></li>
-        <li><a href="/config_email/config_email.html">Configuração E-mail</a></li>
-        </ul>
-    </nav>
-    <div id="overlay"></div>
+<body class="orc-page">
+  <header>
+    <div class="navbar">
+      <button class="menu-btn" id="menu-button">&#9776;</button>
+      <img src="../logo.png" alt="Logo" class="logo" />
+    </div>
+  </header>
+
+  <nav class="sidebar" id="sidebar">
+    <ul>
+      <li><a href="/index.html">Home</a></li>
+      <li><a href="/clientes/cliente.html">Cadastrar Cliente</a></li>
+      <li><a href="#">Atualizar Catálogo</a></li>
+      <li><a href="/pedido/pedido.html">Consultar Pedidos</a></li>
+      <li><a href="#">Exportar Relatórios</a></li>
+      <li><a href="/tabela_preco/criacao_tabela_preco.html">Tabela Preço</a></li>
+      <li><a href="/config_email/config_email.html">Configuração E-mail</a></li>
+    </ul>
+  </nav>
+  <div id="overlay"></div>
 
   <div class="orc-card">
     <header class="orc-header">
@@ -51,16 +59,16 @@
           <input type="date" id="fTo">
         </label>
         <div class="filtro-bloco">
-        <label for="fPeriodoRapido">Período:</label>
-        <select id="fPeriodoRapido">
-          <option value="custom">Personalizado</option>
-          <option value="7">Últimos 7 dias</option>
-          <option value="15">Últimos 15 dias</option>
-          <option value="30" selected>Últimos 30 dias</option>
-          <option value="60">Últimos 60 dias</option>
-          <option value="90">Últimos 90 dias</option>
-        </select>
-      </div>
+          <label for="fPeriodoRapido">Período:</label>
+          <select id="fPeriodoRapido">
+            <option value="custom">Personalizado</option>
+            <option value="7">Últimos 7 dias</option>
+            <option value="15">Últimos 15 dias</option>
+            <option value="30" selected>Últimos 30 dias</option>
+            <option value="60">Últimos 60 dias</option>
+            <option value="90">Últimos 90 dias</option>
+          </select>
+        </div>
         <label>Status:
           <select id="fStatus" class="form-select form-select-sm"></select>
         </label>
@@ -117,4 +125,5 @@
   <script src="pedido.js"></script>
 
 </body>
+
 </html>

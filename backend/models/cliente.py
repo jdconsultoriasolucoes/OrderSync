@@ -1,131 +1,72 @@
-from sqlalchemy import Column, String, Boolean, Float, DateTime, Integer
+from sqlalchemy import Column, Integer, String, Boolean, DateTime, Float, ForeignKey, BigInteger
 from database import Base
 
 class ClienteModel(Base):
-    __tablename__ = "tb_cadastro_cliente"
+    __tablename__ = "t_cadastro_cliente"
 
-    id = Column(Integer, primary_key=True, index=True)
-    codigo_cliente = Column(String)
-    ativo = Column(Boolean)
-    tipo_cliente = Column(String)
-    tipo_venda = Column(String)
-    tipo_compra = Column(String)
-    limite_credito = Column(Float)
-    nome_cliente = Column(String)
+    # Primary Key
+    codigo = Column(BigInteger, primary_key=True, index=True)
+
+    # Identification
+    nome_empresarial = Column(String)
     nome_fantasia = Column(String)
-    cnpj = Column(String)
-    inscricao_estadual = Column(String)
-    cpf = Column(String)
-    situacao = Column(String)
-    indicacao_cliente = Column(String)
-    ramo_de_atividade = Column(String)
+    tipo_pessoa = Column(String)
+    ramo_juridico = Column(String)
     atividade_principal = Column(String)
+    ativo_nao_ativo = Column(String)
+    ocorrencia = Column(String)
 
-    nome_responsavel_compras = Column(String)
-    celular_responsavel_compras = Column(String)
-    email_responsavel_compras = Column(String)
-    data_nascimento_responsavel_compras = Column(DateTime)
-    observacoes_responsavel_compras = Column(String)
-    filial_responsavel_compras = Column(String)
+    # Contact
+    contato_comprador = Column(String)
+    telefone_contato = Column(String)
+    email_contato = Column(String)
 
+    # Billing Address (Faturamento)
+    retira_sim_nao_faturamento = Column(String)
     endereco_faturamento = Column(String)
+    numero_faturamento = Column(String)
     bairro_faturamento = Column(String)
     cep_faturamento = Column(String)
-    localizacao_faturamento = Column(String)
-    municipio_faturamento = Column(String)
-    estado_faturamento = Column(String)
-    email_danfe_faturamento = Column(String)
+    cidade_faturamento = Column(String)
+    uf_faturamento = Column(String)
+    cnpj_cpf_faturamento = Column(String)
+    inscricao_estadual_faturamento = Column(String)
+    telefone_faturamento = Column(String)
+    e_mail_faturamento = Column("e-mail_faturamento", String)
 
-    nome_representante_legal = Column(String)
-    celular_representante_legal = Column(String)
-    email_representante_legal = Column(String)
-    data_nascimento_representante_legal = Column(DateTime)
-    observacoes_representante_legal = Column(String)
-
+    # Delivery Address (Entrega)
+    cidade_entrega = Column(String)
+    km_entrega = Column(BigInteger)
+    rota_entrega = Column(BigInteger)
+    id_entrega = Column(BigInteger)
+    sugestao_de_frete_to_entrega = Column(Float)
     endereco_entrega = Column(String)
-    bairro_endereco_entrega = Column(String)
-    cep_endereco_entrega = Column(String)
-    localizacao_endereco_entrega = Column(String)
-    municipio_endereco_entrega = Column(String)
-    estado_endereco_entrega = Column(String)
-    rota_principal_endereco_entrega = Column(String)
-    rota_aproximacao_endereco_entrega = Column(String)
-    observacao_motorista_endereco_entrega = Column(String)
-
-    nome_responsavel_recebimento = Column(String)
-    celular_responsavel_recebimento = Column(String)
-    email_responsavel_recebimento = Column(String)
-    data_nascimento_responsavel_recebimento = Column(DateTime)
-    observacoes_responsavel_recebimento = Column(String)
-
+    observacao_entrega = Column(String)
+    contato_entrega = Column(String)
+    telefone_entrega = Column(String)
+    e_mail_entrega = Column("e-mail_entrega", String)
+    mensagem_faturamento_entrega = Column(String)
+    mensagem_motorista_entrega = Column(String)
+    
+    # Billing Contact (Cobrança)
+    contato_cobranca = Column(String)
+    telefone_cobranca = Column(String)
+    email_cobranca = Column(String)
+    cidade_cobranca = Column(String)
     endereco_cobranca = Column(String)
-    bairro_endereco_cobranca = Column(String)
-    cep_endereco_cobranca = Column(String)
-    localizacao_endereco_cobranca = Column(String)
-    municipio_endereco_cobranca = Column(String)
-    estado_endereco_cobranca = Column(String)
 
-    nome_responsavel_cobranca = Column(String)
-    celular_responsavel_cobranca = Column(String)
-    email_responsavel_cobranca = Column(String)
-    data_nascimento_responsavel_cobranca = Column(DateTime)
-    observacoes_responsavel_cobranca = Column(String)
+    # Alisul Specific
+    supervisor_alisul = Column(String)
+    tipo_de_cliente_alisul = Column(String)
+    data_ocorrencia_alisul = Column(DateTime)
+    observacoes_alisul_1 = Column(String)
+    observacoes_alisul_2 = Column(String)
 
-
-#    numero_danfe_Compras = Column(String)
-#    emissao_Compras = Column(String)
-#    valor_total_Compras = Column(Float)
-#    valor_frete_Compras = Column(Float)
-#    valor_frete_padrao_Compras = Column(Float)
-#    valor_ultimo_frete_to_Compras = Column(Float)
-#    lista_tabela_Compras = Column(String)
-#    condicoes_pagamento_Compras = Column(String)
-#    cliente_calcula_st_Compras = Column(String)
-#    prazo_medio_compra_Compras = Column(String)
-#    previsao_proxima_compra_Compras = Column(String)
-
-#    observacoes_Compras = Column(String)
-
-    classificacao_elaboracao_cadastro = Column(String)
-    tipo_venda_elaboracao_cadastro = Column(String)
-    limite_credito_elaboracao_cadastro = Column(Float)
-    data_vencimento_elaboracao_cadastro = Column(DateTime)
-
-    codigo_elaboracao_cadastro = Column(String)
-    nome_empresarial_elaboracao_cadastro = Column(String)
-
-    empresa_elaboracao_cadastro = Column(String)
-    cidade_elaboracao_cadastro = Column(String)
-    telefone_elaboracao_cadastro = Column(String)
-    contato_elaboracao_cadastro = Column(String)
-
-    banco_elaboracao_cadastro = Column(String)
-    agencia_elaboracao_cadastro = Column(String)
-    conta_corrente_elaboracao_cadastro = Column(String)
-
-    imovel_elaboracao_cadastro = Column(String)
-    localizacao_elaboracao_cadastro = Column(String)
-    area_elaboracao_cadastro = Column(String)
-    valor_elaboracao_cadastro = Column(Float)
-    hipotecado_elaboracao_cadastro = Column(String)
-
-    bens_moveis_marca_elaboracao_cadastro = Column(String)
-    bens_moveis_modelo_elaboracao_cadastro = Column(String)
-    bens_moveis_alienado_elaboracao_cadastro = Column(String)
-
-    especie_animal_elaboracao_cadastro = Column(String)
-    numero_de_animais_elaboracao_cadastro = Column(String)
-    consumo_diario_kg_elaboracao_cadastro = Column(Float)
-    consumo_mensal_kg_elaboracao_cadastro = Column(Float)
-
-    codigo_insumo_elaboracao_cadastro = Column(String)
-    nome_insumo_elaboracao_cadastro = Column(String)
-    codigo_pet_elaboracao_cadastro = Column(String)
-    nome_pet_elaboracao_cadastro = Column(String)
-
-    insumos_elaboracao_cadastro = Column(String)
-    pet_elaboracao_cadastro = Column(String)
-    observacoes_elaboracao_cadastro = Column(String)
-
-    data_criacao = Column(DateTime)
-    data_atualizacao = Column(DateTime)
+    # Formatted / Derived
+    bairro_faturamento_formatted = Column(String)
+    cidade_faturamento_formatted = Column(String)
+    cnpj_cpf_faturamento_formatted = Column(String)
+    cidade_entrega_formatted = Column(String)
+    cidade_cobranca_formatted = Column(String)
+    
+    # Removed data_criacao and data_atualizacao as they don't exist in DB schema

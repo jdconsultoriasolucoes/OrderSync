@@ -12,7 +12,7 @@ class ConfigEmailMensagemBase(BaseModel):
 class ConfigEmailMensagemOut(ConfigEmailMensagemBase):
     id: int
     class Config:
-        orm_mode = True
+        from_attributes = True
 
 
 # ---------- SMTP / REMETENTE (aba 'Remetente e SMTP') ----------
@@ -30,4 +30,4 @@ class ConfigEmailSMTPUpdate(ConfigEmailSMTPBase):
 class ConfigEmailSMTPOut(ConfigEmailSMTPBase):
     id: int
     class Config:
-        orm_mode = True
+        from_attributes = True

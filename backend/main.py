@@ -11,7 +11,7 @@ from fastapi.staticfiles import StaticFiles
 from pathlib import Path  
 # Routers
 from routers.tabela_preco import router_meta, router as router_tabela
-from routers import pedido_preview, link_pedido, admin_config_email, cliente, listas, fiscal,pedidos,net_diag, produto, pedido_pdf
+from routers import pedido_preview, link_pedido, admin_config_email, cliente, listas, fiscal,pedidos,net_diag, produto, pedido_pdf, auth, usuario
 from database import SessionLocal
 # ---- logging base (simples) ----
 logging.basicConfig(level=logging.INFO)
@@ -106,6 +106,8 @@ app.include_router(admin_config_email.router)
 app.include_router(net_diag.router)
 app.include_router(produto.router)
 app.include_router(pedido_pdf.router)
+app.include_router(auth.router)
+app.include_router(usuario.router)
 
 # ---- Static (se precisar servir arquivos públicos do front) ----
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))

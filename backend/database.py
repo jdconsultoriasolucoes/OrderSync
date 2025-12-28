@@ -2,6 +2,9 @@ import os
 from sqlalchemy import create_engine, event
 from sqlalchemy.engine import Engine
 from sqlalchemy.orm import sessionmaker, declarative_base
+from dotenv import load_dotenv
+
+load_dotenv()
 
 DATABASE_URL = os.environ["DATABASE_URL"]  # Render já fornece essa variável no ambiente
 
