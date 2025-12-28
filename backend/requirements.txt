@@ -9,6 +9,7 @@ pdfplumber==0.11.6
 python-multipart>=0.0.9
 python-dotenv
 passlib[bcrypt]
+bcrypt==3.2.2
 python-jose[cryptography]
 tzdata
 requests
