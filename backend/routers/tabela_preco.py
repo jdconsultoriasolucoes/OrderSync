@@ -149,13 +149,15 @@ def salvar_tabela_preco(body: TabelaSalvar, current_user: UsuarioModel = Depends
               codigo_produto_supra, descricao_produto, embalagem, peso_liquido, valor_produto,
               comissao_aplicada, ajuste_pagamento, descricao_fator_comissao, codigo_plano_pagamento,
               valor_frete_aplicado, frete_kg, valor_frete, valor_s_frete, grupo, departamento,
-              ipi, icms_st, iva_st, calcula_st, criacao_usuario, alteracao_usuario, markup
+              ipi, icms_st, iva_st, calcula_st, criacao_usuario, alteracao_usuario, markup,
+              valor_final_markup, valor_s_frete_markup
             ) VALUES (
               :id_tabela, :nome_tabela, :fornecedor, :codigo_cliente, :cliente,
               :codigo_produto_supra, :descricao_produto, :embalagem, :peso_liquido, :valor_produto,
               :comissao_aplicada, :ajuste_pagamento, :descricao_fator_comissao, :codigo_plano_pagamento,
               :valor_frete_aplicado, :frete_kg, :valor_frete, :valor_s_frete, :grupo, :departamento,
-              :ipi, :icms_st, :iva_st, :calcula_st, :criacao_usuario, :alteracao_usuario, :markup
+              :ipi, :icms_st, :iva_st, :calcula_st, :criacao_usuario, :alteracao_usuario, :markup,
+              :valor_final_markup, :valor_s_frete_markup
             )
             RETURNING id_linha
         """)
@@ -199,6 +201,9 @@ def salvar_tabela_preco(body: TabelaSalvar, current_user: UsuarioModel = Depends
                 "calcula_st": bool(getattr(body, "calcula_st", False)),
                 "criacao_usuario": usuario_email,
                 "alteracao_usuario": usuario_email,
+                "markup": float(getattr(produto, "markup", 0) or 0),
+                "valor_final_markup": float(getattr(produto, "valor_final_markup", 0) or 0),
+                "valor_s_frete_markup": float(getattr(produto, "valor_s_frete_markup", 0) or 0),
             }
 
             logger.info("[/salvar] item %s params=%s", i, params)
@@ -518,7 +523,11 @@ def atualizar_tabela(id_tabela: int, body: TabelaSalvar, current_user: UsuarioMo
                 target.ipi                      = (p.ipi or 0)
                 target.icms_st                  = (p.icms_st or 0)
                 target.iva_st                   = (p.iva_st or 0)
+                target.iva_st                   = (p.iva_st or 0)
                 target.calcula_st               = bool(getattr(body, "calcula_st", False))
+                target.markup                   = (p.markup or 0)
+                target.valor_final_markup       = (p.valor_final_markup or 0)
+                target.valor_s_frete_markup     = (p.valor_s_frete_markup or 0)
                 
                 if not target.ativo:
                     target.ativo = True
@@ -556,7 +565,11 @@ def atualizar_tabela(id_tabela: int, body: TabelaSalvar, current_user: UsuarioMo
                     ipi                  = (p.ipi or 0),
                     icms_st              = (p.icms_st or 0),
                     iva_st               = (p.iva_st or 0),
+                    iva_st               = (p.iva_st or 0),
                     calcula_st           = bool(getattr(body, "calcula_st", False)),
+                    markup               = (p.markup or 0),
+                    valor_final_markup   = (p.valor_final_markup or 0),
+                    valor_s_frete_markup = (p.valor_s_frete_markup or 0),
                     ativo                = True,
                     deletado_em          = None,
                     editado_em           = now,

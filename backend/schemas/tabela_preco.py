@@ -111,6 +111,8 @@ class ProdutoSalvar(BaseModel):
     valor_frete_aplicado: Optional[float]  # was: frete_percentual
     descricao_fator_comissao: Optional[str]# was: fator_comissao
     markup: Optional[float] = 0.0
+    valor_final_markup: Optional[float] = 0.0 # NOVO
+    valor_s_frete_markup: Optional[float] = 0.0 # NOVO
 
     # JÁ EXISTENTES (mantém nomes atuais)
     embalagem: Optional[str] = None
