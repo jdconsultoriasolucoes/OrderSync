@@ -1148,10 +1148,10 @@ function criarLinha(item, idx) {
   inpMarkup.value = mVal.toFixed(2);
   inpMarkup.style.width = '70px';
   inpMarkup.addEventListener('change', () => {
-    let v = parseFloat(inpMarkup.value);
+    let v = parseFloat(inpMarkup.value.replace(',', '.')); // Fix potential comma issue
     if (isNaN(v)) v = 0;
     itens[idx].markup = v;
-    // Markup doesn't affect price calc YET, as per user.
+    recalcLinha(tr); // FIXED: Trigger recalculation
   });
   tdMarkup.appendChild(inpMarkup);
 
