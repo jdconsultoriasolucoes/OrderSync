@@ -523,7 +523,6 @@ def atualizar_tabela(id_tabela: int, body: TabelaSalvar, current_user: UsuarioMo
                 target.ipi                      = (p.ipi or 0)
                 target.icms_st                  = (p.icms_st or 0)
                 target.iva_st                   = (p.iva_st or 0)
-                target.iva_st                   = (p.iva_st or 0)
                 target.calcula_st               = bool(getattr(body, "calcula_st", False))
                 target.markup                   = (p.markup or 0)
                 target.valor_final_markup       = (p.valor_final_markup or 0)
@@ -564,7 +563,6 @@ def atualizar_tabela(id_tabela: int, body: TabelaSalvar, current_user: UsuarioMo
                     departamento         = getattr(p, "departamento", None),
                     ipi                  = (p.ipi or 0),
                     icms_st              = (p.icms_st or 0),
-                    iva_st               = (p.iva_st or 0),
                     iva_st               = (p.iva_st or 0),
                     calcula_st           = bool(getattr(body, "calcula_st", False)),
                     markup               = (p.markup or 0),
