@@ -62,413 +62,416 @@
   </div>
 
   <div class="form-container">
-    <div class="tab-content active" id="cadastro">
-      <!-- Cadastro de Clientes -->
-      <h2 class="subtitulo">Cliente</h2>
-      <div class="form-grid-2col">
-        <div>
-          <label for="codigo_da_empresa">Código da Empresa:</label>
-          <input type="text" id="codigo_da_empresa" name="codigo_da_empresa" />
-        </div>
-        <div class="checkbox-container">
-          <label for="ativo">Ativo:</label>
-          <input type="checkbox" id="ativo" name="ativo" />
+    <form id="formCliente">
+      <div class="tab-content active" id="cadastro">
+        <!-- Cadastro de Clientes -->
+        <h2 class="subtitulo">Cliente</h2>
+        <div class="form-grid-2col">
+          <div>
+            <label for="codigo_da_empresa">Código da Empresa:</label>
+            <input type="text" id="codigo_da_empresa" name="codigo_da_empresa" />
+          </div>
+          <div class="checkbox-container">
+            <label for="ativo">Ativo:</label>
+            <input type="checkbox" id="ativo" name="ativo" />
+          </div>
+
+          <div>
+            <label for="tipo_cliente">Tipo de Cliente:</label>
+            <select id="tipo_cliente" name="tipo_cliente">
+              <option value="">Selecione</option>
+            </select>
+          </div>
+          <div>
+            <label for="tipo_venda">Tipo de Venda:</label>
+            <select id="tipo_venda" name="tipo_venda">
+              <option value="">Selecione</option>
+            </select>
+          </div>
+
+          <div>
+            <label for="tipo_compra">Tipo de Compra:</label>
+            <select id="tipo_compra" name="tipo_compra">
+              <option value="">Selecione</option>
+            </select>
+          </div>
+          <div>
+            <label for="limite_credito">Limite de Crédito:</label>
+            <input type="number" step="0.01" id="limite_credito" name="limite_credito" />
+          </div>
+
+          <div>
+            <label for="nome_cliente">Nome do Cliente:</label>
+            <input type="text" id="nome_cliente" name="nome_cliente" />
+          </div>
+          <div>
+            <label for="nome_fantasia">Nome Fantasia:</label>
+            <input type="text" id="nome_fantasia" name="nome_fantasia" />
+          </div>
+
+          <div>
+            <label for="cnpj">CNPJ:</label>
+            <input type="text" id="cnpj" name="cnpj" />
+          </div>
+          <div>
+            <label for="inscricao_estadual">Inscrição Estadual:</label>
+            <input type="text" id="inscricao_estadual" name="inscricao_estadual" />
+          </div>
+
+          <div>
+            <label for="cpf">CPF:</label>
+            <input type="text" id="cpf" name="cpf" />
+          </div>
+          <div>
+            <label for="situacao">Situação:</label>
+            <select id="situacao" name="situacao">
+              <option value="">Selecione</option>
+            </select>
+          </div>
+
+          <div>
+            <label for="indicacao_cliente">Indicação do Cliente:</label>
+            <input type="text" id="indicacao_cliente" name="indicacao_cliente" />
+          </div>
+          <div>
+            <label for="ramo_de_atividade">Ramo de Atividade:</label>
+            <select id="ramo_de_atividade" name="ramo_de_atividade">
+              <option value="">Selecione</option>
+            </select>
+          </div>
+
+          <div>
+            <label for="atividade_principal">Atividade Principal:</label>
+            <select id="atividade_principal" name="atividade_principal">
+              <option value="">Selecione</option>
+            </select>
+          </div>
+          <div>
+            <label for="markup">Markup (%):</label>
+            <input type="number" step="0.01" id="markup" name="markup" placeholder="0.00" />
+          </div>
         </div>
 
-        <div>
-          <label for="tipo_cliente">Tipo de Cliente:</label>
-          <select id="tipo_cliente" name="tipo_cliente">
-            <option value="">Selecione</option>
-          </select>
-        </div>
-        <div>
-          <label for="tipo_venda">Tipo de Venda:</label>
-          <select id="tipo_venda" name="tipo_venda">
-            <option value="">Selecione</option>
-          </select>
-        </div>
-
-        <div>
-          <label for="tipo_compra">Tipo de Compra:</label>
-          <select id="tipo_compra" name="tipo_compra">
-            <option value="">Selecione</option>
-          </select>
-        </div>
-        <div>
-          <label for="limite_credito">Limite de Crédito:</label>
-          <input type="number" step="0.01" id="limite_credito" name="limite_credito" />
-        </div>
-
-        <div>
-          <label for="nome_cliente">Nome do Cliente:</label>
-          <input type="text" id="nome_cliente" name="nome_cliente" />
-        </div>
-        <div>
-          <label for="nome_fantasia">Nome Fantasia:</label>
-          <input type="text" id="nome_fantasia" name="nome_fantasia" />
-        </div>
-
-        <div>
-          <label for="cnpj">CNPJ:</label>
-          <input type="text" id="cnpj" name="cnpj" />
-        </div>
-        <div>
-          <label for="inscricao_estadual">Inscrição Estadual:</label>
-          <input type="text" id="inscricao_estadual" name="inscricao_estadual" />
-        </div>
-
-        <div>
-          <label for="cpf">CPF:</label>
-          <input type="text" id="cpf" name="cpf" />
-        </div>
-        <div>
-          <label for="situacao">Situação:</label>
-          <select id="situacao" name="situacao">
-            <option value="">Selecione</option>
-          </select>
-        </div>
-
-        <div>
-          <label for="indicacao_cliente">Indicação do Cliente:</label>
-          <input type="text" id="indicacao_cliente" name="indicacao_cliente" />
-        </div>
-        <div>
-          <label for="ramo_de_atividade">Ramo de Atividade:</label>
-          <select id="ramo_de_atividade" name="ramo_de_atividade">
-            <option value="">Selecione</option>
-          </select>
-        </div>
-
-        <div>
-          <label for="atividade_principal">Atividade Principal:</label>
-          <select id="atividade_principal" name="atividade_principal">
-            <option value="">Selecione</option>
-          </select>
-        </div>
-        <div>
-          <label for="markup">Markup (%):</label>
-          <input type="number" step="0.01" id="markup" name="markup" placeholder="0.00" />
+        <!-- Responsável por Compras -->
+        <h2 class="subtitulo">Responsável por Compras</h2>
+        <div class="form-grid-2col">
+          <div>
+            <label for="nome_responsavel">Nome:</label>
+            <input type="text" id="nome_responsavel" name="nome_responsavel" />
+          </div>
+          <div>
+            <label for="celular_responsavel">Celular:</label>
+            <input type="text" id="celular_responsavel" name="celular_responsavel" />
+          </div>
+          <div>
+            <label for="email_resposavel">E-mail:</label>
+            <input type="text" id="email_resposavel" name="email_resposavel" />
+          </div>
+          <div>
+            <label for="data_nascimento_resposavel">Data de Nascimento:</label>
+            <input type="date" id="data_nascimento_resposavel" name="data_nascimento_resposavel" />
+          </div>
+          <div>
+            <label for="observacoes_responsavel">Observações:</label>
+            <input type="text" id="observacoes_responsavel" name="observacoes_responsavel" />
+          </div>
+          <div>
+            <label for="filial_resposavel">Filial:</label>
+            <input type="text" id="filial_resposavel" name="filial_resposavel" />
+          </div>
         </div>
       </div>
 
-      <!-- Responsável por Compras -->
-      <h2 class="subtitulo">Responsável por Compras</h2>
-      <div class="form-grid-2col">
-        <div>
-          <label for="nome_responsavel">Nome:</label>
-          <input type="text" id="nome_responsavel" name="nome_responsavel" />
+      <!-- Endereço de Faturamento -->
+      <div class="tab-content" id="faturamento" style="display: none;">
+        <h2 class="subtitulo">Endereço de Faturamento</h2>
+        <div class="form-grid-2col">
+          <div>
+            <label for="endereco_faturamento">Endereço:</label>
+            <input type="text" id="endereco_faturamento" name="endereco_faturamento" />
+          </div>
+          <div>
+            <label for="bairro_faturamento">Bairro:</label>
+            <input type="text" id="bairro_faturamento" name="bairro_faturamento" />
+          </div>
+          <div>
+            <label for="cep_faturamento">CEP:</label>
+            <input type="text" id="cep_faturamento" name="cep_faturamento" />
+          </div>
+          <div>
+            <label for="localizacao_faturamento">Localização:</label>
+            <input type="text" id="localizacao_faturamento" name="localizacao_faturamento" />
+          </div>
+          <div>
+            <label for="municipio_faturamento">Município:</label>
+            <input type="text" id="municipio_faturamento" name="municipio_faturamento" />
+          </div>
+          <div>
+            <label for="estado_faturamento">Estado:</label>
+            <input type="text" id="estado_faturamento" name="estado_faturamento" />
+          </div>
+          <div>
+            <label for="email_danfe_faturamento">E-mail para DANFE:</label>
+            <input type="text" id="email_danfe_faturamento" name="email_danfe_faturamento" />
+          </div>
         </div>
-        <div>
-          <label for="celular_responsavel">Celular:</label>
-          <input type="text" id="celular_responsavel" name="celular_responsavel" />
-        </div>
-        <div>
-          <label for="email_resposavel">E-mail:</label>
-          <input type="text" id="email_resposavel" name="email_resposavel" />
-        </div>
-        <div>
-          <label for="data_nascimento_resposavel">Data de Nascimento:</label>
-          <input type="date" id="data_nascimento_resposavel" name="data_nascimento_resposavel" />
-        </div>
-        <div>
-          <label for="observacoes_responsavel">Observações:</label>
-          <input type="text" id="observacoes_responsavel" name="observacoes_responsavel" />
-        </div>
-        <div>
-          <label for="filial_resposavel">Filial:</label>
-          <input type="text" id="filial_resposavel" name="filial_resposavel" />
-        </div>
-      </div>
-    </div>
 
-    <!-- Endereço de Faturamento -->
-    <div class="tab-content" id="faturamento" style="display: none;">
-      <h2 class="subtitulo">Endereço de Faturamento</h2>
-      <div class="form-grid-2col">
-        <div>
-          <label for="endereco_faturamento">Endereço:</label>
-          <input type="text" id="endereco_faturamento" name="endereco_faturamento" />
-        </div>
-        <div>
-          <label for="bairro_faturamento">Bairro:</label>
-          <input type="text" id="bairro_faturamento" name="bairro_faturamento" />
-        </div>
-        <div>
-          <label for="cep_faturamento">CEP:</label>
-          <input type="text" id="cep_faturamento" name="cep_faturamento" />
-        </div>
-        <div>
-          <label for="localizacao_faturamento">Localização:</label>
-          <input type="text" id="localizacao_faturamento" name="localizacao_faturamento" />
-        </div>
-        <div>
-          <label for="municipio_faturamento">Município:</label>
-          <input type="text" id="municipio_faturamento" name="municipio_faturamento" />
-        </div>
-        <div>
-          <label for="estado_faturamento">Estado:</label>
-          <input type="text" id="estado_faturamento" name="estado_faturamento" />
-        </div>
-        <div>
-          <label for="email_danfe_faturamento">E-mail para DANFE:</label>
-          <input type="text" id="email_danfe_faturamento" name="email_danfe_faturamento" />
+        <h2 class="subtitulo">Representante Legal</h2>
+        <div class="form-grid-2col">
+          <div>
+            <label for="nome_RepresentanteLegal">Representante Legal:</label>
+            <input type="text" id="nome_RepresentanteLegal" name="nome_RepresentanteLegal" />
+          </div>
+          <div>
+            <label for="celular_RepresentanteLegal">Celular:</label>
+            <input type="text" id="celular_RepresentanteLegal" name="celular_RepresentanteLegal" />
+          </div>
+          <div>
+            <label for="email_RepresentanteLegal">E-mail:</label>
+            <input type="text" id="email_RepresentanteLegal" name="email_RepresentanteLegal" />
+          </div>
+          <div>
+            <label for="data_nascimento_RepresentanteLegal">Data de Nascimento:</label>
+            <input type="date" id="data_nascimento_RepresentanteLegal" name="data_nascimento_RepresentanteLegal" />
+          </div>
+          <div>
+            <label for="observacoes_RepresentanteLegal">Observações:</label>
+            <input type="text" id="observacoes_RepresentanteLegal" name="observacoes_RepresentanteLegal" />
+          </div>
         </div>
       </div>
 
-      <h2 class="subtitulo">Representante Legal</h2>
-      <div class="form-grid-2col">
-        <div>
-          <label for="nome_RepresentanteLegal">Representante Legal:</label>
-          <input type="text" id="nome_RepresentanteLegal" name="nome_RepresentanteLegal" />
+      <!-- Endereço de Entrega -->
+      <div class="tab-content" id="entrega" style="display: none;">
+        <h2 class="subtitulo">Endereço de Entrega</h2>
+        <div class="form-grid-2col">
+          <div>
+            <label for="endereco_EnderecoEntrega">Endereço:</label>
+            <input type="text" id="endereco_EnderecoEntrega" name="endereco_EnderecoEntrega" />
+          </div>
+          <div>
+            <label for="bairro_EnderecoEntrega">Bairro:</label>
+            <input type="text" id="bairro_EnderecoEntrega" name="bairro_EnderecoEntrega" />
+          </div>
+          <div>
+            <label for="cep_EnderecoEntrega">CEP:</label>
+            <input type="text" id="cep_EnderecoEntrega" name="cep_EnderecoEntrega" />
+          </div>
+          <div>
+            <label for="localizacao_EnderecoEntrega">Localização:</label>
+            <input type="text" id="localizacao_EnderecoEntrega" name="localizacao_EnderecoEntrega" />
+          </div>
+          <div>
+            <label for="municipio_EnderecoEntrega">Município:</label>
+            <input type="text" id="municipio_EnderecoEntrega" name="municipio_EnderecoEntrega" />
+          </div>
+          <div>
+            <label for="estado_EnderecoEntrega">Estado:</label>
+            <input type="text" id="estado_EnderecoEntrega" name="estado_EnderecoEntrega" />
+          </div>
+          <div>
+            <label for="rota_principal_EnderecoEntrega">Rota Principal:</label>
+            <select id="rota_principal_EnderecoEntrega" name="rota_principal_EnderecoEntrega">
+              <option value="">Selecione</option>
+            </select>
+          </div>
+          <div>
+            <label for="rota_de_aproximacao_EnderecoEntrega">Rota de Aproximação:</label>
+            <input type="text" id="rota_de_aproximacao_EnderecoEntrega" name="rota_de_aproximacao_EnderecoEntrega" />
+          </div>
+          <div>
+            <label for="observacao_motorista_EnderecoEntrega">Observação para o Motorista:</label>
+            <input type="text" id="observacao_motorista_EnderecoEntrega" name="observacao_motorista_EnderecoEntrega" />
+          </div>
         </div>
-        <div>
-          <label for="celular_RepresentanteLegal">Celular:</label>
-          <input type="text" id="celular_RepresentanteLegal" name="celular_RepresentanteLegal" />
-        </div>
-        <div>
-          <label for="email_RepresentanteLegal">E-mail:</label>
-          <input type="text" id="email_RepresentanteLegal" name="email_RepresentanteLegal" />
-        </div>
-        <div>
-          <label for="data_nascimento_RepresentanteLegal">Data de Nascimento:</label>
-          <input type="date" id="data_nascimento_RepresentanteLegal" name="data_nascimento_RepresentanteLegal" />
-        </div>
-        <div>
-          <label for="observacoes_RepresentanteLegal">Observações:</label>
-          <input type="text" id="observacoes_RepresentanteLegal" name="observacoes_RepresentanteLegal" />
-        </div>
-      </div>
-    </div>
 
-    <!-- Endereço de Entrega -->
-    <div class="tab-content" id="entrega" style="display: none;">
-      <h2 class="subtitulo">Endereço de Entrega</h2>
-      <div class="form-grid-2col">
-        <div>
-          <label for="endereco_EnderecoEntrega">Endereço:</label>
-          <input type="text" id="endereco_EnderecoEntrega" name="endereco_EnderecoEntrega" />
-        </div>
-        <div>
-          <label for="bairro_EnderecoEntrega">Bairro:</label>
-          <input type="text" id="bairro_EnderecoEntrega" name="bairro_EnderecoEntrega" />
-        </div>
-        <div>
-          <label for="cep_EnderecoEntrega">CEP:</label>
-          <input type="text" id="cep_EnderecoEntrega" name="cep_EnderecoEntrega" />
-        </div>
-        <div>
-          <label for="localizacao_EnderecoEntrega">Localização:</label>
-          <input type="text" id="localizacao_EnderecoEntrega" name="localizacao_EnderecoEntrega" />
-        </div>
-        <div>
-          <label for="municipio_EnderecoEntrega">Município:</label>
-          <input type="text" id="municipio_EnderecoEntrega" name="municipio_EnderecoEntrega" />
-        </div>
-        <div>
-          <label for="estado_EnderecoEntrega">Estado:</label>
-          <input type="text" id="estado_EnderecoEntrega" name="estado_EnderecoEntrega" />
-        </div>
-        <div>
-          <label for="rota_principal_EnderecoEntrega">Rota Principal:</label>
-          <select id="rota_principal_EnderecoEntrega" name="rota_principal_EnderecoEntrega">
-            <option value="">Selecione</option>
-          </select>
-        </div>
-        <div>
-          <label for="rota_de_aproximacao_EnderecoEntrega">Rota de Aproximação:</label>
-          <input type="text" id="rota_de_aproximacao_EnderecoEntrega" name="rota_de_aproximacao_EnderecoEntrega" />
-        </div>
-        <div>
-          <label for="observacao_motorista_EnderecoEntrega">Observação para o Motorista:</label>
-          <input type="text" id="observacao_motorista_EnderecoEntrega" name="observacao_motorista_EnderecoEntrega" />
-        </div>
-      </div>
-
-      <h2 class="subtitulo">Responsável pelo Recebimento</h2>
-      <div class="form-grid-2col">
-        <div>
-          <label for="nome_ResponsavelRecebimento">Nome:</label>
-          <input type="text" id="nome_ResponsavelRecebimento" name="nome_ResponsavelRecebimento" />
-        </div>
-        <div>
-          <label for="celular_ResponsavelRecebimento">Celular:</label>
-          <input type="text" id="celular_ResponsavelRecebimento" name="celular_ResponsavelRecebimento" />
-        </div>
-        <div>
-          <label for="email_ResponsavelRecebimento">E-mail:</label>
-          <input type="text" id="email_ResponsavelRecebimento" name="email_ResponsavelRecebimento" />
-        </div>
-        <div>
-          <label for="data_nascimento_ResponsavelRecebimento">Data de Nascimento:</label>
-          <input type="date" id="data_nascimento_ResponsavelRecebimento"
-            name="data_nascimento_ResponsavelRecebimento" />
-        </div>
-        <div>
-          <label for="observacoes_ResponsavelRecebimento">Observações:</label>
-          <input type="text" id="observacoes_ResponsavelRecebimento" name="observacoes_ResponsavelRecebimento" />
-        </div>
-      </div>
-    </div>
-
-    <!-- Aba 4 - Endereço de Cobrança -->
-    <div class="tab-content" id="cobranca" style="display: none;">
-      <h2 class="subtitulo">Endereço de Cobrança</h2>
-      <div class="form-grid-2col">
-        <div>
-          <label for="endereco_EnderecoCobranca">Endereço:</label>
-          <input type="text" id="endereco_EnderecoCobranca" name="endereco_EnderecoCobranca" />
-        </div>
-        <div>
-          <label for="bairro_EnderecoCobranca">Bairro:</label>
-          <input type="text" id="bairro_EnderecoCobranca" name="bairro_EnderecoCobranca" />
-        </div>
-        <div>
-          <label for="cep_EnderecoCobranca">CEP:</label>
-          <input type="text" id="cep_EnderecoCobranca" name="cep_EnderecoCobranca" />
-        </div>
-        <div>
-          <label for="localizacao_EnderecoCobranca">Localização:</label>
-          <input type="text" id="localizacao_EnderecoCobranca" name="localizacao_EnderecoCobranca" />
-        </div>
-        <div>
-          <label for="municipio_EnderecoCobranca">Município:</label>
-          <input type="text" id="municipio_EnderecoCobranca" name="municipio_EnderecoCobranca" />
-        </div>
-        <div>
-          <label for="estado_EnderecoCobranca">Estado:</label>
-          <input type="text" id="estado_EnderecoCobranca" name="estado_EnderecoCobranca" />
+        <h2 class="subtitulo">Responsável pelo Recebimento</h2>
+        <div class="form-grid-2col">
+          <div>
+            <label for="nome_ResponsavelRecebimento">Nome:</label>
+            <input type="text" id="nome_ResponsavelRecebimento" name="nome_ResponsavelRecebimento" />
+          </div>
+          <div>
+            <label for="celular_ResponsavelRecebimento">Celular:</label>
+            <input type="text" id="celular_ResponsavelRecebimento" name="celular_ResponsavelRecebimento" />
+          </div>
+          <div>
+            <label for="email_ResponsavelRecebimento">E-mail:</label>
+            <input type="text" id="email_ResponsavelRecebimento" name="email_ResponsavelRecebimento" />
+          </div>
+          <div>
+            <label for="data_nascimento_ResponsavelRecebimento">Data de Nascimento:</label>
+            <input type="date" id="data_nascimento_ResponsavelRecebimento"
+              name="data_nascimento_ResponsavelRecebimento" />
+          </div>
+          <div>
+            <label for="observacoes_ResponsavelRecebimento">Observações:</label>
+            <input type="text" id="observacoes_ResponsavelRecebimento" name="observacoes_ResponsavelRecebimento" />
+          </div>
         </div>
       </div>
 
-      <h2 class="subtitulo">Responsável pela Cobrança</h2>
-      <div class="form-grid-2col">
-        <div>
-          <label for="nome_ResponsavelCobranca">Nome:</label>
-          <input type="text" id="nome_ResponsavelCobranca" name="nome_ResponsavelCobranca" />
+      <!-- Aba 4 - Endereço de Cobrança -->
+      <div class="tab-content" id="cobranca" style="display: none;">
+        <h2 class="subtitulo">Endereço de Cobrança</h2>
+        <div class="form-grid-2col">
+          <div>
+            <label for="endereco_EnderecoCobranca">Endereço:</label>
+            <input type="text" id="endereco_EnderecoCobranca" name="endereco_EnderecoCobranca" />
+          </div>
+          <div>
+            <label for="bairro_EnderecoCobranca">Bairro:</label>
+            <input type="text" id="bairro_EnderecoCobranca" name="bairro_EnderecoCobranca" />
+          </div>
+          <div>
+            <label for="cep_EnderecoCobranca">CEP:</label>
+            <input type="text" id="cep_EnderecoCobranca" name="cep_EnderecoCobranca" />
+          </div>
+          <div>
+            <label for="localizacao_EnderecoCobranca">Localização:</label>
+            <input type="text" id="localizacao_EnderecoCobranca" name="localizacao_EnderecoCobranca" />
+          </div>
+          <div>
+            <label for="municipio_EnderecoCobranca">Município:</label>
+            <input type="text" id="municipio_EnderecoCobranca" name="municipio_EnderecoCobranca" />
+          </div>
+          <div>
+            <label for="estado_EnderecoCobranca">Estado:</label>
+            <input type="text" id="estado_EnderecoCobranca" name="estado_EnderecoCobranca" />
+          </div>
         </div>
-        <div>
-          <label for="celular_ResponsavelCobranca">Celular:</label>
-          <input type="text" id="celular_ResponsavelCobranca" name="celular_ResponsavelCobranca" />
+
+        <h2 class="subtitulo">Responsável pela Cobrança</h2>
+        <div class="form-grid-2col">
+          <div>
+            <label for="nome_ResponsavelCobranca">Nome:</label>
+            <input type="text" id="nome_ResponsavelCobranca" name="nome_ResponsavelCobranca" />
+          </div>
+          <div>
+            <label for="celular_ResponsavelCobranca">Celular:</label>
+            <input type="text" id="celular_ResponsavelCobranca" name="celular_ResponsavelCobranca" />
+          </div>
+          <div>
+            <label for="email_ResponsavelCobranca">E-mail:</label>
+            <input type="text" id="email_ResponsavelCobranca" name="email_ResponsavelCobranca" />
+          </div>
+          <div>
+            <label for="data_nascimento_ResponsavelCobranca">Data de Nascimento:</label>
+            <input type="date" id="data_nascimento_ResponsavelCobranca" name="data_nascimento_ResponsavelCobranca" />
+          </div>
+          <div>
+            <label for="observacoes_ResponsavelCobranca">Observações:</label>
+            <input type="text" id="observacoes_ResponsavelCobranca" name="observacoes_ResponsavelCobranca" />
+          </div>
         </div>
-        <div>
-          <label for="email_ResponsavelCobranca">E-mail:</label>
-          <input type="text" id="email_ResponsavelCobranca" name="email_ResponsavelCobranca" />
+      </div>
+
+      <!-- Aba 6 - Elaboração do Cadastro -->
+      <div class="tab-content" id="elaboracao" style="display: none;">
+        <h2 class="subtitulo">Dados da Elaboração do Cadastro</h2>
+        <div class="form-grid-2col">
+          <div><label for="classificacao_ElaboracaoCadastro">Classificação:</label><input type="text"
+              id="classificacao_ElaboracaoCadastro" name="classificacao_ElaboracaoCadastro" /></div>
+          <div><label for="tipo_venda_prazo_ou_vista_ElaboracaoCadastro">Tipo de Venda (a prazo / à
+              vista):</label><input type="text" id="tipo_venda_prazo_ou_vista_ElaboracaoCadastro"
+              name="tipo_venda_prazo_ou_vista_ElaboracaoCadastro" /></div>
+          <div><label for="limite_credito_ElaboracaoCadastro">Limite de Crédito (Complementar):</label><input
+              type="number" step="0.01" id="limite_credito_ElaboracaoCadastro"
+              name="limite_credito_ElaboracaoCadastro" />
+          </div>
+          <div><label for="data_vencimento_ElaboracaoCadastro">Data de Vencimento:</label><input type="date"
+              id="data_vencimento_ElaboracaoCadastro" name="data_vencimento_ElaboracaoCadastro" /></div>
         </div>
-        <div>
-          <label for="data_nascimento_ResponsavelCobranca">Data de Nascimento:</label>
-          <input type="date" id="data_nascimento_ResponsavelCobranca" name="data_nascimento_ResponsavelCobranca" />
+
+        <h2 class="subtitulo">Grupo Econômico Amarrado ao Cliente</h2>
+        <div class="form-grid-2col">
+          <div><label for="codigo_ElaboracaoCadastro">Código:</label><input type="text" id="codigo_ElaboracaoCadastro"
+              name="codigo_ElaboracaoCadastro" /></div>
+          <div><label for="nome_empresarial_ElaboracaoCadastro">Nome Empresarial:</label><input type="text"
+              id="nome_empresarial_ElaboracaoCadastro" name="nome_empresarial_ElaboracaoCadastro" /></div>
         </div>
-        <div>
-          <label for="observacoes_ResponsavelCobranca">Observações:</label>
-          <input type="text" id="observacoes_ResponsavelCobranca" name="observacoes_ResponsavelCobranca" />
+
+        <h2 class="subtitulo">Referências Comerciais</h2>
+        <div class="form-grid-2col">
+          <div><label for="empresa_ElaboracaoCadastro">Empresa:</label><input type="text"
+              id="empresa_ElaboracaoCadastro" name="empresa_ElaboracaoCadastro" /></div>
+          <div><label for="cidade_ElaboracaoCadastro">Cidade:</label><input type="text" id="cidade_ElaboracaoCadastro"
+              name="cidade_ElaboracaoCadastro" /></div>
+          <div><label for="telefone_ElaboracaoCadastro">Telefone:</label><input type="text"
+              id="telefone_ElaboracaoCadastro" name="telefone_ElaboracaoCadastro" /></div>
+          <div><label for="contato_ElaboracaoCadastro">Contato:</label><input type="text"
+              id="contato_ElaboracaoCadastro" name="contato_ElaboracaoCadastro" /></div>
+        </div>
+
+        <h2 class="subtitulo">Referências Bancárias</h2>
+        <div class="form-grid-2col">
+          <div><label for="banco_ElaboracaoCadastro">Banco:</label><input type="text" id="banco_ElaboracaoCadastro"
+              name="banco_ElaboracaoCadastro" /></div>
+          <div><label for="agencia_ElaboracaoCadastro">Agência:</label><input type="text"
+              id="agencia_ElaboracaoCadastro" name="agencia_ElaboracaoCadastro" /></div>
+          <div><label for="conta_corrente_ElaboracaoCadastro">Conta Corrente:</label><input type="text"
+              id="conta_corrente_ElaboracaoCadastro" name="conta_corrente_ElaboracaoCadastro" /></div>
+        </div>
+
+        <h2 class="subtitulo">Bens Imóveis</h2>
+        <div class="form-grid-2col">
+          <div><label for="imovel_ElaboracaoCadastro">Imóvel:</label><input type="text" id="imovel_ElaboracaoCadastro"
+              name="imovel_ElaboracaoCadastro" /></div>
+          <div><label for="localizacao_ElaboracaoCadastro">Localização:</label><input type="text"
+              id="localizacao_ElaboracaoCadastro" name="localizacao_ElaboracaoCadastro" /></div>
+          <div><label for="area_ElaboracaoCadastro">Área:</label><input type="text" id="area_ElaboracaoCadastro"
+              name="area_ElaboracaoCadastro" /></div>
+          <div><label for="valor_ElaboracaoCadastro">Valor:</label><input type="number" step="0.01"
+              id="valor_ElaboracaoCadastro" name="valor_ElaboracaoCadastro" /></div>
+          <div><label for="hipotecado_ElaboracaoCadastro">Hipotecado:</label><input type="text"
+              id="hipotecado_ElaboracaoCadastro" name="hipotecado_ElaboracaoCadastro" /></div>
+        </div>
+
+        <h2 class="subtitulo">Bens Móveis</h2>
+        <div class="form-grid-2col">
+          <div><label for="marca_ElaboracaoCadastro">Marca:</label><input type="text" id="marca_ElaboracaoCadastro"
+              name="marca_ElaboracaoCadastro" /></div>
+          <div><label for="modelo_ElaboracaoCadastro">Modelo:</label><input type="text" id="modelo_ElaboracaoCadastro"
+              name="modelo_ElaboracaoCadastro" /></div>
+          <div><label for="alienado_ElaboracaoCadastro">Alienado:</label><input type="text"
+              id="alienado_ElaboracaoCadastro" name="alienado_ElaboracaoCadastro" /></div>
+        </div>
+
+        <h2 class="subtitulo">Plantel de Animais</h2>
+        <div class="form-grid-2col">
+          <div><label for="especie_ElaboracaoCadastro">Espécie:</label><input type="text"
+              id="especie_ElaboracaoCadastro" name="especie_ElaboracaoCadastro" /></div>
+          <div><label for="numero_de_animais_ElaboracaoCadastro">Número de Animais:</label><input type="number"
+              id="numero_de_animais_ElaboracaoCadastro" name="numero_de_animais_ElaboracaoCadastro" /></div>
+          <div><label for="consumo_diario_ElaboracaoCadastro">Consumo Diário (kg):</label><input type="number"
+              step="0.01" id="consumo_diario_ElaboracaoCadastro" name="consumo_diario_ElaboracaoCadastro" /></div>
+          <div><label for="consumo_mensal_ElaboracaoCadastro">Consumo Mensal (kg):</label><input type="number"
+              step="0.01" id="consumo_mensal_ElaboracaoCadastro" name="consumo_mensal_ElaboracaoCadastro" /></div>
+        </div>
+
+        <h2 class="subtitulo">Supervisores</h2>
+        <div class="form-grid-2col">
+          <div><label for="codigo_insumo_ElaboracaoCadastro">Código do Insumo:</label><input type="text"
+              id="codigo_insumo_ElaboracaoCadastro" name="codigo_insumo_ElaboracaoCadastro" /></div>
+          <div><label for="nome_insumos_ElaboracaoCadastro">Nome do Insumo:</label><input type="text"
+              id="nome_insumos_ElaboracaoCadastro" name="nome_insumos_ElaboracaoCadastro" /></div>
+          <div><label for="codigo_pet_ElaboracaoCadastro">Código Pet:</label><input type="text"
+              id="codigo_pet_ElaboracaoCadastro" name="codigo_pet_ElaboracaoCadastro" /></div>
+          <div><label for="nome_pet_ElaboracaoCadastro">Nome Pet:</label><input type="text"
+              id="nome_pet_ElaboracaoCadastro" name="nome_pet_ElaboracaoCadastro" /></div>
+        </div>
+
+        <h2 class="subtitulo">Comissão Dispet</h2>
+        <div class="form-grid-2col">
+          <div><label for="insumos_ElaboracaoCadastro">Insumos:</label><input type="text"
+              id="insumos_ElaboracaoCadastro" name="insumos_ElaboracaoCadastro" /></div>
+          <div><label for="pet_ElaboracaoCadastro">Pet:</label><input type="text" id="pet_ElaboracaoCadastro"
+              name="pet_ElaboracaoCadastro" /></div>
+          <div><label for="observacoes_ElaboracaoCadastro">Observações:</label><input type="text"
+              id="observacoes_ElaboracaoCadastro" name="observacoes_ElaboracaoCadastro" /></div>
         </div>
       </div>
-    </div>
-
-    <!-- Aba 6 - Elaboração do Cadastro -->
-    <div class="tab-content" id="elaboracao" style="display: none;">
-      <h2 class="subtitulo">Dados da Elaboração do Cadastro</h2>
-      <div class="form-grid-2col">
-        <div><label for="classificacao_ElaboracaoCadastro">Classificação:</label><input type="text"
-            id="classificacao_ElaboracaoCadastro" name="classificacao_ElaboracaoCadastro" /></div>
-        <div><label for="tipo_venda_prazo_ou_vista_ElaboracaoCadastro">Tipo de Venda (a prazo / à vista):</label><input
-            type="text" id="tipo_venda_prazo_ou_vista_ElaboracaoCadastro"
-            name="tipo_venda_prazo_ou_vista_ElaboracaoCadastro" /></div>
-        <div><label for="limite_credito_ElaboracaoCadastro">Limite de Crédito (Complementar):</label><input
-            type="number" step="0.01" id="limite_credito_ElaboracaoCadastro" name="limite_credito_ElaboracaoCadastro" />
-        </div>
-        <div><label for="data_vencimento_ElaboracaoCadastro">Data de Vencimento:</label><input type="date"
-            id="data_vencimento_ElaboracaoCadastro" name="data_vencimento_ElaboracaoCadastro" /></div>
-      </div>
-
-      <h2 class="subtitulo">Grupo Econômico Amarrado ao Cliente</h2>
-      <div class="form-grid-2col">
-        <div><label for="codigo_ElaboracaoCadastro">Código:</label><input type="text" id="codigo_ElaboracaoCadastro"
-            name="codigo_ElaboracaoCadastro" /></div>
-        <div><label for="nome_empresarial_ElaboracaoCadastro">Nome Empresarial:</label><input type="text"
-            id="nome_empresarial_ElaboracaoCadastro" name="nome_empresarial_ElaboracaoCadastro" /></div>
-      </div>
-
-      <h2 class="subtitulo">Referências Comerciais</h2>
-      <div class="form-grid-2col">
-        <div><label for="empresa_ElaboracaoCadastro">Empresa:</label><input type="text" id="empresa_ElaboracaoCadastro"
-            name="empresa_ElaboracaoCadastro" /></div>
-        <div><label for="cidade_ElaboracaoCadastro">Cidade:</label><input type="text" id="cidade_ElaboracaoCadastro"
-            name="cidade_ElaboracaoCadastro" /></div>
-        <div><label for="telefone_ElaboracaoCadastro">Telefone:</label><input type="text"
-            id="telefone_ElaboracaoCadastro" name="telefone_ElaboracaoCadastro" /></div>
-        <div><label for="contato_ElaboracaoCadastro">Contato:</label><input type="text" id="contato_ElaboracaoCadastro"
-            name="contato_ElaboracaoCadastro" /></div>
-      </div>
-
-      <h2 class="subtitulo">Referências Bancárias</h2>
-      <div class="form-grid-2col">
-        <div><label for="banco_ElaboracaoCadastro">Banco:</label><input type="text" id="banco_ElaboracaoCadastro"
-            name="banco_ElaboracaoCadastro" /></div>
-        <div><label for="agencia_ElaboracaoCadastro">Agência:</label><input type="text" id="agencia_ElaboracaoCadastro"
-            name="agencia_ElaboracaoCadastro" /></div>
-        <div><label for="conta_corrente_ElaboracaoCadastro">Conta Corrente:</label><input type="text"
-            id="conta_corrente_ElaboracaoCadastro" name="conta_corrente_ElaboracaoCadastro" /></div>
-      </div>
-
-      <h2 class="subtitulo">Bens Imóveis</h2>
-      <div class="form-grid-2col">
-        <div><label for="imovel_ElaboracaoCadastro">Imóvel:</label><input type="text" id="imovel_ElaboracaoCadastro"
-            name="imovel_ElaboracaoCadastro" /></div>
-        <div><label for="localizacao_ElaboracaoCadastro">Localização:</label><input type="text"
-            id="localizacao_ElaboracaoCadastro" name="localizacao_ElaboracaoCadastro" /></div>
-        <div><label for="area_ElaboracaoCadastro">Área:</label><input type="text" id="area_ElaboracaoCadastro"
-            name="area_ElaboracaoCadastro" /></div>
-        <div><label for="valor_ElaboracaoCadastro">Valor:</label><input type="number" step="0.01"
-            id="valor_ElaboracaoCadastro" name="valor_ElaboracaoCadastro" /></div>
-        <div><label for="hipotecado_ElaboracaoCadastro">Hipotecado:</label><input type="text"
-            id="hipotecado_ElaboracaoCadastro" name="hipotecado_ElaboracaoCadastro" /></div>
-      </div>
-
-      <h2 class="subtitulo">Bens Móveis</h2>
-      <div class="form-grid-2col">
-        <div><label for="marca_ElaboracaoCadastro">Marca:</label><input type="text" id="marca_ElaboracaoCadastro"
-            name="marca_ElaboracaoCadastro" /></div>
-        <div><label for="modelo_ElaboracaoCadastro">Modelo:</label><input type="text" id="modelo_ElaboracaoCadastro"
-            name="modelo_ElaboracaoCadastro" /></div>
-        <div><label for="alienado_ElaboracaoCadastro">Alienado:</label><input type="text"
-            id="alienado_ElaboracaoCadastro" name="alienado_ElaboracaoCadastro" /></div>
-      </div>
-
-      <h2 class="subtitulo">Plantel de Animais</h2>
-      <div class="form-grid-2col">
-        <div><label for="especie_ElaboracaoCadastro">Espécie:</label><input type="text" id="especie_ElaboracaoCadastro"
-            name="especie_ElaboracaoCadastro" /></div>
-        <div><label for="numero_de_animais_ElaboracaoCadastro">Número de Animais:</label><input type="number"
-            id="numero_de_animais_ElaboracaoCadastro" name="numero_de_animais_ElaboracaoCadastro" /></div>
-        <div><label for="consumo_diario_ElaboracaoCadastro">Consumo Diário (kg):</label><input type="number" step="0.01"
-            id="consumo_diario_ElaboracaoCadastro" name="consumo_diario_ElaboracaoCadastro" /></div>
-        <div><label for="consumo_mensal_ElaboracaoCadastro">Consumo Mensal (kg):</label><input type="number" step="0.01"
-            id="consumo_mensal_ElaboracaoCadastro" name="consumo_mensal_ElaboracaoCadastro" /></div>
-      </div>
-
-      <h2 class="subtitulo">Supervisores</h2>
-      <div class="form-grid-2col">
-        <div><label for="codigo_insumo_ElaboracaoCadastro">Código do Insumo:</label><input type="text"
-            id="codigo_insumo_ElaboracaoCadastro" name="codigo_insumo_ElaboracaoCadastro" /></div>
-        <div><label for="nome_insumos_ElaboracaoCadastro">Nome do Insumo:</label><input type="text"
-            id="nome_insumos_ElaboracaoCadastro" name="nome_insumos_ElaboracaoCadastro" /></div>
-        <div><label for="codigo_pet_ElaboracaoCadastro">Código Pet:</label><input type="text"
-            id="codigo_pet_ElaboracaoCadastro" name="codigo_pet_ElaboracaoCadastro" /></div>
-        <div><label for="nome_pet_ElaboracaoCadastro">Nome Pet:</label><input type="text"
-            id="nome_pet_ElaboracaoCadastro" name="nome_pet_ElaboracaoCadastro" /></div>
-      </div>
-
-      <h2 class="subtitulo">Comissão Dispet</h2>
-      <div class="form-grid-2col">
-        <div><label for="insumos_ElaboracaoCadastro">Insumos:</label><input type="text" id="insumos_ElaboracaoCadastro"
-            name="insumos_ElaboracaoCadastro" /></div>
-        <div><label for="pet_ElaboracaoCadastro">Pet:</label><input type="text" id="pet_ElaboracaoCadastro"
-            name="pet_ElaboracaoCadastro" /></div>
-        <div><label for="observacoes_ElaboracaoCadastro">Observações:</label><input type="text"
-            id="observacoes_ElaboracaoCadastro" name="observacoes_ElaboracaoCadastro" /></div>
-      </div>
-    </div>
+    </form>
 
 
 
