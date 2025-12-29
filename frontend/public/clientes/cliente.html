@@ -11,6 +11,9 @@
   <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
   <script src="https://unpkg.com/imask"></script>
   <script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js"></script>
+  <script src="https://unpkg.com/imask"></script>
+  <script src="../js/config.js"></script>
+  <script src="../js/auth.js"></script>
 
 </head>
 <script src="../js/auth.js"></script>
@@ -499,7 +502,8 @@
 
         if (id) cliente.cadastrocliente.id = parseInt(id);
 
-        const url = id ? `http://127.0.0.1:8000/cliente/${id}` : "http://127.0.0.1:8000/cliente";
+        const api = window.API_BASE || "http://127.0.0.1:8000";
+        const url = id ? `${api}/cliente/${id}` : `${api}/cliente`;
         const metodo = id ? 'put' : 'post';
 
         axios[metodo](url, cliente)
@@ -520,7 +524,8 @@
           return;
         }
 
-        axios.delete(`http://127.0.0.1:8000/cliente/${codigo}`)
+        const api = window.API_BASE || "http://127.0.0.1:8000";
+        axios.delete(`${api}/cliente/${codigo}`)
 
           .then(() => {
             alert("Cliente excluído com sucesso!");
@@ -553,7 +558,9 @@
             situacao: document.getElementById("situacao")?.value || "",
             indicacao_cliente: document.getElementById("indicacao_cliente")?.value || "",
             ramo_de_atividade: document.getElementById("ramo_de_atividade")?.value || "",
-            atividade_principal: document.getElementById("atividade_principal")?.value || ""
+            ramo_de_atividade: document.getElementById("ramo_de_atividade")?.value || "",
+            atividade_principal: document.getElementById("atividade_principal")?.value || "",
+            cadastro_markup: parseFloat(document.getElementById("cadastro_markup")?.value || 0)
           },
           responsavel_compras: {
             nome_responsavel: document.getElementById("nome_responsavel")?.value || "",
@@ -703,6 +710,7 @@
         document.getElementById("indicacao_cliente").value = c.indicacao_cliente || "";
         document.getElementById("ramo_de_atividade").value = c.ramo_de_atividade || "";
         document.getElementById("atividade_principal").value = c.atividade_principal || "";
+        document.getElementById("cadastro_markup").value = c.cadastro_markup || "";
 
         // Bloco: responsavel_compras
         const rc = dados.responsavel_compras || {};
@@ -887,7 +895,8 @@
     <script>
       // Função genérica para preencher selects
       function preencherSelect(endpoint, idElemento) {
-        fetch(`https://ordersync-backend-edjq.onrender.com/listas/${endpoint}`)
+        const api = window.API_BASE || "http://127.0.0.1:8000";
+        fetch(`${api}/listas/${endpoint}`)
           .then((response) => response.json())
           .then((data) => {
             const select = document.getElementById(idElemento);
