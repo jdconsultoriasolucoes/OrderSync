@@ -517,7 +517,14 @@
         const url = id ? `${api}/cliente/${id}` : `${api}/cliente`;
         const metodo = id ? 'put' : 'post';
 
-        const token = localStorage.getItem('ordersync_token');
+        const token = window.Auth ? window.Auth.getToken() : localStorage.getItem('ordersync_token');
+
+        if (!token) {
+          alert("Sessão expirada. Faça login novamente.");
+          window.Auth.logout();
+          return;
+        }
+
         axios[metodo](url, cliente, {
           headers: { 'Authorization': `Bearer ${token}` }
         })
@@ -539,7 +546,13 @@
         }
 
         const api = window.API_BASE || "http://127.0.0.1:8000";
-        const token = localStorage.getItem('ordersync_token');
+        const token = window.Auth ? window.Auth.getToken() : localStorage.getItem('ordersync_token');
+
+        if (!token) {
+          alert("Sessão expirada. Faça login novamente.");
+          return;
+        }
+
         axios.delete(`${api}/cliente/${codigo}`, {
           headers: { 'Authorization': `Bearer ${token}` }
         })

@@ -25,12 +25,12 @@ def get_cliente(codigo_da_empresa: str):
         raise HTTPException(status_code=404, detail="Cliente não encontrado")
     return cliente
 
-@router.delete("/{codigo_da_empresa}", response_model=ClienteCompleto)
-def delete_cliente(codigo_da_empresa: str):
-    cliente = deletar_cliente(codigo_da_empresa)
-    if not cliente:
+@router.delete("/{codigo_da_empresa}", response_model=dict)
+def delete_cliente(codigo_da_empresa: str, current_user: UsuarioModel = Depends(get_current_user)):
+    success = deletar_cliente(codigo_da_empresa)
+    if not success:
         raise HTTPException(status_code=404, detail="Cliente não encontrado")
-    return cliente
+    return {"message": "Cliente removido com sucesso"}
 
 @router.post("/", response_model=ClienteCompleto)
 def post_cliente(cliente: ClienteCompleto, current_user: UsuarioModel = Depends(get_current_user)):
