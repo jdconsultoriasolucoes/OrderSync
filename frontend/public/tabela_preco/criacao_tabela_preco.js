@@ -932,6 +932,11 @@ async function carregarItens() {
         // totais que você já exibe na tela
         total_sem_frete: Number(p.valor_s_frete ?? p.total_sem_frete ?? 0),
 
+        // Markup (carregar do backend)
+        markup: Number(p.markup ?? 0),
+        valor_final_markup: Number(p.valor_final_markup ?? 0),
+        valor_s_frete_markup: Number(p.valor_s_frete_markup ?? 0),
+
         // guarda para reaproveitar na hora do POST
         __descricao_fator_label: p.descricao_fator_comissao || null,
         __plano_pagto_label: p.codigo_plano_pagamento || null, // já vem "COD - desc" às vezes
@@ -1387,6 +1392,21 @@ async function recalcLinha(tr) {
 
       tdFinMk.textContent = fmtMoney(valFinMk);
       tdSemMk.textContent = fmtMoney(valSemMk);
+
+      // Store in item for saving
+      item.valor_final_markup = Number(valFinMk.toFixed(2));
+      item.valor_s_frete_markup = Number(valSemMk.toFixed(2));
+    } else {
+      // Reset if no markup columns (toggle off) - though logic should persist.
+      // If columns are hidden, we still want to save? User implied toggle is for viewing.
+      // But if toggle is OFF, the columns don't exist in DOM, so this block skipped.
+      // We should ALWAYS calculate these if we want to save them irrespective of view.
+      // Refactoring to calculate always.
+
+      const mkPct = Number(item.markup || 0);
+      const factor = 1 + (mkPct / 100);
+      item.valor_final_markup = Number((totalComercial * factor).toFixed(2));
+      item.valor_s_frete_markup = Number((totalSemFrete * factor).toFixed(2));
     }
 
     setCell('.col-total', totalComercial);
@@ -1550,6 +1570,11 @@ async function salvarTabela() {
         frete_kg: Number(frete_kg || 0),
         valor_frete: Number((item._totalComercial || 0).toFixed(2)),
         valor_s_frete: Number((item.total_sem_frete || 0).toFixed(2)),
+
+        // Novos campos de Markup
+        markup: Number(item.markup || 0),
+        valor_final_markup: Number(item.valor_final_markup || 0),
+        valor_s_frete_markup: Number(item.valor_s_frete_markup || 0),
 
         grupo: item.grupo || null,
         departamento: item.departamento || null,

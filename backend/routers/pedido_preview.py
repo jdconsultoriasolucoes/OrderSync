@@ -28,6 +28,8 @@ class ProdutoPedidoPreview(BaseModel):
     valor_sem_frete: float
     valor_com_frete: float
     quantidade: int = 0
+    markup: Optional[float] = 0.0 # NOVO
+
 
 class PedidoPreviewResp(BaseModel):
     tabela_id: int
@@ -64,7 +66,10 @@ async def pedido_preview(
                 codigo_plano_pagamento     AS plano_pagamento,
                 descricao_fator_comissao   AS tabela_comissao,
                 COALESCE(valor_frete, 0)   AS valor_com_frete,
-                COALESCE(valor_s_frete, 0) AS valor_sem_frete
+                COALESCE(valor_s_frete, 0) AS valor_sem_frete,
+                COALESCE(markup, 0)        AS markup,
+                COALESCE(valor_final_markup, 0)   AS valor_final_markup,
+                COALESCE(valor_s_frete_markup, 0) AS valor_s_frete_markup
             FROM tb_tabela_preco
             WHERE id_tabela = :tid AND ativo IS TRUE
             ORDER BY descricao_produto
@@ -83,6 +88,21 @@ async def pedido_preview(
 
         produtos: List[ProdutoPedidoPreview] = []
         for r in rows:
+            # Lógica Markup: se existir valor_final_markup (>0), prefira ele
+            v_com = float(r.get("valor_com_frete") or 0.0)
+            v_sem = float(r.get("valor_sem_frete") or 0.0)
+            
+            mk_pct = float(r.get("markup") or 0.0)
+            v_com_mk = float(r.get("valor_final_markup") or 0.0)
+            v_sem_mk = float(r.get("valor_s_frete_markup") or 0.0)
+
+            # Se temos colunas de markup populadas (v_com_mk > 0), usamos elas
+            # (Assumindo que markup 0% gera v_com_mk == v_com, então seguro usar sempre se > 0)
+            if v_com_mk > 0:
+                v_com = v_com_mk
+            if v_sem_mk > 0:
+                v_sem = v_sem_mk
+
             produtos.append(ProdutoPedidoPreview(
                 codigo=str(r.get("codigo_supra") or ""),
                 nome=r.get("nome") or "",
@@ -90,9 +110,10 @@ async def pedido_preview(
                 peso=float(r.get("peso") or 0.0),
                 condicao_pagamento=r.get("plano_pagamento"),
                 tabela_comissao=r.get("tabela_comissao"),
-                valor_sem_frete=round(float(r.get("valor_sem_frete") or 0.0), 2),
-                valor_com_frete=round(float(r.get("valor_com_frete") or 0.0), 2),
+                valor_sem_frete=round(v_sem, 2), # Usando var local
+                valor_com_frete=round(v_com, 2), # Usando var local
                 quantidade=0,
+                markup=mk_pct
             ))
 
         return PedidoPreviewResp(
