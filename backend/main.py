@@ -63,9 +63,10 @@ def startup_ensure_admin():
         db.close()
 
 
-@app.get("/")
-def root():
-    return {"mensagem": "API do OrderSync está rodando"}
+# Root route handled by StaticFiles
+# @app.get("/")
+# def root():
+#     return {"mensagem": "API do OrderSync está rodando"}
 
 # ---- Origens permitidas ----
 ALLOWED_ORIGINS = [
@@ -167,7 +168,7 @@ logger.info("[STATIC] /static -> %s", static_dir)
 if not os.path.isdir(static_dir):
     logger.error("[STATIC] Pasta NÃO existe: %s", static_dir)
 
-app.mount("/static", StaticFiles(directory=static_dir), name="static")
+app.mount("/", StaticFiles(directory=static_dir, html=True), name="public")
 
 @app.get("/admin/config-email")
 def config_email_page():
