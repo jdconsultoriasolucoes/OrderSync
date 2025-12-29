@@ -16,7 +16,7 @@
   <script src="../js/auth.js"></script>
 
 </head>
-<script src="../js/auth.js"></script>
+</head>
 <script>
   if (window.Auth) {
     window.Auth.checkAuth();
@@ -517,7 +517,10 @@
         const url = id ? `${api}/cliente/${id}` : `${api}/cliente`;
         const metodo = id ? 'put' : 'post';
 
-        axios[metodo](url, cliente)
+        const token = localStorage.getItem('ordersync_token');
+        axios[metodo](url, cliente, {
+          headers: { 'Authorization': `Bearer ${token}` }
+        })
           .then(() => {
             alert("Cliente salvo com sucesso!");
             novoCliente();
@@ -536,7 +539,10 @@
         }
 
         const api = window.API_BASE || "http://127.0.0.1:8000";
-        axios.delete(`${api}/cliente/${codigo}`)
+        const token = localStorage.getItem('ordersync_token');
+        axios.delete(`${api}/cliente/${codigo}`, {
+          headers: { 'Authorization': `Bearer ${token}` }
+        })
 
           .then(() => {
             alert("Cliente excluído com sucesso!");
