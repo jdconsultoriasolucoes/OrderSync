@@ -23,6 +23,7 @@ class TabelaPreco(Base):
     ajuste_pagamento = Column(Numeric(14, 2), nullable=False, default=0)
     descricao_fator_comissao = Column(Text, nullable=False)
     codigo_plano_pagamento = Column(Text, nullable=False)
+    markup = Column(Numeric(9, 3), nullable=False, default=0) # Markup %
     valor_frete_aplicado = Column(Numeric(14, 2), nullable=False, default=0)  # R$
     frete_kg = Column(Numeric(9, 3), nullable=False, default=0)
 

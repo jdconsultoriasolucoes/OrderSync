@@ -41,6 +41,10 @@ class UsuarioUpdateSenha(BaseModel):
 class UsuarioResetSenha(BaseModel):
     senha_nova: str
 
+class UsuarioChangePassword(BaseModel):
+    senha_atual: str
+    nova_senha: str
+
 class UsuarioUpdate(BaseModel):
     nome: Optional[str] = None
     email: Optional[str] = None

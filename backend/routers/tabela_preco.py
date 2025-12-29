@@ -149,13 +149,13 @@ def salvar_tabela_preco(body: TabelaSalvar, current_user: UsuarioModel = Depends
               codigo_produto_supra, descricao_produto, embalagem, peso_liquido, valor_produto,
               comissao_aplicada, ajuste_pagamento, descricao_fator_comissao, codigo_plano_pagamento,
               valor_frete_aplicado, frete_kg, valor_frete, valor_s_frete, grupo, departamento,
-              ipi, icms_st, iva_st, calcula_st, criacao_usuario, alteracao_usuario
+              ipi, icms_st, iva_st, calcula_st, criacao_usuario, alteracao_usuario, markup
             ) VALUES (
               :id_tabela, :nome_tabela, :fornecedor, :codigo_cliente, :cliente,
               :codigo_produto_supra, :descricao_produto, :embalagem, :peso_liquido, :valor_produto,
               :comissao_aplicada, :ajuste_pagamento, :descricao_fator_comissao, :codigo_plano_pagamento,
               :valor_frete_aplicado, :frete_kg, :valor_frete, :valor_s_frete, :grupo, :departamento,
-              :ipi, :icms_st, :iva_st, :calcula_st, :criacao_usuario, :alteracao_usuario
+              :ipi, :icms_st, :iva_st, :calcula_st, :criacao_usuario, :alteracao_usuario, :markup
             )
             RETURNING id_linha
         """)

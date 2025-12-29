@@ -12,6 +12,7 @@ let itens = []; // itens carregados
 let currentMode = 'new';       // 'new' | 'view' | 'edit' | 'duplicate'
 let currentTabelaId = null;
 let sourceTabelaId = null;
+let currentClientMarkup = 0; // DEFAULT MARKUP
 let ivaStAtivo = !!document.getElementById('iva_st_toggle')?.checked;
 let __recalcRunning = false;
 let __recalcPending = false;
@@ -627,6 +628,7 @@ function setupClienteAutocomplete() {
       if (nomeEl) nomeEl.value = [fmtDoc(c.cnpj), c.nome].filter(Boolean).join(' - ');
       if (codEl) codEl.value = c.codigo ?? '';
       if (ramoEl) ramoEl.value = c.ramo_juridico ?? c.ramo ?? '';
+      currentClientMarkup = Number(c.markup || 0); // Sets default markup
 
       // aplica preferência vinda do cadastro, mas TRAVADO
       const pref = c.iva_st ?? c.usa_iva_st ?? c.st ?? c.calcula_st ?? null;
@@ -677,7 +679,8 @@ function setupClienteAutocomplete() {
       codigo: c.codigo ?? c.id ?? c.id_cliente ?? c.codigo_cliente ?? c.codigoCliente ?? c.CODIGO ?? c.COD_CLIENTE ?? c.cod ?? null,
       nome: c.nome_cliente ?? c.nomeCliente ?? c.NOME_CLIENTE ?? c.nome ?? c.razao ?? c.razao_social ?? c.razaoSocial ?? c.fantasia ?? '',
       cnpj: c.cnpj ?? c.CNPJ ?? c.cnpj_cpf ?? c.cnpjCpf ?? '',
-      ramo_juridico: c.ramo_juridico ?? ''
+      ramo_juridico: c.ramo_juridico ?? '',
+      markup: c.cadastro_markup ?? 0 // Map markup from backend
     })).filter(c => (c.nome || c.cnpj));
 
     // 🔎 filtro FINAL no front (sempre), por nome ou CNPJ
@@ -1122,6 +1125,28 @@ function criarLinha(item, idx) {
   });
 
   const tdCondVal = document.createElement('td'); tdCondVal.className = 'num'; tdCondVal.textContent = '0,00';
+
+  // MARKUP Input
+  const tdMarkup = document.createElement('td');
+  const inpMarkup = document.createElement('input');
+  inpMarkup.type = 'number'; inpMarkup.step = '0.01'; inpMarkup.className = 'field-markup num';
+  // Use existing item markup or fallback to client default
+  const mVal = (item.markup != null) ? Number(item.markup) : currentClientMarkup;
+  item.markup = mVal; // Sync item
+  inpMarkup.value = fmtMoney(mVal); // Format for display? Or raw? input type=number needs dot. 
+  // Wait, local String uses comma? step 0.01. Input number usually requires dot.
+  // fmtMoney uses comma.
+  // Let's use clean input
+  inpMarkup.value = mVal.toFixed(2);
+  inpMarkup.style.width = '70px';
+  inpMarkup.addEventListener('change', () => {
+    let v = parseFloat(inpMarkup.value);
+    if (isNaN(v)) v = 0;
+    itens[idx].markup = v;
+    // Markup doesn't affect price calc YET, as per user.
+  });
+  tdMarkup.appendChild(inpMarkup);
+
   const tdFrete = document.createElement('td'); tdFrete.className = 'num'; tdFrete.textContent = '0,00';
   const tdDescAplic = document.createElement('td'); tdDescAplic.className = 'num'; tdDescAplic.textContent = '0,00';
 

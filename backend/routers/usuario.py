@@ -8,7 +8,7 @@ from jose import JWTError, jwt
 
 from database import SessionLocal
 from models.usuario import UsuarioModel
-from schemas.usuario import UsuarioCreate, UsuarioPublic, UsuarioUpdateSenha, UsuarioResetSenha, UsuarioUpdate
+from schemas.usuario import UsuarioCreate, UsuarioPublic, UsuarioUpdateSenha, UsuarioResetSenha, UsuarioUpdate, UsuarioChangePassword
 from core.security import get_password_hash, SECRET_KEY, ALGORITHM, verify_password
 
 from core.deps import get_db, get_current_user, oauth2_scheme
@@ -76,17 +76,17 @@ def list_users(
 
 @router.post("/me/senha")
 def alterar_minha_senha(
-    dados: UsuarioUpdateSenha,
+    dados: UsuarioChangePassword,
     db: Session = Depends(get_db),
     current_user: UsuarioModel = Depends(get_current_user)
 ):
     # Verify old password
-    if not verify_password(dados.senha_antiga, current_user.senha_hash):
-        raise HTTPException(status_code=400, detail="Senha antiga incorreta")
+    if not verify_password(dados.senha_atual, current_user.senha_hash):
+        raise HTTPException(status_code=400, detail="Senha atual incorreta")
     
     # Update
-    current_user.senha_hash = get_password_hash(dados.senha_nova)
-    current_user.data_atualizacao = datetime.now() # if not auto
+    current_user.senha_hash = get_password_hash(dados.nova_senha)
+    current_user.data_atualizacao = datetime.now()
     db.commit()
     return {"message": "Senha alterada com sucesso"}
 

@@ -97,3 +97,38 @@ window.fetch = async (url, options = {}) => {
 // We might want to call this manually in pages, or run it here.
 // For now, let's expose Auth globally.
 window.Auth = Auth;
+
+// Inject Modal HTML automatically
+document.addEventListener("DOMContentLoaded", () => {
+    if (!document.getElementById("modal-trocar-senha")) {
+        const modalHtml = `
+            <div id="modal-trocar-senha" class="custom-modal" style="display: none; position: fixed; inset: 0; background: rgba(0, 0, 0, 0.5); align-items: center; justify-content: center; z-index: 2000;">
+                <div class="custom-modal-dialog" style="background: white; padding: 24px; border-radius: 12px; width: 90%; max-width: 400px;">
+                    <div class="custom-modal-header" style="display: flex; justify-content: space-between; margin-bottom: 20px;">
+                        <h5 class="custom-modal-title" style="font-weight: 600; font-size: 1.25rem; margin:0;">Trocar Minha Senha</h5>
+                        <button class="close-btn" style="background: none; border: none; font-size: 1.5rem; cursor: pointer;" onclick="window.Auth.closeChangePasswordModal()">&times;</button>
+                    </div>
+                    <form id="form-trocar-senha" onsubmit="window.Auth.confirmarTrocaSenha(event)">
+                        <div style="margin-bottom: 1rem;">
+                            <label style="display: block; margin-bottom: 0.5rem;">Senha Atual</label>
+                            <input type="password" style="width: 100%; padding: 0.5rem; border: 1px solid #ccc; border-radius: 4px;" id="senha-atual" required>
+                        </div>
+                        <div style="margin-bottom: 1rem;">
+                            <label style="display: block; margin-bottom: 0.5rem;">Nova Senha</label>
+                            <input type="password" style="width: 100%; padding: 0.5rem; border: 1px solid #ccc; border-radius: 4px;" id="nova-senha" required minlength="6">
+                        </div>
+                        <div style="margin-bottom: 1rem;">
+                            <label style="display: block; margin-bottom: 0.5rem;">Confirmar Nova Senha</label>
+                            <input type="password" style="width: 100%; padding: 0.5rem; border: 1px solid #ccc; border-radius: 4px;" id="confirm-nova-senha" required minlength="6">
+                        </div>
+                        <div style="display: flex; justify-content: flex-end; gap: 0.5rem;">
+                            <button type="button" style="padding: 0.5rem 1rem; border: none; border-radius: 4px; cursor: pointer; background: #6c757d; color: white;" onclick="window.Auth.closeChangePasswordModal()">Cancelar</button>
+                            <button type="submit" style="padding: 0.5rem 1rem; border: none; border-radius: 4px; cursor: pointer; background: #2563eb; color: white;">Salvar Nova Senha</button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        `;
+        document.body.insertAdjacentHTML("beforeend", modalHtml);
+    }
+});

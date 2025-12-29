@@ -27,6 +27,7 @@ class TabelaPreco(BaseModel):
     acrescimo: Optional[float] = 0.0
     descricao_fator_comissao: Optional[str] = None
     codigo_plano_pagamento: Optional[str] = None
+    markup: Optional[float] = 0.0
     # Frete
     valor_frete_aplicado: Optional[float] = None
     frete_kg: Optional[float] = None
@@ -109,6 +110,7 @@ class ProdutoSalvar(BaseModel):
     codigo_plano_pagamento: Optional[str]  # was: plano_pagamento
     valor_frete_aplicado: Optional[float]  # was: frete_percentual
     descricao_fator_comissao: Optional[str]# was: fator_comissao
+    markup: Optional[float] = 0.0
 
     # JÁ EXISTENTES (mantém nomes atuais)
     embalagem: Optional[str] = None

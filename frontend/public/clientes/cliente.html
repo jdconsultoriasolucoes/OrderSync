@@ -31,13 +31,17 @@
 
   <nav class="sidebar" id="sidebar">
     <ul>
-      <li><a href="/index.html">Home</a></li>
+      <li><a href="/">Home</a></li>
       <li><a href="/clientes/cliente.html">Cadastrar Cliente</a></li>
       <li><a href="#">Atualizar Catálogo</a></li>
       <li><a href="/pedido/pedido.html">Consultar Pedidos</a></li>
       <li><a href="#">Exportar Relatórios</a></li>
       <li><a href="/tabela_preco/criacao_tabela_preco.html">Tabela Preço</a></li>
+      <li><a href="/produto/produto.html">Produtos</a></li>
+      <li><a href="/usuarios.html">Usuários</a></li>
       <li><a href="/config_email/config_email.html">Configuração E-mail</a></li>
+      <li><a href="#" onclick="window.Auth.openChangePasswordModal()">Trocar Senha</a></li>
+      <li><a href="#" onclick="window.Auth.logout()">Sair</a></li>
     </ul>
   </nav>
   <div id="overlay"></div>
@@ -137,6 +141,10 @@
           <select id="atividade_principal" name="atividade_principal">
             <option value="">Selecione</option>
           </select>
+        </div>
+        <div>
+          <label for="markup">Markup (%):</label>
+          <input type="number" step="0.01" id="markup" name="markup" placeholder="0.00" />
         </div>
       </div>
 

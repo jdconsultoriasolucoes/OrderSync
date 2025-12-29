@@ -23,6 +23,7 @@ class ClienteModelV2(Base):
     cadastro_indicacao_cliente = Column(String)
     cadastro_ramo_de_atividade = Column(String)
     cadastro_atividade_principal = Column(String)
+    cadastro_markup = Column(Float, default=0.0) # Markup % (ex: 10.5 para 10.5%)
 
     # 2. ResponsavelCompras
     compras_nome_responsavel = Column(String)
