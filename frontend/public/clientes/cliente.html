@@ -485,10 +485,21 @@
 
     <script>
       // Máscaras
-      IMask(document.getElementById('cpf'), { mask: '000.000.000-00' });
-      IMask(document.getElementById('cnpj'), { mask: '00.000.000/0000-00' });
-      IMask(document.getElementById('telefone'), { mask: '(00) 0000-0000' });
-      IMask(document.getElementById('celular'), { mask: '(00) 00000-0000' });
+      const cpfEl = document.getElementById('cpf');
+      if (cpfEl) IMask(cpfEl, { mask: '000.000.000-00' });
+
+      const cnpjEl = document.getElementById('cnpj');
+      if (cnpjEl) IMask(cnpjEl, { mask: '00.000.000/0000-00' });
+
+      const telEl = document.getElementById('telefone'); // Verify if this ID exists or remove
+      if (telEl) IMask(telEl, { mask: '(00) 0000-0000' });
+
+      const celEl = document.getElementById('celular'); // Verify if this ID exists or remove
+      if (celEl) IMask(celEl, { mask: '(00) 00000-0000' });
+
+      // Add masks for actual fields if needed, e.g.
+      const celResp = document.getElementById('celular_responsavel');
+      if (celResp) IMask(celResp, { mask: '(00) 00000-0000' });
 
       function novoCliente() {
         document.getElementById("formCliente").reset();
