@@ -1308,7 +1308,7 @@ async function recalcLinha(tr) {
   // pinta colunas comerciais
   tr.querySelector('td:nth-child(9)').textContent = fmtMoney(descontoValor); // Desc. aplicado
   tr.querySelector('td:nth-child(11)').textContent = fmtMoney(acrescimoCond); // Cond. (R$)
-  tr.querySelector('td:nth-child(12)').textContent = fmtMoney(freteValor);    // Frete (R$)
+  tr.querySelector('td:nth-child(13)').textContent = fmtMoney(freteValor);    // Frete (R$)
 
 
 
