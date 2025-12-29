@@ -14,7 +14,7 @@ from models.usuario import UsuarioModel
 
 router = APIRouter()
 
-@router.get("/", response_model=List[ClienteResumo])
+@router.get("/", response_model=List[ClienteCompleto])
 def get_clientes():
     return listar_clientes()
 
