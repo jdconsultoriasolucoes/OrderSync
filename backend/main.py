@@ -168,7 +168,26 @@ logger.info("[STATIC] /static -> %s", static_dir)
 if not os.path.isdir(static_dir):
     logger.error("[STATIC] Pasta NÃO existe: %s", static_dir)
 
-app.mount("/", StaticFiles(directory=static_dir, html=True), name="public")
+# Auto-mount subdirectories of public to root
+if os.path.exists(static_dir):
+    for item in os.listdir(static_dir):
+        full_path = os.path.join(static_dir, item)
+        if os.path.isdir(full_path):
+            # Mount /js, /css, /clientes, /produto, etc.
+            app.mount(f"/{item}", StaticFiles(directory=full_path), name=item)
+
+# Also mount /static explicitly
+app.mount("/static", StaticFiles(directory=static_dir), name="static")
+
+@app.get("/")
+def root():
+    # Attempt to find index.html in frontend root (parent of public)
+    # static_dir is .../frontend/public
+    # so .../frontend/index.html is one level up
+    index_path = os.path.abspath(os.path.join(static_dir, "..", "index.html"))
+    if os.path.exists(index_path):
+        return FileResponse(index_path)
+    return {"mensagem": "API do OrderSync está rodando (Frontend não encontrado)"}
 
 @app.get("/admin/config-email")
 def config_email_page():
