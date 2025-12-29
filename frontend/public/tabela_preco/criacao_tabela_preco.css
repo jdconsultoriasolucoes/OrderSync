@@ -343,15 +343,23 @@ body {
 }
 
 /* --- Colapse das colunas ST (Visualização Detalhada) --- */
-/* Índices: BaseST=15 -> Colunas filhas: 16, 17, 18 */
+/* Índices: BaseST=14 -> Colunas filhas: 15, 16, 17 */
+#tabela-itens:has(#st-toggle:not(:checked)) tr> :nth-child(15),
 #tabela-itens:has(#st-toggle:not(:checked)) tr> :nth-child(16),
-#tabela-itens:has(#st-toggle:not(:checked)) tr> :nth-child(17),
-#tabela-itens:has(#st-toggle:not(:checked)) tr> :nth-child(18) {
+#tabela-itens:has(#st-toggle:not(:checked)) tr> :nth-child(17) {
   display: none;
 }
 
 /* --- Colapse das colunas MARKUP --- */
-/* Índices: Valor Final (Mk)=21, Valor s/ Frete (Mk)=22 */
+/* Índices: Markup%(Inp)=20, Final(Mk)=21, SemFrete(Mk)=22 */
+/* O toggle esconde só as derivadas. O input Markup fica sempre visível?
+   O user disse "campe de markup tbm deve ficar la no final".
+   Se o toggle fecha, deve esconder as derivadas E o input?
+   Geralmente o toggle é "Markup %". Se fechar, deve esconder tudo referente a markup?
+   Por enquanto vou esconder as derivadas (21, 22).
+   Se quiser esconder o input markup também, seria index 20.
+   Vou assumir esconder só as derivadas por enquanto.
+*/
 #tabela-itens:has(#markup-cols-toggle:not(:checked)) tr> :nth-child(21),
 #tabela-itens:has(#markup-cols-toggle:not(:checked)) tr> :nth-child(22) {
   display: none;

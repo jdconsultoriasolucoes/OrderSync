@@ -1183,10 +1183,10 @@ function criarLinha(item, idx) {
     tdSel, tdCod, tdDesc, tdEmb, tdGrupo,
     tdPeso, tdValor, tdPercent, tdDescAplic,
     tdCondCod, tdCondVal,
-    tdMarkup,
     tdFrete,
     tdIpiR$, tdBaseStR$, tdIcmsProp$, tdIcmsCheio$, tdIcmsReter$, tdFinal, tdTotalSemFrete,
-    tdFinalMarkup, tdSemFreteMarkup // <--- MOVED TO END
+    tdMarkup, // <--- MOVED TO END
+    tdFinalMarkup, tdSemFreteMarkup // <--- ALREADY AT END
   );
   return tr;
 }
