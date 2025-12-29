@@ -298,18 +298,18 @@ def busca_cliente(
 
         base_sql = """
             SELECT
-              codigo,
-              cnpj_cpf_faturamento_formatted AS cnpj_cpf,
-              nome_empresarial     AS nome_cliente,
-              ramo_juridico
-            FROM public.t_cadastro_cliente
+              cadastro_codigo_da_empresa AS codigo,
+              COALESCE(cadastro_cnpj, cadastro_cpf) AS cnpj_cpf,
+              cadastro_nome_cliente AS nome_cliente,
+              cadastro_ramo_de_atividade AS ramo_juridico
+            FROM public.t_cadastro_cliente_v2
             WHERE
               (
                 :q = ''
-                OR nome_empresarial ILIKE :like
+                OR cadastro_nome_cliente ILIKE :like
                 OR (
                     :cnpj_like IS NOT NULL
-                    AND cnpj_cpf_faturamento ILIKE :cnpj_like
+                    AND (cadastro_cnpj ILIKE :cnpj_like OR cadastro_cpf ILIKE :cnpj_like)
                   )
               )
         """
@@ -323,10 +323,10 @@ def busca_cliente(
         }
 
         if ramo:
-            base_sql += " AND ramo_juridico = :ramo"
+            base_sql += " AND cadastro_ramo_de_atividade = :ramo"
             params["ramo"] = ramo
 
-        base_sql += " ORDER BY nome_empresarial OFFSET :offset LIMIT :limit"
+        base_sql += " ORDER BY cadastro_nome_cliente OFFSET :offset LIMIT :limit"
 
         rows = db.execute(text(base_sql), params).mappings().all()
         return [dict(r) for r in rows]
