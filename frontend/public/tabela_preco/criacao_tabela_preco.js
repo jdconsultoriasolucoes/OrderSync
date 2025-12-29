@@ -630,6 +630,14 @@ function setupClienteAutocomplete() {
       if (ramoEl) ramoEl.value = c.ramo_juridico ?? c.ramo ?? '';
       currentClientMarkup = Number(c.markup || 0); // Sets default markup
 
+      // Apply markup to all existing items
+      if (itens && itens.length > 0) {
+        itens.forEach(it => {
+          it.markup = currentClientMarkup;
+        });
+        renderTabela();
+      }
+
       // aplica preferência vinda do cadastro, mas TRAVADO
       const pref = c.iva_st ?? c.usa_iva_st ?? c.st ?? c.calcula_st ?? null;
       if (ivaChk) {
