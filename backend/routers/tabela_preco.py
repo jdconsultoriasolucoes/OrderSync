@@ -301,7 +301,8 @@ def busca_cliente(
               cadastro_codigo_da_empresa AS codigo,
               COALESCE(cadastro_cnpj, cadastro_cpf) AS cnpj_cpf,
               cadastro_nome_cliente AS nome_cliente,
-              cadastro_ramo_de_atividade AS ramo_juridico
+              cadastro_ramo_de_atividade AS ramo_juridico,
+              cadastro_markup
             FROM public.t_cadastro_cliente_v2
             WHERE
               (
