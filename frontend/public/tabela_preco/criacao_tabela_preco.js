@@ -1184,9 +1184,9 @@ function criarLinha(item, idx) {
     tdPeso, tdValor, tdPercent, tdDescAplic,
     tdCondCod, tdCondVal,
     tdMarkup,
-    tdFinalMarkup, tdSemFreteMarkup, // <--- INSERIDO
     tdFrete,
-    tdIpiR$, tdBaseStR$, tdIcmsProp$, tdIcmsCheio$, tdIcmsReter$, tdFinal, tdTotalSemFrete
+    tdIpiR$, tdBaseStR$, tdIcmsProp$, tdIcmsCheio$, tdIcmsReter$, tdFinal, tdTotalSemFrete,
+    tdFinalMarkup, tdSemFreteMarkup // <--- MOVED TO END
   );
   return tr;
 }

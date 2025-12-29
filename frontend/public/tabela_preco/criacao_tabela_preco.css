@@ -342,20 +342,18 @@ body {
   transform: rotate(90deg);
 }
 
-/* --- Colapse das colunas ST (Opção 1: esconder só os detalhes) --- */
-/* Índices ajustados após inserção de colunas Markup (13, 14) */
-/* Antes: BaseST=15 -> Agora: BaseST=17 */
-/* Antes: ICMS=16,17,18 -> Agora: ICMS=18,19,20 */
-#tabela-itens:has(#st-toggle:not(:checked)) tr> :nth-child(18),
-#tabela-itens:has(#st-toggle:not(:checked)) tr> :nth-child(19),
-#tabela-itens:has(#st-toggle:not(:checked)) tr> :nth-child(20) {
+/* --- Colapse das colunas ST (Visualização Detalhada) --- */
+/* Índices: BaseST=15 -> Colunas filhas: 16, 17, 18 */
+#tabela-itens:has(#st-toggle:not(:checked)) tr> :nth-child(16),
+#tabela-itens:has(#st-toggle:not(:checked)) tr> :nth-child(17),
+#tabela-itens:has(#st-toggle:not(:checked)) tr> :nth-child(18) {
   display: none;
 }
 
 /* --- Colapse das colunas MARKUP --- */
-/* Índices: Markup%=12, Final(Mk)=13, SemFrete(Mk)=14 */
-#tabela-itens:has(#markup-cols-toggle:not(:checked)) tr> :nth-child(13),
-#tabela-itens:has(#markup-cols-toggle:not(:checked)) tr> :nth-child(14) {
+/* Índices: Valor Final (Mk)=21, Valor s/ Frete (Mk)=22 */
+#tabela-itens:has(#markup-cols-toggle:not(:checked)) tr> :nth-child(21),
+#tabela-itens:has(#markup-cols-toggle:not(:checked)) tr> :nth-child(22) {
   display: none;
 }
 
