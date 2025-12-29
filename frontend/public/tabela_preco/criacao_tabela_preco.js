@@ -1155,6 +1155,16 @@ function criarLinha(item, idx) {
   });
   tdMarkup.appendChild(inpMarkup);
 
+  // -- NOVAS COLUNAS DE MARKUP (exibição calculada)
+  // Serão preenchidas em recalcLinha
+  const tdFinalMarkup = document.createElement('td');
+  tdFinalMarkup.className = 'num col-mk-derived';
+  tdFinalMarkup.textContent = '0,00';
+
+  const tdSemFreteMarkup = document.createElement('td');
+  tdSemFreteMarkup.className = 'num col-mk-derived';
+  tdSemFreteMarkup.textContent = '0,00';
+
   const tdFrete = document.createElement('td'); tdFrete.className = 'num'; tdFrete.textContent = '0,00';
   const tdDescAplic = document.createElement('td'); tdDescAplic.className = 'num'; tdDescAplic.textContent = '0,00';
 
@@ -1173,7 +1183,8 @@ function criarLinha(item, idx) {
     tdSel, tdCod, tdDesc, tdEmb, tdGrupo,
     tdPeso, tdValor, tdPercent, tdDescAplic,
     tdCondCod, tdCondVal,
-    tdMarkup, // Inserted Markup column
+    tdMarkup,
+    tdFinalMarkup, tdSemFreteMarkup, // <--- INSERIDO
     tdFrete,
     tdIpiR$, tdBaseStR$, tdIcmsProp$, tdIcmsCheio$, tdIcmsReter$, tdFinal, tdTotalSemFrete
   );
@@ -1354,6 +1365,29 @@ async function recalcLinha(tr) {
     const totalSemFrete = totalComercial - Number(freteValor || 0);
     const tdSemFrete = tr.querySelector('.col-total-sem-frete');
     if (tdSemFrete) tdSemFrete.textContent = fmtMoney(totalSemFrete);
+
+    // --- CÁLCULO E EXIBIÇÃO DAS COLUNAS DE MARKUP (se existirem) ---
+    // Índices: Markup%=12 (0-based: 11? Não, nth-child é 1-based)
+    // Markup input is inside td:nth-child(12)
+    // Final(Mk) is td:nth-child(13)
+    // SemFrete(Mk) is td:nth-child(14)
+    // Como inserimos 2 colunas, os índices seguintes deslocam.
+    // Mas podemos buscar pela classe que adicionamos: .col-mk-derived
+
+    const tdsMk = tr.querySelectorAll('.col-mk-derived');
+    if (tdsMk.length === 2) {
+      const tdFinMk = tdsMk[0];
+      const tdSemMk = tdsMk[1];
+
+      const mkPct = Number(item.markup || 0);
+      const factor = 1 + (mkPct / 100);
+
+      const valFinMk = totalComercial * factor;
+      const valSemMk = totalSemFrete * factor;
+
+      tdFinMk.textContent = fmtMoney(valFinMk);
+      tdSemMk.textContent = fmtMoney(valSemMk);
+    }
 
     setCell('.col-total', totalComercial);
     item._freteValor = Number(freteValor || 0);
