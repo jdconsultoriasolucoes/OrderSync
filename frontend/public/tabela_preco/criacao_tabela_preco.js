@@ -1164,7 +1164,9 @@ function criarLinha(item, idx) {
   tr.append(
     tdSel, tdCod, tdDesc, tdEmb, tdGrupo,
     tdPeso, tdValor, tdPercent, tdDescAplic,
-    tdCondCod, tdCondVal, tdFrete,
+    tdCondCod, tdCondVal,
+    tdMarkup, // Inserted Markup column
+    tdFrete,
     tdIpiR$, tdBaseStR$, tdIcmsProp$, tdIcmsCheio$, tdIcmsReter$, tdFinal, tdTotalSemFrete
   );
   return tr;
