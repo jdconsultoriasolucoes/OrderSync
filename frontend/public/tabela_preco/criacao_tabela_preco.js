@@ -221,6 +221,11 @@ async function mergeBufferFromPickerIfAny() {
     const recebidos = JSON.parse(raw) || [];
     const map = new Map((itens || []).map(x => [x.codigo_tabela, x]));
     for (const p of recebidos) {
+      // Se tivermos um markup de cliente já carregado, aplica nos novos itens
+      // (caso o item não traga markup específico ou seja 0)
+      if (!p.markup && currentClientMarkup) {
+        p.markup = currentClientMarkup;
+      }
       map.set(p.codigo_tabela, { ...(map.get(p.codigo_tabela) || {}), ...p });
     }
     itens = Array.from(map.values());
@@ -617,6 +622,7 @@ function setupClienteAutocomplete() {
       if (ramoEl) ramoEl.value = '';
 
       window.isClienteLivreSelecionado = true;
+      currentClientMarkup = 0; // ✅ Reset markup for free/manual client
       if (ivaChk) {
         ivaChk.disabled = false;              // ✅ habilita para você decidir
         // não marco/desmarco aqui — decisão manual
@@ -1371,42 +1377,23 @@ async function recalcLinha(tr) {
     const tdSemFrete = tr.querySelector('.col-total-sem-frete');
     if (tdSemFrete) tdSemFrete.textContent = fmtMoney(totalSemFrete);
 
-    // --- CÁLCULO E EXIBIÇÃO DAS COLUNAS DE MARKUP (se existirem) ---
-    // Índices: Markup%=12 (0-based: 11? Não, nth-child é 1-based)
-    // Markup input is inside td:nth-child(12)
-    // Final(Mk) is td:nth-child(13)
-    // SemFrete(Mk) is td:nth-child(14)
-    // Como inserimos 2 colunas, os índices seguintes deslocam.
-    // Mas podemos buscar pela classe que adicionamos: .col-mk-derived
+    // --- CÁLCULO DAS COLUNAS DE MARKUP ---
+    // Calcula SEMPRE para garantir que o item tenha os valores corretos para o Save
+    const mkPct = Number(item.markup || 0);
+    const factor = 1 + (mkPct / 100);
 
+    const valFinMk = Number((totalComercial * factor).toFixed(2));
+    const valSemMk = Number((totalSemFrete * factor).toFixed(2));
+
+    // Persiste no objeto item
+    item.valor_final_markup = valFinMk;
+    item.valor_s_frete_markup = valSemMk;
+
+    // Atualiza DOM se as colunas existirem
     const tdsMk = tr.querySelectorAll('.col-mk-derived');
     if (tdsMk.length === 2) {
-      const tdFinMk = tdsMk[0];
-      const tdSemMk = tdsMk[1];
-
-      const mkPct = Number(item.markup || 0);
-      const factor = 1 + (mkPct / 100);
-
-      const valFinMk = totalComercial * factor;
-      const valSemMk = totalSemFrete * factor;
-
-      tdFinMk.textContent = fmtMoney(valFinMk);
-      tdSemMk.textContent = fmtMoney(valSemMk);
-
-      // Store in item for saving
-      item.valor_final_markup = Number(valFinMk.toFixed(2));
-      item.valor_s_frete_markup = Number(valSemMk.toFixed(2));
-    } else {
-      // Reset if no markup columns (toggle off) - though logic should persist.
-      // If columns are hidden, we still want to save? User implied toggle is for viewing.
-      // But if toggle is OFF, the columns don't exist in DOM, so this block skipped.
-      // We should ALWAYS calculate these if we want to save them irrespective of view.
-      // Refactoring to calculate always.
-
-      const mkPct = Number(item.markup || 0);
-      const factor = 1 + (mkPct / 100);
-      item.valor_final_markup = Number((totalComercial * factor).toFixed(2));
-      item.valor_s_frete_markup = Number((totalSemFrete * factor).toFixed(2));
+      tdsMk[0].textContent = fmtMoney(valFinMk);
+      tdsMk[1].textContent = fmtMoney(valSemMk);
     }
 
     setCell('.col-total', totalComercial);
