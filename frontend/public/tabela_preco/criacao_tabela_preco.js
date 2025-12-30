@@ -12,7 +12,7 @@ let itens = []; // itens carregados
 let currentMode = 'new';       // 'new' | 'view' | 'edit' | 'duplicate'
 let currentTabelaId = null;
 let sourceTabelaId = null;
-let currentClientMarkup = 0; // DEFAULT MARKUP
+window.currentClientMarkup = 0; // Expose globally for snapshot
 let ivaStAtivo = !!document.getElementById('iva_st_toggle')?.checked;
 let __recalcRunning = false;
 let __recalcPending = false;
@@ -129,7 +129,9 @@ function getHeaderSnapshot() {
     plano_pagamento: val("plano_pagamento"),
     desconto_global: val("desconto_global"),
     cliente_livre: !!window.isClienteLivreSelecionado,
-    iva_enabled: !$("iva_st_toggle")?.disabled
+    cliente_livre: !!window.isClienteLivreSelecionado,
+    iva_enabled: !$("iva_st_toggle")?.disabled,
+    currentClientMarkup: window.currentClientMarkup || 0 // ✅ Persist Markup
   };
 }
 
@@ -172,6 +174,7 @@ function restoreHeaderSnapshotIfNew() {
       window.ivaStAtivo = ivaChk.checked;
     }
     window.isClienteLivreSelecionado = !!snap.cliente_livre;
+    window.currentClientMarkup = Number(snap.currentClientMarkup || 0); // ✅ Restore Markup
 
     // ---- Atualizações visuais e locks
     atualizarPillTaxa?.();
@@ -622,7 +625,7 @@ function setupClienteAutocomplete() {
       if (ramoEl) ramoEl.value = '';
 
       window.isClienteLivreSelecionado = true;
-      currentClientMarkup = 0; // ✅ Reset markup for free/manual client
+      window.currentClientMarkup = 0; // ✅ Reset markup for free/manual client
       if (ivaChk) {
         ivaChk.disabled = false;              // ✅ habilita para você decidir
         // não marco/desmarco aqui — decisão manual
@@ -634,7 +637,7 @@ function setupClienteAutocomplete() {
       if (nomeEl) nomeEl.value = [fmtDoc(c.cnpj), c.nome].filter(Boolean).join(' - ');
       if (codEl) codEl.value = c.codigo ?? '';
       if (ramoEl) ramoEl.value = c.ramo_juridico ?? c.ramo ?? '';
-      currentClientMarkup = Number(c.markup || 0); // Sets default markup
+      window.currentClientMarkup = Number(c.markup || 0); // Sets default markup global
 
       // Apply markup to all existing items
       if (itens && itens.length > 0) {
@@ -1338,7 +1341,7 @@ async function recalcLinha(tr) {
   // pinta colunas comerciais
   tr.querySelector('td:nth-child(9)').textContent = fmtMoney(descontoValor); // Desc. aplicado
   tr.querySelector('td:nth-child(11)').textContent = fmtMoney(acrescimoCond); // Cond. (R$)
-  tr.querySelector('td:nth-child(13)').textContent = fmtMoney(freteValor);    // Frete (R$)
+  tr.querySelector('td:nth-child(12)').textContent = fmtMoney(freteValor);    // Frete (R$)
 
 
 
