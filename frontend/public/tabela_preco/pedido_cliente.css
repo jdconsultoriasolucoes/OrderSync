@@ -120,7 +120,10 @@ input[type="number"] {
 }
 
 /* Resumo do pedido */
-.resumo-pedido { margin-top: 16px; }
+.resumo-pedido {
+  margin-top: 16px;
+}
+
 .resumo-pedido .resumo-grid {
   display: flex;
   gap: 24px;
@@ -128,8 +131,15 @@ input[type="number"] {
 }
 
 /* Observações do pedido */
-.observacoes-pedido { margin-top: 16px; }
-.observacoes-label { display: block; margin-bottom: 8px; }
+.observacoes-pedido {
+  margin-top: 16px;
+}
+
+.observacoes-label {
+  display: block;
+  margin-bottom: 8px;
+}
+
 .observacoes-textarea {
   width: 100%;
   min-height: 96px;
@@ -139,6 +149,7 @@ input[type="number"] {
   resize: vertical;
   font: inherit;
 }
+
 .observacoes-counter {
   text-align: right;
   font-size: 0.9rem;
@@ -147,126 +158,194 @@ input[type="number"] {
 }
 
 /* ===== Modal de confirmação ===== */
-.modal[hidden] { display: none !important; }
-.modal {
-  position: fixed; inset: 0; z-index: 9999;
-  display: grid; place-items: center;
+.modal[hidden] {
+  display: none !important;
 }
+
+.modal {
+  position: fixed;
+  inset: 0;
+  z-index: 9999;
+  display: grid;
+  place-items: center;
+}
+
 .modal-backdrop {
-  position: absolute; inset: 0;
-  background: rgba(0,0,0,0.55);
+  position: absolute;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.55);
   backdrop-filter: blur(2px);
 }
+
 .modal-content {
   position: relative;
-  max-width: 680px; width: calc(100% - 32px);
-  background: #101012; color: #fff;
-  border-radius: 14px; padding: 24px;
-  box-shadow: 0 10px 40px rgba(0,0,0,0.35);
+  max-width: 680px;
+  width: calc(100% - 32px);
+  background: #101012;
+  color: #fff;
+  border-radius: 14px;
+  padding: 24px;
+  box-shadow: 0 10px 40px rgba(0, 0, 0, 0.35);
 }
-.modal-content h2 { margin: 0 0 8px; font-size: 1.5rem; }
-.modal-content .confirm-text, .modal-content .confirm-info {
-  margin: 0 0 12px; color: #b9c0cf;
+
+.modal-content h2 {
+  margin: 0 0 8px;
+  font-size: 1.5rem;
 }
+
+.modal-content .confirm-text,
+.modal-content .confirm-info {
+  margin: 0 0 12px;
+  color: #b9c0cf;
+}
+
 .btn-modal {
   display: inline-block;
-  padding: 10px 16px; border-radius: 10px;
-  border: 1px solid #2d2f39; background: #1a1c24;
-  cursor: pointer; font: inherit; color: #fff;
+  padding: 10px 16px;
+  border-radius: 10px;
+  border: 1px solid #2d2f39;
+  background: #1a1c24;
+  cursor: pointer;
+  font: inherit;
+  color: #fff;
 }
-body.modal-open { overflow: hidden; }
+
+body.modal-open {
+  overflow: hidden;
+}
 
 /* Estado travado após confirmação (evita interação/estilo visual) */
-body.page-locked .documento { filter: grayscale(0.2); }
+body.page-locked .documento {
+  filter: grayscale(0.2);
+}
+
 body.page-locked .documento *:not(#confirmModal):not(.modal-content):not(.btn-modal) {
   cursor: not-allowed !important;
 }
 
-.hidden { display: none !important; }
+.hidden {
+  display: none !important;
+}
 
 /* esconde a coluna 5 (Peso) da tabela */
 #tabelaProdutos th:nth-child(5),
 #tabelaProdutos td:nth-child(5),
-/* esconde a coluna 8 (Subtotal) da tabela */
-#tabelaProdutos th:nth-child(8),
-#tabelaProdutos td:nth-child(8) {
+/* esconde a coluna 10 (Subtotal) da tabela */
+#tabelaProdutos th:nth-child(10),
+#tabelaProdutos td:nth-child(10) {
   display: none !important;
 }
 
-#btnFecharConfirm{
-  appearance:none; -webkit-appearance:none;
-  background:#2b2b2b;
-  color:#fff;
-  border:0;
-  border-radius:8px;
-  padding:10px 14px;
-  font-weight:600;
-  cursor:pointer;
-  box-shadow:0 2px 6px rgba(0,0,0,.18);
+#btnFecharConfirm {
+  appearance: none;
+  -webkit-appearance: none;
+  background: #2b2b2b;
+  color: #fff;
+  border: 0;
+  border-radius: 8px;
+  padding: 10px 14px;
+  font-weight: 600;
+  cursor: pointer;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, .18);
 }
-#btnFecharConfirm:hover{ filter:brightness(.95); }
-#btnFecharConfirm:focus{ outline:2px solid rgba(255,255,255,.25); outline-offset:2px; }
+
+#btnFecharConfirm:hover {
+  filter: brightness(.95);
+}
+
+#btnFecharConfirm:focus {
+  outline: 2px solid rgba(255, 255, 255, .25);
+  outline-offset: 2px;
+}
 
 /* largura máxima do bloco de totais (opcional) */
-.fechamento-card{ max-width: 420px; }
+.fechamento-card {
+  max-width: 420px;
+}
 
 /* cada linha: rótulo à esquerda, valor à direita em coluna fixa */
-.fech-row{
+.fech-row {
   display: grid;
-  grid-template-columns: 1fr 140px;  /* ajuste a largura dos valores se quiser */
+  grid-template-columns: 1fr 140px;
+  /* ajuste a largura dos valores se quiser */
   align-items: center;
   padding: 8px 0;
   border-bottom: 1px solid #eee;
 }
-.fech-row:last-child{ border-bottom: 0; }
+
+.fech-row:last-child {
+  border-bottom: 0;
+}
 
 /* rótulos e valores no MESMO tamanho */
-.fech-label{
+.fech-label {
   font-size: 16px;
   font-weight: 600;
-  color: #475569;              /* cinza 600 */
+  color: #475569;
+  /* cinza 600 */
 }
-.fech-value{
+
+.fech-value {
   text-align: right;
-  font-size: 16px;             /* igual ao rótulo */
-  font-weight: 600;            /* sem negrito exagerado */
+  font-size: 16px;
+  /* igual ao rótulo */
+  font-weight: 600;
+  /* sem negrito exagerado */
   letter-spacing: 0;
-  font-variant-numeric: tabular-nums;  /* dígitos com largura fixa */
-  color: #0f172a;              /* quase preto */
+  font-variant-numeric: tabular-nums;
+  /* dígitos com largura fixa */
+  color: #0f172a;
+  /* quase preto */
 }
 
 /* neutraliza <strong> dentro do valor para não “engrossar” */
-.fech-value strong{ font-weight: 600; }
-.fech-value span{ line-height: 1; }
+.fech-value strong {
+  font-weight: 600;
+}
+
+.fech-value span {
+  line-height: 1;
+}
 
 /* unidade do peso (opcional, se usar <span class="unit"> kg</span>) */
-.fech-value .unit{ color:#64748b; margin-left:4px; }
+.fech-value .unit {
+  color: #64748b;
+  margin-left: 4px;
+}
 
 /* Observações clean (mantém seu HTML/IDs) */
-.obs-title{
+.obs-title {
   margin: 0 0 6px 0;
   padding: 0;
   background: transparent;
   border: 0;
-  color: #334155;              /* cinza 700 */
+  color: #334155;
+  /* cinza 700 */
   font-weight: 700;
 }
-.obs-body{ padding: 0; }
-.obs-card textarea{
+
+.obs-body {
+  padding: 0;
+}
+
+.obs-card textarea {
   width: 100%;
   min-height: 120px;
   resize: vertical;
   border: 1px solid #e5e7eb;
   border-radius: 8px;
   padding: 10px 12px;
-  background: #fff;            /* sem linhas */
+  background: #fff;
+  /* sem linhas */
   outline: none;
 }
-.obs-card textarea:focus{
-  border-color:#c7d2fe;
-  box-shadow:0 0 0 3px rgba(99,102,241,.15);
+
+.obs-card textarea:focus {
+  border-color: #c7d2fe;
+  box-shadow: 0 0 0 3px rgba(99, 102, 241, .15);
 }
-.obs-count{
+
+.obs-count {
   text-align: right;
   font-size: 12px;
   color: #64748b;
@@ -274,12 +353,14 @@ body.page-locked .documento *:not(#confirmModal):not(.modal-content):not(.btn-mo
 }
 
 /* Responsivo */
-@media (max-width: 700px){
-  .fech-row{ grid-template-columns: 1fr 120px;}
+@media (max-width: 700px) {
+  .fech-row {
+    grid-template-columns: 1fr 120px;
   }
+}
 
 /* Wrapper lado a lado (desktop) e empilhado (mobile) */
-.fechamento-grid{
+.fechamento-grid {
   display: grid;
   grid-template-columns: minmax(260px, 360px) 1fr;
   gap: 24px;
@@ -287,6 +368,8 @@ body.page-locked .documento *:not(#confirmModal):not(.modal-content):not(.btn-mo
   margin: 20px 0 10px;
 }
 
-@media (max-width: 700px){
-  .fechamento-grid{ grid-template-columns: 1fr; }
-}  
+@media (max-width: 700px) {
+  .fechamento-grid {
+    grid-template-columns: 1fr;
+  }
+}
