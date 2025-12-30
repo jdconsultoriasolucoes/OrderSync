@@ -377,12 +377,12 @@ def confirmar_pedido(tabela_id: int, body: ConfirmarPedidoRequest):
                     # 1) carrega os dados do pedido no formato PedidoPdf
                     pedido_pdf = carregar_pedido_pdf(db, new_id)
 
-                    # 2) gera o arquivo físico em /tmp (ou pasta padrão)
-                    path_pdf = gerar_pdf_pedido(pedido_pdf)
-
-                    # 3) lê o arquivo em bytes para anexar no e-mail
-                    with open(path_pdf, "rb") as f:
-                        pdf_bytes = f.read()
+                    # 2) gera o arquivo (agora retorna bytes diretos)
+                    pdf_bytes = gerar_pdf_pedido(pedido_pdf)
+                    
+                    # 3) (etapa de leitura removida pois já temos bytes)
+                    # with open(path_pdf, "rb") as f:
+                    #     pdf_bytes = f.read()
 
                 except Exception as e_pdf:
                     logging.exception("Falha ao gerar PDF (ignorada): %s", e_pdf)

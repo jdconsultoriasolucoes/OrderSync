@@ -10,6 +10,7 @@ from reportlab.lib.utils import ImageReader
 from datetime import datetime
 from pathlib import Path
 import os
+import io
 
 from services.pedido_pdf_data import carregar_pedido_pdf
 from models.pedido_pdf import PedidoPdf
