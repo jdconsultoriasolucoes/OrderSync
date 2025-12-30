@@ -60,8 +60,12 @@
         <div class="toolbar">
           <button id="btn-novo" class="ghost">Novo</button>
           <button id="btn-buscar" class="ghost">Pesquisar</button>
-          <button id="btn-importar" class="ghost">Importar PDF</button>
-          <button id="btn-editar" class="ghost">Editar</button>
+          <button id="btn-importar" class="btn-secondary">Importar Lista (PDF)</button>
+          <button id="btn-renovar-validade" class="btn-secondary"
+            style="background-color: #f39c12; color: #fff;">Renovar Validade</button>
+          <button id="btn-cancelar-tela" class="btn-secondary" style="background-color: #7f8c8d; color: #fff;"
+            onclick="window.close()">Cancelar</button>
+          <button id="btn-novo-produto" class="btn-primary">+ Novo Produto</button>
           <button id="btn-salvar" class="primary">Salvar</button>
         </div>
       </div>
@@ -325,6 +329,23 @@
         <button id="import-success-download" class="primary" style="background-color: #059669;">
           📄 Baixar Relatório PDF
         </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal Renovar Validade -->
+  <div id="modal-renovar-validade" class="modal" hidden>
+    <div class="modal-backdrop"></div>
+    <div class="modal-content">
+      <h2>Renovar Validade (Todos Ativos)</h2>
+      <p>Selecione a nova data de validade para <strong>todos</strong> os produtos ativos.</p>
+      <div class="form-group">
+        <label>Nova Validade:</label>
+        <input type="date" id="input-nova-validade">
+      </div>
+      <div class="modal-actions">
+        <button id="btn-confirmar-renovacao" class="btn-primary">Confirmar</button>
+        <button id="btn-fechar-renovacao" class="btn-secondary">Cancelar</button>
       </div>
     </div>
   </div>

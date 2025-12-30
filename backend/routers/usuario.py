@@ -43,9 +43,6 @@ def create_user(
          raise HTTPException(status_code=403, detail="Not authorized to create users")
     
     current_user_email = current_user.email
-    if current_role not in ["admin", "gerente"]:
-         raise HTTPException(status_code=403, detail="Not authorized to create users")
-
     # Check existing
     if db.query(UsuarioModel).filter(UsuarioModel.email == usuario.email).first():
         raise HTTPException(status_code=400, detail="Email already registered")

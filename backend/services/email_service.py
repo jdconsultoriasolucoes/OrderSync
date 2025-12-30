@@ -158,4 +158,50 @@ def enviar_email_notificacao(
         to_all = [remetente]  # fallback
 
     with _abrir_conexao(cfg_smtp) as server:
+        # Envia para destinatários internos
         server.sendmail(remetente, to_all, msg.as_string())
+        
+        # ---------------------------------------------------------
+        # Envio Opcional para o Cliente (PDF sem validade)
+        # ---------------------------------------------------------
+        if cfg_msg.enviar_para_cliente and getattr(pedido, "cliente_email", None):
+            try:
+                from services.pdf_service import gerar_pdf_pedido
+                pdf_cliente_bytes = gerar_pdf_pedido(pedido, sem_validade=True)
+                
+                msg_cliente = MIMEMultipart()
+                msg_cliente["From"] = remetente
+                msg_cliente["To"] = pedido.cliente_email
+                msg_cliente["Subject"] = f"Confirmação de Pedido #{pedido.id} - {pedido.cliente_nome}"
+                
+                # Corpo simples para o cliente
+                body_client = f"""\
+Prezado(a) {pedido.cliente_nome},
+
+Seu pedido #{pedido.id} foi confirmado com sucesso.
+Segue em anexo a cópia do pedido.
+
+Atenciosamente,
+Equipe OrderSync
+"""
+                msg_cliente.attach(MIMEText(body_client, "plain"))
+                
+                # Anexo
+                part_c = MIMEBase("application", "octet-stream")
+                part_c.set_payload(pdf_cliente_bytes)
+                encoders.encode_base64(part_c)
+                part_c.add_header(
+                    "Content-Disposition",
+                    f"attachment; filename=Pedido_{pedido.id}.pdf",
+                )
+                msg_cliente.attach(part_c)
+                
+                server.sendmail(remetente, [pedido.cliente_email], msg_cliente.as_string())
+                print(f"Email enviado para cliente: {pedido.cliente_email}")
+                
+            except Exception as e:
+                print(f"Erro ao enviar email para cliente: {e}")
+
+        server.quit()
+
+```

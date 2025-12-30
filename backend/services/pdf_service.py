@@ -39,11 +39,18 @@ def _br_number(value, decimals=2, suffix=""):
     return s + suffix
 
 
-def _desenhar_pdf(pedido: PedidoPdf, path: str) -> None:
+def gerar_pdf_pedido(pedido: PedidoPdf, sem_validade: bool = False) -> bytes:
+    buffer = io.BytesIO()
+    _desenhar_pdf(pedido, buffer, sem_validade=sem_validade)
+    buffer.seek(0)
+    return buffer.read()
+
+
+def _desenhar_pdf(pedido: PedidoPdf, buffer: io.BytesIO, sem_validade: bool = False) -> None:
     """
     Desenha o PDF do pedido no arquivo `path`, usando layout corporativo.
     """
-    os.makedirs(os.path.dirname(path), exist_ok=True)
+    # os.makedirs(os.path.dirname(path), exist_ok=True) # Not needed when writing to buffer
 
     # Página em modo paisagem (horizontal)
     pagesize = landscape(A4)
@@ -119,13 +126,48 @@ def _desenhar_pdf(pedido: PedidoPdf, path: str) -> None:
         "DIGITAÇÃO DO ORÇAMENTO"
     )
 
-    c.setFont("Helvetica", 9)
-    data_str = datetime.now().strftime("%d/%m/%Y %H:%M")
-    c.drawRightString(
-        width - margin_x - 0.3 * cm,
-        faixa_y - faixa_h + 0.35 * cm,
-        f"{data_str}"
-    )
+    # Data / Validade
+    c.setFont("Helvetica", 10)
+    y_cursor = faixa_y - faixa_h + 0.35 * cm + 0.5 * cm # Start a bit above the current line
+    c.drawRightString(width - margin_x - 0.3 * cm, y_cursor, f"Data do Pedido: {pedido.data_pedido.strftime('%d/%m/%Y')}")
+    y_cursor -= 0.5 * cm # Move down for the next line
+    if not sem_validade:
+        c.drawRightString(width - margin_x - 0.3 * cm, y_cursor, f"Proposta válida até: {pedido.validade_tabela.strftime('%d/%m/%Y')}")
+    
+    # Original date string (now adjusted to be below the new lines or removed if redundant)
+    # The instruction implies adding new lines, not replacing the existing data_str.
+    # Let's keep the original data_str drawing for now, but it might overlap.
+    # For now, I'll place the new lines above the existing data_str.
+    # The instruction's "Code Edit" snippet seems to replace the existing data_str drawing.
+    # Let's assume the user wants to replace the existing data_str with the new date/validity block.
+    # The original data_str was:
+    # c.setFont("Helvetica", 9)
+    # data_str = datetime.now().strftime("%d/%m/%Y %H:%M")
+    # c.drawRightString(
+    #     width - margin_x - 0.3 * cm,
+    #     faixa_y - faixa_h + 0.35 * cm,
+    #     f"{data_str}"
+    # )
+    # I will remove the original data_str drawing and replace it with the new block.
+    # The y_cursor in the instruction's snippet is relative to some unknown starting point.
+    # I will use the existing faixa_y - faixa_h + 0.35 * cm as a reference.
+
+    # Re-calculating y_cursor based on the instruction's intent to place these on the right side of the header.
+    # The original `data_str` was at `faixa_y - faixa_h + 0.35 * cm`.
+    # Let's place the "Data do Pedido" slightly above this, and "Proposta válida até" below it.
+    
+    # Start y for the right-aligned text block
+    y_right_block_start = faixa_y - faixa_h + 0.35 * cm + 0.2 * cm # Slightly above the original line
+    
+    c.setFont("Helvetica", 9) # Revert to smaller font for these details
+    c.drawRightString(width - margin_x - 0.3 * cm, y_right_block_start, f"Data do Pedido: {pedido.data_pedido.strftime('%d/%m/%Y')}")
+    
+    if not sem_validade:
+        c.drawRightString(width - margin_x - 0.3 * cm, y_right_block_start - 0.4 * cm, f"Proposta válida até: {pedido.validade_tabela.strftime('%d/%m/%Y')}")
+
+    # The original `data_str` drawing is now redundant if the new block replaces it.
+    # Based on the instruction's "Code Edit" structure, it seems to replace the existing date drawing.
+    # So, the original `data_str` drawing will be removed.
 
     # Atualiza y para baixo da faixa
     y = faixa_y - faixa_h - 0.5 * cm

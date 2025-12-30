@@ -51,6 +51,17 @@
 
   <div class="page-container">
 
+    <div class="d-flex justify-content-between align-items-center mb-3">
+      <h2 style="margin:0;">Cadastro de Clientes</h2>
+      <div class="d-flex gap-2">
+        <button class="btn btn-listar" onclick="listarClientes()" type="button">Listar Clientes</button>
+        <button class="btn btn-editar" id="btn-editar" onclick="editarCliente()" type="button">Editar</button>
+        <button class="btn btn-cancelar" id="btn-cancelar" onclick="cancelarEdicao()" type="button">Cancelar</button>
+        <button class="btn btn-salvar" id="btn-salvar" onclick="salvarCliente()" type="button">Salvar</button>
+        <button class="btn btn-excluir" onclick="excluirCliente()" type="button">Excluir</button>
+      </div>
+    </div>
+
     <div class="tabs">
       <button class="tab active" onclick="openTab(event, 'cadastro')">Cadastro de Clientes</button>
       <button class="tab" onclick="openTab(event, 'faturamento')">Endereço de Faturamento</button>
@@ -476,14 +487,8 @@
 
 
     <!-- Botões -->
-    <div class="mt-4 d-flex gap-2">
-      <button class="btn btn-listar" onclick="listarClientes()" type="button">Listar Clientes</button>
-      <button class="btn btn-editar" id="btn-editar" onclick="editarCliente()" type="button">Editar</button>
-      <button class="btn btn-cancelar" id="btn-cancelar" onclick="cancelarEdicao()" type="button">Cancelar</button>
-      <button class="btn btn-salvar" id="btn-salvar" onclick="salvarCliente()" type="button">Salvar</button>
-      <button class="btn btn-excluir" onclick="excluirCliente()" type="button">Excluir</button>
-
-    </div>
+    <!-- Botões movidos para o topo -->
+    <!-- <div class="mt-4 d-flex gap-2"> ... </div> -->
 
 
     <script>

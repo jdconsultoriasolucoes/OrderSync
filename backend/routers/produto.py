@@ -259,3 +259,26 @@ async def importar_lista(
         "sync": sync,
     }
 
+class RenovarValidadeReq(BaseModel):
+    nova_validade: date
+
+@router.post("/renovar_validade_global")
+def renovar_validade_global(payload: RenovarValidadeReq, current_user: UsuarioModel = Depends(get_current_user)):
+    with SessionLocal() as db:
+        from sqlalchemy import text
+        try:
+            # Atualiza todos os produtos ativos com a nova data
+            res = db.execute(text("""
+                UPDATE t_cadastro_produto_v2
+                SET validade_tabela = :val,
+                    atualizado_por = :user,
+                    atualizado_em = NOW()
+                WHERE status_produto = 'ATIVO'
+            """), {"val": payload.nova_validade, "user": current_user.email})
+            
+            db.commit()
+            return {"ok": True, "linhas_afetadas": res.rowcount, "nova_validade": payload.nova_validade}
+        except Exception as e:
+            db.rollback()
+            raise HTTPException(500, f"Erro ao renovar validade: {e}")
+

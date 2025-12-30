@@ -21,7 +21,7 @@ def get_db():
 @router.post("", response_model=Token)
 def login_for_access_token(form_data: OAuth2PasswordRequestForm = Depends(), db: Session = Depends(get_db)):
     # Authenticate User
-    user = db.query(UsuarioModel).filter(UsuarioModel.email == form_data.username).first()
+    user = db.query(UsuarioModel).filter(UsuarioModel.nome == form_data.username).first()
     if not user or not verify_password(form_data.password, user.senha_hash):
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,

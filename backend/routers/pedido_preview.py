@@ -192,7 +192,7 @@ def confirmar_pedido(tabela_id: int, body: ConfirmarPedidoRequest):
                     exp = exp.replace(tzinfo=TZ)
                 agora_sp = datetime.now(TZ)
                 if agora_sp > exp:
-                    raise HTTPException(status_code=410, detail="Link expirado")
+                    pass # raise HTTPException(status_code=410, detail="Link expirado") - Agora apenas aviso visual no front
 
             if int(link_row["tabela_id"]) != int(tabela_id):
                 raise HTTPException(status_code=400, detail="Link e tabela não conferem")

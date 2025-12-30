@@ -295,6 +295,39 @@ async function carregarPedido() {
           info = await r.json();
           window.currentTabelaId = info.tabela_id ?? window.currentTabelaId;
           window.currentComFrete = info.com_frete ?? window.currentComFrete;
+          window.entregaISO = (typeof info.data_prevista === 'string' ? info.data_prevista : null);
+
+          // --- Lógica de Link Expirado ---
+          if (info.is_expired) {
+            window.linkExpirado = true; // flag global
+            setMensagem("Este link de pedido está expirado.", false);
+            if (btnConfirmar) btnConfirmar.disabled = true;
+          }
+
+          // --- Lógica de Pedido Já Confirmado ---
+          if (info.link_status === 'CONFIRMADO') {
+            // Esconde botões
+            const actions = document.querySelector('.acoes');
+            if (actions) actions.style.display = 'none';
+
+            // Avisa o usuário
+            const msg = document.getElementById('mensagem');
+            if (msg) {
+              msg.textContent = "Este pedido já foi aceito e processado.";
+              msg.style.color = "blue";
+              msg.style.fontWeight = "bold";
+              msg.style.fontSize = "1.2rem";
+              msg.style.marginTop = "20px";
+            }
+
+            // Bloqueia inputs
+            lockPageAfterConfirm();
+            // (Opcional) Abrir modal de sucesso direto? O usuário pediu "notificação informando que já foi aceito".
+            // Vou deixar o texto na tela + bloqueio.
+          }
+
+          console.log('[resolver] ok', info);
+
           window.codigoClienteHidden = info.codigo_cliente || null;  // <— oculto
           const elCriado = document.getElementById("datadopedido");
           if (elCriado && info?.created_at) {
@@ -383,6 +416,15 @@ async function carregarPedido() {
           setCampoTexto("tempoRestante", v.tempo_restante ?? "---");
           const rawVal = v.validade ?? v.validade_tabela ?? null;
           window.validadeGlobalISO = normalizarValidadeCampo(rawVal);
+
+          if (window.linkExpirado) {
+            setCampoTexto("tempoRestante", "Validade vencida - valores sujeitos a alteração");
+            const el = document.getElementById("tempoRestante");
+            if (el) el.style.color = "#d9534f"; // vermelho aviso
+          } else {
+            setCampoTexto("tempoRestante", v.tempo_restante ?? "---");
+          }
+
           console.debug("[validade] raw:", rawVal, "ISO:", window.validadeGlobalISO);
         } else {
           setCampoTexto("validadeTabela", "---");
