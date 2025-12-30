@@ -32,7 +32,60 @@ class ProdutoPedidoPreview(BaseModel):
     quantidade: int = 0
     markup: Optional[float] = 0.0 # NOVO
 
-# ... (skip to function body)
+class PedidoPreviewResp(BaseModel):
+    tabela_id: int
+    razao_social: Optional[str] = None
+    condicao_pagamento: Optional[str] = None
+    validade: Optional[str] = None
+    tempo_restante: Optional[str] = None
+    usar_valor_com_frete: bool
+    produtos: List[ProdutoPedidoPreview]
+
+@router.get("/preview", response_model=PedidoPreviewResp)
+async def pedido_preview(
+    tabela_id: int = Query(..., description="ID da tabela de preço salva"),
+    com_frete: bool = Query(..., description="true/false: decidir valor com ou sem frete"),
+):
+    with SessionLocal() as db:
+        # Cabeçalho: cliente "como está no banco"
+        cabecalho_sql = text("""
+            SELECT cliente
+            FROM tb_tabela_preco
+            WHERE id_tabela = :tid
+            LIMIT 1
+        """)
+        cliente = db.execute(cabecalho_sql, {"tid": tabela_id}).scalar() or ""
+
+        itens_sql = text("""
+            SELECT
+                id_tabela,                               -- cabeçalho (retornamos como tabela_id)
+                codigo_produto_supra       AS codigo_supra,
+                descricao_produto          AS nome,
+                embalagem                  AS embalagem,
+                peso_liquido               AS peso,
+                codigo_plano_pagamento     AS plano_pagamento,
+                codigo_plano_pagamento     AS plano_pagamento,
+                descricao_fator_comissao   AS tabela_comissao,
+                COALESCE(valor_frete, 0)   AS valor_com_frete,
+                COALESCE(valor_s_frete, 0) AS valor_sem_frete,
+                COALESCE(markup, 0)        AS markup,
+                COALESCE(valor_final_markup, 0)   AS valor_final_markup,
+                COALESCE(valor_s_frete_markup, 0) AS valor_s_frete_markup
+            FROM tb_tabela_preco
+            WHERE id_tabela = :tid AND ativo IS TRUE
+            ORDER BY descricao_produto
+        """)
+        try:
+            rows = db.execute(itens_sql, {"tid": tabela_id}).mappings().all()
+        except Exception as e:
+            raise HTTPException(
+                status_code=500,
+                detail=(f"Falha ao consultar itens da tabela {tabela_id}: {str(e)}. "
+                        f"Verifique se as colunas 'valor_frete' e 'valor_s_frete' já foram criadas.")
+            )
+
+        if not rows:
+            raise HTTPException(status_code=404, detail="Tabela sem itens ou não encontrada")
 
         produtos: List[ProdutoPedidoPreview] = []
         for r in rows:
