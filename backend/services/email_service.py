@@ -204,4 +204,3 @@ Equipe OrderSync
 
         server.quit()
 
-```
