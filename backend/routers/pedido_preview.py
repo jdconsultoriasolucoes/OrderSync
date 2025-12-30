@@ -120,6 +120,16 @@ async def pedido_preview(
                 markup=mk_pct
             ))
 
+        return PedidoPreviewResp(
+            tabela_id=tabela_id,
+            razao_social=cliente,
+            condicao_pagamento=None,
+            validade=None,
+            tempo_restante=None,
+            usar_valor_com_frete=com_frete,
+            produtos=produtos,
+        )
+
 class ConfirmarItem(BaseModel):
     codigo: str
     descricao: str | None = None
