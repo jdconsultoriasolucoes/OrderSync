@@ -15,7 +15,172 @@
 
   <!-- CSS Global e Navbar -->
   <link rel="stylesheet" href="../navbar.css">
-  <link rel="stylesheet" href="config_email.css?v=tab-1" />
+  <style>
+    /* config_email.css - Component specific styles */
+    /* Global layout handled by navbar.css and bootstrap */
+
+    body {
+      background-color: #f3f4f6;
+      font-family: 'Inter', sans-serif;
+    }
+
+    .page-container {
+      max-width: 900px;
+      margin: 40px auto;
+      padding: 0 20px;
+    }
+
+    .card {
+      background: #fff;
+      border-radius: 12px;
+      box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+      padding: 32px;
+      border: 1px solid #e5e7eb;
+    }
+
+    /* Tabs */
+    .tabs {
+      display: flex;
+      gap: 8px;
+      border-bottom: 1px solid #e5e7eb;
+      margin-bottom: 16px;
+      margin-top: 20px;
+    }
+
+    .tab {
+      appearance: none;
+      border: 1px solid #e5e7eb;
+      border-bottom: none;
+      background: #f9fafb;
+      padding: 10px 14px;
+      border-radius: 8px 8px 0 0;
+      cursor: pointer;
+      color: #111827;
+      font-weight: 500;
+    }
+
+    .tab.active {
+      background: #fff;
+      font-weight: 600;
+      border-bottom-color: #fff;
+      margin-bottom: -1px;
+    }
+
+    .tab-panel {
+      display: none;
+      padding: 10px 0;
+    }
+
+    .tab-panel.active {
+      display: block;
+    }
+
+    /* Form Fields */
+    .form {
+      display: block;
+    }
+
+    .field {
+      margin-bottom: 14px;
+    }
+
+    .field>label {
+      display: block;
+      font-weight: 600;
+      margin-bottom: 6px;
+      color: #374151;
+      font-size: 0.9em;
+    }
+
+    .field>small,
+    .help {
+      color: #6b7280;
+      font-size: 12px;
+    }
+
+    .field.checkbox {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .field.checkbox>label {
+      margin: 0;
+      font-weight: 500;
+    }
+
+    textarea {
+      resize: vertical;
+    }
+
+    /* Grid for SMTP fields */
+    .grid-2 {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 12px;
+    }
+
+    @media (max-width: 720px) {
+      .grid-2 {
+        grid-template-columns: 1fr;
+      }
+    }
+
+    /* Actions */
+    .actions {
+      display: flex;
+      gap: 10px;
+      margin-top: 20px;
+      padding-top: 10px;
+      border-top: 1px solid #eee;
+    }
+
+    .btn {
+      padding: 10px 14px;
+      border: 1px solid #d1d5db;
+      border-radius: 6px;
+      background: #fff;
+      cursor: pointer;
+      font-weight: 500;
+    }
+
+    .btn.primary {
+      background: #2563eb;
+      color: #fff;
+      border-color: #2563eb;
+    }
+
+    .btn:hover {
+      opacity: 0.9;
+    }
+
+    .btn:disabled {
+      opacity: .6;
+      cursor: not-allowed;
+    }
+
+    /* Make inputs fit Bootstrap-like if not included */
+    input[type="text"],
+    input[type="email"],
+    input[type="number"],
+    input[type="password"],
+    textarea {
+      width: 100%;
+      padding: 10px 12px;
+      border: 1px solid #d1d5db;
+      border-radius: 6px;
+      background: #fff;
+      outline: none;
+      font-family: inherit;
+      font-size: 14px;
+    }
+
+    input:focus,
+    textarea:focus {
+      border-color: #2563eb;
+      box-shadow: 0 0 0 2px rgba(37, 99, 235, 0.1);
+    }
+  </style>
 
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
