@@ -128,7 +128,7 @@ body {
 .transparent-input {
   border: none;
   background: transparent;
-  width: 85px;
+  width: 150px;
   color: var(--text);
   font-weight: 600;
   padding: 0;
