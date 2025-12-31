@@ -56,62 +56,97 @@
     <h1> Criação de Tabela de Preço </h1>
 
     <section class="card pad" aria-labelledby="sec-topo">
-      <h2 id="sec-topo" class="section-title">Dados principais</h2>
-      <div class="grid grid-4 grid-gap">
-        <div class="field">
+      <div class="section-header-flex">
+        <h2 id="sec-topo" class="section-title" style="margin: 0;">Dados principais</h2>
+        <div class="header-info-group">
+          <div class="info-item">
+            <span class="info-label">Validade:</span>
+            <input id="validade_tabela" class="transparent-input" type="text" readonly tabindex="-1" />
+          </div>
+          <div class="info-item">
+            <span class="info-label">Tempo:</span>
+            <input id="dias_restantes" class="transparent-input" type="text" readonly tabindex="-1" />
+          </div>
+        </div>
+      </div>
+
+      <div class="custom-grid" style="margin-top: 16px;">
+
+        <!-- Row 1 Items -->
+        <div class="grid-item area-nome">
           <label for="nome_tabela">Nome da Tabela</label>
           <input id="nome_tabela" type="text" placeholder="Ex.: Tabela Promocional Set/25" />
         </div>
-        <div class="field">
+
+        <div class="grid-item area-cliente">
           <label for="cliente_nome">Cliente</label>
           <input id="cliente_nome" type="text" autocomplete="off" placeholder="Digite o nome ou CNPJ..." />
           <input id="codigo_cliente" type="hidden" />
           <input id="ramo_juridico" type="hidden" />
-          <!-- container do autocomplete (fica logo após o input) -->
           <div id="cliente_suggestions" class="suggestions"></div>
         </div>
-        <div class="field">
-          <label for="iva_st_toggle">IVA_ST</label>
-          <div class="inline">
-            <input id="iva_st_toggle" type="checkbox" disabled />
-            <span class="hint">IVA_ST (Sim / Não) </span>
+
+        <!-- Row 2 Items -->
+        <!-- IVA starts aligned with Cliente -->
+        <div class="grid-item area-iva">
+          <!-- Wrapper field/inline for consistency -->
+          <div class="field">
+            <div class="inline">
+              <input id="iva_st_toggle" type="checkbox" disabled />
+              <span class="hint" style="font-size: 0.85rem; color: var(--text);">Aplicar IVA_ST</span>
+            </div>
           </div>
         </div>
-        <div class="field row-2">
-          <label for="validade_tabela">Validade da Tabela</label>
-          <input id="validade_tabela" type="text" readonly />
+
+        <div class="grid-item area-iva">
+          <!-- Wrapper field/inline for consistency -->
+          <div class="field">
+            <div class="inline">
+              <input id="iva_st_toggle" type="checkbox" disabled />
+              <span class="hint" style="font-size: 0.85rem; color: var(--text);">Aplicar IVA_ST</span>
+            </div>
+          </div>
         </div>
-        <div class="field row-2">
-          <label for="dias_restantes">Tempo restante</label>
-          <input id="dias_restantes" type="text" readonly />
-        </div>
+
       </div>
 
-      <div class="grid grid-3 grid-gap">
-        <div class="field">
-          <label for="frete_kg">Frete por KG <span class="hint">(aplica-se por linha)</span></label>
-          <input id="frete_kg" type="number" step="0" min="0" value="0" />
-        </div>
-        <div class="field">
-          <label for="plano_pagamento">Condição de Pagamento</label>
-          <select id="plano_pagamento"></select>
-          <div class="hint" id="hint-condicao">Carregando condições…</div>
-        </div>
-        <div class="toolbar left-gap">
-          <button class="btn" id="btn-aplicar-condicao-todos">Aplicar condição a todos</button>
-          <span class="pill"><span>Taxa Condição:</span><strong id="pill-taxa">—</strong></span>
-        </div>
-        <div class="field">
-          <label for="desconto_global">Desconto / Fator de Comissão %</label>
-          <!--<div class="inline">-->
-          <select id="desconto_global" class="grow"></select>
-          <span class="pill"><span>Taxa do fator:</span><strong id="pill-fator">—</strong><span> %</span></span>
-          <!--</div>-->
-          <div class="hint">Selecione um desconto para <b>aplicar a todos</b> abaixo.</div>
+
+      <!-- Bottom (Condition / Discount) -->
+      <div class="grid-condition-discount">
+
+        <!-- Condição -->
+        <div class="grid-item">
+          <div class="field">
+            <label for="plano_pagamento">Condição de Pagamento</label>
+            <select id="plano_pagamento"></select>
+            <div class="hint" id="hint-condicao">Carregando...</div>
+          </div>
           <div class="toolbar left-gap">
-            <button class="btn" id="btn-aplicar-todos">Aplicar fator a todos</button>
+            <button class="btn btn-sm" id="btn-aplicar-condicao-todos">Aplicar a todos</button>
+            <span class="pill"><span>Taxa:</span><strong id="pill-taxa">—</strong></span>
           </div>
         </div>
+
+        <!-- Desconto: Moved Back Here -->
+        <div class="grid-item area-desconto">
+          <div class="field">
+            <label for="desconto_global">Desconto / Fator %</label>
+            <select id="desconto_global" class="grow"></select>
+          </div>
+          <div class="toolbar left-gap">
+            <button class="btn btn-sm" id="btn-aplicar-todos">Aplicar a todos</button>
+            <span class="pill"><span>Fator:</span><strong id="pill-fator">—</strong><span>%</span></span>
+          </div>
+        </div>
+
+        <!-- Frete: Moved Here -->
+        <div class="grid-item field-frete">
+          <div class="field">
+            <label for="frete_kg">Frete/KG</label>
+            <input id="frete_kg" class="input-mini" type="number" step="0" min="0" value="0" />
+          </div>
+        </div>
+
       </div>
     </section>
 
@@ -137,14 +172,37 @@
             <tr>
               <th><input id="chk-all" type="checkbox" /></th>
               <th>Código</th>
-              <th>Descrição</th>
+              <!-- Toggle Produto: controla Embalagem(4), Grupo(5), Peso(6) -->
+              <th class="th-toggle-prod">
+                <label class="st-toggle-in-th" title="Mostrar/ocultar detalhes do produto">
+                  <input id="prod-toggle" type="checkbox" />
+                  <span class="st-title">Descrição</span>
+                  <span class="chevron">▶</span>
+                </label>
+              </th>
               <th>Embalagem</th>
               <th>Grupo / Depto.</th>
               <th class="right">Peso Líq.</th>
               <th class="right">Valor Unitário</th>
-              <th class="right">Fator Comissão/Desconto %</th>
+
+              <!-- Toggle Desconto: controla Desc. aplicado(9) -->
+              <th class="right th-toggle-desc">
+                <label class="st-toggle-in-th" title="Mostrar/ocultar valor do desconto">
+                  <input id="desc-toggle" type="checkbox" />
+                  <span class="st-title">Fator %</span>
+                  <span class="chevron">▶</span>
+                </label>
+              </th>
               <th class="right">Desc. aplicado (R$)</th>
-              <th>Cond. Pagto (cód)</th><!-- NOVO (editável por linha) -->
+
+              <!-- Toggle Condição: controla Cond. Pagto R$(11) -->
+              <th class="th-toggle-cond">
+                <label class="st-toggle-in-th" title="Mostrar/ocultar valor da condição">
+                  <input id="cond-toggle" type="checkbox" />
+                  <span class="st-title">Cond. Pagto</span>
+                  <span class="chevron">▶</span>
+                </label>
+              </th>
               <th class="right">Cond. Pagto (R$)</th>
               <th class="right">Frete (R$)</th>
               <th class="right">IPI (R$)</th> <!-- foi IPI (%) -->
