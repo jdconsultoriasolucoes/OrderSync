@@ -1137,3 +1137,78 @@ function handleSuccessModal(stats, relatorioUrl) {
     });
   }
 }
+
+// ------------------------------------------------------------------
+// LÓGICA DE RENOVAR VALIDADE (GLOBAL)
+// ------------------------------------------------------------------
+function setupRenovarValidade() {
+  const btnRenovar = document.getElementById("btn-renovar-validade");
+  const modalRenovar = document.getElementById("modal-renovar-validade");
+  const btnConfirmar = document.getElementById("btn-confirmar-renovacao");
+  const btnFechar = document.getElementById("btn-fechar-renovacao");
+  const inputNovaValidade = document.getElementById("input-nova-validade");
+
+  if (!btnRenovar || !modalRenovar) return;
+
+  // Abrir manual
+  btnRenovar.addEventListener("click", () => {
+    modalRenovar.hidden = false;
+    modalRenovar.style.display = "flex"; // Força display flex se css for hidden
+    inputNovaValidade.value = "";
+  });
+
+  // Fechar
+  const close = () => {
+    modalRenovar.hidden = true;
+    modalRenovar.style.display = "none";
+  };
+  if (btnFechar) btnFechar.addEventListener("click", close);
+
+  // Confirmar
+  if (btnConfirmar) {
+    btnConfirmar.addEventListener("click", async () => {
+      const novaData = inputNovaValidade.value;
+      if (!novaData) {
+        showToast("Selecione uma data!", true);
+        return;
+      }
+
+      if (!confirm(`Confirma renovar validade de TODOS os produtos ativos para ${novaData}?`)) {
+        return;
+      }
+
+      try {
+        const token = localStorage.getItem("ordersync_token"); // ou window.Auth.getToken()
+        const api = window.API_BASE || "http://127.0.0.1:8000"; // fallback
+
+        const resp = await fetch(`${api}/produtos/renovar_validade_global`, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            "Authorization": `Bearer ${token}`
+          },
+          body: JSON.stringify({ nova_validade: novaData })
+        });
+
+        if (!resp.ok) {
+          const err = await resp.json();
+          throw new Error(err.detail || "Erro ao renovar validade");
+        }
+
+        const data = await resp.json();
+        showToast(`Sucesso! ${data.linhas_afetadas} produtos atualizados.`);
+        close();
+        if (typeof resetForm === 'function') resetForm();
+
+      } catch (e) {
+        console.error(e);
+        showToast("Erro: " + e.message, true);
+      }
+    });
+  }
+}
+
+// Inicializa a lógica extra
+document.addEventListener("DOMContentLoaded", () => {
+  setupRenovarValidade();
+});

@@ -117,8 +117,28 @@
 
             <div class="form-group">
                 <label for="password">Senha</label>
-                <input type="password" id="password" required placeholder="••••••••">
+                <div style="position: relative;">
+                    <input type="password" id="password" name="password" required placeholder="••••••••">
+                    <span id="togglePassword" style="position: absolute; right: 10px; top: 10px; cursor: pointer;">
+                        👁️
+                    </span>
+                </div>
             </div>
+
+            <script>
+                const togglePassword = document.querySelector('#togglePassword');
+                const password = document.querySelector('#password');
+
+                if (togglePassword && password) {
+                    togglePassword.addEventListener('click', function (e) {
+                        // toggle the type attribute
+                        const type = password.getAttribute('type') === 'password' ? 'text' : 'password';
+                        password.setAttribute('type', type);
+                        // toggle the eye icon (optional)
+                        this.textContent = type === 'password' ? '👁️' : '🙈';
+                    });
+                }
+            </script>
 
             <button type="submit" class="btn-login" id="btn-submit">Entrar</button>
         </form>

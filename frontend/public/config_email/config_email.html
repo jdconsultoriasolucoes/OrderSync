@@ -1,27 +1,201 @@
-<!doctype html>
+<!DOCTYPE html>
 <html lang="pt-BR">
+
 <head>
   <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Configuração de E-mail · OrderSync</title>
+
   <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate" />
   <meta http-equiv="Pragma" content="no-cache" />
   <meta http-equiv="Expires" content="0" />
+
+  <!-- Bootstrap 5 -->
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+
+  <!-- CSS Global e Navbar -->
+  <link rel="stylesheet" href="../navbar.css">
   <link rel="stylesheet" href="/static/config_email/config_email.css?v=tab-1" />
- <script>
+
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600&display=swap" rel="stylesheet">
+
+  <script src="../js/auth.js"></script>
+  <script>
+    if (window.Auth) {
+      window.Auth.checkAuth();
+    }
+  </script>
+
+  <script>
+    window.API_BASE = "https://ordersync-backend-59d2.onrender.com";
+    window.CONFIG_EMAIL_BASE = window.API_BASE + "/admin/config_email";
+    window.NETDIAG_BASE = window.API_BASE + "/admin/netdiag";
+
+    window.CONFIG_EMAIL_ENDPOINTS = {
+      mensagem: window.CONFIG_EMAIL_BASE + "/mensagem",
+      smtp: window.CONFIG_EMAIL_BASE + "/smtp",
+      testarEnvio: window.CONFIG_EMAIL_BASE + "/teste_envio"
+    };
+  </script>
+  <script defer src="/static/config_email/config_email.js?v=tab-6"></script>
+</head>
+
+<body>
+
+  <!-- Header (Faixa Superior) -->
+  <header>
+    <div class="navbar">
+      <button class="menu-btn" id="menu-button">&#9776;</button>
+      <img src="../logo.png" alt="Logo" class="logo" />
+    </div>
+  </header>
+
+  <!-- Sidebar -->
+  <nav class="sidebar" id="sidebar">
+    <ul>
+      <li><a href="/">Home</a></li>
+      <li><a href="/clientes/cliente.html">Cadastrar Cliente</a></li>
+      <li><a href="#">Atualizar Catálogo</a></li>
+      <li><a href="/pedido/pedido.html">Consultar Pedidos</a></li>
+      <li><a href="#">Exportar Relatórios</a></li>
+      <li><a href="/tabela_preco/criacao_tabela_preco.html">Tabela Preço</a></li>
+      <li><a href="/produto/produto.html">Produtos</a></li>
+      <li><a href="/usuarios.html">Usuários</a></li>
+      <li><a href="/config_email/config_email.html">Configuração E-mail</a></li>
+      <li><a href="#" onclick="window.Auth.openChangePasswordModal()">Trocar Senha</a></li>
+      <li><a href="#" onclick="window.Auth.logout()">Sair</a></li>
+    </ul>
+  </nav>
+  <div id="overlay"></div>
+
+  <!-- Main Content Wrapper -->
+  <div class="page-container">
+    <div class="card" style="margin-top: 20px;">
+      <!-- Header interno do Card (opcional, estilo produto) -->
+      <div class="header" style="padding-bottom:10px; border-bottom:1px solid #eee; margin-bottom:20px;">
+        <div class="title" style="font-size:1.2rem; font-weight:600;">CONFIGURAÇÃO DE E-MAIL</div>
+      </div>
+
+      <nav class="tabs" role="tablist" aria-label="Configuração de e-mail">
+        <button class="tab active" data-tab="tab-mensagem" role="tab" aria-selected="true">Mensagem</button>
+        <button class="tab" data-tab="tab-smtp" role="tab" aria-selected="false">SMTP</button>
+      </nav>
+
+      <!-- Guia: Mensagem -->
+      <section id="tab-mensagem" class="tab-panel active" role="tabpanel" aria-labelledby="Mensagem">
+        <form id="form-mensagem" class="form">
+          <div class="field">
+            <label>Destinatário interno <small>(separar por vírgula)</small></label>
+            <textarea id="destinatario_interno" rows="3"
+              placeholder="ex.: pedidos@empresa.com, compras@empresa.com"></textarea>
+          </div>
+
+          <div class="field">
+            <label>Assunto padrão</label>
+            <input id="assunto_padrao" type="text" placeholder="Novo pedido {{pedido_id}}" />
+          </div>
+
+          <div class="field">
+            <label>Corpo do e-mail <small>(HTML permitido)</small></label>
+            <textarea id="corpo_html" rows="8"
+              placeholder="<p>Olá {{cliente_nome}}, seu pedido {{pedido_id}} foi recebido...</p>"></textarea>
+            <p class="help">Placeholders: <code>{{pedido_id}}</code>, <code>{{cliente_nome}}</code>,
+              <code>{{total_pedido}}</code>, <code>{{link_pdf}}</code></p>
+          </div>
+
+          <div class="field checkbox">
+            <input id="enviar_para_cliente" type="checkbox" />
+            <label for="enviar_para_cliente">Enviar também para o cliente</label>
+          </div>
+
+          <div class="actions">
+            <button type="button" id="btnSalvarMensagem" class="btn primary">Salvar</button>
+            <button type="button" id="btnTestarEnvio" class="btn">Testar envio</button>
+          </div>
+        </form>
+      </section>
+
+      <!-- Guia: SMTP -->
+      <section id="tab-smtp" class="tab-panel" role="tabpanel" aria-labelledby="SMTP">
+        <form id="form-smtp" class="form">
+          <div class="grid-2">
+            <div class="field">
+              <label>Remetente (From)</label>
+              <input id="remetente_email" type="email"
+                placeholder="Pedidos &lt;pedidos@empresa.com&gt; ou pedidos@empresa.com" />
+            </div>
+            <div class="field">
+              <label>Servidor SMTP (host)</label>
+              <input id="smtp_host" type="text" placeholder="smtp.seudominio.com" />
+            </div>
+            <div class="field">
+              <label>Porta</label>
+              <input id="smtp_port" type="number" min="1" step="1" value="587" />
+            </div>
+            <div class="field">
+              <label>Usuário SMTP</label>
+              <input id="smtp_user" type="text" placeholder="pedidos@empresa.com" />
+            </div>
+            <div class="field">
+              <label>Senha SMTP</label>
+              <input id="smtp_senha" type="password" />
+            </div>
+            <div class="field checkbox">
+              <input id="usar_tls" type="checkbox" checked />
+              <label for="usar_tls">Usar TLS</label>
+            </div>
+          </div>
+
+          <div class="actions">
+            <button type="button" id="btnSalvarSMTP" class="btn primary">Salvar</button>
+            <button type="button" id="btnTestarSMTP" class="btn">Testar conexão</button>
+          </div>
+        </form>
+      </section>
+    </div>
+  </div>
+
+  <script>
+    const menuButton = document.getElementById("menu-button");
+    const sidebar = document.getElementById("sidebar");
+    const overlay = document.getElementById("overlay");
+
+    if (menuButton && sidebar && overlay) {
+      menuButton.addEventListener("click", () => {
+        sidebar.classList.toggle("active");
+        overlay.style.display = sidebar.classList.contains("active") ? "block" : "none";
+      });
+      overlay.addEventListener("click", () => {
+        sidebar.classList.remove("active");
+        overlay.style.display = "none";
+      });
+    }
+  </script>
+</body>
+
+</html>
+<meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate" />
+<meta http-equiv="Pragma" content="no-cache" />
+<meta http-equiv="Expires" content="0" />
+<link rel="stylesheet" href="/static/config_email/config_email.css?v=tab-1" />
+<script>
   window.API_BASE = "https://ordersync-backend-59d2.onrender.com";
   window.CONFIG_EMAIL_BASE = window.API_BASE + "/admin/config_email";
   window.NETDIAG_BASE = window.API_BASE + "/admin/netdiag";
 
   // Use exatamente as rotas do OpenAPI
   window.CONFIG_EMAIL_ENDPOINTS = {
-    mensagem:    window.CONFIG_EMAIL_BASE + "/mensagem",
-    smtp:        window.CONFIG_EMAIL_BASE + "/smtp",
+    mensagem: window.CONFIG_EMAIL_BASE + "/mensagem",
+    smtp: window.CONFIG_EMAIL_BASE + "/smtp",
     testarEnvio: window.CONFIG_EMAIL_BASE + "/teste_envio"
     // OBS: não existe /smtp/teste no seu back
   };
-  </script>
- <script defer src="/static/config_email/config_email.js?v=tab-6"></script>
+</script>
+<script defer src="/static/config_email/config_email.js?v=tab-6"></script>
 </head>
+
 <body>
   <header class="topbar">
     <div class="brand">
@@ -43,7 +217,8 @@
       <form id="form-mensagem" class="form">
         <div class="field">
           <label>Destinatário interno <small>(separar por vírgula)</small></label>
-          <textarea id="destinatario_interno" rows="3" placeholder="ex.: pedidos@empresa.com, compras@empresa.com"></textarea>
+          <textarea id="destinatario_interno" rows="3"
+            placeholder="ex.: pedidos@empresa.com, compras@empresa.com"></textarea>
         </div>
 
         <div class="field">
@@ -53,8 +228,10 @@
 
         <div class="field">
           <label>Corpo do e-mail <small>(HTML permitido)</small></label>
-          <textarea id="corpo_html" rows="8" placeholder="<p>Olá {{cliente_nome}}, seu pedido {{pedido_id}} foi recebido...</p>"></textarea>
-          <p class="help">Placeholders: <code>{{pedido_id}}</code>, <code>{{cliente_nome}}</code>, <code>{{total_pedido}}</code>, <code>{{link_pdf}}</code></p>
+          <textarea id="corpo_html" rows="8"
+            placeholder="<p>Olá {{cliente_nome}}, seu pedido {{pedido_id}} foi recebido...</p>"></textarea>
+          <p class="help">Placeholders: <code>{{pedido_id}}</code>, <code>{{cliente_nome}}</code>,
+            <code>{{total_pedido}}</code>, <code>{{link_pdf}}</code></p>
         </div>
 
         <div class="field checkbox">
@@ -75,7 +252,8 @@
         <div class="grid-2">
           <div class="field">
             <label>Remetente (From)</label>
-            <input id="remetente_email" type="email" placeholder="Pedidos &lt;pedidos@empresa.com&gt; ou pedidos@empresa.com" />
+            <input id="remetente_email" type="email"
+              placeholder="Pedidos &lt;pedidos@empresa.com&gt; ou pedidos@empresa.com" />
           </div>
           <div class="field">
             <label>Servidor SMTP (host)</label>
@@ -107,4 +285,5 @@
     </section>
   </main>
 </body>
+
 </html>

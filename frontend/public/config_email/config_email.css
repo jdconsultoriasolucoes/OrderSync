@@ -1,36 +1,295 @@
-:root { --bg:#0f1115; --card:#fff; --ink:#1b1f2a; --muted:#6b7280; --brand:#111827; --line:#e5e7eb; --blue:#2563eb; }
-* { box-sizing: border-box; }
-html, body { margin:0; padding:0; font-family: system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif; color:var(--ink); background:#fafafa; }
-.topbar { background:var(--brand); color:#fff; padding:10px 16px; }
-.topbar .brand { display:flex; align-items:center; gap:10px; font-weight:600; letter-spacing:.5px; }
-.logo { height:18px; display:block; }
+/* config_email.css - Component specific styles */
+/* Global layout handled by navbar.css and bootstrap */
 
-.container { max-width: 980px; margin: 24px auto 56px; padding: 0 16px; }
-h1 { font-size: 28px; margin: 8px 0 18px; }
-
-.tabs { display:flex; gap:8px; border-bottom:1px solid var(--line); margin-bottom:16px; }
-.tab { appearance:none; border:1px solid var(--line); border-bottom:none; background:#f9fafb; padding:10px 14px; border-radius:8px 8px 0 0; cursor:pointer; color:#111827; }
-.tab.active { background:#fff; font-weight:600; }
-
-.tab-panel { display:none; background:#fff; border:1px solid var(--line); border-radius:0 8px 8px 8px; padding:18px; }
-.tab-panel.active { display:block; }
-
-.form { display:block; }
-.field { margin-bottom:14px; }
-.field > label { display:block; font-weight:600; margin-bottom:6px; }
-.field > small, .help { color:var(--muted); font-size:12px; }
-.field.checkbox { display:flex; align-items:center; gap:8px; }
-.field.checkbox > label { margin:0; font-weight:500; }
-
-input[type="text"], input[type="email"], input[type="number"], input[type="password"], textarea {
-  width:100%; padding:10px 12px; border:1px solid var(--line); border-radius:8px; background:#fff; outline:none;
+/* Tabs */
+.tabs {
+  display: flex;
+  gap: 8px;
+  border-bottom: 1px solid #e5e7eb;
+  margin-bottom: 16px;
+  margin-top: 20px;
 }
-textarea { resize: vertical; }
 
-.grid-2 { display:grid; grid-template-columns: repeat(2, minmax(0,1fr)); gap:12px; }
-@media (max-width: 720px) { .grid-2 { grid-template-columns: 1fr; } }
+.tab {
+  appearance: none;
+  border: 1px solid #e5e7eb;
+  border-bottom: none;
+  background: #f9fafb;
+  padding: 10px 14px;
+  border-radius: 8px 8px 0 0;
+  cursor: pointer;
+  color: #111827;
+  font-weight: 500;
+}
 
-.actions { display:flex; gap:10px; margin-top:6px; }
-.btn { padding:10px 14px; border:1px solid var(--line); border-radius:8px; background:#f3f4f6; cursor:pointer; }
-.btn.primary { background:var(--blue); color:#fff; border-color:var(--blue); }
-.btn:disabled { opacity:.6; cursor:not-allowed; }
+.tab.active {
+  background: #fff;
+  font-weight: 600;
+  border-bottom-color: #fff;
+  margin-bottom: -1px;
+}
+
+.tab-panel {
+  display: none;
+  padding: 10px 0;
+}
+
+.tab-panel.active {
+  display: block;
+}
+
+/* Form Fields */
+.form {
+  display: block;
+}
+
+.field {
+  margin-bottom: 14px;
+}
+
+.field>label {
+  display: block;
+  font-weight: 600;
+  margin-bottom: 6px;
+  color: #374151;
+  font-size: 0.9em;
+}
+
+.field>small,
+.help {
+  color: #6b7280;
+  font-size: 12px;
+}
+
+.field.checkbox {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.field.checkbox>label {
+  margin: 0;
+  font-weight: 500;
+}
+
+textarea {
+  resize: vertical;
+}
+
+/* Grid for SMTP fields */
+.grid-2 {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+}
+
+@media (max-width: 720px) {
+  .grid-2 {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* Actions */
+.actions {
+  display: flex;
+  gap: 10px;
+  margin-top: 20px;
+  padding-top: 10px;
+  border-top: 1px solid #eee;
+}
+
+.btn {
+  padding: 10px 14px;
+  border: 1px solid #d1d5db;
+  border-radius: 6px;
+  background: #fff;
+  cursor: pointer;
+  font-weight: 500;
+}
+
+.btn.primary {
+  background: #2563eb;
+  color: #fff;
+  border-color: #2563eb;
+}
+
+.btn:hover {
+  opacity: 0.9;
+}
+
+.btn:disabled {
+  opacity: .6;
+  cursor: not-allowed;
+}
+
+/* Make inputs fit Bootstrap-like if not included */
+input[type="text"],
+input[type="email"],
+input[type="number"],
+input[type="password"],
+textarea {
+  width: 100%;
+  padding: 10px 12px;
+  border: 1px solid #d1d5db;
+  border-radius: 6px;
+  background: #fff;
+  outline: none;
+  font-family: inherit;
+  font-size: 14px;
+}
+
+input:focus,
+textarea:focus {
+  border-color: #2563eb;
+  box-shadow: 0 0 0 2px rgba(37, 99, 235, 0.1);
+}
+
+.topbar {
+  background: var(--brand);
+  color: #fff;
+  padding: 10px 16px;
+}
+
+.topbar .brand {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-weight: 600;
+  letter-spacing: .5px;
+}
+
+.logo {
+  height: 18px;
+  display: block;
+}
+
+.container {
+  max-width: 980px;
+  margin: 24px auto 56px;
+  padding: 0 16px;
+}
+
+h1 {
+  font-size: 28px;
+  margin: 8px 0 18px;
+}
+
+.tabs {
+  display: flex;
+  gap: 8px;
+  border-bottom: 1px solid var(--line);
+  margin-bottom: 16px;
+}
+
+.tab {
+  appearance: none;
+  border: 1px solid var(--line);
+  border-bottom: none;
+  background: #f9fafb;
+  padding: 10px 14px;
+  border-radius: 8px 8px 0 0;
+  cursor: pointer;
+  color: #111827;
+}
+
+.tab.active {
+  background: #fff;
+  font-weight: 600;
+}
+
+.tab-panel {
+  display: none;
+  background: #fff;
+  border: 1px solid var(--line);
+  border-radius: 0 8px 8px 8px;
+  padding: 18px;
+}
+
+.tab-panel.active {
+  display: block;
+}
+
+.form {
+  display: block;
+}
+
+.field {
+  margin-bottom: 14px;
+}
+
+.field>label {
+  display: block;
+  font-weight: 600;
+  margin-bottom: 6px;
+}
+
+.field>small,
+.help {
+  color: var(--muted);
+  font-size: 12px;
+}
+
+.field.checkbox {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.field.checkbox>label {
+  margin: 0;
+  font-weight: 500;
+}
+
+input[type="text"],
+input[type="email"],
+input[type="number"],
+input[type="password"],
+textarea {
+  width: 100%;
+  padding: 10px 12px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: #fff;
+  outline: none;
+}
+
+textarea {
+  resize: vertical;
+}
+
+.grid-2 {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+}
+
+@media (max-width: 720px) {
+  .grid-2 {
+    grid-template-columns: 1fr;
+  }
+}
+
+.actions {
+  display: flex;
+  gap: 10px;
+  margin-top: 6px;
+}
+
+.btn {
+  padding: 10px 14px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: #f3f4f6;
+  cursor: pointer;
+}
+
+.btn.primary {
+  background: var(--blue);
+  color: #fff;
+  border-color: var(--blue);
+}
+
+.btn:disabled {
+  opacity: .6;
+  cursor: not-allowed;
+}

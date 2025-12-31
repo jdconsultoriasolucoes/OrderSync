@@ -53,6 +53,28 @@ const Auth = {
         if (!Auth.isAuthenticated()) {
             console.log("Not authenticated, redirecting to:", LOGIN_URL);
             window.location.href = LOGIN_URL;
+            return;
+        }
+
+        // Inactivity Timer (15 minutes)
+        if (!window.inactivityTimerInitialized) {
+            let inactivityTimer;
+            const resetTimer = () => {
+                clearTimeout(inactivityTimer);
+                inactivityTimer = setTimeout(() => {
+                    alert("Sessão expirada por inatividade (15min).");
+                    Auth.logout();
+                }, 15 * 60 * 1000);
+            };
+
+            window.addEventListener('mousemove', resetTimer);
+            window.addEventListener('mousedown', resetTimer);
+            window.addEventListener('keypress', resetTimer);
+            window.addEventListener('touchstart', resetTimer);
+            window.addEventListener('click', resetTimer);
+
+            resetTimer(); // Start
+            window.inactivityTimerInitialized = true;
         }
     }
 };
