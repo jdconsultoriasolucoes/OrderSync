@@ -1,6 +1,7 @@
 body {
   font-size: 14px;
-  zoom: 100%; /* ajusta o tamanho geral da tela */
+  zoom: 100%;
+  /* ajusta o tamanho geral da tela */
 }
 
 /* Caixa do formulário */
@@ -21,7 +22,8 @@ h2 {
 }
 
 /* Inputs e selects */
-input, select {
+input,
+select {
   padding: 6px 10px;
   font-size: 14px;
 }
@@ -35,58 +37,60 @@ input, select {
 
 
 main {
-    padding: 2rem;
+  padding: 2rem;
 }
 
 h1 {
-    text-align: left;
-    color: #0D0D0D;
-    font-size: 18px;
+  text-align: left;
+  color: #0D0D0D;
+  font-size: 18px;
 }
 
 .tabs {
   display: grid;
-  grid-template-columns: repeat(6, 1fr); /* 6 abas */
+  grid-template-columns: repeat(6, 1fr);
+  /* 6 abas */
   gap: 0.5rem;
   margin-bottom: 1rem;
 }
 
 
 .tab {
-    background-color: #f4ecf8;
-    border: none;
-    padding: 0.7rem 1rem;
-    cursor: pointer;
-    border-radius: 6px;
-    font-weight: 600;
-    color: #8e44ad;
+  background-color: #f4ecf8;
+  border: none;
+  padding: 0.7rem 1rem;
+  cursor: pointer;
+  border-radius: 6px;
+  font-weight: 600;
+  color: #8e44ad;
 }
 
 .tab.active {
-    background-color: #dcd6f7;
-    color: #4b0082;
+  background-color: #dcd6f7;
+  color: #4b0082;
 }
 
 .tab-content {
-    display: none;
+  display: none;
 }
 
 .tab-content.active {
-    display: block;
+  display: block;
 }
 
 .checkbox-container {
   display: flex;
   align-items: center;
-  gap: 0px; /* Espaço entre label e checkbox */
+  gap: 0px;
+  /* Espaço entre label e checkbox */
 }
 
 
 form {
-    background: #fafafa;
-    border: 1px solid #e0e0e0;
-    padding: 1.5rem;
-    border-radius: 8px;
+  background: #fafafa;
+  border: 1px solid #e0e0e0;
+  padding: 1.5rem;
+  border-radius: 8px;
 }
 
 .form-grid-2col {
@@ -97,16 +101,17 @@ form {
 }
 
 label {
-    display: flex;
-    flex-direction: column;
-    font-weight: 500;
-    color: #333;
+  display: flex;
+  flex-direction: column;
+  font-weight: 500;
+  color: #333;
 }
 
-input[type="text"], select {
-    padding: 0.5rem;
-    border-radius: 4px;
-    border: 1px solid #ccc;
+input[type="text"],
+select {
+  padding: 0.5rem;
+  border-radius: 4px;
+  border: 1px solid #ccc;
 }
 
 .form-grid {
@@ -185,8 +190,9 @@ input[type="text"], select {
   background-color: #d5d5d5;
 }
 
-.table-wrap{
-  overflow-x: auto;           /* scroll limpo no horizontal em telas menores */
+.table-wrap {
+  overflow-x: auto;
+  /* scroll limpo no horizontal em telas menores */
 }
 
 /* Cabeçalho alinhado à esquerda */
@@ -194,14 +200,16 @@ input[type="text"], select {
   text-align: left;
   font-weight: 600;
   padding: 12px 14px;
-  border-bottom: 2px solid var(--line); /* Linha mais evidente no header */
+  border-bottom: 2px solid var(--line);
+  /* Linha mais evidente no header */
   background: var(--head-bg);
 }
 
 /* Corpo com linhas suaves */
 .data-table tbody td {
   padding: 12px 14px;
-  border-bottom: 1px solid #ddd; /* Linha cinza clara */
+  border-bottom: 1px solid #ddd;
+  /* Linha cinza clara */
 }
 
 /* Zebra */
@@ -226,85 +234,118 @@ input[type="text"], select {
 }
 
 /* Toolbar em linha, podendo quebrar */
-.toolbar{
-  display:flex;
-  align-items:flex-end;
-  gap:12px;
-  flex-wrap:wrap;
+.toolbar {
+  display: flex;
+  align-items: flex-end;
+  gap: 12px;
+  flex-wrap: wrap;
 }
 
 /* Campos */
-.toolbar .field{ display:flex; flex-direction:column; gap:4px; }
+.toolbar .field {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
 .toolbar select,
-.toolbar input[type="text"]{ height:36px; padding:6px 10px; border:1px solid #ccc; border-radius:8px; }
+.toolbar input[type="text"] {
+  height: 36px;
+  padding: 6px 10px;
+  border: 1px solid #ccc;
+  border-radius: 8px;
+}
 
 /* 🔧 Busca não ocupa tudo: largura dinâmica controlada */
-.toolbar .grow{ flex:0 1 auto; }                                 /* não “estica” a linha inteira */
-.toolbar .grow input{ width:clamp(240px, 40vw, 520px); }          /* min 240px, cresce até 40vw, máx 520px */
+.toolbar .grow {
+  flex: 0 1 auto;
+}
+
+/* não “estica” a linha inteira */
+.toolbar .grow input {
+  width: clamp(240px, 40vw, 520px);
+}
+
+/* min 240px, cresce até 40vw, máx 520px */
 
 /* Botão alinhado pela base e perto do input */
-.toolbar .btn{ height:36px; padding:0 14px; border-radius:8px; }
+.toolbar .btn {
+  height: 36px;
+  padding: 0 14px;
+  border-radius: 8px;
+}
 
-.toolbar .grow { 
+.toolbar .grow {
   flex: 0 0 auto;
 }
 
 /* Define uma largura fixa só para o input de busca */
 #filtro-palavra {
-  height: 25px;          /* deixe igual aos selects ou no tamanho que preferir */
-  max-height: 180px;      /* garante que não passe disso */
+  height: 25px;
+  /* deixe igual aos selects ou no tamanho que preferir */
+  max-height: 180px;
+  /* garante que não passe disso */
 }
-.ja-adicionado { opacity: .6; } .ja-adicionado td { text-decoration: none; }
+
+.ja-adicionado {
+  opacity: .6;
+}
+
+.ja-adicionado td {
+  text-decoration: none;
+}
 
 /* Barra superior com search à esquerda e botões à direita */
-.acoes-topo{
-  display:flex;
-  align-items:center;
-  justify-content:space-between;
-  gap:16px;
-  margin:16px 0 8px;
+.acoes-topo {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  margin: 16px 0 8px;
 }
 
 /* mantém proporção bonita do input em telas diferentes */
-.acoes-topo #pesquisa{
+.acoes-topo #pesquisa {
   width: clamp(220px, 28vw, 420px);
   padding: 8px 10px;
-  border:1px solid #ccc;
-  border-radius:6px;
+  border: 1px solid #ccc;
+  border-radius: 6px;
 }
 
 /* grupo de botões alinhado e compacto */
-.acoes-right{
-  display:flex;
-  align-items:center;
-  gap:10px;
+.acoes-right {
+  display: flex;
+  align-items: center;
+  gap: 10px;
 }
 
-.acoes-right button{
-  padding:8px 12px;
+.acoes-right button {
+  padding: 8px 12px;
 }
 
 /* responsivo: empilha quando a tela for estreita */
-@media (max-width: 768px){
-  .acoes-topo{
-    flex-direction:column;
-    align-items:stretch;
-    gap:12px;
+@media (max-width: 768px) {
+  .acoes-topo {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 12px;
   }
-  .acoes-right{
-    justify-content:flex-end;
+
+  .acoes-right {
+    justify-content: flex-end;
   }
 }
 
 /* limita a largura do conteúdo e alinha tudo com a tabela */
-.page-container{
-  max-width: 1100px;   /* ajuste fino: 960–1200 */
+.page-container {
+  max-width: 1100px;
+  /* ajuste fino: 960–1200 */
   margin: 0 auto;
   padding: 24px 16px;
 }
 
 /* barra superior alinhada com a tabela */
-.toolbar{
+.toolbar {
   display: flex;
   align-items: center;
   gap: 16px;
@@ -313,34 +354,85 @@ input[type="text"], select {
 }
 
 /* input ocupa a parte esquerda, na mesma largura “ótica” da tabela */
-.toolbar{ flex-wrap: nowrap; }                 /* garante que não quebre a linha */
-.toolbar .search{ flex: 0 0 420px; }           /* largura fixa ~420px (ajuste à vontade) */
-.toolbar .search input{ 
-  width: 100%; 
-  max-width: 420px;                            /* impede crescer e encostar no botão */
+.toolbar {
+  flex-wrap: nowrap;
+}
+
+/* garante que não quebre a linha */
+.toolbar .search {
+  flex: 0 0 420px;
+}
+
+/* largura fixa ~420px (ajuste à vontade) */
+.toolbar .search input {
+  width: 100%;
+  max-width: 420px;
+  /* impede crescer e encostar no botão */
 }
 
 /* botões agrupados à direita */
-.toolbar .actions{
+.toolbar .actions {
   margin-left: auto;
   display: flex;
   align-items: center;
   gap: 10px;
 }
-.toolbar .actions button{ padding: 8px 12px; }
+
+.toolbar .actions button {
+  padding: 8px 12px;
+}
 
 /* tabela ocupa toda a largura do container */
-.table{
+.table {
   width: 100%;
   border-collapse: collapse;
 }
-.table th, .table td{ padding: 8px 10px; }
-.table th{ text-align: left; }
 
-/* responsivo */
-@media (max-width: 768px){
-  .toolbar{ flex-direction: column; align-items: stretch; }
-  .toolbar .actions{ justify-content: flex-end; }
+.table th,
+.table td {
+  padding: 8px 10px;
 }
 
+.table th {
+  text-align: left;
+}
 
+/* responsivo */
+@media (max-width: 768px) {
+  .toolbar {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .toolbar .actions {
+    justify-content: flex-end;
+  }
+}
+
+/* Paginação */
+.pagination-container {
+  margin-top: 20px;
+  text-align: center;
+}
+
+.pagination-container button {
+  padding: 8px 16px;
+  background-color: #f4ecf8;
+  border: 1px solid #dcd6f7;
+  border-radius: 6px;
+  cursor: pointer;
+  color: #4b0082;
+  font-weight: 600;
+  margin: 0 5px;
+}
+
+.pagination-container button:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.pagination-container span {
+  font-weight: 600;
+  color: #333;
+  margin: 0 10px;
+}

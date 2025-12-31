@@ -250,9 +250,43 @@ def calcular_valores(payload: ParametrosCalculo):
     return calcular_valores_dos_produtos(payload)
 
 @router.get("/")
-def listar_tabelas():
-    with SessionLocal() as db:
-        rows = db.execute(text("""
+def listar_tabelas(
+    page: int = Query(1, ge=1),
+    page_size: int = Query(10, ge=1, le=100),
+    q: Optional[str] = Query(None)
+):
+    try:
+        db = SessionLocal()
+        
+        # Filtro de busca
+        q_raw = (q or "").strip()
+        like_pattern = f"%{q_raw}%"
+        
+        # 1. Query BASE (com filtros)
+        #    Obs: nome_tabela e cliente estão no GROUP BY, então podemos filtrar no WHERE tranquilamente.
+        #    Se quisesse filtrar pelo resultado de agregação, seria HAVING ou subquery.
+        where_clause = "WHERE ativo is TRUE"
+        params = {
+            "limit": page_size,
+            "offset": (page - 1) * page_size
+        }
+        
+        if q_raw:
+            where_clause += " AND (nome_tabela ILIKE :like OR cliente ILIKE :like)"
+            params["like"] = like_pattern
+
+        # 2. Contagem TOTAL (para paginação)
+        #    Precisamos contar quantos GRUPOS existem. 
+        #    Count(Distinct id_tabela) funciona bem já que id_tabela é chave do grupo.
+        count_sql = f"""
+            SELECT COUNT(DISTINCT id_tabela)
+            FROM tb_tabela_preco
+            {where_clause}
+        """
+        total = db.execute(text(count_sql), params).scalar() or 0
+
+        # 3. Busca de dados paginados
+        data_sql = f"""
             SELECT
               id_tabela,
               MIN(id_linha) AS any_row_id,
@@ -263,13 +297,15 @@ def listar_tabelas():
               BOOL_OR(calcula_st) AS calcula_st,
               MAX(criado_em) AS criado_em
             FROM tb_tabela_preco
-            WHERE ativo is TRUE
+            {where_clause}
             GROUP BY id_tabela, nome_tabela, cliente, fornecedor
-            ORDER BY criado_em DESC
-        """)).mappings().all()
+            ORDER BY MAX(criado_em) DESC
+            LIMIT :limit OFFSET :offset
+        """
+        
+        rows = db.execute(text(data_sql), params).mappings().all()
 
-        # O front usa "tabela.id" para abrir/editar; devolvemos id = id_tabela
-        return [
+        items = [
             {
                 "id": int(r["id_tabela"]),
                 "nome_tabela": r["nome_tabela"],
@@ -280,6 +316,20 @@ def listar_tabelas():
             }
             for r in rows
         ]
+
+        return {
+            "items": items,
+            "total": total,
+            "page": page,
+            "page_size": page_size,
+            "total_pages": (total + page_size - 1) // page_size
+        }
+
+    except Exception as e:
+        logger.error(f"Erro ao listar tabelas: {e}")
+        raise HTTPException(status_code=500, detail="Erro interno ao listar tabelas.")
+    finally:
+        db.close()
 
 
 
