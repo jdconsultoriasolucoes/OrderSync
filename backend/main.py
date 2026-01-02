@@ -68,8 +68,8 @@ def startup_ensure_admin():
 
 # ---- Origens permitidas ----
 ALLOWED_ORIGINS = [
-    "https://ordersync-y7kg.onrender.com",  # FRONT (Render) - deixa os dois se alterna
-    "https://ordersync-y7kg.onrender.com",
+    "https://ordersync-y7kg.onrender.com",  # FRONT (Render)
+    "https://ordersync-frontend.onrender.com", # Caso mude nome
     "http://localhost:5500",                # FRONT local (ex. Live Server)
     "http://127.0.0.1:5500",
     "http://localhost:3000",
