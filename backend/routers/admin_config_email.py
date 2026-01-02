@@ -168,8 +168,7 @@ class TesteSMTPIn(BaseModel):
     smtp_senha: Optional[str] = None
     usar_tls: Optional[bool] = None  # se None, vamos inferir pela porta
 
-def testar_smtp_conexao(request: Request):
-    db = _get_db_from_request(request)
+def testar_smtp_conexao(db: Session = Depends(get_db)):
     # ajuste os imports para seus modelos reais
     from models.config_email_smtp import ConfigEmailSMTP
     cfg = db.query(ConfigEmailSMTP).first()
@@ -223,8 +222,7 @@ class TesteEnvioIn(BaseModel):
     corpo_html: Optional[str] = "<p>Este é um e-mail de teste do OrderSync.</p>"
 
 @router.post("/teste_envio")
-def testar_envio_email(request: Request, body: Optional[TesteEnvioIn] = None):
-    db = request.state.db  # sem Depends(get_db)
+def testar_envio_email(body: Optional[TesteEnvioIn] = None, db: Session = Depends(get_db)):
 
     # carrega configs salvas
     msg_cfg = db.query(ConfigEmailMensagem).filter(ConfigEmailMensagem.id == 1).first()

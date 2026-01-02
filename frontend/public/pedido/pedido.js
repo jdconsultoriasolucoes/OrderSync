@@ -5,9 +5,470 @@ const API = {
   list: `${API_BASE}/api/pedidos`,
   status: `${API_BASE}/api/pedidos/status`,
   resumo: (id) => `${API_BASE}/api/pedidos/${id}/resumo`,
+  cancelar: (id) => `${API_BASE}/api/pedidos/${id}/cancelar`,
+  reenviar: (id) => `${API_BASE}/api/pedidos/${id}/reenviar_email`,
+  pdf: (id) => `${API_BASE}/api/pedido/${id}/pdf`, // endpoint de download direto
 };
 
 let state = { page: 1, pageSize: 25, total: 0 };
+
+// ---------------------- utils ----------------------
+function fmtMoney(v) {
+  if (v == null) return "---";
+  try {
+    return Number(v).toLocaleString("pt-BR", {
+      style: "currency",
+      currency: "BRL",
+    });
+  } catch {
+    return v;
+  }
+}
+
+function fmtDate(s) {
+  if (!s) return "---";
+  const d = new Date(s);
+  const dt = d.toLocaleDateString("pt-BR");
+  const hr = d.toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" });
+  return `${dt} ${hr}`;
+}
+
+function getStatusBadge(status) {
+  if (!status) return '<span class="status-badge status-aberto">---</span>';
+  const s = status.toUpperCase();
+  if (s === 'CONFIRMADO') return `<span class="status-badge status-conf">CONFIRMADO</span>`;
+  if (s === 'CANCELADO') return `<span class="status-badge status-cancel">CANCELADO</span>`;
+  if (s === 'ENVIADO') return `<span class="status-badge status-env">ENVIADO</span>`;
+  if (s === 'ENTREGUE') return `<span class="status-badge status-entregue">ENTREGUE</span>`;
+
+  return `<span class="status-badge status-aberto">${status}</span>`;
+}
+
+function addDays(baseDate, days) {
+  const d = new Date(baseDate);
+  d.setDate(d.getDate() + days);
+  return d;
+}
+
+// ---------------------- carregar status ----------------------
+async function loadStatus() {
+  const r = await fetch(API.status, { cache: "no-store" });
+  if (!r.ok) {
+    console.error("Falha ao carregar status:", r.status, await r.text());
+    return;
+  }
+  const j = await r.json();
+  const arr = Array.isArray(j) ? j : (j.data || j.items || j.results || []);
+  const sel = document.getElementById("fStatus");
+  if (!sel) return;
+
+  sel.innerHTML = "";
+
+  // opção “Todos” (vazio = não filtra)
+  const optAll = document.createElement("option");
+  optAll.value = "";
+  optAll.textContent = "Todos";
+  sel.appendChild(optAll);
+
+  arr.forEach(s => {
+    const codigo = s.codigo || s.code || s.id || s.value || s;
+    const rotulo = s.rotulo || s.label || s.nome || s.description || codigo;
+    if (!codigo) return;
+    const opt = document.createElement("option");
+    opt.value = String(codigo);
+    opt.textContent = String(rotulo);
+    sel.appendChild(opt);
+  });
+
+  // deixa em “Todos” por padrão
+  sel.value = "";
+}
+
+// ---------------------- ler filtros da tela ----------------------
+function getFilters() {
+  const fFrom = document.getElementById("fFrom").value;
+  const fTo = document.getElementById("fTo").value;
+  const fTabela = document.getElementById("fTabela").value || null;
+  const fCliente = document.getElementById("fCliente").value || null;
+  const fFornecedor = document.getElementById("fFornecedor").value || null;
+
+  // mesmo que seja um <select> simples, selectedOptions ainda funciona
+  const selStatus = Array.from(
+    document.getElementById("fStatus").selectedOptions
+  ).map((o) => o.value);
+
+  return { fFrom, fTo, fTabela, fCliente, fFornecedor, selStatus };
+}
+
+//--------------------------------
+// Converte "DD/MM/AAAA" -> "AAAA-MM-DD". Se já vier "AAAA-MM-DD", mantém.
+function toISO(d) {
+  if (!d) return "";
+  if (/^\d{4}-\d{2}-\d{2}$/.test(d)) return d; // já está ISO
+  const m = d.match(/^(\d{2})\/(\d{2})\/(\d{4})$/);
+  return m ? `${m[3]}-${m[2]}-${m[1]}` : d;
+}
+
+function toBR(iso) {
+  if (!iso) return "";
+  const [y, m, dd] = iso.split("-");
+  return `${dd}/${m}/${y}`;
+}
+
+// ---------------------- buscar lista no backend ----------------------
+async function loadList(page = 1) {
+  state.page = page;
+  const p = buildParams(page, state.pageSize);
+  const url = `${API.list}?${p.toString()}`;
+
+  // Feedback visual
+  const btn = document.getElementById("btnBuscar");
+  const orgText = btn ? btn.innerText : "";
+  if (btn) btn.innerText = "...";
+
+  try {
+    const r = await fetch(url, { cache: "no-store" });
+    if (!r.ok) {
+      console.error("Falha ao carregar pedidos:", r.status, await r.text());
+      return;
+    }
+    const j = await r.json();
+    const arr = Array.isArray(j) ? j : (j.data || j.items || j.results || (j.payload && j.payload.items) || []);
+    state.total = (j.total ?? j.count ?? (Array.isArray(arr) ? arr.length : 0)) || 0;
+
+    renderTable(arr); // Backend já agrupa? Se sim, ok. Se não, add groupByPedido. Backend parece já retornar lista.
+    renderPager();
+  } finally {
+    if (btn) btn.innerText = orgText;
+  }
+}
+
+function buildParams(page, pageSize) {
+  const { fFrom, fTo, fTabela, fCliente, fFornecedor, selStatus } = getFilters();
+  let fromISO = toISO(fFrom);
+  let toISO_ = toISO(fTo);
+
+  if (!fromISO && !toISO_) {
+    const hoje = new Date();
+    const inicio = new Date(hoje);
+    inicio.setDate(hoje.getDate() - 30);
+    fromISO = inicio.toISOString().slice(0, 10);
+    toISO_ = hoje.toISOString().slice(0, 10);
+  }
+
+  const params = new URLSearchParams();
+  params.set("from", fromISO);
+  params.set("to", toISO_);
+
+  if (selStatus && selStatus.length) {
+    const s = selStatus.join(",");
+    params.set("status", s);
+  }
+  if (fTabela) params.set("tabela_nome", fTabela);
+  if (fCliente) params.set("cliente", fCliente);
+  if (fFornecedor) params.set("fornecedor", fFornecedor);
+
+  params.set("page", page);
+  params.set("pageSize", pageSize);
+  params.set("limit", pageSize);
+  params.set("offset", String((page - 1) * pageSize));
+
+  return params;
+}
+
+// ---------------------- desenhar tabela ----------------------
+function renderTable(rows) {
+  const tb = document.getElementById("tblBody");
+  tb.innerHTML = "";
+
+  if (!rows || !rows.length) {
+    const tr = document.createElement("tr");
+    tr.innerHTML = `<td colspan="9" class="muted">Nenhum pedido encontrado.</td>`;
+    tb.appendChild(tr);
+    return;
+  }
+
+  rows.forEach(row => {
+    const id = row.numero_pedido ?? row.id_pedido ?? row.pedido_id;
+    const dataPedido = row.data_pedido || row.created_at;
+    const cliente = row.cliente_nome;
+    const modalidade = row.modalidade;
+    const valor = row.valor_total;
+    const status = row.status_codigo;
+    const tabela = row.tabela_preco_nome;
+    const fornecedor = row.fornecedor;
+    const link = row.link_url;
+
+    const tr = document.createElement("tr");
+    tr.classList.add("row-click");
+    tr.dataset.id = id;
+
+    // Badge visual
+    const statusHtml = getStatusBadge(status);
+
+    tr.innerHTML = `
+      <td>${fmtDate(dataPedido)}</td>
+      <td><a href="#" class="lnk-resumo" data-id="${id}">${id}</a></td>
+      <td>${cliente}</td>
+      <td><span class="badge badge-gray">${modalidade ?? "---"}</span></td>
+      <td class="tar">${fmtMoney(valor)}</td>
+      <td>${statusHtml}</td>
+      <td>${tabela ?? "---"}</td>
+      <td>${fornecedor ?? "---"}</td>
+      <td>
+        ${link
+        ? `<button class="btn-copy" data-url="${link}">Copiar Link</button>`
+        : "—"}
+      </td>
+    `;
+
+    tb.appendChild(tr);
+
+    tr.addEventListener("click", (ev) => {
+      if (ev.target.closest(".btn") || ev.target.closest("a") || ev.target.closest(".btn-copy")) return;
+      openResumo(id);
+    });
+  });
+}
+
+// ---------------------- paginação ----------------------
+function renderPager() {
+  const pageInfo = document.getElementById("pageInfo");
+  const totalPages = Math.max(1, Math.ceil(state.total / state.pageSize));
+  pageInfo.textContent = `${state.page} / ${totalPages}`;
+  document.getElementById("prevPage").disabled = state.page <= 1;
+  document.getElementById("nextPage").disabled = state.page >= totalPages;
+}
+
+// ---------------------- drawer de resumo & Ações ----------------------
+async function openResumo(id) {
+  const r = await fetch(API.resumo(id), { cache: "no-store" });
+  if (!r.ok) return;
+  const p = await r.json();
+  const el = document.getElementById("drawerContent");
+  const modalidade = p.usar_valor_com_frete ? "ENTREGA" : "RETIRADA";
+
+  el.innerHTML = `
+    <div class="stack">
+      <div class="kv">
+        <div><b>Pedido:</b> ${p.id_pedido}</div>
+        <div>${getStatusBadge(p.status)}</div>
+      </div>
+      <div class="kv">
+        <div><b>Cliente:</b> ${p.cliente} (${p.codigo_cliente ?? "-"})</div>
+        <div><b>Data:</b> ${fmtDate(p.created_at)}</div>
+      </div>
+      <div class="kv">
+        <div><b>Modalidade:</b> ${modalidade}</div>
+        <div><b>Tabela:</b> ${p.tabela_preco_nome ?? "-"}</div>
+      </div>
+      <div class="kv">
+        <div><b>Fornecedor:</b> ${p.fornecedor ?? "-"}</div>
+        <div><b>Total:</b> ${fmtMoney(p.total_pedido)}</div>
+      </div>
+      <div class="block">
+        <b>Itens</b>
+        <div class="itens">
+          ${p.itens.map(i => `
+            <div class="item">
+              <div><b>${i.codigo}</b> - ${i.nome}</div>
+              <div>${i.quantidade} x ${fmtMoney(i.preco_unit)} = <b>${fmtMoney(i.subtotal)}</b></div>
+            </div>
+          `).join("")}
+        </div>
+      </div>
+    </div>
+  `;
+
+  // Renderiza Botões de Ação
+  const actionsEl = document.getElementById("drawerActions");
+  actionsEl.innerHTML = ""; // limpa anteriores
+
+  // 1. PDF
+  const btnPdf = document.createElement("a");
+  btnPdf.className = "btn btn-outline";
+  btnPdf.href = API.pdf(id);
+  btnPdf.target = "_blank";
+  btnPdf.innerHTML = "📄 Baixar PDF";
+  actionsEl.appendChild(btnPdf);
+
+  // 2. Reenviar Email
+  const btnEmail = document.createElement("button");
+  btnEmail.className = "btn btn-outline";
+  btnEmail.innerHTML = "📧 Reenviar E-mail";
+  btnEmail.onclick = () => doAction(API.reenviar(id), "E-mail reenviado com sucesso!");
+  actionsEl.appendChild(btnEmail);
+
+  // 3. Cancelar (só se não estiver cancelado)
+  if (p.status !== "CANCELADO") {
+    const btnCancel = document.createElement("button");
+    btnCancel.className = "btn btn-danger";
+    btnCancel.innerHTML = "🚫 Cancelar Pedido";
+    btnCancel.onclick = () => {
+      if (confirm("Tem certeza que deseja cancelar este pedido?")) {
+        doAction(API.cancelar(id), "Pedido cancelado!", true);
+      }
+    };
+    actionsEl.appendChild(btnCancel);
+  }
+
+  document.getElementById("drawer").classList.remove("hidden");
+}
+
+async function doAction(url, successMsg, reload = false) {
+  try {
+    const r = await fetch(url, { method: "POST" });
+    if (r.ok) {
+      alert(successMsg);
+      if (reload) {
+        document.getElementById("drawer").classList.add("hidden");
+        loadList(state.page);
+      }
+    } else {
+      const txt = await r.text();
+      alert("Erro: " + txt);
+    }
+  } catch (e) {
+    alert("Erro de conexão: " + e.message);
+  }
+}
+
+// ---------------------- bind de eventos ----------------------
+function bindUI() {
+  document.getElementById("btnBuscar").addEventListener("click", () => loadList(1));
+
+  // Refresh
+  document.getElementById("btnRefresh").addEventListener("click", () => loadList(state.page));
+
+  // Export
+  document.getElementById("btnExport").addEventListener("click", exportarCSV);
+
+  // Pagination
+  document.getElementById("prevPage").addEventListener("click", () => {
+    if (state.page > 1) loadList(state.page - 1);
+  });
+  document.getElementById("nextPage").addEventListener("click", () => {
+    const totalPages = Math.max(1, Math.ceil(state.total / state.pageSize));
+    if (state.page < totalPages) loadList(state.page + 1);
+  });
+
+  // Drawer Close
+  document.getElementById("btnCloseDrawer").addEventListener("click", () => {
+    document.getElementById("drawer").classList.add("hidden");
+  });
+
+  // Período Rápido
+  const periodoEl = document.getElementById("fPeriodoRapido");
+  if (periodoEl) periodoEl.addEventListener("change", aplicarPeriodoRapido);
+}
+
+// ---------------------- CSV Export ----------------------
+async function exportarCSV() {
+  const btn = document.getElementById("btnExport");
+  const orgTxt = btn.innerText;
+  btn.innerText = "⏳ Baixando...";
+  btn.disabled = true;
+
+  try {
+    // Pega TODOS os pedidos do filtro (pageSize alto)
+    const params = buildParams(1, 5000);
+    const url = `${API.list}?${params.toString()}`;
+
+    const r = await fetch(url);
+    if (!r.ok) throw new Error("Erro ao baixar dados");
+
+    const j = await r.json();
+    const data = Array.isArray(j) ? j : (j.data || []);
+
+    if (!data.length) {
+      alert("Nada para exportar");
+      return;
+    }
+
+    // CSV Header
+    let csv = "ID;Data;Cliente;Valor Total;Status;Tabela;Fornecedor\n";
+
+    data.forEach(row => {
+      const id = row.numero_pedido ?? row.id_pedido;
+      const dt = row.data_pedido ? new Date(row.data_pedido).toLocaleDateString() : "";
+      const cli = (row.cliente_nome || "").replace(/;/g, ",");
+      const val = (row.valor_total || 0).toString().replace(".", ",");
+      const st = row.status_codigo || "";
+      const tab = (row.tabela_preco_nome || "").replace(/;/g, ",");
+      const forn = (row.fornecedor || "").replace(/;/g, ",");
+
+      csv += `${id};${dt};${cli};${val};${st};${tab};${forn}\n`;
+    });
+
+    // Download Blob
+    const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+    const link = document.createElement("a");
+    const urlObj = URL.createObjectURL(blob);
+    link.setAttribute("href", urlObj);
+    link.setAttribute("download", `pedidos_export_${new Date().toISOString().slice(0, 10)}.csv`);
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+
+  } catch (e) {
+    alert("Erro na exportação: " + e.message);
+  } finally {
+    btn.innerText = orgTxt;
+    btn.disabled = false;
+  }
+}
+
+// ---------------------- Init ----------------------
+document.addEventListener('DOMContentLoaded', () => {
+  const menuButton = document.getElementById('menu-button');
+  const sidebar = document.getElementById('sidebar');
+  const overlay = document.getElementById('overlay');
+  if (menuButton && sidebar && overlay) {
+    const open = () => { sidebar.classList.add('active'); overlay.style.display = 'block'; };
+    const close = () => { sidebar.classList.remove('active'); overlay.style.display = 'none'; };
+    menuButton.addEventListener('click', (e) => { e.stopPropagation(); sidebar.classList.contains('active') ? close() : open(); });
+    overlay.addEventListener('click', close);
+  }
+});
+
+function aplicarPeriodoRapido() {
+  const sel = document.getElementById("fPeriodoRapido");
+  const val = sel.value;
+  if (val === "custom") return;
+  const hoje = new Date();
+  const inicio = addDays(hoje, -parseInt(val, 10));
+  document.getElementById("fFrom").value = inicio.toISOString().slice(0, 10);
+  document.getElementById("fTo").value = hoje.toISOString().slice(0, 10);
+  loadList(1);
+}
+
+(async function init() {
+  bindUI();
+  await loadStatus();
+
+  const periodoEl = document.getElementById("fPeriodoRapido");
+  if (periodoEl) aplicarPeriodoRapido();
+  else {
+    const hoje = new Date();
+    const inicio = addDays(hoje, -30);
+    document.getElementById("fFrom").value = inicio.toISOString().slice(0, 10);
+    document.getElementById("fTo").value = hoje.toISOString().slice(0, 10);
+    loadList(1);
+  }
+
+  // Event Delegation para Copiar Link principal
+  document.getElementById("tblBody").addEventListener("click", (ev) => {
+    const btn = ev.target.closest(".btn-copy");
+    if (btn) {
+      navigator.clipboard.writeText(btn.dataset.url).then(() => {
+        const org = btn.innerText;
+        btn.innerText = "Copiado!";
+        setTimeout(() => btn.innerText = org, 1500);
+      });
+    }
+  });
+
+})();
 
 // ---------------------- utils ----------------------
 function fmtMoney(v) {

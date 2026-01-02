@@ -1,0 +1,170 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>OrderSync - Redefinir Senha</title>
+    <link rel="stylesheet" href="../../styles.css">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600&display=swap" rel="stylesheet">
+    <style>
+        body {
+            background-color: #f4f4f9;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            font-family: 'Inter', sans-serif;
+            margin: 0;
+        }
+
+        .login-card {
+            background: white;
+            padding: 2.5rem;
+            border-radius: 12px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+            width: 100%;
+            max-width: 400px;
+            text-align: center;
+        }
+
+        .form-group {
+            margin-bottom: 1.5rem;
+            text-align: left;
+        }
+
+        .form-group label {
+            display: block;
+            margin-bottom: 0.5rem;
+            font-weight: 600;
+            color: #374151;
+        }
+
+        .form-group input {
+            width: 100%;
+            padding: 0.75rem;
+            border: 1px solid #d1d5db;
+            border-radius: 6px;
+            outline: none;
+            box-sizing: border-box;
+        }
+
+        .btn-login {
+            width: 100%;
+            padding: 0.75rem;
+            background-color: #2563eb;
+            color: white;
+            border: none;
+            border-radius: 6px;
+            font-weight: 600;
+            cursor: pointer;
+        }
+
+        .btn-login:hover {
+            background-color: #1d4ed8;
+        }
+
+        .message-box {
+            margin-top: 1rem;
+            padding: 10px;
+            border-radius: 6px;
+            font-size: 0.9rem;
+            display: none;
+        }
+
+        .success {
+            background-color: #dcfce7;
+            color: #166534;
+            border: 1px solid #bbf7d0;
+        }
+
+        .error {
+            background-color: #fef2f2;
+            color: #991b1b;
+            border: 1px solid #fecaca;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="login-card">
+        <h2>Nova Senha</h2>
+        <p style="color: #666; margin-bottom: 2rem;">Crie uma nova senha segura para sua conta.</p>
+
+        <form id="reset-form">
+            <div class="form-group">
+                <label for="senha">Nova Senha</label>
+                <input type="password" id="senha" placeholder="••••••••" required minlength="8">
+            </div>
+            <div class="form-group">
+                <label for="confirmar">Confirmar Senha</label>
+                <input type="password" id="confirmar" placeholder="••••••••" required minlength="8">
+            </div>
+            <button type="submit" class="btn-login" id="btn-submit">Salvar Nova Senha</button>
+        </form>
+
+        <div id="msg-box" class="message-box"></div>
+    </div>
+
+    <script>
+        const API_URL = "http://127.0.0.1:8000";
+
+        // Pega token da URL
+        const urlParams = new URLSearchParams(window.location.search);
+        const token = urlParams.get('token');
+
+        if (!token) {
+            document.getElementById("reset-form").style.display = "none";
+            const msg = document.getElementById("msg-box");
+            msg.className = "message-box error";
+            msg.innerText = "Link inválido ou expirado. Solicite uma nova redefinição.";
+            msg.style.display = "block";
+        }
+
+        document.getElementById("reset-form").addEventListener("submit", async (e) => {
+            e.preventDefault();
+            const senha = document.getElementById("senha").value;
+            const confirmar = document.getElementById("confirmar").value;
+            const btn = document.getElementById("btn-submit");
+            const msgBox = document.getElementById("msg-box");
+
+            if (senha !== confirmar) {
+                alert("As senhas não coincidem!");
+                return;
+            }
+
+            btn.disabled = true;
+            btn.innerText = "Salvando...";
+            msgBox.style.display = "none";
+
+            try {
+                const response = await fetch(`${API_URL}/token/reset-password`, {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({ token, senha_nova: senha })
+                });
+
+                if (response.ok) {
+                    msgBox.className = "message-box success";
+                    msgBox.innerHTML = 'Senha alterada com sucesso! <br><a href="login.html">Ir para Login</a>';
+                    msgBox.style.display = "block";
+                    document.getElementById("reset-form").reset();
+                    document.getElementById("reset-form").style.display = "none";
+                } else {
+                    const data = await response.json();
+                    throw new Error(data.detail || "Erro ao redefinir senha.");
+                }
+
+            } catch (err) {
+                msgBox.className = "message-box error";
+                msgBox.innerText = err.message;
+                msgBox.style.display = "block";
+            } finally {
+                btn.disabled = false;
+                btn.innerText = "Salvar Nova Senha";
+            }
+        });
+    </script>
+</body>
+
+</html>

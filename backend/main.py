@@ -41,15 +41,13 @@ def startup_ensure_admin():
         # Reset force
         user = db.query(UsuarioModel).filter(UsuarioModel.email == email).first()
         if user:
-            user.senha_hash = get_password_hash("admin123")
-            user.ativo = True
-            user.funcao = "admin"
-            logger.info("ADMIN PASSWORD RESET TO 'admin123'")
+            # Se já existe, NÃO reseta a senha. Apenas loga que encontrou.
+            logger.info("Admin user found. Skipping password reset.")
         else:
             new_user = UsuarioModel(
                 email=email, 
                 nome="Admin", 
-                senha_hash=get_password_hash("admin123"), 
+                senha_hash=get_password_hash(os.environ.get("ADMIN_PASSWORD", "admin123")), 
                 funcao="admin", 
                 ativo=True
             )
@@ -88,6 +86,8 @@ def _apply_cors_headers(resp: JSONResponse, origin: str | None):
     return resp
 
 # ---- MIDDLEWARE: loga 5xx e SEMPRE devolve CORS em erros ----
+
+# ---- MIDDLEWARE: loga 5xx e SEMPRE devolve CORS em erros ----
 @app.middleware("http")
 async def errors_with_cors(request: Request, call_next):
     try:
@@ -109,14 +109,18 @@ async def errors_with_cors(request: Request, call_next):
         resp = JSONResponse(body, status_code=e.status_code)
         resp.headers["x-error-id"] = err_id
         return _apply_cors_headers(resp, request.headers.get("origin"))
-    except Exception:
+    except Exception as e:
         err_id = uuid.uuid4().hex[:8]
         logger.error(
             "EXC %s: %s %s?%s\n%s",
             err_id, request.method, request.url.path, request.url.query,
             traceback.format_exc()
         )
-        body = {"detail": "Internal Server Error", "error_id": err_id}
+        # Show real error in Dev, generic in Prod (based on ENV)
+        is_dev = os.environ.get("ENVIRONMENT", "development") == "development"
+        detail_msg = f"Internal Server Error: {str(e)}" if is_dev else "Internal Server Error"
+        
+        body = {"detail": detail_msg, "error_id": err_id}
         resp = JSONResponse(body, status_code=500)
         resp.headers["x-error-id"] = err_id
         return _apply_cors_headers(resp, request.headers.get("origin"))
@@ -233,14 +237,6 @@ app.add_middleware(
 #     max_age=86400,
 # )
 
-@app.middleware("http")
-async def db_session_middleware(request, call_next):
-    request.state.db = SessionLocal()  # abre sessão por request
-    try:
-        response = await call_next(request)
-        return response
-    finally:
-        # garante fechamento mesmo com exceção
-        request.state.db.close()
+
 
         

@@ -21,11 +21,10 @@ from services.produto_pdf import (
     get_produto,
     list_produtos,
     get_anteriores,
-    get_anteriores,
     importar_pdf_para_produto,
 )
 from fastapi import Depends
-from core.deps import get_current_user
+from core.deps import get_current_user, get_db
 from models.usuario import UsuarioModel
 
 
@@ -43,8 +42,8 @@ async def relatorio_lista(
     request: Request,
     fornecedor: str = Query(...),
     lista: str = Query(...),
+    db: Session = Depends(get_db)
 ):
-    db: Session = request.state.db
     pdf_bytes = gerar_pdf_relatorio_lista(db, fornecedor, lista)
     return Response(
         content=pdf_bytes,
@@ -63,7 +62,7 @@ async def relatorio_lista(
 def obter_opcoes_endpoint():
     db = SessionLocal()
     try:
-        from services.produto_pdf import get_product_options
+        from services.produto import get_product_options
         return get_product_options(db)
     finally:
         db.close()
@@ -185,9 +184,8 @@ async def importar_lista(
     # Note: Using Depends in Form/File upload might be tricky if not done right, 
     # but Depends(get_current_user) works fine with OAuth2 header.
     current_user: UsuarioModel = Depends(get_current_user),
+    db: Session = Depends(get_db)
 ):
-    # pega a sessão criada pelo middleware (database.SessionLocal)
-    db: Session = request.state.db
 
     if not file.filename.lower().endswith(".pdf"):
         raise HTTPException(status_code=400, detail="O arquivo precisa ser um PDF.")

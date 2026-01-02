@@ -88,7 +88,8 @@
           <input type="text" id="fFornecedor" placeholder="Fornecedor">
         </label>
         <button id="btnBuscar" class="btn btn-primary">Buscar</button>
-
+        <button id="btnRefresh" class="btn btn-outline" title="Atualizar Lista">↻</button>
+        <button id="btnExport" class="btn btn-outline" title="Exportar para Excel/CSV">📥 Exportar</button>
       </div>
     </header>
 
@@ -124,6 +125,9 @@
       <button id="btnCloseDrawer">✕</button>
     </div>
     <div id="drawerContent" class="drawer-content"></div>
+    <div id="drawerActions" class="drawer-actions">
+      <!-- Botões injetados via JS -->
+    </div>
   </aside>
 
   <script src="pedido.js"></script>

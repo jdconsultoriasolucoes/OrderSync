@@ -8,13 +8,20 @@ from models.pedido_link import PedidoLink
 from pathlib import Path
 from datetime import datetime
 from sqlalchemy import update
-from fastapi import Depends
+
 from core.deps import get_current_user
 from models.usuario import UsuarioModel
 
 router = APIRouter(prefix="/link_pedido", tags=["Link Pedido"])
 
-PEDIDO_HTML = Path("/opt/render/project/src/frontend/public/tabela_preco/pedido_cliente.html")
+# Resolve relative path to frontend/public/tabela_preco/pedido_cliente.html
+# Assumes structure: root/backend/routers/link_pedido.py -> root/frontend/...
+BASE_DIR = Path(__file__).resolve().parents[2] 
+PEDIDO_HTML = BASE_DIR / "frontend" / "public" / "tabela_preco" / "pedido_cliente.html"
+
+if not PEDIDO_HTML.exists():
+    # Fallback/Debug log if needed, or rely on runtime check
+    pass
 
 @router.post("/gerar")
 def gerar_link(body: dict, request: Request, current_user: UsuarioModel = Depends(get_current_user)):

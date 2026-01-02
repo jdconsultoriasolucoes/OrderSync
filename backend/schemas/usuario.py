@@ -1,6 +1,21 @@
 
-from pydantic import BaseModel
+from pydantic import BaseModel, validator
 from typing import Optional
+from datetime import datetime
+import re
+
+def validate_strength(v: str) -> str:
+    if len(v) < 8:
+        raise ValueError('A senha deve ter no mínimo 8 caracteres')
+    if not re.search(r"[A-Z]", v):
+        raise ValueError('A senha deve ter pelo menos uma letra maiúscula')
+    if not re.search(r"[a-z]", v):
+        raise ValueError('A senha deve ter pelo menos uma letra minúscula')
+    if not re.search(r"[0-9]", v):
+        raise ValueError('A senha deve ter pelo menos um número')
+    if not re.search(r"[\W_]", v):
+        raise ValueError('A senha deve ter pelo menos um caractere especial (ex: @, #, $, !)')
+    return v
 
 class UsuarioBase(BaseModel):
     email: str
@@ -11,7 +26,9 @@ class UsuarioBase(BaseModel):
 class UsuarioCreate(UsuarioBase):
     senha: str
 
-from datetime import datetime
+    @validator('senha')
+    def valid_senha(cls, v):
+        return validate_strength(v)
 
 class UsuarioLogin(BaseModel):
     email: str
@@ -38,12 +55,28 @@ class UsuarioUpdateSenha(BaseModel):
     senha_antiga: str
     senha_nova: str
 
+    @validator('senha_nova')
+    def valid_senha_nova(cls, v):
+        return validate_strength(v)
+
 class UsuarioResetSenha(BaseModel):
+    token: str
     senha_nova: str
+
+    @validator('senha_nova')
+    def valid_senha_nova(cls, v):
+        return validate_strength(v)
+
+class UsuarioForgotPassword(BaseModel):
+    email: str
 
 class UsuarioChangePassword(BaseModel):
     senha_atual: str
     nova_senha: str
+
+    @validator('nova_senha')
+    def valid_nova_senha(cls, v):
+        return validate_strength(v)
 
 class UsuarioUpdate(BaseModel):
     nome: Optional[str] = None

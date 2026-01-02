@@ -294,3 +294,64 @@ def mudar_status(id_pedido: int, body: StatusChangeBody, db: Session = Depends(g
 
     db.commit()
     return {"ok": True}
+
+# ---------- Ações Extras (Cancelamento / Reenvio) ----------
+
+from models.pedido import PedidoModel
+from services.email_service import enviar_email_notificacao
+
+@router.post("/{id_pedido}/cancelar")
+def cancelar_pedido(id_pedido: int, db: Session = Depends(get_db), user_id: Optional[str] = Query(None)):
+    """
+    Cancela o pedido e registra no histórico (se possível).
+    """
+    pedido = db.query(PedidoModel).filter(PedidoModel.id == id_pedido).first()
+    if not pedido:
+        raise HTTPException(status_code=404, detail="Pedido não encontrado")
+
+    if pedido.status == "CANCELADO":
+        return {"message": "Pedido já estava cancelado", "status": "CANCELADO"}
+    
+    pedido.status = "CANCELADO"
+    pedido.cancelado_em = datetime.now()
+    
+    # Tenta logar evento (opcional, igual ao mudar_status)
+    try:
+        db.execute(STATUS_EVENT_INSERT_SQL, {
+            "pedido_id": id_pedido,
+            "de_status": "ANY",
+            "para_status": "CANCELADO",
+            "user_id": user_id or "sistema",
+            "motivo": "Cancelado via Tela de Pedidos",
+            "metadata": "{}"
+        })
+    except Exception:
+        pass
+
+    db.commit()
+    return {"message": "Pedido cancelado com sucesso", "status": "CANCELADO"}
+
+@router.post("/{id_pedido}/reenviar_email")
+def reenviar_email_pedido(id_pedido: int, db: Session = Depends(get_db)):
+    """
+    Reenvia o e-mail de confirmação para o cliente (se configurado) e internos.
+    """
+    pedido = db.query(PedidoModel).filter(PedidoModel.id == id_pedido).first()
+    if not pedido:
+        raise HTTPException(status_code=404, detail="Pedido não encontrado")
+    
+    # Gera PDF em memória para anexar
+    from services.pdf_service import gerar_pdf_pedido_bytes
+    pdf_bytes = None
+    try:
+        pdf_bytes = gerar_pdf_pedido_bytes(db, pedido.id)
+    except Exception as e:
+        print(f"Erro ao gerar PDF para reenvio: {e}")
+
+    # Envia
+    try:
+        enviar_email_notificacao(db, pedido, link_pdf=None, pdf_bytes=pdf_bytes)
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Erro ao enviar e-mail: {str(e)}")
+
+    return {"message": "E-mail reenviado com sucesso."}
