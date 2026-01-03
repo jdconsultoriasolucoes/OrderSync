@@ -58,14 +58,22 @@
     <div class="orc-header">
       <h1 class="orc-title">Pedidos</h1>
       <div class="filters">
-        <label>Data:
-          <input type="date" id="fFrom"> —
-          <input type="date" id="fTo">
-          <button id="btnBuscar" class="btn btn-primary">Buscar</button>
-          <button id="btnLimpar" class="btn btn-outline" title="Limpar Filtros">Limpar</button>
-          <button id="btnRefresh" class="btn btn-outline" title="Atualizar Lista">↻</button>
-          <button id="btnExport" class="btn btn-outline" title="Exportar para Excel/CSV">📥 Exportar</button>
+        <div class="filter-row">
+          <label>Data:
+            <div class="date-inputs">
+              <input type="date" id="fFrom"> —
+              <input type="date" id="fTo">
+            </div>
+          </label>
+          <div class="action-buttons">
+            <button id="btnBuscar" class="btn btn-primary">Buscar</button>
+            <button id="btnLimpar" class="btn btn-outline" title="Limpar Filtros">Limpar</button>
+            <button id="btnRefresh" class="btn btn-outline" title="Atualizar Lista">↻</button>
+            <button id="btnExport" class="btn btn-outline" title="Exportar para Excel/CSV">📥 Exportar</button>
+          </div>
+        </div>
 
+        <div class="filter-row secondary">
           <div class="filtro-bloco">
             <label for="fPeriodoRapido">Período:</label>
             <select id="fPeriodoRapido">
@@ -89,6 +97,7 @@
           <label>Fornecedor:
             <input type="text" id="fFornecedor" placeholder="Fornecedor">
           </label>
+        </div>
       </div>
     </div>
 

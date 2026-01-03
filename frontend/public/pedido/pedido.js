@@ -582,7 +582,7 @@ function updateSortIcons() {
   });
 }
 
-}) ();
+
 
 // ---------------------- utils ----------------------
 function fmtMoney(v) {
