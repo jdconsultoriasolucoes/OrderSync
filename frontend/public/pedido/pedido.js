@@ -341,21 +341,28 @@ function bindUI() {
   document.getElementById("btnRefresh").addEventListener("click", () => loadList(state.page));
 
   // Export
-  document.getElementById("btnExport").addEventListener("click", exportarCSV);
+  document.getElementById("btnExport").onclick = exportarCSV;
 
-  // Pagination
-  document.getElementById("prevPage").addEventListener("click", () => {
-    if (state.page > 1) loadList(state.page - 1);
-  });
-  document.getElementById("nextPage").addEventListener("click", () => {
-    const totalPages = Math.max(1, Math.ceil(state.total / state.pageSize));
-    if (state.page < totalPages) loadList(state.page + 1);
-  });
+  // Pagination - Usando onclick para evitar múltiplos listeners em caso de re-inits
+  const btnPrev = document.getElementById("prevPage");
+  if (btnPrev) {
+    btnPrev.onclick = () => {
+      if (state.page > 1) loadList(state.page - 1);
+    };
+  }
+
+  const btnNext = document.getElementById("nextPage");
+  if (btnNext) {
+    btnNext.onclick = () => {
+      const totalPages = Math.max(1, Math.ceil(state.total / state.pageSize));
+      if (state.page < totalPages) loadList(state.page + 1);
+    };
+  }
 
   // Drawer Close
-  document.getElementById("btnCloseDrawer").addEventListener("click", () => {
+  document.getElementById("btnCloseDrawer").onclick = () => {
     document.getElementById("drawer").classList.add("hidden");
-  });
+  };
 
   // Período Rápido
   const periodoEl = document.getElementById("fPeriodoRapido");

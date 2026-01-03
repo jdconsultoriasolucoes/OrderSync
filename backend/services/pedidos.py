@@ -48,7 +48,8 @@ SELECT
   a.contato_nome,
   a.contato_email,
   a.contato_fone,
-  b.nome_tabela                  AS tabela_preco_nome,
+  a.contato_fone,
+  a.tabela_preco_nome            AS tabela_preco_nome,
   a.fornecedor,
   a.validade_ate,
   a.validade_dias,
@@ -66,7 +67,6 @@ SELECT
   a.link_status,
   a.created_at
 FROM public.tb_pedidos a
-JOIN public.tb_tabela_preco b ON a.tabela_preco_id = b.id_tabela
 WHERE a.id_pedido = :id_pedido
 """)
 
