@@ -416,7 +416,7 @@ async function exportarCSV() {
     const rows = groupByPedido(data);
 
     // CSV Header
-    let csv = "ID;Data;Cliente;Valor Total;Status;Tabela;Fornecedor;Link\n";
+    let csv = "ID;Data;Cliente;Modalidade;Valor Total;Status;Tabela;Fornecedor;Link\n";
 
     rows.forEach(row => {
       // ajusta campos
@@ -425,13 +425,15 @@ async function exportarCSV() {
       const dt = dtRaw ? new Date(dtRaw).toLocaleDateString() : "";
 
       const cli = (row.cliente_nome || row.cliente || "").toString().replace(/;/g, ",");
+      const modalidade = row.modalidade ?? (row.usar_valor_com_frete ? "ENTREGA" : (row.usar_valor_com_frete === false ? "RETIRADA" : ""));
       const val = (row.valor_total || row.total_pedido || 0).toString().replace(".", ",");
       const st = (row.status_codigo || row.status || "").toString();
-      const tab = (row.tabela_preco_nome || row.tabela || "").toString().replace(/;/g, ",");
+      // Match renderTable logic for Tabela
+      const tab = (row.tabela_preco_nome ?? row.tabela ?? row.tabela_nome ?? "").toString().replace(/;/g, ",");
       const forn = (row.fornecedor || "").toString().replace(/;/g, ",");
       const lnk = (row.link_url || "").toString();
 
-      csv += `${id};${dt};${cli};${val};${st};${tab};${forn};${lnk}\n`;
+      csv += `${id};${dt};${cli};${modalidade};${val};${st};${tab};${forn};${lnk}\n`;
     });
 
     // Download Blob
@@ -478,19 +480,17 @@ function limparFiltros() {
   const fStatus = document.getElementById("fStatus");
   if (fStatus) fStatus.value = "";
 
-  // Resetar Período Rápido para 30 dias
+  // Resetar Período: deixar apenas dia atual
   const fPeriodo = document.getElementById("fPeriodoRapido");
   if (fPeriodo) {
-    fPeriodo.value = "30";
-    aplicarPeriodoRapido(); // isso já chama loadList(1)
-  } else {
-    // Fallback manual se não tiver seletor
-    const hoje = new Date();
-    const inicio = addDays(hoje, -30);
-    document.getElementById("fFrom").value = inicio.toISOString().slice(0, 10);
-    document.getElementById("fTo").value = hoje.toISOString().slice(0, 10);
-    loadList(1);
+    fPeriodo.value = "custom"; // ou deixe vazio
   }
+
+  const hoje = new Date();
+  document.getElementById("fFrom").value = hoje.toISOString().slice(0, 10);
+  document.getElementById("fTo").value = hoje.toISOString().slice(0, 10);
+
+  loadList(1);
 }
 
 function aplicarPeriodoRapido() {
