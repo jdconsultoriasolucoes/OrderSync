@@ -652,21 +652,34 @@ async function loadList(page = 1) {
   }
   const j = await r.json();
 
-  // aceita {data, total} | {items, count} | array puro
+  // 8. monta resposta
+  // ... logic above in backend ...
+  // Frontend JS:
+  console.log("loadList: Recebido do backend:", j);
   const arr = Array.isArray(j) ? j : (j.data || j.items || j.results || (j.payload && j.payload.items) || []);
   state.total = (j.total ?? j.count ?? (Array.isArray(arr) ? arr.length : 0)) || 0;
+  console.log("loadList: Array processado:", arr, "Total:", state.total);
 
   const rows = groupByPedido(arr);
+  console.log("loadList: Rows agrupadas:", rows);
   renderTable(rows);
   renderPager();
+} finally {
+  if (btn) btn.innerText = orgText;
 }
+}
+
+// ...
 
 // ---------------------- desenhar tabela ----------------------
 function renderTable(rows) {
   const tb = document.getElementById("tblBody");
   tb.innerHTML = "";
 
+  console.log("renderTable: Iniciando render. Rows:", rows);
+
   if (!rows || !rows.length) {
+    console.warn("renderTable: Nenhuma linha para renderizar.");
     const tr = document.createElement("tr");
     tr.innerHTML = `<td colspan="9" class="muted">Nenhum pedido encontrado.</td>`;
     tb.appendChild(tr);
@@ -674,48 +687,54 @@ function renderTable(rows) {
   }
 
   rows.forEach(row => {
-    const id = row.numero_pedido ?? row.id_pedido ?? row.pedido_id ?? row.id ?? row.numero ?? row.num_pedido ?? row.codigo_pedido;
+    try {
+      const id = row.numero_pedido ?? row.id_pedido ?? row.pedido_id ?? row.id ?? row.numero ?? row.num_pedido ?? row.codigo_pedido;
+      const dataPedido = row.data_pedido || row.created_at || row.data || row.dt || row.data_emissao;
+      const cliente = row.cliente_nome || row.cliente || row.nome_cliente || row.cliente_fantasia || "---";
+      const modalidade = row.modalidade ?? (row.usar_valor_com_frete ? "ENTREGA" : (row.usar_valor_com_frete === false ? "RETIRADA" : "---"));
+      const valor = row.valor_total ?? row.total_pedido ?? row.total ?? row.valor ?? 0;
+      const status = row.status_codigo ?? row.status ?? row.situacao ?? row.sit ?? "---";
+      const tabela = row.tabela_preco_nome ?? row.tabela ?? row.tabela_nome ?? "---";
+      const fornecedor = row.fornecedor ?? row.fornecedor_nome ?? row.fornecedor_fantasia ?? "---";
+      const link = row.link_url ?? row.link ?? row.pedido_link_url ?? null;
+      const linkSent = row.link_enviado ?? row.link_status === "ENVIADO";
 
-    const dataPedido = row.data_pedido || row.created_at || row.data || row.dt || row.data_emissao;
-    const cliente = row.cliente_nome || row.cliente || row.nome_cliente || row.cliente_fantasia || "---";
-    const modalidade = row.modalidade ?? (row.usar_valor_com_frete ? "ENTREGA" : (row.usar_valor_com_frete === false ? "RETIRADA" : "---"));
-    const valor = row.valor_total ?? row.total_pedido ?? row.total ?? row.valor ?? 0;
-    const status = row.status_codigo ?? row.status ?? row.situacao ?? row.sit ?? "---";
-    const tabela = row.tabela_preco_nome ?? row.tabela ?? row.tabela_nome ?? "---";
-    const fornecedor = row.fornecedor ?? row.fornecedor_nome ?? row.fornecedor_fantasia ?? "---";
-    const link = row.link_url ?? row.link ?? row.pedido_link_url ?? null;
-    const linkSent = row.link_enviado ?? row.link_status === "ENVIADO";
+      const tr = document.createElement("tr");
+      tr.classList.add("row-click");
+      tr.dataset.id = id;
 
-    const tr = document.createElement("tr");
-    tr.classList.add("row-click");
-    tr.dataset.id = id;
+      // Badge visual
+      const statusHtml = getStatusBadge(status);
 
-    tr.innerHTML = `
-      <td>${fmtDate(dataPedido)}</td>
-      <td><a href="#" class="lnk-resumo" data-id="${id}">${id}</a></td>
-      <td>${cliente}</td>
-      <td><span class="badge">${modalidade ?? "---"}</span></td>
-      <td class="tar">${fmtMoney(valor)}</td>
-      <td>${status}</td>
-      <td>${tabela}</td>
-      <td>${fornecedor}</td>
-      <td>
-        ${link
-        ? `<div class="flex-gap">
-                 <a class="btn" href="${link}" target="_blank" rel="noopener">Abrir</a>
-                 <button class="btn-copy" data-url="${link}">${linkSent ? "Copiar (Enviado)" : "Copiar (Gerado)"}</button>
-               </div>`
-        : "<span class='muted'>—</span>"
-      }
-      </td>
-    `;
+      tr.innerHTML = `
+          <td>${fmtDate(dataPedido)}</td>
+          <td><a href="#" class="lnk-resumo" data-id="${id}">${id}</a></td>
+          <td>${cliente}</td>
+          <td><span class="badge badge-gray">${modalidade ?? "---"}</span></td>
+          <td class="tar">${fmtMoney(valor)}</td>
+          <td>${statusHtml}</td>
+          <td>${tabela}</td>
+          <td>${fornecedor}</td>
+          <td>
+            ${link
+          ? `<div class="flex-gap">
+                     <a class="btn" href="${link}" target="_blank" rel="noopener">Abrir</a>
+                     <button class="btn-copy" data-url="${link}">${linkSent ? "Copiar (Enviado)" : "Copiar (Gerado)"}</button>
+                   </div>`
+          : "<span class='muted'>—</span>"
+        }
+          </td>
+        `;
 
-    tb.appendChild(tr);
+      tb.appendChild(tr);
 
-    tr.addEventListener("click", (ev) => {
-      if (ev.target.closest(".btn") || ev.target.closest("a")) return;
-      openResumo(id);
-    });
+      tr.addEventListener("click", (ev) => {
+        if (ev.target.closest(".btn") || ev.target.closest("a") || ev.target.closest(".btn-copy")) return;
+        openResumo(id);
+      });
+    } catch (err) {
+      console.error("Erro renderizando linha:", row, err);
+    }
   });
 }
 
