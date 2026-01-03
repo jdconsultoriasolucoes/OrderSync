@@ -72,35 +72,44 @@ header {
   flex-direction: column;
 }
 
-.filters-actions {
+/* Layout 2.0: Datas (Col 1) | Filtros/Botões (Col 2) */
+.filters-container {
   display: flex;
-  gap: 0.5rem;
-  margin-top: 1rem;
+  gap: 1.5rem;
+  align-items: flex-end;
 }
 
-.filter-row {
+.col-dates {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.col-dates input[type="date"] {
+  margin-top: 0;
+}
+
+.col-controls {
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  gap: 1rem;
+  flex: 1;
+}
+
+.row-filters {
   display: flex;
   flex-wrap: wrap;
   gap: 1rem;
   align-items: flex-end;
-  width: 100%;
 }
 
-.filter-row.secondary {
-  margin-top: 1rem;
-}
-
-.date-inputs {
+.row-buttons {
   display: flex;
+  flex-wrap: wrap;
   gap: 0.5rem;
-  align-items: center;
-}
-
-.action-buttons {
-  display: flex;
-  gap: 0.5rem;
-  margin-bottom: 2px;
-  /* Aline with inputs manually if needed */
+  align-items: flex-start;
+  /* Alinhado ao topo da linha, que é a base da coluna */
 }
 
 .btn {
@@ -184,6 +193,33 @@ header {
   color: #6b7280;
   font-weight: 600;
   border-bottom: 1px solid #e5e7eb;
+}
+
+.orc-table th.sortable {
+  cursor: pointer;
+  user-select: none;
+}
+
+.orc-table th.sortable:hover {
+  background-color: #f3f4f6;
+  color: #111827;
+}
+
+.orc-table th.sortable::after {
+  content: " ↕";
+  /* ícone neutro */
+  opacity: 0.3;
+  margin-left: 5px;
+}
+
+.orc-table th.sortable.asc::after {
+  content: " ↑";
+  opacity: 1;
+}
+
+.orc-table th.sortable.desc::after {
+  content: " ↓";
+  opacity: 1;
 }
 
 .orc-table td {

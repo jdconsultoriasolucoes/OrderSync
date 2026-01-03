@@ -58,45 +58,55 @@
     <div class="orc-header">
       <h1 class="orc-title">Pedidos</h1>
       <div class="filters">
-        <div class="filter-row">
-          <label>Data:
-            <div class="date-inputs">
-              <input type="date" id="fFrom"> —
-              <input type="date" id="fTo">
-            </div>
-          </label>
-          <div class="action-buttons">
-            <button id="btnBuscar" class="btn btn-primary">Buscar</button>
-            <button id="btnLimpar" class="btn btn-outline" title="Limpar Filtros">Limpar</button>
-            <button id="btnRefresh" class="btn btn-outline" title="Atualizar Lista">↻</button>
-            <button id="btnExport" class="btn btn-outline" title="Exportar para Excel/CSV">📥 Exportar</button>
+        <div class="filters-container">
+          <!-- Coluna 1: Datas (um em cima do outro) -->
+          <div class="col-dates">
+            <label>Data:</label>
+            <input type="date" id="fFrom">
+            <input type="date" id="fTo">
           </div>
-        </div>
 
-        <div class="filter-row secondary">
-          <div class="filtro-bloco">
-            <label for="fPeriodoRapido">Período:</label>
-            <select id="fPeriodoRapido">
-              <option value="custom">Personalizado</option>
-              <option value="7">Últimos 7 dias</option>
-              <option value="15">Últimos 15 dias</option>
-              <option value="30" selected>Últimos 30 dias</option>
-              <option value="60">Últimos 60 dias</option>
-              <option value="90">Últimos 90 dias</option>
-            </select>
+          <!-- Coluna 2: Filtros (Cima) e Botões (Baixo) -->
+          <div class="col-controls">
+            <!-- Linha superior: Campos de filtro -->
+            <div class="row-filters">
+              <div class="filtro-bloco">
+                <label for="fPeriodoRapido">Período:</label>
+                <select id="fPeriodoRapido">
+                  <option value="custom">Personalizado</option>
+                  <option value="7">Últimos 7 dias</option>
+                  <option value="15">Últimos 15 dias</option>
+                  <option value="30" selected>Últimos 30 dias</option>
+                  <option value="60">Últimos 60 dias</option>
+                  <option value="90">Últimos 90 dias</option>
+                </select>
+              </div>
+
+              <label>Status:
+                <select id="fStatus" class="form-select form-select-sm"></select>
+              </label>
+
+              <label>Tabela:
+                <input type="text" id="fTabela" placeholder="Nome da tabela">
+              </label>
+
+              <label>Cliente:
+                <input type="text" id="fCliente" placeholder="Nome ou código">
+              </label>
+
+              <label>Fornecedor:
+                <input type="text" id="fFornecedor" placeholder="Fornecedor">
+              </label>
+            </div>
+
+            <!-- Linha inferior: Botões (ao lado da segunda data) -->
+            <div class="row-buttons">
+              <button id="btnBuscar" class="btn btn-primary">Buscar</button>
+              <button id="btnLimpar" class="btn btn-outline" title="Limpar Filtros">Limpar</button>
+              <button id="btnRefresh" class="btn btn-outline" title="Atualizar Lista">↻</button>
+              <button id="btnExport" class="btn btn-outline" title="Exportar para Excel/CSV">📥 Exportar</button>
+            </div>
           </div>
-          <label>Status:
-            <select id="fStatus" class="form-select form-select-sm"></select>
-          </label>
-          <label>Tabela:
-            <input type="text" id="fTabela" placeholder="Nome da tabela">
-          </label>
-          <label>Cliente:
-            <input type="text" id="fCliente" placeholder="Nome ou código">
-          </label>
-          <label>Fornecedor:
-            <input type="text" id="fFornecedor" placeholder="Fornecedor">
-          </label>
         </div>
       </div>
     </div>
