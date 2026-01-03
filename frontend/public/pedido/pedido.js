@@ -709,9 +709,9 @@ async function loadList(page = 1) {
 
   // Feedback visual
   const btn = document.getElementById("btnBuscar");
-  const orgText = "Buscar";
+  // const orgText = "Buscar";
   if (btn) {
-    btn.innerText = "...";
+    // btn.innerText = "...";
     btn.disabled = true;
   }
 
@@ -741,7 +741,7 @@ async function loadList(page = 1) {
     document.getElementById("tblBody").innerHTML = `<tr><td colspan="9" class="error">Erro ao buscar dados: ${e.message}</td></tr>`;
   } finally {
     if (btn) {
-      btn.innerText = orgText;
+      // btn.innerText = orgText;
       btn.disabled = false;
     }
   }
@@ -921,19 +921,47 @@ function bindUI() {
     btnBuscar.addEventListener("click", () => loadList(1));
   }
 
+  // refresh
+  const btnRefresh = document.getElementById("btnRefresh");
+  if (btnRefresh) {
+    btnRefresh.addEventListener("click", () => loadList(state.page));
+  }
+
+  // limpar
+  const btnLimpar = document.getElementById("btnLimpar");
+  if (btnLimpar) {
+    btnLimpar.addEventListener("click", limparFiltros);
+  }
+
+  // exportar
+  const btnExport = document.getElementById("btnExport");
+  if (btnExport) {
+    btnExport.addEventListener("click", exportarCSV);
+  }
+
   // paginação
-  document.getElementById("prevPage").addEventListener("click", () => {
-    if (state.page > 1) loadList(state.page - 1);
-  });
-  document.getElementById("nextPage").addEventListener("click", () => {
-    const totalPages = Math.max(1, Math.ceil(state.total / state.pageSize));
-    if (state.page < totalPages) loadList(state.page + 1);
-  });
+  const btnPrev = document.getElementById("prevPage");
+  if (btnPrev) {
+    btnPrev.addEventListener("click", () => {
+      if (state.page > 1) loadList(state.page - 1);
+    });
+  }
+
+  const btnNext = document.getElementById("nextPage");
+  if (btnNext) {
+    btnNext.addEventListener("click", () => {
+      const totalPages = Math.max(1, Math.ceil(state.total / state.pageSize));
+      if (state.page < totalPages) loadList(state.page + 1);
+    });
+  }
 
   // fechar drawer
-  document.getElementById("btnCloseDrawer").addEventListener("click", () => {
-    document.getElementById("drawer").classList.add("hidden");
-  });
+  const btnClose = document.getElementById("btnCloseDrawer");
+  if (btnClose) {
+    btnClose.addEventListener("click", () => {
+      document.getElementById("drawer").classList.add("hidden");
+    });
+  }
 
   // período rápido
   const periodoEl = document.getElementById("fPeriodoRapido");
