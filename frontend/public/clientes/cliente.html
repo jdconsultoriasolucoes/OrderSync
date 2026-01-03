@@ -829,166 +829,176 @@
       function preencherFormularioCliente(cliente) {
         const dados = cliente || {};
 
+        // Helper para evitar erros se o elemento não existir
+        const setVal = (id, val) => {
+          const el = document.getElementById(id);
+          if (el) el.value = val;
+        };
+        const setCheck = (id, val) => {
+          const el = document.getElementById(id);
+          if (el) el.checked = val;
+        };
+
         // Bloco: cadastrocliente
         const c = dados.cadastrocliente || {};
-        document.getElementById("id").value = c.id || "";
-        document.getElementById("codigo_da_empresa").value = c.codigo_da_empresa || "";
-        document.getElementById("ativo").checked = c.ativo ?? true;
-        document.getElementById("tipo_cliente").value = c.tipo_cliente || "";
-        document.getElementById("tipo_venda").value = c.tipo_venda || "";
-        document.getElementById("tipo_compra").value = c.tipo_compra || "";
-        document.getElementById("limite_credito").value = c.limite_credito || "";
-        document.getElementById("nome_cliente").value = c.nome_cliente || "";
-        document.getElementById("nome_fantasia").value = c.nome_fantasia || "";
-        document.getElementById("cnpj").value = c.cnpj || "";
-        document.getElementById("inscricao_estadual").value = c.inscricao_estadual || "";
-        document.getElementById("cpf").value = c.cpf || "";
-        document.getElementById("situacao").value = c.situacao || "";
-        document.getElementById("indicacao_cliente").value = c.indicacao_cliente || "";
-        document.getElementById("ramo_de_atividade").value = c.ramo_de_atividade || "";
-        document.getElementById("atividade_principal").value = c.atividade_principal || "";
-        document.getElementById("cadastro_markup").value = c.cadastro_markup || "";
+        setVal("id", c.id || "");
+        setVal("codigo_da_empresa", c.codigo_da_empresa || "");
+        setCheck("ativo", c.ativo ?? true);
+        setVal("tipo_cliente", c.tipo_cliente || "");
+        setVal("tipo_venda", c.tipo_venda || "");
+        setVal("tipo_compra", c.tipo_compra || "");
+        setVal("limite_credito", c.limite_credito || "");
+        setVal("nome_cliente", c.nome_cliente || "");
+        setVal("nome_fantasia", c.nome_fantasia || "");
+        setVal("cnpj", c.cnpj || "");
+        setVal("inscricao_estadual", c.inscricao_estadual || "");
+        setVal("cpf", c.cpf || "");
+        setVal("situacao", c.situacao || "");
+        setVal("indicacao_cliente", c.indicacao_cliente || "");
+        setVal("ramo_de_atividade", c.ramo_de_atividade || "");
+        setVal("atividade_principal", c.atividade_principal || "");
+        setVal("cadastro_markup", c.cadastro_markup || "");
 
         // Bloco: responsavel_compras
         const rc = dados.responsavel_compras || {};
-        document.getElementById("nome_responsavel").value = rc.nome_responsavel || "";
-        document.getElementById("celular_responsavel").value = rc.celular_responsavel || "";
-        document.getElementById("email_resposavel").value = rc.email_resposavel || "";
-        document.getElementById("data_nascimento_resposavel").value = rc.data_nascimento_resposavel || "";
-        document.getElementById("observacoes_responsavel").value = rc.observacoes_responsavel || "";
-        document.getElementById("filial_resposavel").value = rc.filial_resposavel || "";
+        setVal("nome_responsavel", rc.nome_responsavel || "");
+        setVal("celular_responsavel", rc.celular_responsavel || "");
+        setVal("email_resposavel", rc.email_resposavel || "");
+        setVal("data_nascimento_resposavel", rc.data_nascimento_resposavel || "");
+        setVal("observacoes_responsavel", rc.observacoes_responsavel || "");
+        setVal("filial_resposavel", rc.filial_resposavel || "");
 
         // Bloco: endereco_faturamento
         const ef = dados.endereco_faturamento || {};
-        document.getElementById("endereco_faturamento").value = ef.endereco_faturamento || "";
-        document.getElementById("bairro_faturamento").value = ef.bairro_faturamento || "";
-        document.getElementById("cep_faturamento").value = ef.cep_faturamento || "";
-        document.getElementById("localizacao_faturamento").value = ef.localizacao_faturamento || "";
-        document.getElementById("municipio_faturamento").value = ef.municipio_faturamento || "";
-        document.getElementById("estado_faturamento").value = ef.estado_faturamento || "";
-        document.getElementById("email_danfe_faturamento").value = ef.email_danfe_faturamento || "";
+        setVal("endereco_faturamento", ef.endereco_faturamento || "");
+        setVal("bairro_faturamento", ef.bairro_faturamento || "");
+        setVal("cep_faturamento", ef.cep_faturamento || "");
+        setVal("localizacao_faturamento", ef.localizacao_faturamento || "");
+        setVal("municipio_faturamento", ef.municipio_faturamento || "");
+        setVal("estado_faturamento", ef.estado_faturamento || "");
+        setVal("email_danfe_faturamento", ef.email_danfe_faturamento || "");
 
         // Bloco: representante_legal
         const rl = dados.representante_legal || {};
-        document.getElementById("nome_RepresentanteLegal").value = rl.nome_RepresentanteLegal || "";
-        document.getElementById("celular_RepresentanteLegal").value = rl.celular_RepresentanteLegal || "";
-        document.getElementById("email_RepresentanteLegal").value = rl.email_RepresentanteLegal || "";
-        document.getElementById("data_nascimento_RepresentanteLegal").value = rl.data_nascimento_RepresentanteLegal || "";
-        document.getElementById("observacoes_RepresentanteLegal").value = rl.observacoes_RepresentanteLegal || "";
+        setVal("nome_RepresentanteLegal", rl.nome_RepresentanteLegal || "");
+        setVal("celular_RepresentanteLegal", rl.celular_RepresentanteLegal || "");
+        setVal("email_RepresentanteLegal", rl.email_RepresentanteLegal || "");
+        setVal("data_nascimento_RepresentanteLegal", rl.data_nascimento_RepresentanteLegal || "");
+        setVal("observacoes_RepresentanteLegal", rl.observacoes_RepresentanteLegal || "");
 
         // Bloco: endereco_entrega
         const ee = dados.endereco_entrega || {};
-        document.getElementById("endereco_EnderecoEntrega").value = ee.endereco_EnderecoEntrega || "";
-        document.getElementById("bairro_EnderecoEntrega").value = ee.bairro_EnderecoEntrega || "";
-        document.getElementById("cep_EnderecoEntrega").value = ee.cep_EnderecoEntrega || "";
-        document.getElementById("localizacao_EnderecoEntrega").value = ee.localizacao_EnderecoEntrega || "";
-        document.getElementById("municipio_EnderecoEntrega").value = ee.municipio_EnderecoEntrega || "";
-        document.getElementById("estado_EnderecoEntrega").value = ee.estado_EnderecoEntrega || "";
-        document.getElementById("rota_principal_EnderecoEntrega").value = ee.rota_principal_EnderecoEntrega || "";
-        document.getElementById("rota_de_aproximacao_EnderecoEntrega").value = ee.rota_de_aproximacao_EnderecoEntrega || "";
-        document.getElementById("observacao_motorista_EnderecoEntrega").value = ee.observacao_motorista_EnderecoEntrega || "";
+        setVal("endereco_EnderecoEntrega", ee.endereco_EnderecoEntrega || "");
+        setVal("bairro_EnderecoEntrega", ee.bairro_EnderecoEntrega || "");
+        setVal("cep_EnderecoEntrega", ee.cep_EnderecoEntrega || "");
+        setVal("localizacao_EnderecoEntrega", ee.localizacao_EnderecoEntrega || "");
+        setVal("municipio_EnderecoEntrega", ee.municipio_EnderecoEntrega || "");
+        setVal("estado_EnderecoEntrega", ee.estado_EnderecoEntrega || "");
+        setVal("rota_principal_EnderecoEntrega", ee.rota_principal_EnderecoEntrega || "");
+        setVal("rota_de_aproximacao_EnderecoEntrega", ee.rota_de_aproximacao_EnderecoEntrega || "");
+        setVal("observacao_motorista_EnderecoEntrega", ee.observacao_motorista_EnderecoEntrega || "");
 
         // Bloco: responsavel_recebimento
         const rr = dados.responsavel_recebimento || {};
-        document.getElementById("nome_ResponsavelRecebimento").value = rr.nome_ResponsavelRecebimento || "";
-        document.getElementById("celular_ResponsavelRecebimento").value = rr.celular_ResponsavelRecebimento || "";
-        document.getElementById("email_ResponsavelRecebimento").value = rr.email_ResponsavelRecebimento || "";
-        document.getElementById("data_nascimento_ResponsavelRecebimento").value = rr.data_nascimento_ResponsavelRecebimento || "";
-        document.getElementById("observacoes_ResponsavelRecebimento").value = rr.observacoes_ResponsavelRecebimento || "";
+        setVal("nome_ResponsavelRecebimento", rr.nome_ResponsavelRecebimento || "");
+        setVal("celular_ResponsavelRecebimento", rr.celular_ResponsavelRecebimento || "");
+        setVal("email_ResponsavelRecebimento", rr.email_ResponsavelRecebimento || "");
+        setVal("data_nascimento_ResponsavelRecebimento", rr.data_nascimento_ResponsavelRecebimento || "");
+        setVal("observacoes_ResponsavelRecebimento", rr.observacoes_ResponsavelRecebimento || "");
 
         // Bloco: endereco_cobranca
         const ec = dados.endereco_cobranca || {};
-        document.getElementById("endereco_EnderecoCobranca").value = ec.endereco_EnderecoCobranca || "";
-        document.getElementById("bairro_EnderecoCobranca").value = ec.bairro_EnderecoCobranca || "";
-        document.getElementById("cep_EnderecoCobranca").value = ec.cep_EnderecoCobranca || "";
-        document.getElementById("localizacao_EnderecoCobranca").value = ec.localizacao_EnderecoCobranca || "";
-        document.getElementById("municipio_EnderecoCobranca").value = ec.municipio_EnderecoCobranca || "";
-        document.getElementById("estado_EnderecoCobranca").value = ec.estado_EnderecoCobranca || "";
+        setVal("endereco_EnderecoCobranca", ec.endereco_EnderecoCobranca || "");
+        setVal("bairro_EnderecoCobranca", ec.bairro_EnderecoCobranca || "");
+        setVal("cep_EnderecoCobranca", ec.cep_EnderecoCobranca || "");
+        setVal("localizacao_EnderecoCobranca", ec.localizacao_EnderecoCobranca || "");
+        setVal("municipio_EnderecoCobranca", ec.municipio_EnderecoCobranca || "");
+        setVal("estado_EnderecoCobranca", ec.estado_EnderecoCobranca || "");
 
         // Bloco: responsavel_cobranca
         const rcob = dados.responsavel_cobranca || {};
-        document.getElementById("nome_ResponsavelCobranca").value = rcob.nome_ResponsavelCobranca || "";
-        document.getElementById("celular_ResponsavelCobranca").value = rcob.celular_ResponsavelCobranca || "";
-        document.getElementById("email_ResponsavelCobranca").value = rcob.email_ResponsavelCobranca || "";
-        document.getElementById("data_nascimento_ResponsavelCobranca").value = rcob.data_nascimento_ResponsavelCobranca || "";
-        document.getElementById("observacoes_ResponsavelCobranca").value = rcob.observacoes_ResponsavelCobranca || "";
+        setVal("nome_ResponsavelCobranca", rcob.nome_ResponsavelCobranca || "");
+        setVal("celular_ResponsavelCobranca", rcob.celular_ResponsavelCobranca || "");
+        setVal("email_ResponsavelCobranca", rcob.email_ResponsavelCobranca || "");
+        setVal("data_nascimento_ResponsavelCobranca", rcob.data_nascimento_ResponsavelCobranca || "");
+        setVal("observacoes_ResponsavelCobranca", rcob.observacoes_ResponsavelCobranca || "");
 
         // Bloco: dados_ultimas_compras
         const comp = dados.dados_ultimas_compras || {};
-        document.getElementById("numero_danfe_Compras").value = comp.numero_danfe_Compras || "";
-        document.getElementById("emissao_Compras").value = comp.emissao_Compras || "";
-        document.getElementById("valor_total_Compras").value = comp.valor_total_Compras || "";
-        document.getElementById("valor_frete_Compras").value = comp.valor_frete_Compras || "";
-        document.getElementById("valor_frete_padrao_Compras").value = comp.valor_frete_padrao_Compras || "";
-        document.getElementById("valor_ultimo_frete_to_Compras").value = comp.valor_ultimo_frete_to_Compras || "";
-        document.getElementById("lista_tabela_Compras").value = comp.lista_tabela_Compras || "";
-        document.getElementById("condicoes_pagamento_Compras").value = comp.condicoes_pagamento_Compras || "";
-        document.getElementById("cliente_calcula_st_Compras").value = comp.cliente_calcula_st_Compras || "";
-        document.getElementById("prazo_medio_compra_Compras").value = comp.prazo_medio_compra_Compras || "";
-        document.getElementById("previsao_proxima_compra_Compras").value = comp.previsao_proxima_compra_Compras || "";
+        setVal("numero_danfe_Compras", comp.numero_danfe_Compras || "");
+        setVal("emissao_Compras", comp.emissao_Compras || "");
+        setVal("valor_total_Compras", comp.valor_total_Compras || "");
+        setVal("valor_frete_Compras", comp.valor_frete_Compras || "");
+        setVal("valor_frete_padrao_Compras", comp.valor_frete_padrao_Compras || "");
+        setVal("valor_ultimo_frete_to_Compras", comp.valor_ultimo_frete_to_Compras || "");
+        setVal("lista_tabela_Compras", comp.lista_tabela_Compras || "");
+        setVal("condicoes_pagamento_Compras", comp.condicoes_pagamento_Compras || "");
+        setVal("cliente_calcula_st_Compras", comp.cliente_calcula_st_Compras || "");
+        setVal("prazo_medio_compra_Compras", comp.prazo_medio_compra_Compras || "");
+        setVal("previsao_proxima_compra_Compras", comp.previsao_proxima_compra_Compras || "");
 
         // Bloco: observacoes_nao_compra
         const obs = dados.observacoes_nao_compra || {};
-        document.getElementById("observacoes_Compras").value = obs.observacoes_Compras || "";
+        setVal("observacoes_Compras", obs.observacoes_Compras || "");
 
         // Bloco: dados_elaboracao_cadastro
         const ed = dados.dados_elaboracao_cadastro || {};
-        document.getElementById("classificacao_ElaboracaoCadastro").value = ed.classificacao_ElaboracaoCadastro || "";
-        document.getElementById("tipo_venda_prazo_ou_vista_ElaboracaoCadastro").value = ed.tipo_venda_prazo_ou_vista_ElaboracaoCadastro || "";
-        document.getElementById("limite_credito_ElaboracaoCadastro").value = ed.limite_credito_ElaboracaoCadastro || "";
-        document.getElementById("data_vencimento_ElaboracaoCadastro").value = ed.data_vencimento_ElaboracaoCadastro || "";
+        setVal("classificacao_ElaboracaoCadastro", ed.classificacao_ElaboracaoCadastro || "");
+        setVal("tipo_venda_prazo_ou_vista_ElaboracaoCadastro", ed.tipo_venda_prazo_ou_vista_ElaboracaoCadastro || "");
+        setVal("limite_credito_ElaboracaoCadastro", ed.limite_credito_ElaboracaoCadastro || "");
+        setVal("data_vencimento_ElaboracaoCadastro", ed.data_vencimento_ElaboracaoCadastro || "");
 
         // Bloco: grupo_economico
         const grupo = dados.grupo_economico || {};
-        document.getElementById("codigo_ElaboracaoCadastro").value = grupo.codigo_ElaboracaoCadastro || "";
-        document.getElementById("nome_empresarial_ElaboracaoCadastro").value = grupo.nome_empresarial_ElaboracaoCadastro || "";
+        setVal("codigo_ElaboracaoCadastro", grupo.codigo_ElaboracaoCadastro || "");
+        setVal("nome_empresarial_ElaboracaoCadastro", grupo.nome_empresarial_ElaboracaoCadastro || "");
 
         // Bloco: referencia_comercial
         const refcom = dados.referencia_comercial || {};
-        document.getElementById("empresa_ElaboracaoCadastro").value = refcom.empresa_ElaboracaoCadastro || "";
-        document.getElementById("cidade_ElaboracaoCadastro").value = refcom.cidade_ElaboracaoCadastro || "";
-        document.getElementById("telefone_ElaboracaoCadastro").value = refcom.telefone_ElaboracaoCadastro || "";
-        document.getElementById("contato_ElaboracaoCadastro").value = refcom.contato_ElaboracaoCadastro || "";
+        setVal("empresa_ElaboracaoCadastro", refcom.empresa_ElaboracaoCadastro || "");
+        setVal("cidade_ElaboracaoCadastro", refcom.cidade_ElaboracaoCadastro || "");
+        setVal("telefone_ElaboracaoCadastro", refcom.telefone_ElaboracaoCadastro || "");
+        setVal("contato_ElaboracaoCadastro", refcom.contato_ElaboracaoCadastro || "");
 
         // Bloco: referencia_bancaria
         const refbanco = dados.referencia_bancaria || {};
-        document.getElementById("banco_ElaboracaoCadastro").value = refbanco.banco_ElaboracaoCadastro || "";
-        document.getElementById("agencia_ElaboracaoCadastro").value = refbanco.agencia_ElaboracaoCadastro || "";
-        document.getElementById("conta_corrente_ElaboracaoCadastro").value = refbanco.conta_corrente_ElaboracaoCadastro || "";
+        setVal("banco_ElaboracaoCadastro", refbanco.banco_ElaboracaoCadastro || "");
+        setVal("agencia_ElaboracaoCadastro", refbanco.agencia_ElaboracaoCadastro || "");
+        setVal("conta_corrente_ElaboracaoCadastro", refbanco.conta_corrente_ElaboracaoCadastro || "");
 
         // Bloco: bem_imovel
         const imovel = dados.bem_imovel || {};
-        document.getElementById("imovel_ElaboracaoCadastro").value = imovel.imovel_ElaboracaoCadastro || "";
-        document.getElementById("localizacao_ElaboracaoCadastro").value = imovel.localizacao_ElaboracaoCadastro || "";
-        document.getElementById("area_ElaboracaoCadastro").value = imovel.area_ElaboracaoCadastro || "";
-        document.getElementById("valor_ElaboracaoCadastro").value = imovel.valor_ElaboracaoCadastro || "";
-        document.getElementById("hipotecado_ElaboracaoCadastro").value = imovel.hipotecado_ElaboracaoCadastro || "";
+        setVal("imovel_ElaboracaoCadastro", imovel.imovel_ElaboracaoCadastro || "");
+        setVal("localizacao_ElaboracaoCadastro", imovel.localizacao_ElaboracaoCadastro || "");
+        setVal("area_ElaboracaoCadastro", imovel.area_ElaboracaoCadastro || "");
+        setVal("valor_ElaboracaoCadastro", imovel.valor_ElaboracaoCadastro || "");
+        setVal("hipotecado_ElaboracaoCadastro", imovel.hipotecado_ElaboracaoCadastro || "");
 
         // Bloco: bem_movel
         const movel = dados.bem_movel || {};
-        document.getElementById("marca_ElaboracaoCadastro").value = movel.marca_ElaboracaoCadastro || "";
-        document.getElementById("modelo_ElaboracaoCadastro").value = movel.modelo_ElaboracaoCadastro || "";
-        document.getElementById("alienado_ElaboracaoCadastro").value = movel.alienado_ElaboracaoCadastro || "";
+        setVal("marca_ElaboracaoCadastro", movel.marca_ElaboracaoCadastro || "");
+        setVal("modelo_ElaboracaoCadastro", movel.modelo_ElaboracaoCadastro || "");
+        setVal("alienado_ElaboracaoCadastro", movel.alienado_ElaboracaoCadastro || "");
 
         // Bloco: plantel_animal
         const plantel = dados.plantel_animal || {};
-        document.getElementById("especie_ElaboracaoCadastro").value = plantel.especie_ElaboracaoCadastro || "";
-        document.getElementById("numero_de_animais_ElaboracaoCadastro").value = plantel.numero_de_animais_ElaboracaoCadastro || "";
-        document.getElementById("consumo_diario_ElaboracaoCadastro").value = plantel.consumo_diario_ElaboracaoCadastro || "";
-        document.getElementById("consumo_mensal_ElaboracaoCadastro").value = plantel.consumo_mensal_ElaboracaoCadastro || "";
+        setVal("especie_ElaboracaoCadastro", plantel.especie_ElaboracaoCadastro || "");
+        setVal("numero_de_animais_ElaboracaoCadastro", plantel.numero_de_animais_ElaboracaoCadastro || "");
+        setVal("consumo_diario_ElaboracaoCadastro", plantel.consumo_diario_ElaboracaoCadastro || "");
+        setVal("consumo_mensal_ElaboracaoCadastro", plantel.consumo_mensal_ElaboracaoCadastro || "");
 
         // Bloco: supervisores
         const sup = dados.supervisores || {};
-        document.getElementById("codigo_insumo_ElaboracaoCadastro").value = sup.codigo_insumo_ElaboracaoCadastro || "";
-        document.getElementById("nome_insumos_ElaboracaoCadastro").value = sup.nome_insumos_ElaboracaoCadastro || "";
-        document.getElementById("codigo_pet_ElaboracaoCadastro").value = sup.codigo_pet_ElaboracaoCadastro || "";
-        document.getElementById("nome_pet_ElaboracaoCadastro").value = sup.nome_pet_ElaboracaoCadastro || "";
+        setVal("codigo_insumo_ElaboracaoCadastro", sup.codigo_insumo_ElaboracaoCadastro || "");
+        setVal("nome_insumos_ElaboracaoCadastro", sup.nome_insumos_ElaboracaoCadastro || "");
+        setVal("codigo_pet_ElaboracaoCadastro", sup.codigo_pet_ElaboracaoCadastro || "");
+        setVal("nome_pet_ElaboracaoCadastro", sup.nome_pet_ElaboracaoCadastro || "");
 
         // Bloco: comissao_dispet
         const com = dados.comissao_dispet || {};
-        document.getElementById("insumos_ElaboracaoCadastro").value = com.insumos_ElaboracaoCadastro || "";
-        document.getElementById("pet_ElaboracaoCadastro").value = com.pet_ElaboracaoCadastro || "";
-        document.getElementById("observacoes_ElaboracaoCadastro").value = com.observacoes_ElaboracaoCadastro || "";
+        setVal("insumos_ElaboracaoCadastro", com.insumos_ElaboracaoCadastro || "");
+        setVal("pet_ElaboracaoCadastro", com.pet_ElaboracaoCadastro || "");
+        setVal("observacoes_ElaboracaoCadastro", com.observacoes_ElaboracaoCadastro || "");
 
         setViewState('SELECTED');
       }
