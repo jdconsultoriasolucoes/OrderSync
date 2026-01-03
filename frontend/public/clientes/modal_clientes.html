@@ -96,11 +96,16 @@
     }
 
     function selecionarCliente(cliente) {
-      if (window.opener && typeof window.opener.preencherFormulario === "function") {
-        window.opener.preencherFormulario(cliente);
+      try {
+        if (window.opener && typeof window.opener.preencherFormulario === "function") {
+          window.opener.preencherFormulario(cliente);
+        } else {
+          alert("Não foi possível comunicar com a janela principal.");
+        }
+      } catch (e) {
+        console.error("Erro ao selecionar cliente:", e);
+      } finally {
         window.close();
-      } else {
-        alert("Não foi possível preencher o formulário no sistema principal.");
       }
     }
 

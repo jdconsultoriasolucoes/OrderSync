@@ -575,6 +575,17 @@
           });
       }
 
+      function editarCliente() {
+        // Habilita edição se necessário, ou apenas foca no primeiro campo
+        document.getElementById("nome_cliente").focus();
+      }
+
+      function cancelarEdicao() {
+        if (confirm("Deseja cancelar a edição e limpar o formulário?")) {
+          novoCliente();
+        }
+      }
+
       function listarClientes() {
         window.open("modal_clientes.html", "popup", "width=800,height=600");
       }
@@ -582,6 +593,8 @@
       function obterDadosFormulario() {
         return {
           cadastrocliente: {
+            // Se o ID for vazio, envia 0 para validar como int no backend
+            id: parseInt(document.getElementById("id")?.value || 0),
             codigo_da_empresa: document.getElementById("codigo_da_empresa")?.value || "",
             ativo: document.getElementById("ativo")?.checked || false,
             tipo_cliente: document.getElementById("tipo_cliente")?.value || "",
