@@ -61,38 +61,34 @@
         <label>Data:
           <input type="date" id="fFrom"> —
           <input type="date" id="fTo">
-        </label>
-        <div class="filtro-bloco">
-          <label for="fPeriodoRapido">Período:</label>
-          <select id="fPeriodoRapido">
-            <option value="custom">Personalizado</option>
-            <option value="7">Últimos 7 dias</option>
-            <option value="15">Últimos 15 dias</option>
-            <option value="30" selected>Últimos 30 dias</option>
-            <option value="60">Últimos 60 dias</option>
-            <option value="90">Últimos 90 dias</option>
-          </select>
-        </div>
-        <label>Status:
-          <select id="fStatus" class="form-select form-select-sm"></select>
-        </label>
+          <button id="btnBuscar" class="btn btn-primary">Buscar</button>
+          <button id="btnLimpar" class="btn btn-outline" title="Limpar Filtros">Limpar</button>
+          <button id="btnRefresh" class="btn btn-outline" title="Atualizar Lista">↻</button>
+          <button id="btnExport" class="btn btn-outline" title="Exportar para Excel/CSV">📥 Exportar</button>
 
-
-        <label>Tabela:
-          <input type="text" id="fTabela" placeholder="Nome da tabela de preço">
-        </label>
-        <label>Cliente:
-          <input type="text" id="fCliente" placeholder="Nome ou código">
-        </label>
-        <label>Fornecedor:
-          <input type="text" id="fFornecedor" placeholder="Fornecedor">
-        </label>
-      </div>
-      <div class="filters-actions">
-        <button id="btnBuscar" class="btn btn-primary">Buscar</button>
-        <button id="btnLimpar" class="btn btn-outline" title="Limpar Filtros">Limpar</button>
-        <button id="btnRefresh" class="btn btn-outline" title="Atualizar Lista">↻</button>
-        <button id="btnExport" class="btn btn-outline" title="Exportar para Excel/CSV">📥 Exportar</button>
+          <div class="filtro-bloco">
+            <label for="fPeriodoRapido">Período:</label>
+            <select id="fPeriodoRapido">
+              <option value="custom">Personalizado</option>
+              <option value="7">Últimos 7 dias</option>
+              <option value="15">Últimos 15 dias</option>
+              <option value="30" selected>Últimos 30 dias</option>
+              <option value="60">Últimos 60 dias</option>
+              <option value="90">Últimos 90 dias</option>
+            </select>
+          </div>
+          <label>Status:
+            <select id="fStatus" class="form-select form-select-sm"></select>
+          </label>
+          <label>Tabela:
+            <input type="text" id="fTabela" placeholder="Nome da tabela">
+          </label>
+          <label>Cliente:
+            <input type="text" id="fCliente" placeholder="Nome ou código">
+          </label>
+          <label>Fornecedor:
+            <input type="text" id="fFornecedor" placeholder="Fornecedor">
+          </label>
       </div>
     </div>
 
@@ -100,14 +96,14 @@
       <table class="orc-table" id="tblPedidos">
         <thead>
           <tr>
-            <th>Data</th>
-            <th>Num. Pedido</th>
-            <th>Cliente</th>
-            <th>Entrega/Retirada</th>
-            <th>Valor</th>
-            <th>Status</th>
-            <th>Tabela</th>
-            <th>Fornecedor</th>
+            <th data-sort="data_pedido" class="sortable">Data</th>
+            <th data-sort="numero_pedido" class="sortable">Num. Pedido</th>
+            <th data-sort="cliente_nome" class="sortable">Cliente</th>
+            <th data-sort="modalidade" class="sortable">Entrega/Retirada</th>
+            <th data-sort="valor_total" class="sortable tar">Valor</th>
+            <th data-sort="status_codigo" class="sortable">Status</th>
+            <th data-sort="tabela_preco_nome" class="sortable">Tabela</th>
+            <th data-sort="fornecedor" class="sortable">Fornecedor</th>
             <th>Link</th>
           </tr>
         </thead>

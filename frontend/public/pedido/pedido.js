@@ -10,7 +10,14 @@ const API = {
   pdf: (id) => `${API_BASE}/api/pedido/${id}/pdf`, // endpoint de download direto
 };
 
-let state = { page: 1, pageSize: 25, total: 0 };
+let state = {
+  page: 1,
+  pageSize: 25,
+  total: 0,
+  rows: [], // armazena linhas atuais p/ ordenação
+  sortCol: null,
+  sortAsc: true
+};
 
 // ---------------------- utils ----------------------
 function fmtMoney(v) {
@@ -530,7 +537,52 @@ function aplicarPeriodoRapido() {
     }
   });
 
+  // Evento de ordenação
+  document.querySelectorAll("th.sortable").forEach(th => {
+    th.addEventListener("click", () => {
+      const col = th.dataset.sort;
+      if (state.sortCol === col) {
+        state.sortAsc = !state.sortAsc; // inverte
+      } else {
+        state.sortCol = col;
+        state.sortAsc = true; // novo padrão asc
+      }
+      // reordena e renderiza
+      sortRows(state.rows, state.sortCol, state.sortAsc);
+      renderTable(state.rows);
+      updateSortIcons();
+    });
+  });
+
 })();
+
+function sortRows(rows, col, asc) {
+  if (!rows || !col) return;
+
+  rows.sort((a, b) => {
+    let va = a[col] ?? "";
+    let vb = b[col] ?? "";
+
+    // Tratamento especial para números/datas se necessário, mas string funciona para maioria
+    if (typeof va === 'string') va = va.toLowerCase();
+    if (typeof vb === 'string') vb = vb.toLowerCase();
+
+    if (va < vb) return asc ? -1 : 1;
+    if (va > vb) return asc ? 1 : -1;
+    return 0;
+  });
+}
+
+function updateSortIcons() {
+  document.querySelectorAll("th.sortable").forEach(th => {
+    th.classList.remove("asc", "desc");
+    if (th.dataset.sort === state.sortCol) {
+      th.classList.add(state.sortAsc ? "asc" : "desc");
+    }
+  });
+}
+
+}) ();
 
 // ---------------------- utils ----------------------
 function fmtMoney(v) {
@@ -730,11 +782,16 @@ async function loadList(page = 1) {
     console.log("loadList: Recebido do backend:", j);
     const arr = Array.isArray(j) ? j : (j.data || j.items || j.results || (j.payload && j.payload.items) || []);
     state.total = (j.total ?? j.count ?? (Array.isArray(arr) ? arr.length : 0)) || 0;
-    console.log("loadList: Array processado:", arr, "Total:", state.total);
 
-    const rows = groupByPedido(arr);
-    console.log("loadList: Rows agrupadas:", rows);
-    renderTable(rows);
+    // Agrupa e salva no state.rows para permitir ordenação local
+    state.rows = groupByPedido(arr);
+
+    // Se tiver ordenação ativa, aplica
+    if (state.sortCol) {
+      sortRows(state.rows, state.sortCol, state.sortAsc);
+    }
+
+    renderTable(state.rows);
     renderPager();
   } catch (e) {
     console.error("Erro em loadList:", e);
@@ -797,7 +854,7 @@ function renderTable(rows) {
             ${link
           ? `<div class="flex-gap">
                      <a class="btn" href="${link}" target="_blank" rel="noopener">Abrir</a>
-                     <button class="btn-copy" data-url="${link}">${linkSent ? "Copiar (Enviado)" : "Copiar (Gerado)"}</button>
+                     <button class="btn-copy" data-url="${link}">Copiar Link</button>
                    </div>`
           : "<span class='muted'>—</span>"
         }
