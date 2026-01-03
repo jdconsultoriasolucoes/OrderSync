@@ -1110,7 +1110,19 @@
           };
 
           setVal('nome_cliente', data.razao_social); // Razão Social
-          setVal('nome_fantasia', data.nome_fantasia || data.razao_social);
+
+          // Limpeza: Muitas vezes (principalmente MEI) a Razão Social vem com o CNPJ no início (ex: "12.345.678 NOME DA PESSOA").
+          // Vamos remover isso se existir para ficar mais limpo.
+          let nomeLimpo = data.razao_social;
+          const cnpjRootFormatado = data.cnpj.substring(0, 8).replace(/^(\d{2})(\d{3})(\d{3}).*/, "$1.$2.$3");
+          if (nomeLimpo.startsWith(cnpjRootFormatado)) {
+            nomeLimpo = nomeLimpo.substring(cnpjRootFormatado.length).trim();
+            // Remove hifens ou caracteres soltos que possam ter sobrado
+            nomeLimpo = nomeLimpo.replace(/^[-–]\s*/, "");
+          }
+          setVal('nome_cliente', nomeLimpo);
+
+          setVal('nome_fantasia', data.nome_fantasia || nomeLimpo);
 
           // Mapeamentos Específicos
 
