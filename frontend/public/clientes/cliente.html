@@ -53,12 +53,19 @@
 
     <div class="d-flex justify-content-between align-items-center mb-3">
       <h2 style="margin:0;">Cadastro de Clientes</h2>
-      <div class="d-flex gap-2">
-        <button class="btn btn-listar" onclick="listarClientes()" type="button">Listar Clientes</button>
-        <button class="btn btn-editar" id="btn-editar" onclick="editarCliente()" type="button">Editar</button>
-        <button class="btn btn-cancelar" id="btn-cancelar" onclick="cancelarEdicao()" type="button">Cancelar</button>
-        <button class="btn btn-salvar" id="btn-salvar" onclick="salvarCliente()" type="button">Salvar</button>
-        <button class="btn btn-excluir" onclick="excluirCliente()" type="button">Excluir</button>
+      <div class="d-flex gap-2" id="action-buttons">
+        <button class="btn btn-listar" id="btn-listar" onclick="listarClientes()" type="button">Listar Clientes</button>
+        <button class="btn btn-novo" id="btn-novo" onclick="novoCliente()" type="button">Novo Cliente</button>
+        <button class="btn btn-editar" id="btn-editar" onclick="editarCliente()" type="button"
+          style="display: none;">Editar</button>
+        <button class="btn btn-excluir" id="btn-excluir" onclick="excluirCliente()" type="button"
+          style="display: none;">Excluir</button>
+        <button class="btn btn-voltar" id="btn-voltar" onclick="voltarEstadoInicial()" type="button"
+          style="display: none;">Voltar</button>
+        <button class="btn btn-salvar" id="btn-salvar" onclick="salvarCliente()" type="button"
+          style="display: none;">Salvar</button>
+        <button class="btn btn-cancelar" id="btn-cancelar" onclick="cancelarEdicao()" type="button"
+          style="display: none;">Cancelar</button>
       </div>
     </div>
 
@@ -198,16 +205,16 @@
         <h2 class="subtitulo">Endereço de Faturamento</h2>
         <div class="form-grid-2col">
           <div>
+            <label for="cep_faturamento">CEP:</label>
+            <input type="text" id="cep_faturamento" name="cep_faturamento" />
+          </div>
+          <div>
             <label for="endereco_faturamento">Endereço:</label>
             <input type="text" id="endereco_faturamento" name="endereco_faturamento" />
           </div>
           <div>
             <label for="bairro_faturamento">Bairro:</label>
             <input type="text" id="bairro_faturamento" name="bairro_faturamento" />
-          </div>
-          <div>
-            <label for="cep_faturamento">CEP:</label>
-            <input type="text" id="cep_faturamento" name="cep_faturamento" />
           </div>
           <div>
             <label for="localizacao_faturamento">Localização:</label>
@@ -257,16 +264,16 @@
         <h2 class="subtitulo">Endereço de Entrega</h2>
         <div class="form-grid-2col">
           <div>
+            <label for="cep_EnderecoEntrega">CEP:</label>
+            <input type="text" id="cep_EnderecoEntrega" name="cep_EnderecoEntrega" />
+          </div>
+          <div>
             <label for="endereco_EnderecoEntrega">Endereço:</label>
             <input type="text" id="endereco_EnderecoEntrega" name="endereco_EnderecoEntrega" />
           </div>
           <div>
             <label for="bairro_EnderecoEntrega">Bairro:</label>
             <input type="text" id="bairro_EnderecoEntrega" name="bairro_EnderecoEntrega" />
-          </div>
-          <div>
-            <label for="cep_EnderecoEntrega">CEP:</label>
-            <input type="text" id="cep_EnderecoEntrega" name="cep_EnderecoEntrega" />
           </div>
           <div>
             <label for="localizacao_EnderecoEntrega">Localização:</label>
@@ -327,16 +334,16 @@
         <h2 class="subtitulo">Endereço de Cobrança</h2>
         <div class="form-grid-2col">
           <div>
+            <label for="cep_EnderecoCobranca">CEP:</label>
+            <input type="text" id="cep_EnderecoCobranca" name="cep_EnderecoCobranca" />
+          </div>
+          <div>
             <label for="endereco_EnderecoCobranca">Endereço:</label>
             <input type="text" id="endereco_EnderecoCobranca" name="endereco_EnderecoCobranca" />
           </div>
           <div>
             <label for="bairro_EnderecoCobranca">Bairro:</label>
             <input type="text" id="bairro_EnderecoCobranca" name="bairro_EnderecoCobranca" />
-          </div>
-          <div>
-            <label for="cep_EnderecoCobranca">CEP:</label>
-            <input type="text" id="cep_EnderecoCobranca" name="cep_EnderecoCobranca" />
           </div>
           <div>
             <label for="localizacao_EnderecoCobranca">Localização:</label>
@@ -509,10 +516,69 @@
       const celResp = document.getElementById('celular_responsavel');
       if (celResp) IMask(celResp, { mask: '(00) 00000-0000' });
 
+      // --- State Management ---
+      // Modes: 'INITIAL', 'SELECTED', 'EDITING'
+      function setViewState(mode) {
+        const btnListar = document.getElementById("btn-listar");
+        const btnNovo = document.getElementById("btn-novo");
+        const btnEditar = document.getElementById("btn-editar");
+        const btnExcluir = document.getElementById("btn-excluir");
+        const btnVoltar = document.getElementById("btn-voltar");
+        const btnSalvar = document.getElementById("btn-salvar");
+        const btnCancelar = document.getElementById("btn-cancelar");
+
+        // Helper to show/hide
+        const show = (el) => el.style.display = "inline-block";
+        const hide = (el) => el.style.display = "none";
+
+        // Disable/Enable form
+        const formInputs = document.querySelectorAll("#formCliente input, #formCliente select");
+        const disableForm = (disabled) => {
+          formInputs.forEach(input => input.disabled = disabled);
+        };
+
+        if (mode === 'INITIAL') {
+          show(btnListar);
+          show(btnNovo);
+          hide(btnEditar);
+          hide(btnExcluir);
+          hide(btnVoltar);
+          hide(btnSalvar);
+          hide(btnCancelar);
+          disableForm(true);
+          // Clear form logic typically handles resetting ID to ""
+        } else if (mode === 'SELECTED') {
+          show(btnListar);
+          hide(btnNovo);
+          show(btnEditar);
+          show(btnExcluir);
+          show(btnVoltar);
+          hide(btnSalvar);
+          hide(btnCancelar);
+          disableForm(true);
+        } else if (mode === 'EDITING' || mode === 'CREATING') {
+          hide(btnListar);
+          hide(btnNovo);
+          hide(btnEditar);
+          hide(btnExcluir);
+          // hide(btnVoltar); // Usually hidden during edit
+          show(btnSalvar);
+          show(btnCancelar);
+          disableForm(false);
+        }
+      }
+
       function novoCliente() {
         document.getElementById("formCliente").reset();
         document.getElementById("id").value = "";
         document.getElementById("ativo").checked = true;
+        setViewState('CREATING');
+      }
+
+      function voltarEstadoInicial() {
+        document.getElementById("formCliente").reset();
+        document.getElementById("id").value = "";
+        setViewState('INITIAL');
       }
 
       function salvarCliente() {
@@ -536,9 +602,15 @@
         axios[metodo](url, cliente, {
           headers: { 'Authorization': `Bearer ${token}` }
         })
-          .then(() => {
+          .then((res) => {
             alert("Cliente salvo com sucesso!");
-            novoCliente();
+            // After save, we can go to SELECTED state with the new/updated data
+            // For simplicity, let's load the data if returned, or go to initial
+            if (res.data && res.data.cadastrocliente && res.data.cadastrocliente.id) {
+              preencherFormularioCliente(res.data);
+            } else {
+              novoCliente(); // Fallback
+            }
           })
           .catch(erro => {
             console.error(erro);
@@ -547,11 +619,13 @@
       }
 
       function excluirCliente() {
-        const codigo = document.getElementById("codigo_da_empresa").value;
-        if (!codigo) {
-          alert("Selecione um cliente primeiro.");
+        const id = document.getElementById("id").value;
+        if (!id) {
+          alert("Nenhum cliente selecionado para excluir.");
           return;
         }
+
+        if (!confirm("Tem certeza que deseja excluir este cliente?")) return;
 
         const api = window.API_BASE || "http://127.0.0.1:8000";
         const token = window.Auth ? window.Auth.getToken() : localStorage.getItem('ordersync_token');
@@ -561,13 +635,14 @@
           return;
         }
 
-        axios.delete(`${api}/cliente/${codigo}`, {
+        // Fix: Use ID instead of codigo_da_empresa, as backend expects ID in path (despite param name)
+        axios.delete(`${api}/cliente/${id}`, {
           headers: { 'Authorization': `Bearer ${token}` }
         })
 
           .then(() => {
             alert("Cliente excluído com sucesso!");
-            novoCliente();
+            voltarEstadoInicial();
           })
           .catch(erro => {
             console.error(erro);
@@ -576,13 +651,24 @@
       }
 
       function editarCliente() {
+        setViewState('EDITING');
         // Habilita edição se necessário, ou apenas foca no primeiro campo
         document.getElementById("nome_cliente").focus();
       }
 
       function cancelarEdicao() {
-        if (confirm("Deseja cancelar a edição e limpar o formulário?")) {
-          novoCliente();
+        if (confirm("Deseja cancelar a edição? Os dados não salvos serão perdidos.")) {
+          const id = document.getElementById("id").value;
+          if (id) {
+            // If we were editing an existing client, revert to Selected state
+            // Ideally re-fetch or just disable form. For now, disable form.
+            setViewState('SELECTED');
+            // Optional: Reload data to revert unsaved changes in DOM inputs
+            // loadCliente(id); // If we had such function readily available
+          } else {
+            // If creating new, go back to initial
+            voltarEstadoInicial();
+          }
         }
       }
 
@@ -903,6 +989,8 @@
         document.getElementById("insumos_ElaboracaoCadastro").value = com.insumos_ElaboracaoCadastro || "";
         document.getElementById("pet_ElaboracaoCadastro").value = com.pet_ElaboracaoCadastro || "";
         document.getElementById("observacoes_ElaboracaoCadastro").value = com.observacoes_ElaboracaoCadastro || "";
+
+        setViewState('SELECTED');
       }
 
 
@@ -974,6 +1062,8 @@
         preencherSelect("tipo_venda", "tipo_venda");
         preencherSelect("tipo_compra", "tipo_compra");
         preencherSelect("ramo_de_atividade", "ramo_de_atividade");
+
+        setViewState('INITIAL');
       };
 
     </script>
