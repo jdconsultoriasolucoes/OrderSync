@@ -182,7 +182,7 @@ def listar_pedidos(
     count_sql = text(f"""
         SELECT COUNT(*) AS total
         FROM public.tb_pedidos a
-        JOIN public.tb_tabela_preco b ON a.tabela_preco_id = b.id_tabela
+        LEFT JOIN public.tb_tabela_preco b ON a.tabela_preco_id = b.id_tabela
         WHERE {where_clause}
     """)
 
@@ -195,13 +195,13 @@ def listar_pedidos(
           CASE WHEN a.usar_valor_com_frete THEN 'ENTREGA' ELSE 'RETIRADA' END AS modalidade,
           a.total_pedido                            AS valor_total,
           a.status                                  AS status_codigo,
-          b.nome_tabela                             AS tabela_preco_nome,
+          COALESCE(a.tabela_preco_nome, b.nome_tabela) AS tabela_preco_nome,
           a.fornecedor                              AS fornecedor,
           a.link_url,
           a.link_status,
           (a.link_enviado_em IS NOT NULL)           AS link_enviado
         FROM public.tb_pedidos a
-        JOIN public.tb_tabela_preco b ON a.tabela_preco_id = b.id_tabela
+        LEFT JOIN public.tb_tabela_preco b ON a.tabela_preco_id = b.id_tabela
         WHERE {where_clause}
         ORDER BY a.created_at DESC, a.id_pedido DESC
         LIMIT :limit OFFSET :offset

@@ -21,19 +21,48 @@ def criar_pedido_confirmado(db: Session, tabela_id: int, body: ConfirmarPedidoRe
     if not body.produtos:
         raise ValueError("Nenhum item informado")
 
-    # ---  buscar fornecedor da tabela de preço ---
-    fornecedor = db.execute(text("""
-        SELECT fornecedor
+    # ---  buscar fornecedor e nome da tabela de preço ---
+    res_tabela = db.execute(text("""
+        SELECT fornecedor, nome_tabela
         FROM public.tb_tabela_preco
         WHERE id_tabela = :tid
-    """), {"tid": tabela_id}).scalar()
+    """), {"tid": tabela_id}).mappings().first()
 
-    if fornecedor:
-        fornecedor = str(fornecedor)[:255]
+    if res_tabela:
+        fornecedor = str(res_tabela["fornecedor"])[:255] if res_tabela["fornecedor"] else None
+        tabela_nome_snapshot = str(res_tabela["nome_tabela"])[:255] if res_tabela["nome_tabela"] else None
     else:
         fornecedor = None
+        tabela_nome_snapshot = None
 
-    # 2) Validar o link do token (se veio)
+    # ... (rest of logic) ...
+
+    # 5) Insert pedido
+    insert_sql = text("""
+        INSERT INTO tb_pedidos (
+            codigo_cliente, cliente, tabela_preco_id, tabela_preco_nome,
+            validade_ate, validade_dias, data_retirada,
+            usar_valor_com_frete, itens,
+            peso_total_kg, frete_total, total_sem_frete, total_com_frete, total_pedido,
+            observacoes, status, confirmado_em,
+            link_token, link_url, link_enviado_em, link_expira_em, link_status,
+            link_primeiro_acesso_em, link_ultimo_acesso_em, link_qtd_acessos,
+            fornecedor,          
+            criado_em, atualizado_em, created_at
+        )
+        VALUES (
+            :codigo_cliente, :cliente, :tabela_preco_id, :tabela_preco_nome,
+            :validade_ate, :validade_dias, :data_retirada,
+            :usar_valor_com_frete, CAST(:itens AS jsonb),
+            :peso_total_kg, :frete_total, :total_sem_frete, :total_com_frete, :total_pedido,
+            :observacoes, 'CONFIRMADO', :confirmado_em,
+            :link_token, :link_url, :link_enviado_em, :link_expira_em, 'ABERTO',
+            :link_primeiro_acesso_em, :link_ultimo_acesso_em, :link_qtd_acessos,
+            :fornecedor,         
+            :agora, :agora, :pedido_created_at
+        )
+        RETURNING id_pedido
+    """)
     link_row = None
     if body.origin_code:
         link_row = db.execute(text("""
@@ -134,6 +163,7 @@ def criar_pedido_confirmado(db: Session, tabela_id: int, body: ConfirmarPedidoRe
         "codigo_cliente": (codigo_cliente or "Não cadastrado")[:80],
         "cliente": (body.cliente or "").strip() or "---",
         "tabela_preco_id": tabela_id,
+        "tabela_preco_nome": tabela_nome_snapshot,
         "validade_ate": validade_ate,
         "validade_dias": validade_dias,
         "data_retirada": data_retirada,

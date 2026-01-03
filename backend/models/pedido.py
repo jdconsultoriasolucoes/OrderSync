@@ -13,6 +13,7 @@ class PedidoModel(Base):
     id = Column("id_pedido", BigInteger, primary_key=True, index=True)
 
     tabela_preco_id = Column(BigInteger) # FK implicit
+    tabela_preco_nome = Column(String) # Snapshot do nome da tabela
     
     # Client Data (Denormalized or Link)
     codigo_cliente = Column(String) # Stored as string in SQL queries? "a.codigo_cliente". In DB it might be varchar.
