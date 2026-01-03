@@ -1077,16 +1077,54 @@
           const response = await axios.get(`https://brasilapi.com.br/api/cnpj/v1/${cnpj}`);
           const data = response.data;
 
-          // Basic Company Info
+          // Helper to set value
           const setVal = (id, val) => {
             const el = document.getElementById(id);
             if (el) el.value = val;
           };
 
+          // Helper to handle Selects (add option if not exists to ensure it's selected)
+          const setSelect = (id, value) => {
+            const select = document.getElementById(id);
+            if (!select) return;
+
+            // Normaliza para comparação (ex: remove acentos ou uppercase se necessário, mas aqui vamos tentar direto)
+            // Verifica se já existe a opção
+            let exists = false;
+            for (let i = 0; i < select.options.length; i++) {
+              if (select.options[i].value === value || select.options[i].text === value) {
+                select.selectedIndex = i;
+                exists = true;
+                break;
+              }
+            }
+
+            // Se não existe, cria uma nova opção temporária
+            if (!exists && value) {
+              const option = document.createElement("option");
+              option.value = value;
+              option.text = value; // Exibe o texto vindo da API
+              select.appendChild(option);
+              select.value = value;
+            }
+          };
+
           setVal('nome_cliente', data.razao_social); // Razão Social
-          setVal('nome_fantasia', data.nome_fantasia);
-          // 'ramo_de_atividade' -> data.cnae_fiscal_descricao_principal (text) - Select might not match exactly, skipping or needs fuzzy match.
-          // setVal('ramo_de_atividade', data.cnae_fiscal_descricao_principal); 
+          setVal('nome_fantasia', data.nome_fantasia || data.razao_social);
+
+          // Mapeamentos Específicos
+
+          // 1. Situação: BrasilAPI retorna "ATIVA", "BAIXADA", etc.
+          // Tenta mapear "ATIVA" -> "Ativo" se o select esperar isso, ou usa o valor direto.
+          let situacao = data.descricao_situacao_cadastral;
+          if (situacao === "ATIVA") situacao = "Ativo"; // Tentativa de normalização comum
+          setSelect('situacao', situacao);
+
+          // 2. Atividade Principal e Ramo de Atividade
+          // A API retorna `cnae_fiscal_descricao_principal`. Vamos preencher ambos os campos com isso por padrão.
+          const atividade = data.cnae_fiscal_descricao_principal;
+          setSelect('atividade_principal', atividade);
+          setSelect('ramo_de_atividade', atividade);
 
           // Address Info -> Mapped to Faturamento (Standard behavior)
           setVal('cep_faturamento', data.cep);
@@ -1095,13 +1133,12 @@
           setVal('municipio_faturamento', data.municipio);
           setVal('estado_faturamento', data.uf);
 
-          // Contact
-          // setVal('telefone', data.ddd_telefone_1); // If we had a generic phone field
+          // Nota sobre Inscrição Estadual:
+          // A API pública de CNPJ (Receita Federal) NÃO retorna Inscrição Estadual (dado estadual).
+          // Portanto, esse campo deve ser preenchido manualmente ou via API paga (Sintegra).
 
         } catch (error) {
           console.error("Erro ao buscar CNPJ:", error);
-          // Silent fail or alert depending on preference (alerting is safer for user awareness)
-          // alert("CNPJ não encontrado ou erro na busca."); 
         } finally {
           cnpjInput.style.cursor = 'default';
         }
