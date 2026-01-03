@@ -1133,6 +1133,10 @@
           setVal('municipio_faturamento', data.municipio);
           setVal('estado_faturamento', data.uf);
 
+          // Contact
+          setVal('email_resposavel', data.email);
+          // setVal('telefone', data.ddd_telefone_1); // If we had a generic phone field
+
           // Nota sobre Inscrição Estadual:
           // A API pública de CNPJ (Receita Federal) NÃO retorna Inscrição Estadual (dado estadual).
           // Portanto, esse campo deve ser preenchido manualmente ou via API paga (Sintegra).
