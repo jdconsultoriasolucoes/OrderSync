@@ -129,7 +129,7 @@
 
           <div>
             <label for="cnpj">CNPJ:</label>
-            <input type="text" id="cnpj" name="cnpj" />
+            <input type="text" id="cnpj" name="cnpj" onblur="buscarCnpj()" />
           </div>
           <div>
             <label for="inscricao_estadual">Inscrição Estadual:</label>
@@ -206,7 +206,7 @@
         <div class="form-grid-2col">
           <div>
             <label for="cep_faturamento">CEP:</label>
-            <input type="text" id="cep_faturamento" name="cep_faturamento" />
+            <input type="text" id="cep_faturamento" name="cep_faturamento" onblur="buscarCep(event, 'faturamento')" />
           </div>
           <div>
             <label for="endereco_faturamento">Endereço:</label>
@@ -265,7 +265,8 @@
         <div class="form-grid-2col">
           <div>
             <label for="cep_EnderecoEntrega">CEP:</label>
-            <input type="text" id="cep_EnderecoEntrega" name="cep_EnderecoEntrega" />
+            <input type="text" id="cep_EnderecoEntrega" name="cep_EnderecoEntrega"
+              onblur="buscarCep(event, 'entrega')" />
           </div>
           <div>
             <label for="endereco_EnderecoEntrega">Endereço:</label>
@@ -335,7 +336,8 @@
         <div class="form-grid-2col">
           <div>
             <label for="cep_EnderecoCobranca">CEP:</label>
-            <input type="text" id="cep_EnderecoCobranca" name="cep_EnderecoCobranca" />
+            <input type="text" id="cep_EnderecoCobranca" name="cep_EnderecoCobranca"
+              onblur="buscarCep(event, 'cobranca')" />
           </div>
           <div>
             <label for="endereco_EnderecoCobranca">Endereço:</label>
@@ -1014,10 +1016,96 @@
         const selectedTab = document.getElementById(tabName);
         if (selectedTab) selectedTab.style.display = 'block';
 
-        event.currentTarget.classList.add('active');
+        // Add active class to the button that opened the tab if event is provided
+        if (event && event.currentTarget) {
+          event.currentTarget.classList.add('active');
+        }
       }
 
+      // --- API Integration Functions ---
 
+      async function buscarCep(event, tipo) {
+        const cep = event.target.value.replace(/\D/g, '');
+        if (cep.length !== 8) return;
+
+        try {
+          // Visual feedback (optional: change cursor or disable input temp)
+          event.target.style.cursor = 'wait';
+
+          const response = await axios.get(`https://brasilapi.com.br/api/cep/v2/${cep}`);
+          const data = response.data;
+
+          // Mapping based on 'tipo' (faturamento, EnderecoEntrega, EnderecoCobranca)
+          // Note: The HTML IDs use 'faturamento' (lowercase) but 'EnderecoEntrega'/'EnderecoCobranca' (CamelCase) suffix.
+          // We need to map the incoming 'tipo' argument to the correct suffix used in IDs.
+
+          let suffix = "";
+          if (tipo === 'faturamento') suffix = "_faturamento";
+          else if (tipo === 'entrega') suffix = "_EnderecoEntrega";
+          else if (tipo === 'cobranca') suffix = "_EnderecoCobranca";
+
+          if (!suffix) return;
+
+          const setVal = (fieldPrefix, value) => {
+            const el = document.getElementById(`${fieldPrefix}${suffix}`);
+            if (el) el.value = value;
+          };
+
+          setVal('endereco', data.street);
+          setVal('bairro', data.neighborhood);
+          setVal('municipio', data.city);
+          setVal('estado', data.state);
+          // 'localizacao' is not provided by data directly (often used for complements or ref), leaving as is.
+
+        } catch (error) {
+          console.error("Erro ao buscar CEP:", error);
+          alert("Erro ao buscar CEP. Verifique se está correto.");
+        } finally {
+          event.target.style.cursor = 'default';
+        }
+      }
+
+      async function buscarCnpj() {
+        const cnpjInput = document.getElementById("cnpj");
+        const cnpj = cnpjInput.value.replace(/\D/g, '');
+
+        if (cnpj.length !== 14) return;
+
+        try {
+          cnpjInput.style.cursor = 'wait';
+
+          const response = await axios.get(`https://brasilapi.com.br/api/cnpj/v1/${cnpj}`);
+          const data = response.data;
+
+          // Basic Company Info
+          const setVal = (id, val) => {
+            const el = document.getElementById(id);
+            if (el) el.value = val;
+          };
+
+          setVal('nome_cliente', data.razao_social); // Razão Social
+          setVal('nome_fantasia', data.nome_fantasia);
+          // 'ramo_de_atividade' -> data.cnae_fiscal_descricao_principal (text) - Select might not match exactly, skipping or needs fuzzy match.
+          // setVal('ramo_de_atividade', data.cnae_fiscal_descricao_principal); 
+
+          // Address Info -> Mapped to Faturamento (Standard behavior)
+          setVal('cep_faturamento', data.cep);
+          setVal('endereco_faturamento', `${data.logradouro}, ${data.numero}${data.complemento ? ' - ' + data.complemento : ''}`);
+          setVal('bairro_faturamento', data.bairro);
+          setVal('municipio_faturamento', data.municipio);
+          setVal('estado_faturamento', data.uf);
+
+          // Contact
+          // setVal('telefone', data.ddd_telefone_1); // If we had a generic phone field
+
+        } catch (error) {
+          console.error("Erro ao buscar CNPJ:", error);
+          // Silent fail or alert depending on preference (alerting is safer for user awareness)
+          // alert("CNPJ não encontrado ou erro na busca."); 
+        } finally {
+          cnpjInput.style.cursor = 'default';
+        }
+      }
 
       // Disponibiliza para o modal chamar
       window.preencherFormulario = preencherFormularioCliente;
