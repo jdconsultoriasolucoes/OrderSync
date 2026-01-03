@@ -645,28 +645,35 @@ async function loadList(page = 1) {
   const url = `${API.list}?${params.toString()}`;
   console.log("GET", url);
 
-  const r = await fetch(url, { cache: "no-store" });
-  if (!r.ok) {
-    console.error("Falha ao carregar pedidos:", r.status, await r.text());
-    return;
+  // Feedback visual
+  const btn = document.getElementById("btnBuscar");
+  const orgText = btn ? btn.innerText : "";
+  if (btn) btn.innerText = "...";
+
+  try {
+
+    const r = await fetch(url, { cache: "no-store" });
+    if (!r.ok) {
+      console.error("Falha ao carregar pedidos:", r.status, await r.text());
+      return;
+    }
+    const j = await r.json();
+
+    // 8. monta resposta
+    // ... logic above in backend ...
+    // Frontend JS:
+    console.log("loadList: Recebido do backend:", j);
+    const arr = Array.isArray(j) ? j : (j.data || j.items || j.results || (j.payload && j.payload.items) || []);
+    state.total = (j.total ?? j.count ?? (Array.isArray(arr) ? arr.length : 0)) || 0;
+    console.log("loadList: Array processado:", arr, "Total:", state.total);
+
+    const rows = groupByPedido(arr);
+    console.log("loadList: Rows agrupadas:", rows);
+    renderTable(rows);
+    renderPager();
+  } finally {
+    if (btn) btn.innerText = orgText;
   }
-  const j = await r.json();
-
-  // 8. monta resposta
-  // ... logic above in backend ...
-  // Frontend JS:
-  console.log("loadList: Recebido do backend:", j);
-  const arr = Array.isArray(j) ? j : (j.data || j.items || j.results || (j.payload && j.payload.items) || []);
-  state.total = (j.total ?? j.count ?? (Array.isArray(arr) ? arr.length : 0)) || 0;
-  console.log("loadList: Array processado:", arr, "Total:", state.total);
-
-  const rows = groupByPedido(arr);
-  console.log("loadList: Rows agrupadas:", rows);
-  renderTable(rows);
-  renderPager();
-} finally {
-  if (btn) btn.innerText = orgText;
-}
 }
 
 // ...
