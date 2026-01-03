@@ -340,6 +340,12 @@ function bindUI() {
   // Refresh
   document.getElementById("btnRefresh").addEventListener("click", () => loadList(state.page));
 
+  // Limpar
+  const btnLimpar = document.getElementById("btnLimpar");
+  if (btnLimpar) {
+    btnLimpar.addEventListener("click", limparFiltros);
+  }
+
   // Export
   document.getElementById("btnExport").onclick = exportarCSV;
 
@@ -382,29 +388,50 @@ async function exportarCSV() {
     const url = `${API.list}?${params.toString()}`;
 
     const r = await fetch(url);
-    if (!r.ok) throw new Error("Erro ao baixar dados");
+    if (!r.ok) throw new Error(`Erro HTTP: ${r.status}`);
 
     const j = await r.json();
-    const data = Array.isArray(j) ? j : (j.data || []);
+    console.log("CSV Export Payload:", j);
+
+    // Tenta normalizar a resposta
+    let data = [];
+    if (Array.isArray(j)) {
+      data = j;
+    } else if (j.data && Array.isArray(j.data)) {
+      data = j.data;
+    } else if (j.items && Array.isArray(j.items)) {
+      data = j.items;
+    } else if (j.results && Array.isArray(j.results)) {
+      data = j.results;
+    }
 
     if (!data.length) {
-      alert("Nada para exportar");
+      alert("Nenhum dado encontrado para exportar com os filtros atuais.");
       return;
     }
 
+    // Como o backend pode não agrupar se pedir many=true ou similar,
+    // garantimos o agrupamento se vierem itens soltos (opcional, mas seguro).
+    // Se o backend já retorna pedidos unicos, groupByPedido nao atrapalha (idempotente se id for unico).
+    const rows = groupByPedido(data);
+
     // CSV Header
-    let csv = "ID;Data;Cliente;Valor Total;Status;Tabela;Fornecedor\n";
+    let csv = "ID;Data;Cliente;Valor Total;Status;Tabela;Fornecedor;Link\n";
 
-    data.forEach(row => {
-      const id = row.numero_pedido ?? row.id_pedido;
-      const dt = row.data_pedido ? new Date(row.data_pedido).toLocaleDateString() : "";
-      const cli = (row.cliente_nome || "").replace(/;/g, ",");
-      const val = (row.valor_total || 0).toString().replace(".", ",");
-      const st = row.status_codigo || "";
-      const tab = (row.tabela_preco_nome || "").replace(/;/g, ",");
-      const forn = (row.fornecedor || "").replace(/;/g, ",");
+    rows.forEach(row => {
+      // ajusta campos
+      const id = row.numero_pedido ?? row.id_pedido ?? row.pedido_id ?? "";
+      const dtRaw = row.data_pedido || row.created_at || "";
+      const dt = dtRaw ? new Date(dtRaw).toLocaleDateString() : "";
 
-      csv += `${id};${dt};${cli};${val};${st};${tab};${forn}\n`;
+      const cli = (row.cliente_nome || row.cliente || "").toString().replace(/;/g, ",");
+      const val = (row.valor_total || row.total_pedido || 0).toString().replace(".", ",");
+      const st = (row.status_codigo || row.status || "").toString();
+      const tab = (row.tabela_preco_nome || row.tabela || "").toString().replace(/;/g, ",");
+      const forn = (row.fornecedor || "").toString().replace(/;/g, ",");
+      const lnk = (row.link_url || "").toString();
+
+      csv += `${id};${dt};${cli};${val};${st};${tab};${forn};${lnk}\n`;
     });
 
     // Download Blob
@@ -418,10 +445,13 @@ async function exportarCSV() {
     document.body.removeChild(link);
 
   } catch (e) {
+    console.error("Erro export:", e);
     alert("Erro na exportação: " + e.message);
   } finally {
-    btn.innerText = orgTxt;
-    btn.disabled = false;
+    if (btn) {
+      btn.innerText = orgTxt;
+      btn.disabled = false;
+    }
   }
 }
 
@@ -437,6 +467,31 @@ document.addEventListener('DOMContentLoaded', () => {
     overlay.addEventListener('click', close);
   }
 });
+
+function limparFiltros() {
+  // Limpar inputs de texto
+  document.getElementById("fTabela").value = "";
+  document.getElementById("fCliente").value = "";
+  document.getElementById("fFornecedor").value = "";
+
+  // Resetar Status para "Todos"
+  const fStatus = document.getElementById("fStatus");
+  if (fStatus) fStatus.value = "";
+
+  // Resetar Período Rápido para 30 dias
+  const fPeriodo = document.getElementById("fPeriodoRapido");
+  if (fPeriodo) {
+    fPeriodo.value = "30";
+    aplicarPeriodoRapido(); // isso já chama loadList(1)
+  } else {
+    // Fallback manual se não tiver seletor
+    const hoje = new Date();
+    const inicio = addDays(hoje, -30);
+    document.getElementById("fFrom").value = inicio.toISOString().slice(0, 10);
+    document.getElementById("fTo").value = hoje.toISOString().slice(0, 10);
+    loadList(1);
+  }
+}
 
 function aplicarPeriodoRapido() {
   const sel = document.getElementById("fPeriodoRapido");
@@ -654,8 +709,11 @@ async function loadList(page = 1) {
 
   // Feedback visual
   const btn = document.getElementById("btnBuscar");
-  const orgText = btn ? btn.innerText : "";
-  if (btn) btn.innerText = "...";
+  const orgText = "Buscar";
+  if (btn) {
+    btn.innerText = "...";
+    btn.disabled = true;
+  }
 
   try {
 
@@ -678,8 +736,14 @@ async function loadList(page = 1) {
     console.log("loadList: Rows agrupadas:", rows);
     renderTable(rows);
     renderPager();
+  } catch (e) {
+    console.error("Erro em loadList:", e);
+    document.getElementById("tblBody").innerHTML = `<tr><td colspan="9" class="error">Erro ao buscar dados: ${e.message}</td></tr>`;
   } finally {
-    if (btn) btn.innerText = orgText;
+    if (btn) {
+      btn.innerText = orgText;
+      btn.disabled = false;
+    }
   }
 }
 
