@@ -274,7 +274,11 @@ def mudar_status(id_pedido: int, body: StatusChangeBody, db: Session = Depends(g
         raise HTTPException(status_code=404, detail="Pedido não encontrado")
     de_status = cur[0]
 
-    upd = db.execute(STATUS_UPDATE_SQL, {"para_status": body.para, "id_pedido": id_pedido}).first()
+    upd = db.execute(STATUS_UPDATE_SQL, {
+        "para_status": body.para, 
+        "id_pedido": id_pedido,
+        "user_id": body.user_id
+    }).first()
     if upd is None:
         raise HTTPException(status_code=400, detail="Falha ao atualizar status")
 

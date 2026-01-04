@@ -100,7 +100,8 @@ ORDER BY COALESCE(ordem, 999), codigo
 STATUS_UPDATE_SQL = text("""
 UPDATE public.tb_pedidos
 SET status = :para_status,
-    atualizado_em = now()
+    atualizado_em = now(),
+    atualizado_por = :user_id
 WHERE id_pedido = :id_pedido
 RETURNING id_pedido
 """)
