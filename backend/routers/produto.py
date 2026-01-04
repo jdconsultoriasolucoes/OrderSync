@@ -166,6 +166,7 @@ def consultar_anteriores(produto_id: int):
     try:
         return get_anteriores(db, produto_id)
     finally:
+        db.close()
 
 @router.delete(
     "/{produto_id}",
