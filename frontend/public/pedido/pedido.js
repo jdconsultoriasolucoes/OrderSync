@@ -553,15 +553,11 @@ async function saveStatus(id) {
     const user = window.Auth && window.Auth.getUser ? window.Auth.getUser() : null;
     const userId = user ? (user.nome || user.email || "usuario_logado") : "sistema";
 
-    console.log("DEBUG saveStatus: Auth user:", user);
-    console.log("DEBUG saveStatus: Computed userId:", userId);
-
     const payload = {
       para: newStatus,
       motivo: "Edição inline na lista de pedidos",
       user_id: userId
     };
-    console.log("DEBUG saveStatus: Sending payload:", payload);
 
     const r = await fetch(url, {
       method: "POST",
