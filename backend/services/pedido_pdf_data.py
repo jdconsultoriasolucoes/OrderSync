@@ -2,6 +2,7 @@
 from sqlalchemy import text
 from database import SessionLocal
 from models.pedido_pdf import PedidoPdf, PedidoPdfItem
+from datetime import timedelta
 
 
 def carregar_pedido_pdf(db, pedido_id: int) -> PedidoPdf:
@@ -45,8 +46,7 @@ def carregar_pedido_pdf(db, pedido_id: int) -> PedidoPdf:
         LEFT JOIN (
             SELECT
                 id_tabela,
-                MAX(frete_kg) AS frete_kg,
-                MAX(validade) AS validade  -- Capturar validade
+                MAX(frete_kg) AS frete_kg
             FROM tb_tabela_preco
             GROUP BY id_tabela
         ) t
@@ -87,7 +87,6 @@ def carregar_pedido_pdf(db, pedido_id: int) -> PedidoPdf:
         data_entrega_ou_retirada=head["data_retirada"],
         frete_total=float(head["frete_total"] or 0),
         frete_kg=float(head.get("frete_kg") or 0),
-        validade_tabela=head.get("validade"), # Passar validade
         total_peso_bruto=float(head["peso_total_kg"] or 0),
         total_valor=float(head["total_pedido"] or 0),
         observacoes=(head.get("observacoes") or ""),

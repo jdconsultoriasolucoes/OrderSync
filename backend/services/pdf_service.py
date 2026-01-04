@@ -129,11 +129,9 @@ def _desenhar_pdf(pedido: PedidoPdf, buffer: io.BytesIO, sem_validade: bool = Fa
 
     # Data / Validade
     c.setFont("Helvetica", 10)
-    y_cursor = faixa_y - faixa_h + 0.35 * cm + 0.5 * cm # Start a bit above the current line
+    y_cursor = faixa_y - faixa_h + 0.35 * cm + 0.5 * cm 
     c.drawRightString(width - margin_x - 0.3 * cm, y_cursor, f"Data do Pedido: {pedido.data_pedido.strftime('%d/%m/%Y')}")
-    y_cursor -= 0.5 * cm # Move down for the next line
-    if not sem_validade:
-        c.drawRightString(width - margin_x - 0.3 * cm, y_cursor, f"Proposta válida até: {pedido.validade_tabela.strftime('%d/%m/%Y')}")
+
     
     # Original date string (now adjusted to be below the new lines or removed if redundant)
     # The instruction implies adding new lines, not replacing the existing data_str.
@@ -240,7 +238,7 @@ def _desenhar_pdf(pedido: PedidoPdf, buffer: io.BytesIO, sem_validade: bool = Fa
 
     # FRETE (apenas total – sem "frete por kg")
     if frete_total > 0:
-        frete_str = "R$ " + _br_number(frete_kg)
+        frete_str = "R$ " + _br_number(frete_total)
     else:
         frete_str = "R$ 0,00"
 
