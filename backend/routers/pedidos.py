@@ -194,6 +194,7 @@ def listar_pedidos(
           CASE WHEN a.usar_valor_com_frete THEN 'ENTREGA' ELSE 'RETIRADA' END AS modalidade,
           a.total_pedido                            AS valor_total,
           a.status                                  AS status_codigo,
+          a.status                                  AS status_codigo,
           a.tabela_preco_nome                       AS tabela_preco_nome,
           a.fornecedor                              AS fornecedor,
           a.link_url,

@@ -150,7 +150,7 @@ def criar_pedido_confirmado(db: Session, tabela_id: int, body: ConfirmarPedidoRe
             :validade_ate, :validade_dias, :data_retirada,
             :usar_valor_com_frete, CAST(:itens AS jsonb),
             :peso_total_kg, :frete_total, :total_sem_frete, :total_com_frete, :total_pedido,
-            :observacoes, 'CONFIRMADO', :confirmado_em,
+            :observacoes, 'EM SEPARAÇÃO', :confirmado_em,
             :link_token, :link_url, :link_enviado_em, :link_expira_em, 'ABERTO',
             :link_primeiro_acesso_em, :link_ultimo_acesso_em, :link_qtd_acessos,
             :fornecedor,         

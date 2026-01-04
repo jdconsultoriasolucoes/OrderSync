@@ -18,22 +18,38 @@ function getLoginUrl() {
 
 const LOGIN_URL = getLoginUrl();
 
+const AUTH_USER_KEY = "ordersync_user";
+
 const Auth = {
-    // Save token
-    login: (token) => {
+    // Save token and user info
+    login: (token, user) => {
         localStorage.setItem(AUTH_TOKEN_KEY, token);
+        if (user) {
+            localStorage.setItem(AUTH_USER_KEY, JSON.stringify(user));
+        }
         window.location.href = "/";
     },
 
     // Remove token and redirect
     logout: () => {
         localStorage.removeItem(AUTH_TOKEN_KEY);
+        localStorage.removeItem(AUTH_USER_KEY);
         window.location.href = LOGIN_URL;
     },
 
     // Get raw token
     getToken: () => {
         return localStorage.getItem(AUTH_TOKEN_KEY);
+    },
+
+    // Get user info
+    getUser: () => {
+        const u = localStorage.getItem(AUTH_USER_KEY);
+        try {
+            return u ? JSON.parse(u) : null;
+        } catch {
+            return null;
+        }
     },
 
     // Check if user is authenticated (simple check)

@@ -37,9 +37,12 @@ document.getElementById("login-form").addEventListener("submit", async (e) => {
         const data = await response.json();
         const token = data.access_token;
 
-        console.log("Login successful! Saving token...");
+        console.log("Login successful! Saving token...", data);
         // Use global Auth from auth.js
-        window.Auth.login(token);
+        window.Auth.login(token, {
+            nome: data.nome,
+            funcao: data.funcao
+        });
 
     } catch (err) {
         console.error("Login Error:", err);

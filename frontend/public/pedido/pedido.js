@@ -77,10 +77,16 @@ async function loadStatus() {
   optAll.textContent = "Todos";
   sel.appendChild(optAll);
 
+  state.statusList = []; // Reinicia lista para uso na edição inline
+
   arr.forEach(s => {
     const codigo = s.codigo || s.code || s.id || s.value || s;
     const rotulo = s.rotulo || s.label || s.nome || s.description || codigo;
     if (!codigo) return;
+
+    // Salva no state
+    state.statusList.push({ codigo: String(codigo), rotulo: String(rotulo) });
+
     const opt = document.createElement("option");
     opt.value = String(codigo);
     opt.textContent = String(rotulo);
@@ -554,7 +560,142 @@ function aplicarPeriodoRapido() {
     });
   });
 
+  // Event Delegation para Botões de Ação (Editar, Salvar, Cancelar Status)
+  document.getElementById("tblBody").addEventListener("click", async (ev) => {
+    const target = ev.target;
+
+    // Editar Status
+    const btnEdit = target.closest(".btn-edit-status");
+    if (btnEdit) {
+      startEditStatus(btnEdit.dataset.id, btnEdit.dataset.status);
+      return;
+    }
+
+    // Cancelar Edição
+    const btnCancel = target.closest(".btn-cancel-status");
+    if (btnCancel) {
+      cancelEditStatus(btnCancel.dataset.id, btnCancel.dataset.originalStatus);
+      return;
+    }
+
+    // Salvar Edição
+    const btnSave = target.closest(".btn-save-status");
+    if (btnSave) {
+      await saveStatus(btnSave.dataset.id);
+      return;
+    }
+  });
+
 })();
+
+// ---------------------- Edição de Status Inline ----------------------
+
+function startEditStatus(id, currentStatus) {
+  const tdStatus = document.getElementById(`td-status-${id}`);
+  const tdActions = document.getElementById(`td-actions-${id}`);
+  if (!tdStatus || !tdActions) return;
+
+  // 1. Substituir badge por Select
+  // Tenta pegar a lista de status do state.statusList (que veio do loadStatus)
+  // Se não tiver, usa lista fixa ou recarrega.
+  const options = state.statusList || [];
+
+  let selectHtml = `<select id="sel-status-${id}" class="form-select form-select-sm">`;
+  options.forEach(opt => {
+    const selected = (opt.codigo === currentStatus || opt.rotulo === currentStatus) ? "selected" : "";
+    selectHtml += `<option value="${opt.codigo}" ${selected}>${opt.rotulo}</option>`;
+  });
+  selectHtml += `</select>`;
+
+  tdStatus.innerHTML = selectHtml;
+
+  // 2. Substituir botão Edit por Salvar (green check) e Cancelar (red X)
+  tdActions.innerHTML = `
+    <button class="btn-icon btn-save-status" data-id="${id}" title="Salvar" style="color: green; font-weight: bold;">
+      ✔️
+    </button>
+    <button class="btn-icon btn-cancel-status" data-id="${id}" data-original-status="${currentStatus}" title="Cancelar" style="color: red; font-weight: bold;">
+      ❌
+    </button>
+  `;
+}
+
+function cancelEditStatus(id, originalStatus) {
+  const row = state.rows.find(r =>
+    String(r.numero_pedido || r.id_pedido || r.id) === String(id)
+  );
+
+  // Re-renderiza a célula de status e actions com o valor original
+  const tdStatus = document.getElementById(`td-status-${id}`);
+  const tdActions = document.getElementById(`td-actions-${id}`);
+
+  if (tdStatus) tdStatus.innerHTML = getStatusBadge(originalStatus);
+  if (tdActions) {
+    tdActions.innerHTML = `
+      <button class="btn-icon btn-edit-status" data-id="${id}" data-status="${originalStatus}" title="Editar Status">
+         📝
+      </button>
+    `;
+  }
+}
+
+async function saveStatus(id) {
+  const sel = document.getElementById(`sel-status-${id}`);
+  if (!sel) return;
+
+  const newStatus = sel.value;
+
+  // Feedback visual (desabilita botões)
+  const tdActions = document.getElementById(`td-actions-${id}`);
+  const orgHtml = tdActions.innerHTML;
+  tdActions.innerHTML = `<span class="muted">💾...</span>`;
+
+  try {
+    const url = `${API.list}/${id}/status`; // Ajuste conforme sua rota: POST /api/pedidos/{id}/status
+
+    // Tenta pegar usuário logado
+    const user = window.Auth && window.Auth.getUser ? window.Auth.getUser() : null;
+    const userId = user ? (user.nome || user.email || "usuario_logado") : "sistema";
+
+    const payload = {
+      para: newStatus,
+      motivo: "Edição inline na lista de pedidos",
+      user_id: userId
+    };
+
+    const r = await fetch(url, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(payload)
+    });
+
+    if (!r.ok) throw new Error("Erro ao salvar status");
+
+    // Sucesso: atualiza localmente ou recarrega a lista
+    // Para ser rápido, atualizamos localmente o array state.rows e re-renderizamos a célula
+    const row = state.rows.find(r => String(r.numero_pedido || r.id_pedido || r.id) === String(id));
+    if (row) {
+      row.status = newStatus;
+      row.status_codigo = newStatus;
+    }
+
+    const tdStatus = document.getElementById(`td-status-${id}`);
+    if (tdStatus) tdStatus.innerHTML = getStatusBadge(newStatus);
+
+    // Restaura botão de edit
+    tdActions.innerHTML = `
+      <button class="btn-icon btn-edit-status" data-id="${id}" data-status="${newStatus}" title="Editar Status">
+         📝
+      </button>
+    `;
+
+  } catch (e) {
+    console.error(e);
+    alert("Falha ao atualizar status: " + e.message);
+    tdActions.innerHTML = orgHtml; // restaura botões de salvar/cancelar
+  }
+}
+}
 
 function sortRows(rows, col, asc) {
   if (!rows || !col) return;
@@ -847,17 +988,17 @@ function renderTable(rows) {
           <td>${cliente}</td>
           <td><span class="badge badge-gray">${modalidade ?? "---"}</span></td>
           <td class="tar">${fmtMoney(valor)}</td>
-          <td>${statusHtml}</td>
+          <td class="td-status" id="td-status-${id}">${statusHtml}</td>
           <td>${tabela}</td>
           <td>${fornecedor}</td>
           <td>
-            ${link
-          ? `<div class="flex-gap">
-                     <a class="btn" href="${link}" target="_blank" rel="noopener">Abrir</a>
-                     <button class="btn-copy" data-url="${link}">Copiar Link</button>
-                   </div>`
-          : "<span class='muted'>—</span>"
-        }
+            ${link ? `<a href="${link}" target="_blank" class="btn-copy">Copiar Link</a>` : '<span class="muted">---</span>'}
+          </td>
+          <td class="tar td-actions" id="td-actions-${id}">
+            <!-- Botão de Editar Status -->
+            <button class="btn-icon btn-edit-status" data-id="${id}" data-status="${status}" title="Editar Status">
+               📝
+            </button>
           </td>
         `;
 
