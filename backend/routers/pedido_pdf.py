@@ -6,7 +6,7 @@ from services.pedido_pdf_data import carregar_pedido_pdf
 from services.pdf_service import gerar_pdf_pedido
 import os
 import io
-router = APIRouter(prefix="/pedido", tags=["Pedido PDF"])
+router = APIRouter(prefix="/api/pedido", tags=["Pedido PDF"])
 
 @router.get("/{pedido_id}/dados_pdf", response_model=PedidoPdf)
 def get_dados_pdf(pedido_id: int):

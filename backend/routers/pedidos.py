@@ -320,15 +320,17 @@ def cancelar_pedido(id_pedido: int, db: Session = Depends(get_db), user_id: Opti
     pedido.cancelado_em = datetime.now()
     
     # Tenta logar evento (opcional, igual ao mudar_status)
+    # Tenta logar evento (opcional)
     try:
-        db.execute(STATUS_EVENT_INSERT_SQL, {
-            "pedido_id": id_pedido,
-            "de_status": "ANY",
-            "para_status": "CANCELADO",
-            "user_id": user_id or "sistema",
-            "motivo": "Cancelado via Tela de Pedidos",
-            "metadata": "{}"
-        })
+        with db.begin_nested():
+            db.execute(STATUS_EVENT_INSERT_SQL, {
+                "pedido_id": id_pedido,
+                "de_status": "ANY",
+                "para_status": "CANCELADO",
+                "user_id": user_id or "sistema",
+                "motivo": "Cancelado via Tela de Pedidos",
+                "metadata": "{}"
+            })
     except Exception:
         pass
 
