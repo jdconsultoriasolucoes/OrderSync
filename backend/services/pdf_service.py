@@ -127,16 +127,9 @@ def _desenhar_pdf(pedido: PedidoPdf, buffer: io.BytesIO, sem_validade: bool = Fa
         "DIGITAÇÃO DO ORÇAMENTO"
     )
 
-    # Data / Validade
+    # Data / Validade (Bloco direito do header)
     c.setFont("Helvetica", 10)
-    y_cursor = faixa_y - faixa_h + 0.35 * cm + 0.5 * cm 
-    c.drawRightString(width - margin_x - 0.3 * cm, y_cursor, f"Data do Pedido: {pedido.data_pedido.strftime('%d/%m/%Y')}")
-
     
-    # Original date string (now adjusted to be below the new lines or removed if redundant)
-    # The instruction implies adding new lines, not replacing the existing data_str.
-    # Let's keep the original data_str drawing for now, but it might overlap.
-    # For now, I'll place the new lines above the existing data_str.
     # Start y for the right-aligned text block
     y_right_block_start = faixa_y - faixa_h + 0.35 * cm + 0.2 * cm
 
