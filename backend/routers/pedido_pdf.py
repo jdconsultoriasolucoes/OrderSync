@@ -36,7 +36,8 @@ def gerar_pdf_pedido_endpoint(pedido_id: int):
         )
 
 
-router = APIRouter(prefix="/pedido_pdf", tags=["Pedido PDF"])
+# Router duplicado removido
+# router = APIRouter(prefix="/pedido_pdf", ... )
 @router.get("/{pedido_id}")
 def visualizar_pedido_pdf(pedido_id: int):
     with SessionLocal() as db:
