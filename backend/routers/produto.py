@@ -22,6 +22,7 @@ from services.produto_pdf import (
     list_produtos,
     get_anteriores,
     importar_pdf_para_produto,
+    delete_produto,
 )
 from fastapi import Depends
 from core.deps import get_current_user, get_db
@@ -165,7 +166,22 @@ def consultar_anteriores(produto_id: int):
     try:
         return get_anteriores(db, produto_id)
     finally:
+
+@router.delete(
+    "/{produto_id}",
+    status_code=204,
+    summary="Excluir produto",
+    description="Remove um produto pelo ID. Retorna 204 No Content.",
+    operation_id="produtos_excluir",
+)
+def excluir_produto_endpoint(produto_id: int):
+    db = SessionLocal()
+    try:
+        delete_produto(db, produto_id)
+        return Response(status_code=204)
+    finally:
         db.close()
+
 
 
 

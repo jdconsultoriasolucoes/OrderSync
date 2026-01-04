@@ -62,13 +62,15 @@ class ProdutoV2Base(BaseModel):
          return v
 
 class ProdutoV2Create(ProdutoV2Base):
-    pass
+    criado_por: Optional[str] = None
+    atualizado_por: Optional[str] = None
 
 class ProdutoV2Update(ProdutoV2Base):
     # tudo opcional em PATCH
     codigo_supra: Optional[str] = None
     status_produto: Optional[str] = None
     nome_produto: Optional[str] = None
+    atualizado_por: Optional[str] = None
 
     # v2 -> v1: checagem que envolve 2 campos usa root_validator
     # v2: model_validator

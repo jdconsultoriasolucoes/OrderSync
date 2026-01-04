@@ -182,6 +182,19 @@ async function produtosPATCH(id, body) {
   throw new Error("Não foi possível atualizar o produto.");
 }
 
+async function produtosDELETE(id) {
+  const base = await resolveProdutosEndpoint();
+  for (const p of [`${base}/${id}`, `${base}/${encodeURIComponent(id)}`]) {
+    try {
+      return await fetchJSON(p, { method: "DELETE" });
+    } catch (e) {
+      if (e.status === 404) continue;
+      throw e;
+    }
+  }
+  throw new Error("Não foi possível excluir o produto.");
+}
+
 // ---------- leitura / preenchimento formulário ----------
 function getValue(id) {
   const el = $(id);
@@ -1001,6 +1014,7 @@ function setMode(mode) {
 
   // Botões de ação
   const btnEditar = "btn-editar";
+  const btnExcluir = "btn-excluir";
   const btnVoltarView = "btn-voltar-view";
   const btnSalvar = "btn-salvar";
   const btnCancelarEdicao = "btn-cancelar-edicao";
@@ -1013,6 +1027,7 @@ function setMode(mode) {
     show(btnRenovar);
 
     hide(btnEditar);
+    hide(btnExcluir);
     hide(btnVoltarView);
     hide(btnSalvar);
     hide(btnCancelarEdicao);
@@ -1026,6 +1041,7 @@ function setMode(mode) {
 
     // Mostra ações de visão
     show(btnEditar);
+    show(btnExcluir);
     show(btnVoltarView);
 
     hide(btnSalvar);
@@ -1038,6 +1054,7 @@ function setMode(mode) {
     hide(btnImportar);
     hide(btnRenovar);
     hide(btnEditar);
+    hide(btnExcluir);
     hide(btnVoltarView);
 
     show(btnSalvar);
@@ -1071,6 +1088,24 @@ document.addEventListener("DOMContentLoaded", async () => {
     }
     setMode("EDIT");
     toast("Modo de edição.");
+  });
+
+  // Excluir
+  $("btn-excluir")?.addEventListener("click", async () => {
+    if (!CURRENT_ID) {
+      toast("Nenhum produto selecionado.");
+      return;
+    }
+    if (!confirm("Tem certeza que deseja excluir este produto?")) return;
+
+    try {
+      await produtosDELETE(CURRENT_ID);
+      toast("Produto excluído com sucesso.");
+      clearForm(); // reset to IDLE
+    } catch (e) {
+      console.error(e);
+      toast("Erro ao excluir: " + (e.message || "Erro desconhecido"), "error");
+    }
   });
 
   // Cancelar da Visão (Voltar para Home/Limpo)

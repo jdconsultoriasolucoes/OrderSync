@@ -234,6 +234,21 @@ def create_produto(db: Session, produto_in: ProdutoV2Create, imposto_in: Optiona
     )
 
 
+def delete_produto(db: Session, produto_id: int) -> bool:
+    """Hard delete de produto (ou soft delete se preferir). Aqui faremos Hard Delete."""
+    obj = db.query(ProdutoV2).filter(ProdutoV2.id == produto_id).one_or_none()
+    if not obj:
+        raise HTTPException(404, detail="Produto não encontrado")
+    
+    # Se houver constraints (imposto), deletar cascata ou manual
+    if obj.imposto:
+        db.delete(obj.imposto)
+    
+    db.delete(obj)
+    db.commit()
+    return True
+
+
 def update_produto(
     db: Session,
     produto_id: int,
