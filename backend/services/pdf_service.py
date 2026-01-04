@@ -137,36 +137,11 @@ def _desenhar_pdf(pedido: PedidoPdf, buffer: io.BytesIO, sem_validade: bool = Fa
     # The instruction implies adding new lines, not replacing the existing data_str.
     # Let's keep the original data_str drawing for now, but it might overlap.
     # For now, I'll place the new lines above the existing data_str.
-    # The instruction's "Code Edit" snippet seems to replace the existing data_str drawing.
-    # Let's assume the user wants to replace the existing data_str with the new date/validity block.
-    # The original data_str was:
-    # c.setFont("Helvetica", 9)
-    # data_str = datetime.now().strftime("%d/%m/%Y %H:%M")
-    # c.drawRightString(
-    #     width - margin_x - 0.3 * cm,
-    #     faixa_y - faixa_h + 0.35 * cm,
-    #     f"{data_str}"
-    # )
-    # I will remove the original data_str drawing and replace it with the new block.
-    # The y_cursor in the instruction's snippet is relative to some unknown starting point.
-    # I will use the existing faixa_y - faixa_h + 0.35 * cm as a reference.
-
-    # Re-calculating y_cursor based on the instruction's intent to place these on the right side of the header.
-    # The original `data_str` was at `faixa_y - faixa_h + 0.35 * cm`.
-    # Let's place the "Data do Pedido" slightly above this, and "Proposta válida até" below it.
-    
-    # Start y for the right-aligned text block
-    y_right_block_start = faixa_y - faixa_h + 0.35 * cm + 0.2 * cm # Slightly above the original line
-    
-    c.setFont("Helvetica", 9) # Revert to smaller font for these details
+    c.setFont("Helvetica", 9) 
     c.drawRightString(width - margin_x - 0.3 * cm, y_right_block_start, f"Data do Pedido: {pedido.data_pedido.strftime('%d/%m/%Y')}")
     
-    if not sem_validade:
-        c.drawRightString(width - margin_x - 0.3 * cm, y_right_block_start - 0.4 * cm, f"Proposta válida até: {pedido.validade_tabela.strftime('%d/%m/%Y')}")
-
-    # The original `data_str` drawing is now redundant if the new block replaces it.
-    # Based on the instruction's "Code Edit" structure, it seems to replace the existing date drawing.
-    # So, the original `data_str` drawing will be removed.
+    if not sem_validade and pedido.validade_tabela:
+        c.drawRightString(width - margin_x - 0.3 * cm, y_right_block_start - 0.4 * cm, f"Proposta válida até: {pedido.validade_tabela}")
 
     # Atualiza y para baixo da faixa
     y = faixa_y - faixa_h - 0.5 * cm

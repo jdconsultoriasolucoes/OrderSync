@@ -87,6 +87,7 @@ def carregar_pedido_pdf(db, pedido_id: int) -> PedidoPdf:
         data_entrega_ou_retirada=head["data_retirada"],
         frete_total=float(head["frete_total"] or 0),
         frete_kg=float(head.get("frete_kg") or 0),
+        validade_tabela="Não se aplica",
         total_peso_bruto=float(head["peso_total_kg"] or 0),
         total_valor=float(head["total_pedido"] or 0),
         observacoes=(head.get("observacoes") or ""),
