@@ -62,7 +62,7 @@ async def relatorio_lista(
 def obter_opcoes_endpoint():
     db = SessionLocal()
     try:
-        from services.produto import get_product_options
+        from services.produto_pdf import get_product_options
         return get_product_options(db)
     finally:
         db.close()
