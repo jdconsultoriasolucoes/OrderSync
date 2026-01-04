@@ -18,7 +18,7 @@ class PedidoModel(Base):
     # Client Data (Denormalized or Link)
     codigo_cliente = Column(String) # Stored as string in SQL queries? "a.codigo_cliente". In DB it might be varchar.
     cliente = Column(String) # Nome do cliente
-    cliente_email = Column(String) # Email do cliente (snapshot?)
+    # cliente_email = Column(String) # Email do cliente (snapshot?)
     
     # Contact
     contato_nome = Column(String)

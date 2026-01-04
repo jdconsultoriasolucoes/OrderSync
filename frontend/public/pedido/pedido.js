@@ -59,6 +59,15 @@ function addDays(baseDate, days) {
   return d;
 }
 
+// Debounce util
+function debounce(func, wait) {
+  let timeout;
+  return function (...args) {
+    clearTimeout(timeout);
+    timeout = setTimeout(() => func.apply(this, args), wait);
+  };
+}
+
 function groupByPedido(rows) {
   if (!Array.isArray(rows)) return [];
   const map = new Map();
@@ -389,12 +398,9 @@ async function openResumo(id) {
     btnPdf.innerHTML = "📄 Baixar PDF";
     actionsEl.appendChild(btnPdf);
 
-    // 2. Reenviar Email
-    const btnEmail = document.createElement("button");
-    btnEmail.className = "btn btn-outline";
-    btnEmail.innerHTML = "📧 Reenviar E-mail";
-    btnEmail.onclick = () => doAction(API.reenviar(id), "E-mail reenviado com sucesso!");
-    actionsEl.appendChild(btnEmail);
+    // 2. Reenviar Email (REMOVIDO por solicitação do usuário)
+    // const btnEmail = document.createElement("button"); ...
+
 
     // 3. Cancelar
     if (p.status !== "CANCELADO") {
@@ -614,8 +620,21 @@ function updateSortIcons() {
 }
 
 // ---------------------- bindUI & Init ----------------------
+// ---------------------- bindUI & Init ----------------------
 function bindUI() {
-  document.getElementById("btnBuscar")?.addEventListener("click", () => loadList(1));
+  // Busca dinâmica (Debounced)
+  const doSearch = debounce(() => loadList(1), 500);
+
+  const inputs = ["fTabela", "fCliente", "fFornecedor"];
+  inputs.forEach(id => {
+    document.getElementById(id)?.addEventListener("input", doSearch);
+  });
+
+  const changes = ["fStatus", "fFrom", "fTo"];
+  changes.forEach(id => {
+    document.getElementById(id)?.addEventListener("change", () => loadList(1));
+  });
+
   document.getElementById("btnRefresh")?.addEventListener("click", () => loadList(state.page));
   document.getElementById("btnLimpar")?.addEventListener("click", limparFiltros);
   document.getElementById("btnExport")?.addEventListener("click", exportarCSV);
