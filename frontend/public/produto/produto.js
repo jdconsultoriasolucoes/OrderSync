@@ -1001,39 +1001,44 @@ function setMode(mode) {
 
   // Botões de ação
   const btnEditar = "btn-editar";
+  const btnVoltarView = "btn-voltar-view";
   const btnSalvar = "btn-salvar";
   const btnCancelarEdicao = "btn-cancelar-edicao";
-  const btnFechar = "btn-fechar-janela"; // Se houver, sempre visivel ou controlado aqui
 
   if (mode === "IDLE") {
     // Tela inicial limpa
+    show(btnNovo); // Reordered logically in display if flexbox, but here just visibility
     show(btnBuscar);
     show(btnImportar);
     show(btnRenovar);
-    show(btnNovo);
 
     hide(btnEditar);
+    hide(btnVoltarView);
     hide(btnSalvar);
     hide(btnCancelarEdicao);
 
   } else if (mode === "VIEW") {
-    // Produto carregado
-    show(btnBuscar);
-    show(btnImportar);
-    show(btnRenovar);
-    show(btnNovo);
+    // Produto carregado -> Oculta ações de topo
+    hide(btnNovo);
+    hide(btnBuscar);
+    hide(btnImportar);
+    hide(btnRenovar);
+
+    // Mostra ações de visão
     show(btnEditar);
+    show(btnVoltarView);
 
     hide(btnSalvar);
     hide(btnCancelarEdicao);
 
   } else if (mode === "NEW" || mode === "EDIT") {
     // Editando ou Criando
+    hide(btnNovo);
     hide(btnBuscar);
     hide(btnImportar);
     hide(btnRenovar);
-    hide(btnNovo);
     hide(btnEditar);
+    hide(btnVoltarView);
 
     show(btnSalvar);
     show(btnCancelarEdicao);
@@ -1068,7 +1073,13 @@ document.addEventListener("DOMContentLoaded", async () => {
     toast("Modo de edição.");
   });
 
-  // Cancel logic
+  // Cancelar da Visão (Voltar para Home/Limpo)
+  $("btn-voltar-view")?.addEventListener("click", () => {
+    clearForm();
+    toast("Limpo.");
+  });
+
+  // Cancelar da Edição
   $("btn-cancelar-edicao")?.addEventListener("click", () => {
     if (CURRENT_MODE === "NEW") {
       clearForm(); // volta pra IDLE
