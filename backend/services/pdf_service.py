@@ -55,7 +55,7 @@ def _desenhar_pdf(pedido: PedidoPdf, buffer: io.BytesIO, sem_validade: bool = Fa
 
     # Página em modo paisagem (horizontal)
     pagesize = landscape(A4)
-    c = canvas.Canvas(path, pagesize=pagesize)
+    c = canvas.Canvas(buffer, pagesize=pagesize)
     width, height = pagesize
 
     # margens
