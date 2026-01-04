@@ -39,6 +39,7 @@ class ProdutoV2(Base):
     fornecedor = Column(Text)
     filhos = Column(Integer)                             # Filho nº (int)
     familia = Column(Text)                               # Nome da Família (era ID, mas agora é Texto vindo do PDF)
+    marca = Column(Text)                                 # Marca do produto
 
     # Preços e vigências
     preco = Column(Numeric(14, 4))                       # Valor Tabela Atual (oficial)
