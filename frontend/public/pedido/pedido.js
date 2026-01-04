@@ -1,5 +1,5 @@
 // base do backend FastAPI publicado no Render
-const API_BASE = "https://ordersync-backend-edjq.onrender.com";
+const API_BASE = window.API_BASE || "https://ordersync-backend-edjq.onrender.com";
 
 const API = {
   list: `${API_BASE}/api/pedidos`,
@@ -611,13 +611,15 @@ function startEditStatus(id, currentStatus) {
 
   // 2. Substituir botão Edit por Salvar (green check) e Cancelar (red X)
   tdActions.innerHTML = `
-    <button class="btn-icon btn-save-status" data-id="${id}" title="Salvar" style="color: green; font-weight: bold;">
-      ✔️
-    </button>
-    <button class="btn-icon btn-cancel-status" data-id="${id}" data-original-status="${currentStatus}" title="Cancelar" style="color: red; font-weight: bold;">
-      ❌
-    </button>
-  `;
+      <div style="display: flex; gap: 5px; justify-content: flex-end;">
+        <button class="btn-icon btn-save-status" data-id="${id}" title="Salvar" style="color: green;">✔️</button>
+        <button class="btn-icon btn-cancel-status" data-id="${id}" data-original-status="${currentStatus}" title="Cancelar" style="color: red;">❌</button>
+      </div>
+    `;
+
+  // Marca a linha como 'editing' para bloquear o clique
+  const tr = tdStatus.closest("tr");
+  if (tr) tr.classList.add("editing");
 }
 
 function cancelEditStatus(id, originalStatus) {
@@ -625,17 +627,24 @@ function cancelEditStatus(id, originalStatus) {
     String(r.numero_pedido || r.id_pedido || r.id) === String(id)
   );
 
-  // Re-renderiza a célula de status e actions com o valor original
+  // Remove classe editing
   const tdStatus = document.getElementById(`td-status-${id}`);
+  if (tdStatus) {
+    const tr = tdStatus.closest("tr");
+    if (tr) tr.classList.remove("editing");
+  }
+
+  // Re-renderiza a célula de status e actions com o valor original
+
   const tdActions = document.getElementById(`td-actions-${id}`);
 
   if (tdStatus) tdStatus.innerHTML = getStatusBadge(originalStatus);
   if (tdActions) {
     tdActions.innerHTML = `
-      <button class="btn-icon btn-edit-status" data-id="${id}" data-status="${originalStatus}" title="Editar Status">
-         📝
-      </button>
-    `;
+        <button class="btn-sm btn-outline-secondary btn-edit-status" data-id="${id}" data-status="${originalStatus}">
+           Editar
+        </button>
+      `;
   }
 }
 
@@ -684,10 +693,13 @@ async function saveStatus(id) {
 
     // Restaura botão de edit
     tdActions.innerHTML = `
-      <button class="btn-icon btn-edit-status" data-id="${id}" data-status="${newStatus}" title="Editar Status">
-         📝
+      <button class="btn-sm btn-outline-secondary btn-edit-status" data-id="${id}" data-status="${newStatus}">
+         Editar
       </button>
     `;
+
+    const tr = tdActions.closest("tr");
+    if (tr) tr.classList.remove("editing");
 
   } catch (e) {
     console.error(e);
@@ -995,16 +1007,22 @@ function renderTable(rows) {
           </td>
           <td class="tar td-actions" id="td-actions-${id}">
             <!-- Botão de Editar Status -->
-            <button class="btn-icon btn-edit-status" data-id="${id}" data-status="${status}" title="Editar Status">
-               📝
+            <button class="btn-sm btn-outline-secondary btn-edit-status" data-id="${id}" data-status="${status}">
+               Editar
             </button>
           </td>
         `;
 
       tb.appendChild(tr);
 
-      tr.addEventListener("click", (ev) => {
-        if (ev.target.closest(".btn") || ev.target.closest("a") || ev.target.closest(".btn-copy")) return;
+      tr.addEventListener("click", (e) => {
+        // Ignorar cliques se estiver em modo edição
+        if (tr.classList.contains("editing")) return;
+
+        // Ignorar cliques em botões específicos
+        if (e.target.closest("a") || e.target.closest("button") || e.target.closest("select")) return;
+
+        // Se clicar na linha, abre resumo (comportamento original);
         openResumo(id);
       });
     } catch (err) {
