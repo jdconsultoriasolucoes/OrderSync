@@ -284,14 +284,15 @@ def mudar_status(id_pedido: int, body: StatusChangeBody, db: Session = Depends(g
 
     # log (silencioso no MVP se tabela não existir)
     try:
-        db.execute(STATUS_EVENT_INSERT_SQL, {
-            "pedido_id": id_pedido,
-            "de_status": de_status,
-            "para_status": body.para,
-            "user_id": body.user_id,
-            "motivo": body.motivo,
-            "metadata": "{}"
-        })
+        with db.begin_nested():
+            db.execute(STATUS_EVENT_INSERT_SQL, {
+                "pedido_id": id_pedido,
+                "de_status": de_status,
+                "para_status": body.para,
+                "user_id": body.user_id,
+                "motivo": body.motivo,
+                "metadata": "{}"
+            })
     except Exception:
         pass
 

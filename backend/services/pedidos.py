@@ -108,5 +108,5 @@ RETURNING id_pedido
 
 STATUS_EVENT_INSERT_SQL = text("""
 INSERT INTO public.pedido_status_event (id, pedido_id, de_status, para_status, user_id, motivo, metadata, created_at)
-VALUES (gen_random_uuid(), :pedido_id, :de_status, :para_status, :user_id, :motivo, :metadata::jsonb, now())
+VALUES (gen_random_uuid(), :pedido_id, :de_status, :para_status, :user_id, :motivo, CAST(:metadata AS jsonb), now())
 """)
