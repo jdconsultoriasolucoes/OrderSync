@@ -695,7 +695,6 @@ async function saveStatus(id) {
     tdActions.innerHTML = orgHtml; // restaura botões de salvar/cancelar
   }
 }
-}
 
 function sortRows(rows, col, asc) {
   if (!rows || !col) return;
