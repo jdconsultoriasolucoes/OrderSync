@@ -59,13 +59,33 @@
         <div class="title">CADASTRO DO PRODUTO</div>
         <div class="toolbar">
           <button id="btn-buscar" class="ghost">Pesquisar</button>
-          <button id="btn-importar" class="btn-secondary">Importar Lista (PDF)</button>
+
+          <!-- Importar PDF (Icon) -->
+          <button id="btn-importar" class="btn-secondary" title="Importar Lista (PDF)" style="padding: 10px 12px;">
+            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" fill="currentColor"
+              class="bi bi-file-earmark-pdf" viewBox="0 0 16 16">
+              <path
+                d="M14 14V4.5L9.5 0H4a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h8a2 2 0 0 0 2-2zM9.5 3A1.5 1.5 0 0 0 11 4.5h2V14a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V2a1 1 0 0 1 1-1h5.5v2z" />
+              <path
+                d="M4.603 14.087a.81.81 0 0 1-.438-.42c-.195-.388-.13-.776.08-1.102.198-.307.526-.568.897-.787a7.68 7.68 0 0 1 1.482-.645 19.697 19.697 0 0 0 1.062-2.227 7.269 7.269 0 0 1-.43-1.295c-.086-.4-.119-.796-.046-1.136.075-.354.274-.672.65-.823.192-.077.4-.12.602-.077a.7.7 0 0 1 .477.365c.088.164.12.356.127.538.007.188-.012.396-.047.614-.084.51-.27 1.134-.52 1.794a10.954 10.954 0 0 0 .98 1.686 5.753 5.753 0 0 1 1.334.05c.364.066.734.195.96.465.12.144.193.32.2.518.007.192-.047.382-.138.563a1.04 1.04 0 0 1-.354.416.856.856 0 0 1-.51.138c-.331-.014-.654-.196-.933-.417a5.712 5.712 0 0 1-.911-.95 11.651 11.651 0 0 0-1.997.406 11.307 11.307 0 0 1-1.02 1.51c-.292.35-.609.656-.927.787a.793.793 0 0 1-.58.029zm1.379-1.901c-.166.076-.32.156-.459.238-.328.194-.541.383-.647.545-.094.148-.096.289-.019.386.105.133.251.142.439.066.212-.088.452-.296.646-.516.192-.216.369-.48.514-.716a4 4 0 0 1-.47-.003zM7.05 7.75a5.132 5.132 0 0 1 .256-1.556c.07-.353.07-.674.018-.787-.047-.101-.11-.129-.16-.134-.11-.009-.234.103-.314.288-.095.215-.094.493.003.883.084.34.175.715.245.1.185.053.385.053.15-.316.037.072.072.115.106.142.147.065.25.045.333.018.41-.07.191-.252.373-.509.51-.598-.242-.128-.51-.183-.795-.146-.382.02-.75.054-1.107.036-.346-.017-.503-.098-.823-.27z" />
+            </svg>
+          </button>
+
           <button id="btn-renovar-validade" class="btn-secondary"
             style="background-color: #f39c12; color: #fff;">Renovar Validade</button>
-          <button id="btn-cancelar-tela" class="btn-secondary" style="background-color: #7f8c8d; color: #fff;"
-            onclick="window.close()">Cancelar</button>
+
+          <!-- Botão "Cancelar" geral (ex: fechar janela) -->
+          <button id="btn-fechar-janela" class="btn-secondary" style="background-color: #7f8c8d; color: #fff;"
+            onclick="window.close()">Fechar</button>
+
+          <!-- Botões de Ação do Formulário -->
+          <button id="btn-editar" class="btn-secondary" style="display: none;">Editar</button>
+
+          <button id="btn-cancelar-edicao" class="btn-secondary"
+            style="background-color: #e74c3c; color: #fff; display: none;">Cancelar</button>
+          <button id="btn-salvar" class="primary" style="display: none;">Salvar</button>
+
           <button id="btn-novo-produto" class="btn-primary">+ Novo Produto</button>
-          <button id="btn-salvar" class="primary">Salvar</button>
         </div>
       </div>
 

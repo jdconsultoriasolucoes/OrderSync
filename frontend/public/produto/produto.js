@@ -22,6 +22,8 @@ const ENDPOINTS_AUX = {
 
 let PROD_ENDPOINT = null;
 let CURRENT_ID = null;
+let LAST_DATA = null;
+let CURRENT_MODE = "IDLE"; // IDLE, VIEW, EDIT, NEW
 
 // === Helpers básicos ===
 const $ = (id) => document.getElementById(id);
@@ -272,7 +274,10 @@ function readForm() {
 
 function fillForm(p) {
   if (!p) return;
-  setFormState(false); // Carregou dados -> Readonly por padrão
+  // Store for cancel
+  LAST_DATA = JSON.parse(JSON.stringify(p));
+
+  setMode("VIEW");
 
   const set = (id, v) => {
     const el = $(id);
@@ -361,6 +366,7 @@ function clearForm() {
   if ($("reajuste")) $("reajuste").textContent = "—";
   if ($("vigencia")) $("vigencia").textContent = "—";
   CURRENT_ID = null;
+  setMode("IDLE");
 }
 
 // ---------- cálculo/aux ----------
@@ -976,6 +982,64 @@ function setFormState(enabled) {
   if (btnSalvar) btnSalvar.disabled = !enabled;
 }
 
+// ---------- Controle de Modo (IDLE, VIEW, NEW, EDIT) ----------
+function setMode(mode) {
+  CURRENT_MODE = mode;
+  const isEditing = (mode === "EDIT" || mode === "NEW");
+
+  // 1. Trava/Destrava inputs
+  setFormState(isEditing);
+
+  // 2. Visibilidade de Botões
+  const show = (id) => { const el = $(id); if (el) el.style.display = ""; };
+  const hide = (id) => { const el = $(id); if (el) el.style.display = "none"; };
+
+  const btnBuscar = "btn-buscar";
+  const btnImportar = "btn-importar";
+  const btnRenovar = "btn-renovar-validade";
+  const btnNovo = "btn-novo-produto";
+
+  // Botões de ação
+  const btnEditar = "btn-editar";
+  const btnSalvar = "btn-salvar";
+  const btnCancelarEdicao = "btn-cancelar-edicao";
+  const btnFechar = "btn-fechar-janela"; // Se houver, sempre visivel ou controlado aqui
+
+  if (mode === "IDLE") {
+    // Tela inicial limpa
+    show(btnBuscar);
+    show(btnImportar);
+    show(btnRenovar);
+    show(btnNovo);
+
+    hide(btnEditar);
+    hide(btnSalvar);
+    hide(btnCancelarEdicao);
+
+  } else if (mode === "VIEW") {
+    // Produto carregado
+    show(btnBuscar);
+    show(btnImportar);
+    show(btnRenovar);
+    show(btnNovo);
+    show(btnEditar);
+
+    hide(btnSalvar);
+    hide(btnCancelarEdicao);
+
+  } else if (mode === "NEW" || mode === "EDIT") {
+    // Editando ou Criando
+    hide(btnBuscar);
+    hide(btnImportar);
+    hide(btnRenovar);
+    hide(btnNovo);
+    hide(btnEditar);
+
+    show(btnSalvar);
+    show(btnCancelarEdicao);
+  }
+}
+
 // ---------- Init ----------
 document.addEventListener("DOMContentLoaded", async () => {
   try {
@@ -985,10 +1049,39 @@ document.addEventListener("DOMContentLoaded", async () => {
     console.warn("[produto] não foi possível resolver endpoint ainda:", e);
   }
 
-  $("btn-novo")?.addEventListener("click", () => {
+  // Hook buttons
+  $("btn-novo-produto")?.addEventListener("click", () => {
     clearForm();
-    setFormState(true); // Novo = Habilitado
-    toast("Novo produto em edição.");
+    // clearForm seta IDLE, mas aqui queremos NEW
+    // override
+    setMode("NEW");
+    toast("Novo produto.");
+  });
+
+  // Edit logic
+  $("btn-editar")?.addEventListener("click", () => {
+    if (!CURRENT_ID) {
+      toast("Nenhum produto selecionado.");
+      return;
+    }
+    setMode("EDIT");
+    toast("Modo de edição.");
+  });
+
+  // Cancel logic
+  $("btn-cancelar-edicao")?.addEventListener("click", () => {
+    if (CURRENT_MODE === "NEW") {
+      clearForm(); // volta pra IDLE
+    } else {
+      // EDIT
+      // restaura dados
+      if (LAST_DATA) {
+        fillForm(LAST_DATA); // volta pra VIEW
+      } else {
+        // Fallback
+        setMode("VIEW");
+      }
+    }
   });
 
   $("btn-salvar")?.addEventListener("click", async () => {
@@ -1015,12 +1108,11 @@ document.addEventListener("DOMContentLoaded", async () => {
       if (alvoId) {
         const res = await produtosPATCH(alvoId, { produto, imposto });
         fillForm(res);
-        setFormState(false); // Volta para readonly após salvar
+        setMode("VIEW"); // Volta para readonly após salvar
         toast("Produto atualizado.");
       } else {
         const res = await produtosPOST({ produto, imposto });
-        fillForm(res);
-        setFormState(false); // Volta para readonly após salvar
+        fillForm(res); // fillForm chama setMode("VIEW")
         toast("Produto criado.");
       }
     } catch (e) {
@@ -1029,13 +1121,9 @@ document.addEventListener("DOMContentLoaded", async () => {
     }
   });
 
-  $("btn-editar")?.addEventListener("click", () => {
-    setFormState(true); // Habilita edição
-    toast("Edição habilitada.");
-  });
-
-  // Inicializa inputs desabilitados (exceto Search/Novo que tem suas regras)
-  setFormState(false);
+  // Remove old listeners passed by copy paste or prev setup if any
+  // Init default state
+  setMode("IDLE");
 
   $("btn-buscar")?.addEventListener("click", () => {
     const modal = $("search-modal");
