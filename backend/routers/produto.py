@@ -282,17 +282,15 @@ def renovar_validade_global(payload: RenovarValidadeReq, current_user: UsuarioMo
     with SessionLocal() as db:
         from sqlalchemy import text
         try:
-            print(f"DEBUG: Recebido nova_validade={payload.nova_validade}, user={current_user.email}")
             # Atualiza todos os produtos ativos com a nova data
             res = db.execute(text("""
                 UPDATE t_cadastro_produto_v2
                 SET validade_tabela = :val,
                     atualizado_por = :user,
-                    atualizado_em = NOW()
+                    updated_at = NOW()
                 WHERE UPPER(status_produto) = 'ATIVO'
             """), {"val": payload.nova_validade, "user": current_user.email})
             
-            print(f"DEBUG: Linhas afetadas={res.rowcount}")
             db.commit()
             return {"ok": True, "linhas_afetadas": res.rowcount, "nova_validade": payload.nova_validade}
         except Exception as e:
