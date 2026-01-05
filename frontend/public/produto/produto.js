@@ -1313,9 +1313,13 @@ function setupRenovarValidade() {
       try {
         const base = await resolveProdutosEndpoint();
         const url = `${base}/renovar_validade_global`;
+        const token = localStorage.getItem("ordersync_token");
 
         const data = await fetchJSON(url, {
           method: "POST",
+          headers: {
+            "Authorization": `Bearer ${token}`
+          },
           body: JSON.stringify({ nova_validade: novaData }),
         });
 
