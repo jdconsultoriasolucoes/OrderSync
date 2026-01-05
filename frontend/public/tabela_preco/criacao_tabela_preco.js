@@ -1,6 +1,6 @@
 // === Config ===
 // Config is now imported via config.js
-const API_BASE = window.API_BASE || "http://127.0.0.1:8000";
+// const API_BASE = window.API_BASE || "http://127.0.0.1:8000";
 // window.API_BASE already set by config.js
 const ENDPOINT_VALIDADE = `${API_BASE}/tabela_preco/meta/validade_global`;
 

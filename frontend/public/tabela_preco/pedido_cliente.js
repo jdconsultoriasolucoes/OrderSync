@@ -29,7 +29,7 @@ const comFreteParam = comFreteFromCode ?? comFreteParamQS;
 const razaoParam = url.searchParams.get("razao_social");
 const condPagtoParam = url.searchParams.get("cond_pagto");
 
-const API_BASE = (typeof window !== "undefined" && window.API_BASE) ? window.API_BASE : location.origin;
+// const API_BASE = (typeof window !== "undefined" && window.API_BASE) ? window.API_BASE : location.origin;
 const API = (p) => {
   const base = (typeof window !== "undefined" && window.API_BASE ? window.API_BASE : location.origin) || "";
   // remove barra final do base e garante que p tem barra inicial
