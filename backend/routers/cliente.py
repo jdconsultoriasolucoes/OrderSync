@@ -8,10 +8,13 @@ from services.cliente import (
     atualizar_cliente,
     deletar_cliente
 )
+from fastapi import Depends
+from core.deps import get_current_user
+from models.usuario import UsuarioModel
 
 router = APIRouter()
 
-@router.get("/", response_model=List[ClienteResumo])
+@router.get("/", response_model=List[ClienteCompleto])
 def get_clientes():
     return listar_clientes()
 
@@ -22,20 +25,25 @@ def get_cliente(codigo_da_empresa: str):
         raise HTTPException(status_code=404, detail="Cliente não encontrado")
     return cliente
 
-@router.delete("/{codigo_da_empresa}", response_model=ClienteCompleto)
-def delete_cliente(codigo_da_empresa: str):
-    cliente = deletar_cliente(codigo_da_empresa)
-    if not cliente:
+@router.delete("/{codigo_da_empresa}", response_model=dict)
+def delete_cliente(codigo_da_empresa: str, current_user: UsuarioModel = Depends(get_current_user)):
+    success = deletar_cliente(codigo_da_empresa)
+    if not success:
         raise HTTPException(status_code=404, detail="Cliente não encontrado")
-    return cliente
+    return {"message": "Cliente removido com sucesso"}
 
 @router.post("/", response_model=ClienteCompleto)
-def post_cliente(cliente: ClienteCompleto):
-    return criar_cliente(cliente.model_dump())
+def post_cliente(cliente: ClienteCompleto, current_user: UsuarioModel = Depends(get_current_user)):
+    data = cliente.model_dump()
+    data["criado_por"] = current_user.email
+    data["atualizado_por"] = current_user.email
+    return criar_cliente(data)
 
 @router.put("/{codigo_da_empresa}", response_model=ClienteCompleto)
-def put_cliente(codigo_da_empresa: str, cliente: ClienteCompleto):
-    atualizado = atualizar_cliente(codigo_da_empresa, cliente.model_dump())
+def put_cliente(codigo_da_empresa: str, cliente: ClienteCompleto, current_user: UsuarioModel = Depends(get_current_user)):
+    data = cliente.model_dump()
+    data["atualizado_por"] = current_user.email
+    atualizado = atualizar_cliente(codigo_da_empresa, data)
     if not atualizado:
         raise HTTPException(status_code=404, detail="Cliente não encontrado")
     return atualizado

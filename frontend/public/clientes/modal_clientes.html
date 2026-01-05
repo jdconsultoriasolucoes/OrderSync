@@ -1,26 +1,32 @@
 <!DOCTYPE html>
 <html lang="pt-BR">
+
 <head>
   <meta charset="UTF-8" />
   <title>Lista de Clientes</title>
   <script src="https://unpkg.com/axios/dist/axios.min.js"></script>
+  <script src="../js/config.js"></script>
   <style>
     #filtro {
       width: 300px;
       padding: 8px;
       margin-bottom: 10px;
     }
+
     table {
       width: 100%;
       border-collapse: collapse;
     }
-    th, td {
+
+    th,
+    td {
       padding: 6px;
       border: 1px solid #ccc;
       text-align: left;
     }
   </style>
 </head>
+
 <body>
   <h3>Clientes Cadastrados</h3>
 
@@ -46,13 +52,18 @@
     let clientes = [];
 
     // Carrega os clientes do backend
-    axios.get("http://127.0.0.1:8000/cliente")
+    const token = localStorage.getItem('ordersync_token');
+    const api = window.API_BASE || "http://127.0.0.1:8000";
+
+    axios.get(`${api}/cliente`, {
+      headers: { 'Authorization': `Bearer ${token}` }
+    })
       .then(res => {
         clientes = res.data;
         renderizarTabela(clientes);
       })
       .catch(error => {
-        alert("Erro ao buscar clientes.");
+        alert(`Erro ao buscar clientes: ${error.message || error}`);
         console.error(error);
       });
 
@@ -85,11 +96,16 @@
     }
 
     function selecionarCliente(cliente) {
-      if (window.opener && typeof window.opener.preencherFormulario === "function") {
-        window.opener.preencherFormulario(cliente);
+      try {
+        if (window.opener && typeof window.opener.preencherFormulario === "function") {
+          window.opener.preencherFormulario(cliente);
+        } else {
+          alert("Não foi possível comunicar com a janela principal.");
+        }
+      } catch (e) {
+        console.error("Erro ao selecionar cliente:", e);
+      } finally {
         window.close();
-      } else {
-        alert("Não foi possível preencher o formulário no sistema principal.");
       }
     }
 
@@ -100,25 +116,25 @@
 
       const filtrados = clientes.filter(c => {
         const id = String(c.cadastrocliente?.id || '');
+        const codigo = String(c.cadastrocliente?.codigo_da_empresa || '').toLowerCase(); // Novo
         const nome = c.cadastrocliente?.nome_cliente?.toLowerCase() || '';
-        const cpf = c.cadastrocliente?.cpf?.toLowerCase() || '';
-        const cnpj = c.cadastrocliente?.cnpj?.toLowerCase() || '';
+        const fantasia = c.cadastrocliente?.nome_fantasia?.toLowerCase() || ''; // Novo
+        const cpf = (c.cadastrocliente?.cpf || '').replace(/\D/g, ''); // Somente números
+        const cnpj = (c.cadastrocliente?.cnpj || '').replace(/\D/g, ''); // Somente números
         const email = c.responsavel_compras?.email_resposavel?.toLowerCase() || '';
         const uf = c.endereco_entrega?.estado_EnderecoEntrega?.toLowerCase() || '';
 
+        // Termo limpo para comparação numérica
+        const termoNumerico = termo.replace(/\D/g, '');
+
         return (
-          (ehNumero
-            ? (
-                id.startsWith(termo) ||
-                cpf.startsWith(termo) ||
-                cnpj.startsWith(termo)
-              )
-            : (
-                nome.includes(termo) ||
-                email.includes(termo) ||
-                uf.includes(termo)
-              )
-          )
+          id.includes(termo) ||
+          codigo.includes(termo) ||
+          nome.includes(termo) ||
+          fantasia.includes(termo) ||
+          email.includes(termo) ||
+          uf.includes(termo) ||
+          (termoNumerico && (cpf.includes(termoNumerico) || cnpj.includes(termoNumerico)))
         );
       });
 
@@ -126,4 +142,5 @@
     });
   </script>
 </body>
+
 </html>

@@ -11,7 +11,7 @@ from fastapi.staticfiles import StaticFiles
 from pathlib import Path  
 # Routers
 from routers.tabela_preco import router_meta, router as router_tabela
-from routers import pedido_preview, link_pedido, admin_config_email, cliente, listas, fiscal,pedidos,net_diag, produto, pedido_pdf
+from routers import pedido_preview, link_pedido, admin_config_email, cliente, listas, fiscal,pedidos,net_diag, produto, pedido_pdf, auth, usuario
 from database import SessionLocal
 # ---- logging base (simples) ----
 logging.basicConfig(level=logging.INFO)
@@ -28,14 +28,48 @@ class NoCacheStaticFiles(StaticFiles):
 
 app = FastAPI()
 
-@app.get("/")
-def root():
-    return {"mensagem": "API do OrderSync está rodando"}
+# --- STARTUP: Garantir usuario Admin ---
+@app.on_event("startup")
+def startup_ensure_admin():
+    from database import SessionLocal
+    from models.usuario import UsuarioModel
+    from core.security import get_password_hash
+    
+    db = SessionLocal()
+    try:
+        email = "admin@ordersync.com"
+        # Reset force
+        user = db.query(UsuarioModel).filter(UsuarioModel.email == email).first()
+        if user:
+            # Se já existe, NÃO reseta a senha. Apenas loga que encontrou.
+            logger.info("Admin user found. Skipping password reset.")
+        else:
+            new_user = UsuarioModel(
+                email=email, 
+                nome="Admin", 
+                senha_hash=get_password_hash(os.environ.get("ADMIN_PASSWORD", "admin123")), 
+                funcao="admin", 
+                ativo=True
+            )
+            db.add(new_user)
+            logger.info("ADMIN USER CREATED: admin123")
+            
+        db.commit()
+    except Exception as e:
+        logger.error(f"Startup Admin Reset Failed: {e}")
+    finally:
+        db.close()
+
+
+# Root route handled by StaticFiles
+# @app.get("/")
+# def root():
+#     return {"mensagem": "API do OrderSync está rodando"}
 
 # ---- Origens permitidas ----
 ALLOWED_ORIGINS = [
-    "https://ordersync-qwcl.onrender.com",  # FRONT (Render) - deixa os dois se alterna
-    "https://ordersync-qwcl.onrender.com",
+    "https://ordersync-y7kg.onrender.com",  # FRONT (Render)
+    "https://ordersync-frontend.onrender.com", # Caso mude nome
     "http://localhost:5500",                # FRONT local (ex. Live Server)
     "http://127.0.0.1:5500",
     "http://localhost:3000",
@@ -50,6 +84,8 @@ def _apply_cors_headers(resp: JSONResponse, origin: str | None):
         resp.headers["Vary"] = "Origin"
         resp.headers["Access-Control-Allow-Credentials"] = "true"
     return resp
+
+# ---- MIDDLEWARE: loga 5xx e SEMPRE devolve CORS em erros ----
 
 # ---- MIDDLEWARE: loga 5xx e SEMPRE devolve CORS em erros ----
 @app.middleware("http")
@@ -73,14 +109,18 @@ async def errors_with_cors(request: Request, call_next):
         resp = JSONResponse(body, status_code=e.status_code)
         resp.headers["x-error-id"] = err_id
         return _apply_cors_headers(resp, request.headers.get("origin"))
-    except Exception:
+    except Exception as e:
         err_id = uuid.uuid4().hex[:8]
         logger.error(
             "EXC %s: %s %s?%s\n%s",
             err_id, request.method, request.url.path, request.url.query,
             traceback.format_exc()
         )
-        body = {"detail": "Internal Server Error", "error_id": err_id}
+        # Show real error in Dev, generic in Prod (based on ENV)
+        is_dev = os.environ.get("ENVIRONMENT", "development") == "development"
+        detail_msg = f"Internal Server Error: {str(e)}" if is_dev else "Internal Server Error"
+        
+        body = {"detail": detail_msg, "error_id": err_id}
         resp = JSONResponse(body, status_code=500)
         resp.headers["x-error-id"] = err_id
         return _apply_cors_headers(resp, request.headers.get("origin"))
@@ -106,6 +146,8 @@ app.include_router(admin_config_email.router)
 app.include_router(net_diag.router)
 app.include_router(produto.router)
 app.include_router(pedido_pdf.router)
+app.include_router(auth.router)
+app.include_router(usuario.router)
 
 # ---- Static (se precisar servir arquivos públicos do front) ----
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
@@ -130,7 +172,26 @@ logger.info("[STATIC] /static -> %s", static_dir)
 if not os.path.isdir(static_dir):
     logger.error("[STATIC] Pasta NÃO existe: %s", static_dir)
 
+# Auto-mount subdirectories of public to root
+if os.path.exists(static_dir):
+    for item in os.listdir(static_dir):
+        full_path = os.path.join(static_dir, item)
+        if os.path.isdir(full_path):
+            # Mount /js, /css, /clientes, /produto, etc.
+            app.mount(f"/{item}", StaticFiles(directory=full_path), name=item)
+
+# Also mount /static explicitly
 app.mount("/static", StaticFiles(directory=static_dir), name="static")
+
+@app.get("/")
+def root():
+    # Attempt to find index.html in frontend root (parent of public)
+    # static_dir is .../frontend/public
+    # so .../frontend/index.html is one level up
+    index_path = os.path.abspath(os.path.join(static_dir, "..", "index.html"))
+    if os.path.exists(index_path):
+        return FileResponse(index_path)
+    return {"mensagem": "API do OrderSync está rodando (Frontend não encontrado)"}
 
 @app.get("/admin/config-email")
 def config_email_page():
@@ -176,14 +237,6 @@ app.add_middleware(
 #     max_age=86400,
 # )
 
-@app.middleware("http")
-async def db_session_middleware(request, call_next):
-    request.state.db = SessionLocal()  # abre sessão por request
-    try:
-        response = await call_next(request)
-        return response
-    finally:
-        # garante fechamento mesmo com exceção
-        request.state.db.close()
+
 
         

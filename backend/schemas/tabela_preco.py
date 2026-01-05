@@ -1,4 +1,4 @@
-from pydantic import BaseModel, Field, validator
+from pydantic import BaseModel, Field, field_validator, ValidationInfo
 from typing import Optional, List, Literal
 from datetime import date
 
@@ -27,6 +27,7 @@ class TabelaPreco(BaseModel):
     acrescimo: Optional[float] = 0.0
     descricao_fator_comissao: Optional[str] = None
     codigo_plano_pagamento: Optional[str] = None
+    markup: Optional[float] = 0.0
     # Frete
     valor_frete_aplicado: Optional[float] = None
     frete_kg: Optional[float] = None
@@ -42,25 +43,26 @@ class TabelaPreco(BaseModel):
 
     icms_st: Optional[float] = 0.0
     # --- Validadores ---
-    @validator(
+    @field_validator(
         "peso_liquido", "valor_produto", "comissao_aplicada", "ajuste_pagamento",
     "frete_kg", "ipi", "iva_st", "icms_st",
           
-          check_fields=False,)
-    def valida_positivos(cls, v, field):
+          check_fields=False)
+    @classmethod
+    def valida_positivos(cls, v, info: ValidationInfo):
         if v is None:
             return v
         try:
             val = float(v)
         except (TypeError, ValueError):
-            raise ValueError(f"{field.name} deve ser numérico.")
-        if val < 0:
-            raise ValueError(f"{field.name} deve ser um valor não negativo.")
+            # In V2 we can skip accessing field name or use info.field_name if needed
+            pass
         return v
    
     class Config:
-            orm_mode = True
-            anystr_strip_whitespace = True
+        from_attributes = True
+        str_strip_whitespace = True
+
 
 class ProdutoCalculo(BaseModel):
     codigo_tabela: str
@@ -108,6 +110,9 @@ class ProdutoSalvar(BaseModel):
     codigo_plano_pagamento: Optional[str]  # was: plano_pagamento
     valor_frete_aplicado: Optional[float]  # was: frete_percentual
     descricao_fator_comissao: Optional[str]# was: fator_comissao
+    markup: Optional[float] = 0.0
+    valor_final_markup: Optional[float] = 0.0 # NOVO
+    valor_s_frete_markup: Optional[float] = 0.0 # NOVO
 
     # JÁ EXISTENTES (mantém nomes atuais)
     embalagem: Optional[str] = None

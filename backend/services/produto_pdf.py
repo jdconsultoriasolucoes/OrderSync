@@ -20,6 +20,20 @@ import pandas as pd
 # ----------------------------
 # Helpers
 # ----------------------------
+def safe_float(val: Any, default: float = 0.0) -> float:
+    """Converte para float com segurança (trata None e strings vazias/inválidas)."""
+    if val is None:
+        return default
+    if isinstance(val, (float, int)):
+        return float(val)
+    try:
+        s = str(val).replace(",", ".").strip()
+        if not s:
+            return default
+        return float(s)
+    except (ValueError, TypeError):
+        return default
+
 def _row_to_out(db: Session, row: Dict[str, Any], include_imposto: bool = True) -> ProdutoV2Out:
     data = dict(row)
     
@@ -28,7 +42,6 @@ def _row_to_out(db: Session, row: Dict[str, Any], include_imposto: bool = True) 
     if product_id:
         # Se 'preco_anterior' ou 'validade_tabela' estiverem ausentes logicamente da view,
         # buscamos na tabela física para garantir cálculo correto de indicadores.
-        # Verifica se chaves existem mas são None, ou se nem existem.
         needs_fetch = False
         if data.get("preco_anterior") is None: needs_fetch = True
         if data.get("validade_tabela") is None: needs_fetch = True
@@ -57,41 +70,38 @@ def _row_to_out(db: Session, row: Dict[str, Any], include_imposto: bool = True) 
     # --- Lógica de campos calculados (se não vierem da View/DB) ---
     
     # 1) Reajuste Percentual
+    # 1) Reajuste Percentual
     # 1) Reajuste Percentual (Agora significando % de Desconto Efetivo)
     # Contexto UI: ((Preço Final - Preço Tabela) / Preço Tabela) * 100
     if data.get("reajuste_percentual") is None:
-        p_atual = data.get("preco")
-        p_peso = data.get("peso")
+        p_atual = safe_float(data.get("preco"))
+        p_peso = safe_float(data.get("peso"))
         
         # Parâmetros de desconto
-        desc_ton = data.get("desconto_valor_tonelada") or 0
+        desc_ton = safe_float(data.get("desconto_valor_tonelada"))
         dt_ini = data.get("data_desconto_inicio")
         dt_fim = data.get("data_desconto_fim")
         
         # Validar vigência para calcular o preço final "teórico" de hoje
         # Nota: O front usa 'new Date()', aqui usamos 'date.today()'
         is_active = False
-        if desc_ton > 0 and dt_ini and dt_fim and p_peso:
+        if desc_ton > 0 and dt_ini and dt_fim and p_peso > 0:
             if isinstance(dt_ini, str): dt_ini = date.fromisoformat(dt_ini)
             if isinstance(dt_fim, str): dt_fim = date.fromisoformat(dt_fim)
             today = date.today()
             if dt_ini <= today <= dt_fim:
                 is_active = True
         
-        if is_active and p_atual and p_atual > 0:
+        if is_active and p_atual > 0:
             # Calculo do Preço Final
             # DescontoUnitario = (DescTon / 1000) * Peso
-            # Convert values to float to avoid Decimal vs Float errors
-            desc_ton_f = float(desc_ton)
-            p_peso_f = float(p_peso)
-            p_atual_f = float(p_atual)
-
-            desc_unit = (desc_ton_f / 1000.0) * p_peso_f
-            p_final = p_atual_f - desc_unit
+            
+            desc_unit = (desc_ton / 1000.0) * p_peso
+            p_final = p_atual - desc_unit
             if p_final < 0: p_final = 0.0
             
             # Reajuste (Variação inverdida: Positivo = Desconto)
-            data["reajuste_percentual"] = (((p_final - p_atual_f) / p_atual_f) * 100) * -1
+            data["reajuste_percentual"] = (((p_final - p_atual) / p_atual) * 100) * -1
         else:
             # Sem desconto ativo, reajuste é 0% ou None?
             # Se a intenção é mostrar o impacto do desconto, é 0%.
@@ -175,7 +185,7 @@ def create_produto(db: Session, produto_in: ProdutoV2Create, imposto_in: Optiona
             {"id": obj.id},
         ).mappings().first()
         if row:
-            return ProdutoV2Out(**row)
+            return _row_to_out(db, row)
     except Exception:
         # print(f"[create_produto] view fallback: {e}")
         pass
@@ -222,6 +232,21 @@ def create_produto(db: Session, produto_in: ProdutoV2Create, imposto_in: Optiona
         preco_tonelada_anterior=None,
         validade_tabela_anterior=None,
     )
+
+
+def delete_produto(db: Session, produto_id: int) -> bool:
+    """Hard delete de produto (ou soft delete se preferir). Aqui faremos Hard Delete."""
+    obj = db.query(ProdutoV2).filter(ProdutoV2.id == produto_id).one_or_none()
+    if not obj:
+        raise HTTPException(404, detail="Produto não encontrado")
+    
+    # Se houver constraints (imposto), deletar cascata ou manual
+    if obj.imposto:
+        db.delete(obj.imposto)
+    
+    db.delete(obj)
+    db.commit()
+    return True
 
 
 def update_produto(
@@ -324,7 +349,18 @@ def list_produtos(
 
     try:
         rows = db.execute(text(base), params).mappings().all()
-        return [_row_to_out(db, r, include_imposto=False) for r in rows]
+        
+        valid_products = []
+        for r in rows:
+            try:
+                out = _row_to_out(db, r, include_imposto=False)
+                valid_products.append(out)
+            except Exception as e:
+                print(f"[list_produtos] ERRO ao mapear produto ID {r.get('id')}: {e}")
+                # Log error but don't crash
+        
+        return valid_products
+
     except Exception as e:
         import traceback
         with open("search_error.log", "w") as f:

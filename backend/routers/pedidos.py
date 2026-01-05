@@ -165,7 +165,7 @@ def listar_pedidos(
         params["status_list"] = status_list
 
     if tabela_nome:
-        filtros_sql.append("b.nome_tabela ILIKE :tabela_nome")
+        filtros_sql.append("a.tabela_preco_nome ILIKE :tabela_nome")
         params["tabela_nome"] = f"%{tabela_nome}%"
 
     if cliente:
@@ -182,7 +182,6 @@ def listar_pedidos(
     count_sql = text(f"""
         SELECT COUNT(*) AS total
         FROM public.tb_pedidos a
-        JOIN public.tb_tabela_preco b ON a.tabela_preco_id = b.id_tabela
         WHERE {where_clause}
     """)
 
@@ -195,13 +194,13 @@ def listar_pedidos(
           CASE WHEN a.usar_valor_com_frete THEN 'ENTREGA' ELSE 'RETIRADA' END AS modalidade,
           a.total_pedido                            AS valor_total,
           a.status                                  AS status_codigo,
-          b.nome_tabela                             AS tabela_preco_nome,
+          a.status                                  AS status_codigo,
+          a.tabela_preco_nome                       AS tabela_preco_nome,
           a.fornecedor                              AS fornecedor,
           a.link_url,
           a.link_status,
           (a.link_enviado_em IS NOT NULL)           AS link_enviado
         FROM public.tb_pedidos a
-        JOIN public.tb_tabela_preco b ON a.tabela_preco_id = b.id_tabela
         WHERE {where_clause}
         ORDER BY a.created_at DESC, a.id_pedido DESC
         LIMIT :limit OFFSET :offset
@@ -275,22 +274,90 @@ def mudar_status(id_pedido: int, body: StatusChangeBody, db: Session = Depends(g
         raise HTTPException(status_code=404, detail="Pedido não encontrado")
     de_status = cur[0]
 
-    upd = db.execute(STATUS_UPDATE_SQL, {"para_status": body.para, "id_pedido": id_pedido}).first()
+    upd = db.execute(STATUS_UPDATE_SQL, {
+        "para_status": body.para, 
+        "id_pedido": id_pedido,
+        "user_id": body.user_id
+    }).first()
     if upd is None:
         raise HTTPException(status_code=400, detail="Falha ao atualizar status")
 
     # log (silencioso no MVP se tabela não existir)
     try:
-        db.execute(STATUS_EVENT_INSERT_SQL, {
-            "pedido_id": id_pedido,
-            "de_status": de_status,
-            "para_status": body.para,
-            "user_id": body.user_id,
-            "motivo": body.motivo,
-            "metadata": "{}"
-        })
+        with db.begin_nested():
+            db.execute(STATUS_EVENT_INSERT_SQL, {
+                "pedido_id": id_pedido,
+                "de_status": de_status,
+                "para_status": body.para,
+                "user_id": body.user_id,
+                "motivo": body.motivo,
+                "metadata": "{}"
+            })
     except Exception:
         pass
 
     db.commit()
     return {"ok": True}
+
+# ---------- Ações Extras (Cancelamento / Reenvio) ----------
+
+from models.pedido import PedidoModel
+from services.email_service import enviar_email_notificacao
+
+@router.post("/{id_pedido}/cancelar")
+def cancelar_pedido(id_pedido: int, db: Session = Depends(get_db), user_id: Optional[str] = Query(None)):
+    """
+    Cancela o pedido e registra no histórico (se possível).
+    """
+    pedido = db.query(PedidoModel).filter(PedidoModel.id == id_pedido).first()
+    if not pedido:
+        raise HTTPException(status_code=404, detail="Pedido não encontrado")
+
+    if pedido.status == "CANCELADO":
+        return {"message": "Pedido já estava cancelado", "status": "CANCELADO"}
+    
+    pedido.status = "CANCELADO"
+    pedido.cancelado_em = datetime.now()
+    
+    # Tenta logar evento (opcional, igual ao mudar_status)
+    # Tenta logar evento (opcional)
+    try:
+        with db.begin_nested():
+            db.execute(STATUS_EVENT_INSERT_SQL, {
+                "pedido_id": id_pedido,
+                "de_status": "ANY",
+                "para_status": "CANCELADO",
+                "user_id": user_id or "sistema",
+                "motivo": "Cancelado via Tela de Pedidos",
+                "metadata": "{}"
+            })
+    except Exception:
+        pass
+
+    db.commit()
+    return {"message": "Pedido cancelado com sucesso", "status": "CANCELADO"}
+
+@router.post("/{id_pedido}/reenviar_email")
+def reenviar_email_pedido(id_pedido: int, db: Session = Depends(get_db)):
+    """
+    Reenvia o e-mail de confirmação para o cliente (se configurado) e internos.
+    """
+    pedido = db.query(PedidoModel).filter(PedidoModel.id == id_pedido).first()
+    if not pedido:
+        raise HTTPException(status_code=404, detail="Pedido não encontrado")
+    
+    # Gera PDF em memória para anexar
+    from services.pdf_service import gerar_pdf_pedido_bytes
+    pdf_bytes = None
+    try:
+        pdf_bytes = gerar_pdf_pedido_bytes(db, pedido.id)
+    except Exception as e:
+        print(f"Erro ao gerar PDF para reenvio: {e}")
+
+    # Envia
+    try:
+        enviar_email_notificacao(db, pedido, link_pdf=None, pdf_bytes=pdf_bytes)
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Erro ao enviar e-mail: {str(e)}")
+
+    return {"message": "E-mail reenviado com sucesso."}

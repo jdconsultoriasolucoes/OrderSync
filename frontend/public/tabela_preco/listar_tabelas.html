@@ -1,9 +1,10 @@
 <!DOCTYPE html>
 <html lang="pt-br">
+
 <head>
   <meta charset="UTF-8">
   <title>Listar Tabelas de Preço</title>
-  
+
   <!-- Bootstrap igual à tela de cliente -->
   <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
 
@@ -22,6 +23,7 @@
   <script src="listar_tabelas.js" defer></script>
 
 </head>
+
 <body>
 
   <header>
@@ -35,12 +37,12 @@
   <nav class="sidebar" id="sidebar">
     <ul>
       <li><a href="/index.html">Home</a></li>
-        <li><a href="/clientes/cliente.html">Cadastrar Cliente</a></li>
-        <li><a href="#">Atualizar Catálogo</a></li>
-        <li><a href="/pedido/pedido.html">Consultar Pedidos</a></li>
-        <li><a href="#">Exportar Relatórios</a></li>
-        <li><a href="/tabela_preco/criacao_tabela_preco.html">Tabela Preço</a></li>
-        <li><a href="/config_email/config_email.html">Configuração E-mail</a></li>
+      <li><a href="/clientes/cliente.html">Cadastrar Cliente</a></li>
+      <li><a href="#">Atualizar Catálogo</a></li>
+      <li><a href="/pedido/pedido.html">Consultar Pedidos</a></li>
+      <li><a href="#">Exportar Relatórios</a></li>
+      <li><a href="/tabela_preco/criacao_tabela_preco.html">Tabela Preço</a></li>
+      <li><a href="/config_email/config_email.html">Configuração E-mail</a></li>
     </ul>
   </nav>
   <div id="overlay"></div>
@@ -57,7 +59,7 @@
         <button onclick="voltar()">Voltar</button>
       </div>
     </div>
-    
+
     <table class="table">
       <thead>
         <tr>
@@ -71,24 +73,33 @@
         <!-- linhas serão inseridas aqui via JS -->
       </tbody>
     </table>
-  
 
-</div>
+    <!-- Controles de Paginação -->
+    <div id="pagination-controls" class="pagination-container"
+      style="display: flex; justify-content: center; align-items: center; gap: 10px; margin-top: 20px;">
+      <button id="btn-prev" disabled>Anterior</button>
+      <span id="page-info">Página 1</span>
+      <button id="btn-next" disabled>Próxima</button>
+    </div>
+
+
+    </div>
   </main>
   <div id="modal-confirmar-delete" style="display:none; position: fixed; top: 0; left: 0; 
   width: 100%; height: 100%; background-color: rgba(0,0,0,0.5); 
   align-items: center; justify-content: center; z-index: 999;">
-  
-  <div style="background-color: white; padding: 20px; border-radius: 6px; text-align: center;">
-    <p>Tem certeza que deseja deletar esta tabela?</p>
-    <button onclick="confirmarDelecao(true)">Sim</button>
-    <button onclick="confirmarDelecao(false)">Não</button>
+
+    <div style="background-color: white; padding: 20px; border-radius: 6px; text-align: center;">
+      <p>Tem certeza que deseja deletar esta tabela?</p>
+      <button onclick="confirmarDelecao(true)">Sim</button>
+      <button onclick="confirmarDelecao(false)">Não</button>
+    </div>
   </div>
-</div>
-  
+
   <script type="module">
-   import { showGerarLinkModal } from "../js/gerar_link_pedido.js";
-   window.__showGerarLinkModal = showGerarLinkModal;
+    import { showGerarLinkModal } from "../js/gerar_link_pedido.js";
+    window.__showGerarLinkModal = showGerarLinkModal;
   </script>
-  </body>
+</body>
+
 </html>

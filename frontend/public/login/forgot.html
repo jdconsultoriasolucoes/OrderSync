@@ -1,0 +1,159 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>OrderSync - Recuperar Senha</title>
+    <link rel="stylesheet" href="../../styles.css">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600&display=swap" rel="stylesheet">
+    <style>
+        body {
+            background-color: #f4f4f9;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            font-family: 'Inter', sans-serif;
+            margin: 0;
+        }
+
+        .login-card {
+            background: white;
+            padding: 2.5rem;
+            border-radius: 12px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+            width: 100%;
+            max-width: 400px;
+            text-align: center;
+        }
+
+        .form-group {
+            margin-bottom: 1.5rem;
+            text-align: left;
+        }
+
+        .form-group label {
+            display: block;
+            margin-bottom: 0.5rem;
+            font-weight: 600;
+            color: #374151;
+        }
+
+        .form-group input {
+            width: 100%;
+            padding: 0.75rem;
+            border: 1px solid #d1d5db;
+            border-radius: 6px;
+            outline: none;
+            box-sizing: border-box;
+        }
+
+        .btn-login {
+            width: 100%;
+            padding: 0.75rem;
+            background-color: #2563eb;
+            color: white;
+            border: none;
+            border-radius: 6px;
+            font-weight: 600;
+            cursor: pointer;
+        }
+
+        .btn-login:hover {
+            background-color: #1d4ed8;
+        }
+
+        .back-link {
+            display: block;
+            margin-top: 1rem;
+            color: #6b7280;
+            text-decoration: none;
+            font-size: 0.9rem;
+        }
+
+        .message-box {
+            margin-top: 1rem;
+            padding: 10px;
+            border-radius: 6px;
+            font-size: 0.9rem;
+            display: none;
+        }
+
+        .success {
+            background-color: #dcfce7;
+            color: #166534;
+            border: 1px solid #bbf7d0;
+        }
+
+        .error {
+            background-color: #fef2f2;
+            color: #991b1b;
+            border: 1px solid #fecaca;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="login-card">
+        <h2>Recuperar Senha</h2>
+        <p style="color: #666; margin-bottom: 2rem;">Informe seu e-mail para receber o link de redefinição.</p>
+
+        <form id="forgot-form">
+            <div class="form-group">
+                <label for="email">E-mail</label>
+                <input type="email" id="email" placeholder="seu@email.com" required>
+            </div>
+            <button type="submit" class="btn-login" id="btn-submit">Enviar Link</button>
+        </form>
+
+        <div id="msg-box" class="message-box"></div>
+
+        <a href="login.html" class="back-link">← Voltar para Login</a>
+    </div>
+
+    <!-- Script Inline para agilidade -->
+    <script>
+        const API_URL = "http://127.0.0.1:8000"; // Ajustar se necessário ou ler de config.js
+
+        document.getElementById("forgot-form").addEventListener("submit", async (e) => {
+            e.preventDefault();
+            const email = document.getElementById("email").value;
+            const btn = document.getElementById("btn-submit");
+            const msgBox = document.getElementById("msg-box");
+
+            btn.disabled = true;
+            btn.innerText = "Enviando...";
+            msgBox.style.display = "none";
+
+            try {
+                const response = await fetch(`${API_URL}/token/forgot-password`, {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({ email })
+                });
+
+                // Mesmo se falhar (404), a API pode retornar 200 por segurança ou 404 dependendo da implementação. 
+                // Nossa API retorna 200 sempre, exceto erro interno.
+                if (response.ok) {
+                    msgBox.className = "message-box success";
+                    msgBox.innerText = "Se o e-mail estiver cadastrado, você receberá um link em instantes.";
+                    msgBox.style.display = "block";
+                } else {
+                    throw new Error("Erro ao processar solicitação.");
+                }
+
+            } catch (err) {
+                msgBox.className = "message-box error";
+                msgBox.innerText = "Ocorreu um erro ao tentar enviar o e-mail. Tente novamente.";
+                msgBox.style.display = "block";
+                console.error(err);
+            } finally {
+                btn.disabled = false;
+                btn.innerText = "Enviar Link";
+            }
+        });
+    </script>
+</body>
+
+</html>

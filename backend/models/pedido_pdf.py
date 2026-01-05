@@ -22,6 +22,7 @@ class PedidoPdf(BaseModel):
     # NOVOS
     nome_fantasia: Optional[str] = None
     frete_kg: Optional[float] = None
+    validade_tabela: Optional[str] = "Não se aplica"
 
     data_pedido: Optional[datetime]
     data_entrega_ou_retirada: Optional[datetime]

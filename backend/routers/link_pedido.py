@@ -9,12 +9,22 @@ from pathlib import Path
 from datetime import datetime
 from sqlalchemy import update
 
+from core.deps import get_current_user
+from models.usuario import UsuarioModel
+
 router = APIRouter(prefix="/link_pedido", tags=["Link Pedido"])
 
-PEDIDO_HTML = Path("/opt/render/project/src/frontend/public/tabela_preco/pedido_cliente.html")
+# Resolve relative path to frontend/public/tabela_preco/pedido_cliente.html
+# Assumes structure: root/backend/routers/link_pedido.py -> root/frontend/...
+BASE_DIR = Path(__file__).resolve().parents[2] 
+PEDIDO_HTML = BASE_DIR / "frontend" / "public" / "tabela_preco" / "pedido_cliente.html"
+
+if not PEDIDO_HTML.exists():
+    # Fallback/Debug log if needed, or rely on runtime check
+    pass
 
 @router.post("/gerar")
-def gerar_link(body: dict, request: Request):
+def gerar_link(body: dict, request: Request, current_user: UsuarioModel = Depends(get_current_user)):
     # abre sessão local (sem Depends)
     with SessionLocal() as db:
         tabela_id = int(body["tabela_id"])
@@ -32,7 +42,7 @@ def gerar_link(body: dict, request: Request):
         db.execute(
             update(PedidoLink)
             .where(PedidoLink.code == code)
-            .values(link_url=url)
+            .values(link_url=url, criado_por=current_user.email)
         )
         db.commit()
 
@@ -49,8 +59,8 @@ def resolver_link(code: str):
         link, status = resolver_code(db, code)
         if status == "not_found":
             raise HTTPException(status_code=404, detail="Link não encontrado")
-        if status == "expired":
-            raise HTTPException(status_code=410, detail="Link expirado")
+        # if status == "expired":
+        #    raise HTTPException(status_code=410, detail="Link expirado")
 
         return {
             "tabela_id": link.tabela_id,
@@ -63,6 +73,8 @@ def resolver_link(code: str):
             "last_access_at": getattr(link, "last_access_at", None) and link.last_access_at.isoformat(),
             "created_at": getattr(link, "created_at", None) and link.created_at.isoformat(),
             "link_url": getattr(link, "link_url", None),
+            "is_expired": (status == "expired"), # New flag
+            "link_status": getattr(link, "link_status", "ABERTO") # Return status for approved check
         }
 
 # Rota curta que serve o HTML público

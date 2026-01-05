@@ -1,7 +1,7 @@
 // ==================== produto.js ====================
 
 // === Config ===
-const API_BASE = "https://ordersync-backend-59d2.onrender.com";
+const API_BASE = "https://ordersync-backend-edjq.onrender.com";
 window.API_BASE = API_BASE;
 
 // candidatos de rotas (ordem de preferência)
@@ -22,6 +22,8 @@ const ENDPOINTS_AUX = {
 
 let PROD_ENDPOINT = null;
 let CURRENT_ID = null;
+let LAST_DATA = null;
+let CURRENT_MODE = "IDLE"; // IDLE, VIEW, EDIT, NEW
 
 // === Helpers básicos ===
 const $ = (id) => document.getElementById(id);
@@ -180,6 +182,19 @@ async function produtosPATCH(id, body) {
   throw new Error("Não foi possível atualizar o produto.");
 }
 
+async function produtosDELETE(id) {
+  const base = await resolveProdutosEndpoint();
+  for (const p of [`${base}/${id}`, `${base}/${encodeURIComponent(id)}`]) {
+    try {
+      return await fetchJSON(p, { method: "DELETE" });
+    } catch (e) {
+      if (e.status === 404) continue;
+      throw e;
+    }
+  }
+  throw new Error("Não foi possível excluir o produto.");
+}
+
 // ---------- leitura / preenchimento formulário ----------
 function getValue(id) {
   const el = $(id);
@@ -218,6 +233,7 @@ function readForm() {
 
     tipo: getValue("linha") || null, // Mapped to 'linha' UI input
     familia: getValue("familia") || null,
+    marca: getValue("marca") || null,
     filhos: getInt("filhos"),
 
     unidade: getValue("unidade") || null,
@@ -271,7 +287,10 @@ function readForm() {
 
 function fillForm(p) {
   if (!p) return;
-  setFormState(false); // Carregou dados -> Readonly por padrão
+  // Store for cancel
+  LAST_DATA = JSON.parse(JSON.stringify(p));
+
+  setMode("VIEW");
 
   const set = (id, v) => {
     const el = $(id);
@@ -292,6 +311,7 @@ function fillForm(p) {
 
   set("linha", p.tipo); // Map backend 'tipo' to frontend 'linha' input
   set("familia", p.familia);
+  set("marca", p.marca);
   set("filhos", p.filhos);
 
   set("unidade", p.unidade);
@@ -359,6 +379,7 @@ function clearForm() {
   if ($("reajuste")) $("reajuste").textContent = "—";
   if ($("vigencia")) $("vigencia").textContent = "—";
   CURRENT_ID = null;
+  setMode("IDLE");
 }
 
 // ---------- cálculo/aux ----------
@@ -974,6 +995,73 @@ function setFormState(enabled) {
   if (btnSalvar) btnSalvar.disabled = !enabled;
 }
 
+// ---------- Controle de Modo (IDLE, VIEW, NEW, EDIT) ----------
+function setMode(mode) {
+  CURRENT_MODE = mode;
+  const isEditing = (mode === "EDIT" || mode === "NEW");
+
+  // 1. Trava/Destrava inputs
+  setFormState(isEditing);
+
+  // 2. Visibilidade de Botões
+  const show = (id) => { const el = $(id); if (el) el.style.display = ""; };
+  const hide = (id) => { const el = $(id); if (el) el.style.display = "none"; };
+
+  const btnBuscar = "btn-buscar";
+  const btnImportar = "btn-importar";
+  const btnRenovar = "btn-renovar-validade";
+  const btnNovo = "btn-novo-produto";
+
+  // Botões de ação
+  const btnEditar = "btn-editar";
+  const btnExcluir = "btn-excluir";
+  const btnVoltarView = "btn-voltar-view";
+  const btnSalvar = "btn-salvar";
+  const btnCancelarEdicao = "btn-cancelar-edicao";
+
+  if (mode === "IDLE") {
+    // Tela inicial limpa
+    show(btnNovo); // Reordered logically in display if flexbox, but here just visibility
+    show(btnBuscar);
+    show(btnImportar);
+    show(btnRenovar);
+
+    hide(btnEditar);
+    hide(btnExcluir);
+    hide(btnVoltarView);
+    hide(btnSalvar);
+    hide(btnCancelarEdicao);
+
+  } else if (mode === "VIEW") {
+    // Produto carregado -> Oculta ações de topo
+    hide(btnNovo);
+    hide(btnBuscar);
+    hide(btnImportar);
+    hide(btnRenovar);
+
+    // Mostra ações de visão
+    show(btnEditar);
+    show(btnExcluir);
+    show(btnVoltarView);
+
+    hide(btnSalvar);
+    hide(btnCancelarEdicao);
+
+  } else if (mode === "NEW" || mode === "EDIT") {
+    // Editando ou Criando
+    hide(btnNovo);
+    hide(btnBuscar);
+    hide(btnImportar);
+    hide(btnRenovar);
+    hide(btnEditar);
+    hide(btnExcluir);
+    hide(btnVoltarView);
+
+    show(btnSalvar);
+    show(btnCancelarEdicao);
+  }
+}
+
 // ---------- Init ----------
 document.addEventListener("DOMContentLoaded", async () => {
   try {
@@ -983,10 +1071,63 @@ document.addEventListener("DOMContentLoaded", async () => {
     console.warn("[produto] não foi possível resolver endpoint ainda:", e);
   }
 
-  $("btn-novo")?.addEventListener("click", () => {
+  // Hook buttons
+  $("btn-novo-produto")?.addEventListener("click", () => {
     clearForm();
-    setFormState(true); // Novo = Habilitado
-    toast("Novo produto em edição.");
+    // clearForm seta IDLE, mas aqui queremos NEW
+    // override
+    setMode("NEW");
+    toast("Novo produto.");
+  });
+
+  // Edit logic
+  $("btn-editar")?.addEventListener("click", () => {
+    if (!CURRENT_ID) {
+      toast("Nenhum produto selecionado.");
+      return;
+    }
+    setMode("EDIT");
+    toast("Modo de edição.");
+  });
+
+  // Excluir
+  $("btn-excluir")?.addEventListener("click", async () => {
+    if (!CURRENT_ID) {
+      toast("Nenhum produto selecionado.");
+      return;
+    }
+    if (!confirm("Tem certeza que deseja excluir este produto?")) return;
+
+    try {
+      await produtosDELETE(CURRENT_ID);
+      toast("Produto excluído com sucesso.");
+      clearForm(); // reset to IDLE
+    } catch (e) {
+      console.error(e);
+      toast("Erro ao excluir: " + (e.message || "Erro desconhecido"), "error");
+    }
+  });
+
+  // Cancelar da Visão (Voltar para Home/Limpo)
+  $("btn-voltar-view")?.addEventListener("click", () => {
+    clearForm();
+    toast("Limpo.");
+  });
+
+  // Cancelar da Edição
+  $("btn-cancelar-edicao")?.addEventListener("click", () => {
+    if (CURRENT_MODE === "NEW") {
+      clearForm(); // volta pra IDLE
+    } else {
+      // EDIT
+      // restaura dados
+      if (LAST_DATA) {
+        fillForm(LAST_DATA); // volta pra VIEW
+      } else {
+        // Fallback
+        setMode("VIEW");
+      }
+    }
   });
 
   $("btn-salvar")?.addEventListener("click", async () => {
@@ -1013,12 +1154,11 @@ document.addEventListener("DOMContentLoaded", async () => {
       if (alvoId) {
         const res = await produtosPATCH(alvoId, { produto, imposto });
         fillForm(res);
-        setFormState(false); // Volta para readonly após salvar
+        setMode("VIEW"); // Volta para readonly após salvar
         toast("Produto atualizado.");
       } else {
         const res = await produtosPOST({ produto, imposto });
-        fillForm(res);
-        setFormState(false); // Volta para readonly após salvar
+        fillForm(res); // fillForm chama setMode("VIEW")
         toast("Produto criado.");
       }
     } catch (e) {
@@ -1027,13 +1167,9 @@ document.addEventListener("DOMContentLoaded", async () => {
     }
   });
 
-  $("btn-editar")?.addEventListener("click", () => {
-    setFormState(true); // Habilita edição
-    toast("Edição habilitada.");
-  });
-
-  // Inicializa inputs desabilitados (exceto Search/Novo que tem suas regras)
-  setFormState(false);
+  // Remove old listeners passed by copy paste or prev setup if any
+  // Init default state
+  setMode("IDLE");
 
   $("btn-buscar")?.addEventListener("click", () => {
     const modal = $("search-modal");
@@ -1135,3 +1271,71 @@ function handleSuccessModal(stats, relatorioUrl) {
     });
   }
 }
+
+// ------------------------------------------------------------------
+// LÓGICA DE RENOVAR VALIDADE (GLOBAL)
+// ------------------------------------------------------------------
+function setupRenovarValidade() {
+  const btnRenovar = document.getElementById("btn-renovar-validade");
+  const modalRenovar = document.getElementById("modal-renovar-validade");
+  const btnConfirmar = document.getElementById("btn-confirmar-renovacao");
+  const btnFechar = document.getElementById("btn-fechar-renovacao");
+  const inputNovaValidade = document.getElementById("input-nova-validade");
+
+  if (!btnRenovar || !modalRenovar) return;
+
+  // Abrir manual
+  // Abrir manual
+  btnRenovar.addEventListener("click", () => {
+    modalRenovar.classList.remove("hidden");
+    inputNovaValidade.value = "";
+  });
+
+  // Fechar
+  const close = () => {
+    modalRenovar.classList.add("hidden");
+  };
+  if (btnFechar) btnFechar.addEventListener("click", close);
+
+  // Confirmar
+  if (btnConfirmar) {
+    btnConfirmar.addEventListener("click", async () => {
+      const novaData = inputNovaValidade.value;
+      if (!novaData) {
+        toast("Selecione uma data!");
+        return;
+      }
+
+      if (!confirm(`Confirma renovar validade de TODOS os produtos ativos para ${novaData}?`)) {
+        return;
+      }
+
+      try {
+        const base = await resolveProdutosEndpoint();
+        const url = `${base}/renovar_validade_global`;
+        const token = localStorage.getItem("ordersync_token");
+
+        const data = await fetchJSON(url, {
+          method: "POST",
+          headers: {
+            "Authorization": `Bearer ${token}`
+          },
+          body: JSON.stringify({ nova_validade: novaData }),
+        });
+
+        toast(`Sucesso! ${data.linhas_afetadas} produtos atualizados.`);
+        close();
+        if (typeof clearForm === 'function') clearForm();
+
+      } catch (e) {
+        console.error(e);
+        toast("Erro: " + e.message);
+      }
+    });
+  }
+}
+
+// Inicializa a lógica extra
+document.addEventListener("DOMContentLoaded", () => {
+  setupRenovarValidade();
+});

@@ -174,7 +174,17 @@ input[type="text"], select {
   background-color: #6366f1 !important;
 }
 
+/* Novos botões */
+.btn-novo {
+  background-color: #3b82f6 !important; /* Azul vibrante */
+  color: white !important;
+}
+
+.btn-voltar {
+  background-color: #6b7280 !important; /* Cinza escuro */
+  color: white !important;
+}
+
 .btn:hover {
   opacity: 0.85;
 }
-

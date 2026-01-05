@@ -1,5 +1,6 @@
 <!DOCTYPE html>
 <html lang="pt-BR">
+
 <head>
   <meta charset="UTF-8">
   <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
@@ -8,6 +9,7 @@
   <title>Confirmação de Pedido</title>
   <link rel="stylesheet" href="/static/tabela_preco/pedido_cliente.css?v=20251013h">
 </head>
+
 <body>
   <div class="documento">
     <header>
@@ -16,12 +18,12 @@
       </div>
       <div class="dados-header">
         <h1>Solicitação de orçamento</h1>
-        <div class="meta-link" style="font-size:12px;color:#666;margin-top:4px;">
+        <div class="meta-link" style="font-weight: bold; font-size: 14px; margin-top: 4px; color: #333;">
           Data do pedido: <span id="datadopedido">—</span>
         </div>
         <p><strong>Cliente:</strong> <span id="razaoSocialCliente">---</span></p>
         <p><strong>Validade:</strong> <span id="validadeTabela">---</span> (<span id="tempoRestante">---</span>)</p>
-        <p><strong id="labelEntregaRetirada">Data:</strong> <span id="dataEntregaValor">a combinar</span></p> 
+        <p><strong id="labelEntregaRetirada">Data:</strong> <span id="dataEntregaValor">a combinar</span></p>
       </div>
     </header>
 
@@ -33,10 +35,14 @@
             <th>Produto</th>
             <th>Embal.</th>
             <th>Qtd</th>
-            <th>Peso</th> <!-- Retirado por pedido do Edson, o campo continua sendo calculado, para retornar ele necessario retirar do CSS regra de ocultar -->
+            <th>Peso</th>
+            <!-- Retirado por pedido do Edson, o campo continua sendo calculado, para retornar ele necessario retirar do CSS regra de ocultar -->
             <th>Valor <span id="tituloValorFrete">c/ Frete</span></th>
             <th>Condição de Pagamento</th>
-            <th>Subtotal</th> <!-- Retirado por pedido do Edson, o campo continua sendo calculado, para retornar ele necessario retirar do CSS regra de ocultar -->
+            <th class="col-markup">Markup %</th>
+            <th class="col-markup">Valor C Markup</th>
+            <th>Subtotal</th>
+            <!-- Retirado por pedido do Edson, o campo continua sendo calculado, para retornar ele necessario retirar do CSS regra de ocultar -->
           </tr>
         </thead>
         <tbody></tbody>
@@ -67,51 +73,52 @@
         <button id="btnConfirmar">Confirmar Pedido</button>
         <button id="btnCancelar">Cancelar</button>
       </div>
-     
+
       <div class="marca-dagua">
         <img src="/static/tabela_preco/logo.png" alt="Marca d'água OrderSync">
-       </div>
+      </div>
       <p id="mensagem"></p>
     </main>
   </div>
 
   <!-- defina sua API (ajuste para prod) -->
-<script>
-  window.API_BASE = "https://ordersync-backend-59d2.onrender.com";
-</script>
-<script src="/static/tabela_preco/pedido_cliente.js?v=tab-5"></script>
-<!-- resolve o /p/{code} e expõe os globais -->
-<script>
-  window.addEventListener('DOMContentLoaded', () => {
-    const API = (p) => `${(window.API_BASE || location.origin).replace(/\/$/,'')}${p}`;
-    const code = location.pathname.split('/').pop();
+  <script>
+    window.API_BASE = ""; // Auto-detect origin
+  </script>
+  <script src="/static/tabela_preco/pedido_cliente.js?v=tab-5"></script>
+  <!-- resolve o /p/{code} e expõe os globais -->
+  <script>
+    window.addEventListener('DOMContentLoaded', () => {
+      const API = (p) => `${(window.API_BASE || location.origin).replace(/\/$/, '')}${p}`;
+      const code = location.pathname.split('/').pop();
 
-   fetch(API(`/link_pedido/resolver?code=${encodeURIComponent(code)}`), { cache:'no-store' })
-      .then(r => { if (!r.ok) throw new Error('resolver '+r.status); return r.json(); })
-      .then(d => {
-        window.currentTabelaId  = d.tabela_id;
-        window.currentComFrete  = d.com_frete;
-        window.entregaISO       = (typeof d.data_prevista === 'string' ? d.data_prevista : null); // << NOVO
-        console.log('[resolver] ok', d);
+      fetch(API(`/link_pedido/resolver?code=${encodeURIComponent(code)}`), { cache: 'no-store' })
+        .then(r => { if (!r.ok) throw new Error('resolver ' + r.status); return r.json(); })
+        .then(d => {
+          window.currentTabelaId = d.tabela_id;
+          window.currentComFrete = d.com_frete;
+          window.entregaISO = (typeof d.data_prevista === 'string' ? d.data_prevista : null); // << NOVO
+          console.log('[resolver] ok', d);
 
-        if (typeof window.carregarPedido === 'function') {
-          window.carregarPedido();
-        } else {
-          setTimeout(() => window.carregarPedido && window.carregarPedido(), 0);
-        }
-      })
-      .catch(err => console.error('[resolver] fail', err));
-  });
-</script>
+          if (typeof window.carregarPedido === 'function') {
+            window.carregarPedido();
+          } else {
+            setTimeout(() => window.carregarPedido && window.carregarPedido(), 0);
+          }
+        })
+        .catch(err => console.error('[resolver] fail', err));
+    });
+  </script>
 
   <div id="confirmModal" class="modal" hidden>
-  <div class="modal-backdrop"></div>
-  <div class="modal-content" role="dialog" aria-modal="true" aria-labelledby="confirmTitle">
-    <h2 id="confirmTitle">Pedido confirmado ✅</h2>
-    <p class="confirm-text">Recebemos seu pedido e ele já está sendo processado.</p>
-    <p id="confirmPedidoInfo" class="confirm-info"></p>
-    <button id="btnFecharConfirm" type="button" onclick="closeConfirmModal()">Fechar</button>
+    <div class="modal-backdrop"></div>
+    <div class="modal-content" role="dialog" aria-modal="true" aria-labelledby="confirmTitle">
+      <h2 id="confirmTitle">Pedido confirmado ✅</h2>
+      <p class="confirm-text">Recebemos seu pedido e ele já está sendo processado.</p>
+      <p id="confirmPedidoInfo" class="confirm-info"></p>
+      <button id="btnFecharConfirm" type="button" onclick="closeConfirmModal()">Fechar</button>
+    </div>
   </div>
-</div>
 </body>
+
 </html>

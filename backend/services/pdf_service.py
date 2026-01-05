@@ -10,6 +10,7 @@ from reportlab.lib.utils import ImageReader
 from datetime import datetime
 from pathlib import Path
 import os
+import io
 
 from services.pedido_pdf_data import carregar_pedido_pdf
 from models.pedido_pdf import PedidoPdf
@@ -39,15 +40,22 @@ def _br_number(value, decimals=2, suffix=""):
     return s + suffix
 
 
-def _desenhar_pdf(pedido: PedidoPdf, path: str) -> None:
+def gerar_pdf_pedido(pedido: PedidoPdf, sem_validade: bool = False) -> bytes:
+    buffer = io.BytesIO()
+    _desenhar_pdf(pedido, buffer, sem_validade=sem_validade)
+    buffer.seek(0)
+    return buffer.read()
+
+
+def _desenhar_pdf(pedido: PedidoPdf, buffer: io.BytesIO, sem_validade: bool = False) -> None:
     """
     Desenha o PDF do pedido no arquivo `path`, usando layout corporativo.
     """
-    os.makedirs(os.path.dirname(path), exist_ok=True)
+    # os.makedirs(os.path.dirname(path), exist_ok=True) # Not needed when writing to buffer
 
     # Página em modo paisagem (horizontal)
     pagesize = landscape(A4)
-    c = canvas.Canvas(path, pagesize=pagesize)
+    c = canvas.Canvas(buffer, pagesize=pagesize)
     width, height = pagesize
 
     # margens
@@ -119,13 +127,17 @@ def _desenhar_pdf(pedido: PedidoPdf, path: str) -> None:
         "DIGITAÇÃO DO ORÇAMENTO"
     )
 
-    c.setFont("Helvetica", 9)
-    data_str = datetime.now().strftime("%d/%m/%Y %H:%M")
-    c.drawRightString(
-        width - margin_x - 0.3 * cm,
-        faixa_y - faixa_h + 0.35 * cm,
-        f"{data_str}"
-    )
+    # Data / Validade (Bloco direito do header)
+    c.setFont("Helvetica", 10)
+    
+    # Start y for the right-aligned text block
+    y_right_block_start = faixa_y - faixa_h + 0.35 * cm + 0.2 * cm
+
+    c.setFont("Helvetica", 9) 
+    c.drawRightString(width - margin_x - 0.3 * cm, y_right_block_start, f"Data do Pedido: {pedido.data_pedido.strftime('%d/%m/%Y')}")
+    
+    if not sem_validade and pedido.validade_tabela:
+        c.drawRightString(width - margin_x - 0.3 * cm, y_right_block_start - 0.4 * cm, f"Proposta válida até: {pedido.validade_tabela}")
 
     # Atualiza y para baixo da faixa
     y = faixa_y - faixa_h - 0.5 * cm
@@ -197,7 +209,7 @@ def _desenhar_pdf(pedido: PedidoPdf, path: str) -> None:
 
     # FRETE (apenas total – sem "frete por kg")
     if frete_total > 0:
-        frete_str = "R$ " + _br_number(frete_kg)
+        frete_str = "R$ " + _br_number(frete_total)
     else:
         frete_str = "R$ 0,00"
 
@@ -464,6 +476,10 @@ def _desenhar_pdf(pedido: PedidoPdf, path: str) -> None:
     # rodapé
     c.setFont("Helvetica", 8)
     c.drawString(itens_x, y, "Documento gerado automaticamente pelo OrderSync.")
+    
+    if sem_validade:
+        c.drawCentredString(width / 2, 1 * cm, "* Confirmação da Solicitação de Orçamento *")
+
 
     c.showPage()
     c.save()

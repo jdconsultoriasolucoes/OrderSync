@@ -173,17 +173,24 @@ function getCodigoClienteHidden() {
 }
 
 
-async function gerarLinkCurtoNoServidor({ tabelaId, comFrete, dataPrevistaISO  }) {
-  const url  = apiBase() ? `${apiBase()}/link_pedido/gerar` : "/link_pedido/gerar";
+async function gerarLinkCurtoNoServidor({ tabelaId, comFrete, dataPrevistaISO }) {
+  const url = apiBase() ? `${apiBase()}/link_pedido/gerar` : "/link_pedido/gerar";
+  const token = localStorage.getItem("ordersync_token"); // Get token explicitly
+
+  const headers = { "Content-Type": "application/json" };
+  if (token) {
+    headers["Authorization"] = `Bearer ${token}`;
+  }
+
   const resp = await fetch(url, {
     method: "POST",
-    headers: { "Content-Type": "application/json" },
+    headers: headers,
     body: JSON.stringify({
       tabela_id: tabelaId,
       com_frete: comFrete,
       data_prevista: (isISODate(dataPrevistaISO) ? dataPrevistaISO : null),
-     codigo_cliente: getCodigoClienteHidden() }),
-      
+      codigo_cliente: getCodigoClienteHidden()
+    }),
   });
   if (!resp.ok) {
     const msg = await resp.text();
@@ -199,18 +206,18 @@ function isISODate(s) {
 }
 function formatarBR(iso) {
   if (!isISODate(iso)) return null;
-  const [y,m,d] = iso.split("-").map(Number);
-  const dt = new Date(y, m-1, d);
+  const [y, m, d] = iso.split("-").map(Number);
+  const dt = new Date(y, m - 1, d);
   if (Number.isNaN(dt.getTime())) return null;
   return dt.toLocaleDateString("pt-BR", { timeZone: "America/Sao_Paulo" });
 }
 function normalizarEntregaISO(iso) {
   if (!isISODate(iso)) return null;
-  const [y,m,d] = iso.split("-").map(Number);
-  const dt = new Date(y, m-1, d);
+  const [y, m, d] = iso.split("-").map(Number);
+  const dt = new Date(y, m - 1, d);
   if (Number.isNaN(dt.getTime())) return null;
-  const hoje = new Date(); hoje.setHours(0,0,0,0);
-  dt.setHours(0,0,0,0);
+  const hoje = new Date(); hoje.setHours(0, 0, 0, 0);
+  dt.setHours(0, 0, 0, 0);
   return (dt < hoje) ? null : iso;
 }
 function aplicarEntregaNaUrl(urlCurta, entregaISO) {
@@ -241,9 +248,9 @@ export function showGerarLinkModal({ tabelaId, freteKg }) {
   ensureModalInjected();
   showModal();
 
-  const modal   = document.getElementById("modalGerarLinkPedido");
-  const input   = modal.querySelector("#glpLinkInput");
-  const hint    = modal.querySelector("#glpHint");
+  const modal = document.getElementById("modalGerarLinkPedido");
+  const input = modal.querySelector("#glpLinkInput");
+  const hint = modal.querySelector("#glpHint");
   const buttons = Array.from(modal.querySelectorAll(".glp-option"));
   const dateInp = modal.querySelector("#glpDate");
 
@@ -267,7 +274,7 @@ export function showGerarLinkModal({ tabelaId, freteKg }) {
   }
 
   const freteAtual = obterFreteKg();
-  const temFrete   = freteAtual != null && freteAtual > 0;
+  const temFrete = freteAtual != null && freteAtual > 0;
 
   // se tem frete -> COM frete; se não tem -> SEM frete
   let currentComFrete = !!temFrete;

@@ -1,4 +1,4 @@
-const API_BASE = "https://ordersync-backend-59d2.onrender.com";
+const API_BASE = "https://ordersync-backend-edjq.onrender.com";
 
 let currentPage = 1;
 let pageSize = 25;
@@ -10,32 +10,32 @@ let preSelecionadosCodigos = new Set(); // para pré-marcar checkboxes (enviado 
 ======================== */
 
 document.addEventListener("DOMContentLoaded", () => {
-  const selGrupo      = document.getElementById("grupo");
+  const selGrupo = document.getElementById("grupo");
   const selFornecedor = document.getElementById("filtro-fornecedor");
-  const btnFiltrar    = document.getElementById("btn-filtrar");
-  const btnLimpar     = document.getElementById("btn-limpar");
-  const ps            = document.getElementById("page_size");
-  const inpPalavra    = document.getElementById("filtro-palavra");
+  const btnFiltrar = document.getElementById("btn-filtrar");
+  const btnLimpar = document.getElementById("btn-limpar");
+  const ps = document.getElementById("page_size");
+  const inpPalavra = document.getElementById("filtro-palavra");
 
-// === Contexto com o Pai ===
-function getCtxId() {
-  return sessionStorage.getItem('TP_CTX_ID') || 'new';
-}
-function loadPreselectionFromParent() {
-  const ctx = getCtxId();
-  try {
-    const arr = JSON.parse(sessionStorage.getItem(`TP_ATUAL:${ctx}`) || '[]');
-    preSelecionadosCodigos = new Set((arr || []).map(p => p.codigo_tabela || p.codigo));
-  } catch { preSelecionadosCodigos = new Set(); }
-}
-function sendBufferBackToParent(selecionados) {
-  const ctx = getCtxId();
-  sessionStorage.setItem(`TP_BUFFER:${ctx}`, JSON.stringify(selecionados || []));
-}
+  // === Contexto com o Pai ===
+  function getCtxId() {
+    return sessionStorage.getItem('TP_CTX_ID') || 'new';
+  }
+  function loadPreselectionFromParent() {
+    const ctx = getCtxId();
+    try {
+      const arr = JSON.parse(sessionStorage.getItem(`TP_ATUAL:${ctx}`) || '[]');
+      preSelecionadosCodigos = new Set((arr || []).map(p => p.codigo_tabela || p.codigo));
+    } catch { preSelecionadosCodigos = new Set(); }
+  }
+  function sendBufferBackToParent(selecionados) {
+    const ctx = getCtxId();
+    sessionStorage.setItem(`TP_BUFFER:${ctx}`, JSON.stringify(selecionados || []));
+  }
 
 
   // Filtros
-  selGrupo?.addEventListener("change",      () => { currentPage = 1; carregarProdutos(); });
+  selGrupo?.addEventListener("change", () => { currentPage = 1; carregarProdutos(); });
   selFornecedor?.addEventListener("change", () => { currentPage = 1; carregarProdutos(); });
 
   // Botões da toolbar
@@ -76,7 +76,7 @@ function sendBufferBackToParent(selecionados) {
   document.getElementById("btn-adicionar-selecionados")
     ?.addEventListener("click", enviarSelecionados);
   document.getElementById("btn-cancelar")
-  ?.addEventListener("click", () => window.location.href = 'criacao_tabela_preco.html');
+    ?.addEventListener("click", () => window.location.href = 'criacao_tabela_preco.html');
 });
 
 // === Compat shim: envia seleção de volta ao PAI, sem quebrar legado ===
@@ -86,7 +86,7 @@ function sendBufferBackToParent(selecionados) {
 
     // --- LEGADO: MERGE na chave 'criacao_tabela_preco_produtos'
     let prev = [];
-    try { prev = JSON.parse(sessionStorage.getItem('criacao_tabela_preco_produtos') || '[]'); } catch {}
+    try { prev = JSON.parse(sessionStorage.getItem('criacao_tabela_preco_produtos') || '[]'); } catch { }
     const map = new Map((prev || []).map(x => [(x.codigo_tabela ?? x.codigo), x]));
     for (const p of arr) {
       const k = p.codigo_tabela ?? p.codigo;
@@ -98,7 +98,7 @@ function sendBufferBackToParent(selecionados) {
     const ctx = sessionStorage.getItem('TP_CTX_ID');
     if (ctx) {
       let prevCtx = [];
-      try { prevCtx = JSON.parse(sessionStorage.getItem(`TP_BUFFER:${ctx}`) || '[]'); } catch {}
+      try { prevCtx = JSON.parse(sessionStorage.getItem(`TP_BUFFER:${ctx}`) || '[]'); } catch { }
       const mapCtx = new Map((prevCtx || []).map(x => [(x.codigo_tabela ?? x.codigo), x]));
       for (const p of arr) {
         const k = p.codigo_tabela ?? p.codigo;
@@ -112,7 +112,7 @@ function sendBufferBackToParent(selecionados) {
 }
 
 // fora do DOMContentLoaded
-const fornecedoresMap = new Map(); 
+const fornecedoresMap = new Map();
 // chave = nome normalizado; valor = nome original para exibir
 function norm(s) { return String(s || "").trim().toUpperCase(); }
 
@@ -161,7 +161,8 @@ async function carregarGrupos() {
     selectGrupo.innerHTML = "<option value=''>Todos os grupos</option>";
 
     grupos.forEach(item => {
-      const grupo = item.grupo || item;
+      const grupo = item.grupo || "";
+      if (!grupo) return;
       const opt = document.createElement("option");
       opt.value = grupo;
       opt.textContent = grupo;
@@ -190,7 +191,7 @@ function renderFornecedoresDropdown() {
   sel.innerHTML = "<option value=''>Todos</option>";
 
   // ordena alfabeticamente pelo valor exibido
-  const valores = Array.from(fornecedoresMap.values()).sort((a,b) =>
+  const valores = Array.from(fornecedoresMap.values()).sort((a, b) =>
     a.localeCompare(b, 'pt-BR', { sensitivity: 'base' })
   );
 
@@ -208,15 +209,15 @@ function renderFornecedoresDropdown() {
 function carregarProdutos(page = currentPage) {
   currentPage = page;
 
-  const grupo      = document.getElementById("grupo")?.value || "";
+  const grupo = document.getElementById("grupo")?.value || "";
   const fornecedor = document.getElementById("filtro-fornecedor")?.value || "";
-  const termo      = document.getElementById("filtro-palavra")?.value?.trim() || "";
-  const termoN     = normText(termo);
+  const termo = document.getElementById("filtro-palavra")?.value?.trim() || "";
+  const termoN = normText(termo);
 
   const url = new URL(`${API_BASE}/tabela_preco/produtos_filtro`);
-  if (grupo)      url.searchParams.append("grupo", grupo);
+  if (grupo) url.searchParams.append("grupo", grupo);
   if (fornecedor) url.searchParams.append("fornecedor", fornecedor);
-  if (termo)      url.searchParams.append("q", termo);
+  if (termo) url.searchParams.append("q", termo);
   url.searchParams.append("page", currentPage);
   url.searchParams.append("page_size", pageSize);
 
@@ -243,10 +244,10 @@ function carregarProdutos(page = currentPage) {
         renderFornecedoresDropdown();
 
         if (fornecedor) base = base.filter(p => p.fornecedor === fornecedor);
-        if (termoN)     base = base.filter(p => matchesTerm(p, termoN));
+        if (termoN) base = base.filter(p => matchesTerm(p, termoN));
 
         const start = (currentPage - 1) * pageSize;
-        const end   = start + pageSize;
+        const end = start + pageSize;
         items = base.slice(start, end);
         total = base.length;
       }
@@ -342,7 +343,7 @@ function enviarSelecionados() {
       valor: p.valor || 0,
       grupo: p.grupo || null,
       departamento: p.departamento || null,
-      tipo: p.tipo, 
+      tipo: p.tipo,
       fornecedor: p.fornecedor || "",
       fator_comissao: 0,
       ipi: Number(p.ipi ?? 0),

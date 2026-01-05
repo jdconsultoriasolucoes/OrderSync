@@ -12,8 +12,14 @@ from services.fiscal import decide_st, calcular_linha, D, money, _norm
 router = APIRouter(tags=["Fiscal"])
 
 # --------- I/O ---------
+from typing import Optional, List, Union
+
+# ... (imports remain)
+
+# --------- I/O ---------
 class LinhaPreviewIn(BaseModel):
-    cliente_codigo: Optional[int] = None
+    # ACEITA INT OU STR agora, para evitar crash com "Não cadastrado"
+    cliente_codigo: Optional[Union[int, str]] = None
     forcar_iva_st: bool = False
     produto_id: str
     preco_unit: Decimal
@@ -61,35 +67,35 @@ def get_db():
 
 # --------- Data access (mesmas fontes dos seus endpoints) ---------
 # ---- em routers/fiscal.py ----
-def carregar_cliente(db: Session, codigo: Optional[int]) -> dict:
+def carregar_cliente(db: Session, codigo: Optional[Union[int, str]]) -> dict:
     if not codigo:
         return {}
+    # table v2 usa cadastro_codigo_da_empresa (string)
+    # se vier int, converte
+    cod_str = str(codigo).strip()
+    
     row = db.execute(text("""
         SELECT
-          codigo,
-          ramo_juridico
-        FROM public.t_cadastro_cliente
-        WHERE codigo = :cod
+          cadastro_codigo_da_empresa,
+          cadastro_tipo_cliente
+        FROM public.t_cadastro_cliente_v2
+        WHERE cadastro_codigo_da_empresa = :cod
         LIMIT 1
-    """), {"cod": codigo}).mappings().first()
+    """), {"cod": cod_str}).mappings().first()
     return dict(row) if row else {}
-
-
 
 def carregar_produto(db: Session, produto_id: str) -> dict:
     try:
         row = db.execute(text("""
             SELECT
               b.codigo_supra,
-              a.tipo,
-              COALESCE(b.peso,   0)    AS peso_kg,   -- alias certo
-              COALESCE(b.iva_st, 0)    AS iva_st,
-              COALESCE(b.ipi,    0)    AS ipi,
-              COALESCE(b.icms,   0.18) AS icms
-            FROM public.t_familia_produtos a
-            JOIN public.t_cadastro_produto b
-              ON b.familia = a.id
-            WHERE status_produto = 'ATIVO' and b.codigo_supra::text = :pid
+              b.tipo,
+              b.peso    AS peso_kg,
+              b.iva_st,
+              b.ipi,
+              b.icms
+            FROM public.v_produto_v2_preco b
+            WHERE b.status_produto = 'ATIVO' and b.codigo_supra::text = :pid
             LIMIT 1
         """), {"pid": produto_id}).mappings().first()
     except Exception as e:
@@ -102,20 +108,36 @@ def carregar_produto(db: Session, produto_id: str) -> dict:
 
 @router.post("/fiscal/preview-linha", response_model=LinhaPreviewOut)
 def preview_linha(payload: LinhaPreviewIn, db: Session = Depends(get_db)):
-   
     try:
-        print("DBG payload:", payload.dict())
+        print(f"--- PREVIEW LINHA DEBUG ---")
+        print(f"Payload input: cliente_codigo={payload.cliente_codigo!r} (type {type(payload.cliente_codigo)}), forcar={payload.forcar_iva_st}, produto={payload.produto_id}")
 
-        cliente = carregar_cliente(db, payload.cliente_codigo)
+        # 1. Tenta carregar dados do cliente SE for um ID numérico válido
+        cliente = {}
+        if payload.cliente_codigo:
+            try:
+                # remove espaços se for string e converte
+                val_str = str(payload.cliente_codigo).strip()
+                # na V2 o codigo é string, então passamos val_str direto
+                cliente = carregar_cliente(db, val_str)
+            except Exception as ex:
+                print(f"Erro ao carregar cliente: {ex}")
+                pass
+        
         produto = carregar_produto(db, payload.produto_id)
-       
         
-        
-        print("DBG cliente:", cliente)
-        print("DBG produto:", produto)
+        print(f"Cliente DB: {cliente}")
+        print(f"Produto DB: {produto.get('codigo_supra')} - {produto.get('tipo')} - IVA: {produto.get('iva_st')}")
 
-        ramo_db = cliente.get("ramo_juridico") if cliente else None
-        ramo = ramo_db or getattr(payload, "ramo_juridico", None)
+        # ATERADO: usamos cadastro_tipo_cliente em vez de ramo_juridico
+        tipo_cliente_db = cliente.get("cadastro_tipo_cliente") if cliente else None
+        
+        # Fallback: se o payload mandar ramo_juridico, usamos como 'tipo_cliente' pra manter compatibilidade parcial?
+        # Ou esperamos que o payload mandasse algo novo? O usuário só pediu pra trocar o campo DB.
+        # Vamos assumir que ramo_juridico do payload (se vier) serve de override para o tipo_cliente.
+        tipo_cliente = tipo_cliente_db or getattr(payload, "ramo_juridico", None)
+        
+        print(f"Tipo Cliente Final: {tipo_cliente!r} (DB: {tipo_cliente_db!r}, Payload(ramo): {getattr(payload, 'ramo_juridico', None)!r})")
 
         tipo = produto.get("tipo") or getattr(payload, "tipo", None)
 
@@ -130,9 +152,10 @@ def preview_linha(payload: LinhaPreviewIn, db: Session = Depends(get_db)):
 
         aplica, motivos = decide_st(
             tipo=tipo,
-            ramo_juridico=ramo,
+            tipo_cliente=tipo_cliente,  # Changed argument name
             forcar_iva_st=payload.forcar_iva_st
         )
+        print(f"DECIDE ST: Aplica={aplica}, Motivos={motivos}")
 
         comp = calcular_linha(
             preco_unit=payload.preco_unit,
@@ -142,6 +165,9 @@ def preview_linha(payload: LinhaPreviewIn, db: Session = Depends(get_db)):
             ipi=ipi, icms=icms, iva_st=iva_st,
             aplica_st=aplica
         )
+        
+        print(f"TOTAL COM ST: {comp['total_com_st']}")
+        print(f"---------------------------")
 
         return LinhaPreviewOut(
             aplica_iva_st=aplica, motivos_iva_st=motivos,

@@ -11,7 +11,7 @@ SELECT
   CASE WHEN a.usar_valor_com_frete THEN 'ENTREGA' ELSE 'RETIRADA' END AS modalidade,
   a.total_pedido                            AS valor_total,
   a.status                                  AS status_codigo,
-  b.nome_tabela                             AS tabela_preco_nome,
+  COALESCE(b.nome_tabela, 'DEBUG-NULL')     AS tabela_preco_nome,
   a.fornecedor                              AS fornecedor,
   a.link_url,
   a.link_status,
@@ -48,7 +48,8 @@ SELECT
   a.contato_nome,
   a.contato_email,
   a.contato_fone,
-  b.nome_tabela                  AS tabela_preco_nome,
+  a.contato_fone,
+  a.tabela_preco_nome            AS tabela_preco_nome,
   a.fornecedor,
   a.validade_ate,
   a.validade_dias,
@@ -66,7 +67,6 @@ SELECT
   a.link_status,
   a.created_at
 FROM public.tb_pedidos a
-JOIN public.tb_tabela_preco b ON a.tabela_preco_id = b.id_tabela
 WHERE a.id_pedido = :id_pedido
 """)
 
@@ -100,12 +100,13 @@ ORDER BY COALESCE(ordem, 999), codigo
 STATUS_UPDATE_SQL = text("""
 UPDATE public.tb_pedidos
 SET status = :para_status,
-    atualizado_em = now()
+    atualizado_em = now(),
+    atualizado_por = :user_id
 WHERE id_pedido = :id_pedido
 RETURNING id_pedido
 """)
 
 STATUS_EVENT_INSERT_SQL = text("""
 INSERT INTO public.pedido_status_event (id, pedido_id, de_status, para_status, user_id, motivo, metadata, created_at)
-VALUES (gen_random_uuid(), :pedido_id, :de_status, :para_status, :user_id, :motivo, :metadata::jsonb, now())
+VALUES (gen_random_uuid(), :pedido_id, :de_status, :para_status, :user_id, :motivo, CAST(:metadata AS jsonb), now())
 """)

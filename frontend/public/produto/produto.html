@@ -17,6 +17,12 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600&display=swap" rel="stylesheet">
 </head>
+<script src="../js/auth.js"></script>
+<script>
+  if (window.Auth) {
+    window.Auth.checkAuth();
+  }
+</script>
 
 <body>
 
@@ -31,13 +37,17 @@
   <!-- Sidebar -->
   <nav class="sidebar" id="sidebar">
     <ul>
-      <li><a href="/index.html">Home</a></li>
+      <li><a href="/">Home</a></li>
       <li><a href="/clientes/cliente.html">Cadastrar Cliente</a></li>
       <li><a href="#">Atualizar Catálogo</a></li>
       <li><a href="/pedido/pedido.html">Consultar Pedidos</a></li>
       <li><a href="#">Exportar Relatórios</a></li>
       <li><a href="/tabela_preco/criacao_tabela_preco.html">Tabela Preço</a></li>
+      <li><a href="/produto/produto.html">Produtos</a></li>
+      <li><a href="/usuarios.html">Usuários</a></li>
       <li><a href="/config_email/config_email.html">Configuração E-mail</a></li>
+      <li><a href="#" onclick="window.Auth.openChangePasswordModal()">Trocar Senha</a></li>
+      <li><a href="#" onclick="window.Auth.logout()">Sair</a></li>
     </ul>
   </nav>
   <div id="overlay"></div>
@@ -48,11 +58,33 @@
       <div class="header">
         <div class="title">CADASTRO DO PRODUTO</div>
         <div class="toolbar">
-          <button id="btn-novo" class="ghost">Novo</button>
-          <button id="btn-buscar" class="ghost">Pesquisar</button>
-          <button id="btn-importar" class="ghost">Importar PDF</button>
-          <button id="btn-editar" class="ghost">Editar</button>
-          <button id="btn-salvar" class="primary">Salvar</button>
+          <button id="btn-novo-produto" class="btn-primary">+ Novo</button>
+          <button id="btn-buscar" class="ghost">Buscar</button>
+
+          <!-- Importar PDF (Icon) -->
+          <button id="btn-importar" class="btn-secondary" title="Importar Lista (PDF)" style="padding: 10px 12px;">
+            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-file-pdf"
+              viewBox="0 0 16 16">
+              <path
+                d="M4 0a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h8a2 2 0 0 0 2-2V2a2 2 0 0 0-2-2H4zm0 1h8a1 1 0 0 1 1 1v12a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V2a1 1 0 0 1 1-1z" />
+              <path
+                d="M4.603 12.087a.81.81 0 0 1-.438-.42c-.195-.388-.13-.776.08-1.102.198-.307.526-.568.897-.787a7.68 7.68 0 0 1 1.482-.645 19.697 19.697 0 0 0 1.062-2.227 7.269 7.269 0 0 1-.43-1.295c-.086-.4-.119-.796-.046-1.136.075-.354.274-.672.65-.823.192-.077.4-.12.602-.077a.7.7 0 0 1 .477.365c.088.164.12.356.127.538.007.188-.012.396-.047.614-.084.51-.27 1.134-.52 1.794a10.954 10.954 0 0 0 .98 1.686 5.753 5.753 0 0 1 1.334.05c.364.066.734.195.96.465.12.144.193.32.2.518.007.192-.047.382-.138.563a1.04 1.04 0 0 1-.354.416.856.856 0 0 1-.51.138c-.331-.014-.654-.196-.933-.417a5.712 5.712 0 0 1-.911-.95 11.651 11.651 0 0 0-1.997.406 11.307 11.307 0 0 1-1.02 1.51c-.292.35-.609.656-.927.787a.793.793 0 0 1-.58.029zm1.379-1.901c-.166.076-.32.156-.459.238-.328.194-.541.383-.647.545-.094.148-.096.289-.019.386.105.133.251.142.439.066.212-.088.452-.296.646-.516.192-.216.369-.48.514-.716a4 4 0 0 1-.47-.003z" />
+            </svg>
+          </button>
+
+          <button id="btn-renovar-validade" class="btn-secondary"
+            style="background-color: #f39c12; color: #fff;">Renovar Validade</button>
+
+          <!-- Botões de Ação do Formulário -->
+          <button id="btn-editar" class="btn-secondary" style="display: none;">Editar</button>
+          <button id="btn-excluir" class="btn-secondary"
+            style="background-color: #c0392b; color: #fff; display: none;">Excluir</button>
+          <button id="btn-voltar-view" class="btn-secondary"
+            style="background-color: #7f8c8d; color: #fff; display: none;">Voltar</button>
+
+          <button id="btn-salvar" class="primary" style="display: none;">Salvar</button>
+          <button id="btn-cancelar-edicao" class="btn-secondary"
+            style="background-color: #e74c3c; color: #fff; display: none;">Cancelar</button>
         </div>
       </div>
 
@@ -81,9 +113,13 @@
           <label for="linha">Linha</label>
           <select id="linha"></select>
         </div>
-        <div class="col-5">
+        <div class="col-3">
           <label for="familia">Família</label>
           <select id="familia"></select>
+        </div>
+        <div class="col-2">
+          <label for="marca">Marca</label>
+          <input id="marca" type="text" placeholder="" />
         </div>
         <div class="col-1">
           <label for="filhos">Filho</label>
@@ -311,6 +347,27 @@
         <button id="import-success-download" class="primary" style="background-color: #059669;">
           📄 Baixar Relatório PDF
         </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal Renovar Validade -->
+  <div id="modal-renovar-validade" class="custom-modal hidden">
+    <div class="custom-modal-dialog" style="max-width: 500px;">
+      <div class="custom-modal-header">
+        <div class="custom-modal-title">Renovar Validade (Todos Ativos)</div>
+      </div>
+      <div class="custom-modal-body">
+        <p style="margin-bottom: 12px;">Selecione a nova data de validade para <strong>todos</strong> os produtos
+          ativos.</p>
+        <div class="form-group">
+          <label for="input-nova-validade">Nova Validade:</label>
+          <input type="date" id="input-nova-validade">
+        </div>
+      </div>
+      <div class="custom-modal-footer">
+        <button id="btn-fechar-renovacao" class="ghost">Cancelar</button>
+        <button id="btn-confirmar-renovacao" class="primary">Confirmar</button>
       </div>
     </div>
   </div>

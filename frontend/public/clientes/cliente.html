@@ -1,6 +1,7 @@
 <input type="hidden" id="id" name="id" />
 <!DOCTYPE html>
 <html lang="pt-br">
+
 <head>
   <meta charset="UTF-8">
   <title>Cadastro de Cliente</title>
@@ -10,8 +11,17 @@
   <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
   <script src="https://unpkg.com/imask"></script>
   <script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js"></script>
+  <script src="https://unpkg.com/imask"></script>
+  <script src="/js/config.js"></script>
+  <script src="/js/auth.js"></script>
 
 </head>
+</head>
+<script>
+  if (window.Auth) {
+    window.Auth.checkAuth();
+  }
+</script>
 
 <body>
 
@@ -24,850 +34,1192 @@
 
   <nav class="sidebar" id="sidebar">
     <ul>
-      <li><a href="/index.html">Home</a></li>
-        <li><a href="/clientes/cliente.html">Cadastrar Cliente</a></li>
-        <li><a href="#">Atualizar Catálogo</a></li>
-        <li><a href="/pedido/pedido.html">Consultar Pedidos</a></li>
-        <li><a href="#">Exportar Relatórios</a></li>
-        <li><a href="/tabela_preco/criacao_tabela_preco.html">Tabela Preço</a></li>
-        <li><a href="/config_email/config_email.html">Configuração E-mail</a></li>
+      <li><a href="/">Home</a></li>
+      <li><a href="/clientes/cliente.html">Cadastrar Cliente</a></li>
+      <li><a href="#">Atualizar Catálogo</a></li>
+      <li><a href="/pedido/pedido.html">Consultar Pedidos</a></li>
+      <li><a href="#">Exportar Relatórios</a></li>
+      <li><a href="/tabela_preco/criacao_tabela_preco.html">Tabela Preço</a></li>
+      <li><a href="/produto/produto.html">Produtos</a></li>
+      <li><a href="/usuarios.html">Usuários</a></li>
+      <li><a href="/config_email/config_email.html">Configuração E-mail</a></li>
+      <li><a href="#" onclick="window.Auth.openChangePasswordModal()">Trocar Senha</a></li>
+      <li><a href="#" onclick="window.Auth.logout()">Sair</a></li>
     </ul>
   </nav>
   <div id="overlay"></div>
 
-  <div class="page-container">  
-      
-          <div class="tabs">
-              <button class="tab active" onclick="openTab(event, 'cadastro')">Cadastro de Clientes</button>
-              <button class="tab" onclick="openTab(event, 'faturamento')">Endereço de Faturamento</button>
-              <button class="tab" onclick="openTab(event, 'entrega')">Endereço de Entrega</button>
-              <button class="tab" onclick="openTab(event, 'cobranca')">Endereço de Cobrança</button>
-              <button class="tab" onclick="openTab(event, 'compras')">Compras</button>
-              <button class="tab" onclick="openTab(event, 'elaboracao')">Elaboração do Cadastro</button>
+  <div class="page-container">
+
+    <div class="d-flex justify-content-between align-items-center mb-3">
+      <h2 style="margin:0;">Cadastro de Clientes</h2>
+      <div class="d-flex gap-2" id="action-buttons">
+        <button class="btn btn-listar" id="btn-listar" onclick="listarClientes()" type="button">Listar Clientes</button>
+        <button class="btn btn-novo" id="btn-novo" onclick="novoCliente()" type="button">Novo Cliente</button>
+        <button class="btn btn-editar" id="btn-editar" onclick="editarCliente()" type="button"
+          style="display: none;">Editar</button>
+        <button class="btn btn-excluir" id="btn-excluir" onclick="excluirCliente()" type="button"
+          style="display: none;">Excluir</button>
+        <button class="btn btn-voltar" id="btn-voltar" onclick="voltarEstadoInicial()" type="button"
+          style="display: none;">Voltar</button>
+        <button class="btn btn-salvar" id="btn-salvar" onclick="salvarCliente()" type="button"
+          style="display: none;">Salvar</button>
+        <button class="btn btn-cancelar" id="btn-cancelar" onclick="cancelarEdicao()" type="button"
+          style="display: none;">Cancelar</button>
+      </div>
+    </div>
+
+    <div class="tabs">
+      <button class="tab active" onclick="openTab(event, 'cadastro')">Cadastro de Clientes</button>
+      <button class="tab" onclick="openTab(event, 'faturamento')">Endereço de Faturamento</button>
+      <button class="tab" onclick="openTab(event, 'entrega')">Endereço de Entrega</button>
+      <button class="tab" onclick="openTab(event, 'cobranca')">Endereço de Cobrança</button>
+      <button class="tab" onclick="openTab(event, 'compras')">Compras</button>
+      <button class="tab" onclick="openTab(event, 'elaboracao')">Elaboração do Cadastro</button>
+    </div>
+  </div>
+
+  <div class="form-container">
+    <form id="formCliente">
+      <div class="tab-content active" id="cadastro">
+        <!-- Cadastro de Clientes -->
+        <h2 class="subtitulo">Cliente</h2>
+        <div class="form-grid-2col">
+          <div>
+            <label for="codigo_da_empresa">Código da Empresa:</label>
+            <input type="text" id="codigo_da_empresa" name="codigo_da_empresa" />
           </div>
-  </div>
+          <div class="checkbox-container">
+            <label for="ativo">Ativo:</label>
+            <input type="checkbox" id="ativo" name="ativo" />
+          </div>
 
-  <div class="form-container">     
-    <div class="tab-content active" id="cadastro">
-      <!-- Cadastro de Clientes -->
-      <h2 class="subtitulo">Cliente</h2>
-      <div class="form-grid-2col">
-        <div>
-          <label for="codigo_da_empresa">Código da Empresa:</label>
-          <input type="text" id="codigo_da_empresa" name="codigo_da_empresa" />
-        </div>
-        <div class="checkbox-container">
-          <label for="ativo">Ativo:</label>
-          <input type="checkbox" id="ativo" name="ativo" />
+          <div>
+            <label for="tipo_cliente">Tipo de Cliente:</label>
+            <select id="tipo_cliente" name="tipo_cliente">
+              <option value="">Selecione</option>
+            </select>
+          </div>
+          <div>
+            <label for="tipo_venda">Tipo de Venda:</label>
+            <select id="tipo_venda" name="tipo_venda">
+              <option value="">Selecione</option>
+            </select>
+          </div>
+
+          <div>
+            <label for="tipo_compra">Tipo de Compra:</label>
+            <select id="tipo_compra" name="tipo_compra">
+              <option value="">Selecione</option>
+            </select>
+          </div>
+          <div>
+            <label for="limite_credito">Limite de Crédito:</label>
+            <input type="number" step="0.01" id="limite_credito" name="limite_credito" />
+          </div>
+
+          <div>
+            <label for="nome_cliente">Nome do Cliente:</label>
+            <input type="text" id="nome_cliente" name="nome_cliente" />
+          </div>
+          <div>
+            <label for="nome_fantasia">Nome Fantasia:</label>
+            <input type="text" id="nome_fantasia" name="nome_fantasia" />
+          </div>
+
+          <div>
+            <label for="cnpj">CNPJ:</label>
+            <input type="text" id="cnpj" name="cnpj" onblur="buscarCnpj()" />
+          </div>
+          <div>
+            <label for="inscricao_estadual">Inscrição Estadual:</label>
+            <input type="text" id="inscricao_estadual" name="inscricao_estadual" />
+          </div>
+
+          <div>
+            <label for="cpf">CPF:</label>
+            <input type="text" id="cpf" name="cpf" />
+          </div>
+          <div>
+            <label for="situacao">Situação:</label>
+            <select id="situacao" name="situacao">
+              <option value="">Selecione</option>
+            </select>
+          </div>
+
+          <div>
+            <label for="indicacao_cliente">Indicação do Cliente:</label>
+            <input type="text" id="indicacao_cliente" name="indicacao_cliente" />
+          </div>
+          <div>
+            <label for="ramo_de_atividade">Ramo de Atividade:</label>
+            <select id="ramo_de_atividade" name="ramo_de_atividade">
+              <option value="">Selecione</option>
+            </select>
+          </div>
+
+          <div>
+            <label for="atividade_principal">Atividade Principal:</label>
+            <select id="atividade_principal" name="atividade_principal">
+              <option value="">Selecione</option>
+            </select>
+          </div>
+          <div>
+            <label for="cadastro_markup">Markup (%):</label>
+            <input type="number" step="0.01" id="cadastro_markup" name="cadastro_markup" placeholder="0.00" />
+          </div>
         </div>
 
-        <div>
-          <label for="tipo_cliente">Tipo de Cliente:</label>
-          <select id="tipo_cliente" name="tipo_cliente">
-            <option value="">Selecione</option>
-          </select>
-        </div>
-        <div>
-          <label for="tipo_venda">Tipo de Venda:</label>
-          <select id="tipo_venda" name="tipo_venda">
-            <option value="">Selecione</option>
-          </select>
-        </div>
-
-        <div>
-          <label for="tipo_compra">Tipo de Compra:</label>
-          <select id="tipo_compra" name="tipo_compra">
-            <option value="">Selecione</option>
-          </select>
-        </div>
-        <div>
-          <label for="limite_credito">Limite de Crédito:</label>
-          <input type="number" step="0.01" id="limite_credito" name="limite_credito" />
-        </div>
-
-        <div>
-          <label for="nome_cliente">Nome do Cliente:</label>
-          <input type="text" id="nome_cliente" name="nome_cliente" />
-        </div>
-        <div>
-          <label for="nome_fantasia">Nome Fantasia:</label>
-          <input type="text" id="nome_fantasia" name="nome_fantasia" />
-        </div>
-
-        <div>
-          <label for="cnpj">CNPJ:</label>
-          <input type="text" id="cnpj" name="cnpj" />
-        </div>
-        <div>
-          <label for="inscricao_estadual">Inscrição Estadual:</label>
-          <input type="text" id="inscricao_estadual" name="inscricao_estadual" />
-        </div>
-
-        <div>
-          <label for="cpf">CPF:</label>
-          <input type="text" id="cpf" name="cpf" />
-        </div>
-        <div>
-          <label for="situacao">Situação:</label>
-          <select id="situacao" name="situacao">
-            <option value="">Selecione</option>
-          </select>
-        </div>
-
-        <div>
-          <label for="indicacao_cliente">Indicação do Cliente:</label>
-          <input type="text" id="indicacao_cliente" name="indicacao_cliente" />
-        </div>
-        <div>
-          <label for="ramo_de_atividade">Ramo de Atividade:</label>
-          <select id="ramo_de_atividade" name="ramo_de_atividade">
-            <option value="">Selecione</option>
-          </select>
-        </div>
-
-        <div>
-          <label for="atividade_principal">Atividade Principal:</label>
-          <select id="atividade_principal" name="atividade_principal">
-            <option value="">Selecione</option>
-          </select>
-        </div>
-      </div>
-
-      <!-- Responsável por Compras -->
-      <h2 class="subtitulo">Responsável por Compras</h2>
-      <div class="form-grid-2col">
-        <div>
-          <label for="nome_responsavel">Nome:</label>
-          <input type="text" id="nome_responsavel" name="nome_responsavel" />
-        </div>
-        <div>
-          <label for="celular_responsavel">Celular:</label>
-          <input type="text" id="celular_responsavel" name="celular_responsavel" />
-        </div>
-        <div>
-          <label for="email_resposavel">E-mail:</label>
-          <input type="text" id="email_resposavel" name="email_resposavel" />
-        </div>
-        <div>
-          <label for="data_nascimento_resposavel">Data de Nascimento:</label>
-          <input type="date" id="data_nascimento_resposavel" name="data_nascimento_resposavel" />
-        </div>
-        <div>
-          <label for="observacoes_responsavel">Observações:</label>
-          <input type="text" id="observacoes_responsavel" name="observacoes_responsavel" />
-        </div>
-        <div>
-          <label for="filial_resposavel">Filial:</label>
-          <input type="text" id="filial_resposavel" name="filial_resposavel" />
-        </div>
-      </div>
-    </div>
-
-  <!-- Endereço de Faturamento -->
-    <div class="tab-content" id="faturamento" style="display: none;">
-      <h2 class="subtitulo">Endereço de Faturamento</h2>
-      <div class="form-grid-2col">
-        <div>
-          <label for="endereco_faturamento">Endereço:</label>
-          <input type="text" id="endereco_faturamento" name="endereco_faturamento" />
-        </div>
-        <div>
-          <label for="bairro_faturamento">Bairro:</label>
-          <input type="text" id="bairro_faturamento" name="bairro_faturamento" />
-        </div>
-        <div>
-          <label for="cep_faturamento">CEP:</label>
-          <input type="text" id="cep_faturamento" name="cep_faturamento" />
-        </div>
-        <div>
-          <label for="localizacao_faturamento">Localização:</label>
-          <input type="text" id="localizacao_faturamento" name="localizacao_faturamento" />
-        </div>
-        <div>
-          <label for="municipio_faturamento">Município:</label>
-          <input type="text" id="municipio_faturamento" name="municipio_faturamento" />
-        </div>
-        <div>
-          <label for="estado_faturamento">Estado:</label>
-          <input type="text" id="estado_faturamento" name="estado_faturamento" />
-        </div>
-        <div>
-          <label for="email_danfe_faturamento">E-mail para DANFE:</label>
-          <input type="text" id="email_danfe_faturamento" name="email_danfe_faturamento" />
+        <!-- Responsável por Compras -->
+        <h2 class="subtitulo">Responsável por Compras</h2>
+        <div class="form-grid-2col">
+          <div>
+            <label for="nome_responsavel">Nome:</label>
+            <input type="text" id="nome_responsavel" name="nome_responsavel" />
+          </div>
+          <div>
+            <label for="celular_responsavel">Celular:</label>
+            <input type="text" id="celular_responsavel" name="celular_responsavel" />
+          </div>
+          <div>
+            <label for="email_resposavel">E-mail:</label>
+            <input type="text" id="email_resposavel" name="email_resposavel" />
+          </div>
+          <div>
+            <label for="data_nascimento_resposavel">Data de Nascimento:</label>
+            <input type="date" id="data_nascimento_resposavel" name="data_nascimento_resposavel" />
+          </div>
+          <div>
+            <label for="observacoes_responsavel">Observações:</label>
+            <input type="text" id="observacoes_responsavel" name="observacoes_responsavel" />
+          </div>
+          <div>
+            <label for="filial_resposavel">Filial:</label>
+            <input type="text" id="filial_resposavel" name="filial_resposavel" />
+          </div>
         </div>
       </div>
 
-      <h2 class="subtitulo">Representante Legal</h2>
-      <div class="form-grid-2col">
-        <div>
-          <label for="nome_RepresentanteLegal">Representante Legal:</label>
-          <input type="text" id="nome_RepresentanteLegal" name="nome_RepresentanteLegal" />
+      <!-- Endereço de Faturamento -->
+      <div class="tab-content" id="faturamento" style="display: none;">
+        <h2 class="subtitulo">Endereço de Faturamento</h2>
+        <div class="form-grid-2col">
+          <div>
+            <label for="cep_faturamento">CEP:</label>
+            <input type="text" id="cep_faturamento" name="cep_faturamento" onblur="buscarCep(event, 'faturamento')" />
+          </div>
+          <div>
+            <label for="endereco_faturamento">Endereço:</label>
+            <input type="text" id="endereco_faturamento" name="endereco_faturamento" />
+          </div>
+          <div>
+            <label for="bairro_faturamento">Bairro:</label>
+            <input type="text" id="bairro_faturamento" name="bairro_faturamento" />
+          </div>
+          <div>
+            <label for="localizacao_faturamento">Localização:</label>
+            <input type="text" id="localizacao_faturamento" name="localizacao_faturamento" />
+          </div>
+          <div>
+            <label for="municipio_faturamento">Município:</label>
+            <input type="text" id="municipio_faturamento" name="municipio_faturamento" />
+          </div>
+          <div>
+            <label for="estado_faturamento">Estado:</label>
+            <input type="text" id="estado_faturamento" name="estado_faturamento" />
+          </div>
+          <div>
+            <label for="email_danfe_faturamento">E-mail para DANFE:</label>
+            <input type="text" id="email_danfe_faturamento" name="email_danfe_faturamento" />
+          </div>
         </div>
-        <div>
-          <label for="celular_RepresentanteLegal">Celular:</label>
-          <input type="text" id="celular_RepresentanteLegal" name="celular_RepresentanteLegal" />
+
+        <h2 class="subtitulo">Representante Legal</h2>
+        <div class="form-grid-2col">
+          <div>
+            <label for="nome_RepresentanteLegal">Representante Legal:</label>
+            <input type="text" id="nome_RepresentanteLegal" name="nome_RepresentanteLegal" />
+          </div>
+          <div>
+            <label for="celular_RepresentanteLegal">Celular:</label>
+            <input type="text" id="celular_RepresentanteLegal" name="celular_RepresentanteLegal" />
+          </div>
+          <div>
+            <label for="email_RepresentanteLegal">E-mail:</label>
+            <input type="text" id="email_RepresentanteLegal" name="email_RepresentanteLegal" />
+          </div>
+          <div>
+            <label for="data_nascimento_RepresentanteLegal">Data de Nascimento:</label>
+            <input type="date" id="data_nascimento_RepresentanteLegal" name="data_nascimento_RepresentanteLegal" />
+          </div>
+          <div>
+            <label for="observacoes_RepresentanteLegal">Observações:</label>
+            <input type="text" id="observacoes_RepresentanteLegal" name="observacoes_RepresentanteLegal" />
+          </div>
         </div>
-        <div>
-          <label for="email_RepresentanteLegal">E-mail:</label>
-          <input type="text" id="email_RepresentanteLegal" name="email_RepresentanteLegal" />
+      </div>
+
+      <!-- Endereço de Entrega -->
+      <div class="tab-content" id="entrega" style="display: none;">
+        <h2 class="subtitulo">Endereço de Entrega</h2>
+        <div class="form-grid-2col">
+          <div>
+            <label for="cep_EnderecoEntrega">CEP:</label>
+            <input type="text" id="cep_EnderecoEntrega" name="cep_EnderecoEntrega"
+              onblur="buscarCep(event, 'entrega')" />
+          </div>
+          <div>
+            <label for="endereco_EnderecoEntrega">Endereço:</label>
+            <input type="text" id="endereco_EnderecoEntrega" name="endereco_EnderecoEntrega" />
+          </div>
+          <div>
+            <label for="bairro_EnderecoEntrega">Bairro:</label>
+            <input type="text" id="bairro_EnderecoEntrega" name="bairro_EnderecoEntrega" />
+          </div>
+          <div>
+            <label for="localizacao_EnderecoEntrega">Localização:</label>
+            <input type="text" id="localizacao_EnderecoEntrega" name="localizacao_EnderecoEntrega" />
+          </div>
+          <div>
+            <label for="municipio_EnderecoEntrega">Município:</label>
+            <input type="text" id="municipio_EnderecoEntrega" name="municipio_EnderecoEntrega" />
+          </div>
+          <div>
+            <label for="estado_EnderecoEntrega">Estado:</label>
+            <input type="text" id="estado_EnderecoEntrega" name="estado_EnderecoEntrega" />
+          </div>
+          <div>
+            <label for="rota_principal_EnderecoEntrega">Rota Principal:</label>
+            <select id="rota_principal_EnderecoEntrega" name="rota_principal_EnderecoEntrega">
+              <option value="">Selecione</option>
+            </select>
+          </div>
+          <div>
+            <label for="rota_de_aproximacao_EnderecoEntrega">Rota de Aproximação:</label>
+            <input type="text" id="rota_de_aproximacao_EnderecoEntrega" name="rota_de_aproximacao_EnderecoEntrega" />
+          </div>
+          <div>
+            <label for="observacao_motorista_EnderecoEntrega">Observação para o Motorista:</label>
+            <input type="text" id="observacao_motorista_EnderecoEntrega" name="observacao_motorista_EnderecoEntrega" />
+          </div>
         </div>
-        <div>
-          <label for="data_nascimento_RepresentanteLegal">Data de Nascimento:</label>
-          <input type="date" id="data_nascimento_RepresentanteLegal" name="data_nascimento_RepresentanteLegal" />
+
+        <h2 class="subtitulo">Responsável pelo Recebimento</h2>
+        <div class="form-grid-2col">
+          <div>
+            <label for="nome_ResponsavelRecebimento">Nome:</label>
+            <input type="text" id="nome_ResponsavelRecebimento" name="nome_ResponsavelRecebimento" />
+          </div>
+          <div>
+            <label for="celular_ResponsavelRecebimento">Celular:</label>
+            <input type="text" id="celular_ResponsavelRecebimento" name="celular_ResponsavelRecebimento" />
+          </div>
+          <div>
+            <label for="email_ResponsavelRecebimento">E-mail:</label>
+            <input type="text" id="email_ResponsavelRecebimento" name="email_ResponsavelRecebimento" />
+          </div>
+          <div>
+            <label for="data_nascimento_ResponsavelRecebimento">Data de Nascimento:</label>
+            <input type="date" id="data_nascimento_ResponsavelRecebimento"
+              name="data_nascimento_ResponsavelRecebimento" />
+          </div>
+          <div>
+            <label for="observacoes_ResponsavelRecebimento">Observações:</label>
+            <input type="text" id="observacoes_ResponsavelRecebimento" name="observacoes_ResponsavelRecebimento" />
+          </div>
         </div>
-        <div>
-          <label for="observacoes_RepresentanteLegal">Observações:</label>
-          <input type="text" id="observacoes_RepresentanteLegal" name="observacoes_RepresentanteLegal" />
+      </div>
+
+      <!-- Aba 4 - Endereço de Cobrança -->
+      <div class="tab-content" id="cobranca" style="display: none;">
+        <h2 class="subtitulo">Endereço de Cobrança</h2>
+        <div class="form-grid-2col">
+          <div>
+            <label for="cep_EnderecoCobranca">CEP:</label>
+            <input type="text" id="cep_EnderecoCobranca" name="cep_EnderecoCobranca"
+              onblur="buscarCep(event, 'cobranca')" />
+          </div>
+          <div>
+            <label for="endereco_EnderecoCobranca">Endereço:</label>
+            <input type="text" id="endereco_EnderecoCobranca" name="endereco_EnderecoCobranca" />
+          </div>
+          <div>
+            <label for="bairro_EnderecoCobranca">Bairro:</label>
+            <input type="text" id="bairro_EnderecoCobranca" name="bairro_EnderecoCobranca" />
+          </div>
+          <div>
+            <label for="localizacao_EnderecoCobranca">Localização:</label>
+            <input type="text" id="localizacao_EnderecoCobranca" name="localizacao_EnderecoCobranca" />
+          </div>
+          <div>
+            <label for="municipio_EnderecoCobranca">Município:</label>
+            <input type="text" id="municipio_EnderecoCobranca" name="municipio_EnderecoCobranca" />
+          </div>
+          <div>
+            <label for="estado_EnderecoCobranca">Estado:</label>
+            <input type="text" id="estado_EnderecoCobranca" name="estado_EnderecoCobranca" />
+          </div>
+        </div>
+
+        <h2 class="subtitulo">Responsável pela Cobrança</h2>
+        <div class="form-grid-2col">
+          <div>
+            <label for="nome_ResponsavelCobranca">Nome:</label>
+            <input type="text" id="nome_ResponsavelCobranca" name="nome_ResponsavelCobranca" />
+          </div>
+          <div>
+            <label for="celular_ResponsavelCobranca">Celular:</label>
+            <input type="text" id="celular_ResponsavelCobranca" name="celular_ResponsavelCobranca" />
+          </div>
+          <div>
+            <label for="email_ResponsavelCobranca">E-mail:</label>
+            <input type="text" id="email_ResponsavelCobranca" name="email_ResponsavelCobranca" />
+          </div>
+          <div>
+            <label for="data_nascimento_ResponsavelCobranca">Data de Nascimento:</label>
+            <input type="date" id="data_nascimento_ResponsavelCobranca" name="data_nascimento_ResponsavelCobranca" />
+          </div>
+          <div>
+            <label for="observacoes_ResponsavelCobranca">Observações:</label>
+            <input type="text" id="observacoes_ResponsavelCobranca" name="observacoes_ResponsavelCobranca" />
+          </div>
         </div>
       </div>
-    </div>
 
-  <!-- Endereço de Entrega -->
-  <div class="tab-content" id="entrega" style="display: none;">
-    <h2 class="subtitulo">Endereço de Entrega</h2>
-    <div class="form-grid-2col">
-      <div>
-        <label for="endereco_EnderecoEntrega">Endereço:</label>
-        <input type="text" id="endereco_EnderecoEntrega" name="endereco_EnderecoEntrega" />
-      </div>
-      <div>
-        <label for="bairro_EnderecoEntrega">Bairro:</label>
-        <input type="text" id="bairro_EnderecoEntrega" name="bairro_EnderecoEntrega" />
-      </div>
-      <div>
-        <label for="cep_EnderecoEntrega">CEP:</label>
-        <input type="text" id="cep_EnderecoEntrega" name="cep_EnderecoEntrega" />
-      </div>
-      <div>
-        <label for="localizacao_EnderecoEntrega">Localização:</label>
-        <input type="text" id="localizacao_EnderecoEntrega" name="localizacao_EnderecoEntrega" />
-      </div>
-      <div>
-        <label for="municipio_EnderecoEntrega">Município:</label>
-        <input type="text" id="municipio_EnderecoEntrega" name="municipio_EnderecoEntrega" />
-      </div>
-      <div>
-        <label for="estado_EnderecoEntrega">Estado:</label>
-        <input type="text" id="estado_EnderecoEntrega" name="estado_EnderecoEntrega" />
-      </div>
-      <div>
-        <label for="rota_principal_EnderecoEntrega">Rota Principal:</label>
-        <select id="rota_principal_EnderecoEntrega" name="rota_principal_EnderecoEntrega">
-          <option value="">Selecione</option>
-        </select>
-      </div>
-      <div>
-        <label for="rota_de_aproximacao_EnderecoEntrega">Rota de Aproximação:</label>
-        <input type="text" id="rota_de_aproximacao_EnderecoEntrega" name="rota_de_aproximacao_EnderecoEntrega" />
-      </div>
-      <div>
-        <label for="observacao_motorista_EnderecoEntrega">Observação para o Motorista:</label>
-        <input type="text" id="observacao_motorista_EnderecoEntrega" name="observacao_motorista_EnderecoEntrega" />
-      </div>
-    </div>
+      <!-- Aba 6 - Elaboração do Cadastro -->
+      <div class="tab-content" id="elaboracao" style="display: none;">
+        <h2 class="subtitulo">Dados da Elaboração do Cadastro</h2>
+        <div class="form-grid-2col">
+          <div><label for="classificacao_ElaboracaoCadastro">Classificação:</label><input type="text"
+              id="classificacao_ElaboracaoCadastro" name="classificacao_ElaboracaoCadastro" /></div>
+          <div><label for="tipo_venda_prazo_ou_vista_ElaboracaoCadastro">Tipo de Venda (a prazo / à
+              vista):</label><input type="text" id="tipo_venda_prazo_ou_vista_ElaboracaoCadastro"
+              name="tipo_venda_prazo_ou_vista_ElaboracaoCadastro" /></div>
+          <div><label for="limite_credito_ElaboracaoCadastro">Limite de Crédito (Complementar):</label><input
+              type="number" step="0.01" id="limite_credito_ElaboracaoCadastro"
+              name="limite_credito_ElaboracaoCadastro" />
+          </div>
+          <div><label for="data_vencimento_ElaboracaoCadastro">Data de Vencimento:</label><input type="date"
+              id="data_vencimento_ElaboracaoCadastro" name="data_vencimento_ElaboracaoCadastro" /></div>
+        </div>
 
-    <h2 class="subtitulo">Responsável pelo Recebimento</h2>
-    <div class="form-grid-2col">
-      <div>
-        <label for="nome_ResponsavelRecebimento">Nome:</label>
-        <input type="text" id="nome_ResponsavelRecebimento" name="nome_ResponsavelRecebimento" />
-      </div>
-      <div>
-        <label for="celular_ResponsavelRecebimento">Celular:</label>
-        <input type="text" id="celular_ResponsavelRecebimento" name="celular_ResponsavelRecebimento" />
-      </div>
-      <div>
-        <label for="email_ResponsavelRecebimento">E-mail:</label>
-        <input type="text" id="email_ResponsavelRecebimento" name="email_ResponsavelRecebimento" />
-      </div>
-      <div>
-        <label for="data_nascimento_ResponsavelRecebimento">Data de Nascimento:</label>
-        <input type="date" id="data_nascimento_ResponsavelRecebimento" name="data_nascimento_ResponsavelRecebimento" />
-      </div>
-      <div>
-        <label for="observacoes_ResponsavelRecebimento">Observações:</label>
-        <input type="text" id="observacoes_ResponsavelRecebimento" name="observacoes_ResponsavelRecebimento" />
-      </div>
-    </div>
-  </div>
+        <h2 class="subtitulo">Grupo Econômico Amarrado ao Cliente</h2>
+        <div class="form-grid-2col">
+          <div><label for="codigo_ElaboracaoCadastro">Código:</label><input type="text" id="codigo_ElaboracaoCadastro"
+              name="codigo_ElaboracaoCadastro" /></div>
+          <div><label for="nome_empresarial_ElaboracaoCadastro">Nome Empresarial:</label><input type="text"
+              id="nome_empresarial_ElaboracaoCadastro" name="nome_empresarial_ElaboracaoCadastro" /></div>
+        </div>
 
-  <!-- Aba 4 - Endereço de Cobrança -->
-  <div class="tab-content" id="cobranca" style="display: none;">
-    <h2 class="subtitulo">Endereço de Cobrança</h2>
-    <div class="form-grid-2col">
-      <div>
-        <label for="endereco_EnderecoCobranca">Endereço:</label>
-        <input type="text" id="endereco_EnderecoCobranca" name="endereco_EnderecoCobranca" />
-      </div>
-      <div>
-        <label for="bairro_EnderecoCobranca">Bairro:</label>
-        <input type="text" id="bairro_EnderecoCobranca" name="bairro_EnderecoCobranca" />
-      </div>
-      <div>
-        <label for="cep_EnderecoCobranca">CEP:</label>
-        <input type="text" id="cep_EnderecoCobranca" name="cep_EnderecoCobranca" />
-      </div>
-      <div>
-        <label for="localizacao_EnderecoCobranca">Localização:</label>
-        <input type="text" id="localizacao_EnderecoCobranca" name="localizacao_EnderecoCobranca" />
-      </div>
-      <div>
-        <label for="municipio_EnderecoCobranca">Município:</label>
-        <input type="text" id="municipio_EnderecoCobranca" name="municipio_EnderecoCobranca" />
-      </div>
-      <div>
-        <label for="estado_EnderecoCobranca">Estado:</label>
-        <input type="text" id="estado_EnderecoCobranca" name="estado_EnderecoCobranca" />
-      </div>
-    </div>
+        <h2 class="subtitulo">Referências Comerciais</h2>
+        <div class="form-grid-2col">
+          <div><label for="empresa_ElaboracaoCadastro">Empresa:</label><input type="text"
+              id="empresa_ElaboracaoCadastro" name="empresa_ElaboracaoCadastro" /></div>
+          <div><label for="cidade_ElaboracaoCadastro">Cidade:</label><input type="text" id="cidade_ElaboracaoCadastro"
+              name="cidade_ElaboracaoCadastro" /></div>
+          <div><label for="telefone_ElaboracaoCadastro">Telefone:</label><input type="text"
+              id="telefone_ElaboracaoCadastro" name="telefone_ElaboracaoCadastro" /></div>
+          <div><label for="contato_ElaboracaoCadastro">Contato:</label><input type="text"
+              id="contato_ElaboracaoCadastro" name="contato_ElaboracaoCadastro" /></div>
+        </div>
 
-    <h2 class="subtitulo">Responsável pela Cobrança</h2>
-    <div class="form-grid-2col">
-      <div>
-        <label for="nome_ResponsavelCobranca">Nome:</label>
-        <input type="text" id="nome_ResponsavelCobranca" name="nome_ResponsavelCobranca" />
+        <h2 class="subtitulo">Referências Bancárias</h2>
+        <div class="form-grid-2col">
+          <div><label for="banco_ElaboracaoCadastro">Banco:</label><input type="text" id="banco_ElaboracaoCadastro"
+              name="banco_ElaboracaoCadastro" /></div>
+          <div><label for="agencia_ElaboracaoCadastro">Agência:</label><input type="text"
+              id="agencia_ElaboracaoCadastro" name="agencia_ElaboracaoCadastro" /></div>
+          <div><label for="conta_corrente_ElaboracaoCadastro">Conta Corrente:</label><input type="text"
+              id="conta_corrente_ElaboracaoCadastro" name="conta_corrente_ElaboracaoCadastro" /></div>
+        </div>
+
+        <h2 class="subtitulo">Bens Imóveis</h2>
+        <div class="form-grid-2col">
+          <div><label for="imovel_ElaboracaoCadastro">Imóvel:</label><input type="text" id="imovel_ElaboracaoCadastro"
+              name="imovel_ElaboracaoCadastro" /></div>
+          <div><label for="localizacao_ElaboracaoCadastro">Localização:</label><input type="text"
+              id="localizacao_ElaboracaoCadastro" name="localizacao_ElaboracaoCadastro" /></div>
+          <div><label for="area_ElaboracaoCadastro">Área:</label><input type="text" id="area_ElaboracaoCadastro"
+              name="area_ElaboracaoCadastro" /></div>
+          <div><label for="valor_ElaboracaoCadastro">Valor:</label><input type="number" step="0.01"
+              id="valor_ElaboracaoCadastro" name="valor_ElaboracaoCadastro" /></div>
+          <div><label for="hipotecado_ElaboracaoCadastro">Hipotecado:</label><input type="text"
+              id="hipotecado_ElaboracaoCadastro" name="hipotecado_ElaboracaoCadastro" /></div>
+        </div>
+
+        <h2 class="subtitulo">Bens Móveis</h2>
+        <div class="form-grid-2col">
+          <div><label for="marca_ElaboracaoCadastro">Marca:</label><input type="text" id="marca_ElaboracaoCadastro"
+              name="marca_ElaboracaoCadastro" /></div>
+          <div><label for="modelo_ElaboracaoCadastro">Modelo:</label><input type="text" id="modelo_ElaboracaoCadastro"
+              name="modelo_ElaboracaoCadastro" /></div>
+          <div><label for="alienado_ElaboracaoCadastro">Alienado:</label><input type="text"
+              id="alienado_ElaboracaoCadastro" name="alienado_ElaboracaoCadastro" /></div>
+        </div>
+
+        <h2 class="subtitulo">Plantel de Animais</h2>
+        <div class="form-grid-2col">
+          <div><label for="especie_ElaboracaoCadastro">Espécie:</label><input type="text"
+              id="especie_ElaboracaoCadastro" name="especie_ElaboracaoCadastro" /></div>
+          <div><label for="numero_de_animais_ElaboracaoCadastro">Número de Animais:</label><input type="number"
+              id="numero_de_animais_ElaboracaoCadastro" name="numero_de_animais_ElaboracaoCadastro" /></div>
+          <div><label for="consumo_diario_ElaboracaoCadastro">Consumo Diário (kg):</label><input type="number"
+              step="0.01" id="consumo_diario_ElaboracaoCadastro" name="consumo_diario_ElaboracaoCadastro" /></div>
+          <div><label for="consumo_mensal_ElaboracaoCadastro">Consumo Mensal (kg):</label><input type="number"
+              step="0.01" id="consumo_mensal_ElaboracaoCadastro" name="consumo_mensal_ElaboracaoCadastro" /></div>
+        </div>
+
+        <h2 class="subtitulo">Supervisores</h2>
+        <div class="form-grid-2col">
+          <div><label for="codigo_insumo_ElaboracaoCadastro">Código do Insumo:</label><input type="text"
+              id="codigo_insumo_ElaboracaoCadastro" name="codigo_insumo_ElaboracaoCadastro" /></div>
+          <div><label for="nome_insumos_ElaboracaoCadastro">Nome do Insumo:</label><input type="text"
+              id="nome_insumos_ElaboracaoCadastro" name="nome_insumos_ElaboracaoCadastro" /></div>
+          <div><label for="codigo_pet_ElaboracaoCadastro">Código Pet:</label><input type="text"
+              id="codigo_pet_ElaboracaoCadastro" name="codigo_pet_ElaboracaoCadastro" /></div>
+          <div><label for="nome_pet_ElaboracaoCadastro">Nome Pet:</label><input type="text"
+              id="nome_pet_ElaboracaoCadastro" name="nome_pet_ElaboracaoCadastro" /></div>
+        </div>
+
+        <h2 class="subtitulo">Comissão Dispet</h2>
+        <div class="form-grid-2col">
+          <div><label for="insumos_ElaboracaoCadastro">Insumos:</label><input type="text"
+              id="insumos_ElaboracaoCadastro" name="insumos_ElaboracaoCadastro" /></div>
+          <div><label for="pet_ElaboracaoCadastro">Pet:</label><input type="text" id="pet_ElaboracaoCadastro"
+              name="pet_ElaboracaoCadastro" /></div>
+          <div><label for="observacoes_ElaboracaoCadastro">Observações:</label><input type="text"
+              id="observacoes_ElaboracaoCadastro" name="observacoes_ElaboracaoCadastro" /></div>
+        </div>
       </div>
-      <div>
-        <label for="celular_ResponsavelCobranca">Celular:</label>
-        <input type="text" id="celular_ResponsavelCobranca" name="celular_ResponsavelCobranca" />
-      </div>
-      <div>
-        <label for="email_ResponsavelCobranca">E-mail:</label>
-        <input type="text" id="email_ResponsavelCobranca" name="email_ResponsavelCobranca" />
-      </div>
-      <div>
-        <label for="data_nascimento_ResponsavelCobranca">Data de Nascimento:</label>
-        <input type="date" id="data_nascimento_ResponsavelCobranca" name="data_nascimento_ResponsavelCobranca" />
-      </div>
-      <div>
-        <label for="observacoes_ResponsavelCobranca">Observações:</label>
-        <input type="text" id="observacoes_ResponsavelCobranca" name="observacoes_ResponsavelCobranca" />
-      </div>
-    </div>
-  </div>
-
-  <!-- Aba 6 - Elaboração do Cadastro -->
-  <div class="tab-content" id="elaboracao" style="display: none;">
-    <h2 class="subtitulo">Dados da Elaboração do Cadastro</h2>
-    <div class="form-grid-2col">
-      <div><label for="classificacao_ElaboracaoCadastro">Classificação:</label><input type="text" id="classificacao_ElaboracaoCadastro" name="classificacao_ElaboracaoCadastro" /></div>
-      <div><label for="tipo_venda_prazo_ou_vista_ElaboracaoCadastro">Tipo de Venda (a prazo / à vista):</label><input type="text" id="tipo_venda_prazo_ou_vista_ElaboracaoCadastro" name="tipo_venda_prazo_ou_vista_ElaboracaoCadastro" /></div>
-      <div><label for="limite_credito_ElaboracaoCadastro">Limite de Crédito (Complementar):</label><input type="number" step="0.01" id="limite_credito_ElaboracaoCadastro" name="limite_credito_ElaboracaoCadastro" /></div>
-      <div><label for="data_vencimento_ElaboracaoCadastro">Data de Vencimento:</label><input type="date" id="data_vencimento_ElaboracaoCadastro" name="data_vencimento_ElaboracaoCadastro" /></div>
-    </div>
-
-    <h2 class="subtitulo">Grupo Econômico Amarrado ao Cliente</h2>
-    <div class="form-grid-2col">
-      <div><label for="codigo_ElaboracaoCadastro">Código:</label><input type="text" id="codigo_ElaboracaoCadastro" name="codigo_ElaboracaoCadastro" /></div>
-      <div><label for="nome_empresarial_ElaboracaoCadastro">Nome Empresarial:</label><input type="text" id="nome_empresarial_ElaboracaoCadastro" name="nome_empresarial_ElaboracaoCadastro" /></div>
-    </div>
-
-    <h2 class="subtitulo">Referências Comerciais</h2>
-    <div class="form-grid-2col">
-      <div><label for="empresa_ElaboracaoCadastro">Empresa:</label><input type="text" id="empresa_ElaboracaoCadastro" name="empresa_ElaboracaoCadastro" /></div>
-      <div><label for="cidade_ElaboracaoCadastro">Cidade:</label><input type="text" id="cidade_ElaboracaoCadastro" name="cidade_ElaboracaoCadastro" /></div>
-      <div><label for="telefone_ElaboracaoCadastro">Telefone:</label><input type="text" id="telefone_ElaboracaoCadastro" name="telefone_ElaboracaoCadastro" /></div>
-      <div><label for="contato_ElaboracaoCadastro">Contato:</label><input type="text" id="contato_ElaboracaoCadastro" name="contato_ElaboracaoCadastro" /></div>
-    </div>
-
-    <h2 class="subtitulo">Referências Bancárias</h2>
-    <div class="form-grid-2col">
-      <div><label for="banco_ElaboracaoCadastro">Banco:</label><input type="text" id="banco_ElaboracaoCadastro" name="banco_ElaboracaoCadastro" /></div>
-      <div><label for="agencia_ElaboracaoCadastro">Agência:</label><input type="text" id="agencia_ElaboracaoCadastro" name="agencia_ElaboracaoCadastro" /></div>
-      <div><label for="conta_corrente_ElaboracaoCadastro">Conta Corrente:</label><input type="text" id="conta_corrente_ElaboracaoCadastro" name="conta_corrente_ElaboracaoCadastro" /></div>
-    </div>
-
-    <h2 class="subtitulo">Bens Imóveis</h2>
-    <div class="form-grid-2col">
-      <div><label for="imovel_ElaboracaoCadastro">Imóvel:</label><input type="text" id="imovel_ElaboracaoCadastro" name="imovel_ElaboracaoCadastro" /></div>
-      <div><label for="localizacao_ElaboracaoCadastro">Localização:</label><input type="text" id="localizacao_ElaboracaoCadastro" name="localizacao_ElaboracaoCadastro" /></div>
-      <div><label for="area_ElaboracaoCadastro">Área:</label><input type="text" id="area_ElaboracaoCadastro" name="area_ElaboracaoCadastro" /></div>
-      <div><label for="valor_ElaboracaoCadastro">Valor:</label><input type="number" step="0.01" id="valor_ElaboracaoCadastro" name="valor_ElaboracaoCadastro" /></div>
-      <div><label for="hipotecado_ElaboracaoCadastro">Hipotecado:</label><input type="text" id="hipotecado_ElaboracaoCadastro" name="hipotecado_ElaboracaoCadastro" /></div>
-    </div>
-
-    <h2 class="subtitulo">Bens Móveis</h2>
-    <div class="form-grid-2col">
-      <div><label for="marca_ElaboracaoCadastro">Marca:</label><input type="text" id="marca_ElaboracaoCadastro" name="marca_ElaboracaoCadastro" /></div>
-      <div><label for="modelo_ElaboracaoCadastro">Modelo:</label><input type="text" id="modelo_ElaboracaoCadastro" name="modelo_ElaboracaoCadastro" /></div>
-      <div><label for="alienado_ElaboracaoCadastro">Alienado:</label><input type="text" id="alienado_ElaboracaoCadastro" name="alienado_ElaboracaoCadastro" /></div>
-    </div>
-
-    <h2 class="subtitulo">Plantel de Animais</h2>
-    <div class="form-grid-2col">
-      <div><label for="especie_ElaboracaoCadastro">Espécie:</label><input type="text" id="especie_ElaboracaoCadastro" name="especie_ElaboracaoCadastro" /></div>
-      <div><label for="numero_de_animais_ElaboracaoCadastro">Número de Animais:</label><input type="number" id="numero_de_animais_ElaboracaoCadastro" name="numero_de_animais_ElaboracaoCadastro" /></div>
-      <div><label for="consumo_diario_ElaboracaoCadastro">Consumo Diário (kg):</label><input type="number" step="0.01" id="consumo_diario_ElaboracaoCadastro" name="consumo_diario_ElaboracaoCadastro" /></div>
-      <div><label for="consumo_mensal_ElaboracaoCadastro">Consumo Mensal (kg):</label><input type="number" step="0.01" id="consumo_mensal_ElaboracaoCadastro" name="consumo_mensal_ElaboracaoCadastro" /></div>
-    </div>
-
-    <h2 class="subtitulo">Supervisores</h2>
-    <div class="form-grid-2col">
-      <div><label for="codigo_insumo_ElaboracaoCadastro">Código do Insumo:</label><input type="text" id="codigo_insumo_ElaboracaoCadastro" name="codigo_insumo_ElaboracaoCadastro" /></div>
-      <div><label for="nome_insumos_ElaboracaoCadastro">Nome do Insumo:</label><input type="text" id="nome_insumos_ElaboracaoCadastro" name="nome_insumos_ElaboracaoCadastro" /></div>
-      <div><label for="codigo_pet_ElaboracaoCadastro">Código Pet:</label><input type="text" id="codigo_pet_ElaboracaoCadastro" name="codigo_pet_ElaboracaoCadastro" /></div>
-      <div><label for="nome_pet_ElaboracaoCadastro">Nome Pet:</label><input type="text" id="nome_pet_ElaboracaoCadastro" name="nome_pet_ElaboracaoCadastro" /></div>
-    </div>
-
-    <h2 class="subtitulo">Comissão Dispet</h2>
-    <div class="form-grid-2col">
-      <div><label for="insumos_ElaboracaoCadastro">Insumos:</label><input type="text" id="insumos_ElaboracaoCadastro" name="insumos_ElaboracaoCadastro" /></div>
-      <div><label for="pet_ElaboracaoCadastro">Pet:</label><input type="text" id="pet_ElaboracaoCadastro" name="pet_ElaboracaoCadastro" /></div>
-      <div><label for="observacoes_ElaboracaoCadastro">Observações:</label><input type="text" id="observacoes_ElaboracaoCadastro" name="observacoes_ElaboracaoCadastro" /></div>
-    </div>
-  </div>
+    </form>
 
 
 
     <!-- Botões -->
-    <div class="mt-4 d-flex gap-2">
-      <button class="btn btn-listar" onclick="listarClientes()" type="button">Listar Clientes</button>
-      <button class="btn btn-editar" id="btn-editar" onclick="editarCliente()" type="button">Editar</button>
-      <button class="btn btn-cancelar" id="btn-cancelar" onclick="cancelarEdicao()" type="button">Cancelar</button>
-      <button class="btn btn-salvar" id="btn-salvar" onclick="salvarCliente()" type="button">Salvar</button>
-      <button class="btn btn-excluir" onclick="excluirCliente()" type="button">Excluir</button>
-      
-    </div>
+    <!-- Botões movidos para o topo -->
+    <!-- <div class="mt-4 d-flex gap-2"> ... </div> -->
 
 
-<script>
-		 // Máscaras
-    IMask(document.getElementById('cpf'), { mask: '000.000.000-00' });
-    IMask(document.getElementById('cnpj'), { mask: '00.000.000/0000-00' });
-    IMask(document.getElementById('telefone'), { mask: '(00) 0000-0000' });
-    IMask(document.getElementById('celular'), { mask: '(00) 00000-0000' });
+    <script>
+      // Máscaras
+      const cpfEl = document.getElementById('cpf');
+      if (cpfEl) IMask(cpfEl, { mask: '000.000.000-00' });
 
-    function novoCliente() {
-      document.getElementById("formCliente").reset();
-      document.getElementById("id").value = "";
-      document.getElementById("ativo").checked = true;
-    }
+      const cnpjEl = document.getElementById('cnpj');
+      if (cnpjEl) IMask(cnpjEl, { mask: '00.000.000/0000-00' });
 
-    function salvarCliente() {
-	  const id = document.getElementById("id").value;
-      const cliente = obterDadosFormulario();
-      
-	  if (id) cliente.cadastrocliente.id = parseInt(id);
+      const telEl = document.getElementById('telefone'); // Verify if this ID exists or remove
+      if (telEl) IMask(telEl, { mask: '(00) 0000-0000' });
 
-	  const url = id ? `http://127.0.0.1:8000/cliente/${id}` : "http://127.0.0.1:8000/cliente";
-      const metodo = id ? 'put' : 'post';
-	  
-      axios[metodo](url, cliente)
-        .then(() => {
-          alert("Cliente salvo com sucesso!");
-          novoCliente();
-        })
-        .catch(erro => {
-          console.error(erro);
-          alert("Erro ao salvar cliente.");
-        });
-    }
+      const celEl = document.getElementById('celular'); // Verify if this ID exists or remove
+      if (celEl) IMask(celEl, { mask: '(00) 00000-0000' });
 
-    function excluirCliente() {
-      const codigo = document.getElementById("codigo_da_empresa").value;
-	  if (!codigo) {
-        alert("Selecione um cliente primeiro.");
-        return;
+      // Add masks for actual fields if needed, e.g.
+      const celResp = document.getElementById('celular_responsavel');
+      if (celResp) IMask(celResp, { mask: '(00) 00000-0000' });
+
+      // --- State Management ---
+      // Modes: 'INITIAL', 'SELECTED', 'EDITING'
+      function setViewState(mode) {
+        const btnListar = document.getElementById("btn-listar");
+        const btnNovo = document.getElementById("btn-novo");
+        const btnEditar = document.getElementById("btn-editar");
+        const btnExcluir = document.getElementById("btn-excluir");
+        const btnVoltar = document.getElementById("btn-voltar");
+        const btnSalvar = document.getElementById("btn-salvar");
+        const btnCancelar = document.getElementById("btn-cancelar");
+
+        // Helper to show/hide
+        const show = (el) => el.style.display = "inline-block";
+        const hide = (el) => el.style.display = "none";
+
+        // Disable/Enable form
+        const formInputs = document.querySelectorAll("#formCliente input, #formCliente select");
+        const disableForm = (disabled) => {
+          formInputs.forEach(input => input.disabled = disabled);
+        };
+
+        if (mode === 'INITIAL') {
+          show(btnListar);
+          show(btnNovo);
+          hide(btnEditar);
+          hide(btnExcluir);
+          hide(btnVoltar);
+          hide(btnSalvar);
+          hide(btnCancelar);
+          disableForm(true);
+          // Clear form logic typically handles resetting ID to ""
+        } else if (mode === 'SELECTED') {
+          show(btnListar);
+          hide(btnNovo);
+          show(btnEditar);
+          show(btnExcluir);
+          show(btnVoltar);
+          hide(btnSalvar);
+          hide(btnCancelar);
+          disableForm(true);
+        } else if (mode === 'EDITING' || mode === 'CREATING') {
+          hide(btnListar);
+          hide(btnNovo);
+          hide(btnEditar);
+          hide(btnExcluir);
+          // hide(btnVoltar); // Usually hidden during edit
+          show(btnSalvar);
+          show(btnCancelar);
+          disableForm(false);
+        }
       }
 
-      axios.delete(`http://127.0.0.1:8000/cliente/${codigo}`)
+      function novoCliente() {
+        document.getElementById("formCliente").reset();
+        document.getElementById("id").value = "";
+        document.getElementById("ativo").checked = true;
+        setViewState('CREATING');
+      }
 
-        .then(() => {
-          alert("Cliente excluído com sucesso!");
-          novoCliente();
-        })
-        .catch(erro => {
-          console.error(erro);
-          alert("Erro ao excluir cliente.");
-        });
-    }
+      function voltarEstadoInicial() {
+        document.getElementById("formCliente").reset();
+        document.getElementById("id").value = "";
+        setViewState('INITIAL');
+      }
 
-    function listarClientes() {
-      window.open("modal_clientes.html", "popup", "width=800,height=600");
-    }
+      function salvarCliente() {
+        const id = document.getElementById("id").value;
+        const cliente = obterDadosFormulario();
 
-    function obterDadosFormulario() {
-      return {
-        cadastrocliente: {
-          codigo_da_empresa: document.getElementById("codigo_da_empresa")?.value || "",
-          ativo: document.getElementById("ativo")?.checked || false,
-          tipo_cliente: document.getElementById("tipo_cliente")?.value || "",
-          tipo_venda: document.getElementById("tipo_venda")?.value || "",
-          tipo_compra: document.getElementById("tipo_compra")?.value || "",
-          limite_credito: parseFloat(document.getElementById("limite_credito")?.value || 0),
-          nome_cliente: document.getElementById("nome_cliente")?.value || "",
-          nome_fantasia: document.getElementById("nome_fantasia")?.value || "",
-          cnpj: document.getElementById("cnpj")?.value || "",
-          inscricao_estadual: document.getElementById("inscricao_estadual")?.value || "",
-          cpf: document.getElementById("cpf")?.value || "",
-          situacao: document.getElementById("situacao")?.value || "",
-          indicacao_cliente: document.getElementById("indicacao_cliente")?.value || "",
-          ramo_de_atividade: document.getElementById("ramo_de_atividade")?.value || "",
-          atividade_principal: document.getElementById("atividade_principal")?.value || ""
-        },
-        responsavel_compras: {
-          nome_responsavel: document.getElementById("nome_responsavel")?.value || "",
-          celular_responsavel: document.getElementById("celular_responsavel")?.value || "",
-          email_resposavel: document.getElementById("email_resposavel")?.value || "",
-          data_nascimento_resposavel: document.getElementById("data_nascimento_resposavel")?.value || "",
-          observacoes_responsavel: document.getElementById("observacoes_responsavel")?.value || "",
-          filial_resposavel: document.getElementById("filial_resposavel")?.value || ""
-        },
-        endereco_faturamento: {
-          endereco_faturamento: document.getElementById("endereco_faturamento")?.value || "",
-          bairro_faturamento: document.getElementById("bairro_faturamento")?.value || "",
-          cep_faturamento: document.getElementById("cep_faturamento")?.value || "",
-          localizacao_faturamento: document.getElementById("localizacao_faturamento")?.value || "",
-          municipio_faturamento: document.getElementById("municipio_faturamento")?.value || "",
-          estado_faturamento: document.getElementById("estado_faturamento")?.value || "",
-          email_danfe_faturamento: document.getElementById("email_danfe_faturamento")?.value || ""
-        },
-        representante_legal: {
-          nome_RepresentanteLegal: document.getElementById("nome_RepresentanteLegal")?.value || "",
-          celular_RepresentanteLegal: document.getElementById("celular_RepresentanteLegal")?.value || "",
-          email_RepresentanteLegal: document.getElementById("email_RepresentanteLegal")?.value || "",
-          data_nascimento_RepresentanteLegal: document.getElementById("data_nascimento_RepresentanteLegal")?.value || "",
-          observacoes_RepresentanteLegal: document.getElementById("observacoes_RepresentanteLegal")?.value || ""
-        },
-        endereco_entrega: {
-          endereco_EnderecoEntrega: document.getElementById("endereco_EnderecoEntrega")?.value || "",
-          bairro_EnderecoEntrega: document.getElementById("bairro_EnderecoEntrega")?.value || "",
-          cep_EnderecoEntrega: document.getElementById("cep_EnderecoEntrega")?.value || "",
-          localizacao_EnderecoEntrega: document.getElementById("localizacao_EnderecoEntrega")?.value || "",
-          municipio_EnderecoEntrega: document.getElementById("municipio_EnderecoEntrega")?.value || "",
-          estado_EnderecoEntrega: document.getElementById("estado_EnderecoEntrega")?.value || "",
-          rota_principal_EnderecoEntrega: document.getElementById("rota_principal_EnderecoEntrega")?.value || "",
-          rota_de_aproximacao_EnderecoEntrega: document.getElementById("rota_de_aproximacao_EnderecoEntrega")?.value || "",
-          observacao_motorista_EnderecoEntrega: document.getElementById("observacao_motorista_EnderecoEntrega")?.value || ""
-        },
-        responsavel_recebimento: {
-          nome_ResponsavelRecebimento: document.getElementById("nome_ResponsavelRecebimento")?.value || "",
-          celular_ResponsavelRecebimento: document.getElementById("celular_ResponsavelRecebimento")?.value || "",
-          email_ResponsavelRecebimento: document.getElementById("email_ResponsavelRecebimento")?.value || "",
-          data_nascimento_ResponsavelRecebimento: document.getElementById("data_nascimento_ResponsavelRecebimento")?.value || "",
-          observacoes_ResponsavelRecebimento: document.getElementById("observacoes_ResponsavelRecebimento")?.value || ""
-        },
-        endereco_cobranca: {
-          endereco_EnderecoCobranca: document.getElementById("endereco_EnderecoCobranca")?.value || "",
-          bairro_EnderecoCobranca: document.getElementById("bairro_EnderecoCobranca")?.value || "",
-          cep_EnderecoCobranca: document.getElementById("cep_EnderecoCobranca")?.value || "",
-          localizacao_EnderecoCobranca: document.getElementById("localizacao_EnderecoCobranca")?.value || "",
-          municipio_EnderecoCobranca: document.getElementById("municipio_EnderecoCobranca")?.value || "",
-          estado_EnderecoCobranca: document.getElementById("estado_EnderecoCobranca")?.value || ""
-        },
-        responsavel_cobranca: {
-          nome_ResponsavelCobranca: document.getElementById("nome_ResponsavelCobranca")?.value || "",
-          celular_ResponsavelCobranca: document.getElementById("celular_ResponsavelCobranca")?.value || "",
-          email_ResponsavelCobranca: document.getElementById("email_ResponsavelCobranca")?.value || "",
-          data_nascimento_ResponsavelCobranca: document.getElementById("data_nascimento_ResponsavelCobranca")?.value || "",
-          observacoes_ResponsavelCobranca: document.getElementById("observacoes_ResponsavelCobranca")?.value || ""
-        },
-        dados_ultimas_compras: {
-          numero_danfe_Compras: document.getElementById("numero_danfe_Compras")?.value || "",
-          emissao_Compras: document.getElementById("emissao_Compras")?.value || "",
-          valor_total_Compras: parseFloat(document.getElementById("valor_total_Compras")?.value || 0),
-          valor_frete_Compras: parseFloat(document.getElementById("valor_frete_Compras")?.value || 0),
-          valor_frete_padrao_Compras: parseFloat(document.getElementById("valor_frete_padrao_Compras")?.value || 0),
-          valor_ultimo_frete_to_Compras: parseFloat(document.getElementById("valor_ultimo_frete_to_Compras")?.value || 0),
-          lista_tabela_Compras: document.getElementById("lista_tabela_Compras")?.value || "",
-          condicoes_pagamento_Compras: document.getElementById("condicoes_pagamento_Compras")?.value || "",
-          cliente_calcula_st_Compras: document.getElementById("cliente_calcula_st_Compras")?.value || "",
-          prazo_medio_compra_Compras: document.getElementById("prazo_medio_compra_Compras")?.value || "",
-          previsao_proxima_compra_Compras: document.getElementById("previsao_proxima_compra_Compras")?.value || ""
-        },
-        observacoes_nao_compra: {
-          observacoes_Compras: document.getElementById("observacoes_Compras")?.value || ""
-        },
-        dados_elaboracao_cadastro: {
-          classificacao_ElaboracaoCadastro: document.getElementById("classificacao_ElaboracaoCadastro")?.value || "",
-          tipo_venda_prazo_ou_vista_ElaboracaoCadastro: document.getElementById("tipo_venda_prazo_ou_vista_ElaboracaoCadastro")?.value || "",
-          limite_credito_ElaboracaoCadastro: parseFloat(document.getElementById("limite_credito_ElaboracaoCadastro")?.value || 0),
-          data_vencimento_ElaboracaoCadastro: document.getElementById("data_vencimento_ElaboracaoCadastro")?.value || ""
-        },
-        grupo_economico: {
-          codigo_ElaboracaoCadastro: document.getElementById("codigo_ElaboracaoCadastro")?.value || "",
-          nome_empresarial_ElaboracaoCadastro: document.getElementById("nome_empresarial_ElaboracaoCadastro")?.value || ""
-        },
-        referencia_comercial: {
-          empresa_ElaboracaoCadastro: document.getElementById("empresa_ElaboracaoCadastro")?.value || "",
-          cidade_ElaboracaoCadastro: document.getElementById("cidade_ElaboracaoCadastro")?.value || "",
-          telefone_ElaboracaoCadastro: document.getElementById("telefone_ElaboracaoCadastro")?.value || "",
-          contato_ElaboracaoCadastro: document.getElementById("contato_ElaboracaoCadastro")?.value || ""
-        },
-        referencia_bancaria: {
-          banco_ElaboracaoCadastro: document.getElementById("banco_ElaboracaoCadastro")?.value || "",
-          agencia_ElaboracaoCadastro: document.getElementById("agencia_ElaboracaoCadastro")?.value || "",
-          conta_corrente_ElaboracaoCadastro: document.getElementById("conta_corrente_ElaboracaoCadastro")?.value || ""
-        },
-        bem_imovel: {
-          imovel_ElaboracaoCadastro: document.getElementById("imovel_ElaboracaoCadastro")?.value || "",
-          localizacao_ElaboracaoCadastro: document.getElementById("localizacao_ElaboracaoCadastro")?.value || "",
-          area_ElaboracaoCadastro: document.getElementById("area_ElaboracaoCadastro")?.value || "",
-          valor_ElaboracaoCadastro: parseFloat(document.getElementById("valor_ElaboracaoCadastro")?.value || 0),
-          hipotecado_ElaboracaoCadastro: document.getElementById("hipotecado_ElaboracaoCadastro")?.value || ""
-        },
-        bem_movel: {
-          marca_ElaboracaoCadastro: document.getElementById("marca_ElaboracaoCadastro")?.value || "",
-          modelo_ElaboracaoCadastro: document.getElementById("modelo_ElaboracaoCadastro")?.value || "",
-          alienado_ElaboracaoCadastro: document.getElementById("alienado_ElaboracaoCadastro")?.value || ""
-        },
-        plantel_animal: {
-          especie_ElaboracaoCadastro: document.getElementById("especie_ElaboracaoCadastro")?.value || "",
-          numero_de_animais_ElaboracaoCadastro: parseInt(document.getElementById("numero_de_animais_ElaboracaoCadastro")?.value || 0),
-          consumo_diario_ElaboracaoCadastro: parseFloat(document.getElementById("consumo_diario_ElaboracaoCadastro")?.value || 0),
-          consumo_mensal_ElaboracaoCadastro: parseFloat(document.getElementById("consumo_mensal_ElaboracaoCadastro")?.value || 0)
-        },
-        supervisores: {
-          codigo_insumo_ElaboracaoCadastro: document.getElementById("codigo_insumo_ElaboracaoCadastro")?.value || "",
-          nome_insumos_ElaboracaoCadastro: document.getElementById("nome_insumos_ElaboracaoCadastro")?.value || "",
-          codigo_pet_ElaboracaoCadastro: document.getElementById("codigo_pet_ElaboracaoCadastro")?.value || "",
-          nome_pet_ElaboracaoCadastro: document.getElementById("nome_pet_ElaboracaoCadastro")?.value || ""
-        },
-        comissao_dispet: {
-          insumos_ElaboracaoCadastro: document.getElementById("insumos_ElaboracaoCadastro")?.value || "",
-          pet_ElaboracaoCadastro: document.getElementById("pet_ElaboracaoCadastro")?.value || "",
-          observacoes_ElaboracaoCadastro: document.getElementById("observacoes_ElaboracaoCadastro")?.value || ""
+        if (id) cliente.cadastrocliente.id = parseInt(id);
+
+        const api = window.API_BASE || "http://127.0.0.1:8000";
+        const url = id ? `${api}/cliente/${id}` : `${api}/cliente`;
+        const metodo = id ? 'put' : 'post';
+
+        const token = window.Auth ? window.Auth.getToken() : localStorage.getItem('ordersync_token');
+
+        if (!token) {
+          alert("Sessão expirada. Faça login novamente.");
+          window.Auth.logout();
+          return;
         }
-      };
-   }
+
+        axios[metodo](url, cliente, {
+          headers: { 'Authorization': `Bearer ${token}` }
+        })
+          .then((res) => {
+            alert("Cliente salvo com sucesso!");
+            // After save, we can go to SELECTED state with the new/updated data
+            // For simplicity, let's load the data if returned, or go to initial
+            if (res.data && res.data.cadastrocliente && res.data.cadastrocliente.id) {
+              preencherFormularioCliente(res.data);
+            } else {
+              novoCliente(); // Fallback
+            }
+          })
+          .catch(erro => {
+            console.error(erro);
+            alert("Erro ao salvar cliente.");
+          });
+      }
+
+      function excluirCliente() {
+        const id = document.getElementById("id").value;
+        if (!id) {
+          alert("Nenhum cliente selecionado para excluir.");
+          return;
+        }
+
+        if (!confirm("Tem certeza que deseja excluir este cliente?")) return;
+
+        const api = window.API_BASE || "http://127.0.0.1:8000";
+        const token = window.Auth ? window.Auth.getToken() : localStorage.getItem('ordersync_token');
+
+        if (!token) {
+          alert("Sessão expirada. Faça login novamente.");
+          return;
+        }
+
+        // Fix: Use ID instead of codigo_da_empresa, as backend expects ID in path (despite param name)
+        axios.delete(`${api}/cliente/${id}`, {
+          headers: { 'Authorization': `Bearer ${token}` }
+        })
+
+          .then(() => {
+            alert("Cliente excluído com sucesso!");
+            voltarEstadoInicial();
+          })
+          .catch(erro => {
+            console.error(erro);
+            alert("Erro ao excluir cliente.");
+          });
+      }
+
+      function editarCliente() {
+        setViewState('EDITING');
+        // Habilita edição se necessário, ou apenas foca no primeiro campo
+        document.getElementById("nome_cliente").focus();
+      }
+
+      function cancelarEdicao() {
+        if (confirm("Deseja cancelar a edição? Os dados não salvos serão perdidos.")) {
+          const id = document.getElementById("id").value;
+          if (id) {
+            // If we were editing an existing client, revert to Selected state
+            // Ideally re-fetch or just disable form. For now, disable form.
+            setViewState('SELECTED');
+            // Optional: Reload data to revert unsaved changes in DOM inputs
+            // loadCliente(id); // If we had such function readily available
+          } else {
+            // If creating new, go back to initial
+            voltarEstadoInicial();
+          }
+        }
+      }
+
+      function listarClientes() {
+        window.open("modal_clientes.html", "popup", "width=800,height=600");
+      }
+
+      function obterDadosFormulario() {
+        return {
+          cadastrocliente: {
+            // Se o ID for vazio, envia 0 para validar como int no backend
+            id: parseInt(document.getElementById("id")?.value || 0),
+            codigo_da_empresa: document.getElementById("codigo_da_empresa")?.value || "",
+            ativo: document.getElementById("ativo")?.checked || false,
+            tipo_cliente: document.getElementById("tipo_cliente")?.value || "",
+            tipo_venda: document.getElementById("tipo_venda")?.value || "",
+            tipo_compra: document.getElementById("tipo_compra")?.value || "",
+            limite_credito: parseFloat(document.getElementById("limite_credito")?.value || 0),
+            nome_cliente: document.getElementById("nome_cliente")?.value || "",
+            nome_fantasia: document.getElementById("nome_fantasia")?.value || "",
+            cnpj: document.getElementById("cnpj")?.value || "",
+            inscricao_estadual: document.getElementById("inscricao_estadual")?.value || "",
+            cpf: document.getElementById("cpf")?.value || "",
+            situacao: document.getElementById("situacao")?.value || "",
+            indicacao_cliente: document.getElementById("indicacao_cliente")?.value || "",
+            ramo_de_atividade: document.getElementById("ramo_de_atividade")?.value || "",
+            ramo_de_atividade: document.getElementById("ramo_de_atividade")?.value || "",
+            atividade_principal: document.getElementById("atividade_principal")?.value || "",
+            cadastro_markup: parseFloat(document.getElementById("cadastro_markup")?.value || 0)
+          },
+          responsavel_compras: {
+            nome_responsavel: document.getElementById("nome_responsavel")?.value || "",
+            celular_responsavel: document.getElementById("celular_responsavel")?.value || "",
+            email_resposavel: document.getElementById("email_resposavel")?.value || "",
+            data_nascimento_resposavel: document.getElementById("data_nascimento_resposavel")?.value || "",
+            observacoes_responsavel: document.getElementById("observacoes_responsavel")?.value || "",
+            filial_resposavel: document.getElementById("filial_resposavel")?.value || ""
+          },
+          endereco_faturamento: {
+            endereco_faturamento: document.getElementById("endereco_faturamento")?.value || "",
+            bairro_faturamento: document.getElementById("bairro_faturamento")?.value || "",
+            cep_faturamento: document.getElementById("cep_faturamento")?.value || "",
+            localizacao_faturamento: document.getElementById("localizacao_faturamento")?.value || "",
+            municipio_faturamento: document.getElementById("municipio_faturamento")?.value || "",
+            estado_faturamento: document.getElementById("estado_faturamento")?.value || "",
+            email_danfe_faturamento: document.getElementById("email_danfe_faturamento")?.value || ""
+          },
+          representante_legal: {
+            nome_RepresentanteLegal: document.getElementById("nome_RepresentanteLegal")?.value || "",
+            celular_RepresentanteLegal: document.getElementById("celular_RepresentanteLegal")?.value || "",
+            email_RepresentanteLegal: document.getElementById("email_RepresentanteLegal")?.value || "",
+            data_nascimento_RepresentanteLegal: document.getElementById("data_nascimento_RepresentanteLegal")?.value || "",
+            observacoes_RepresentanteLegal: document.getElementById("observacoes_RepresentanteLegal")?.value || ""
+          },
+          endereco_entrega: {
+            endereco_EnderecoEntrega: document.getElementById("endereco_EnderecoEntrega")?.value || "",
+            bairro_EnderecoEntrega: document.getElementById("bairro_EnderecoEntrega")?.value || "",
+            cep_EnderecoEntrega: document.getElementById("cep_EnderecoEntrega")?.value || "",
+            localizacao_EnderecoEntrega: document.getElementById("localizacao_EnderecoEntrega")?.value || "",
+            municipio_EnderecoEntrega: document.getElementById("municipio_EnderecoEntrega")?.value || "",
+            estado_EnderecoEntrega: document.getElementById("estado_EnderecoEntrega")?.value || "",
+            rota_principal_EnderecoEntrega: document.getElementById("rota_principal_EnderecoEntrega")?.value || "",
+            rota_de_aproximacao_EnderecoEntrega: document.getElementById("rota_de_aproximacao_EnderecoEntrega")?.value || "",
+            observacao_motorista_EnderecoEntrega: document.getElementById("observacao_motorista_EnderecoEntrega")?.value || ""
+          },
+          responsavel_recebimento: {
+            nome_ResponsavelRecebimento: document.getElementById("nome_ResponsavelRecebimento")?.value || "",
+            celular_ResponsavelRecebimento: document.getElementById("celular_ResponsavelRecebimento")?.value || "",
+            email_ResponsavelRecebimento: document.getElementById("email_ResponsavelRecebimento")?.value || "",
+            data_nascimento_ResponsavelRecebimento: document.getElementById("data_nascimento_ResponsavelRecebimento")?.value || "",
+            observacoes_ResponsavelRecebimento: document.getElementById("observacoes_ResponsavelRecebimento")?.value || ""
+          },
+          endereco_cobranca: {
+            endereco_EnderecoCobranca: document.getElementById("endereco_EnderecoCobranca")?.value || "",
+            bairro_EnderecoCobranca: document.getElementById("bairro_EnderecoCobranca")?.value || "",
+            cep_EnderecoCobranca: document.getElementById("cep_EnderecoCobranca")?.value || "",
+            localizacao_EnderecoCobranca: document.getElementById("localizacao_EnderecoCobranca")?.value || "",
+            municipio_EnderecoCobranca: document.getElementById("municipio_EnderecoCobranca")?.value || "",
+            estado_EnderecoCobranca: document.getElementById("estado_EnderecoCobranca")?.value || ""
+          },
+          responsavel_cobranca: {
+            nome_ResponsavelCobranca: document.getElementById("nome_ResponsavelCobranca")?.value || "",
+            celular_ResponsavelCobranca: document.getElementById("celular_ResponsavelCobranca")?.value || "",
+            email_ResponsavelCobranca: document.getElementById("email_ResponsavelCobranca")?.value || "",
+            data_nascimento_ResponsavelCobranca: document.getElementById("data_nascimento_ResponsavelCobranca")?.value || "",
+            observacoes_ResponsavelCobranca: document.getElementById("observacoes_ResponsavelCobranca")?.value || ""
+          },
+          dados_ultimas_compras: {
+            numero_danfe_Compras: document.getElementById("numero_danfe_Compras")?.value || "",
+            emissao_Compras: document.getElementById("emissao_Compras")?.value || "",
+            valor_total_Compras: parseFloat(document.getElementById("valor_total_Compras")?.value || 0),
+            valor_frete_Compras: parseFloat(document.getElementById("valor_frete_Compras")?.value || 0),
+            valor_frete_padrao_Compras: parseFloat(document.getElementById("valor_frete_padrao_Compras")?.value || 0),
+            valor_ultimo_frete_to_Compras: parseFloat(document.getElementById("valor_ultimo_frete_to_Compras")?.value || 0),
+            lista_tabela_Compras: document.getElementById("lista_tabela_Compras")?.value || "",
+            condicoes_pagamento_Compras: document.getElementById("condicoes_pagamento_Compras")?.value || "",
+            cliente_calcula_st_Compras: document.getElementById("cliente_calcula_st_Compras")?.value || "",
+            prazo_medio_compra_Compras: document.getElementById("prazo_medio_compra_Compras")?.value || "",
+            previsao_proxima_compra_Compras: document.getElementById("previsao_proxima_compra_Compras")?.value || ""
+          },
+          observacoes_nao_compra: {
+            observacoes_Compras: document.getElementById("observacoes_Compras")?.value || ""
+          },
+          dados_elaboracao_cadastro: {
+            classificacao_ElaboracaoCadastro: document.getElementById("classificacao_ElaboracaoCadastro")?.value || "",
+            tipo_venda_prazo_ou_vista_ElaboracaoCadastro: document.getElementById("tipo_venda_prazo_ou_vista_ElaboracaoCadastro")?.value || "",
+            limite_credito_ElaboracaoCadastro: parseFloat(document.getElementById("limite_credito_ElaboracaoCadastro")?.value || 0),
+            data_vencimento_ElaboracaoCadastro: document.getElementById("data_vencimento_ElaboracaoCadastro")?.value || ""
+          },
+          grupo_economico: {
+            codigo_ElaboracaoCadastro: document.getElementById("codigo_ElaboracaoCadastro")?.value || "",
+            nome_empresarial_ElaboracaoCadastro: document.getElementById("nome_empresarial_ElaboracaoCadastro")?.value || ""
+          },
+          referencia_comercial: {
+            empresa_ElaboracaoCadastro: document.getElementById("empresa_ElaboracaoCadastro")?.value || "",
+            cidade_ElaboracaoCadastro: document.getElementById("cidade_ElaboracaoCadastro")?.value || "",
+            telefone_ElaboracaoCadastro: document.getElementById("telefone_ElaboracaoCadastro")?.value || "",
+            contato_ElaboracaoCadastro: document.getElementById("contato_ElaboracaoCadastro")?.value || ""
+          },
+          referencia_bancaria: {
+            banco_ElaboracaoCadastro: document.getElementById("banco_ElaboracaoCadastro")?.value || "",
+            agencia_ElaboracaoCadastro: document.getElementById("agencia_ElaboracaoCadastro")?.value || "",
+            conta_corrente_ElaboracaoCadastro: document.getElementById("conta_corrente_ElaboracaoCadastro")?.value || ""
+          },
+          bem_imovel: {
+            imovel_ElaboracaoCadastro: document.getElementById("imovel_ElaboracaoCadastro")?.value || "",
+            localizacao_ElaboracaoCadastro: document.getElementById("localizacao_ElaboracaoCadastro")?.value || "",
+            area_ElaboracaoCadastro: document.getElementById("area_ElaboracaoCadastro")?.value || "",
+            valor_ElaboracaoCadastro: parseFloat(document.getElementById("valor_ElaboracaoCadastro")?.value || 0),
+            hipotecado_ElaboracaoCadastro: document.getElementById("hipotecado_ElaboracaoCadastro")?.value || ""
+          },
+          bem_movel: {
+            marca_ElaboracaoCadastro: document.getElementById("marca_ElaboracaoCadastro")?.value || "",
+            modelo_ElaboracaoCadastro: document.getElementById("modelo_ElaboracaoCadastro")?.value || "",
+            alienado_ElaboracaoCadastro: document.getElementById("alienado_ElaboracaoCadastro")?.value || ""
+          },
+          plantel_animal: {
+            especie_ElaboracaoCadastro: document.getElementById("especie_ElaboracaoCadastro")?.value || "",
+            numero_de_animais_ElaboracaoCadastro: parseInt(document.getElementById("numero_de_animais_ElaboracaoCadastro")?.value || 0),
+            consumo_diario_ElaboracaoCadastro: parseFloat(document.getElementById("consumo_diario_ElaboracaoCadastro")?.value || 0),
+            consumo_mensal_ElaboracaoCadastro: parseFloat(document.getElementById("consumo_mensal_ElaboracaoCadastro")?.value || 0)
+          },
+          supervisores: {
+            codigo_insumo_ElaboracaoCadastro: document.getElementById("codigo_insumo_ElaboracaoCadastro")?.value || "",
+            nome_insumos_ElaboracaoCadastro: document.getElementById("nome_insumos_ElaboracaoCadastro")?.value || "",
+            codigo_pet_ElaboracaoCadastro: document.getElementById("codigo_pet_ElaboracaoCadastro")?.value || "",
+            nome_pet_ElaboracaoCadastro: document.getElementById("nome_pet_ElaboracaoCadastro")?.value || ""
+          },
+          comissao_dispet: {
+            insumos_ElaboracaoCadastro: document.getElementById("insumos_ElaboracaoCadastro")?.value || "",
+            pet_ElaboracaoCadastro: document.getElementById("pet_ElaboracaoCadastro")?.value || "",
+            observacoes_ElaboracaoCadastro: document.getElementById("observacoes_ElaboracaoCadastro")?.value || ""
+          }
+        };
+      }
 
 
-    function preencherFormularioCliente(cliente) {
-      const dados = cliente || {};
+      function preencherFormularioCliente(cliente) {
+        const dados = cliente || {};
 
-      // Bloco: cadastrocliente
-      const c = dados.cadastrocliente || {};
-      document.getElementById("id").value = c.id || "";
-      document.getElementById("codigo_da_empresa").value = c.codigo_da_empresa || "";
-      document.getElementById("ativo").checked = c.ativo ?? true;
-      document.getElementById("tipo_cliente").value = c.tipo_cliente || "";
-      document.getElementById("tipo_venda").value = c.tipo_venda || "";
-      document.getElementById("tipo_compra").value = c.tipo_compra || "";
-      document.getElementById("limite_credito").value = c.limite_credito || "";
-      document.getElementById("nome_cliente").value = c.nome_cliente || "";
-      document.getElementById("nome_fantasia").value = c.nome_fantasia || "";
-      document.getElementById("cnpj").value = c.cnpj || "";
-      document.getElementById("inscricao_estadual").value = c.inscricao_estadual || "";
-      document.getElementById("cpf").value = c.cpf || "";
-      document.getElementById("situacao").value = c.situacao || "";
-      document.getElementById("indicacao_cliente").value = c.indicacao_cliente || "";
-      document.getElementById("ramo_de_atividade").value = c.ramo_de_atividade || "";
-      document.getElementById("atividade_principal").value = c.atividade_principal || "";
+        // Helper para evitar erros se o elemento não existir
+        const setVal = (id, val) => {
+          const el = document.getElementById(id);
+          if (el) el.value = val;
+        };
+        const setCheck = (id, val) => {
+          const el = document.getElementById(id);
+          if (el) el.checked = val;
+        };
 
-      // Bloco: responsavel_compras
-      const rc = dados.responsavel_compras || {};
-      document.getElementById("nome_responsavel").value = rc.nome_responsavel || "";
-      document.getElementById("celular_responsavel").value = rc.celular_responsavel || "";
-      document.getElementById("email_resposavel").value = rc.email_resposavel || "";
-      document.getElementById("data_nascimento_resposavel").value = rc.data_nascimento_resposavel || "";
-      document.getElementById("observacoes_responsavel").value = rc.observacoes_responsavel || "";
-      document.getElementById("filial_resposavel").value = rc.filial_resposavel || "";
+        // Bloco: cadastrocliente
+        const c = dados.cadastrocliente || {};
+        setVal("id", c.id || "");
+        setVal("codigo_da_empresa", c.codigo_da_empresa || "");
+        setCheck("ativo", c.ativo ?? true);
+        setVal("tipo_cliente", c.tipo_cliente || "");
+        setVal("tipo_venda", c.tipo_venda || "");
+        setVal("tipo_compra", c.tipo_compra || "");
+        setVal("limite_credito", c.limite_credito || "");
+        setVal("nome_cliente", c.nome_cliente || "");
+        setVal("nome_fantasia", c.nome_fantasia || "");
+        setVal("cnpj", c.cnpj || "");
+        setVal("inscricao_estadual", c.inscricao_estadual || "");
+        setVal("cpf", c.cpf || "");
+        setVal("situacao", c.situacao || "");
+        setVal("indicacao_cliente", c.indicacao_cliente || "");
+        setVal("ramo_de_atividade", c.ramo_de_atividade || "");
+        setVal("atividade_principal", c.atividade_principal || "");
+        setVal("cadastro_markup", c.cadastro_markup || "");
 
-      // Bloco: endereco_faturamento
-      const ef = dados.endereco_faturamento || {};
-      document.getElementById("endereco_faturamento").value = ef.endereco_faturamento || "";
-      document.getElementById("bairro_faturamento").value = ef.bairro_faturamento || "";
-      document.getElementById("cep_faturamento").value = ef.cep_faturamento || "";
-      document.getElementById("localizacao_faturamento").value = ef.localizacao_faturamento || "";
-      document.getElementById("municipio_faturamento").value = ef.municipio_faturamento || "";
-      document.getElementById("estado_faturamento").value = ef.estado_faturamento || "";
-      document.getElementById("email_danfe_faturamento").value = ef.email_danfe_faturamento || "";
+        // Bloco: responsavel_compras
+        const rc = dados.responsavel_compras || {};
+        setVal("nome_responsavel", rc.nome_responsavel || "");
+        setVal("celular_responsavel", rc.celular_responsavel || "");
+        setVal("email_resposavel", rc.email_resposavel || "");
+        setVal("data_nascimento_resposavel", rc.data_nascimento_resposavel || "");
+        setVal("observacoes_responsavel", rc.observacoes_responsavel || "");
+        setVal("filial_resposavel", rc.filial_resposavel || "");
 
-      // Bloco: representante_legal
-      const rl = dados.representante_legal || {};
-      document.getElementById("nome_RepresentanteLegal").value = rl.nome_RepresentanteLegal || "";
-      document.getElementById("celular_RepresentanteLegal").value = rl.celular_RepresentanteLegal || "";
-      document.getElementById("email_RepresentanteLegal").value = rl.email_RepresentanteLegal || "";
-      document.getElementById("data_nascimento_RepresentanteLegal").value = rl.data_nascimento_RepresentanteLegal || "";
-      document.getElementById("observacoes_RepresentanteLegal").value = rl.observacoes_RepresentanteLegal || "";
+        // Bloco: endereco_faturamento
+        const ef = dados.endereco_faturamento || {};
+        setVal("endereco_faturamento", ef.endereco_faturamento || "");
+        setVal("bairro_faturamento", ef.bairro_faturamento || "");
+        setVal("cep_faturamento", ef.cep_faturamento || "");
+        setVal("localizacao_faturamento", ef.localizacao_faturamento || "");
+        setVal("municipio_faturamento", ef.municipio_faturamento || "");
+        setVal("estado_faturamento", ef.estado_faturamento || "");
+        setVal("email_danfe_faturamento", ef.email_danfe_faturamento || "");
 
-      // Bloco: endereco_entrega
-      const ee = dados.endereco_entrega || {};
-      document.getElementById("endereco_EnderecoEntrega").value = ee.endereco_EnderecoEntrega || "";
-      document.getElementById("bairro_EnderecoEntrega").value = ee.bairro_EnderecoEntrega || "";
-      document.getElementById("cep_EnderecoEntrega").value = ee.cep_EnderecoEntrega || "";
-      document.getElementById("localizacao_EnderecoEntrega").value = ee.localizacao_EnderecoEntrega || "";
-      document.getElementById("municipio_EnderecoEntrega").value = ee.municipio_EnderecoEntrega || "";
-      document.getElementById("estado_EnderecoEntrega").value = ee.estado_EnderecoEntrega || "";
-      document.getElementById("rota_principal_EnderecoEntrega").value = ee.rota_principal_EnderecoEntrega || "";
-      document.getElementById("rota_de_aproximacao_EnderecoEntrega").value = ee.rota_de_aproximacao_EnderecoEntrega || "";
-      document.getElementById("observacao_motorista_EnderecoEntrega").value = ee.observacao_motorista_EnderecoEntrega || "";
+        // Bloco: representante_legal
+        const rl = dados.representante_legal || {};
+        setVal("nome_RepresentanteLegal", rl.nome_RepresentanteLegal || "");
+        setVal("celular_RepresentanteLegal", rl.celular_RepresentanteLegal || "");
+        setVal("email_RepresentanteLegal", rl.email_RepresentanteLegal || "");
+        setVal("data_nascimento_RepresentanteLegal", rl.data_nascimento_RepresentanteLegal || "");
+        setVal("observacoes_RepresentanteLegal", rl.observacoes_RepresentanteLegal || "");
 
-      // Bloco: responsavel_recebimento
-      const rr = dados.responsavel_recebimento || {};
-      document.getElementById("nome_ResponsavelRecebimento").value = rr.nome_ResponsavelRecebimento || "";
-      document.getElementById("celular_ResponsavelRecebimento").value = rr.celular_ResponsavelRecebimento || "";
-      document.getElementById("email_ResponsavelRecebimento").value = rr.email_ResponsavelRecebimento || "";
-      document.getElementById("data_nascimento_ResponsavelRecebimento").value = rr.data_nascimento_ResponsavelRecebimento || "";
-      document.getElementById("observacoes_ResponsavelRecebimento").value = rr.observacoes_ResponsavelRecebimento || "";
+        // Bloco: endereco_entrega
+        const ee = dados.endereco_entrega || {};
+        setVal("endereco_EnderecoEntrega", ee.endereco_EnderecoEntrega || "");
+        setVal("bairro_EnderecoEntrega", ee.bairro_EnderecoEntrega || "");
+        setVal("cep_EnderecoEntrega", ee.cep_EnderecoEntrega || "");
+        setVal("localizacao_EnderecoEntrega", ee.localizacao_EnderecoEntrega || "");
+        setVal("municipio_EnderecoEntrega", ee.municipio_EnderecoEntrega || "");
+        setVal("estado_EnderecoEntrega", ee.estado_EnderecoEntrega || "");
+        setVal("rota_principal_EnderecoEntrega", ee.rota_principal_EnderecoEntrega || "");
+        setVal("rota_de_aproximacao_EnderecoEntrega", ee.rota_de_aproximacao_EnderecoEntrega || "");
+        setVal("observacao_motorista_EnderecoEntrega", ee.observacao_motorista_EnderecoEntrega || "");
 
-      // Bloco: endereco_cobranca
-      const ec = dados.endereco_cobranca || {};
-      document.getElementById("endereco_EnderecoCobranca").value = ec.endereco_EnderecoCobranca || "";
-      document.getElementById("bairro_EnderecoCobranca").value = ec.bairro_EnderecoCobranca || "";
-      document.getElementById("cep_EnderecoCobranca").value = ec.cep_EnderecoCobranca || "";
-      document.getElementById("localizacao_EnderecoCobranca").value = ec.localizacao_EnderecoCobranca || "";
-      document.getElementById("municipio_EnderecoCobranca").value = ec.municipio_EnderecoCobranca || "";
-      document.getElementById("estado_EnderecoCobranca").value = ec.estado_EnderecoCobranca || "";
+        // Bloco: responsavel_recebimento
+        const rr = dados.responsavel_recebimento || {};
+        setVal("nome_ResponsavelRecebimento", rr.nome_ResponsavelRecebimento || "");
+        setVal("celular_ResponsavelRecebimento", rr.celular_ResponsavelRecebimento || "");
+        setVal("email_ResponsavelRecebimento", rr.email_ResponsavelRecebimento || "");
+        setVal("data_nascimento_ResponsavelRecebimento", rr.data_nascimento_ResponsavelRecebimento || "");
+        setVal("observacoes_ResponsavelRecebimento", rr.observacoes_ResponsavelRecebimento || "");
 
-      // Bloco: responsavel_cobranca
-      const rcob = dados.responsavel_cobranca || {};
-      document.getElementById("nome_ResponsavelCobranca").value = rcob.nome_ResponsavelCobranca || "";
-      document.getElementById("celular_ResponsavelCobranca").value = rcob.celular_ResponsavelCobranca || "";
-      document.getElementById("email_ResponsavelCobranca").value = rcob.email_ResponsavelCobranca || "";
-      document.getElementById("data_nascimento_ResponsavelCobranca").value = rcob.data_nascimento_ResponsavelCobranca || "";
-      document.getElementById("observacoes_ResponsavelCobranca").value = rcob.observacoes_ResponsavelCobranca || "";
+        // Bloco: endereco_cobranca
+        const ec = dados.endereco_cobranca || {};
+        setVal("endereco_EnderecoCobranca", ec.endereco_EnderecoCobranca || "");
+        setVal("bairro_EnderecoCobranca", ec.bairro_EnderecoCobranca || "");
+        setVal("cep_EnderecoCobranca", ec.cep_EnderecoCobranca || "");
+        setVal("localizacao_EnderecoCobranca", ec.localizacao_EnderecoCobranca || "");
+        setVal("municipio_EnderecoCobranca", ec.municipio_EnderecoCobranca || "");
+        setVal("estado_EnderecoCobranca", ec.estado_EnderecoCobranca || "");
 
-      // Bloco: dados_ultimas_compras
-      const comp = dados.dados_ultimas_compras || {};
-      document.getElementById("numero_danfe_Compras").value = comp.numero_danfe_Compras || "";
-      document.getElementById("emissao_Compras").value = comp.emissao_Compras || "";
-      document.getElementById("valor_total_Compras").value = comp.valor_total_Compras || "";
-      document.getElementById("valor_frete_Compras").value = comp.valor_frete_Compras || "";
-      document.getElementById("valor_frete_padrao_Compras").value = comp.valor_frete_padrao_Compras || "";
-      document.getElementById("valor_ultimo_frete_to_Compras").value = comp.valor_ultimo_frete_to_Compras || "";
-      document.getElementById("lista_tabela_Compras").value = comp.lista_tabela_Compras || "";
-      document.getElementById("condicoes_pagamento_Compras").value = comp.condicoes_pagamento_Compras || "";
-      document.getElementById("cliente_calcula_st_Compras").value = comp.cliente_calcula_st_Compras || "";
-      document.getElementById("prazo_medio_compra_Compras").value = comp.prazo_medio_compra_Compras || "";
-      document.getElementById("previsao_proxima_compra_Compras").value = comp.previsao_proxima_compra_Compras || "";
+        // Bloco: responsavel_cobranca
+        const rcob = dados.responsavel_cobranca || {};
+        setVal("nome_ResponsavelCobranca", rcob.nome_ResponsavelCobranca || "");
+        setVal("celular_ResponsavelCobranca", rcob.celular_ResponsavelCobranca || "");
+        setVal("email_ResponsavelCobranca", rcob.email_ResponsavelCobranca || "");
+        setVal("data_nascimento_ResponsavelCobranca", rcob.data_nascimento_ResponsavelCobranca || "");
+        setVal("observacoes_ResponsavelCobranca", rcob.observacoes_ResponsavelCobranca || "");
 
-      // Bloco: observacoes_nao_compra
-      const obs = dados.observacoes_nao_compra || {};
-      document.getElementById("observacoes_Compras").value = obs.observacoes_Compras || "";
+        // Bloco: dados_ultimas_compras
+        const comp = dados.dados_ultimas_compras || {};
+        setVal("numero_danfe_Compras", comp.numero_danfe_Compras || "");
+        setVal("emissao_Compras", comp.emissao_Compras || "");
+        setVal("valor_total_Compras", comp.valor_total_Compras || "");
+        setVal("valor_frete_Compras", comp.valor_frete_Compras || "");
+        setVal("valor_frete_padrao_Compras", comp.valor_frete_padrao_Compras || "");
+        setVal("valor_ultimo_frete_to_Compras", comp.valor_ultimo_frete_to_Compras || "");
+        setVal("lista_tabela_Compras", comp.lista_tabela_Compras || "");
+        setVal("condicoes_pagamento_Compras", comp.condicoes_pagamento_Compras || "");
+        setVal("cliente_calcula_st_Compras", comp.cliente_calcula_st_Compras || "");
+        setVal("prazo_medio_compra_Compras", comp.prazo_medio_compra_Compras || "");
+        setVal("previsao_proxima_compra_Compras", comp.previsao_proxima_compra_Compras || "");
 
-      // Bloco: dados_elaboracao_cadastro
-      const ed = dados.dados_elaboracao_cadastro || {};
-      document.getElementById("classificacao_ElaboracaoCadastro").value = ed.classificacao_ElaboracaoCadastro || "";
-      document.getElementById("tipo_venda_prazo_ou_vista_ElaboracaoCadastro").value = ed.tipo_venda_prazo_ou_vista_ElaboracaoCadastro || "";
-      document.getElementById("limite_credito_ElaboracaoCadastro").value = ed.limite_credito_ElaboracaoCadastro || "";
-      document.getElementById("data_vencimento_ElaboracaoCadastro").value = ed.data_vencimento_ElaboracaoCadastro || "";
+        // Bloco: observacoes_nao_compra
+        const obs = dados.observacoes_nao_compra || {};
+        setVal("observacoes_Compras", obs.observacoes_Compras || "");
 
-      // Bloco: grupo_economico
-      const grupo = dados.grupo_economico || {};
-      document.getElementById("codigo_ElaboracaoCadastro").value = grupo.codigo_ElaboracaoCadastro || "";
-      document.getElementById("nome_empresarial_ElaboracaoCadastro").value = grupo.nome_empresarial_ElaboracaoCadastro || "";
+        // Bloco: dados_elaboracao_cadastro
+        const ed = dados.dados_elaboracao_cadastro || {};
+        setVal("classificacao_ElaboracaoCadastro", ed.classificacao_ElaboracaoCadastro || "");
+        setVal("tipo_venda_prazo_ou_vista_ElaboracaoCadastro", ed.tipo_venda_prazo_ou_vista_ElaboracaoCadastro || "");
+        setVal("limite_credito_ElaboracaoCadastro", ed.limite_credito_ElaboracaoCadastro || "");
+        setVal("data_vencimento_ElaboracaoCadastro", ed.data_vencimento_ElaboracaoCadastro || "");
 
-      // Bloco: referencia_comercial
-      const refcom = dados.referencia_comercial || {};
-      document.getElementById("empresa_ElaboracaoCadastro").value = refcom.empresa_ElaboracaoCadastro || "";
-      document.getElementById("cidade_ElaboracaoCadastro").value = refcom.cidade_ElaboracaoCadastro || "";
-      document.getElementById("telefone_ElaboracaoCadastro").value = refcom.telefone_ElaboracaoCadastro || "";
-      document.getElementById("contato_ElaboracaoCadastro").value = refcom.contato_ElaboracaoCadastro || "";
+        // Bloco: grupo_economico
+        const grupo = dados.grupo_economico || {};
+        setVal("codigo_ElaboracaoCadastro", grupo.codigo_ElaboracaoCadastro || "");
+        setVal("nome_empresarial_ElaboracaoCadastro", grupo.nome_empresarial_ElaboracaoCadastro || "");
 
-      // Bloco: referencia_bancaria
-      const refbanco = dados.referencia_bancaria || {};
-      document.getElementById("banco_ElaboracaoCadastro").value = refbanco.banco_ElaboracaoCadastro || "";
-      document.getElementById("agencia_ElaboracaoCadastro").value = refbanco.agencia_ElaboracaoCadastro || "";
-      document.getElementById("conta_corrente_ElaboracaoCadastro").value = refbanco.conta_corrente_ElaboracaoCadastro || "";
+        // Bloco: referencia_comercial
+        const refcom = dados.referencia_comercial || {};
+        setVal("empresa_ElaboracaoCadastro", refcom.empresa_ElaboracaoCadastro || "");
+        setVal("cidade_ElaboracaoCadastro", refcom.cidade_ElaboracaoCadastro || "");
+        setVal("telefone_ElaboracaoCadastro", refcom.telefone_ElaboracaoCadastro || "");
+        setVal("contato_ElaboracaoCadastro", refcom.contato_ElaboracaoCadastro || "");
 
-      // Bloco: bem_imovel
-      const imovel = dados.bem_imovel || {};
-      document.getElementById("imovel_ElaboracaoCadastro").value = imovel.imovel_ElaboracaoCadastro || "";
-      document.getElementById("localizacao_ElaboracaoCadastro").value = imovel.localizacao_ElaboracaoCadastro || "";
-      document.getElementById("area_ElaboracaoCadastro").value = imovel.area_ElaboracaoCadastro || "";
-      document.getElementById("valor_ElaboracaoCadastro").value = imovel.valor_ElaboracaoCadastro || "";
-      document.getElementById("hipotecado_ElaboracaoCadastro").value = imovel.hipotecado_ElaboracaoCadastro || "";
+        // Bloco: referencia_bancaria
+        const refbanco = dados.referencia_bancaria || {};
+        setVal("banco_ElaboracaoCadastro", refbanco.banco_ElaboracaoCadastro || "");
+        setVal("agencia_ElaboracaoCadastro", refbanco.agencia_ElaboracaoCadastro || "");
+        setVal("conta_corrente_ElaboracaoCadastro", refbanco.conta_corrente_ElaboracaoCadastro || "");
 
-      // Bloco: bem_movel
-      const movel = dados.bem_movel || {};
-      document.getElementById("marca_ElaboracaoCadastro").value = movel.marca_ElaboracaoCadastro || "";
-      document.getElementById("modelo_ElaboracaoCadastro").value = movel.modelo_ElaboracaoCadastro || "";
-      document.getElementById("alienado_ElaboracaoCadastro").value = movel.alienado_ElaboracaoCadastro || "";
+        // Bloco: bem_imovel
+        const imovel = dados.bem_imovel || {};
+        setVal("imovel_ElaboracaoCadastro", imovel.imovel_ElaboracaoCadastro || "");
+        setVal("localizacao_ElaboracaoCadastro", imovel.localizacao_ElaboracaoCadastro || "");
+        setVal("area_ElaboracaoCadastro", imovel.area_ElaboracaoCadastro || "");
+        setVal("valor_ElaboracaoCadastro", imovel.valor_ElaboracaoCadastro || "");
+        setVal("hipotecado_ElaboracaoCadastro", imovel.hipotecado_ElaboracaoCadastro || "");
 
-      // Bloco: plantel_animal
-      const plantel = dados.plantel_animal || {};
-      document.getElementById("especie_ElaboracaoCadastro").value = plantel.especie_ElaboracaoCadastro || "";
-      document.getElementById("numero_de_animais_ElaboracaoCadastro").value = plantel.numero_de_animais_ElaboracaoCadastro || "";
-      document.getElementById("consumo_diario_ElaboracaoCadastro").value = plantel.consumo_diario_ElaboracaoCadastro || "";
-      document.getElementById("consumo_mensal_ElaboracaoCadastro").value = plantel.consumo_mensal_ElaboracaoCadastro || "";
+        // Bloco: bem_movel
+        const movel = dados.bem_movel || {};
+        setVal("marca_ElaboracaoCadastro", movel.marca_ElaboracaoCadastro || "");
+        setVal("modelo_ElaboracaoCadastro", movel.modelo_ElaboracaoCadastro || "");
+        setVal("alienado_ElaboracaoCadastro", movel.alienado_ElaboracaoCadastro || "");
 
-      // Bloco: supervisores
-      const sup = dados.supervisores || {};
-      document.getElementById("codigo_insumo_ElaboracaoCadastro").value = sup.codigo_insumo_ElaboracaoCadastro || "";
-      document.getElementById("nome_insumos_ElaboracaoCadastro").value = sup.nome_insumos_ElaboracaoCadastro || "";
-      document.getElementById("codigo_pet_ElaboracaoCadastro").value = sup.codigo_pet_ElaboracaoCadastro || "";
-      document.getElementById("nome_pet_ElaboracaoCadastro").value = sup.nome_pet_ElaboracaoCadastro || "";
+        // Bloco: plantel_animal
+        const plantel = dados.plantel_animal || {};
+        setVal("especie_ElaboracaoCadastro", plantel.especie_ElaboracaoCadastro || "");
+        setVal("numero_de_animais_ElaboracaoCadastro", plantel.numero_de_animais_ElaboracaoCadastro || "");
+        setVal("consumo_diario_ElaboracaoCadastro", plantel.consumo_diario_ElaboracaoCadastro || "");
+        setVal("consumo_mensal_ElaboracaoCadastro", plantel.consumo_mensal_ElaboracaoCadastro || "");
 
-      // Bloco: comissao_dispet
-      const com = dados.comissao_dispet || {};
-      document.getElementById("insumos_ElaboracaoCadastro").value = com.insumos_ElaboracaoCadastro || "";
-      document.getElementById("pet_ElaboracaoCadastro").value = com.pet_ElaboracaoCadastro || "";
-      document.getElementById("observacoes_ElaboracaoCadastro").value = com.observacoes_ElaboracaoCadastro || "";
-    }
+        // Bloco: supervisores
+        const sup = dados.supervisores || {};
+        setVal("codigo_insumo_ElaboracaoCadastro", sup.codigo_insumo_ElaboracaoCadastro || "");
+        setVal("nome_insumos_ElaboracaoCadastro", sup.nome_insumos_ElaboracaoCadastro || "");
+        setVal("codigo_pet_ElaboracaoCadastro", sup.codigo_pet_ElaboracaoCadastro || "");
+        setVal("nome_pet_ElaboracaoCadastro", sup.nome_pet_ElaboracaoCadastro || "");
 
+        // Bloco: comissao_dispet
+        const com = dados.comissao_dispet || {};
+        setVal("insumos_ElaboracaoCadastro", com.insumos_ElaboracaoCadastro || "");
+        setVal("pet_ElaboracaoCadastro", com.pet_ElaboracaoCadastro || "");
+        setVal("observacoes_ElaboracaoCadastro", com.observacoes_ElaboracaoCadastro || "");
 
-    function openTab(event, tabName) {
-      const tabs = document.querySelectorAll('.tab-content');
-      tabs.forEach(tab => tab.style.display = 'none');
-
-      const buttons = document.querySelectorAll('.tab');
-      buttons.forEach(btn => btn.classList.remove('active'));
-
-      const selectedTab = document.getElementById(tabName);
-      if (selectedTab) selectedTab.style.display = 'block';
-
-      event.currentTarget.classList.add('active');
-    }
-
+        setViewState('SELECTED');
+      }
 
 
-        // Disponibiliza para o modal chamar
-        window.preencherFormulario = preencherFormularioCliente;
-</script>	
-  
-<!--  <script src="/js/script.js"></script>-->
+      function openTab(event, tabName) {
+        const tabs = document.querySelectorAll('.tab-content');
+        tabs.forEach(tab => tab.style.display = 'none');
 
-  <script>
-  const menuButton = document.getElementById("menu-button");
-  const sidebar = document.getElementById("sidebar");
-  const overlay = document.getElementById("overlay");
+        const buttons = document.querySelectorAll('.tab');
+        buttons.forEach(btn => btn.classList.remove('active'));
 
-  menuButton.addEventListener("click", () => {
-    sidebar.classList.toggle("active");
-    overlay.style.display = sidebar.classList.contains("active") ? "block" : "none";
-  });
+        const selectedTab = document.getElementById(tabName);
+        if (selectedTab) selectedTab.style.display = 'block';
 
-  overlay.addEventListener("click", () => {
-    sidebar.classList.remove("active");
-    overlay.style.display = "none";
-  });
-</script>
+        // Add active class to the button that opened the tab if event is provided
+        if (event && event.currentTarget) {
+          event.currentTarget.classList.add('active');
+        }
+      }
 
-<script>
-  // Função genérica para preencher selects
-function preencherSelect(endpoint, idElemento) {
-  fetch(`https://ordersync-backend-edjq.onrender.com/listas/${endpoint}`)
-    .then((response) => response.json())
-    .then((data) => {
-      const select = document.getElementById(idElemento);
-      if (!select) return;
+      // --- API Integration Functions ---
 
-      data.forEach((item) => {
-        const option = document.createElement("option");
-        option.value = item;
-        option.text = item;
-        select.appendChild(option);
+      async function buscarCep(event, tipo) {
+        const cep = event.target.value.replace(/\D/g, '');
+        if (cep.length !== 8) return;
+
+        try {
+          // Visual feedback (optional: change cursor or disable input temp)
+          event.target.style.cursor = 'wait';
+
+          const response = await axios.get(`https://brasilapi.com.br/api/cep/v2/${cep}`);
+          const data = response.data;
+
+          // Mapping based on 'tipo' (faturamento, EnderecoEntrega, EnderecoCobranca)
+          // Note: The HTML IDs use 'faturamento' (lowercase) but 'EnderecoEntrega'/'EnderecoCobranca' (CamelCase) suffix.
+          // We need to map the incoming 'tipo' argument to the correct suffix used in IDs.
+
+          let suffix = "";
+          if (tipo === 'faturamento') suffix = "_faturamento";
+          else if (tipo === 'entrega') suffix = "_EnderecoEntrega";
+          else if (tipo === 'cobranca') suffix = "_EnderecoCobranca";
+
+          if (!suffix) return;
+
+          const setVal = (fieldPrefix, value) => {
+            const el = document.getElementById(`${fieldPrefix}${suffix}`);
+            if (el) el.value = value;
+          };
+
+          setVal('endereco', data.street);
+          setVal('bairro', data.neighborhood);
+          setVal('municipio', data.city);
+          setVal('estado', data.state);
+          // 'localizacao' is not provided by data directly (often used for complements or ref), leaving as is.
+
+        } catch (error) {
+          console.error("Erro ao buscar CEP:", error);
+          alert("Erro ao buscar CEP. Verifique se está correto.");
+        } finally {
+          event.target.style.cursor = 'default';
+        }
+      }
+
+      async function buscarCnpj() {
+        const cnpjInput = document.getElementById("cnpj");
+        const cnpj = cnpjInput.value.replace(/\D/g, '');
+
+        if (cnpj.length !== 14) return;
+
+        try {
+          cnpjInput.style.cursor = 'wait';
+
+          const response = await axios.get(`https://brasilapi.com.br/api/cnpj/v1/${cnpj}`);
+          const data = response.data;
+
+          // Helper to set value
+          const setVal = (id, val) => {
+            const el = document.getElementById(id);
+            if (el) el.value = val;
+          };
+
+          // Helper to handle Selects (add option if not exists to ensure it's selected)
+          const setSelect = (id, value) => {
+            const select = document.getElementById(id);
+            if (!select) return;
+
+            // Normaliza para comparação (ex: remove acentos ou uppercase se necessário, mas aqui vamos tentar direto)
+            // Verifica se já existe a opção
+            let exists = false;
+            for (let i = 0; i < select.options.length; i++) {
+              if (select.options[i].value === value || select.options[i].text === value) {
+                select.selectedIndex = i;
+                exists = true;
+                break;
+              }
+            }
+
+            // Se não existe, cria uma nova opção temporária
+            if (!exists && value) {
+              const option = document.createElement("option");
+              option.value = value;
+              option.text = value; // Exibe o texto vindo da API
+              select.appendChild(option);
+              select.value = value;
+            }
+          };
+
+          setVal('nome_cliente', data.razao_social); // Razão Social
+
+          // Limpeza: Muitas vezes (principalmente MEI) a Razão Social vem com o CNPJ no início (ex: "12.345.678 NOME DA PESSOA").
+          // Vamos remover isso se existir para ficar mais limpo.
+          let nomeLimpo = data.razao_social;
+          const cnpjRootFormatado = data.cnpj.substring(0, 8).replace(/^(\d{2})(\d{3})(\d{3}).*/, "$1.$2.$3");
+          if (nomeLimpo.startsWith(cnpjRootFormatado)) {
+            nomeLimpo = nomeLimpo.substring(cnpjRootFormatado.length).trim();
+            // Remove hifens ou caracteres soltos que possam ter sobrado
+            nomeLimpo = nomeLimpo.replace(/^[-–]\s*/, "");
+          }
+          setVal('nome_cliente', nomeLimpo);
+
+          setVal('nome_fantasia', data.nome_fantasia || nomeLimpo);
+
+          // Mapeamentos Específicos
+
+          // 1. Situação: BrasilAPI retorna "ATIVA", "BAIXADA", etc.
+          // Tenta mapear "ATIVA" -> "Ativo" se o select esperar isso, ou usa o valor direto.
+          let situacao = data.descricao_situacao_cadastral;
+          if (situacao === "ATIVA") situacao = "Ativo"; // Tentativa de normalização comum
+          setSelect('situacao', situacao);
+
+          // 2. Atividade Principal e Ramo de Atividade
+          // A API retorna `cnae_fiscal_descricao_principal`. Vamos preencher ambos os campos com isso por padrão.
+          const atividade = data.cnae_fiscal_descricao_principal;
+          setSelect('atividade_principal', atividade);
+          setSelect('ramo_de_atividade', atividade);
+
+          // Address Info -> Mapped to Faturamento (Standard behavior)
+          setVal('cep_faturamento', data.cep);
+          setVal('endereco_faturamento', `${data.logradouro}, ${data.numero}${data.complemento ? ' - ' + data.complemento : ''}`);
+          setVal('bairro_faturamento', data.bairro);
+          setVal('municipio_faturamento', data.municipio);
+          setVal('estado_faturamento', data.uf);
+
+          // Contact
+          setVal('email_resposavel', data.email);
+          // setVal('telefone', data.ddd_telefone_1); // If we had a generic phone field
+
+          // Nota sobre Inscrição Estadual:
+          // A API pública de CNPJ (Receita Federal) NÃO retorna Inscrição Estadual (dado estadual).
+          // Portanto, esse campo deve ser preenchido manualmente ou via API paga (Sintegra).
+
+        } catch (error) {
+          console.error("Erro ao buscar CNPJ:", error);
+        } finally {
+          cnpjInput.style.cursor = 'default';
+        }
+      }
+
+      // Disponibiliza para o modal chamar
+      window.preencherFormulario = preencherFormularioCliente;
+    </script>
+
+    <!--  <script src="/js/script.js"></script>-->
+
+    <script>
+      const menuButton = document.getElementById("menu-button");
+      const sidebar = document.getElementById("sidebar");
+      const overlay = document.getElementById("overlay");
+
+      menuButton.addEventListener("click", () => {
+        sidebar.classList.toggle("active");
+        overlay.style.display = sidebar.classList.contains("active") ? "block" : "none";
       });
-    })
-    .catch((error) => {
-      console.error(`Erro ao carregar lista ${endpoint}:`, error);
-    });
-}
 
-// Chamada ao carregar a página
-window.onload = () => {
-  preencherSelect("situacao", "situacao");
-  preencherSelect("tipos_cliente", "tipo_cliente");
-  preencherSelect("atividade_principal", "atividade_principal");
-  preencherSelect("rota", "rota_principal_EnderecoEntrega");
-  preencherSelect("tipo_venda", "tipo_venda");
-  preencherSelect("tipo_compra", "tipo_compra");
-  preencherSelect("ramo_de_atividade", "ramo_de_atividade");
-};
+      overlay.addEventListener("click", () => {
+        sidebar.classList.remove("active");
+        overlay.style.display = "none";
+      });
+    </script>
 
-</script>
+    <script>
+      // Função genérica para preencher selects
+      function preencherSelect(endpoint, idElemento) {
+        const api = window.API_BASE || "http://127.0.0.1:8000";
+        fetch(`${api}/listas/${endpoint}`)
+          .then((response) => response.json())
+          .then((data) => {
+            const select = document.getElementById(idElemento);
+            if (!select) return;
+
+            data.forEach((item) => {
+              const option = document.createElement("option");
+              option.value = item;
+              option.text = item;
+              select.appendChild(option);
+            });
+          })
+          .catch((error) => {
+            console.error(`Erro ao carregar lista ${endpoint}:`, error);
+          });
+      }
+
+      // Chamada ao carregar a página
+      window.onload = () => {
+        preencherSelect("situacao", "situacao");
+        preencherSelect("tipos_cliente", "tipo_cliente");
+        preencherSelect("atividade_principal", "atividade_principal");
+        preencherSelect("rota", "rota_principal_EnderecoEntrega");
+        preencherSelect("tipo_venda", "tipo_venda");
+        preencherSelect("tipo_compra", "tipo_compra");
+        preencherSelect("ramo_de_atividade", "ramo_de_atividade");
+
+        setViewState('INITIAL');
+      };
+
+    </script>
 
 
 </body>
+
 </html>

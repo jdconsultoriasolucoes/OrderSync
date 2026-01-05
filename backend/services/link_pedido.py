@@ -12,7 +12,7 @@ def _fim_do_dia(d):  # date → datetime no fim do dia
 def calcular_expires_at_global(db):
     v = db.execute(text("""
         SELECT MAX(CAST(p.validade_tabela AS DATE)) AS max_validade
-        FROM t_cadastro_produto p
+        FROM t_cadastro_produto_v2 p
         WHERE p.status_produto = 'ATIVO'
     """)).scalar()
     return _fim_do_dia(v) if v else None

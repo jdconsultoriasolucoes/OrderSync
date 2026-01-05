@@ -39,6 +39,7 @@ class ProdutoV2(Base):
     fornecedor = Column(Text)
     filhos = Column(Integer)                             # Filho nº (int)
     familia = Column(Text)                               # Nome da Família (era ID, mas agora é Texto vindo do PDF)
+    marca = Column(Text)                                 # Marca do produto
 
     # Preços e vigências
     preco = Column(Numeric(14, 4))                       # Valor Tabela Atual (oficial)
@@ -59,6 +60,9 @@ class ProdutoV2(Base):
     # Metadados
     created_at = Column(DateTime(timezone=True), server_default=func.now(), nullable=False)
     updated_at = Column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now(), nullable=False)
+    
+    criado_por = Column(Text, nullable=True)
+    atualizado_por = Column(Text, nullable=True)
 
     # Relação 1–1 com impostos
     imposto = relationship("ImpostoV2", back_populates="produto", uselist=False)

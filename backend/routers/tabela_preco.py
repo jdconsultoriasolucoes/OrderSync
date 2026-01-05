@@ -1,5 +1,5 @@
 from fastapi import APIRouter, HTTPException, Query
-from services.tabela_preco import calcular_valores_dos_produtos, buscar_max_validade_ativos
+from services.tabela_preco import calcular_valores_dos_produtos, create_tabela, update_tabela
 from schemas.tabela_preco import TabelaPreco, TabelaPrecoCompleta, ProdutoCalculado, ParametrosCalculo, ValidadeGlobalResp, TabelaSalvar  
 from typing import List, Optional
 from sqlalchemy import text , bindparam
@@ -14,6 +14,9 @@ from pydantic import BaseModel
 import logging
 from sqlalchemy.exc import SQLAlchemyError, IntegrityError, DataError
 import re
+from fastapi import Depends
+from core.deps import get_current_user, get_db
+from models.usuario import UsuarioModel
 
 logger = logging.getLogger("tabela_preco")
 
@@ -39,24 +42,26 @@ def filtrar_produtos_para_tabela_preco(
                 p.codigo_supra AS codigo_tabela,
                 p.nome_produto AS descricao,
                 CASE 
-                    WHEN p.unidade IN ('SC','SACO') THEN 'SACO'
-                    WHEN p.unidade IN ('FD')       THEN 'FARDO'
-                    WHEN p.unidade IN ('CX')       THEN 'CAIXA'
-                    ELSE p.unidade
+                    WHEN UPPER(p.embalagem_venda) IN ('SC', 'SACO') THEN 'SACO'
+                    WHEN UPPER(p.embalagem_venda) IN ('CX', 'CAIXA') THEN 'CAIXA'
+                    WHEN UPPER(p.embalagem_venda) IN ('FD', 'FARDO') THEN 'FARDO'
+                    WHEN UPPER(p.embalagem_venda) IN ('PC', 'PACOTE') THEN 'PACOTE'
+                    WHEN UPPER(p.embalagem_venda) IN ('UN', 'UNIDADE', 'UNI') THEN 'UNIDADE'
+                    ELSE COALESCE(p.embalagem_venda, 'UN')
                 END AS embalagem,
                 p.peso AS peso_liquido,
-                p.preco_lista_supra AS valor,
-                p.ipi AS ipi,
-                p.iva_st AS iva_st,
+                p.preco AS valor,
+                p.ipi,
+                p.iva_st,
                 p.marca AS grupo,
-                f.familia AS departamento,
+                p.familia AS departamento,
+                p.marca,
+                p.id_familia,
                 p.fornecedor,
-                f.tipo,
+                p.tipo,
                 p.icms,
                 p.validade_tabela
-            FROM t_cadastro_produto p
-            LEFT JOIN t_familia_produtos f 
-              ON CAST(p.familia AS INT) = CAST(f.id AS INT)
+            FROM v_produto_v2_preco p
             WHERE p.status_produto = 'ATIVO'
               AND (:grupo IS NULL OR p.marca = :grupo)
               AND (:fornecedor IS NULL OR p.fornecedor = :fornecedor)
@@ -64,9 +69,9 @@ def filtrar_produtos_para_tabela_preco(
                     :q IS NULL
                  OR  p.codigo_supra::text ILIKE :like
                  OR  p.nome_produto       ILIKE :like
-                 OR  COALESCE(p.marca,'') ILIKE :like
+                 OR  COALESCE(p.marca,'')   ILIKE :like
                  OR  COALESCE(p.unidade,'') ILIKE :like
-                 OR  COALESCE(f.tipo,'')  ILIKE :like
+                 OR  COALESCE(p.tipo,'')  ILIKE :like
               )
         """
 
@@ -118,98 +123,23 @@ def condicoes_pagamento():
 def filtro_grupo_produto():
     try:
         db = SessionLocal()
-        query = text("select distinct marca as grupo from  t_cadastro_produto order by marca")
+        query = text("select distinct marca as grupo from t_cadastro_produto_v2 WHERE marca IS NOT NULL AND marca != '' order by marca")
         resultado = db.execute(query).fetchall()
         return [{"grupo": row.grupo} for row in resultado]
     finally:
         db.close()
 
 @router.post("/salvar")
-def salvar_tabela_preco(body: TabelaSalvar):
-    db: Session = SessionLocal()
+def salvar_tabela_preco(
+    body: TabelaSalvar, 
+    current_user: UsuarioModel = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
     try:
-        # 1) Gera id_tabela com fallback
-        try:
-            id_tabela = db.execute(text("SELECT nextval('seq_tabela_preco_id_tabela')")).scalar()
-        except Exception:
-            logger.warning("seq_tabela_preco_id_tabela ausente; usando MAX+1")
-            id_tabela = db.execute(text("SELECT COALESCE(MAX(id_tabela),0)+1 FROM tb_tabela_preco")).scalar()
-
-        insert_sql = text("""
-            INSERT INTO tb_tabela_preco (
-              id_tabela, nome_tabela, fornecedor, codigo_cliente, cliente,
-              codigo_produto_supra, descricao_produto, embalagem, peso_liquido, valor_produto,
-              comissao_aplicada, ajuste_pagamento, descricao_fator_comissao, codigo_plano_pagamento,
-              valor_frete_aplicado, frete_kg, valor_frete, valor_s_frete, grupo, departamento,
-              ipi, icms_st, iva_st, calcula_st
-            ) VALUES (
-              :id_tabela, :nome_tabela, :fornecedor, :codigo_cliente, :cliente,
-              :codigo_produto_supra, :descricao_produto, :embalagem, :peso_liquido, :valor_produto,
-              :comissao_aplicada, :ajuste_pagamento, :descricao_fator_comissao, :codigo_plano_pagamento,
-              :valor_frete_aplicado, :frete_kg, :valor_frete, :valor_s_frete, :grupo, :departamento,
-              :ipi, :icms_st, :iva_st, :calcula_st
-            )
-            RETURNING id_linha
-        """)
-
-        logger.info("[/salvar] header id=%s nome=%s cliente=%s fornecedor=%s codigo_cliente=%s",
-                    id_tabela, body.nome_tabela, body.cliente, body.fornecedor, getattr(body, "codigo_cliente", None))
-
-        inseridos = 0
-        for i, produto in enumerate(body.produtos, start=1):
-            params = {
-                "id_tabela": int(id_tabela),
-                "nome_tabela": body.nome_tabela or "",
-                "fornecedor":  (body.fornecedor or ""),
-                "codigo_cliente": getattr(body, "codigo_cliente", None),
-                "cliente":     body.cliente or "",
-
-                "codigo_produto_supra": produto.codigo_produto_supra or "",
-                "descricao_produto":    (produto.descricao_produto or ""),
-                "embalagem":            (getattr(produto, "embalagem", "") or ""),
-                "peso_liquido":         float(getattr(produto, "peso_liquido", 0) or 0),
-
-                "valor_produto":        float(produto.valor_produto or 0),
-
-                "comissao_aplicada":        float(getattr(produto, "comissao_aplicada", 0) or 0),
-                "ajuste_pagamento":         float(getattr(produto, "ajuste_pagamento", 0) or 0),
-                "descricao_fator_comissao": (getattr(produto, "descricao_fator_comissao", "") or ""),
-                "codigo_plano_pagamento":   (getattr(produto, "codigo_plano_pagamento", "") or ""),
-
-                "valor_frete_aplicado": float(getattr(produto, "valor_frete_aplicado", 0) or 0),
-                "frete_kg":             float(getattr(produto, "frete_kg", 0) or 0),
-
-                "valor_frete":   float(getattr(produto, "valor_frete", 0) or 0),
-                "valor_s_frete": float(getattr(produto, "valor_s_frete", 0) or 0),
-
-                "grupo":        (getattr(produto, "grupo", "") or ""),
-                "departamento": (getattr(produto, "departamento", "") or ""),
-
-                "ipi":     float(getattr(produto, "ipi", 0) or 0),
-                "icms_st": float(getattr(produto, "icms_st", 0) or 0),
-                "iva_st":  float(getattr(produto, "iva_st", 0) or 0),
-                "calcula_st": bool(getattr(body, "calcula_st", False)),
-            }
-
-            logger.info("[/salvar] item %s params=%s", i, params)
-
-            try:
-                db.execute(insert_sql, params)
-                inseridos += 1
-            except SQLAlchemyError as e:
-                logger.exception("[/salvar] ERRO no item %s. Params acima. Detalhe: %s", i, e)
-                raise
-
-        db.commit()
-        return {"ok": True, "id_tabela": int(id_tabela), "itens_inseridos": inseridos}
-
+        return create_tabela(db, body, current_user.email)
     except Exception as e:
-        db.rollback()
         logger.exception("[/salvar] Falha geral: %s", e)
-        # devolve uma mensagem útil pro front enquanto debuga
         raise HTTPException(status_code=500, detail=f"Erro ao salvar tabela_preco: {e}")
-    finally:
-        db.close()
 
 
 
@@ -235,9 +165,43 @@ def calcular_valores(payload: ParametrosCalculo):
     return calcular_valores_dos_produtos(payload)
 
 @router.get("/")
-def listar_tabelas():
-    with SessionLocal() as db:
-        rows = db.execute(text("""
+def listar_tabelas(
+    page: int = Query(1, ge=1),
+    page_size: int = Query(10, ge=1, le=100),
+    q: Optional[str] = Query(None)
+):
+    try:
+        db = SessionLocal()
+        
+        # Filtro de busca
+        q_raw = (q or "").strip()
+        like_pattern = f"%{q_raw}%"
+        
+        # 1. Query BASE (com filtros)
+        #    Obs: nome_tabela e cliente estão no GROUP BY, então podemos filtrar no WHERE tranquilamente.
+        #    Se quisesse filtrar pelo resultado de agregação, seria HAVING ou subquery.
+        where_clause = "WHERE ativo is TRUE"
+        params = {
+            "limit": page_size,
+            "offset": (page - 1) * page_size
+        }
+        
+        if q_raw:
+            where_clause += " AND (nome_tabela ILIKE :like OR cliente ILIKE :like)"
+            params["like"] = like_pattern
+
+        # 2. Contagem TOTAL (para paginação)
+        #    Precisamos contar quantos GRUPOS existem. 
+        #    Count(Distinct id_tabela) funciona bem já que id_tabela é chave do grupo.
+        count_sql = f"""
+            SELECT COUNT(DISTINCT id_tabela)
+            FROM tb_tabela_preco
+            {where_clause}
+        """
+        total = db.execute(text(count_sql), params).scalar() or 0
+
+        # 3. Busca de dados paginados
+        data_sql = f"""
             SELECT
               id_tabela,
               MIN(id_linha) AS any_row_id,
@@ -248,13 +212,15 @@ def listar_tabelas():
               BOOL_OR(calcula_st) AS calcula_st,
               MAX(criado_em) AS criado_em
             FROM tb_tabela_preco
-            WHERE ativo is TRUE
+            {where_clause}
             GROUP BY id_tabela, nome_tabela, cliente, fornecedor
-            ORDER BY criado_em DESC
-        """)).mappings().all()
+            ORDER BY MAX(criado_em) DESC
+            LIMIT :limit OFFSET :offset
+        """
+        
+        rows = db.execute(text(data_sql), params).mappings().all()
 
-        # O front usa "tabela.id" para abrir/editar; devolvemos id = id_tabela
-        return [
+        items = [
             {
                 "id": int(r["id_tabela"]),
                 "nome_tabela": r["nome_tabela"],
@@ -265,6 +231,20 @@ def listar_tabelas():
             }
             for r in rows
         ]
+
+        return {
+            "items": items,
+            "total": total,
+            "page": page,
+            "page_size": page_size,
+            "total_pages": (total + page_size - 1) // page_size
+        }
+
+    except Exception as e:
+        logger.error(f"Erro ao listar tabelas: {e}")
+        raise HTTPException(status_code=500, detail="Erro interno ao listar tabelas.")
+    finally:
+        db.close()
 
 
 
@@ -288,18 +268,19 @@ def busca_cliente(
 
         base_sql = """
             SELECT
-              codigo,
-              cnpj_cpf_faturamento_formatted AS cnpj_cpf,
-              nome_empresarial     AS nome_cliente,
-              ramo_juridico
-            FROM public.t_cadastro_cliente
+              cadastro_codigo_da_empresa AS codigo,
+              COALESCE(cadastro_cnpj, cadastro_cpf) AS cnpj_cpf,
+              cadastro_nome_cliente AS nome_cliente,
+              cadastro_tipo_cliente AS ramo_juridico,
+              cadastro_markup
+            FROM public.t_cadastro_cliente_v2
             WHERE
               (
                 :q = ''
-                OR nome_empresarial ILIKE :like
+                OR cadastro_nome_cliente ILIKE :like
                 OR (
                     :cnpj_like IS NOT NULL
-                    AND cnpj_cpf_faturamento ILIKE :cnpj_like
+                    AND (cadastro_cnpj ILIKE :cnpj_like OR cadastro_cpf ILIKE :cnpj_like)
                   )
               )
         """
@@ -313,10 +294,10 @@ def busca_cliente(
         }
 
         if ramo:
-            base_sql += " AND ramo_juridico = :ramo"
+            base_sql += " AND cadastro_tipo_cliente = :ramo"
             params["ramo"] = ramo
 
-        base_sql += " ORDER BY nome_empresarial OFFSET :offset LIMIT :limit"
+        base_sql += " ORDER BY cadastro_nome_cliente OFFSET :offset LIMIT :limit"
 
         rows = db.execute(text(base_sql), params).mappings().all()
         return [dict(r) for r in rows]
@@ -378,7 +359,7 @@ def validade_global():
         with SessionLocal() as db:
             v = db.execute(text("""
                 SELECT MAX(CAST(p.validade_tabela AS DATE)) AS max_validade
-                FROM t_cadastro_produto p
+                FROM t_cadastro_produto_v2 p
                 WHERE p.status_produto = 'ATIVO'
             """)).scalar()
 
@@ -433,143 +414,20 @@ def only_code(v):
     return str(v).strip().split(" - ", 1)[0]
 
 @router.put("/{id_tabela}")
-def atualizar_tabela(id_tabela: int, body: TabelaSalvar):
-    now = datetime.utcnow()
-    with SessionLocal() as db:
-        existentes = db.query(TabelaPrecoModel).filter(
-            TabelaPrecoModel.id_tabela == id_tabela
-        ).all()
-        if not existentes:
+def atualizar_tabela(
+    id_tabela: int, 
+    body: TabelaSalvar, 
+    current_user: UsuarioModel = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    try:
+        res = update_tabela(db, id_tabela, body, current_user.email)
+        if res is None:
             raise HTTPException(404, "Tabela não encontrada")
-
-        por_id = {r.id_linha: r for r in existentes}
-        por_codigo = { (r.codigo_produto_supra or "").strip(): r for r in existentes if (r.codigo_produto_supra or "").strip() }
-
-        # cabeçalho
-        for r in existentes:
-            r.nome_tabela    = body.nome_tabela
-            r.cliente        = body.cliente
-            r.codigo_cliente = body.codigo_cliente or "Não cadastrado"
-            r.fornecedor     = body.fornecedor or ""
-            r.calcula_st     = bool(getattr(body, "calcula_st", False))
-            r.editado_em     = now
-
-        # ✅ filtra itens "lixo" do Swagger/exemplo
-        produtos_validos = []
-        for p in (body.produtos or []):
-            cod = (getattr(p, "codigo_produto_supra", "") or "").strip()
-            if not cod:               # sem código -> ignora
-                continue
-            if cod.lower() == "string":
-                continue
-            desc = (getattr(p, "descricao_produto", "") or "").strip()
-            if not desc or desc.lower() == "string":   # exige descrição também
-                continue
-            # normaliza plano
-            p.codigo_produto_supra = cod
-            p.codigo_plano_pagamento =  (getattr(p, "codigo_plano_pagamento", "") or "").strip()
-            produtos_validos.append(p)
-
-        enviados_codigos = set()
-        novos = atualizados = reativados = 0
-
-        for p in produtos_validos:
-            cod = p.codigo_produto_supra
-            enviados_codigos.add(cod)
-
-            target = None
-            p_id_linha = getattr(p, "id_linha", None)
-            if p_id_linha is not None:
-                target = por_id.get(p_id_linha)
-            if target is None:
-                target = por_codigo.get(cod)
-
-            if target is not None:
-                # UPDATE + possível reativação
-                target.descricao_produto        = p.descricao_produto
-                target.embalagem                = (p.embalagem or "")
-                target.peso_liquido             = (p.peso_liquido or 0)
-                target.valor_produto            = (p.valor_produto or 0)
-                target.comissao_aplicada        = (p.comissao_aplicada or 0)
-                target.ajuste_pagamento         = (p.ajuste_pagamento or 0)
-                target.descricao_fator_comissao = (p.descricao_fator_comissao or "")
-                target.codigo_plano_pagamento   = p.codigo_plano_pagamento
-                target.valor_frete_aplicado     = (p.valor_frete_aplicado or 0)
-                target.frete_kg                 = (getattr(p, "frete_kg", None)
-                                                  if getattr(p, "frete_kg", None) is not None
-                                                  else getattr(body, "frete_kg", None) or 0)
-                target.valor_frete              = (getattr(p, "valor_frete", None) or 0)
-                target.valor_s_frete            = (p.valor_s_frete or 0)
-                target.grupo                    = getattr(p, "grupo", None)
-                target.departamento             = getattr(p, "departamento", None)
-                target.ipi                      = (p.ipi or 0)
-                target.icms_st                  = (p.icms_st or 0)
-                target.iva_st                   = (p.iva_st or 0)
-                target.calcula_st               = bool(getattr(body, "calcula_st", False))
-                
-                if not target.ativo:
-                    target.ativo = True
-                    target.deletado_em = None
-                    reativados += 1
-                else:
-                    atualizados += 1
-                target.editado_em = now
-            else:
-                # INSERT novo
-                db.add(TabelaPrecoModel(
-                    id_tabela            = id_tabela,
-                    nome_tabela          = body.nome_tabela,
-                    cliente              = body.cliente,
-                    codigo_cliente       = body.codigo_cliente or "Não cadastrado",
-                    fornecedor           = body.fornecedor or "",
-                    codigo_produto_supra = cod,
-                    descricao_produto    = p.descricao_produto,
-                    embalagem            = (p.embalagem or ""),
-                    peso_liquido         = (p.peso_liquido or 0),
-                    valor_produto        = (p.valor_produto or 0),
-                    comissao_aplicada    = (p.comissao_aplicada or 0),
-                    ajuste_pagamento     = (p.ajuste_pagamento or 0),
-                    descricao_fator_comissao = (p.descricao_fator_comissao or ""),
-                    codigo_plano_pagamento   = p.codigo_plano_pagamento,
-                    valor_frete_aplicado = (p.valor_frete_aplicado or 0),
-                    frete_kg             = (getattr(p, "frete_kg", None)
-                                             if getattr(p, "frete_kg", None) is not None
-                                             else getattr(body, "frete_kg", None) or 0),
-                    valor_frete          = (getattr(p, "valor_frete", None) or 0),
-                    valor_s_frete        = (p.valor_s_frete or 0),
-                    grupo                = getattr(p, "grupo", None),
-                    departamento         = getattr(p, "departamento", None),
-                    ipi                  = (p.ipi or 0),
-                    icms_st              = (p.icms_st or 0),
-                    iva_st               = (p.iva_st or 0),
-                    calcula_st           = bool(getattr(body, "calcula_st", False)),
-                    ativo                = True,
-                    deletado_em          = None,
-                    editado_em           = now,
-                ))
-                novos += 1
-
-        # soft-delete do que não veio
-        removidos = 0
-        for r in existentes:
-            cod_exist = (r.codigo_produto_supra or "").strip()
-            if r.ativo and cod_exist and cod_exist not in enviados_codigos:
-                r.ativo = False
-                r.deletado_em = now
-                r.editado_em  = now
-                removidos += 1
-
-        try:
-            db.commit()
-        except Exception as e:
-            db.rollback()
-            raise HTTPException(400, detail=f"{type(e).__name__}: {e}")
-
-        return {
-            "ok": True,
-            "tabela_id": id_tabela,
-            "novos": novos,
-            "reativados": reativados,
-            "atualizados": atualizados,
-            "removidos": removidos
-        }
+        return res
+    except Exception as e:
+        logger.error(f"Erro ao atualizar tabela: {e}")
+        # Re-raise apenas se for HTTPException
+        if isinstance(e, HTTPException):
+            raise e
+        raise HTTPException(status_code=500, detail=f"Erro interno: {e}")

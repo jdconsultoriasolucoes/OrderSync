@@ -33,6 +33,7 @@ class CadastroCliente(BaseModel):
     indicacao_cliente: Optional[str]
     ramo_de_atividade: Optional[str]
     atividade_principal: Optional[str]
+    cadastro_markup: Optional[float] = 0.0
 
 #    @field_validator("cpf")
 #    def cpf_valido(cls, v):

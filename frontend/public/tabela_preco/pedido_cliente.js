@@ -4,7 +4,7 @@
 const url = new URL(window.location.href);
 
 // Modo interno (prévia via "Visualizar")
-const IS_MODO_INTERNO = new URLSearchParams(location.search).get("modo") === "interno" || location.hash.replace("#","") === "interno";;
+const IS_MODO_INTERNO = new URLSearchParams(location.search).get("modo") === "interno" || location.hash.replace("#", "") === "interno";;
 // preferir valores vindos do /p/{code} (definidos no HTML), senão cair no querystring
 let tabelaIdParam = (typeof window.currentTabelaId !== "undefined" && window.currentTabelaId !== null)
   ? String(window.currentTabelaId)
@@ -26,7 +26,7 @@ const comFreteFromCode = (typeof window.currentComFrete !== "undefined")
 const comFreteParam = comFreteFromCode ?? comFreteParamQS;
 
 // Dados opcionais vindos do link
-const razaoParam     = url.searchParams.get("razao_social");
+const razaoParam = url.searchParams.get("razao_social");
 const condPagtoParam = url.searchParams.get("cond_pagto");
 
 const API_BASE = (typeof window !== "undefined" && window.API_BASE) ? window.API_BASE : location.origin;
@@ -56,8 +56,8 @@ function normalizarEntregaISO(iso) {
   const [y, m, d] = iso.split("-").map(Number);
   const dt = new Date(y, m - 1, d);
   if (Number.isNaN(dt.getTime())) return null;
-  const hoje = new Date(); hoje.setHours(0,0,0,0);
-  dt.setHours(0,0,0,0);
+  const hoje = new Date(); hoje.setHours(0, 0, 0, 0);
+  dt.setHours(0, 0, 0, 0);
   // regra atual: aceitar passado também mostra "a combinar"? 
   // Se quiser bloquear passado, descomente abaixo:
   if (dt < hoje) return null;
@@ -95,11 +95,11 @@ function aplicarEntregaRetiradaHeader() {
 }
 
 // -------------------- Elementos --------------------
-const tbody         = document.querySelector("#tabelaProdutos tbody");
-const totalEl       = document.getElementById("totalGeral");
-const msgEl         = document.getElementById("mensagem");
-const btnConfirmar  = document.getElementById("btnConfirmar");
-const btnCancelar   = document.getElementById("btnCancelar");
+const tbody = document.querySelector("#tabelaProdutos tbody");
+const totalEl = document.getElementById("totalGeral");
+const msgEl = document.getElementById("mensagem");
+const btnConfirmar = document.getElementById("btnConfirmar");
+const btnCancelar = document.getElementById("btnCancelar");
 
 // Observação do cliente – contador de caracteres
 const taObs = document.getElementById('observacaoPedido');
@@ -122,8 +122,23 @@ function renderTabela() {
   if (!tbody) return;
   tbody.innerHTML = "";
   produtos.forEach((item, i) => {
-    const valorUnitario = usarValorComFrete ? item.valor_com_frete : item.valor_sem_frete;
-    const subtotal = valorUnitario * (Number(item.quantidade) || 0);
+    // Logica de preço unitário:
+    // Se tiver markup, o preço "unitario" p/ calculo do total/subtotal É o preço markup.
+    // Mas na tela, mostramos o unitário base original na coluna "Valor".
+    // Então aqui definimos "precoEfetivo" para contas e "valorBase" para display.
+
+    // Valor Base (Original)
+    const valorBase = usarValorComFrete ? item.valor_com_frete : item.valor_sem_frete;
+
+    // Valor c/ Markup (se existir > 0)
+    const valorMarkup = usarValorComFrete ? (item.valor_com_frete_markup || 0) : (item.valor_sem_frete_markup || 0);
+
+    // Preço efetivo (se markup > 0, usa ele. Se não, usa base)
+    // NOTE: Se markup for 0, valorMarkup esperado é 0 ou igual base?
+    // O backend retorna 0 se não tiver. Então se for 0, usamos base.
+    const precoEfetivo = valorMarkup > 0 ? valorMarkup : valorBase;
+
+    const subtotal = precoEfetivo * (Number(item.quantidade) || 0);
 
     const tr = document.createElement("tr");
     tr.innerHTML = `
@@ -132,8 +147,10 @@ function renderTabela() {
       <td>${item.embalagem ?? ""}</td>
       <td><input type="number" min="0" step="1" value="${item.quantidade || 0}" data-index="${i}" class="qtd" /></td>
       <td class="celula-peso" data-peso-unit="${Number(item.peso ?? 0)}"></td>
-      <td>${fmtBRL.format(valorUnitario)}</td>
+      <td>${fmtBRL.format(valorBase)}</td>
       <td>${item.condicao_pagamento ?? ""}</td>
+      <td class="col-markup text-center">${item.markup ? Number(item.markup).toLocaleString("pt-BR", { minimumFractionDigits: 2 }) + "%" : "-"}</td>
+      <td class="col-markup text-right">${item.markup > 0 ? fmtBRL.format(usarValorComFrete ? item.valor_com_frete_markup : item.valor_sem_frete_markup) : "-"}</td>
       <td id="subtotal-${i}">${fmtBRL.format(subtotal)}</td>
     `;
     tbody.appendChild(tr);
@@ -141,12 +158,12 @@ function renderTabela() {
     const pesoUnit = Number(item.peso ?? 0);
     const qtdInicial = Number(item.quantidade) || 0;
     const pesoCell = tr.querySelector('.celula-peso');
-      if (pesoCell) {
+    if (pesoCell) {
       const pesoTotal = pesoUnit * qtdInicial;
       pesoCell.textContent = formatIntBR(pesoTotal, { mode: "trunc" });
-      }
-    
-   
+    }
+
+
   });
 
   // Listeners de quantidade
@@ -169,21 +186,28 @@ function onQtdChange(e) {
   e.target.value = quantidade;
   produtos[idx].quantidade = quantidade;
 
-  const valorUnitario = usarValorComFrete
+  // Recalculo dinâmico
+  const valorBase = usarValorComFrete
     ? produtos[idx].valor_com_frete
     : produtos[idx].valor_sem_frete;
 
-  const subtotal = quantidade * valorUnitario;
+  const valorMarkup = usarValorComFrete
+    ? (produtos[idx].valor_com_frete_markup || 0)
+    : (produtos[idx].valor_sem_frete_markup || 0);
+
+  const precoEfetivo = valorMarkup > 0 ? valorMarkup : valorBase;
+
+  const subtotal = quantidade * precoEfetivo;
   const cell = document.getElementById(`subtotal-${idx}`);
   if (cell) cell.textContent = fmtBRL.format(subtotal);
-  
+
   // Atualizar peso total da linha (peso unitário × nova quantidade)
- const tr = e.target.closest('tr');
- const pesoCell = tr?.querySelector('.celula-peso');
- if (pesoCell) {
-   const pesoUnit = Number(pesoCell.dataset.pesoUnit || produtos[idx].peso || 0);
-   const pesoTotal = pesoUnit * quantidade;
-   pesoCell.textContent = (Number.isFinite(pesoTotal) ? pesoTotal : 0).toLocaleString('pt-BR');
+  const tr = e.target.closest('tr');
+  const pesoCell = tr?.querySelector('.celula-peso');
+  if (pesoCell) {
+    const pesoUnit = Number(pesoCell.dataset.pesoUnit || produtos[idx].peso || 0);
+    const pesoTotal = pesoUnit * quantidade;
+    pesoCell.textContent = (Number.isFinite(pesoTotal) ? pesoTotal : 0).toLocaleString('pt-BR');
   }
 
   atualizarTotal();
@@ -192,8 +216,11 @@ function onQtdChange(e) {
 
 function atualizarTotal() {
   const total = produtos.reduce((acc, item) => {
-    const v = usarValorComFrete ? item.valor_com_frete : item.valor_sem_frete;
-    return acc + v * (Number(item.quantidade) || 0);
+    const vBase = usarValorComFrete ? item.valor_com_frete : item.valor_sem_frete;
+    const vMk = usarValorComFrete ? (item.valor_com_frete_markup || 0) : (item.valor_sem_frete_markup || 0);
+    const vEf = vMk > 0 ? vMk : vBase;
+
+    return acc + vEf * (Number(item.quantidade) || 0);
   }, 0);
   if (totalEl) totalEl.textContent = fmtBRL.format(total);
   if (btnConfirmar) btnConfirmar.disabled = total <= 0;
@@ -229,10 +256,10 @@ function atualizarResumoFreteEPeso() {
   // escreve na tela
   const elPeso = document.getElementById('totalPesoPedido');
   const elFrete = document.getElementById('totalFretePedido');
-  
+
   if (elPeso) {
-  const pesoArredondado = Number.isFinite(pesoTotal) ? Math.round(pesoTotal) : 0;
-  elPeso.textContent = pesoArredondado.toLocaleString('pt-BR');
+    const pesoArredondado = Number.isFinite(pesoTotal) ? Math.round(pesoTotal) : 0;
+    elPeso.textContent = pesoArredondado.toLocaleString('pt-BR');
   }
   if (elFrete) elFrete.textContent = window.usarValorComFrete === true ? fmtBRL.format(freteTotal) : fmtBRL.format(0);
 }
@@ -258,16 +285,49 @@ async function carregarPedido() {
     const _qsNow = new URLSearchParams(location.search);
     const pathParts = location.pathname.split('/').filter(Boolean);
     const lastPart = pathParts[pathParts.length - 1];
-    
+
     let info = null;
-    
+
     if (pathParts[0] === 'p' && lastPart) {
       try {
         const r = await fetch(API(`/link_pedido/resolver?code=${encodeURIComponent(lastPart)}`), { cache: "no-store" });
         if (r.ok) {
-          info = await r.json(); 
+          info = await r.json();
           window.currentTabelaId = info.tabela_id ?? window.currentTabelaId;
           window.currentComFrete = info.com_frete ?? window.currentComFrete;
+          window.entregaISO = (typeof info.data_prevista === 'string' ? info.data_prevista : null);
+
+          // --- Lógica de Link Expirado ---
+          if (info.is_expired) {
+            window.linkExpirado = true; // flag global
+            setMensagem("Este link de pedido está expirado.", false);
+            if (btnConfirmar) btnConfirmar.disabled = true;
+          }
+
+          // --- Lógica de Pedido Já Confirmado ---
+          if (info.link_status === 'CONFIRMADO') {
+            // Esconde botões
+            const actions = document.querySelector('.acoes');
+            if (actions) actions.style.display = 'none';
+
+            // Avisa o usuário
+            const msg = document.getElementById('mensagem');
+            if (msg) {
+              msg.textContent = "Este pedido já foi aceito e processado.";
+              msg.style.color = "blue";
+              msg.style.fontWeight = "bold";
+              msg.style.fontSize = "1.2rem";
+              msg.style.marginTop = "20px";
+            }
+
+            // Bloqueia inputs
+            lockPageAfterConfirm();
+            // (Opcional) Abrir modal de sucesso direto? O usuário pediu "notificação informando que já foi aceito".
+            // Vou deixar o texto na tela + bloqueio.
+          }
+
+          console.log('[resolver] ok', info);
+
           window.codigoClienteHidden = info.codigo_cliente || null;  // <— oculto
           const elCriado = document.getElementById("datadopedido");
           if (elCriado && info?.created_at) {
@@ -280,17 +340,17 @@ async function carregarPedido() {
             logoEl.onerror = () => { logoEl.style.display = "none"; };
           }
         }
-      } catch {}
+      } catch { }
     }
-  
-    tabelaIdParam = tabelaIdParam
-    || _qsNow.get("tabela_id")
-    || (typeof window.currentTabelaId !== "undefined" ? String(window.currentTabelaId) : null);
 
-    const _comFreteQS   = _qsNow.get("com_frete");
+    tabelaIdParam = tabelaIdParam
+      || _qsNow.get("tabela_id")
+      || (typeof window.currentTabelaId !== "undefined" ? String(window.currentTabelaId) : null);
+
+    const _comFreteQS = _qsNow.get("com_frete");
     const _comFreteCode = (typeof window.currentComFrete !== "undefined")
-    ? (window.currentComFrete ? "true" : "false")
-    : null;
+      ? (window.currentComFrete ? "true" : "false")
+      : null;
 
     // valor efetivo de com_frete (prioriza query; se não houver, usa o do resolver)
     const _comFreteEfetivo = (_comFreteQS ?? _comFreteCode);
@@ -310,13 +370,13 @@ async function carregarPedido() {
       console.debug("[preview] URL:", previewURL);
 
       const r1 = await fetch(API(`/pedido/preview?${qs.toString()}`));
-      
+
       if (!r1.ok) {
         let detail = "";
         try {
           const err = await r1.json();
           detail = err?.detail || JSON.stringify(err);
-        } catch (_) {}
+        } catch (_) { }
         throw new Error(`Erro ${r1.status} no preview${detail ? " — " + detail : ""}`);
       }
 
@@ -329,7 +389,7 @@ async function carregarPedido() {
       // Usar c/ ou s/ frete decidido no link
       usarValorComFrete = Boolean(dados.usar_valor_com_frete);
       setCampoTexto("tituloValorFrete", usarValorComFrete ? "c/ Frete" : "s/ Frete");
-      
+
       window.usarValorComFrete = usarValorComFrete;
       aplicarEntregaRetiradaHeader();
       // Itens
@@ -337,6 +397,9 @@ async function carregarPedido() {
         ...p,
         valor_com_frete: Number(p.valor_com_frete) || 0,
         valor_sem_frete: Number(p.valor_sem_frete) || 0,
+        valor_com_frete_markup: Number(p.valor_com_frete_markup) || 0,
+        valor_sem_frete_markup: Number(p.valor_sem_frete_markup) || 0,
+        markup: Number(p.markup) || 0,
         quantidade: Number(p.quantidade) || 0
       }));
       renderTabela();
@@ -350,17 +413,26 @@ async function carregarPedido() {
         if (r2.ok) {
           const v = await r2.json();
           setCampoTexto("validadeTabela", v.validade ?? v.validade_tabela ?? "---");
-          setCampoTexto("tempoRestante",  v.tempo_restante ?? "---");
+          setCampoTexto("tempoRestante", v.tempo_restante ?? "---");
           const rawVal = v.validade ?? v.validade_tabela ?? null;
           window.validadeGlobalISO = normalizarValidadeCampo(rawVal);
+
+          if (window.linkExpirado) {
+            setCampoTexto("tempoRestante", "Validade vencida - valores sujeitos a alteração");
+            const el = document.getElementById("tempoRestante");
+            if (el) el.style.color = "#d9534f"; // vermelho aviso
+          } else {
+            setCampoTexto("tempoRestante", v.tempo_restante ?? "---");
+          }
+
           console.debug("[validade] raw:", rawVal, "ISO:", window.validadeGlobalISO);
         } else {
           setCampoTexto("validadeTabela", "---");
-          setCampoTexto("tempoRestante",  "---");
+          setCampoTexto("tempoRestante", "---");
         }
       } catch {
         setCampoTexto("validadeTabela", "---");
-        setCampoTexto("tempoRestante",  "---");
+        setCampoTexto("tempoRestante", "---");
       }
 
       return;
@@ -374,8 +446,8 @@ async function carregarPedido() {
 
       setCampoTexto("razaoSocialCliente", dados.razao_social ?? "---");
       setCampoTexto("condicaoPagamento", dados.condicao_pagamento ?? "---");
-      setCampoTexto("validadeTabela",   dados.validade ?? "---");
-      setCampoTexto("tempoRestante",    dados.tempo_restante ?? "---");
+      setCampoTexto("validadeTabela", dados.validade ?? "---");
+      setCampoTexto("tempoRestante", dados.tempo_restante ?? "---");
 
       usarValorComFrete = Boolean(dados.usar_valor_com_frete);
       setCampoTexto("tituloValorFrete", usarValorComFrete ? "c/ Frete" : "s/ Frete");
@@ -385,11 +457,11 @@ async function carregarPedido() {
 
       produtos = Array.isArray(dados.produtos)
         ? dados.produtos.map((p) => ({
-            ...p,
-            valor_com_frete: Number(p.valor_com_frete) || 0,
-            valor_sem_frete: Number(p.valor_sem_frete) || 0,
-            quantidade: Number(p.quantidade) || 0,
-          }))
+          ...p,
+          valor_com_frete: Number(p.valor_com_frete) || 0,
+          valor_sem_frete: Number(p.valor_sem_frete) || 0,
+          quantidade: Number(p.quantidade) || 0,
+        }))
         : [];
 
       renderTabela();
@@ -433,7 +505,7 @@ function lockPageAfterConfirm() {
 
 function openConfirmModal(pedidoId) {
   const modal = document.getElementById('confirmModal');
-  const info  = document.getElementById('confirmPedidoInfo');
+  const info = document.getElementById('confirmPedidoInfo');
   if (!modal) return;
 
   info.textContent = pedidoId ? `Número do pedido: ${pedidoId}` : '';
@@ -452,7 +524,7 @@ function closeConfirmModal() {
   if (modal) modal.hidden = true;
 
   // 1) fecha a aba (se aberta via window.open)
-  try { window.close(); } catch {}
+  try { window.close(); } catch { }
 
   // 2) se não fechar, volta no histórico
   if (history.length > 1) {
@@ -501,18 +573,33 @@ async function confirmarPedido() {
       body: JSON.stringify({
         origin_code: originCode,
         usar_valor_com_frete: !!usarValorComFrete,
-        produtos: itens.map(x => ({
-          codigo: x.codigo,
-          descricao: x.nome ?? null,       // 👈 manda o nome do produto
-          embalagem: x.embalagem ?? null,  // 👈 manda a embalagem
-          condicao_pagamento: x.condicao_pagamento ?? null,       // 👈 NOVO
-          tabela_comissao: x.tabela_comissao ?? null,
-          quantidade: Number(x.quantidade || 0),
-          preco_unit: x.preco_unit ?? x.valor_sem_frete ?? 0,
-          preco_unit_com_frete:
-            x.preco_unit_com_frete ?? x.valor_com_frete ?? x.preco_unit ?? 0,
-          peso_kg: x.peso ?? x.peso_kg ?? null
-        })),
+        produtos: itens.map(x => {
+          // Lógica para enviar o preço EFETIVO (com markup se houver)
+          // Backend espera 'preco_unit' (sem frete) e 'preco_unit_com_frete' (com frete)
+          // Se houver markup, enviamos o valor markup. Se não, o base.
+
+          const vBaseSem = x.valor_sem_frete || 0;
+          const vBaseCom = x.valor_com_frete || 0;
+          const vMkSem = x.valor_sem_frete_markup || 0;
+          const vMkCom = x.valor_com_frete_markup || 0;
+
+          // Se markup > 0, usa ele.
+          const pSem = (vMkSem > 0) ? vMkSem : vBaseSem;
+          const pCom = (vMkCom > 0) ? vMkCom : vBaseCom;
+
+          return {
+            codigo: x.codigo,
+            descricao: x.nome ?? null,
+            embalagem: x.embalagem ?? null,
+            condicao_pagamento: x.condicao_pagamento ?? null,
+            tabela_comissao: x.tabela_comissao ?? null,
+            quantidade: Number(x.quantidade || 0),
+            // Envia o EFETIVO para o backend registrar o valor correto do pedido
+            preco_unit: pSem,
+            preco_unit_com_frete: pCom,
+            peso_kg: x.peso ?? x.peso_kg ?? null
+          };
+        }),
         observacao,
         cliente: clienteRazao,
         validade_ate:
@@ -533,8 +620,8 @@ async function confirmarPedido() {
     }
 
     const data = await resp.json();
-   const pedidoIdConfirmado = data?.id ?? data?.pedido_id;
-   if (!pedidoIdConfirmado) throw new Error("Resposta sem id do pedido.");
+    const pedidoIdConfirmado = data?.id ?? data?.pedido_id;
+    if (!pedidoIdConfirmado) throw new Error("Resposta sem id do pedido.");
 
     if (!pedidoIdConfirmado) {
       throw new Error("Resposta sem id do pedido.");
@@ -543,14 +630,14 @@ async function confirmarPedido() {
     openConfirmModal(pedidoIdConfirmado);
 
   } catch (err) {
-  console.error('[confirmarPedido] erro', err);
-  alert("Recebemos seu pedido e ele já está sendo processado. Em breve alguém da nossa equipe entrará em contato.");
-  setMensagem("Falha ao enviar o pedido.", false);
-  if (btnConfirmar) btnConfirmar.disabled = false;
- }
+    console.error('[confirmarPedido] erro', err);
+    alert("Recebemos seu pedido e ele já está sendo processado. Em breve alguém da nossa equipe entrará em contato.");
+    setMensagem("Falha ao enviar o pedido.", false);
+    if (btnConfirmar) btnConfirmar.disabled = false;
+  }
 }
 
-  function assertShape(d) {
+function assertShape(d) {
   const must = [
     ["tabela", "object"],
     ["tabela.nome", "string"],
@@ -559,7 +646,7 @@ async function confirmarPedido() {
     ["cliente.nome", "string"],
     ["itens", "object"], // array
   ];
-  const get = (o, path) => path.split(".").reduce((a,k)=> (a && a[k]!==undefined ? a[k] : undefined), o);
+  const get = (o, path) => path.split(".").reduce((a, k) => (a && a[k] !== undefined ? a[k] : undefined), o);
   const errs = [];
   for (const [p, t] of must) {
     const v = get(d, p);
@@ -581,7 +668,7 @@ function cancelarPedido() {
     history.back();
   } else {
     window.location.href = "/";
- }
+  }
 }
 
 
@@ -589,34 +676,34 @@ function aplicarModoInterno() {
   if (!IS_MODO_INTERNO) return;
 
   // Esconde "Confirmar"
-  document.getElementById("btnConfirmar")?.style.setProperty("display","none");
+  document.getElementById("btnConfirmar")?.style.setProperty("display", "none");
 
   // "Cancelar" -> "Voltar" com override total de listeners
   const oldBtn = document.getElementById("btnCancelar");
-if (oldBtn) {
-  const newBtn = oldBtn.cloneNode(true);   // remove listeners antigos
-  newBtn.textContent = "Voltar";
-  newBtn.disabled = false;
+  if (oldBtn) {
+    const newBtn = oldBtn.cloneNode(true);   // remove listeners antigos
+    newBtn.textContent = "Voltar";
+    newBtn.disabled = false;
 
-  newBtn.onclick = (ev) => {
-    ev.preventDefault();
-    ev.stopPropagation();
+    newBtn.onclick = (ev) => {
+      ev.preventDefault();
+      ev.stopPropagation();
 
-    // fecha se foi aberto pelo botão Visualizar
-    try { window.close(); } catch {}
+      // fecha se foi aberto pelo botão Visualizar
+      try { window.close(); } catch { }
 
-    // se não fechar, tenta voltar
-    if (history.length > 1) {
-      history.back();
-      return;
-    }
+      // se não fechar, tenta voltar
+      if (history.length > 1) {
+        history.back();
+        return;
+      }
 
-    // fallback
-    window.location.replace("about:blank");
-  };
+      // fallback
+      window.location.replace("about:blank");
+    };
 
-  oldBtn.replaceWith(newBtn);
-}
+    oldBtn.replaceWith(newBtn);
+  }
 
   // "Validade:" -> "Proposta válida até:"
   const spanVal = document.getElementById("validadeTabela");
@@ -627,7 +714,7 @@ if (oldBtn) {
 }
 // -------------------- Bind de eventos e início --------------------
 if (btnConfirmar) btnConfirmar.addEventListener("click", confirmarPedido);
-if (btnCancelar)  btnCancelar.addEventListener("click", cancelarPedido);
+if (btnCancelar) btnCancelar.addEventListener("click", cancelarPedido);
 
 window.carregarPedido = carregarPedido;
 window.addEventListener("DOMContentLoaded", aplicarModoInterno);

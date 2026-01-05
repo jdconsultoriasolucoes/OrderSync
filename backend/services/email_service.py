@@ -9,9 +9,9 @@ from sqlalchemy.orm import Session
 
 # ===== IMPORTS CORRETOS =====
 try:
-    from models.cliente import ClienteModel            # <- sua classe real
+    from models.cliente_v2 import ClienteModelV2       # <- Atualizado para V2
 except ModuleNotFoundError:
-    from cliente import ClienteModel                   # fallback se não houver pacote models
+    from cliente_v2 import ClienteModelV2
 
 try:
     from models.config_email_mensagem import ConfigEmailMensagem as ConfigEmailMensagemModel
@@ -36,14 +36,21 @@ def render_placeholders(template: str, pedido_info: dict, link_pdf: Optional[str
 
 
 # ------------------------
-# Busca e-mail do cliente (usa codigo_cliente do seu modelo)
+# Busca e-mail do cliente (usa codigo_cliente como ID do V2)
 # ------------------------
 def get_email_cliente_responsavel_compras(db: Session, codigo_cliente) -> Optional[str]:
     if not codigo_cliente:
         return None
+    
+    # Tenta converter para int, pois IDs são inteiros/bigint
+    try:
+        c_id = int(codigo_cliente)
+    except (ValueError, TypeError):
+        return None
+
     row = (
-        db.query(ClienteModel.email_responsavel_compras)
-        .filter(ClienteModel.codigo_cliente == codigo_cliente)  # <- campo correto do seu modelo
+        db.query(ClienteModelV2.compras_email_resposavel)
+        .filter(ClienteModelV2.id == c_id)
         .first()
     )
     return row[0] if row and row[0] else None
@@ -158,4 +165,93 @@ def enviar_email_notificacao(
         to_all = [remetente]  # fallback
 
     with _abrir_conexao(cfg_smtp) as server:
+        # Envia para destinatários internos
         server.sendmail(remetente, to_all, msg.as_string())
+        
+        # ---------------------------------------------------------
+        # Envio Opcional para o Cliente (PDF sem validade)
+        # ---------------------------------------------------------
+        if cfg_msg.enviar_para_cliente and getattr(pedido, "cliente_email", None):
+            try:
+                from services.pdf_service import gerar_pdf_pedido
+                pdf_cliente_bytes = gerar_pdf_pedido(pedido, sem_validade=True)
+                
+                msg_cliente = MIMEMultipart()
+                msg_cliente["From"] = remetente
+                msg_cliente["To"] = pedido.cliente_email
+                msg_cliente["Subject"] = f"Confirmação de Pedido #{pedido.id} - {pedido.cliente_nome}"
+                
+                # Corpo simples para o cliente
+                body_client = f"""\
+Prezado(a) {pedido.cliente_nome},
+
+Seu pedido #{pedido.id} foi confirmado com sucesso.
+Segue em anexo a cópia do pedido.
+
+Atenciosamente,
+Equipe OrderSync
+"""
+                msg_cliente.attach(MIMEText(body_client, "plain"))
+                
+                # Anexo
+                part_c = MIMEBase("application", "octet-stream")
+                part_c.set_payload(pdf_cliente_bytes)
+                encoders.encode_base64(part_c)
+                part_c.add_header(
+                    "Content-Disposition",
+                    f"attachment; filename=Pedido_{pedido.id}.pdf",
+                )
+                msg_cliente.attach(part_c)
+                
+                server.sendmail(remetente, [pedido.cliente_email], msg_cliente.as_string())
+                print(f"Email enviado para cliente: {pedido.cliente_email}")
+                
+            except Exception as e:
+                print(f"Erro ao enviar email para cliente: {e}")
+
+        server.quit()
+
+
+def enviar_email_recuperacao_senha(db: Session, email_destino: str, link_reset: str) -> None:
+    """
+    Envia e-mail com link de recuperação de senha.
+    """
+    cfg_smtp = _get_cfg_smtp(db)
+    remetente = (getattr(cfg_smtp, "remetente_email", "") or getattr(cfg_smtp, "smtp_user", "")).strip()
+    
+    assunto = "Recuperação de Senha - OrderSync"
+    
+    corpo_html = f"""
+    <html>
+    <body style="font-family: Arial, sans-serif; color: #333;">
+        <div style="max-width: 600px; margin: 0 auto; padding: 20px; border: 1px solid #eee; border-radius: 8px;">
+            <h2 style="color: #2563eb;">Recuperação de Senha</h2>
+            <p>Você solicitou a redefinição de sua senha no OrderSync.</p>
+            <p>Clique no botão abaixo para criar uma nova senha:</p>
+            <p style="text-align: center; margin: 30px 0;">
+                <a href="{link_reset}" style="background-color: #2563eb; color: white; padding: 12px 24px; text-decoration: none; border-radius: 5px; font-weight: bold;">Redefinir Minha Senha</a>
+            </p>
+            <p>Se o botão não funcionar, copie e cole o link abaixo no seu navegador:</p>
+            <p style="font-size: 12px; color: #666; word-break: break-all;">{link_reset}</p>
+            <hr style="border: 0; border-top: 1px solid #eee; margin: 20px 0;">
+            <p style="font-size: 12px; color: #999;">Este link é válido por 15 minutos. Se você não solicitou isso, ignore este e-mail.</p>
+        </div>
+    </body>
+    </html>
+    """
+    
+    msg = MIMEMultipart("alternative")
+    msg["From"] = remetente
+    msg["To"] = email_destino
+    msg["Subject"] = assunto
+    
+    msg.attach(MIMEText(corpo_html, "html", "utf-8"))
+    
+    try:
+        with _abrir_conexao(cfg_smtp) as server:
+            server.sendmail(remetente, [email_destino], msg.as_string())
+            print(f"Email de recuperação enviado para: {email_destino}")
+    except Exception as e:
+        print(f"Erro ao enviar email de recuperação: {e}")
+        # Não lançar exceção para não expor erro ao usuário (security by obscurity, ou melhor, UX)
+        # Mas logar é importante.

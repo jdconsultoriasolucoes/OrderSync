@@ -63,6 +63,10 @@ def parse_lista_precos(
     """
     linhas = []
 
+    # Sequence tracking
+    last_familia = None
+    filhos_seq = 0
+
     with pdfplumber.open(file_obj) as pdf:
         # === Leitura Inicial (Header) ===
         header_text = pdf.pages[0].extract_text() or ""
@@ -200,6 +204,14 @@ def parse_lista_precos(
                     # if preco_ton is None and preco_sc is None:
                     #    continue
 
+                    
+                    # Sequence Logic
+                    if familia_atual != last_familia:
+                        last_familia = familia_atual
+                        filhos_seq = 1
+                    else:
+                        filhos_seq += 1
+
                     linhas.append(
                         {
                             "fornecedor": fornecedor,
@@ -210,6 +222,7 @@ def parse_lista_precos(
                             "preco_ton": preco_ton,
                             "preco_sc": preco_sc,
                             "page": page_idx,
+                            "filhos": filhos_seq,
                         }
                     )
 
