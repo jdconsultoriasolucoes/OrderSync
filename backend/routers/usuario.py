@@ -54,7 +54,10 @@ def create_user(
         senha_hash=hashed_pw,
         funcao=usuario.funcao,
         ativo=usuario.ativo,
-        criado_por=current_user_email
+        funcao=usuario.funcao,
+        ativo=usuario.ativo,
+        criado_por=current_user_email,
+        reset_senha_obrigatorio=True
     )
     db.add(db_user)
     db.commit()
@@ -84,6 +87,7 @@ def alterar_minha_senha(
     # Update
     current_user.senha_hash = get_password_hash(dados.nova_senha)
     current_user.data_atualizacao = datetime.now()
+    current_user.reset_senha_obrigatorio = False
     db.commit()
     return {"message": "Senha alterada com sucesso"}
 

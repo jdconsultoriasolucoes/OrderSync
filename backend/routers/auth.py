@@ -45,7 +45,8 @@ def login_for_access_token(form_data: OAuth2PasswordRequestForm = Depends(), db:
         "access_token": access_token, 
         "token_type": "bearer",
         "funcao": user.funcao,
-        "nome": user.nome
+        "nome": user.nome,
+        "reset_senha_obrigatorio": user.reset_senha_obrigatorio or False
     }
 
 from schemas.usuario import UsuarioForgotPassword, UsuarioResetSenha

@@ -41,8 +41,25 @@ document.getElementById("login-form").addEventListener("submit", async (e) => {
         // Use global Auth from auth.js
         window.Auth.login(token, {
             nome: data.nome,
-            funcao: data.funcao
+            funcao: data.funcao,
+            reset_senha_obrigatorio: data.reset_senha_obrigatorio
         });
+
+        // Check forced reset
+        if (data.reset_senha_obrigatorio) {
+            console.log("Forced password reset required.");
+            // We need to show the modal. Since we are on login.html, we might need to load it specially or handle it.
+            // But wait, login.html redirects to / on success (in Auth.login).
+            // We should modify Auth.login to NOT redirect if reset is required? 
+            // OR handle it on the dashboard?
+
+            // The requirement says "when first login is made, it must request password change automatically".
+            // If Auth.login redirects immediately, checking it here is useless unless we pass a flag to the next page.
+            // Better approach: Store 'reset_required' in localStorage and check it in global Auth.checkAuth or similar.
+
+            localStorage.setItem("ordersync_reset_required", "true");
+        }
+
 
     } catch (err) {
         console.error("Login Error:", err);

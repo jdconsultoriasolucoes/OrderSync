@@ -169,4 +169,66 @@ document.addEventListener("DOMContentLoaded", () => {
         `;
         document.body.insertAdjacentHTML("beforeend", modalHtml);
     }
+    // Check for forced reset
+    const checkForcedReset = () => {
+        if (localStorage.getItem("ordersync_reset_required") === "true") {
+            const modal = document.getElementById("modal-trocar-senha");
+            if (modal) {
+                modal.style.display = "flex";
+                // Prevent closing by hiding the close button or re-opening?
+                // For better UX, allow close but re-open on navigation? 
+                // Let's just open it for now.
+
+                // Optional: Hide close button to force action
+                const closeBtn = modal.querySelector(".close-btn");
+                if (closeBtn) closeBtn.style.display = "none";
+
+                const cancelBtn = modal.querySelector("button[onclick*='closeChangePasswordModal']");
+                if (cancelBtn) cancelBtn.style.display = "none";
+            }
+        }
+    };
+
+    // Allow external closing if needed manually
+    window.Auth.closeChangePasswordModal = () => {
+        const modal = document.getElementById("modal-trocar-senha");
+        if (modal) modal.style.display = "none";
+    };
+
+    window.Auth.confirmarTrocaSenha = async (e) => {
+        e.preventDefault();
+        const senhaAtual = document.getElementById("senha-atual").value;
+        const novaSenha = document.getElementById("nova-senha").value;
+        const confirm = document.getElementById("confirm-nova-senha").value;
+
+        if (novaSenha !== confirm) {
+            alert("As senhas não conferem.");
+            return;
+        }
+
+        try {
+            const res = await fetch(`${window.API_BASE}/usuarios/me/senha`, {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ senha_atual: senhaAtual, nova_senha: novaSenha })
+            });
+
+            if (!res.ok) {
+                const err = await res.json();
+                throw new Error(err.detail || "Erro ao alterar senha");
+            }
+
+            alert("Senha alterada com sucesso!");
+            document.getElementById("modal-trocar-senha").style.display = "none";
+            document.getElementById("form-trocar-senha").reset();
+
+            // Clear forced reset flag
+            localStorage.removeItem("ordersync_reset_required");
+
+        } catch (err) {
+            alert("Erro: " + err.message);
+        }
+    };
+
+    setTimeout(checkForcedReset, 1000); // Check shortly after load
 });
