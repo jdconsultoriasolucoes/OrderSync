@@ -34,6 +34,9 @@ def startup_ensure_admin():
     from database import SessionLocal
     from models.usuario import UsuarioModel
     from core.security import get_password_hash
+    # --- FIX CRITICO: Criar tabelas antes de consultar ---
+    from database import Base, engine
+    Base.metadata.create_all(bind=engine)
     
     db = SessionLocal()
     try:
@@ -70,6 +73,7 @@ def startup_ensure_admin():
 ALLOWED_ORIGINS = [
     "https://ordersync-y7kg.onrender.com",  # FRONT (Render)
     "https://ordersync-frontend.onrender.com", # Caso mude nome
+    "https://ordersync-qwc1.onrender.com",     # NOVO FRONT (Production)
     "http://localhost:5500",                # FRONT local (ex. Live Server)
     "http://127.0.0.1:5500",
     "http://localhost:3000",
