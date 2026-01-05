@@ -352,18 +352,22 @@
   </div>
 
   <!-- Modal Renovar Validade -->
-  <div id="modal-renovar-validade" class="modal" hidden>
-    <div class="modal-backdrop"></div>
-    <div class="modal-content">
-      <h2>Renovar Validade (Todos Ativos)</h2>
-      <p>Selecione a nova data de validade para <strong>todos</strong> os produtos ativos.</p>
-      <div class="form-group">
-        <label>Nova Validade:</label>
-        <input type="date" id="input-nova-validade">
+  <div id="modal-renovar-validade" class="custom-modal hidden">
+    <div class="custom-modal-dialog" style="max-width: 500px;">
+      <div class="custom-modal-header">
+        <div class="custom-modal-title">Renovar Validade (Todos Ativos)</div>
       </div>
-      <div class="modal-actions">
-        <button id="btn-confirmar-renovacao" class="btn-primary">Confirmar</button>
-        <button id="btn-fechar-renovacao" class="btn-secondary">Cancelar</button>
+      <div class="custom-modal-body">
+        <p style="margin-bottom: 12px;">Selecione a nova data de validade para <strong>todos</strong> os produtos
+          ativos.</p>
+        <div class="form-group">
+          <label for="input-nova-validade">Nova Validade:</label>
+          <input type="date" id="input-nova-validade">
+        </div>
+      </div>
+      <div class="custom-modal-footer">
+        <button id="btn-fechar-renovacao" class="ghost">Cancelar</button>
+        <button id="btn-confirmar-renovacao" class="primary">Confirmar</button>
       </div>
     </div>
   </div>

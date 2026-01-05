@@ -1285,16 +1285,15 @@ function setupRenovarValidade() {
   if (!btnRenovar || !modalRenovar) return;
 
   // Abrir manual
+  // Abrir manual
   btnRenovar.addEventListener("click", () => {
-    modalRenovar.hidden = false;
-    modalRenovar.style.display = "flex"; // Força display flex se css for hidden
+    modalRenovar.classList.remove("hidden");
     inputNovaValidade.value = "";
   });
 
   // Fechar
   const close = () => {
-    modalRenovar.hidden = true;
-    modalRenovar.style.display = "none";
+    modalRenovar.classList.add("hidden");
   };
   if (btnFechar) btnFechar.addEventListener("click", close);
 
@@ -1303,7 +1302,7 @@ function setupRenovarValidade() {
     btnConfirmar.addEventListener("click", async () => {
       const novaData = inputNovaValidade.value;
       if (!novaData) {
-        showToast("Selecione uma data!", true);
+        toast("Selecione uma data!");
         return;
       }
 
@@ -1330,13 +1329,13 @@ function setupRenovarValidade() {
         }
 
         const data = await resp.json();
-        showToast(`Sucesso! ${data.linhas_afetadas} produtos atualizados.`);
+        toast(`Sucesso! ${data.linhas_afetadas} produtos atualizados.`);
         close();
-        if (typeof resetForm === 'function') resetForm();
+        if (typeof clearForm === 'function') clearForm();
 
       } catch (e) {
         console.error(e);
-        showToast("Erro: " + e.message, true);
+        toast("Erro: " + e.message);
       }
     });
   }
