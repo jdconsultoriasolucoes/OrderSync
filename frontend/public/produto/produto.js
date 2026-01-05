@@ -6,12 +6,12 @@ window.API_BASE = API_BASE;
 
 // candidatos de rotas (ordem de preferência)
 const CANDIDATES = [
-  `${API_BASE}/api/produtos`,
-  `${API_BASE}/api/produto`,
-  `${API_BASE}/api/produtos_v2`,
+  `${API_BASE}/api/produto`,        // Preferido (singular)
+  `${API_BASE}/api/produtos`,       // Fallback
   `${API_BASE}/api/produto_v2`,
-  `${API_BASE}/produtos`,
+  `${API_BASE}/api/produtos_v2`,
   `${API_BASE}/produto`,
+  `${API_BASE}/produtos`,
 ];
 
 const ENDPOINTS_AUX = {

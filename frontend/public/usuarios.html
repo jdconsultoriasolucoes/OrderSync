@@ -13,7 +13,16 @@
         .page-container {
             padding: 20px;
             margin-left: 250px;
+            /* Sidebar width */
+            max-width: 1200px;
+            /* Prevent infinite stretch */
+            /* margin-right: auto; -> Not needed with margin-left 250px usually, but let's see */
         }
+
+        /* Responsive tweak: on very large screens, maybe center content area? 
+           But sidebar is fixed left. Standard admin dashboard behavior is fluid. 
+           Let's just keep padding. */
+
 
         /* Sidebar space */
         .card {
@@ -202,7 +211,7 @@
                     <input type="hidden" id="reset-user-id">
                     <div class="mb-3">
                         <label class="form-label">Nova Senha</label>
-                        <input type="text" class="form-control" id="nova-senha" required>
+                        <input type="text" class="form-control" id="reset-nova-senha" required>
                     </div>
                     <button type="submit" class="btn btn-danger w-100">Confirmar Reset</button>
                 </form>

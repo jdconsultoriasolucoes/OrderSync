@@ -48,7 +48,7 @@ document.addEventListener("DOMContentLoaded", () => {
     document.getElementById("form-reset-senha").addEventListener("submit", async (e) => {
         e.preventDefault();
         const id = document.getElementById("reset-user-id").value;
-        const senha = document.getElementById("nova-senha").value;
+        const senha = document.getElementById("reset-nova-senha").value;
 
         if (confirm("Confirma o reset de senha?")) {
             try {
