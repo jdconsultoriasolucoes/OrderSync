@@ -220,26 +220,29 @@ async def no_cache_static_tabela_preco(request, call_next):
 
 
 # ---- CORS: adicionar por ÚLTIMO (camada mais externa) ----
+
+# ---- CORS: Usando Regex para garantir todos os subdominios Render ----
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=ALLOWED_ORIGINS,     # não usar "*" se há credenciais
+    # Permite qualquer subdominio ordersync-XXXX.onrender.com
+    allow_origin_regex=r"https://ordersync.*\.onrender\.com$",
     allow_credentials=True,
-    allow_methods=["*"],               # GET/POST/PUT/PATCH/DELETE/OPTIONS
+    allow_methods=["*"],
     allow_headers=["*"],
     expose_headers=["x-cors-debug", "x-error-id"],
     max_age=86400,
 )
 
-# # Alternativa, se o subdomínio do Render variar:
 # app.add_middleware(
 #     CORSMiddleware,
-#     allow_origin_regex=r"https://ordersync-[a-z0-9]+\.onrender\.com$",
+#     allow_origins=ALLOWED_ORIGINS,     # não usar "*" se há credenciais
 #     allow_credentials=True,
-#     allow_methods=["*"],
+#     allow_methods=["*"],               # GET/POST/PUT/PATCH/DELETE/OPTIONS
 #     allow_headers=["*"],
 #     expose_headers=["x-cors-debug", "x-error-id"],
 #     max_age=86400,
 # )
+
 
 
 
