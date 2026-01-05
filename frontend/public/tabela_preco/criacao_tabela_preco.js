@@ -2114,6 +2114,55 @@ window.addEventListener('pageshow', () => {
 document.addEventListener('input', handleFieldChange, true);
 document.addEventListener('change', handleFieldChange, true);
 
+// =========================================================
+// CORREÇÃO DE AUTENTICAÇÃO (401)
+// Reescrevendo/definindo explicitamente a função de salvar
+// para garantir o envio do token.
+// =========================================================
+async function salvarTabelaPreco(payload) {
+  const url = `${API_BASE}/tabela_preco/salvar`;
+  const token = localStorage.getItem("ordersync_token");
+
+  // Se for edição (tem ID), usar PUT em vez de POST (ou ajustar endpoint conforme backend)
+  // O backend atual /tabela_preco/salvar é POST e cria nova tabela.
+  // Se quisermos atualizar, o endpoint é PUT /tabela_preco/{id}.
+
+  if (window.currentTabelaId) {
+    // EDIÇÃO
+    const putUrl = `${API_BASE}/tabela_preco/${window.currentTabelaId}`;
+    const r = await fetch(putUrl, {
+      method: "PUT",
+      headers: {
+        "Content-Type": "application/json",
+        "Authorization": `Bearer ${token}`
+      },
+      body: JSON.stringify(payload)
+    });
+    if (!r.ok) {
+      const txt = await r.text().catch(() => "");
+      if (r.status === 401) throw new Error("Não autorizado (401). Faça login novamente.");
+      throw new Error(`Falha ao atualizar (401/500). ${txt}`);
+    }
+    return await r.json();
+  } else {
+    // CRIAÇÃO
+    const r = await fetch(url, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "Authorization": `Bearer ${token}`
+      },
+      body: JSON.stringify(payload)
+    });
+    if (!r.ok) {
+      const txt = await r.text().catch(() => "");
+      if (r.status === 401) throw new Error("Não autorizado (401). Faça login novamente.");
+      throw new Error(`Falha ao salvar (401/500). ${txt}`);
+    }
+    return await r.json();
+  }
+}
+
 function handleFieldChange(e) {
   const el = e.target;
   if (!el || !(el instanceof HTMLElement)) return;
