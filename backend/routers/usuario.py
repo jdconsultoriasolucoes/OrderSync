@@ -54,8 +54,6 @@ def create_user(
         senha_hash=hashed_pw,
         funcao=usuario.funcao,
         ativo=usuario.ativo,
-        funcao=usuario.funcao,
-        ativo=usuario.ativo,
         criado_por=current_user_email,
         reset_senha_obrigatorio=True
     )
