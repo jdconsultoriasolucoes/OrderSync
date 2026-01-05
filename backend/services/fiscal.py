@@ -17,7 +17,7 @@ def _norm(s: Optional[str]) -> str:
 
 def decide_st(
     tipo: Optional[str],
-    ramo_juridico: Optional[str],
+    tipo_cliente: Optional[str],
     forcar_iva_st: bool
 ) -> Tuple[bool, List[str]]:
     motivos: List[str] = []
@@ -27,13 +27,13 @@ def decide_st(
     if is_pet:
         motivos.append("tipo=PET")
 
-    is_revenda = _norm(ramo_juridico) == "revenda"   # <<--- usar lower-case
+    is_revenda = _norm(tipo_cliente) == "revenda"   # <<--- usar lower-case
     if is_revenda:
         motivos.append("cliente=Revenda")
 
     # Se forçar via UI e cliente NÃO cadastrado: ainda exige que o produto
     
-    if forcar_iva_st and not ramo_juridico:
+    if forcar_iva_st and not tipo_cliente:
         aplica_forcado = is_pet
         if aplica_forcado:
             motivos.extend(["forcado_ui", "cliente_sem_cadastro"])

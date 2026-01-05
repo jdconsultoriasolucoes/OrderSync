@@ -67,17 +67,21 @@ def get_db():
 
 # --------- Data access (mesmas fontes dos seus endpoints) ---------
 # ---- em routers/fiscal.py ----
-def carregar_cliente(db: Session, codigo: Optional[int]) -> dict:
+def carregar_cliente(db: Session, codigo: Optional[Union[int, str]]) -> dict:
     if not codigo:
         return {}
+    # table v2 usa cadastro_codigo_da_empresa (string)
+    # se vier int, converte
+    cod_str = str(codigo).strip()
+    
     row = db.execute(text("""
         SELECT
-          codigo,
-          ramo_juridico
-        FROM public.t_cadastro_cliente
-        WHERE codigo = :cod
+          cadastro_codigo_da_empresa,
+          cadastro_tipo_cliente
+        FROM public.t_cadastro_cliente_v2
+        WHERE cadastro_codigo_da_empresa = :cod
         LIMIT 1
-    """), {"cod": codigo}).mappings().first()
+    """), {"cod": cod_str}).mappings().first()
     return dict(row) if row else {}
 
 def carregar_produto(db: Session, produto_id: str) -> dict:
@@ -114,13 +118,10 @@ def preview_linha(payload: LinhaPreviewIn, db: Session = Depends(get_db)):
             try:
                 # remove espaços se for string e converte
                 val_str = str(payload.cliente_codigo).strip()
-                if val_str.isdigit():
-                    cod_int = int(val_str)
-                    cliente = carregar_cliente(db, cod_int)
-                else:
-                    print(f"cliente_codigo '{val_str}' nao é numérico, ignorando DB lookup.")
+                # na V2 o codigo é string, então passamos val_str direto
+                cliente = carregar_cliente(db, val_str)
             except Exception as ex:
-                print(f"Erro ao converter cliente_codigo: {ex}")
+                print(f"Erro ao carregar cliente: {ex}")
                 pass
         
         produto = carregar_produto(db, payload.produto_id)
@@ -128,9 +129,15 @@ def preview_linha(payload: LinhaPreviewIn, db: Session = Depends(get_db)):
         print(f"Cliente DB: {cliente}")
         print(f"Produto DB: {produto.get('codigo_supra')} - {produto.get('tipo')} - IVA: {produto.get('iva_st')}")
 
-        ramo_db = cliente.get("ramo_juridico") if cliente else None
-        ramo = ramo_db or getattr(payload, "ramo_juridico", None)
-        print(f"Ramo Final: {ramo!r} (DB: {ramo_db!r}, Payload: {getattr(payload, 'ramo_juridico', None)!r})")
+        # ATERADO: usamos cadastro_tipo_cliente em vez de ramo_juridico
+        tipo_cliente_db = cliente.get("cadastro_tipo_cliente") if cliente else None
+        
+        # Fallback: se o payload mandar ramo_juridico, usamos como 'tipo_cliente' pra manter compatibilidade parcial?
+        # Ou esperamos que o payload mandasse algo novo? O usuário só pediu pra trocar o campo DB.
+        # Vamos assumir que ramo_juridico do payload (se vier) serve de override para o tipo_cliente.
+        tipo_cliente = tipo_cliente_db or getattr(payload, "ramo_juridico", None)
+        
+        print(f"Tipo Cliente Final: {tipo_cliente!r} (DB: {tipo_cliente_db!r}, Payload(ramo): {getattr(payload, 'ramo_juridico', None)!r})")
 
         tipo = produto.get("tipo") or getattr(payload, "tipo", None)
 
@@ -145,7 +152,7 @@ def preview_linha(payload: LinhaPreviewIn, db: Session = Depends(get_db)):
 
         aplica, motivos = decide_st(
             tipo=tipo,
-            ramo_juridico=ramo,
+            tipo_cliente=tipo_cliente,  # Changed argument name
             forcar_iva_st=payload.forcar_iva_st
         )
         print(f"DECIDE ST: Aplica={aplica}, Motivos={motivos}")
