@@ -1311,24 +1311,14 @@ function setupRenovarValidade() {
       }
 
       try {
-        const token = localStorage.getItem("ordersync_token"); // ou window.Auth.getToken()
-        const api = window.API_BASE || "http://127.0.0.1:8000"; // fallback
+        const base = await resolveProdutosEndpoint();
+        const url = `${base}/renovar_validade_global`;
 
-        const resp = await fetch(`${api}/produtos/renovar_validade_global`, {
+        const data = await fetchJSON(url, {
           method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            "Authorization": `Bearer ${token}`
-          },
-          body: JSON.stringify({ nova_validade: novaData })
+          body: JSON.stringify({ nova_validade: novaData }),
         });
 
-        if (!resp.ok) {
-          const err = await resp.json();
-          throw new Error(err.detail || "Erro ao renovar validade");
-        }
-
-        const data = await resp.json();
         toast(`Sucesso! ${data.linhas_afetadas} produtos atualizados.`);
         close();
         if (typeof clearForm === 'function') clearForm();
