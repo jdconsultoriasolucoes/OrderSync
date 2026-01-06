@@ -300,8 +300,8 @@ async function carregarPedido() {
           // --- Lógica de Link Expirado ---
           if (info.is_expired) {
             window.linkExpirado = true; // flag global
-            setMensagem("Este link de pedido está expirado.", false);
-            if (btnConfirmar) btnConfirmar.disabled = true;
+            setMensagem("Este link de pedido está com validade vencida, mas você pode confirmar normalmente.", false);
+            // if (btnConfirmar) btnConfirmar.disabled = true; // REMOVIDO: permitir confirmar mesmo vencido
           }
 
           // --- Lógica de Pedido Já Confirmado ---

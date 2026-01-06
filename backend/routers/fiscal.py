@@ -145,7 +145,7 @@ def preview_linha(payload: LinhaPreviewIn, db: Session = Depends(get_db)):
         peso = D(peso)
         ipi_prod = D(produto.get("ipi", 0))
         # nova regra:
-        ipi = ipi_prod if (_norm(tipo) == "pet" and peso is not None and peso <= D(10)) else D(0)
+        ipi = ipi_prod if ((_norm(tipo) == "pet" or _norm(tipo) == "insumos") and peso is not None and peso <= D(10)) else D(0)
 
         iva_st = D(produto.get("iva_st", 0))
         icms = D(produto.get("icms", 0.18))

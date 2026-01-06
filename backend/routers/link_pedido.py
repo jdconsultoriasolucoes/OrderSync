@@ -59,8 +59,18 @@ def resolver_link(code: str):
         link, status = resolver_code(db, code)
         if status == "not_found":
             raise HTTPException(status_code=404, detail="Link não encontrado")
-        # if status == "expired":
-        #    raise HTTPException(status_code=410, detail="Link expirado")
+        if status == "expired":
+             return {
+                "is_expired": True,
+                "link_status": "EXPIRADO",
+                # Now we return actual data so user can see what it was
+                "tabela_id": link.tabela_id,
+                "com_frete": link.com_frete,
+                "expires_at": link.expires_at.isoformat() if link.expires_at else None,
+                "data_prevista": link.data_prevista.isoformat() if getattr(link, "data_prevista", None) else None,
+                "codigo_cliente": getattr(link, "codigo_cliente", None),
+                "link_url": getattr(link, "link_url", None)
+             }
 
         return {
             "tabela_id": link.tabela_id,
@@ -73,8 +83,8 @@ def resolver_link(code: str):
             "last_access_at": getattr(link, "last_access_at", None) and link.last_access_at.isoformat(),
             "created_at": getattr(link, "created_at", None) and link.created_at.isoformat(),
             "link_url": getattr(link, "link_url", None),
-            "is_expired": (status == "expired"), # New flag
-            "link_status": getattr(link, "link_status", "ABERTO") # Return status for approved check
+            "is_expired": False,
+            "link_status": getattr(link, "link_status", "ABERTO")
         }
 
 # Rota curta que serve o HTML público

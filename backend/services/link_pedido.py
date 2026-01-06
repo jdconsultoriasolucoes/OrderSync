@@ -61,7 +61,7 @@ def resolver_code(db, code: str):
     if not link:
         return None, "not_found"
     if link.expires_at and datetime.now(TZ) > link.expires_at:
-        return None, "expired"
+        return link, "expired"
 
     # contadores e carimbos
     now = datetime.now(TZ)
