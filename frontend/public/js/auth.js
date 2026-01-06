@@ -189,6 +189,15 @@ document.addEventListener("DOMContentLoaded", () => {
         }
     };
 
+    // Allow manual opening
+    window.Auth.openChangePasswordModal = () => {
+        const modal = document.getElementById("modal-trocar-senha");
+        if (modal) {
+            document.getElementById("form-trocar-senha").reset();
+            modal.style.display = "flex";
+        }
+    };
+
     // Allow external closing if needed manually
     window.Auth.closeChangePasswordModal = () => {
         const modal = document.getElementById("modal-trocar-senha");
