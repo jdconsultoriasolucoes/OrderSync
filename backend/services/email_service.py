@@ -176,7 +176,11 @@ def enviar_email_notificacao(
         if cfg_msg.enviar_para_cliente and getattr(pedido, "cliente_email", None):
             try:
                 from services.pdf_service import gerar_pdf_pedido
-                pdf_cliente_bytes = gerar_pdf_pedido(pedido, sem_validade=True)
+                from services.pedido_pdf_data import carregar_pedido_pdf
+                
+                # Carregar dados completos para o PDF (o objeto 'pedido' atual é só um resumo/dummy)
+                pedido_full = carregar_pedido_pdf(db, int(pedido_info["pedido_id"]))
+                pdf_cliente_bytes = gerar_pdf_pedido(pedido_full, sem_validade=True)
                 
                 msg_cliente = MIMEMultipart()
                 msg_cliente["From"] = remetente

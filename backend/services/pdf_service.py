@@ -40,11 +40,11 @@ def _br_number(value, decimals=2, suffix=""):
     return s + suffix
 
 
-def gerar_pdf_pedido(pedido: PedidoPdf, sem_validade: bool = False) -> bytes:
-    buffer = io.BytesIO()
-    _desenhar_pdf(pedido, buffer, sem_validade=sem_validade)
-    buffer.seek(0)
-    return buffer.read()
+# def gerar_pdf_pedido(pedido: PedidoPdf, sem_validade: bool = False) -> bytes:
+#     buffer = io.BytesIO()
+#     _desenhar_pdf(pedido, buffer, sem_validade=sem_validade)
+#     buffer.seek(0)
+#     return buffer.read()
 
 
 def _desenhar_pdf(pedido: PedidoPdf, buffer: io.BytesIO, sem_validade: bool = False) -> None:
@@ -485,42 +485,45 @@ def _desenhar_pdf(pedido: PedidoPdf, buffer: io.BytesIO, sem_validade: bool = Fa
     c.save()
 
 
-def gerar_pdf_pedido(*args, destino_dir: str = "/tmp", **kwargs):
+def gerar_pdf_pedido(*args, destino_dir: str = "/tmp", sem_validade: bool = False, **kwargs) -> bytes:
     """
-    Wrapper compatível com os dois jeitos de uso:
-
-    1) JEITO ANTIGO:
-        pedido_pdf = carregar_pedido_pdf(db, pedido_id)
-        path_pdf = gerar_pdf_pedido(pedido_pdf)
-        -> retorna STRING com o caminho do PDF
-
-    2) JEITO NOVO:
-        pdf_bytes = gerar_pdf_pedido(db, pedido_id, destino_dir=...)
-        -> retorna BYTES do PDF
+    Gera PDF do pedido.
+    Assinaturas suportadas:
+    1) gerar_pdf_pedido(pedido_pdf: PedidoPdf, sem_validade=...) -> bytes
+    2) gerar_pdf_pedido(db: Session, pedido_id: int, sem_validade=...) -> bytes
     """
-    if len(args) == 1 and isinstance(args[0], PedidoPdf):
-        # JEITO ANTIGO: gerar a partir de um PedidoPdf já carregado
-        pedido = args[0]
-        os.makedirs(destino_dir, exist_ok=True)
-        path = os.path.join(destino_dir, f"pedido_{pedido.id_pedido}.pdf")
-        _desenhar_pdf(pedido, path)
-        return path
-
-    # JEITO NOVO: (db, pedido_id)
-    if len(args) >= 2:
+    pedido = None
+    
+    # Caso 1: Passou objeto PedidoPdf direto
+    if len(args) == 1:
+        if isinstance(args[0], PedidoPdf):
+            pedido = args[0]
+        # Se for Session, cai no logic abaixo? Não, Session é arg 0.
+        # Vamos checar types.
+    
+    # Caso 2: Passou (db, pedido_id)
+    if not pedido and len(args) >= 2:
         db = args[0]
-        pedido_id = args[1]
-    elif "db" in kwargs and "pedido_id" in kwargs:
-        db = kwargs["db"]
-        pedido_id = kwargs["pedido_id"]
-    else:
-        raise TypeError("Uso inválido de gerar_pdf_pedido")
+        pid = args[1]
+        pedido = carregar_pedido_pdf(db, int(pid))
+        
+    # Caso kwargs (db=..., pedido_id=...)
+    if not pedido and "db" in kwargs and "pedido_id" in kwargs:
+         pedido = carregar_pedido_pdf(kwargs["db"], int(kwargs["pedido_id"]))
 
-    pedido = carregar_pedido_pdf(db, int(pedido_id))
-    os.makedirs(destino_dir, exist_ok=True)
-    path = os.path.join(destino_dir, f"pedido_{pedido.id_pedido}.pdf")
-    _desenhar_pdf(pedido, path)
+    if not pedido:
+         # Tenta recuperar do args[0] se for PedidoPdf, pois a checagem len(args)==1 pode falhar se passarem mais args opcionais
+         if len(args) > 0 and isinstance(args[0], PedidoPdf):
+             pedido = args[0]
+         else:
+             raise TypeError("Uso inválido de gerar_pdf_pedido. Espetado (PedidoPdf) ou (db, id).")
 
-    # no jeito novo, devolve bytes (pra anexo de e-mail)
-    with open(path, "rb") as f:
-        return f.read()
+    # Override do sem_validade se vier no kwargs
+    if "sem_validade" in kwargs:
+        sem_validade = kwargs["sem_validade"]
+
+    # Gera em memória (mais rápido e seguro que File IO)
+    buffer = io.BytesIO()
+    _desenhar_pdf(pedido, buffer, sem_validade=sem_validade)
+    buffer.seek(0)
+    return buffer.read()
