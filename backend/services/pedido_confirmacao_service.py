@@ -230,18 +230,24 @@ def criar_pedido_confirmado(db: Session, tabela_id: int, body: ConfirmarPedidoRe
     db.commit()
 
     # 7) Monta um "pedido" mínimo só para o serviço de e-mail
+    # Fetch customer email for the "Client Copy" feature
+    from services.email_service import get_email_cliente_responsavel_compras
+    client_email_addr = get_email_cliente_responsavel_compras(db, codigo_cliente)
+
     class PedidoEmailDummy:
-        def __init__(self, id_pedido, codigo_cliente, cliente_nome, total_pedido):
+        def __init__(self, id_pedido, codigo_cliente, cliente_nome, total_pedido, cliente_email):
             self.id = id_pedido
             self.codigo_cliente = codigo_cliente
             self.cliente_nome = cliente_nome
             self.total_pedido = total_pedido
+            self.cliente_email = cliente_email
 
     pedido_email = PedidoEmailDummy(
         id_pedido=new_id,
         codigo_cliente=codigo_cliente,
         cliente_nome=(body.cliente or "").strip() or "---",
         total_pedido=round(total_pedido, 2),
+        cliente_email=client_email_addr
     )
 
     # 8) E-mail best-effort (com PDF)

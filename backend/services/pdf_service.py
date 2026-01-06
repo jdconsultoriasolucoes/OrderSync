@@ -215,6 +215,7 @@ def _desenhar_pdf(pedido: PedidoPdf, buffer: io.BytesIO, sem_validade: bool = Fa
 
     frete_data = [
         ["Frete Total:", frete_str],
+        ["Frete (R$/kg):", "R$ " + _br_number(frete_kg)],
     ]
     frete_col_widths = [3.0 * cm, 4.0 * cm]
 
