@@ -3,6 +3,8 @@ import smtplib
 from email.mime.multipart import MIMEMultipart
 from email.mime.application import MIMEApplication
 from email.mime.text import MIMEText
+from email.mime.base import MIMEBase
+from email import encoders
 from typing import Optional
 import ssl, smtplib
 from sqlalchemy.orm import Session
@@ -193,13 +195,12 @@ Equipe OrderSync
 """
                 msg_cliente.attach(MIMEText(body_client, "plain"))
                 
-                # Anexo
-                part_c = MIMEBase("application", "octet-stream")
-                part_c.set_payload(pdf_cliente_bytes)
-                encoders.encode_base64(part_c)
+                # Anexo (usando MIMEApplication para evitar erro de encoding)
+                part_c = MIMEApplication(pdf_cliente_bytes, _subtype="pdf")
                 part_c.add_header(
-                    "Content-Disposition",
-                    f"attachment; filename=Pedido_{pedido.id}.pdf",
+                    "Content-Disposition", 
+                    "attachment", 
+                    filename=f"Pedido_{pedido.id}.pdf"
                 )
                 msg_cliente.attach(part_c)
                 
