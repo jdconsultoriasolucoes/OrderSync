@@ -215,7 +215,6 @@ def _desenhar_pdf(pedido: PedidoPdf, buffer: io.BytesIO, sem_validade: bool = Fa
 
     frete_data = [
         ["Frete Total:", frete_str],
-        ["Frete (R$/kg):", "R$ " + _br_number(frete_kg)],
     ]
     frete_col_widths = [3.0 * cm, 4.0 * cm]
 
@@ -407,7 +406,7 @@ def _desenhar_pdf(pedido: PedidoPdf, buffer: io.BytesIO, sem_validade: bool = Fa
     data_fech = [
         ["Fechamento do Orçamento:", ""],
         ["Total em Peso Bruto:", _br_number(total_peso_kg, 0, " kg")],
-        ["Valor Frete:", "R$ " + _br_number(frete_total)],
+        ["Valor Frete:", "R$ " + _br_number(frete_kg)],
         ["Total em Valor:", "R$ " + _br_number(total_valor)],
     ]
 
