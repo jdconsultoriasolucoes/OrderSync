@@ -479,7 +479,7 @@ def _desenhar_pdf(pedido: PedidoPdf, buffer: io.BytesIO, sem_validade: bool = Fa
     c.drawString(itens_x, y, "Documento gerado automaticamente pelo OrderSync.")
     
     if sem_validade:
-        c.drawCentredString(width / 2, 1 * cm, "* Confirmação da Solicitação de Orçamento *")
+        c.drawCentredString(width / 2, 1 * cm, "*Confirmação da Solicitação de Orçamento *")
 
 
     c.showPage()

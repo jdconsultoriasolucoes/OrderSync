@@ -185,14 +185,14 @@ def enviar_email_notificacao(
                 msg_cliente = MIMEMultipart()
                 msg_cliente["From"] = remetente
                 msg_cliente["To"] = pedido.cliente_email
-                msg_cliente["Subject"] = f"Confirmação de Pedido #{pedido.id} - {pedido.cliente_nome}"
+                msg_cliente["Subject"] = f"Confirmação de Orçamento #{pedido.id} - {pedido.cliente_nome}"
                 
                 # Corpo simples para o cliente
                 body_client = f"""\
 Prezado(a) {pedido.cliente_nome},
 
-Seu pedido #{pedido.id} foi confirmado com sucesso.
-Segue em anexo a cópia do pedido.
+Seu orçamento #{pedido.id} foi confirmado com sucesso.
+Segue em anexo a cópia do orçamento.
 
 Atenciosamente,
 Equipe OrderSync
