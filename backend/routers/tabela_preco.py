@@ -346,6 +346,9 @@ def obter_tabela(id_tabela: int):
                 "icms_st": p.icms_st,
                 "valor_frete": p.valor_frete,
                 "valor_s_frete": p.valor_s_frete,
+                "markup": p.markup,
+                "valor_final_markup": p.valor_final_markup,
+                "valor_s_frete_markup": p.valor_s_frete_markup,
                 } for p in itens
             ]
         }

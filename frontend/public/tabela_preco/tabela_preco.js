@@ -28,10 +28,7 @@ document.addEventListener("DOMContentLoaded", () => {
       preSelecionadosCodigos = new Set((arr || []).map(p => p.codigo_tabela || p.codigo));
     } catch { preSelecionadosCodigos = new Set(); }
   }
-  function sendBufferBackToParent(selecionados) {
-    const ctx = getCtxId();
-    sessionStorage.setItem(`TP_BUFFER:${ctx}`, JSON.stringify(selecionados || []));
-  }
+  // (sendBufferBackToParent original removida; usada versão shim abaixo)
 
 
   // Filtros

@@ -766,35 +766,8 @@ function enforceIvaLockByCliente() {
 
 
 // --- Persistência compacta ---
-async function salvarTabelaPreco(payload) {
-  const isEdicao = (currentMode === MODE.EDIT) && !!currentTabelaId;
-
-  const url = isEdicao
-    ? `${API_BASE}/tabela_preco/${encodeURIComponent(currentTabelaId)}`
-    : `${API_BASE}/tabela_preco/salvar`;
-
-  const method = isEdicao ? 'PUT' : 'POST';
-
-  const resp = await fetch(url, {
-    method,
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(payload),
-  });
-
-  const raw = await resp.text();
-  let data = null; try { data = JSON.parse(raw); } catch { }
-
-  if (!resp.ok) {
-    // trata 422 bonitinho, se vier
-    try {
-      const j = JSON.parse(raw);
-      if (j?.detail) throw new Error(typeof j.detail === 'string' ? j.detail
-        : j.detail.map(d => `• ${d.loc?.join('.')}: ${d.msg}`).join('\n'));
-    } catch { }
-    throw new Error(`Falha ao salvar (${resp.status}). ${raw}`);
-  }
-  return data;
-}
+// Função de salvar removida daqui (duplicada).
+// Veja implementação unificada no final do arquivo.
 
 
 function option(text, value) {
@@ -2119,48 +2092,55 @@ document.addEventListener('change', handleFieldChange, true);
 // Reescrevendo/definindo explicitamente a função de salvar
 // para garantir o envio do token.
 // =========================================================
+// =========================================================
+// FUNÇÃO DE SALVAR UNIFICADA (CRIAÇÃO E EDIÇÃO)
+// =========================================================
 async function salvarTabelaPreco(payload) {
-  const url = `${API_BASE}/tabela_preco/salvar`;
   const token = localStorage.getItem("ordersync_token");
 
-  // Se for edição (tem ID), usar PUT em vez de POST (ou ajustar endpoint conforme backend)
-  // O backend atual /tabela_preco/salvar é POST e cria nova tabela.
-  // Se quisermos atualizar, o endpoint é PUT /tabela_preco/{id}.
+  // A lógica de "Edição" depende se temos um ID de tabela carregado E se o modo é compatível (não DUP/NEW)
+  // Mas se tivermos ID e o usuário clicou em salvar, assumimos que é update daquele ID,
+  // exceto se mode for DUP (nesse caso ID é null).
+  const idParaSalvar = (currentMode !== MODE.DUP && currentMode !== MODE.NEW) ? currentTabelaId : null;
+  // Fallback: se window.currentTabelaId existir e não for DUP, usa ele.
+  // (Pode ocorrer se o modo visual não atualizou, mas temos ID no contexto)
+  const finalId = idParaSalvar || ((currentMode !== MODE.DUP && currentMode !== MODE.NEW) ? window.currentTabelaId : null);
 
-  if (window.currentTabelaId) {
-    // EDIÇÃO
-    const putUrl = `${API_BASE}/tabela_preco/${window.currentTabelaId}`;
-    const r = await fetch(putUrl, {
-      method: "PUT",
-      headers: {
-        "Content-Type": "application/json",
-        "Authorization": `Bearer ${token}`
-      },
-      body: JSON.stringify(payload)
-    });
-    if (!r.ok) {
-      const txt = await r.text().catch(() => "");
-      if (r.status === 401) throw new Error("Não autorizado (401). Faça login novamente.");
-      throw new Error(`Falha ao atualizar (401/500). ${txt}`);
-    }
-    return await r.json();
+  let url, method;
+
+  if (finalId) {
+    // UPDATE
+    url = `${API_BASE}/tabela_preco/${finalId}`;
+    method = "PUT";
+    console.log("Salvando tabela (UPDATE):", finalId);
   } else {
-    // CRIAÇÃO
-    const r = await fetch(url, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        "Authorization": `Bearer ${token}`
-      },
-      body: JSON.stringify(payload)
-    });
-    if (!r.ok) {
-      const txt = await r.text().catch(() => "");
-      if (r.status === 401) throw new Error("Não autorizado (401). Faça login novamente.");
-      throw new Error(`Falha ao salvar (401/500). ${txt}`);
-    }
-    return await r.json();
+    // CREATE
+    url = `${API_BASE}/tabela_preco/salvar`;
+    method = "POST";
+    console.log("Salvando tabela (CREATE)");
   }
+
+  const r = await fetch(url, {
+    method,
+    headers: {
+      "Content-Type": "application/json",
+      "Authorization": `Bearer ${token}`
+    },
+    body: JSON.stringify(payload)
+  });
+
+  if (!r.ok) {
+    const txt = await r.text().catch(() => "");
+    if (r.status === 401) throw new Error("Não autorizado (401). Faça login novamente.");
+    // Tenta parsear erro estruturado
+    try {
+      const j = JSON.parse(txt);
+      if (j.detail) throw new Error(typeof j.detail === 'string' ? j.detail : JSON.stringify(j.detail));
+    } catch (e) { /* ignora erro de parse */ }
+    throw new Error(`Falha ao salvar (${r.status}). ${txt}`);
+  }
+
+  return await r.json();
 }
 
 function handleFieldChange(e) {
