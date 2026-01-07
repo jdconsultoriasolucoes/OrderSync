@@ -78,7 +78,7 @@ def obter_opcoes_endpoint():
 )
 def listar_produtos(
     q: Optional[str] = None,
-    status: Optional[str] = None,
+    status: Optional[str] = "ATIVO",
     familia: Optional[int] = None,
     vigencia_em: Optional[date] = None,
     limit: int = 50,

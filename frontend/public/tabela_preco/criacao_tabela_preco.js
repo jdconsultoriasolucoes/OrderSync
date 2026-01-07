@@ -922,7 +922,8 @@ async function carregarItens() {
         // guarda para reaproveitar na hora do POST
         __descricao_fator_label: p.descricao_fator_comissao || null,
         __plano_pagto_label: p.codigo_plano_pagamento || null, // já vem "COD - desc" às vezes
-        fornecedor: t.fornecedor || ''
+        fornecedor: t.fornecedor || '',
+        status_atual: p.status_atual ?? 'ATIVO' // <--- Mapeia status
       }));
 
       itens = itens.map(p => ({
@@ -937,6 +938,13 @@ async function carregarItens() {
 
       // Atualiza a pill e recálculo
       atualizarPillTaxa();
+
+      // Checa por inativos
+      const inativos = itens.filter(i => i.status_atual && i.status_atual !== 'ATIVO');
+      if (inativos.length > 0) {
+        // setTimeout para não bloquear a renderização inicial
+        setTimeout(() => alert(`⚠️ ATENÇÃO: Existem ${inativos.length} produtos com status INATIVO nesta tabela.\nPor favor, remova-os.`), 500);
+      }
 
 
       // >>> NOVO: fator global (se todos iguais)
@@ -1005,7 +1013,16 @@ function criarLinha(item, idx) {
   tdSel.appendChild(chk);
 
   const tdCod = document.createElement('td'); tdCod.textContent = item.codigo_tabela || '';
-  const tdDesc = document.createElement('td'); tdDesc.textContent = item.descricao || '';
+  const tdDesc = document.createElement('td');
+
+  if (item.status_atual && item.status_atual !== 'ATIVO') {
+    tr.classList.add('row-inactive');
+    tdDesc.innerHTML = `<span class="badge-inactive">INATIVO</span> ${item.descricao || ''}`;
+    tr.title = `Produto com status: ${item.status_atual}`;
+  } else {
+    tdDesc.textContent = item.descricao || '';
+  }
+
   const tdEmb = document.createElement('td'); tdEmb.textContent = item.embalagem || '';
   const tdPeso = document.createElement('td'); tdPeso.className = 'num'; tdPeso.textContent = fmt4(item.peso_liquido || 0);
   const tdValor = document.createElement('td'); tdValor.className = 'num'; tdValor.textContent = fmtMoney(item.valor || 0);

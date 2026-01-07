@@ -17,6 +17,7 @@ import re
 from fastapi import Depends
 from core.deps import get_current_user, get_db
 from models.usuario import UsuarioModel
+from models.produto import ProdutoV2
 
 logger = logging.getLogger("tabela_preco")
 
@@ -314,6 +315,18 @@ def obter_tabela(id_tabela: int):
 
         itens = db.query(TabelaPrecoModel).filter_by(id_tabela=id_tabela, ativo=True).all()
 
+        # Helper: buscar status ATUAL na t_cadastro_produto_v2
+        status_map = {}
+        if itens:
+             codigos = [i.codigo_produto_supra for i in itens if i.codigo_produto_supra]
+             if codigos:
+                 # Busca em lote
+                 rows_status = db.query(ProdutoV2.codigo_supra, ProdutoV2.status_produto).filter(
+                     ProdutoV2.codigo_supra.in_(codigos)
+                 ).all()
+                 for r in rows_status:
+                     status_map[r.codigo_supra] = r.status_produto
+
          # se por algum motivo tiver divergência entre linhas, faz um OR
         calcula_st = any(bool(getattr(p, "calcula_st", False)) for p in itens) or bool(
             getattr(cab, "calcula_st", False)
@@ -349,6 +362,7 @@ def obter_tabela(id_tabela: int):
                 "markup": p.markup,
                 "valor_final_markup": p.valor_final_markup,
                 "valor_s_frete_markup": p.valor_s_frete_markup,
+                "status_atual": status_map.get(p.codigo_produto_supra, "DESCONHECIDO"), # <--- NOVO
                 } for p in itens
             ]
         }
