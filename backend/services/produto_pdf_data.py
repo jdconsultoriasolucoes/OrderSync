@@ -69,6 +69,7 @@ def parse_lista_precos(
 
     with pdfplumber.open(file_obj) as pdf:
         # === Leitura Inicial (Header) ===
+    # === Leitura Inicial (Header) ===
         header_text = pdf.pages[0].extract_text() or ""
         m = re.search(
             r"LISTA:\s*(.+?)(?:\s{2,}|VALIDADE|BATIDA|PÁG|$)",
@@ -107,12 +108,17 @@ def parse_lista_precos(
         
         # Estrategia A: Filename (Prioridade Solicitada)
         if filename:
-            match_fn = re.search(r"(?:INS|PET|INSUMOS)\s+(.+?)(?:\s+\d+|\.pdf|$)", filename, re.IGNORECASE)
-            if match_fn:
-                cand = match_fn.group(1).strip().upper()
-                cand = re.sub(r"\s+\d+$", "", cand) 
-                if cand:
-                    fornecedor = cand
+            # Tenta pegar tudo antes de ".pdf" ou numeros finais
+            # Ex: "PET ALISUL 15.pdf" -> ALISUL
+            clean_fn = re.sub(r"\.pdf$", "", filename, flags=re.IGNORECASE)
+            # Remove prefixos comuns
+            clean_fn = re.sub(r"^(INS|PET|INSUMOS)\s+", "", clean_fn, flags=re.IGNORECASE)
+            # Remove digitos finais (ex: 15)
+            clean_fn = re.sub(r"\s+\d+$", "", clean_fn)
+            
+            cand = clean_fn.strip().upper()
+            if cand:
+                fornecedor = cand
 
         # Estrategia B: Header (Fallback)
         if not fornecedor:
@@ -121,7 +127,7 @@ def parse_lista_precos(
             elif "ALISUL" in up_lista or "ALISUL" in header_text.upper():
                 fornecedor = "ALISUL"
             elif "RIO CLARO" in up_lista or "RIO CLARO" in header_text.upper():
-                 fornecedor = "RIO CLARO"
+                fornecedor = "RIO CLARO"
             elif up_lista and "LISTA" not in up_lista:
                 fornecedor = up_lista
 
@@ -149,17 +155,35 @@ def parse_lista_precos(
                     if not any([c0, c1, c2, c3]):
                         continue
 
-                    joined = " ".join(x for x in [c0, c1, c2, c3] if x).upper()
+                    joined_upper = " ".join(x for x in [c0, c1, c2, c3] if x).upper()
 
-                    # Familia Header
-                    if (c0 and not c1 and not c2 and not c3):
-                         # Validação simples
-                        if len(c0) > 3 and "PÁG" not in c0.upper():
-                            familia_atual = clean_markers(c0)
+                    # --- FILTRO DE RODAPÉ (IGNORE TERMS) ---
+                    IGNORE_TERMS = [
+                        "ATENDIMENTO AO CONSUMIDOR",
+                        "GERÊNCIA DE VENDAS", 
+                        "CONTATO:", "EMAIL:", "FONE:",
+                        "VOTORANTIM@ALISUL", "PÁG:", "PAGINA",
+                        "OBSERVAÇÕES", " PEDIDO MÍNIMO"
+                    ]
+                    if any(term in joined_upper for term in IGNORE_TERMS):
                         continue
 
+                    # Familia Header
+                    # Logica melhorada: Se c0 tem texto, c1/c2/c3 vazios, e contem "FAMILIA" ou parece titulo
+                    if c0 and not c1 and not c2 and not c3:
+                        # Se contiver "FAMILIA", é batata
+                        if "FAMÍLIA" in c0.upper() or "FAMILIA" in c0.upper():
+                            familia_atual = clean_markers(c0)
+                            continue
+                        
+                        # Se for um texto longo sem numeros, pode ser familia (ex: FROST GATOS)
+                        # Mas evitar confundir com "ATENDIMENTO..." (já filtrado acima)
+                        if len(c0) > 3 and not re.search(r"\d", c0):
+                             familia_atual = clean_markers(c0)
+                             continue
+
                     # Table Header Skip
-                    if ("COD" in joined or "CÓD" in joined) and ("PROD" in joined):
+                    if ("COD" in joined_upper or "CÓD" in joined_upper) and ("PROD" in joined_upper):
                         continue
 
                     # === Lógica Diferenciada por TIPO ===
@@ -172,17 +196,12 @@ def parse_lista_precos(
                         continue
 
                     # FILTRO DE LIXO / TABELAS DE PRAZO
-                    # O PDF contém uma tabelinha no rodapé com "PRAZO | COEF" ou "7 DD | 0,000"
-                    # Devemos ignorar isso para não sujar o banco de produtos.
                     code_upper = codigo.upper()
-                    # 1. "PRAZO", "COEF"
-                    # 2. "7 DD", "14 DD" etc
-                    # 3. "7/14/21/28" (sem DD, mas é prazo)
                     if (
                         "PRAZO" in code_upper 
                         or "COEF" in code_upper 
                         or re.search(r"\d+\s*DD", code_upper)
-                        or re.search(r"\d+/\d+", code_upper) # Captura 7/14/21...
+                        or re.search(r"\d+/\d+", code_upper)
                     ):
                         continue
 
@@ -196,15 +215,9 @@ def parse_lista_precos(
                         preco_ton = None
                     else:
                         # Layout INSUMOS (Default)
-                        # Assume colunas fixas: 0=Cod, 1=Desc, 2=Ton, 3=SC
                         preco_ton = normalize_num(c2)
                         preco_sc = normalize_num(c3)
 
-                    # Se não tiver preço, considera 0 (Sob Consulta) em vez de pular
-                    # if preco_ton is None and preco_sc is None:
-                    #    continue
-
-                    
                     # Sequence Logic
                     if familia_atual != last_familia:
                         last_familia = familia_atual

@@ -14,10 +14,25 @@
 <script src="/js/config.js"></script>
 <script src="/js/auth.js"></script>
 <script>
-    // Auth.checkAuth() will handle redirect if needed
-    if (window.Auth) {
-        window.Auth.checkAuth();
-    }
+    // Fail-safe: Check token immediately before waiting for Auth object
+    // This prevents the page from rendering if auth.js fails to load
+    (function () {
+        const token = localStorage.getItem("ordersync_token");
+        if (!token) {
+            console.warn("No token found in index.html, redirecting to login...");
+            // Assuming login is at /login/login.html based on project structure
+            window.location.href = "/login/login.html";
+        }
+    })();
+
+    // Auth.checkAuth() will handle redirect if needed (for expiration, etc.)
+    window.addEventListener('load', function () {
+        if (window.Auth) {
+            window.Auth.checkAuth();
+        } else {
+            console.error("Auth module failed to load!");
+        }
+    });
 </script>
 
 <body>

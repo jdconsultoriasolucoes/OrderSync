@@ -57,7 +57,9 @@ def _sincronizar_um_grupo(
                preco_tonelada_anterior = p.preco_tonelada,
                preco                   = la.preco_sc,
                preco_tonelada          = la.preco_ton,
-               validade_tabela         = la.validade_tabela
+               validade_tabela         = la.validade_tabela,
+               familia                 = la.familia,
+               fornecedor              = la.fornecedor
         FROM lista_ativa AS la
         WHERE p.fornecedor   = la.fornecedor
           AND p.tipo         = la.lista

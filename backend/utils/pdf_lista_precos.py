@@ -63,6 +63,25 @@ def parse_lista_precos(pdf_path: str) -> pd.DataFrame:
                     c2 = (row[2] or "").strip()
                     c3 = (row[3] or "").strip()
 
+                    # --- NOVO: Filtrar linhas de rodapé/contato ---
+                    joined_upper = (c0 + " " + c1 + " " + c2 + " " + c3).upper()
+                    
+                    # Termos que identificam o rodapé e não produto
+                    IGNORE_TERMS = [
+                        "ATENDIMENTO AO CONSUMIDOR",
+                        "GERÊNCIA DE VENDAS", 
+                        "CONTATO:",
+                        "EMAIL:",
+                        "FONE:",
+                        "VOTORANTIM@ALISUL",
+                        "PÁG:",
+                        "PAGINA"
+                    ]
+
+                    if any(term in joined_upper for term in IGNORE_TERMS):
+                        continue
+                    # ----------------------------------------------
+
                     if not any([c0, c1, c2, c3]):
                         continue
 
