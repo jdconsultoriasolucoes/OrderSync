@@ -276,20 +276,32 @@ async def importar_lista(
 
 class RenovarValidadeReq(BaseModel):
     nova_validade: date
+    tipo: Optional[str] = "TODOS" # TODOS, INSUMOS, PET
 
 @router.post("/renovar_validade_global")
 def renovar_validade_global(payload: RenovarValidadeReq, current_user: UsuarioModel = Depends(get_current_user)):
     with SessionLocal() as db:
         from sqlalchemy import text
         try:
-            # Atualiza todos os produtos ativos com a nova data
-            res = db.execute(text("""
+            # Filtro base
+            where_clause = "UPPER(status_produto) = 'ATIVO'"
+            params = {"val": payload.nova_validade, "user": current_user.email}
+
+            # Filtro opcional por tipo
+            if payload.tipo and payload.tipo.upper() != "TODOS":
+                where_clause += " AND tipo = :tipo"
+                params["tipo"] = payload.tipo.upper()
+
+            # Atualiza todos os produtos ativos com a nova data (e filtro opcional)
+            query = f"""
                 UPDATE t_cadastro_produto_v2
                 SET validade_tabela = :val,
                     atualizado_por = :user,
                     updated_at = NOW()
-                WHERE UPPER(status_produto) = 'ATIVO'
-            """), {"val": payload.nova_validade, "user": current_user.email})
+                WHERE {where_clause}
+            """
+
+            res = db.execute(text(query), params)
             
             db.commit()
             return {"ok": True, "linhas_afetadas": res.rowcount, "nova_validade": payload.nova_validade}

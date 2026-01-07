@@ -1306,7 +1306,11 @@ function setupRenovarValidade() {
         return;
       }
 
-      if (!confirm(`Confirma renovar validade de TODOS os produtos ativos para ${novaData}?`)) {
+      const tipoRenovacao = document.getElementById("select-tipo-renovacao")?.value || "TODOS";
+
+      const tipoLabel = tipoRenovacao === "TODOS" ? "TODOS os produtos" : `${tipoRenovacao}`;
+
+      if (!confirm(`Confirma renovar validade de ${tipoLabel} ativos para ${novaData}?`)) {
         return;
       }
 
@@ -1320,7 +1324,7 @@ function setupRenovarValidade() {
           headers: {
             "Authorization": `Bearer ${token}`
           },
-          body: JSON.stringify({ nova_validade: novaData }),
+          body: JSON.stringify({ nova_validade: novaData, tipo: tipoRenovacao }),
         });
 
         toast(`Sucesso! ${data.linhas_afetadas} produtos atualizados.`);
