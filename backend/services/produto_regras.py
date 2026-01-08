@@ -34,7 +34,6 @@ def _sincronizar_um_grupo(
         "inseridos": 0,
     }
 
-    # -- 0) PREPARAÇÃO DE IDs DE FAMILIA --
     # Identificar famílias distintas NA LISTA ATIVA
     familias_pdf = db.execute(text("""
         SELECT DISTINCT familia 
@@ -45,27 +44,35 @@ def _sincronizar_um_grupo(
     familias_nomes = [row[0] for row in familias_pdf]
     mapa_familia_id = {}
     
-    # Buscar IDs existentes globalmente
+    # 1. Buscar IDs já existentes na tabela t_familia_produtos
     if familias_nomes:
-        ftxt = text("SELECT DISTINCT familia, id_familia FROM public.t_cadastro_produto_v2 WHERE familia IN :fams AND id_familia IS NOT NULL")
-        existing_fams = db.execute(ftxt, {"fams": tuple(familias_nomes)}).fetchall()
+        ftxt = text("SELECT familia, id FROM public.t_familia_produtos WHERE tipo=:tipo AND familia IN :fams")
+        existing_fams = db.execute(ftxt, {"tipo": lista, "fams": tuple(familias_nomes)}).fetchall()
         for f_nome, f_id in existing_fams:
             mapa_familia_id[f_nome] = f_id
 
-    # Determinar MAX id atual para novos (FILTRADO POR TIPO)
-    max_id = db.execute(
-        text("SELECT MAX(id_familia) FROM public.t_cadastro_produto_v2 WHERE tipo = :lista"),
-        {"lista": lista}
-    ).scalar() or 0
-    
-    # Atribuir IDs para as novas
+    # 2. Identificar novas familias que precisam ser criadas
     familias_novas = [f for f in familias_nomes if f not in mapa_familia_id]
     familias_novas.sort()
     
-    for f_novo in familias_novas:
-        max_id += 10
-        mapa_familia_id[f_novo] = max_id
+    if familias_novas:
+        # Determinar MAX id atual na tabela t_familia_produtos para esse TIPO
+        max_id = db.execute(
+            text("SELECT MAX(id) FROM public.t_familia_produtos WHERE tipo = :lista"),
+            {"lista": lista}
+        ).scalar() or 0
         
+        # Inserir as novas famílias
+        for f_novo in familias_novas:
+            max_id += 10
+            # Insert into t_familia_produtos explicitly
+            db.execute(
+                text("INSERT INTO public.t_familia_produtos (id, tipo, familia) VALUES (:id, :tipo, :fam)"),
+                {"id": max_id, "tipo": lista, "fam": f_novo}
+            )
+            mapa_familia_id[f_novo] = max_id
+        
+        # db.commit() -> Removed to keep transaction atomic (will commit at end of func)
     # Build CTE for mapping
     cte_body = ""
     binds = {}

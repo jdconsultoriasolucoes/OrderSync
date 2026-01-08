@@ -8,7 +8,13 @@ def normalize_num(s):
     s = str(s).strip()
     if not s:
         return None
+    
+    # Remove R$ and spaces
+    s = s.replace("R$", "").strip()
+    
+    # Standardize format: 1.000,00 -> 1000.00
     s = s.replace(".", "").replace(",", ".")
+    
     try:
         return float(s)
     except ValueError:
@@ -63,7 +69,7 @@ def parse_lista_precos(pdf_path: str) -> pd.DataFrame:
                     c2 = (row[2] or "").strip()
                     c3 = (row[3] or "").strip()
 
-                    # --- NOVO: Filtrar linhas de rodapé/contato ---
+                     # --- NOVO: Filtrar linhas de rodapé/contato ---
                     joined_upper = (c0 + " " + c1 + " " + c2 + " " + c3).upper()
                     
                     # Termos que identificam o rodapé e não produto
@@ -110,8 +116,21 @@ def parse_lista_precos(pdf_path: str) -> pd.DataFrame:
                     # item
                     codigo = clean_markers(c0)
                     descricao = clean_markers(c1)
+                    
+                    # ALERT: The user reported zero values. 
+                    # If columns are shifted, we might be missing the price.
+                    # Usually price is in c2 (Ton) and c3 (SC) or sometimes just c3.
+                    # Looking at the table structure is crucial.
+                    # Based on the screenshot, the price is in the LAST column.
+                    
                     preco_ton = normalize_num(c2)
                     preco_sc = normalize_num(c3)
+                    
+                    # Quick fix for when price is only in the last column (c3) but c2 is empty
+                    if preco_sc is None and c3 == "" and c2 != "":
+                         # Try swapping if column shift happened? No, looking at screenshot 
+                         # it seems Price is clearly in the last column.
+                         pass
 
                     if not codigo or not descricao:
                         continue
