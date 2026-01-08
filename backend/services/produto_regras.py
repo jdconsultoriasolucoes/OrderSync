@@ -106,26 +106,41 @@ def _sincronizar_um_grupo(
             WHERE l.ativo = TRUE
               AND l.fornecedor = :fornecedor
               AND l.lista = :lista
+        ),
+        matches AS (
+             SELECT DISTINCT ON (la.codigo)
+                p.id,
+                la.*
+             FROM lista_ativa la
+             JOIN public.t_cadastro_produto_v2 p
+               ON TRIM(p.tipo) = la.lista
+               AND TRIM(p.codigo_supra) = la.codigo
+               AND (
+                 p.fornecedor = la.fornecedor
+                 OR p.fornecedor IS NULL
+                 OR p.fornecedor = ''
+                 OR p.fornecedor ILIKE '%' || la.fornecedor || '%'
+               )
+             ORDER BY 
+                la.codigo, 
+                -- Priority: Exact Match > Partial > Null > ID Desc
+                CASE WHEN p.fornecedor = la.fornecedor THEN 1 
+                     WHEN p.fornecedor ILIKE '%' || la.fornecedor || '%' THEN 2
+                     ELSE 3 END ASC,
+                p.id DESC
         )
         UPDATE public.t_cadastro_produto_v2 AS p
            SET preco_anterior          = p.preco,
                preco_tonelada_anterior = p.preco_tonelada,
-               preco                   = la.preco_sc,
-               preco_tonelada          = la.preco_ton,
-               validade_tabela         = la.validade_tabela,
-               familia                 = la.familia,
-               fornecedor              = la.fornecedor,
-               filhos                  = la.filhos,
-               id_familia              = COALESCE(p.id_familia, la.id_fam)
-        FROM lista_ativa AS la
-        WHERE TRIM(p.tipo) = la.lista
-          AND TRIM(p.codigo_supra) = la.codigo
-          AND (
-            p.fornecedor = la.fornecedor
-            OR p.fornecedor IS NULL
-            OR p.fornecedor = ''
-            OR p.fornecedor ILIKE '%' || la.fornecedor || '%'
-          )
+               preco                   = m.preco_sc,
+               preco_tonelada          = m.preco_ton,
+               validade_tabela         = m.validade_tabela,
+               familia                 = m.familia,
+               fornecedor              = m.fornecedor,
+               filhos                  = m.filhos,
+               id_familia              = COALESCE(p.id_familia, m.id_fam)
+        FROM matches AS m
+        WHERE p.id = m.id
         """
     )
     
@@ -249,6 +264,7 @@ def _sincronizar_um_grupo(
               )
             WHERE p.id IS NULL
         )
+        )
         INSERT INTO public.t_cadastro_produto_v2 (
             tipo,
             familia,
@@ -264,7 +280,80 @@ def _sincronizar_um_grupo(
             created_at,
             updated_at
         )
-        SELECT
+        SELECT DISTINCT ON (codigo)
+            lista,
+            familia,
+            id_fam,
+            codigo,
+            descricao,
+            preco_ton,
+            preco_sc,
+            validade_tabela,
+            fornecedor,
+            'ATIVO',
+            filhos,
+            NOW(),
+            NOW(),
+            NOW()
+        FROM nao_cadastrados
+        RETURNING id
+        """
+    )
+     
+    # Use ON CONFLICT DO NOTHING to simply skip if we race-condition or duplicate key exists
+    inserir_sql = text(
+        f"""
+        WITH map_fam(nome_fam, id_fam) AS (
+            VALUES {cte_body}
+        ),
+        lista_ativa AS (
+            SELECT
+                l.fornecedor,
+                l.lista,
+                l.familia,
+                l.codigo,
+                l.descricao,
+                l.preco_ton,
+                l.preco_sc,
+                l.validade_tabela,
+                l.filhos,
+                m.id_fam
+            FROM public.t_preco_produto_pdf_v2 l
+            LEFT JOIN map_fam m ON m.nome_fam = l.familia
+            WHERE l.ativo = TRUE
+              AND l.fornecedor = :fornecedor
+              AND l.lista = :lista
+        ),
+        nao_cadastrados AS (
+            SELECT la.*
+            FROM lista_ativa la
+            LEFT JOIN public.t_cadastro_produto_v2 p
+              ON  TRIM(p.tipo) = la.lista
+              AND TRIM(p.codigo_supra) = la.codigo
+              AND (
+                  p.fornecedor = la.fornecedor
+                  OR p.fornecedor IS NULL
+                  OR p.fornecedor = ''
+                  OR p.fornecedor ILIKE '%' || la.fornecedor || '%'
+              )
+            WHERE p.id IS NULL
+        )
+        INSERT INTO public.t_cadastro_produto_v2 (
+            tipo,
+            familia,
+            id_familia,
+            codigo_supra,
+            nome_produto,
+            preco_tonelada,
+            preco,
+            validade_tabela,
+            fornecedor,
+            status_produto,
+            filhos,
+            created_at,
+            updated_at
+        )
+        SELECT DISTINCT ON (codigo)
             lista,
             familia,
             id_fam,
@@ -279,6 +368,7 @@ def _sincronizar_um_grupo(
             NOW(),
             NOW()
         FROM nao_cadastrados
+        ON CONFLICT (fornecedor, tipo, codigo_supra) DO NOTHING
         RETURNING id
         """
     )
