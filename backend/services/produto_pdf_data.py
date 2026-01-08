@@ -111,6 +111,14 @@ def parse_lista_precos(
             # Tenta pegar tudo antes de ".pdf" ou numeros finais
             # Ex: "PET ALISUL 15.pdf" -> ALISUL
             clean_fn = re.sub(r"\.pdf$", "", filename, flags=re.IGNORECASE)
+            
+            # --- NOVO: Limpeza de lixo (colchetes, datas, traços iniciais) ---
+            # Remove [291225], [12-12], etc
+            clean_fn = re.sub(r"\[.*?\]", "", clean_fn)
+            # Remove traços ou espaços no inicio (ex: " - PET..." -> "PET...")
+            clean_fn = re.sub(r"^[\s\-]+", "", clean_fn)
+            # -----------------------------------------------------------------
+
             # Remove prefixos comuns
             clean_fn = re.sub(r"^(INS|PET|INSUMOS)\s+", "", clean_fn, flags=re.IGNORECASE)
             # Remove digitos finais (ex: 15)
