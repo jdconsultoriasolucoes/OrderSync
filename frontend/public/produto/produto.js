@@ -830,7 +830,7 @@ function setupImportarPdf() {
         return;
       }
 
-      const { total_linhas_pdf, lista, fornecedor, sync } = data;
+      const { total_linhas_pdf, lista, fornecedor: fornecedorResult, sync } = data;
 
       // Compatibilidade com API nova (sync) e antiga (inseridos/atualizados na raiz)
       let inseridos = data.inseridos ?? 0;
@@ -850,7 +850,7 @@ function setupImportarPdf() {
 
       // opção de baixar o relatório em PDF
       const listaFinal = lista || tipo;
-      const fornecedorFinal = fornecedor || "";
+      const fornecedorFinal = fornecedorResult || "";
 
       if (listaFinal && fornecedorFinal) {
         const relatorioUrl = `${importBase}/relatorio-lista?fornecedor=${encodeURIComponent(
