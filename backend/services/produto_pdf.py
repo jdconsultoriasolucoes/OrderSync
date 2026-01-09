@@ -531,7 +531,8 @@ def salvar_t_preco_produto_pdf(
             data_ingestao,
             nome_arquivo,
             ativo,
-            usuario
+            usuario,
+            filhos
         )
         VALUES (
             :fornecedor,
@@ -546,7 +547,8 @@ def salvar_t_preco_produto_pdf(
             :data_ingestao,
             :nome_arquivo,
             :ativo,
-            :usuario
+            :usuario,
+            :filhos
         )
         """
     )
