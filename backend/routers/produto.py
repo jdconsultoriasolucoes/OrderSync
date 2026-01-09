@@ -196,6 +196,7 @@ def excluir_produto_endpoint(produto_id: int):
 async def importar_lista(
     request: Request,
     tipo_lista: str = Form(..., description="Tipo de lista: INSUMOS ou PET"),
+    fornecedor: Optional[str] = Form(None, description="Nome do fornecedor (opcional, sobrescreve detecção)"),
     validade_tabela: Optional[str] = Form(None),
     file: UploadFile = File(...),
     # Note: Using Depends in Form/File upload might be tricky if not done right, 
@@ -239,7 +240,7 @@ async def importar_lista(
                 )
 
     try:
-        df = parse_lista_precos(file.file, tipo_lista=tipo, filename=file.filename)
+        df = parse_lista_precos(file.file, tipo_lista=tipo, filename=file.filename, fornecedor_selecionado=fornecedor)
     except Exception as e:
         raise HTTPException(status_code=400, detail=f"Erro ao ler PDF: {e}")
 

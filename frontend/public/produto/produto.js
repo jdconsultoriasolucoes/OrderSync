@@ -728,6 +728,26 @@ async function uploadListaPdf(file) {
   }
 }
 
+// ---------- Carregar Fornecedores ----------
+async function loadFornecedores() {
+  const el = $("import_fornecedor");
+  if (!el) return;
+  try {
+    const url = `${API_BASE}/api/fornecedores`;
+    const data = await fetchJSON(url);
+
+    // Sort logic just in case backend didn't
+    // data.sort((a,b) => a.nome_fornecedor.localeCompare(b.nome_fornecedor));
+
+    el.innerHTML = '<option value="">Selecione...</option>' +
+      data.map(f => `<option value="${f.nome_fornecedor}">${f.nome_fornecedor}</option>`).join("");
+  } catch (e) {
+    console.error("Erro ao carregar fornecedores:", e);
+    // Don't break UI, just leave empty or show error option
+    el.innerHTML = '<option value="">Erro ao carregar</option>';
+  }
+}
+
 // ---------- Importar PDF (INS/PET + validade) ----------
 function setupImportarPdf() {
   const btnImportar = $("btn-importar");
@@ -756,13 +776,17 @@ function setupImportarPdf() {
     return parseDateBrToISO(s);
   };
 
-  const doImport = async ({ tipo, validadeISO, file }) => {
+  const doImport = async ({ tipo, validadeISO, file, fornecedor }) => {
     if (!tipo) {
       alert("Tipo inválido. Use INSUMOS ou PET.");
       return;
     }
     if (!validadeISO) {
       alert("Data de validade inválida. Use dd/mm/aaaa ou selecione no calendário.");
+      return;
+    }
+    if (!fornecedor) {
+      alert("Selecione o fornecedor.");
       return;
     }
     if (!file) {
@@ -786,6 +810,7 @@ function setupImportarPdf() {
       const formData = new FormData();
       formData.append("tipo_lista", tipo);
       formData.append("validade_tabela", validadeISO); // yyyy-mm-dd
+      formData.append("fornecedor", fornecedor);
       formData.append("file", file);
 
       const resp = await fetch(url, { method: "POST", body: formData });
@@ -867,6 +892,7 @@ function setupImportarPdf() {
       // modalTipo.value = "";
       // modalValidade.value = "";
       // modalArquivo.value = "";
+      loadFornecedores();
       openModal();
     });
 
@@ -884,8 +910,9 @@ function setupImportarPdf() {
         const tipo = normalizeTipo(modalTipo.value);
         const validadeISO = normalizeValidISO(modalValidade.value);
         const file = modalArquivo.files?.[0];
+        const fornecedor = $("import_fornecedor")?.value;
 
-        const ok = await doImport({ tipo, validadeISO, file });
+        const ok = await doImport({ tipo, validadeISO, file, fornecedor });
         if (ok) {
           // opcional: fecha e reseta se deu certo
           modalArquivo.value = "";

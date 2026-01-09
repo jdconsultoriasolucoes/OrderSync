@@ -56,10 +56,11 @@ def parse_lista_precos(
     file_obj: BinaryIO,
     tipo_lista: Optional[str] = None,  # "INSUMOS" ou "PET"
     filename: Optional[str] = None,
+    fornecedor_selecionado: Optional[str] = None,
 ) -> pd.DataFrame:
     """
     Lê o PDF da lista de preços (INS/PET VOTORANTIM 15) a partir de um file-like.
-    Prioriza Filename para identificar Fornecedor/Lista, depois Header.
+    Usa o Fornecedor Selecionado pelo usuário.
     """
     linhas = []
 
@@ -69,7 +70,6 @@ def parse_lista_precos(
 
     with pdfplumber.open(file_obj) as pdf:
         # === Leitura Inicial (Header) ===
-    # === Leitura Inicial (Header) ===
         header_text = pdf.pages[0].extract_text() or ""
         m = re.search(
             r"LISTA:\s*(.+?)(?:\s{2,}|VALIDADE|BATIDA|PÁG|$)",
@@ -84,7 +84,7 @@ def parse_lista_precos(
         if tipo_lista:
             lista = tipo_lista.upper()
         
-        # Fallback pelo Filename
+        # Fallback pelo Filename (apenas para TIPO, se necessário, mas o user passou tipo_lista)
         if not lista and filename:
             fname_up = filename.upper()
             if "PET" in fname_up:
@@ -104,39 +104,19 @@ def parse_lista_precos(
             lista = "INSUMOS"
 
         # === 2. Definição do FORNECEDOR ===
-        fornecedor = None
+        # FORÇADO pelo input do usuário
+        fornecedor = fornecedor_selecionado
         
-        # Estrategia A: Filename (Prioridade Solicitada)
-        if filename:
-            # Tenta pegar tudo antes de ".pdf" ou numeros finais
-            # Ex: "PET ALISUL 15.pdf" -> ALISUL
-            clean_fn = re.sub(r"\.pdf$", "", filename, flags=re.IGNORECASE)
-            
-            # --- NOVO: Limpeza de lixo (colchetes, datas, traços iniciais) ---
-            # Remove [291225], [12-12], etc
-            clean_fn = re.sub(r"\[.*?\]", "", clean_fn)
-            # Remove traços ou espaços no inicio (ex: " - PET..." -> "PET...")
-            clean_fn = re.sub(r"^[\s\-]+", "", clean_fn)
-            # -----------------------------------------------------------------
-
-            # Remove prefixos comuns
-            clean_fn = re.sub(r"^(INS|PET|INSUMOS)\s+", "", clean_fn, flags=re.IGNORECASE)
-            # Remove digitos finais (ex: 15)
-            clean_fn = re.sub(r"\s+\d+$", "", clean_fn)
-            
-            cand = clean_fn.strip().upper()
-            if cand:
-                fornecedor = cand
-
-        # Estrategia B: Header (Fallback)
         if not fornecedor:
-            if "VOTORANTIM" in up_lista or "VOTORANTIM" in header_text.upper():
+             # Fallback Header se o usuário não selecionou (caso raro se o front obrigar)
+             # Mas removemos a lógica do filename conforme solicitado.
+             if "VOTORANTIM" in up_lista or "VOTORANTIM" in header_text.upper():
                 fornecedor = "VOTORANTIM"
-            elif "ALISUL" in up_lista or "ALISUL" in header_text.upper():
+             elif "ALISUL" in up_lista or "ALISUL" in header_text.upper():
                 fornecedor = "ALISUL"
-            elif "RIO CLARO" in up_lista or "RIO CLARO" in header_text.upper():
+             elif "RIO CLARO" in up_lista or "RIO CLARO" in header_text.upper():
                 fornecedor = "RIO CLARO"
-            elif up_lista and "LISTA" not in up_lista:
+             elif up_lista and "LISTA" not in up_lista:
                 fornecedor = up_lista
 
         # === 3. Extração de Dados ===
