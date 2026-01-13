@@ -92,6 +92,8 @@ def coletar_dados_relatorio_lista(
             "aumentos": [],
             "reducoes": [],
             "novos": [],
+            "reativados": [],
+            "incluidos_sem_alteracao": [],
             "inativados": [],
         }
 
@@ -109,7 +111,8 @@ def coletar_dados_relatorio_lista(
             p.preco_anterior      AS preco_anterior,
             p.preco               AS preco_novo,
             p.preco_tonelada_anterior AS preco_ton_anterior,
-            p.preco_tonelada      AS preco_ton_novo
+            p.preco_tonelada      AS preco_ton_novo,
+            p.status_anterior     AS status_anterior
         FROM public.t_cadastro_produto_v2 p
         JOIN public.t_preco_produto_pdf_v2 t
           ON t.ativo       = TRUE
@@ -126,6 +129,11 @@ def coletar_dados_relatorio_lista(
     aumentos: List[Dict[str, Any]] = []
     reducoes: List[Dict[str, Any]] = []
     novos: List[Dict[str, Any]] = []
+    aumentos: List[Dict[str, Any]] = []
+    reducoes: List[Dict[str, Any]] = []
+    novos: List[Dict[str, Any]] = []
+    reativados: List[Dict[str, Any]] = []
+    incluidos_sem_alteracao: List[Dict[str, Any]] = []
 
     for row in produtos_lista:
         codigo = row["codigo"]
@@ -134,6 +142,7 @@ def coletar_dados_relatorio_lista(
         preco_novo = row["preco_novo"]
         preco_ton_ant = row["preco_ton_anterior"]
         preco_ton_novo = row["preco_ton_novo"]
+        status_ant = row.get("status_anterior")
 
         # NOVO produto (não tinha preco_anterior)
         if preco_ant is None:
@@ -186,12 +195,17 @@ def coletar_dados_relatorio_lista(
             "var_pct_ton": var_pct_ton,
         }
 
-        if dif > 0:
+        if status_ant and status_ant != 'ATIVO':
+            # Estava INATIVO (ou outro status) e agora foi confirmado -> Reativado
+            # Independente se houve mudança de preço, o fato mais relevante é a reativação.
+            reativados.append(info)
+        elif dif > 0:
             aumentos.append(info)
         elif dif < 0:
             reducoes.append(info)
-        # se dif == 0, não entra (sem alteração); se quiser,
-        # dá pra criar uma lista separado mais pra frente
+        else:
+            # dif == 0 -> Manutenção de preço (produto confirmado)
+            incluidos_sem_alteracao.append(info)
 
     # -------------------------------------------------------
     # Produtos inativados
@@ -237,7 +251,11 @@ def coletar_dados_relatorio_lista(
         "total_itens_lista": total_itens,
         "aumentos": aumentos,
         "reducoes": reducoes,
+        "reducoes": reducoes,
+        "reducoes": reducoes,
         "novos": novos,
+        "reativados": reativados,
+        "incluidos_sem_alteracao": incluidos_sem_alteracao,
         "inativados": inativados,
     }
 
@@ -346,6 +364,8 @@ def gerar_pdf_relatorio_lista(
     aumentos = dados["aumentos"]
     reducoes = dados["reducoes"]
     novos = dados["novos"]
+    reativados = dados["reativados"]
+    sem_alteracao = dados["incluidos_sem_alteracao"]
     inativados = dados["inativados"]
     
     summary_data = [
@@ -353,6 +373,8 @@ def gerar_pdf_relatorio_lista(
         ["Produtos com Aumento:", str(len(aumentos))],
         ["Produtos com Redução:", str(len(reducoes))],
         ["Produtos Novos:", str(len(novos))],
+        ["Produtos Reativados:", str(len(reativados))],
+        ["Produtos Sem Alteração:", str(len(sem_alteracao))],
         ["Produtos Inativados:", str(len(inativados))],
     ]
     
@@ -481,6 +503,60 @@ def gerar_pdf_relatorio_lista(
             ('ALIGN', (2,1), (-1,-1), 'RIGHT'),
         ]))
         elements.append(Paragraph("Produtos NOVOS", styles["Heading3"]))
+        elements.append(Spacer(1, 0.2*cm))
+        elements.append(t)
+        elements.append(t)
+        elements.append(Spacer(1, 0.8*cm))
+
+        elements.append(t)
+        elements.append(Spacer(1, 0.8*cm))
+
+    # --- TABELA REATIVADOS ---
+    rows_rea = [[
+        i["codigo"], 
+        i["nome"][:60], 
+        _fmt_moeda(i["preco_novo"])
+    ] for i in reativados]
+    
+    if rows_rea:
+        t = Table([["Código", "Produto", "Novo Preço"]] + rows_rea, 
+                  colWidths=[3*cm, 10*cm, 4*cm], hAlign='LEFT')
+        t.setStyle(TableStyle([
+            ('BACKGROUND', (0,0), (-1,0), SUPRA_RED),
+            ('TEXTCOLOR', (0,0), (-1,0), colors.white),
+            ('FONTNAME', (0,0), (-1,0), 'Helvetica-Bold'),
+            ('FONTSIZE', (0,0), (-1,0), 9),
+            ('ALIGN', (0,0), (-1,0), 'CENTER'),
+            ('GRID', (0,0), (-1,-1), 0.5, colors.black),
+            ('FONTSIZE', (0,1), (-1,-1), 8),
+            ('ALIGN', (2,1), (-1,-1), 'RIGHT'),
+        ]))
+        elements.append(Paragraph("Produtos REATIVADOS", styles["Heading3"]))
+        elements.append(Spacer(1, 0.2*cm))
+        elements.append(t)
+        elements.append(Spacer(1, 0.8*cm))
+
+    # --- TABELA SEM ALTERAÇÃO ---
+    rows_sem = [[
+        i["codigo"], 
+        i["nome"][:60], 
+        _fmt_moeda(i["preco_novo"])
+    ] for i in sem_alteracao]
+    
+    if rows_sem:
+        t = Table([["Código", "Produto", "Preço Mantido"]] + rows_sem, 
+                  colWidths=[3*cm, 10*cm, 4*cm], hAlign='LEFT')
+        t.setStyle(TableStyle([
+            ('BACKGROUND', (0,0), (-1,0), colors.Color(0.9, 0.9, 0.9)), # Cinza claro para não alarmar
+            ('TEXTCOLOR', (0,0), (-1,0), colors.black),
+            ('FONTNAME', (0,0), (-1,0), 'Helvetica-Bold'),
+            ('FONTSIZE', (0,0), (-1,0), 9),
+            ('ALIGN', (0,0), (-1,0), 'CENTER'),
+            ('GRID', (0,0), (-1,-1), 0.5, colors.black),
+            ('FONTSIZE', (0,1), (-1,-1), 8),
+            ('ALIGN', (2,1), (-1,-1), 'RIGHT'),
+        ]))
+        elements.append(Paragraph("Produtos SEM ALTERAÇÃO (Validados na Carga)", styles["Heading3"]))
         elements.append(Spacer(1, 0.2*cm))
         elements.append(t)
         elements.append(Spacer(1, 0.8*cm))

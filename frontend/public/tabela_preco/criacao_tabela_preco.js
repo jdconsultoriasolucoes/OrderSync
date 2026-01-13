@@ -2116,7 +2116,7 @@ async function salvarTabelaPreco(payload) {
 
   if (!r.ok) {
     const txt = await r.text().catch(() => "");
-    if (r.status === 401) throw new Error("Não autorizado (401). Faça login novamente.");
+    if (r.status === 401) throw new Error("Tempo expirado: faça o login");
     // Tenta parsear erro estruturado
     try {
       const j = JSON.parse(txt);

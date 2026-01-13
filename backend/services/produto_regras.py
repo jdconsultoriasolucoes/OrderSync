@@ -148,23 +148,35 @@ def _sincronizar_um_grupo(
                marca                   = COALESCE(m.marca_oficial, m.familia),
                fornecedor              = m.fornecedor,
                filhos                  = m.filhos,
+               status_anterior         = p.status_produto,
                status_produto          = 'ATIVO',
+               updated_at              = NOW(),
                id_familia              = COALESCE(p.id_familia, m.id_fam)
         FROM matches AS m
         WHERE p.id = m.id
+        RETURNING p.codigo_supra
         """
     )
     
     # Merge params
     run_params = {**{"fornecedor": fornecedor, "lista": lista}, **binds}
     res = db.execute(update_sql, run_params)
-    stats["atualizados"] = res.rowcount or 0
+    
+    # Capturar códigos ativados/atualizados
+    codigos_ativados = [row[0] for row in res.fetchall()]
+    stats["atualizados"] = len(codigos_ativados)
+    
+    if codigos_ativados:
+        print(f"=== [Sincronizacao PDF] Produtos ATIVADOS/ATUALIZADOS ({len(codigos_ativados)}) para {fornecedor}/{lista}: ===")
+        print(codigos_ativados)
+        print("=================================================================================")
 
     # 2) Inativar produtos que sumiram da lista ativa
     inativar_sql = text(
         """
         UPDATE public.t_cadastro_produto_v2 AS p
-           SET status_produto = 'NÃO ATIVO'
+           SET status_produto = 'NÃO ATIVO',
+               updated_at = NOW()
         WHERE p.fornecedor = :fornecedor
           AND p.tipo       = :lista
           AND p.codigo_supra NOT IN (
