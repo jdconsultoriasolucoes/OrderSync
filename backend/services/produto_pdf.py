@@ -444,11 +444,21 @@ def get_product_options(db: Session) -> Dict[str, List[str]]:
         # query distinct, filter not null, order by value
         rows = db.query(col).distinct().filter(col != None).order_by(col).all()
         return [r[0] for r in rows if r[0]]
+    
+    # Busca famílias na tabela dedicada t_familia_produtos
+    familias = []
+    try:
+        rows_fam = db.execute(text("SELECT DISTINCT familia FROM public.t_familia_produtos ORDER BY familia")).fetchall()
+        familias = [r[0] for r in rows_fam if r[0]]
+    except Exception as e:
+        print(f"Erro ao buscar familias: {e}")
+        # fallback se a tabela não existir ou der erro
+        familias = _distinct__list(ProdutoV2.familia)
 
     return {
         "status_produto": _distinct__list(ProdutoV2.status_produto),
         "tipo_giro": _distinct__list(ProdutoV2.tipo_giro),
-        "familia": _distinct__list(ProdutoV2.familia),
+        "familia": familias,
         "tipo": ["INSUMOS", "PET"], # Opções fixas
         "unidade": _distinct__list(ProdutoV2.unidade),
         "fornecedor": _distinct__list(ProdutoV2.fornecedor),

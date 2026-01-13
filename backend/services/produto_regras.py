@@ -145,6 +145,7 @@ def _sincronizar_um_grupo(
                familia                 = m.familia,
                fornecedor              = m.fornecedor,
                filhos                  = m.filhos,
+               status_produto          = 'ATIVO',
                id_familia              = COALESCE(p.id_familia, m.id_fam)
         FROM matches AS m
         WHERE p.id = m.id

@@ -207,9 +207,9 @@ def _desenhar_pdf(pedido: PedidoPdf, buffer: io.BytesIO, sem_validade: bool = Fa
     else:
         data_entrega_str = ""
 
-    # FRETE (apenas total – sem "frete por kg")
-    if frete_total > 0:
-        frete_str = "R$ " + _br_number(frete_total)
+    # FRETE (agora mostra FRETE KG no topo - solicitado "inverter")
+    if frete_kg > 0:
+        frete_str = "R$ " + _br_number(frete_kg)
     else:
         frete_str = "R$ 0,00"
 
@@ -406,7 +406,8 @@ def _desenhar_pdf(pedido: PedidoPdf, buffer: io.BytesIO, sem_validade: bool = Fa
     data_fech = [
         ["Fechamento do Orçamento:", ""],
         ["Total em Peso Bruto:", _br_number(total_peso_kg, 0, " kg")],
-        ["Valor Frete:", "R$ " + _br_number(frete_kg)],
+        ["Valor Frete:", "R$ " + _br_number(frete_total)],
+
         ["Total em Valor:", "R$ " + _br_number(total_valor)],
     ]
 

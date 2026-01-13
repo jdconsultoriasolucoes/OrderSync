@@ -437,6 +437,11 @@ function onDuplicar() {
   atualizarPillTaxa?.();
   atualizarPillDesconto?.();
   refreshToolbarEnablement?.();
+
+  // Atualiza preços ao entrar no modo duplicar (novo orçamento)
+  atualizarPrecosAtuais()
+    .then(() => recalcTudo())
+    .catch(err => console.error("Erro ao atualizar preços em onDuplicar:", err));
 }
 
 // MOSTRAR/OCULTAR botões corretamente em todos os modos
@@ -476,6 +481,10 @@ function toggleToolbarByMode() {
 function onEditar() {
   if (currentTabelaId) sessionStorage.setItem('TP_LAST_VIEW_ID', String(currentTabelaId));
   setMode(MODE.EDIT);
+  // Atualiza preços ao entrar no modo edição
+  atualizarPrecosAtuais()
+    .then(() => recalcTudo())
+    .catch(err => console.error("Erro ao atualizar preços em onEditar:", err));
 }
 
 // Atalhos
@@ -932,9 +941,10 @@ async function carregarItens() {
 
       }));
       renderTabela();
-      if (typeof recalcTudo === 'function') {
-        await Promise.resolve(recalcTudo()).catch(() => { });
-      }
+      // Removido bloqueio do recálculo para renderização instantânea
+      // if (typeof recalcTudo === 'function') {
+      //   await Promise.resolve(recalcTudo()).catch(() => { });
+      // }
 
       // Atualiza a pill e recálculo
       atualizarPillTaxa();
@@ -1172,12 +1182,13 @@ function criarLinha(item, idx) {
   const tdFrete = document.createElement('td'); tdFrete.className = 'num'; tdFrete.textContent = '0,00';
   const tdDescAplic = document.createElement('td'); tdDescAplic.className = 'num'; tdDescAplic.textContent = '0,00';
 
-  // IPI e IVA_ST (%) — NOVOS
-  const tdIpiR$ = document.createElement('td'); tdIpiR$.className = 'num col-ipi'; tdIpiR$.textContent = '0,00';
-  const tdBaseStR$ = document.createElement('td'); tdBaseStR$.className = 'num col-base-st'; tdBaseStR$.textContent = '0,00';
-  const tdIcmsProp$ = document.createElement('td'); tdIcmsProp$.className = 'num col-icms-proprio'; tdIcmsProp$.textContent = '0,00';
-  const tdIcmsCheio$ = document.createElement('td'); tdIcmsCheio$.className = 'num col-icms-st-cheio'; tdIcmsCheio$.textContent = '0,00';
+  // IPI e IVA_ST (%) — Inicializar com o valor salvo no item, se houver
+  const tdIpiR$ = document.createElement('td'); tdIpiR$.className = 'num col-ipi'; tdIpiR$.textContent = fmtMoney(item.ipi || 0);
+  const tdBaseStR$ = document.createElement('td'); tdBaseStR$.className = 'num col-base-st'; tdBaseStR$.textContent = fmtMoney(item.iva_st || 0);
+  const tdIcmsProp$ = document.createElement('td'); tdIcmsProp$.className = 'num col-icms-proprio'; tdIcmsProp$.textContent = fmtMoney(item.icms_st || 0); // Nota: icms_st aqui mapeia para col-icms-proprio no backend? Revisar se necessário, mantendo compatibilidade
+  const tdIcmsCheio$ = document.createElement('td'); tdIcmsCheio$.className = 'num col-icms-st-cheio'; tdIcmsCheio$.textContent = '0,00'; // Cheio/Reter geralmente não salvos individualmente no item simples, recalculados
   const tdIcmsReter$ = document.createElement('td'); tdIcmsReter$.className = 'num col-icms-st-reter'; tdIcmsReter$.textContent = '0,00';
+
 
   const tdGrupo = document.createElement('td'); tdGrupo.textContent = [item.grupo, item.departamento].filter(Boolean).join(' / ');
   const tdFinal = document.createElement('td'); tdFinal.className = 'num col-total'; tdFinal.textContent = fmtMoney(item.valor || 0); tr.appendChild(tdFinal);
@@ -2005,64 +2016,21 @@ document.addEventListener('DOMContentLoaded', () => {
     // ✅ agora sim, com o modo correto, mescla o buffer do picker
     if (!__IS_RELOAD) await mergeBufferFromPickerIfAny?.();
 
-    await Promise.resolve(recalcTudo()).catch(() => { });
-    refreshToolbarEnablement?.();
-    setupClienteAutocomplete();
-    enforceIvaLockByCliente();
-
-    // —— quando o usuário editar manualmente o NOME do cliente ——
-    const inpNome = document.getElementById('cliente_nome');
-    const hidCodigo = document.getElementById('codigo_cliente');
-    const hidRamo = document.getElementById('ramo_juridico');
-
-    inpNome?.addEventListener('input', () => {
-      // Se o campo ficar vazio, não considere mais “cliente cadastrado”
-      if (!inpNome.value.trim()) {
-        if (hidCodigo) hidCodigo.value = '';
-        if (hidRamo) hidRamo.value = '';
-        recalcTudo();                         // dispara o preview em todas as linhas
-      }
-      enforceIvaLockByCliente();
-      saveHeaderSnapshot?.();
-    });
-
-    // Se algum outro código limpar/alterar esses campos, recalcule também
-    hidCodigo?.addEventListener('change', () => {
-      enforceIvaLockByCliente();   // 👈 acrescenta
-      saveHeaderSnapshot?.();      // 👈 acrescenta
-      recalcTudo();
-    });
-
-    hidRamo?.addEventListener('change', () => {
-      saveHeaderSnapshot?.();      // 👈 opcional
-      recalcTudo();
-    });
-
-
-    if (!action) {
-      const ctx = sessionStorage.getItem('TP_CTX_ID') || getCtxId();
-      const ret = sessionStorage.getItem(`TP_RETURN_MODE:${ctx}`);
-      if (ret) {
-        if (ret === MODE.EDIT) setMode(MODE.EDIT);
-        else if (ret === MODE.DUP) setMode(MODE.DUP);
-        else if (ret === MODE.NEW) setMode(MODE.NEW);
-        sessionStorage.removeItem(`TP_RETURN_MODE:${ctx}`);
-        modeRestored = true;
-      }
+    // SE for modo Edição ou Duplicação, atualiza preços com o cadastro atual
+    // (mas não bloqueia a UI totalmente, deixa rodar)
+    if (currentMode === MODE.EDIT || currentMode === MODE.DUP) {
+      // Dispara atualização de preços E recálculo em background
+      // O usuário já vê a tabela com valores antigos/salvos imediatamente
+      atualizarPrecosAtuais()
+        .then(() => recalcTudo())
+        .catch(err => console.error("Erro ao atualizar preços/recalcular em background:", err));
+    } else {
+      // Se for View ou New (sem buffer), roda um recalcTudo "fire-and-forget" 
+      // para garantir totais visuais, mas renderTabela já deve ter mostrado algo.
+      Promise.resolve(recalcTudo()).catch(() => { });
     }
 
-    if (!modeRestored) {
-      if (currentTabelaId) {
-        if (action === 'edit') setMode(MODE.EDIT);
-        else if (action === 'duplicate') onDuplicar(); // usa o fluxo que guarda a origem
-        else setMode(MODE.VIEW);
-      } else {
-        setMode(MODE.NEW);
-      }
-
-    }
     refreshToolbarEnablement();
-    await Promise.resolve(recalcTudo()).catch(() => { });
   })();
 });
 

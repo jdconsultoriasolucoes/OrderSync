@@ -1,0 +1,18 @@
+--- PULLING FROM t_cadastro_produto_v2 ---
+Status: NÃO ATIVO
+Codigo Supra Raw: '735F10'
+Length: 6
+
+--- PULLING FROM t_preco_produto_pdf_v2 (LAST 5 RECORDS) ---
+{'codigo': '735F10', 'lista': 'INSUMOS', 'fornecedor': 'VOTORANTIM', 'ativo': True, 'data_ingestao': datetime.date(2026, 1, 10), 'preco_sc': Decimal('58.5500'), 'nome_arquivo': '[270625] -INS VOTORANTIM 15 (1).pdf .pdf'}
+Codigo PDF Raw: '735F10', Length: 6
+{'codigo': '735F10', 'lista': 'INSUMOS', 'fornecedor': 'VOTORANTIM', 'ativo': False, 'data_ingestao': datetime.date(2026, 1, 10), 'preco_sc': Decimal('58.0700'), 'nome_arquivo': '[270625] -INS VOTORANTIM 15 (1).pdf.pdf'}
+Codigo PDF Raw: '735F10', Length: 6
+{'codigo': '735F10', 'lista': 'INSUMOS', 'fornecedor': 'VOTORANTIM', 'ativo': False, 'data_ingestao': datetime.date(2026, 1, 10), 'preco_sc': Decimal('58.0700'), 'nome_arquivo': '[270625] -INS VOTORANTIM 15 (1).pdf.pdf'}
+Codigo PDF Raw: '735F10', Length: 6
+{'codigo': '735F10', 'lista': 'INSUMOS', 'fornecedor': 'VOTORANTIM', 'ativo': False, 'data_ingestao': datetime.date(2026, 1, 10), 'preco_sc': Decimal('58.0700'), 'nome_arquivo': '[270625] -INS VOTORANTIM 15 (1).pdf.pdf'}
+Codigo PDF Raw: '735F10', Length: 6
+
+--- CHECKING ACTIVE LIST FOR Tipo='INSUMOS' Fornecedor='VOTORANTIM' ---
+Total active items for INSUMOS/VOTORANTIM: 172
+Is '735F10' in that active list (Exact Match)? YES
