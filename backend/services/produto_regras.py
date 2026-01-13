@@ -114,17 +114,12 @@ def _sincronizar_um_grupo(
               AND l.fornecedor = :fornecedor
               AND l.lista = :lista
         ),
-        lista_ativa_com_id AS (
-           SELECT la.*, m.id_fam 
-           FROM lista_ativa la
-           LEFT JOIN map_fam m ON m.nome_fam_raw = la.familia
-        ),
         matches AS (
              SELECT DISTINCT ON (la.codigo)
                 p.id,
                 la.*,
                 fp.marca as marca_oficial
-             FROM lista_ativa_com_id la
+             FROM lista_ativa la
              LEFT JOIN public.t_familia_produtos fp ON fp.id = la.id_fam
              JOIN public.t_cadastro_produto_v2 p
                ON TRIM(p.tipo) = la.lista
