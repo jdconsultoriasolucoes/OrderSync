@@ -96,7 +96,6 @@ def _sincronizar_um_grupo(
         WITH map_fam(nome_fam_raw, id_fam) AS (
             VALUES {cte_body}
         ),
-        # Agora JOIN no map_fam é via familia (raw)
         lista_ativa AS (
             SELECT
                 l.fornecedor,
@@ -115,14 +114,11 @@ def _sincronizar_um_grupo(
               AND l.fornecedor = :fornecedor
               AND l.lista = :lista
         ),
-        # JOIN map_fam.nome_fam_raw = l.familia
-        # Recuperamos o `id_fam`
         lista_ativa_com_id AS (
            SELECT la.*, m.id_fam 
            FROM lista_ativa la
            LEFT JOIN map_fam m ON m.nome_fam_raw = la.familia
         ),
-        # Recuperar o nome oficial da familia (coluna 'marca') da tabela t_familia_produtos
         matches AS (
              SELECT DISTINCT ON (la.codigo)
                 p.id,
