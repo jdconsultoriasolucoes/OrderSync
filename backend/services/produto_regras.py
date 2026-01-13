@@ -144,8 +144,8 @@ def _sincronizar_um_grupo(
                preco                   = m.preco_sc,
                preco_tonelada          = m.preco_ton,
                validade_tabela         = m.validade_tabela,
-               familia                 = m.familia, -- familia recebe o valor RAW do PDF
-               marca                   = COALESCE(m.marca_oficial, m.familia), -- marca recebe o valor CLEAN (ou RAW se nula)
+               familia                 = m.familia, 
+               marca                   = COALESCE(m.marca_oficial, m.familia),
                fornecedor              = m.fornecedor,
                filhos                  = m.filhos,
                status_produto          = 'ATIVO',
@@ -183,7 +183,7 @@ def _sincronizar_um_grupo(
     # 3) Inserir produtos novos
     inserir_sql = text(
         f"""
-        WITH map_fam(nome_fam_carga, id_fam) AS (
+        WITH map_fam(nome_fam_raw, id_fam) AS (
             VALUES {cte_body}
         ),
         lista_ativa AS (
@@ -199,23 +199,16 @@ def _sincronizar_um_grupo(
                 l.filhos,
                 m.id_fam
             FROM public.t_preco_produto_pdf_v2 l
-            LEFT JOIN map_fam m ON m.nome_fam_carga = l.familia
+            LEFT JOIN map_fam m ON m.nome_fam_raw = l.familia
             WHERE l.ativo = TRUE
               AND l.fornecedor = :fornecedor
               AND l.lista = :lista
         ),
-        # JOIN map_fam on familia_carga
-        lista_ativa_com_id AS (
-           SELECT la.*, m.id_fam
-           FROM lista_ativa la
-           LEFT JOIN map_fam m ON m.nome_fam_carga = la.familia
-        ),
-        # JOIN t_familia_produtos para pegar nome oficial
         nao_cadastrados AS (
             SELECT 
                 la.*,
-                fp.familia as familia_oficial
-            FROM lista_ativa_com_id la
+                fp.marca as marca_oficial
+            FROM lista_ativa la
             LEFT JOIN public.t_familia_produtos fp ON fp.id = la.id_fam
             LEFT JOIN public.t_cadastro_produto_v2 p
               ON  TRIM(p.tipo) = la.lista
@@ -225,6 +218,7 @@ def _sincronizar_um_grupo(
         INSERT INTO public.t_cadastro_produto_v2 (
             tipo,
             familia,
+            marca,
             id_familia,
             codigo_supra,
             nome_produto,
@@ -239,7 +233,8 @@ def _sincronizar_um_grupo(
         )
         SELECT DISTINCT ON (codigo)
             lista,
-            COALESCE(familia_oficial, familia),
+            familia,
+            COALESCE(marca_oficial, familia),
             id_fam,
             codigo,
             descricao,
