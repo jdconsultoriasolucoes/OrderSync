@@ -9,162 +9,307 @@
     <link rel="stylesheet" href="/navbar.css">
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600&display=swap" rel="stylesheet">
     <style>
-        /* Specific Styles */
-        .mgmt-container {
-            display: flex;
-            /* Adjust height to fill remaining screen space (Header approx 80-90px) */
-            height: calc(100vh - 90px);
-            /* margin-top removed because header is static */
+        :root {
+            --primary-color: #007bff;
+            --primary-hover: #0056b3;
+            --bg-light: #f4f6f9;
+            --text-dark: #333;
+            --sidebar-width: 260px;
+            --header-height: 70px;
         }
 
+        body {
+            background-color: var(--bg-light);
+            margin: 0;
+            font-family: 'Inter', sans-serif;
+            overflow: hidden;
+            /* Prevent body scroll, use inner scroll */
+        }
+
+        /* Layout Container */
+        .mgmt-container {
+            display: flex;
+            height: calc(100vh - var(--header-height));
+            margin-top: 0;
+        }
+
+        /* Internal Sidebar */
         .mgmt-sidebar {
-            width: 250px;
-            background: #f4f4f4;
-            padding: 20px;
-            border-right: 1px solid #ddd;
+            width: var(--sidebar-width);
+            background: #ffffff;
+            border-right: 1px solid #e1e4e8;
+            padding: 20px 15px;
+            display: flex;
+            flex-direction: column;
+            box-shadow: 2px 0 5px rgba(0, 0, 0, 0.02);
+            z-index: 10;
+        }
+
+        .mgmt-sidebar h3 {
+            font-size: 0.85rem;
+            text-transform: uppercase;
+            color: #8898aa;
+            margin-bottom: 15px;
+            letter-spacing: 0.5px;
+            padding-left: 10px;
         }
 
         .mgmt-sidebar ul {
             list-style: none;
             padding: 0;
+            margin: 0;
         }
 
         .mgmt-sidebar li {
-            margin-bottom: 10px;
+            margin-bottom: 8px;
         }
 
         .mgmt-sidebar button {
             width: 100%;
             text-align: left;
-            padding: 10px;
-            background: white;
-            border: 1px solid #ccc;
-            border-radius: 4px;
+            padding: 12px 15px;
+            background: transparent;
+            border: none;
+            border-radius: 8px;
             cursor: pointer;
             font-weight: 500;
+            color: #525f7f;
+            transition: all 0.2s ease;
+            display: flex;
+            align-items: center;
+            font-size: 0.95rem;
+        }
+
+        .mgmt-sidebar button:hover {
+            background-color: #f6f9fc;
+            color: var(--primary-color);
         }
 
         .mgmt-sidebar button.active {
-            background: #007bff;
-            color: white;
-            border-color: #0056b3;
+            background-color: #e6f0ff;
+            color: var(--primary-color);
+            font-weight: 600;
         }
 
+        /* Content Area */
         .mgmt-content {
             flex: 1;
-            padding: 20px;
+            padding: 30px;
             overflow-y: auto;
+            position: relative;
+        }
+
+        .content-card {
+            background: #fff;
+            border-radius: 12px;
+            box-shadow: 0 4px 6px rgba(50, 50, 93, 0.11), 0 1px 3px rgba(0, 0, 0, 0.08);
+            padding: 25px;
+            min-height: 80vh;
         }
 
         .mgmt-header {
             display: flex;
             justify-content: space-between;
             align-items: center;
-            margin-bottom: 20px;
+            margin-bottom: 25px;
+            border-bottom: 1px solid #eee;
+            padding-bottom: 15px;
         }
 
+        .mgmt-header h2 {
+            margin: 0;
+            font-size: 1.5rem;
+            color: #32325d;
+        }
+
+        .btn-primary {
+            background-color: var(--primary-color);
+            color: white;
+            border: none;
+            padding: 10px 24px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-weight: 600;
+            font-size: 0.9rem;
+            box-shadow: 0 4px 6px rgba(50, 50, 93, 0.11), 0 1px 3px rgba(0, 0, 0, 0.08);
+            transition: transform 0.15s;
+        }
+
+        .btn-primary:active {
+            transform: scale(0.98);
+        }
+
+        .btn-primary:disabled {
+            background-color: #ccc;
+            cursor: not-allowed;
+            box-shadow: none;
+        }
+
+        /* Table Styles */
         .data-table {
             width: 100%;
-            border-collapse: collapse;
-            font-size: 14px;
-        }
-
-        .data-table th,
-        .data-table td {
-            border: 1px solid #ddd;
-            padding: 8px;
-            text-align: left;
+            border-collapse: separate;
+            border-spacing: 0;
+            margin-top: 10px;
         }
 
         .data-table th {
-            background-color: #f2f2f2;
+            background-color: #f6f9fc;
+            color: #8898aa;
+            font-weight: 600;
+            text-transform: uppercase;
+            font-size: 0.8rem;
+            letter-spacing: 0.5px;
+            padding: 12px 15px;
+            text-align: left;
+            border-bottom: 1px solid #e9ecef;
+            border-top: 1px solid #e9ecef;
         }
 
+        .data-table th:first-child {
+            border-top-left-radius: 6px;
+            border-left: 1px solid #e9ecef;
+        }
+
+        .data-table th:last-child {
+            border-top-right-radius: 6px;
+            border-right: 1px solid #e9ecef;
+        }
+
+        .data-table td {
+            padding: 15px;
+            vertical-align: middle;
+            border-bottom: 1px solid #e9ecef;
+            color: #525f7f;
+            font-size: 0.9rem;
+        }
+
+        .data-table tbody tr:hover {
+            background-color: #fbfdff;
+        }
+
+        .data-table tbody tr:last-child td {
+            border-bottom: none;
+        }
+
+        /* Actions */
         .action-btn {
-            background: none;
+            background: transparent;
             border: none;
             cursor: pointer;
-            margin: 0 5px;
-            font-size: 16px;
+            padding: 5px;
+            border-radius: 4px;
+            transition: background 0.2s;
+            margin-right: 8px;
+        }
+
+        .action-btn:hover {
+            background-color: #f4f5f7;
         }
 
         .btn-edit {
-            color: #f0ad4e;
+            color: #5e72e4;
+            font-size: 1.1rem;
         }
 
         .btn-delete {
-            color: #d9534f;
+            color: #f5365c;
+            font-size: 1.1rem;
         }
 
-        /* Modal */
+        /* Modals */
         .modal {
             display: none;
             position: fixed;
-            z-index: 1000;
+            z-index: 2000;
             left: 0;
             top: 0;
             width: 100%;
             height: 100%;
-            background-color: rgba(0, 0, 0, 0.5);
+            background-color: rgba(0, 0, 0, 0.4);
+            backdrop-filter: blur(2px);
         }
 
         .modal-content {
             background-color: #fff;
-            margin: 10% auto;
-            padding: 20px;
-            border-radius: 5px;
+            margin: 5% auto;
+            padding: 30px;
+            border-radius: 8px;
             width: 500px;
             max-width: 90%;
             position: relative;
+            box-shadow: 0 15px 35px rgba(50, 50, 93, 0.2), 0 5px 15px rgba(0, 0, 0, 0.17);
+            animation: slideDown 0.3s ease;
+        }
+
+        @keyframes slideDown {
+            from {
+                transform: translateY(-50px);
+                opacity: 0;
+            }
+
+            to {
+                transform: translateY(0);
+                opacity: 1;
+            }
         }
 
         .close-modal {
             position: absolute;
-            right: 10px;
-            top: 10px;
-            font-size: 24px;
+            right: 20px;
+            top: 20px;
+            font-size: 28px;
+            color: #aaa;
             cursor: pointer;
+            line-height: 1;
+        }
+
+        .close-modal:hover {
+            color: #333;
         }
 
         .form-group {
-            margin-bottom: 15px;
+            margin-bottom: 20px;
         }
 
         .form-group label {
             display: block;
-            margin-bottom: 5px;
+            margin-bottom: 8px;
             font-weight: 600;
+            color: #32325d;
+            font-size: 0.9rem;
         }
 
         .form-group input,
         .form-group select {
             width: 100%;
-            padding: 8px;
-            border: 1px solid #ccc;
+            padding: 10px 12px;
+            border: 1px solid #cad1d7;
             border-radius: 4px;
+            font-size: 0.95rem;
+            transition: border-color 0.2s;
+            box-sizing: border-box;
         }
 
-        .form-actions {
-            text-align: right;
-            margin-top: 20px;
+        .form-group input:focus {
+            border-color: var(--primary-color);
+            outline: none;
+            box-shadow: 0 0 0 2px rgba(0, 123, 255, 0.1);
         }
 
-        .btn-primary {
-            background-color: #007bff;
-            color: white;
-            border: none;
+        .form-actions button {
             padding: 10px 20px;
             border-radius: 4px;
+            border: none;
             cursor: pointer;
+            font-weight: 600;
+            font-size: 0.9rem;
+            margin-left: 10px;
         }
 
-        .btn-success {
-            background-color: #28a745;
+        .form-actions .btn-success {
+            background-color: #2dce89;
             color: white;
-            border: none;
-            padding: 10px 20px;
-            border-radius: 4px;
-            cursor: pointer;
         }
     </style>
 </head>
@@ -218,14 +363,16 @@
         </aside>
 
         <main class="mgmt-content">
-            <div class="mgmt-header">
-                <h2 id="module-title">Selecione uma tabela</h2>
-                <button class="btn-primary" id="btn-novo" onclick="openModal()" disabled>+ Novo Item</button>
-            </div>
+            <div class="content-card">
+                <div class="mgmt-header">
+                    <h2 id="module-title">Selecione uma tabela</h2>
+                    <button class="btn-primary" id="btn-novo" onclick="openModal()" disabled>+ Novo Item</button>
+                </div>
 
-            <div id="table-container">
-                <!-- Grid renders here -->
-                <p>Selecione uma tabela ao lado para visualizar os dados.</p>
+                <div id="table-container">
+                    <!-- Grid renders here -->
+                    <p>Selecione uma tabela ao lado para visualizar os dados.</p>
+                </div>
             </div>
         </main>
     </div>
