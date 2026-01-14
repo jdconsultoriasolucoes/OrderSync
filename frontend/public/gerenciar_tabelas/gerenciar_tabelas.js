@@ -13,9 +13,7 @@ const CONFIG = {
             { key: 'codigo_prazo', label: 'Código' },
             { key: 'prazo', label: 'Prazo' },
             { key: 'descricao', label: 'Descrição' },
-            { key: 'custo', label: 'Custo (%)', fmt: v => (v || 0).toFixed(2) + '%' },
-            { key: 'ativo', label: 'Ativo', fmt: v => v ? 'Sim' : 'Não' },
-            { key: 'updated_by', label: 'Alterado Por' }
+            { key: 'custo', label: 'Custo (%)', fmt: v => (v || 0).toFixed(2) + '%' }
         ],
         modalId: 'modal-condicoes',
         fillForm: (item) => {
@@ -38,9 +36,7 @@ const CONFIG = {
         pk: 'id_desconto',
         cols: [
             { key: 'id_desconto', label: 'ID' },
-            { key: 'fator_comissao', label: 'Fator Comiss. (%)', fmt: v => (v || 0).toFixed(2) + '%' },
-            { key: 'ativo', label: 'Ativo', fmt: v => v ? 'Sim' : 'Não' },
-            { key: 'updated_by', label: 'Alterado Por' }
+            { key: 'fator_comissao', label: 'Fator Comiss. (%)', fmt: v => (v || 0).toFixed(2) + '%' }
         ],
         modalId: 'modal-descontos',
         fillForm: (item) => {
@@ -61,9 +57,7 @@ const CONFIG = {
             { key: 'id', label: 'ID' },
             { key: 'tipo', label: 'Tipo' },
             { key: 'familia', label: 'Família' },
-            { key: 'marca', label: 'Marca' },
-            { key: 'ativo', label: 'Ativo', fmt: v => v ? 'Sim' : 'Não' },
-            { key: 'updated_by', label: 'Alterado Por' }
+            { key: 'marca', label: 'Marca' }
         ],
         modalId: 'modal-familias',
         fillForm: (item) => {
