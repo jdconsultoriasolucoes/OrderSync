@@ -547,8 +547,8 @@ def gerar_pdf_relatorio_lista(
         t = Table([["Código", "Produto", "Preço Mantido"]] + rows_sem, 
                   colWidths=[3*cm, 10*cm, 4*cm], hAlign='LEFT')
         t.setStyle(TableStyle([
-            ('BACKGROUND', (0,0), (-1,0), colors.Color(0.9, 0.9, 0.9)), # Cinza claro para não alarmar
-            ('TEXTCOLOR', (0,0), (-1,0), colors.black),
+            ('BACKGROUND', (0,0), (-1,0), SUPRA_RED),
+            ('TEXTCOLOR', (0,0), (-1,0), colors.white),
             ('FONTNAME', (0,0), (-1,0), 'Helvetica-Bold'),
             ('FONTSIZE', (0,0), (-1,0), 9),
             ('ALIGN', (0,0), (-1,0), 'CENTER'),

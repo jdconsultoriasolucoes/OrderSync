@@ -154,6 +154,9 @@ app.include_router(auth.router)
 app.include_router(usuario.router)
 app.include_router(fornecedor.router)
 
+from routers import system_tables
+app.include_router(system_tables.router)
+
 # ---- Static (se precisar servir arquivos públicos do front) ----
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 

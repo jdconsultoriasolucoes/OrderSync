@@ -1,0 +1,336 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Gerenciar Tabelas do Sistema</title>
+    <link rel="stylesheet" href="/styles.css">
+    <link rel="stylesheet" href="/navbar.css">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600&display=swap" rel="stylesheet">
+    <style>
+        /* Specific Styles */
+        .mgmt-container {
+            display: flex;
+            /* Adjust height to fill remaining screen space (Header approx 80-90px) */
+            height: calc(100vh - 90px);
+            /* margin-top removed because header is static */
+        }
+
+        .mgmt-sidebar {
+            width: 250px;
+            background: #f4f4f4;
+            padding: 20px;
+            border-right: 1px solid #ddd;
+        }
+
+        .mgmt-sidebar ul {
+            list-style: none;
+            padding: 0;
+        }
+
+        .mgmt-sidebar li {
+            margin-bottom: 10px;
+        }
+
+        .mgmt-sidebar button {
+            width: 100%;
+            text-align: left;
+            padding: 10px;
+            background: white;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+            cursor: pointer;
+            font-weight: 500;
+        }
+
+        .mgmt-sidebar button.active {
+            background: #007bff;
+            color: white;
+            border-color: #0056b3;
+        }
+
+        .mgmt-content {
+            flex: 1;
+            padding: 20px;
+            overflow-y: auto;
+        }
+
+        .mgmt-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+        }
+
+        .data-table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 14px;
+        }
+
+        .data-table th,
+        .data-table td {
+            border: 1px solid #ddd;
+            padding: 8px;
+            text-align: left;
+        }
+
+        .data-table th {
+            background-color: #f2f2f2;
+        }
+
+        .action-btn {
+            background: none;
+            border: none;
+            cursor: pointer;
+            margin: 0 5px;
+            font-size: 16px;
+        }
+
+        .btn-edit {
+            color: #f0ad4e;
+        }
+
+        .btn-delete {
+            color: #d9534f;
+        }
+
+        /* Modal */
+        .modal {
+            display: none;
+            position: fixed;
+            z-index: 1000;
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.5);
+        }
+
+        .modal-content {
+            background-color: #fff;
+            margin: 10% auto;
+            padding: 20px;
+            border-radius: 5px;
+            width: 500px;
+            max-width: 90%;
+            position: relative;
+        }
+
+        .close-modal {
+            position: absolute;
+            right: 10px;
+            top: 10px;
+            font-size: 24px;
+            cursor: pointer;
+        }
+
+        .form-group {
+            margin-bottom: 15px;
+        }
+
+        .form-group label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: 600;
+        }
+
+        .form-group input,
+        .form-group select {
+            width: 100%;
+            padding: 8px;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+        }
+
+        .form-actions {
+            text-align: right;
+            margin-top: 20px;
+        }
+
+        .btn-primary {
+            background-color: #007bff;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 4px;
+            cursor: pointer;
+        }
+
+        .btn-success {
+            background-color: #28a745;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 4px;
+            cursor: pointer;
+        }
+    </style>
+</head>
+<script src="/js/config.js"></script>
+<script src="/js/auth.js"></script>
+<script>
+    (function () {
+        const token = localStorage.getItem("ordersync_token");
+        if (!token) window.location.href = "/login/login.html";
+    })();
+    window.addEventListener('load', function () {
+        if (window.Auth) window.Auth.checkAuth();
+    });
+</script>
+
+<body>
+    <header>
+        <div class="navbar">
+            <button class="menu-btn" id="menu-button">&#9776;</button>
+            <a href="/" style="display:flex;align-items:center;text-decoration:none;">
+                <img src="/logo.png" alt="Logo" class="logo" />
+            </a>
+            <span style="color:white; margin-left: 15px; font-weight: 600;">Gerenciar Tabelas</span>
+        </div>
+    </header>
+
+    <nav class="sidebar" id="sidebar">
+        <ul>
+            <li><a href="/">Home</a></li>
+            <li><a href="/clientes/cliente.html">Cadastrar Cliente</a></li>
+            <li><a href="/gerenciar_tabelas/gerenciar_tabelas.html">Atualizar Catálogo</a></li>
+            <li><a href="/pedido/pedido.html">Consultar Pedidos</a></li>
+            <li><a href="#">Exportar Relatórios</a></li>
+            <li><a href="/tabela_preco/criacao_tabela_preco.html">Tabela Preço</a></li>
+            <li><a href="/produto/produto.html">Produtos</a></li>
+            <li><a href="/usuarios.html">Usuários</a></li>
+            <li><a href="/config_email/config_email.html">Configuração E-mail</a></li>
+            <li><a href="#" onclick="window.Auth.openChangePasswordModal()">Trocar Senha</a></li>
+            <li><a href="#" onclick="window.Auth.logout()">Sair</a></li>
+        </ul>
+    </nav>
+    <div id="overlay"></div>
+
+    <div class="mgmt-container">
+        <aside class="mgmt-sidebar">
+            <ul>
+                <li><button id="nav-condicoes" onclick="selectModule('condicoes')">Condições de Pagamento</button></li>
+                <li><button id="nav-descontos" onclick="selectModule('descontos')">Descontos</button></li>
+                <li><button id="nav-familias" onclick="selectModule('familias')">Famílias de Produtos</button></li>
+            </ul>
+        </aside>
+
+        <main class="mgmt-content">
+            <div class="mgmt-header">
+                <h2 id="module-title">Selecione uma tabela</h2>
+                <button class="btn-primary" id="btn-novo" onclick="openModal()" disabled>+ Novo Item</button>
+            </div>
+
+            <div id="table-container">
+                <!-- Grid renders here -->
+                <p>Selecione uma tabela ao lado para visualizar os dados.</p>
+            </div>
+        </main>
+    </div>
+
+    <!-- Modal Condicoes -->
+    <div id="modal-condicoes" class="modal">
+        <div class="modal-content">
+            <span class="close-modal" onclick="closeModals()">&times;</span>
+            <h3 id="modal-title-condicoes">Condição de Pagamento</h3>
+            <form id="form-condicoes" onsubmit="saveCondicao(event)">
+                <div class="form-group">
+                    <label>Código Prazo (ID)</label>
+                    <input type="number" id="cond-id" required>
+                    <small>Este código não pode ser alterado após criação.</small>
+                </div>
+                <div class="form-group">
+                    <label>Prazo (Descrição Curta)</label>
+                    <input type="text" id="cond-prazo" required>
+                </div>
+                <div class="form-group">
+                    <label>Descrição Completa</label>
+                    <input type="text" id="cond-desc" required>
+                </div>
+                <div class="form-group">
+                    <label>Custo (%)</label>
+                    <input type="number" step="0.01" id="cond-custo" required>
+                    <small>Informe o valor percentual (ex: 5.0 para 5%)</small>
+                </div>
+                <div class="form-actions">
+                    <button type="submit" class="btn-success">Salvar</button>
+                    <button type="button" onclick="closeModals()">Cancelar</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Modal Descontos -->
+    <div id="modal-descontos" class="modal">
+        <div class="modal-content">
+            <span class="close-modal" onclick="closeModals()">&times;</span>
+            <h3 id="modal-title-descontos">Desconto</h3>
+            <form id="form-descontos" onsubmit="saveDesconto(event)">
+                <div class="form-group">
+                    <label>ID Desconto</label>
+                    <input type="number" id="desc-id" required>
+                    <small>Não pode ser alterado após criação.</small>
+                </div>
+                <div class="form-group">
+                    <label>Fator Comissão (%)</label>
+                    <input type="number" step="0.01" id="desc-fator" required>
+                </div>
+                <div class="form-actions">
+                    <button type="submit" class="btn-success">Salvar</button>
+                    <button type="button" onclick="closeModals()">Cancelar</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Modal Familias -->
+    <div id="modal-familias" class="modal">
+        <div class="modal-content">
+            <span class="close-modal" onclick="closeModals()">&times;</span>
+            <h3 id="modal-title-familias">Família de Produto</h3>
+            <form id="form-familias" onsubmit="saveFamilia(event)">
+                <div class="form-group">
+                    <label>ID</label>
+                    <input type="text" id="fam-id" disabled placeholder="Automático (Novo)">
+                </div>
+                <div class="form-group">
+                    <label>Tipo</label>
+                    <input type="text" id="fam-tipo" required placeholder="Ex: PET, INSUMOS">
+                </div>
+                <div class="form-group">
+                    <label>Família</label>
+                    <input type="text" id="fam-nome" required>
+                </div>
+                <div class="form-group">
+                    <label>Marca</label>
+                    <input type="text" id="fam-marca">
+                </div>
+                <div class="form-actions">
+                    <button type="submit" class="btn-success">Salvar</button>
+                    <button type="button" onclick="closeModals()">Cancelar</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <script src="gerenciar_tabelas.js"></script>
+    <script>
+        // Sidebar toggle
+        const menuButton = document.getElementById("menu-button");
+        const sidebar = document.getElementById("sidebar");
+        const overlay = document.getElementById("overlay");
+
+        menuButton.addEventListener("click", () => {
+            sidebar.classList.toggle("active");
+            overlay.style.display = sidebar.classList.contains("active") ? "block" : "none";
+        });
+        overlay.addEventListener("click", () => {
+            sidebar.classList.remove("active");
+            overlay.style.display = "none";
+        });
+    </script>
+</body>
+
+</html>
