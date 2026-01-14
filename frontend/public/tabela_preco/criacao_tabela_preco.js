@@ -1467,6 +1467,7 @@ async function aplicarFatorGlobal() {
     if (!sel) return;
     sel.value = code;
     // 🔑 dispara o mesmo fluxo do usuário (atualiza itens[idx] e recalcula)
+    console.log(`Aplicando Fator Global: ${code} na linha com select`, sel);
     sel.dispatchEvent(new Event('change', { bubbles: true }));
   });
   await Promise.resolve(recalcTudo()).catch(() => { });
@@ -1977,6 +1978,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
   // Init
   (async function init() {
+    setupClienteAutocomplete(); // ✅ Fix: Initialize autocomplete
     await Promise.all([carregarCondicoes(), carregarDescontos()]);
 
     const temIdNaUrl = !!new URLSearchParams(location.search).get('id');
@@ -2053,6 +2055,7 @@ document.getElementById('btn-aplicar-condicao-todos')?.addEventListener('click',
     if (!sel) return;
     sel.value = cod;
     // 🔑 garante persistência em itens[idx] + recálculo
+    console.log(`Aplicando Condição Global: ${cod} na linha com select`, sel);
     sel.dispatchEvent(new Event('change', { bubbles: true }));
   });
   setTimeout(() => {
