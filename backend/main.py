@@ -141,7 +141,7 @@ app.include_router(router_meta)                # /tabela_preco/meta/*
 app.include_router(router_tabela)              # /tabela_preco/*
 app.include_router(cliente.router, prefix="/cliente", tags=["Cliente"])
 app.include_router(listas.router, prefix="/listas", tags=["Listas"])
-app.include_router(fiscal.router)              # (sem prefixo se o router já tiver)
+app.include_router(fiscal.router, prefix="/fiscal")              # (prefixo padronizado)
 app.include_router(pedido_preview.router)
 app.include_router(link_pedido.router)
 app.include_router(link_pedido.router_short)

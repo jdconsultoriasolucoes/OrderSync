@@ -196,6 +196,13 @@ function clearPickerBridgeFor(ctx) {
   try { sessionStorage.removeItem(`TP_BUFFER:${ctx}`); } catch { }
 }
 
+function clearFullSnapshot() {
+  const ctx = getCtxId();
+  try { sessionStorage.removeItem(`TP_HEADER_SNAPSHOT:${ctx}`); } catch { }
+  try { sessionStorage.removeItem(`TP_RETURN_MODE:${ctx}`); } catch { }
+  clearPickerBridgeFor(ctx);
+}
+
 function preparePickerBridgeBeforeNavigate() {
   const ctx = getCtxId();
   sessionStorage.setItem('TP_CTX_ID', ctx);
@@ -1627,6 +1634,7 @@ function refreshToolbarEnablement() {
   if (btnRemover) btnRemover.disabled = !algumaMarcada;
 }
 function limparFormularioCabecalho() {
+  clearFullSnapshot();
   // Campos principais
   document.getElementById('nome_tabela').value = '';
   document.getElementById('cliente_nome').value = '';
@@ -1908,6 +1916,9 @@ document.addEventListener('DOMContentLoaded', () => {
           alert("Tabela salva, mas o ID não veio no retorno do backend. Ajuste o /tabela_preco/salvar para devolver o id.");
           return;
         }
+
+        // Sucesso absoluto: limpa snapshot para não voltar sujeira se recarregar
+        clearFullSnapshot();
 
         // pergunta de decisão
         const querEnviar = confirm("Deseja mandar o link do orçamento?");

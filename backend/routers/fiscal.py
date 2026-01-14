@@ -106,7 +106,7 @@ def carregar_produto(db: Session, produto_id: str) -> dict:
         raise HTTPException(status_code=404, detail="Produto não encontrado")
     return dict(row)
 
-@router.post("/fiscal/preview-linha", response_model=LinhaPreviewOut)
+@router.post("/preview-linha", response_model=LinhaPreviewOut)
 def preview_linha(payload: LinhaPreviewIn, db: Session = Depends(get_db)):
     try:
         print(f"--- PREVIEW LINHA DEBUG ---")
