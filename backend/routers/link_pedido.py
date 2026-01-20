@@ -95,6 +95,12 @@ router_short = APIRouter()
 def abrir_link(code: str):
     if not PEDIDO_HTML.exists():
         raise HTTPException(500, "Arquivo pedido_cliente.html não encontrado")
+    return FileResponse(PEDIDO_HTML, headers={
+        "X-Robots-Tag": "noindex, nofollow",
+        "Referrer-Policy": "no-referrer",
+        "Cache-Control": "no-store",
+    })
+
 @router.get("/lista_preco/{code}")
 def baixar_lista_preco(code: str):
     from services.pdf_service import gerar_pdf_lista_preco
