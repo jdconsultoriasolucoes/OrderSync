@@ -653,5 +653,6 @@ def gerar_pdf_lista_preco(pedido: PedidoPdf) -> bytes:
         _draw_page(rows_buffer, current_y)
 
     c.showPage()
+    c.save()
     buffer.seek(0)
     return buffer.read()
