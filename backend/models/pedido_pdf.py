@@ -12,6 +12,9 @@ class PedidoPdfItem(BaseModel):
     tabela_comissao: Optional[str] = None
     valor_retira: float
     valor_entrega: float
+    markup: Optional[float] = 0.0
+    valor_final_markup: Optional[float] = 0.0
+    valor_s_frete_markup: Optional[float] = 0.0
 
 
 class PedidoPdf(BaseModel):
@@ -28,6 +31,7 @@ class PedidoPdf(BaseModel):
     data_entrega_ou_retirada: Optional[datetime]
     frete_total: float
     total_peso_bruto: float
+    total_peso_liquido: float # NOVO
     total_valor: float
     observacoes: Optional[str] = None
     itens: List[PedidoPdfItem]

@@ -585,29 +585,49 @@ def gerar_pdf_lista_preco(pedido: PedidoPdf) -> bytes:
     # Colunas: Código | Produto | Embal | R$ Sem Frete | R$ Com Frete
     # Sem Quantidade, Sem Obs.
     
-    header = ["Código", "Produto", "Embal", "Cond. Pgto", "R$ s/ Frete", "R$ c/ Frete"]
+    # 2) Tabela Itens
+    # Colunas: Código | Produto | Embal | Cond. | Base | Mk% | Final s/F | Final c/F
+    
+    header = ["Cód", "Produto", "Embal", "Cond.", "R$ Base", "Mk%", "R$ s/F(MK)", "R$ c/F(MK)"]
     
     # Prepara dados
     itens_ordenados = sorted(pedido.itens, key=lambda it: it.produto or "")
 
     data_rows = []
     for it in itens_ordenados:
+        markup_pct = it.markup or 0
+        
+        # Se tiver markup, usa os campos _markup. Se não, usa base.
+        # Mas no link_pedido.py já populamos. Se markup=0, valor_final_markup=0?
+        # É melhor garantir.
+        
+        v_base = float(it.valor_retira or 0)
+        v_sf_mk = float(it.valor_s_frete_markup or 0)
+        v_cf_mk = float(it.valor_final_markup or 0)
+        
+        if v_sf_mk <= 0: v_sf_mk = v_base
+        if v_cf_mk <= 0: v_cf_mk = float(it.valor_entrega or 0)
+
         data_rows.append([
             it.codigo or "",
             it.produto or "",
             it.embalagem or "",
             it.condicao_pagamento or "",
-            "R$ " + _br_number(it.valor_retira or 0),
-            "R$ " + _br_number(it.valor_entrega or 0)
+            _br_number(v_base),
+            f"{markup_pct:g}%" if markup_pct else "-",
+            _br_number(v_sf_mk),
+            _br_number(v_cf_mk)
         ])
     
     col_widths = [
-        2.0 * cm, # Código
+        1.6 * cm, # Cód
         9.0 * cm, # Produto
-        2.5 * cm, # Embal
-        5.0 * cm, # Cond Pagto
-        3.0 * cm, # s/ Frete
-        3.0 * cm  # c/ Frete
+        2.2 * cm, # Embal
+        3.5 * cm, # Cond
+        2.2 * cm, # Base
+        1.5 * cm, # Mk%
+        2.5 * cm, # s/F
+        2.5 * cm  # c/F
     ]
     # Ajusta largura total para ocupar available_width
     current_sum = sum(col_widths)
@@ -620,9 +640,9 @@ def gerar_pdf_lista_preco(pedido: PedidoPdf) -> bytes:
         ("FONTNAME", (0, 0), (-1, 0), "Helvetica-Bold"),
         ("ALIGN", (0, 0), (-1, 0), "CENTER"),
         ("GRID", (0, 0), (-1, -1), 0.5, colors.black),
-        ("FONTSIZE", (0, 0), (-1, -1), 8),
+        ("FONTSIZE", (0, 0), (-1, -1), 7), # Fonte um pouco menor pra caber
         ("VALIGN", (0, 0), (-1, -1), "MIDDLE"),
-        ("ALIGN", (4, 1), (5, -1), "RIGHT"),
+        ("ALIGN", (4, 1), (-1, -1), "RIGHT"), # Alinha valores à direita
     ])
 
     rows_buffer = []

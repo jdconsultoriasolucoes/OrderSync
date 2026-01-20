@@ -150,7 +150,10 @@ def baixar_lista_preco(code: str):
                 condicao_pagamento=r.get("codigo_plano_pagamento"), # ou descricao
                 tabela_comissao=None,
                 valor_retira=float(r.get("valor_s_frete") or 0),
-                valor_entrega=float(r.get("valor_frete") or 0)
+                valor_entrega=float(r.get("valor_frete") or 0),
+                markup=float(r.get("markup") or 0),
+                valor_final_markup=float(r.get("valor_final_markup") or 0),
+                valor_s_frete_markup=float(r.get("valor_s_frete_markup") or 0)
             ))
             
         fake_pedido = PedidoPdf(
