@@ -25,7 +25,7 @@ def carregar_pedido_pdf(db, pedido_id: int) -> PedidoPdf:
             p.confirmado_em,
             p.data_retirada,
             p.frete_total,
-            p.peso_total_kg,
+            p.peso_total_kg, /* Este costuma ser o peso considerado para frete (agora bruto) */
             p.total_pedido,
             p.observacoes,
 
@@ -36,7 +36,10 @@ def carregar_pedido_pdf(db, pedido_id: int) -> PedidoPdf:
             i.condicao_pagamento  AS item_condicao_pagamento,
             i.tabela_comissao     AS item_tabela_comissao,
             i.preco_unit          AS item_preco_retira,
-            i.preco_unit_frt      AS item_preco_entrega
+            i.preco_unit_frt      AS item_preco_entrega,
+            
+            prod.peso             AS item_peso_liquido_cad,
+            prod.peso_bruto       AS item_peso_bruto_cad
 
         FROM tb_pedidos p
         LEFT JOIN public.t_cadastro_cliente c
@@ -54,6 +57,9 @@ def carregar_pedido_pdf(db, pedido_id: int) -> PedidoPdf:
 
         JOIN tb_pedidos_itens i
             ON i.id_pedido = p.id_pedido
+            
+        LEFT JOIN t_cadastro_produto_v2 prod
+            ON prod.codigo_supra = i.codigo
 
         WHERE p.id_pedido = :pid
         ORDER BY i.quantidade DESC, i.id_item;
@@ -66,12 +72,29 @@ def carregar_pedido_pdf(db, pedido_id: int) -> PedidoPdf:
     head = rows[0]
 
     itens = []
+    
+    # Recalcula pesos
+    sum_peso_liq = 0.0
+    sum_peso_bru = 0.0
+
     for r in rows:
+        qtd = float(r["item_quantidade"] or 0)
+        
+        # Pesos unitários
+        p_liq = float(r["item_peso_liquido_cad"] or 0)
+        p_bru = float(r["item_peso_bruto_cad"] or 0)
+        
+        # Fallback se peso bruto for 0, usa liquido
+        if p_bru <= 0: p_bru = p_liq
+
+        sum_peso_liq += p_liq * qtd
+        sum_peso_bru += p_bru * qtd
+
         itens.append(PedidoPdfItem(
             codigo=str(r["item_codigo"] or ""),
             produto=r["item_nome"] or "",
             embalagem=r["item_embalagem"],
-            quantidade=float(r["item_quantidade"] or 0),
+            quantidade=qtd,
             condicao_pagamento=r.get("item_condicao_pagamento"),
             tabela_comissao=r.get("item_tabela_comissao"),
             valor_retira=float(r["item_preco_retira"] or 0),
@@ -88,7 +111,8 @@ def carregar_pedido_pdf(db, pedido_id: int) -> PedidoPdf:
         frete_total=float(head["frete_total"] or 0),
         frete_kg=float(head.get("frete_kg") or 0),
         validade_tabela="Não se aplica",
-        total_peso_bruto=float(head["peso_total_kg"] or 0),
+        total_peso_bruto=sum_peso_bru,
+        total_peso_liquido=sum_peso_liq,
         total_valor=float(head["total_pedido"] or 0),
         observacoes=(head.get("observacoes") or ""),
         itens=itens,

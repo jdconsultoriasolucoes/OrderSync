@@ -332,7 +332,10 @@ async function atualizarPrecosAtuais() {
       );
 
       if (!Number.isNaN(valorNum) && valorNum > 0) {
-        mapa[chave] = valorNum;
+        mapa[chave] = {
+          valor: valorNum,
+          peso_bruto: Number(p.peso_bruto || 0)
+        };
       }
     }
 
@@ -368,13 +371,31 @@ async function atualizarPrecosAtuais() {
   let mudou = false;
   itens = (itens || []).map(it => {
     const key = String(it.codigo_tabela ?? "").trim();
-    const novo = key && Object.prototype.hasOwnProperty.call(mapa, key)
+    const data = key && Object.prototype.hasOwnProperty.call(mapa, key)
       ? mapa[key]
       : null;
 
-    if (novo != null && !Number.isNaN(novo) && Number(novo) !== Number(it.valor)) {
-      mudou = true;
-      return { ...it, valor: Number(novo) };
+    if (data) {
+      // Se tivermos dados novos...
+      const novoValor = data.valor;
+      const novoPesoBruto = data.peso_bruto;
+
+      let mudouItem = false;
+
+      // Atualiza valor se mudou
+      if (novoValor != null && !Number.isNaN(novoValor) && Number(novoValor) !== Number(it.valor)) {
+        it.valor = Number(novoValor);
+        mudouItem = true;
+      }
+
+      // Atualiza peso_bruto se mudou (ou se não tinha)
+      if (novoPesoBruto != null && Number(novoPesoBruto) !== Number(it.peso_bruto || 0)) {
+        it.peso_bruto = Number(novoPesoBruto);
+        mudouItem = true;
+      }
+
+      if (mudouItem) mudou = true;
+      return it;
     }
     return it;
   });
@@ -510,6 +531,7 @@ const fmtPct = (v) => (Number(v || 0)).toLocaleString('pt-BR', { minimumFraction
 function calcularLinha(item, fator, taxaCond, freteKg) {
   const valor = Number(item.valor || 0);
   const peso = Number(item.peso_liquido || 0);
+  const pesoBruto = Number(item.peso_bruto || 0);
 
   // 1) DESCONTO/FATOR → base líquida
   const descontoValor = valor * Number(fator || 0);
@@ -518,8 +540,9 @@ function calcularLinha(item, fator, taxaCond, freteKg) {
   // 2) Condição SOBRE o líquido
   const acrescimoCond = liquido * Number(taxaCond || 0);
 
-  // 3) Frete (continua por KG — só soma no total)
-  const freteValor = (Number(freteKg || 0) / 1000) * peso;
+  // 3) Frete (agora usa Peso Bruto se disponível, senão Liquido)
+  const pesoParaFrete = (pesoBruto > 0) ? pesoBruto : peso;
+  const freteValor = (Number(freteKg || 0) / 1000) * pesoParaFrete;
 
   // 4) Preço comercial sem impostos (líquido + condição)
   const precoBase = liquido + acrescimoCond;

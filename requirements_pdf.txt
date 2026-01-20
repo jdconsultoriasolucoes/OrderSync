@@ -1,0 +1,12 @@
+# Dependências para gerar PDF do manual
+
+# Opção 1: WeasyPrint (requer GTK+ no Windows)
+# weasyprint>=60.0
+# markdown>=3.4.0
+
+# Opção 2: ReportLab (mais compatível, recomendado para Windows)
+reportlab>=4.0.0
+markdown>=3.4.0
+
+# Extensões do Markdown
+markdown-extensions

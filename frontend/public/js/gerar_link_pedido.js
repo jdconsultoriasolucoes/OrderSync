@@ -40,6 +40,7 @@ function ensureModalInjected() {
           <div class="glp-actions">
             <button id="glpCopy">Copiar link</button>
             <button id="glpOpen">Visualizar</button>
+            <button id="glpPriceList" style="background:#6c757d;">Lista de Preço</button>
             <button id="glpWhats">WhatsApp</button>
           </div>
           <p id="glpHint" class="glp-hint"></p>
@@ -381,6 +382,27 @@ export function showGerarLinkModal({ tabelaId, freteKg }) {
       window.open(url, "_blank", "noopener,noreferrer");
     }
   };
+
+  const btnList = modal.querySelector("#glpPriceList");
+  if (btnList) {
+    btnList.onclick = () => {
+      // Extrair code do link gerado
+      // Ex: .../p/CODE
+      const val = input.value;
+      if (!val) return;
+
+      const parts = val.split("/p/");
+      if (parts.length < 2) {
+        alert("Link inválido, gere novamente.");
+        return;
+      }
+      const code = parts[1].split("?")[0].split("#")[0]; // clean code
+
+      // Abrir endpoint de PDF
+      const urlPdf = `${apiBase()}/link_pedido/lista_preco/${code}`;
+      window.open(urlPdf, "_blank", "noopener,noreferrer");
+    };
+  }
 
   modal.querySelector("#glpWhats").onclick = () => {
     if (!input.value) return;

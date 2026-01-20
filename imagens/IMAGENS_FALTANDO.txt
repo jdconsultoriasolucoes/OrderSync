@@ -1,0 +1,51 @@
+Lista de Imagens que Precisam ser Capturadas
+============================================================
+
+1. 01-tela-login.png
+   Caminho completo: imagens/01-tela-login.png
+
+2. 02-recuperacao-senha.png
+   Caminho completo: imagens/02-recuperacao-senha.png
+
+3. 03-reset-senha.png
+   Caminho completo: imagens/03-reset-senha.png
+
+4. 04-menu-principal.png
+   Caminho completo: imagens/04-menu-principal.png
+
+5. 05-lista-pedidos.png
+   Caminho completo: imagens/05-lista-pedidos.png
+
+6. 06-detalhes-pedido.png
+   Caminho completo: imagens/06-detalhes-pedido.png
+
+7. 07-criar-tabela-basico.png
+   Caminho completo: imagens/07-criar-tabela-basico.png
+
+8. 08-buscar-produtos.png
+   Caminho completo: imagens/08-buscar-produtos.png
+
+9. 09-gerar-link.png
+   Caminho completo: imagens/09-gerar-link.png
+
+10. 10-link-gerado.png
+   Caminho completo: imagens/10-link-gerado.png
+
+11. 12-cadastro-produto.png
+   Caminho completo: imagens/12-cadastro-produto.png
+
+12. 13-cadastro-cliente.png
+   Caminho completo: imagens/13-cadastro-cliente.png
+
+13. 11-pedido-cliente.png
+   Caminho completo: imagens/11-pedido-cliente.png
+
+14. 14-cadastro-usuario.png
+   Caminho completo: imagens/14-cadastro-usuario.png
+
+15. 15-config-smtp.png
+   Caminho completo: imagens/15-config-smtp.png
+
+16. 16-config-mensagens.png
+   Caminho completo: imagens/16-config-mensagens.png
+

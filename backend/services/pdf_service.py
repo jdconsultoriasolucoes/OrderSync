@@ -393,21 +393,33 @@ def _desenhar_pdf(pedido: PedidoPdf, buffer: io.BytesIO, sem_validade: bool = Fa
     fech_block_width = available_width * 0.45   # fechamento à esquerda
     obs_block_width = available_width - fech_block_width - gap
 
-    # Peso bruto total – arredondar "regra de escola": 65,4 -> 65 | 65,5 -> 66
-    total_peso_raw = float(pedido.total_peso_bruto or 0)
-
     if total_peso_raw >= 0:
         total_peso_kg = int(total_peso_raw + 0.5)
     else:
         total_peso_kg = int(total_peso_raw - 0.5)
 
+    # NOVO: Peso Bruto vs Liquido
+    # O pedido.total_peso_bruto (que vem de pedido_pdf_data) é, na verdade, a soma dos pesos dos itens.
+    # Historicamente era peso LÍQUIDO. Agora queremos mostrar ambos.
+    # Mas o objeto PedidoPdf tem campos limitados. 
+    # Vamos assumir que "total_peso_bruto" no objeto PedidoPdf deve ser o BRUTO mesmo, 
+    # e talvez precisemos de "total_peso_liquido".
+    # Se não tivermos o campo separado, usamos o mesmo por enquanto, mas adicionamos a linha visual.
+    # idealmente `pedido` deveria ter `total_peso_liquido`.
+    
+    total_peso_liq_raw = getattr(pedido, "total_peso_liquido", total_peso_raw) or 0
+    total_peso_bru_raw = getattr(pedido, "total_peso_bruto", total_peso_raw) or 0
+
+    def _fmt_peso(p):
+        return _br_number(int(p + 0.5) if p >= 0 else int(p - 0.5), 0, " kg")
+
     total_valor = float(pedido.total_valor or 0)
 
     data_fech = [
         ["Fechamento do Orçamento:", ""],
-        ["Total em Peso Bruto:", _br_number(total_peso_kg, 0, " kg")],
+        ["Total em Peso Líquido:", _fmt_peso(total_peso_liq_raw)],
+        ["Total em Peso Bruto:",   _fmt_peso(total_peso_bru_raw)],
         ["Valor Frete:", "R$ " + _br_number(frete_total)],
-
         ["Total em Valor:", "R$ " + _br_number(total_valor)],
     ]
 
@@ -431,6 +443,7 @@ def _desenhar_pdf(pedido: PedidoPdf, buffer: io.BytesIO, sem_validade: bool = Fa
     )
 
     # Observações (DIREITA, SEMPRE APARECE) – com quebra de linha automática
+    obs_text = (pedido.observacoes or "").strip()
     obs_para = Paragraph(obs_text.replace("\n", "<br/>"), obs_style)
 
     data_obs = [["Observações:", obs_para]]
@@ -526,5 +539,119 @@ def gerar_pdf_pedido(*args, destino_dir: str = "/tmp", sem_validade: bool = Fals
     # Gera em memória (mais rápido e seguro que File IO)
     buffer = io.BytesIO()
     _desenhar_pdf(pedido, buffer, sem_validade=sem_validade)
+    buffer.seek(0)
+    return buffer.read()
+
+
+def gerar_pdf_lista_preco(pedido: PedidoPdf) -> bytes:
+    """
+    Gera PDF estilo 'Lista de Preço' (sem Qtd, sem Obs, valores com/sem frete).
+    """
+    buffer = io.BytesIO()
+    pagesize = landscape(A4)
+    c = canvas.Canvas(buffer, pagesize=pagesize)
+    width, height = pagesize
+    margin_x = 0.7 * cm
+    margin_y = 0.5 * cm
+
+    # 1) Cabeçalho simplificado (Faixa)
+    c.setFillColor(SUPRA_RED)
+    faixa_h = 1.0 * cm
+    faixa_y = height - margin_y - faixa_h
+    available_width = width - 2 * margin_x
+    c.rect(margin_x, faixa_y, available_width, faixa_h, stroke=0, fill=1)
+
+    c.setFillColor(colors.white)
+    c.setFont("Helvetica-Bold", 14)
+    c.drawString(margin_x + 0.3 * cm, faixa_y + 0.3 * cm, "LISTA DE PREÇOS")
+
+    # Data
+    c.setFont("Helvetica", 10)
+    data_str = pedido.data_pedido.strftime('%d/%m/%Y')
+    c.drawRightString(width - margin_x - 0.3 * cm, faixa_y + 0.3 * cm, f"Data: {data_str}")
+
+    # Cliente
+    y = faixa_y - 0.5 * cm
+    c.setFillColor(SUPRA_DARK)
+    c.setFont("Helvetica-Bold", 10)
+    c.drawString(margin_x, y, f"Cliente: {pedido.cliente or ''}") 
+    if pedido.nome_fantasia:
+         c.drawString(margin_x, y - 0.4*cm, f"Fantasia: {pedido.nome_fantasia}")
+         y -= 0.4*cm
+    
+    y -= 1.0 * cm
+
+    # 2) Tabela Itens
+    # Colunas: Código | Produto | Embal | R$ Sem Frete | R$ Com Frete
+    # Sem Quantidade, Sem Obs.
+    
+    header = ["Código", "Produto", "Embal", "Cond. Pgto", "R$ s/ Frete", "R$ c/ Frete"]
+    
+    # Prepara dados
+    itens_ordenados = sorted(pedido.itens, key=lambda it: it.produto or "")
+
+    data_rows = []
+    for it in itens_ordenados:
+        data_rows.append([
+            it.codigo or "",
+            it.produto or "",
+            it.embalagem or "",
+            it.condicao_pagamento or "",
+            "R$ " + _br_number(it.valor_retira or 0),
+            "R$ " + _br_number(it.valor_entrega or 0)
+        ])
+    
+    col_widths = [
+        2.0 * cm, # Código
+        9.0 * cm, # Produto
+        2.5 * cm, # Embal
+        5.0 * cm, # Cond Pagto
+        3.0 * cm, # s/ Frete
+        3.0 * cm  # c/ Frete
+    ]
+    # Ajusta largura total para ocupar available_width
+    current_sum = sum(col_widths)
+    scale = available_width / current_sum
+    final_widths = [w * scale for w in col_widths]
+
+    table_style = TableStyle([
+        ("BACKGROUND", (0, 0), (-1, 0), SUPRA_RED),
+        ("TEXTCOLOR", (0, 0), (-1, 0), colors.white),
+        ("FONTNAME", (0, 0), (-1, 0), "Helvetica-Bold"),
+        ("ALIGN", (0, 0), (-1, 0), "CENTER"),
+        ("GRID", (0, 0), (-1, -1), 0.5, colors.black),
+        ("FONTSIZE", (0, 0), (-1, -1), 8),
+        ("VALIGN", (0, 0), (-1, -1), "MIDDLE"),
+        ("ALIGN", (4, 1), (5, -1), "RIGHT"),
+    ])
+
+    rows_buffer = []
+    current_y = y
+    
+    def _draw_page(rows, y_pos):
+        tbl = Table([header] + rows, colWidths=final_widths)
+        tbl.setStyle(table_style)
+        _, h_tbl = tbl.wrap(available_width, height)
+        tbl.drawOn(c, margin_x, y_pos - h_tbl)
+        return y_pos - h_tbl
+
+    for row in data_rows:
+        test_tbl = Table([header] + rows_buffer + [row], colWidths=final_widths)
+        test_tbl.setStyle(table_style)
+        _, h_test = test_tbl.wrap(available_width, height)
+        
+        if current_y - h_test < margin_y:
+            # Quebra página
+            _draw_page(rows_buffer, current_y)
+            c.showPage()
+            current_y = height - margin_y
+            rows_buffer = [row]
+        else:
+            rows_buffer.append(row)
+
+    if rows_buffer:
+        _draw_page(rows_buffer, current_y)
+
+    c.showPage()
     buffer.seek(0)
     return buffer.read()

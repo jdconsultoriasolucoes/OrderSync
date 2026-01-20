@@ -16,13 +16,18 @@ def calcular_valores_dos_produtos(payload: ParametrosCalculo) -> List[ProdutoCal
 
     for produto in payload.produtos:
         valor = produto.valor
-        peso = produto.peso_liquido or 0.0
+        peso_liquido = produto.peso_liquido or 0.0
+        # Tenta pegar peso_bruto do payload, se não tiver, usa o liquido
+        peso_bruto = getattr(produto, "peso_bruto", 0.0) or 0.0
+        
+        peso_para_frete = peso_bruto if peso_bruto > 0 else peso_liquido
+
         is_pet = (str(produto.tipo or "").strip().lower() == "pet")
-        ipi_item = (produto.ipi or 0.0) if (is_pet and peso <= 10) else 0.0
+        ipi_item = (produto.ipi or 0.0) if (is_pet and peso_liquido <= 10) else 0.0
         
         iva_st = produto.iva_st or 0.0
 
-        frete_kg = (payload.frete_unitario / 1000) * peso
+        frete_kg = (payload.frete_unitario / 1000) * peso_para_frete
         ajuste_pagamento = valor * payload.acrescimo_pagamento
         comissao_aplicada = valor * payload.fator_comissao
 

@@ -104,7 +104,7 @@ def filtrar_produtos_para_tabela_preco(
 def listar_descontos():
     try:
         db = SessionLocal()
-        query = text("SELECT id_desconto, fator_comissao FROM t_desconto ORDER BY id_desconto")
+        query = text("SELECT id_desconto, fator_comissao FROM t_desconto WHERE ativo IS TRUE ORDER BY id_desconto")
         resultado = db.execute(query).fetchall()
         return [{"codigo": row.id_desconto, "percentual": row.fator_comissao} for row in resultado]
     finally:
@@ -114,7 +114,7 @@ def listar_descontos():
 def condicoes_pagamento():
     try:
         db = SessionLocal()
-        query = text("select codigo_prazo, prazo, custo as taxa_condicao from t_condicoes_pagamento order by codigo_prazo")
+        query = text("select codigo_prazo, prazo, custo as taxa_condicao from t_condicoes_pagamento WHERE ativo IS TRUE order by codigo_prazo")
         resultado = db.execute(query).fetchall()
         return [{"codigo": row.codigo_prazo, "descricao": row.prazo, "taxa_condicao": row.taxa_condicao} for row in resultado]
     finally:
