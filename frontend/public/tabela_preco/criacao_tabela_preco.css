@@ -153,6 +153,11 @@ body {
   grid-row: 1;
 }
 
+.area-markup {
+  grid-column: 9 / span 4;
+  grid-row: 1;
+}
+
 /* Row 2 */
 .area-iva {
   /* Aligned with Cliente (now Left) */
@@ -200,7 +205,8 @@ body {
   .area-nome,
   .area-cliente,
   .area-frete,
-  .area-iva {
+  .area-iva,
+  .area-markup {
     grid-column: span 2;
     grid-row: auto;
   }
@@ -586,15 +592,18 @@ body {
 
 /* Inactive Row Warning */
 .row-inactive {
-  background-color: #fff1f2; /* Light red/pink background */
+  background-color: #fff1f2;
+  /* Light red/pink background */
 }
+
 .row-inactive:hover {
   background-color: #ffe4e6 !important;
 }
 
 .badge-inactive {
   display: inline-block;
-  background-color: #ef4444; /* Red 500 */
+  background-color: #ef4444;
+  /* Red 500 */
   color: white;
   font-size: 0.7rem;
   font-weight: 700;

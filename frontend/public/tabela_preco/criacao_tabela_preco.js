@@ -128,6 +128,7 @@ function getHeaderSnapshot() {
     frete_kg: val("frete_kg") || "0",
     plano_pagamento: val("plano_pagamento"),
     desconto_global: val("desconto_global"),
+    markup_global: val("markup_global"), // ✅ Persist Markup Global Field
     cliente_livre: !!window.isClienteLivreSelecionado,
     cliente_livre: !!window.isClienteLivreSelecionado,
     iva_enabled: !$("iva_st_toggle")?.disabled,
@@ -165,6 +166,7 @@ function restoreHeaderSnapshotIfNew() {
     // ---- Selects (este método deve ser chamado DEPOIS de carregarCondicoes/Descontos)
     set('plano_pagamento', snap.plano_pagamento || '');
     set('desconto_global', snap.desconto_global || '');
+    set('markup_global', snap.markup_global || ''); // ✅ Restore Markup Global
 
     // ---- IVA_ST e flags do cliente livre
     const ivaChk = document.getElementById('iva_st_toggle');
@@ -454,7 +456,10 @@ function onDuplicar() {
 
   if (frete) frete.value = 0;
   if (cond) cond.value = '';
+  if (cond) cond.value = '';
   if (desc) desc.value = '';
+  const mk = document.getElementById('markup_global');
+  if (mk) mk.value = '';
 
   // flags de cliente “livre” e travas do IVA
   window.isClienteLivreSelecionado = false;
@@ -758,6 +763,16 @@ function setupClienteAutocomplete() {
   }
 
   input.addEventListener('input', () => {
+    // 🧹 Limpa ID se digitar algo novo (assume novo/livre até selecionar)
+    const codEl = document.getElementById('codigo_cliente');
+    if (codEl && codEl.value) codEl.value = '';
+
+    const ramoEl = document.getElementById('ramo_juridico');
+    if (ramoEl) ramoEl.value = '';
+
+    window.isClienteLivreSelecionado = false; // Reset flag, rely on text presence
+    enforceIvaLockByCliente();
+
     clearTimeout(timer);
     timer = setTimeout(() => { doSearch(input.value); }, 250);
   });
@@ -796,8 +811,9 @@ function enforceIvaLockByCliente() {
     ivaChk.disabled = true;            // 🔒 travado
     // não muda o checked aqui (pode já ter vindo do cadastro)
   } else {
-    // sem código: só habilita se já selecionou “Usar: ...”
-    ivaChk.disabled = !window.isClienteLivreSelecionado;
+    // sem código: habilita se selecionou "Usar..." OU se tem texto digitado
+    const nome = (document.getElementById('cliente_nome')?.value || '').trim();
+    ivaChk.disabled = !(window.isClienteLivreSelecionado || nome.length > 0);
   }
   window.ivaStAtivo = !!ivaChk.checked;
 }
@@ -1675,6 +1691,9 @@ function limparFormularioCabecalho() {
   if (descGlobal) descGlobal.value = '';
 
   // Pill de taxa
+  const mk = document.getElementById('markup_global');
+  if (mk) mk.value = '';
+
   const pill = document.getElementById('pill-taxa');
   if (pill) pill.textContent = '—';
 
@@ -2088,6 +2107,39 @@ document.getElementById('btn-aplicar-condicao-todos')?.addEventListener('click',
   if (hdr) hdr.dataset.userEdited = '';
   snapshotSelecionadosParaPicker?.();
 });
+
+document.getElementById('btn-aplicar-markup-todos')?.addEventListener('click', () => {
+  const mkInput = document.getElementById('markup_global');
+  // replace comma with dot for parsing
+  let raw = mkInput?.value || '';
+  raw = raw.replace(',', '.');
+  const val = parseFloat(raw);
+
+  if (isNaN(val)) {
+    alert('Informe um valor de Markup válido.');
+    return;
+  }
+
+  // Format consistent to 2 decimal places for input value
+  if (mkInput) mkInput.value = val.toFixed(2);
+
+  document.querySelectorAll('#tbody-itens tr').forEach(tr => {
+    const inp = tr.querySelector('.field-markup');
+    if (inp) {
+      // Set value and trigger change to calc
+      inp.value = val.toFixed(2);
+      inp.dispatchEvent(new Event('change', { bubbles: true }));
+    }
+  });
+
+  // Save snapshot of header field
+  saveHeaderSnapshot();
+});
+
+document.getElementById('markup_global')?.addEventListener('change', () => {
+  saveHeaderSnapshot();
+});
+
 document.getElementById('iva_st_toggle')?.addEventListener('change', (e) => {
   ivaStAtivo = !!e.target.checked;
   Promise.resolve(recalcTudo()).catch(err => console.debug('recalcTudo falhou:', err));
