@@ -393,22 +393,9 @@ def _desenhar_pdf(pedido: PedidoPdf, buffer: io.BytesIO, sem_validade: bool = Fa
     fech_block_width = available_width * 0.45   # fechamento à esquerda
     obs_block_width = available_width - fech_block_width - gap
 
-    if total_peso_raw >= 0:
-        total_peso_kg = int(total_peso_raw + 0.5)
-    else:
-        total_peso_kg = int(total_peso_raw - 0.5)
-
     # NOVO: Peso Bruto vs Liquido
-    # O pedido.total_peso_bruto (que vem de pedido_pdf_data) é, na verdade, a soma dos pesos dos itens.
-    # Historicamente era peso LÍQUIDO. Agora queremos mostrar ambos.
-    # Mas o objeto PedidoPdf tem campos limitados. 
-    # Vamos assumir que "total_peso_bruto" no objeto PedidoPdf deve ser o BRUTO mesmo, 
-    # e talvez precisemos de "total_peso_liquido".
-    # Se não tivermos o campo separado, usamos o mesmo por enquanto, mas adicionamos a linha visual.
-    # idealmente `pedido` deveria ter `total_peso_liquido`.
-    
-    total_peso_liq_raw = getattr(pedido, "total_peso_liquido", total_peso_raw) or 0
-    total_peso_bru_raw = getattr(pedido, "total_peso_bruto", total_peso_raw) or 0
+    total_peso_liq_raw = getattr(pedido, "total_peso_liquido", 0.0) or 0.0
+    total_peso_bru_raw = getattr(pedido, "total_peso_bruto", 0.0) or 0.0
 
     def _fmt_peso(p):
         return _br_number(int(p + 0.5) if p >= 0 else int(p - 0.5), 0, " kg")
