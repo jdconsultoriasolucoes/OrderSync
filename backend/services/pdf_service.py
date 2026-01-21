@@ -586,9 +586,9 @@ def gerar_pdf_lista_preco(pedido: PedidoPdf) -> bytes:
     # Sem Quantidade, Sem Obs.
     
     # 2) Tabela Itens
-    # Colunas: Código | Produto | Embal | Cond. | Base | Mk% | Final s/F | Final c/F
+    # Colunas: Código | Produto | Embal | Cond. | MK% | R$ C/ Frete | MK% C/F | R$ S/ Frete | MK% S/F
     
-    header = ["Cód", "Produto", "Embal", "Cond.", "R$ Base", "Mk%", "R$ s/F(MK)", "R$ c/F(MK)"]
+    header = ["Cód", "Produto", "Embal", "Cond.", "MK%", "R$ C/Frete", "MK% C/F", "R$ S/Frete", "MK% S/F"]
     
     # Prepara dados
     itens_ordenados = sorted(pedido.itens, key=lambda it: it.produto or "")
@@ -598,9 +598,6 @@ def gerar_pdf_lista_preco(pedido: PedidoPdf) -> bytes:
         markup_pct = it.markup or 0
         
         # Se tiver markup, usa os campos _markup. Se não, usa base.
-        # Mas no link_pedido.py já populamos. Se markup=0, valor_final_markup=0?
-        # É melhor garantir.
-        
         v_base = float(it.valor_retira or 0)
         v_sf_mk = float(it.valor_s_frete_markup or 0)
         v_cf_mk = float(it.valor_final_markup or 0)
@@ -608,26 +605,30 @@ def gerar_pdf_lista_preco(pedido: PedidoPdf) -> bytes:
         if v_sf_mk <= 0: v_sf_mk = v_base
         if v_cf_mk <= 0: v_cf_mk = float(it.valor_entrega or 0)
 
+        mk_str = f"{markup_pct:g}%" if markup_pct else "0%"
+
         data_rows.append([
             it.codigo or "",
             it.produto or "",
             it.embalagem or "",
             it.condicao_pagamento or "",
-            _br_number(v_base),
-            f"{markup_pct:g}%" if markup_pct else "-",
+            mk_str,
+            _br_number(v_cf_mk),
+            mk_str,
             _br_number(v_sf_mk),
-            _br_number(v_cf_mk)
+            mk_str,
         ])
     
     col_widths = [
         1.6 * cm, # Cód
-        9.0 * cm, # Produto
-        2.2 * cm, # Embal
+        8.0 * cm, # Produto
+        2.0 * cm, # Embal
         3.5 * cm, # Cond
-        2.2 * cm, # Base
-        1.5 * cm, # Mk%
-        2.5 * cm, # s/F
-        2.5 * cm  # c/F
+        1.5 * cm, # MK%
+        2.5 * cm, # R$ C/Frete
+        1.5 * cm, # MK% C/F
+        2.5 * cm, # R$ S/Frete
+        1.5 * cm  # MK% S/F
     ]
     # Ajusta largura total para ocupar available_width
     current_sum = sum(col_widths)

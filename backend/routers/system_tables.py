@@ -182,8 +182,15 @@ def criar_familia(payload: s.FamiliaProdutoBase, db: Session = Depends(get_db)):
     # I'll check if ID is serial from schema? The schema dump said "id (integer)". Doesn't confirm Serial.
     # I'll implement Max+1 logic to be safe if no sequence.
     
-    max_id = db.execute(text("SELECT COALESCE(MAX(id), 0) FROM t_familia_produtos")).scalar()
-    new_id = max_id + 1
+    # Regra de ID: Pega o maior ID deste TIPO e soma 10 (conforme regra de ingestão)
+    max_id = db.execute(
+        text("SELECT COALESCE(MAX(id), 0) FROM t_familia_produtos WHERE tipo = :t"),
+        {"t": payload.tipo}
+    ).scalar()
+    
+    # Se não tiver nenhum desse tipo, precisamos definir um "start"? 
+    # Assumindo que 0 retorna se vazio, entao o primeiro será 10.
+    new_id = max_id + 10
     
     sql = text("""
         INSERT INTO t_familia_produtos (id, tipo, familia, marca, ativo, created_at, updated_at, updated_by)
@@ -222,6 +229,36 @@ def atualizar_familia(id: int, payload: s.FamiliaProdutoUpdate, db: Session = De
     row = db.execute(sql, params).mappings().first()
     if not row:
         raise HTTPException(status_code=404, detail="Família não encontrada")
+    
+    # --- GATILHO DE SINCRONIZAÇÃO ---
+    # Se alterou familia ou marca, replica para t_cadastro_produto_v2
+    if payload.familia is not None or payload.marca is not None:
+        # Usa os valores novos (do payload ou do row atualizado)
+        # Se payload.marca for None, não mudou, mas precisamos do valor atual para o update?
+        # Melhor pegar do 'row' que é o estado final.
+        
+        nova_familia = row["familia"]
+        nova_marca = row["marca"] # pode ser None/Null na tabela? Se sim, cuidado. 
+                                  # Mas na t_cadastro_produto_v2 usamos familia como fallback de marca.
+        
+        # O SQL abaixo atualiza todos os produtos vinculados a este ID de família
+        sync_sql = text("""
+            UPDATE t_cadastro_produto_v2
+               SET familia = :fam,
+                   marca   = :marc,
+                   updated_at = NOW()
+             WHERE id_familia = :fid
+        """)
+        
+        # Marca fallback: Se nova_marca for null/empty, usa a propria familia (regra de negocio comum)
+        marca_final = nova_marca if nova_marca else nova_familia
+        
+        db.execute(sync_sql, {
+            "fam": nova_familia,
+            "marc": marca_final,
+            "fid": id
+        })
+
     db.commit()
     return row
 
