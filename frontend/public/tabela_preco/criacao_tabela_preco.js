@@ -807,14 +807,13 @@ function enforceIvaLockByCliente() {
   const codigo = (document.getElementById('codigo_cliente')?.value || '').trim();
   if (!ivaChk) return;
 
-  if (codigo) {                         // cliente cadastrado
-    ivaChk.disabled = true;            // 🔒 travado
-    // não muda o checked aqui (pode já ter vindo do cadastro)
-  } else {
-    // sem código: habilita se selecionou "Usar..." OU se tem texto digitado
-    const nome = (document.getElementById('cliente_nome')?.value || '').trim();
-    ivaChk.disabled = !(window.isClienteLivreSelecionado || nome.length > 0);
-  }
+  const nome = (document.getElementById('cliente_nome')?.value || '').trim();
+
+  // Regra Simplificada Final:
+  // - Tem Código? => Travado (Vem do cadastro).
+  // - Não tem Código? => Liberado (Cliente livre ou "em digitação").
+  ivaChk.disabled = !!codigo;
+
   window.ivaStAtivo = !!ivaChk.checked;
 }
 
