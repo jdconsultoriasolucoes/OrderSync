@@ -134,11 +134,11 @@ function renderTabela() {
     const valorMarkup = usarValorComFrete ? (item.valor_com_frete_markup || 0) : (item.valor_sem_frete_markup || 0);
 
     // Preço efetivo (se markup > 0, usa ele. Se não, usa base)
-    // NOTE: Se markup for 0, valorMarkup esperado é 0 ou igual base?
-    // O backend retorna 0 se não tiver. Então se for 0, usamos base.
-    const precoEfetivo = valorMarkup > 0 ? valorMarkup : valorBase;
+    // NOTE: Usuário pediu para ignorar Markup no cálculo do TOTAL. O total deve ser sobre o valor COM/SEM frete (Base).
+    // O Markup é apenas visual/informativo.
+    const precoCalculo = valorBase;
 
-    const subtotal = precoEfetivo * (Number(item.quantidade) || 0);
+    const subtotal = precoCalculo * (Number(item.quantidade) || 0);
 
     const tr = document.createElement("tr");
     tr.innerHTML = `
@@ -195,9 +195,10 @@ function onQtdChange(e) {
     ? (produtos[idx].valor_com_frete_markup || 0)
     : (produtos[idx].valor_sem_frete_markup || 0);
 
-  const precoEfetivo = valorMarkup > 0 ? valorMarkup : valorBase;
+  // USER REQUEST: Cálculo deve ser sobre o valor da nota (Base), ignorando Markup no total
+  const precoCalculo = valorBase;
 
-  const subtotal = quantidade * precoEfetivo;
+  const subtotal = quantidade * precoCalculo;
   const cell = document.getElementById(`subtotal-${idx}`);
   if (cell) cell.textContent = fmtBRL.format(subtotal);
 
@@ -218,9 +219,10 @@ function atualizarTotal() {
   const total = produtos.reduce((acc, item) => {
     const vBase = usarValorComFrete ? item.valor_com_frete : item.valor_sem_frete;
     const vMk = usarValorComFrete ? (item.valor_com_frete_markup || 0) : (item.valor_sem_frete_markup || 0);
-    const vEf = vMk > 0 ? vMk : vBase;
+    // USER REQUEST: Total ignorando markup
+    const vCalc = vBase;
 
-    return acc + vEf * (Number(item.quantidade) || 0);
+    return acc + vCalc * (Number(item.quantidade) || 0);
   }, 0);
   if (totalEl) totalEl.textContent = fmtBRL.format(total);
   if (btnConfirmar) btnConfirmar.disabled = total <= 0;
@@ -584,8 +586,9 @@ async function confirmarPedido() {
           const vMkCom = x.valor_com_frete_markup || 0;
 
           // Se markup > 0, usa ele.
-          const pSem = (vMkSem > 0) ? vMkSem : vBaseSem;
-          const pCom = (vMkCom > 0) ? vMkCom : vBaseCom;
+          // USER REQUEST: Salvar o pedido com valor BASE, ignorando markup no valor final do pedido.
+          const pSem = vBaseSem;
+          const pCom = vBaseCom;
 
           return {
             codigo: x.codigo,
