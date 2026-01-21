@@ -134,10 +134,10 @@ function renderTabela() {
     const valorMarkup = usarValorComFrete ? (item.valor_com_frete_markup || 0) : (item.valor_sem_frete_markup || 0);
 
     // Preço efetivo (se markup > 0, usa ele. Se não, usa base)
+    // Preço efetivo (se markup > 0, usa ele. Se não, usa base)
     // NOTE: Usuário pediu para ignorar Markup no cálculo do TOTAL. O total deve ser sobre o valor COM/SEM frete (Base).
     // O Markup é apenas visual/informativo.
     const precoCalculo = valorBase;
-    console.log(`[DEBUG] Item ${i}: Base=${valorBase}, Markup=${valorMarkup}, Calculo=${precoCalculo}`);
 
     const subtotal = precoCalculo * (Number(item.quantidade) || 0);
 
