@@ -137,6 +137,7 @@ function renderTabela() {
     // NOTE: Usuário pediu para ignorar Markup no cálculo do TOTAL. O total deve ser sobre o valor COM/SEM frete (Base).
     // O Markup é apenas visual/informativo.
     const precoCalculo = valorBase;
+    console.log(`[DEBUG] Item ${i}: Base=${valorBase}, Markup=${valorMarkup}, Calculo=${precoCalculo}`);
 
     const subtotal = precoCalculo * (Number(item.quantidade) || 0);
 
