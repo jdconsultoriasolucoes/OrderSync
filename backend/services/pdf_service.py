@@ -573,9 +573,9 @@ def gerar_pdf_lista_preco(pedido: PedidoPdf) -> bytes:
     # Sem Quantidade, Sem Obs.
     
     # 2) Tabela Itens
-    # Colunas: Código | Produto | Embal | Cond. | Custo C/Frete | Venda C/Frete | Custo S/Frete | Venda S/Frete
+    # Colunas: Código | Produto | Embal | Cond. | MK% | R$ C/Frete | MK C/F | R$ S/Frete | MK S/F
     
-    header = ["Cód", "Produto", "Embal", "Cond.", "Custo C/F", "Venda C/F", "Custo S/F", "Venda S/F"]
+    header = ["Cód", "Produto", "Embal", "Cond.", "MK%", "R$ C/Frete", "MK C/F", "R$ S/Frete", "MK S/F"]
     
     # Prepara dados
     itens_ordenados = sorted(pedido.itens, key=lambda it: it.produto or "")
@@ -583,23 +583,23 @@ def gerar_pdf_lista_preco(pedido: PedidoPdf) -> bytes:
     data_rows = []
     for it in itens_ordenados:
         markup_pct = it.markup or 0
+        mk_str = f"{markup_pct:g}%" if markup_pct else "0%"
         
-        # Base values
-        val_retira = float(it.valor_retira or 0)
-        val_entrega = float(it.valor_entrega or 0)
+        # Unit Values (using explicit fields from saving logic)
+        val_unit = float(it.valor_produto or 0)
+        frete_unit = float(it.valor_frete_aplicado or 0)
         
-        # Custo C/Frete = Retira + Entrega
-        custo_cf = val_retira + val_entrega
+        # R$ C/Frete (Cost w/ Freight) = Unit + Freight
+        custo_cf = val_unit + frete_unit
         
-        # Venda C/Frete = valor_final_markup (Price + Freight + Markup)
-        # Fallback to Custo if 0? No, usually 0 means calculated 0 or error.
+        # MK C/F (Final Price w/ Freight)
         venda_cf = float(it.valor_final_markup or 0)
         if venda_cf <= 0: venda_cf = custo_cf # fallback
 
-        # Custo S/Frete = Retira
-        custo_sf = val_retira
+        # R$ S/Frete (Cost w/o Freight) = Unit
+        custo_sf = val_unit
 
-        # Venda S/Frete = valor_s_frete_markup (Price + Markup)
+        # MK S/F (Final Price w/o Freight)
         venda_sf = float(it.valor_s_frete_markup or 0)
         if venda_sf <= 0: venda_sf = custo_sf # fallback
 
@@ -608,6 +608,7 @@ def gerar_pdf_lista_preco(pedido: PedidoPdf) -> bytes:
             it.produto or "",
             it.embalagem or "",
             it.condicao_pagamento or "",
+            mk_str,
             _br_number(custo_cf),
             _br_number(venda_cf),
             _br_number(custo_sf),
@@ -619,10 +620,11 @@ def gerar_pdf_lista_preco(pedido: PedidoPdf) -> bytes:
         7.0 * cm, # Produto
         2.0 * cm, # Embal
         5.5 * cm, # Cond
-        2.5 * cm, # Custo C/F
-        2.5 * cm, # Venda C/F
-        2.5 * cm, # Custo S/F
-        2.5 * cm  # Venda S/F
+        1.2 * cm, # MK%
+        2.2 * cm, # R$ C/Frete
+        2.2 * cm, # MK C/F
+        2.2 * cm, # R$ S/Frete
+        2.2 * cm  # MK S/F
     ]
     # Ajusta largura total para ocupar available_width
     current_sum = sum(col_widths)
