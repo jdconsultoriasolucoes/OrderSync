@@ -126,7 +126,7 @@ async function carregarTabelas() {
           
           <button
             class="btn-enviar-link btn-secundario"
-            style="border:none; border-radius:4px; padding:6px 12px; cursor:pointer;"
+            style="border:none; border-radius:4px; padding:6px 12px; cursor:pointer; display: none;"
             data-id="${tabela.id}"
             data-frete-kg="${tabela.frete_kg !== undefined && tabela.frete_kg !== null ? tabela.frete_kg : ''}"
           >

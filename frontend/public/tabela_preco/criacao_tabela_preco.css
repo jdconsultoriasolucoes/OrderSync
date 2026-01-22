@@ -166,7 +166,7 @@ body {
   align-items: center;
   height: 40px;
   /* Pull up closer to the client input */
-  margin-top: -20px;
+  margin-top: -32px;
   padding-left: 2px;
   padding-top: 0;
 }
