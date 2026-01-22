@@ -42,9 +42,14 @@ document.addEventListener("DOMContentLoaded", () => {
   btnFiltrar?.addEventListener("click", () => { currentPage = 1; carregarProdutos(); });
   btnLimpar?.addEventListener("click", () => {
     if (selGrupo) selGrupo.value = "";
-    if (selFornecedor) selFornecedor.value = "";
+    if (selFornecedor) {
+      // Tenta resetar para Votorantim explicitamente ou recarregar se necessário.
+      // Como a lista é estática do DB, basta selecionar.
+      selFornecedor.value = "Votorantim";
+      // Se não existir na lista (edge case), mantém valor atual ou vazio.
+    }
     if (inpPalavra) inpPalavra.value = "";   // limpa a palavra
-    fornecedoresMap.clear();                 // limpa cache de fornecedores
+    // fornecedoresMap.clear(); // não usa mais map local
     currentPage = 1;
     carregarProdutos();
   });
@@ -173,37 +178,60 @@ async function carregarGrupos() {
   }
 }
 
-function coletarFornecedores(lista) {
-  (lista || []).forEach(p => {
-    const show = p.fornecedor;
-    const key = norm(show);
-    if (show && key && !fornecedoresMap.has(key)) {
-      fornecedoresMap.set(key, show); // guarda o “bonitinho” pra exibir
-    }
-  });
-}
-
-function renderFornecedoresDropdown() {
+// Função para carregar fornecedores do banco
+async function carregarFornecedoresDb() {
   const sel = document.getElementById("filtro-fornecedor");
   if (!sel) return;
 
-  const selecionado = sel.value;
-  sel.innerHTML = "<option value=''>Todos</option>";
+  try {
+    const r = await fetch(`${API_BASE}/api/fornecedores`); // Rota ajustada
+    let lista = [];
+    if (r.ok) {
+      lista = await r.json();
+    } else {
+      console.warn("Falha ao carregar fornecedores do banco, status:", r.status);
+    }
 
-  // ordena alfabeticamente pelo valor exibido
-  const valores = Array.from(fornecedoresMap.values()).sort((a, b) =>
-    a.localeCompare(b, 'pt-BR', { sensitivity: 'base' })
-  );
+    sel.innerHTML = "";
 
-  for (const f of valores) {
-    const o = document.createElement("option");
-    o.value = f; o.textContent = f;
-    sel.appendChild(o);
+    // O backend retorna [{ id, nome_fornecedor }, ...] ou similar
+    // Vamos normalizar e ordenar
+    const fornecedores = lista
+      .map(f => f.nome_fornecedor || f.nome || "")
+      .filter(n => n.trim() !== "")
+      .sort((a, b) => a.localeCompare(b, 'pt-BR', { sensitivity: 'base' }));
+
+    // Remove duplicados se houver
+    const unique = [...new Set(fornecedores)];
+
+    // Popula o select
+    for (const f of unique) {
+      const o = document.createElement("option");
+      o.value = f;
+      o.textContent = f;
+      sel.appendChild(o);
+    }
+
+    // Default Votorantim logic
+    const opVotorantim = [...sel.options].find(o => o.value.toUpperCase() === "VOTORANTIM");
+    if (opVotorantim) {
+      sel.value = opVotorantim.value;
+    } else if (sel.options.length > 0) {
+      sel.value = sel.options[0].value;
+    }
+
+  } catch (e) {
+    console.error("Erro ao carregarFornecedoresDb:", e);
   }
+}
 
-  if ([...sel.options].some(o => o.value === selecionado)) {
-    sel.value = selecionado; // mantém a seleção do usuário
-  }
+// Stub para manter compatibilidade se algo chamar (mas não deve ser usado mais)
+function coletarFornecedores(lista) {
+  // no-op: agora carregamos do banco globalmente
+}
+
+function renderFornecedoresDropdown() {
+  // no-op: renderização é feita no carregarFornecedoresDb
 }
 
 function carregarProdutos(page = currentPage) {
@@ -377,6 +405,7 @@ window.onload = async function () {
     try { carregarPreSelecionadosDaSessao(); } catch (e) { console.warn(e); }
   }
   // mantém o fluxo original
+  await carregarFornecedoresDb(); // ✅ Carrega filtro primeiro
   await carregarGrupos();
   await carregarProdutos();
 };

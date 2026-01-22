@@ -586,8 +586,8 @@ def gerar_pdf_lista_preco(pedido: PedidoPdf) -> bytes:
         mk_str = f"{markup_pct:g}%" if markup_pct else "0%"
         
         # Unit Values (using explicit fields from saving logic)
-        val_unit = float(it.valor_produto or 0)
-        frete_unit = float(it.valor_frete_aplicado or 0)
+        val_unit = float(it.valor_retira or 0)
+        frete_unit = float(it.valor_entrega or 0)
         
         # R$ C/Frete (Cost w/ Freight) = Unit + Freight
         custo_cf = val_unit + frete_unit
