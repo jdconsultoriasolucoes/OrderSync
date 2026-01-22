@@ -590,7 +590,8 @@ def gerar_pdf_lista_preco(pedido: PedidoPdf) -> bytes:
         frete_unit = float(it.valor_entrega or 0)
         
         # R$ C/Frete (Cost w/ Freight) = Unit + Freight
-        custo_cf = val_unit + frete_unit
+        # CORRECTION: valor_entrega already contains (Price + Freight) in link_pedido context
+        custo_cf = frete_unit
         
         # MK C/F (Final Price w/ Freight)
         venda_cf = float(it.valor_final_markup or 0)
