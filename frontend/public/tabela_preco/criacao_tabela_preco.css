@@ -158,16 +158,17 @@ body {
   grid-row: 1;
 }
 
-/* Row 2 */
+/* Row 2 (Back to under Client) */
 .area-iva {
-  /* Aligned with Cliente (now Left) */
   grid-column: 1 / span 4;
   grid-row: 2;
   display: flex;
   align-items: center;
   height: 40px;
-  margin-top: -12px;
+  /* Pull up closer to the client input */
+  margin-top: -20px;
   padding-left: 2px;
+  padding-top: 0;
 }
 
 /* Bottom Frete Container */

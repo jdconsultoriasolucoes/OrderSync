@@ -2112,6 +2112,14 @@ document.getElementById('btn-aplicar-markup-todos')?.addEventListener('click', (
   // replace comma with dot for parsing
   let raw = mkInput?.value || '';
   raw = raw.replace(',', '.');
+
+  // Se estiver vazio, assumir 0? O usuário disse "se colocar 0".
+  // Mas se parseFloat falhar em string vazia, retorna NaN.
+  if (raw.trim() === '') {
+    // Opção: ou alerta ou considera 0. Vamos manter alerta se vazio, 
+    // mas garantir que '0' passe.
+  }
+
   const val = parseFloat(raw);
 
   if (isNaN(val)) {
@@ -2130,6 +2138,8 @@ document.getElementById('btn-aplicar-markup-todos')?.addEventListener('click', (
       inp.dispatchEvent(new Event('change', { bubbles: true }));
     }
   });
+
+
 
   // Save snapshot of header field
   saveHeaderSnapshot();
