@@ -573,9 +573,9 @@ def gerar_pdf_lista_preco(pedido: PedidoPdf) -> bytes:
     # Sem Quantidade, Sem Obs.
     
     # 2) Tabela Itens
-    # Colunas: Código | Produto | Embal | Cond. | MK% | R$ C/ Frete | MK% C/F | R$ S/ Frete | MK% S/F
+    # Colunas: Código | Produto | Embal | Cond. | Custo C/Frete | Venda C/Frete | Custo S/Frete | Venda S/Frete
     
-    header = ["Cód", "Produto", "Embal", "Cond.", "MK%", "R$ C/Frete", "MK% C/F", "R$ S/Frete", "MK% S/F"]
+    header = ["Cód", "Produto", "Embal", "Cond.", "Custo C/F", "Venda C/F", "Custo S/F", "Venda S/F"]
     
     # Prepara dados
     itens_ordenados = sorted(pedido.itens, key=lambda it: it.produto or "")
@@ -584,38 +584,45 @@ def gerar_pdf_lista_preco(pedido: PedidoPdf) -> bytes:
     for it in itens_ordenados:
         markup_pct = it.markup or 0
         
-        # Se tiver markup, usa os campos _markup. Se não, usa base.
-        v_base = float(it.valor_retira or 0)
-        v_sf_mk = float(it.valor_s_frete_markup or 0)
-        v_cf_mk = float(it.valor_final_markup or 0)
+        # Base values
+        val_retira = float(it.valor_retira or 0)
+        val_entrega = float(it.valor_entrega or 0)
         
-        if v_sf_mk <= 0: v_sf_mk = v_base
-        if v_cf_mk <= 0: v_cf_mk = float(it.valor_entrega or 0)
+        # Custo C/Frete = Retira + Entrega
+        custo_cf = val_retira + val_entrega
+        
+        # Venda C/Frete = valor_final_markup (Price + Freight + Markup)
+        # Fallback to Custo if 0? No, usually 0 means calculated 0 or error.
+        venda_cf = float(it.valor_final_markup or 0)
+        if venda_cf <= 0: venda_cf = custo_cf # fallback
 
-        mk_str = f"{markup_pct:g}%" if markup_pct else "0%"
+        # Custo S/Frete = Retira
+        custo_sf = val_retira
+
+        # Venda S/Frete = valor_s_frete_markup (Price + Markup)
+        venda_sf = float(it.valor_s_frete_markup or 0)
+        if venda_sf <= 0: venda_sf = custo_sf # fallback
 
         data_rows.append([
             it.codigo or "",
             it.produto or "",
             it.embalagem or "",
             it.condicao_pagamento or "",
-            mk_str,
-            _br_number(v_cf_mk),
-            mk_str,
-            _br_number(v_sf_mk),
-            mk_str,
+            _br_number(custo_cf),
+            _br_number(venda_cf),
+            _br_number(custo_sf),
+            _br_number(venda_sf),
         ])
     
     col_widths = [
         1.6 * cm, # Cód
-        7.0 * cm, # Produto (Reduced from 8.0)
+        7.0 * cm, # Produto
         2.0 * cm, # Embal
-        5.5 * cm, # Cond (Increased from 3.5)
-        1.2 * cm, # MK% (Reduced from 1.5)
-        2.2 * cm, # R$ C/Frete (Reduced from 2.5)
-        1.2 * cm, # MK% C/F (Reduced from 1.5)
-        2.2 * cm, # R$ S/Frete (Reduced from 2.5)
-        1.2 * cm  # MK% S/F (Reduced from 1.5)
+        5.5 * cm, # Cond
+        2.5 * cm, # Custo C/F
+        2.5 * cm, # Venda C/F
+        2.5 * cm, # Custo S/F
+        2.5 * cm  # Venda S/F
     ]
     # Ajusta largura total para ocupar available_width
     current_sum = sum(col_widths)
