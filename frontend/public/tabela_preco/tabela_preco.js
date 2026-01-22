@@ -12,6 +12,9 @@ let preSelecionadosCodigos = new Set(); // para pré-marcar checkboxes (enviado 
 document.addEventListener("DOMContentLoaded", () => {
   const selGrupo = document.getElementById("grupo");
   const selFornecedor = document.getElementById("filtro-fornecedor");
+  // 🛡️ Force "Votorantim" default if available. 
+  // O usuário solicitou explicitamente "VOTORANTIM" e retirar o Todos.
+  if (selFornecedor) selFornecedor.value = "Votorantim";
   const btnFiltrar = document.getElementById("btn-filtrar");
   const btnLimpar = document.getElementById("btn-limpar");
   const ps = document.getElementById("page_size");

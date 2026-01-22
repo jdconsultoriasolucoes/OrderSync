@@ -608,14 +608,14 @@ def gerar_pdf_lista_preco(pedido: PedidoPdf) -> bytes:
     
     col_widths = [
         1.6 * cm, # Cód
-        8.0 * cm, # Produto
+        7.0 * cm, # Produto (Reduced from 8.0)
         2.0 * cm, # Embal
-        3.5 * cm, # Cond
-        1.5 * cm, # MK%
-        2.5 * cm, # R$ C/Frete
-        1.5 * cm, # MK% C/F
-        2.5 * cm, # R$ S/Frete
-        1.5 * cm  # MK% S/F
+        5.5 * cm, # Cond (Increased from 3.5)
+        1.2 * cm, # MK% (Reduced from 1.5)
+        2.2 * cm, # R$ C/Frete (Reduced from 2.5)
+        1.2 * cm, # MK% C/F (Reduced from 1.5)
+        2.2 * cm, # R$ S/Frete (Reduced from 2.5)
+        1.2 * cm  # MK% S/F (Reduced from 1.5)
     ]
     # Ajusta largura total para ocupar available_width
     current_sum = sum(col_widths)
