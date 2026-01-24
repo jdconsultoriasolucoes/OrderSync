@@ -165,8 +165,17 @@ def baixar_lista_preco(code: str, modo: str = "ambos"):
             itens=itens
         )
         
+        # Prepare safe filename
+        import re
+        raw_cliente = head.get("cliente") or "cliente"
+        # Keep alphanumeric, spaces, hyphens, underscores
+        safe_cliente = re.sub(r'[^a-zA-Z0-9 \-_]', '', raw_cliente).strip()
+        # Avoid multiple spaces
+        safe_cliente = re.sub(r'\s+', ' ', safe_cliente)
+        
         pdf_bytes = gerar_pdf_lista_preco(fake_pedido, modo_frete=modo)
         
+        # Quote filename to handle spaces safely
         return Response(content=pdf_bytes, media_type="application/pdf", headers={
-            "Content-Disposition": f"attachment; filename=lista_precos_{code}.pdf"
+            "Content-Disposition": f'attachment; filename="Preco Lista - {safe_cliente}.pdf"'
         })
