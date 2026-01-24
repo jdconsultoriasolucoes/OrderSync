@@ -40,7 +40,7 @@ def carregar_pedido_pdf(db, pedido_id: int) -> PedidoPdf:
             
             prod.peso             AS item_peso_liquido_cad,
             prod.peso_bruto       AS item_peso_bruto_cad,
-            prod.fornecedor       AS item_fornecedor,
+            tp.fornecedor         AS item_fornecedor,
 
             tp.markup                 AS item_markup,
             tp.valor_final_markup     AS item_valor_final_markup,
@@ -63,14 +63,16 @@ def carregar_pedido_pdf(db, pedido_id: int) -> PedidoPdf:
         JOIN tb_pedidos_itens i
             ON i.id_pedido = p.id_pedido
             
-        LEFT JOIN t_cadastro_produto_v2 prod
-            ON prod.codigo_supra = i.codigo
-
         -- Join para pegar dados de markup originais da tabela de preço
         LEFT JOIN tb_tabela_preco tp
             ON tp.id_tabela = p.tabela_preco_id 
             AND tp.codigo_produto_supra = i.codigo
             AND tp.ativo = TRUE
+
+        -- Busca produto usando o fornecedor da tabela de preço para evitar duplicidade
+        LEFT JOIN t_cadastro_produto_v2 prod
+            ON prod.codigo_supra = i.codigo
+            AND prod.fornecedor = tp.fornecedor
 
         WHERE p.id_pedido = :pid
         ORDER BY i.quantidade DESC, i.id_item;
