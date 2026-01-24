@@ -321,11 +321,25 @@ def obter_tabela(id_tabela: int):
              codigos = [i.codigo_produto_supra for i in itens if i.codigo_produto_supra]
              if codigos:
                  # Busca em lote
-                 rows_status = db.query(ProdutoV2.codigo_supra, ProdutoV2.status_produto).filter(
-                     ProdutoV2.codigo_supra.in_(codigos)
-                 ).all()
-                 for r in rows_status:
-                     status_map[r.codigo_supra] = r.status_produto
+                rows_status = db.query(ProdutoV2.codigo_supra, ProdutoV2.status_produto).filter(
+                    ProdutoV2.codigo_supra.in_(codigos),
+                    ProdutoV2.fornecedor == cab.fornecedor
+                ).all()
+                
+                # Logic to prioritized ATIVO
+                # First pass: map all found statuses
+                temp_status = {}
+                for r in rows_status:
+                    rs = (r.status_produto or "").upper()
+                    if r.codigo_supra not in temp_status:
+                        temp_status[r.codigo_supra] = rs
+                    else:
+                        # If we already have something that is NOT active, and this one IS active, overwrite.
+                        # If we already have ACTIVE, keep it.
+                        if temp_status[r.codigo_supra] != 'ATIVO' and rs == 'ATIVO':
+                            temp_status[r.codigo_supra] = 'ATIVO'
+                
+                status_map = temp_status
 
          # se por algum motivo tiver divergência entre linhas, faz um OR
         calcula_st = any(bool(getattr(p, "calcula_st", False)) for p in itens) or bool(
