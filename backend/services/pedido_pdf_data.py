@@ -40,6 +40,7 @@ def carregar_pedido_pdf(db, pedido_id: int) -> PedidoPdf:
             
             prod.peso             AS item_peso_liquido_cad,
             prod.peso_bruto       AS item_peso_bruto_cad,
+            prod.fornecedor       AS item_fornecedor,
 
             tp.markup                 AS item_markup,
             tp.valor_final_markup     AS item_valor_final_markup,
@@ -69,6 +70,7 @@ def carregar_pedido_pdf(db, pedido_id: int) -> PedidoPdf:
         LEFT JOIN tb_tabela_preco tp
             ON tp.id_tabela = p.tabela_preco_id 
             AND tp.codigo_produto_supra = i.codigo
+            AND tp.ativo = TRUE
 
         WHERE p.id_pedido = :pid
         ORDER BY i.quantidade DESC, i.id_item;
@@ -111,6 +113,7 @@ def carregar_pedido_pdf(db, pedido_id: int) -> PedidoPdf:
             markup=float(r["item_markup"] or 0),
             valor_final_markup=float(r["item_valor_final_markup"] or 0),
             valor_s_frete_markup=float(r["item_valor_s_frete_markup"] or 0),
+            fornecedor=r.get("item_fornecedor") or "",
         ))
 
     return PedidoPdf(

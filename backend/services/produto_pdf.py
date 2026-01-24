@@ -318,11 +318,13 @@ def get_produto(db: Session, produto_id: int) -> ProdutoV2Out:
     return _row_to_out(db, row)
 
 
+
 def list_produtos(
     db: Session,
     q: Optional[str],
     status: Optional[str],
     familia: Optional[int],
+    fornecedor: Optional[str],
     vigencia_em: Optional[date],
     limit: int,
     offset: int,
@@ -339,6 +341,9 @@ def list_produtos(
     if familia is not None:
         base += " AND familia = :familia"
         params["familia"] = familia
+    if fornecedor:
+        base += " AND fornecedor = :fornecedor"
+        params["fornecedor"] = fornecedor
     if vigencia_em:
         base += " AND validade_tabela <= :vig"
         params["vig"] = vigencia_em

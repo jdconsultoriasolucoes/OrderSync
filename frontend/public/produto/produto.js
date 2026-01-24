@@ -407,6 +407,7 @@ function parseDateBrToISO(input) {
   return `${y}-${M}-${d}`;
 }
 
+
 // ---------- busca / modal ----------
 function renderSearchResults(items) {
   const box = $("search-results");
@@ -423,6 +424,7 @@ function renderSearchResults(items) {
     <tr data-id="${p.id}">
       <td>${p.codigo_supra || ""}</td>
       <td>${p.nome_produto || ""}</td>
+      <td>${p.fornecedor || ""}</td>
       <td>${p.preco != null ? p.preco.toFixed(2) : ""}</td>
       <td>${p.unidade || ""}</td>
       <td>${p.status_produto || ""}</td>
@@ -437,6 +439,7 @@ function renderSearchResults(items) {
         <tr>
           <th>Código</th>
           <th>Descrição</th>
+          <th>Fornecedor</th>
           <th>Preço</th>
           <th>Unid.</th>
           <th>Status</th>
@@ -466,18 +469,29 @@ function renderSearchResults(items) {
 
 const doSearch = debounce(async () => {
   const inp = $("search-input");
+  const selForn = $("search-fornecedor");
   const box = $("search-results");
   if (!inp || !box) return;
 
   const q = inp.value.trim();
-  if (!q) {
-    box.innerHTML = `<div class="empty">Digite parte do código ou descrição…</div>`;
+  const forn = selForn ? selForn.value : "";
+
+  // Se vazio, limpa
+  if (!q && !forn) {
+    box.innerHTML = `<div class="empty">Digite algo ou selecione fornecedor...</div>`;
     return;
   }
 
   try {
     const base = await resolveProdutosEndpoint();
-    const url = `${base}?q=${encodeURIComponent(q)}&limit=50&offset=0`;
+    // Monta Query String
+    const params = new URLSearchParams();
+    if (q) params.append("q", q);
+    if (forn) params.append("fornecedor", forn);
+    params.append("limit", "50");
+    params.append("offset", "0");
+
+    const url = `${base}?${params.toString()}`;
     const data = await fetchJSON(url);
     renderSearchResults(data);
   } catch (e) {
@@ -485,6 +499,62 @@ const doSearch = debounce(async () => {
     box.innerHTML = `<div class="empty">Erro ao buscar produtos.</div>`;
   }
 }, 400);
+
+async function loadSearchFornecedores() {
+  const el = $("search-fornecedor");
+  if (!el) return;
+  // Se já tiver opções (além do default), não recarrega
+  if (el.options.length > 1) return;
+
+  try {
+    const url = `${API_BASE}/api/fornecedores`;
+    // ou use endpoint de opções do produto se preferir, 
+    // mas vamos tentar usar o mesmo loadFornecedores se possivel, ou fetch direto.
+    // O backend tem GET /api/produto/opcoes ? Tem GET /api/fornecedores
+    // Vamos usar /api/fornecedores que já vimos em loadFornecedores
+
+    // Pequena duplicacao para garantir contexto isolado do modal de busca
+    const data = await fetchJSON(url);
+    // data deve ser lista de { nome_fornecedor, ... }
+
+    el.innerHTML = '<option value="">Todos Fornecedores</option>' +
+      data.map(f => `<option value="${f.nome_fornecedor}">${f.nome_fornecedor}</option>`).join("");
+
+  } catch (e) {
+    console.error("Erro ao carregar fornecedores search:", e);
+  }
+}
+
+// Hook para abrir modal e carregar fornecedores
+function setupSearchModal() {
+  const btn = $("btn-buscar");
+  const modal = $("search-modal");
+  const close = $("search-close");
+  const cancel = $("search-cancel");
+  const inp = $("search-input");
+  const selForn = $("search-fornecedor");
+
+  if (btn && modal) {
+    btn.addEventListener("click", () => {
+      modal.classList.remove("hidden");
+      if (modal.showModal) modal.showModal(); // se for dialog
+      loadSearchFornecedores();
+      if (inp) inp.focus();
+    });
+  }
+
+  const hide = () => {
+    if (modal.close) modal.close();
+    else modal.classList.add("hidden");
+  };
+
+  if (close) close.addEventListener("click", hide);
+  if (cancel) cancel.addEventListener("click", hide);
+
+  if (inp) inp.addEventListener("input", doSearch);
+  if (selForn) selForn.addEventListener("change", doSearch);
+}
+
 
 // ---------- Cálculo de Preço Final (Promoção) ----------
 function calculateFinalPrice() {
@@ -1367,6 +1437,9 @@ function setupRenovarValidade() {
 }
 
 // Inicializa a lógica extra
+
 document.addEventListener("DOMContentLoaded", () => {
   setupRenovarValidade();
+  setupSearchModal();
 });
+

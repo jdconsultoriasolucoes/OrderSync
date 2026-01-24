@@ -15,6 +15,7 @@ class PedidoPdfItem(BaseModel):
     markup: Optional[float] = 0.0
     valor_final_markup: Optional[float] = 0.0
     valor_s_frete_markup: Optional[float] = 0.0
+    fornecedor: Optional[str] = None
 
 
 class PedidoPdf(BaseModel):

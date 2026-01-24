@@ -400,7 +400,18 @@
       </div>
 
       <div class="custom-modal-body">
-        <input id="search-input" type="text" placeholder="Código ou descrição..." />
+
+        <div class="row g-2 mb-2">
+          <div class="col-8">
+             <input id="search-input" type="text" placeholder="Código ou descrição..." style="width: 100%;" />
+          </div>
+          <div class="col-4">
+            <select id="search-fornecedor" style="width: 100%; padding: 8px; border-radius: 4px; border: 1px solid #ccc;">
+              <option value="">Todos Fornecedores</option>
+            </select>
+          </div>
+        </div>
+
         <div id="search-hint" class="hint">Digite para buscar • Enter: selecionar • Esc: fechar</div>
         <div id="search-results" class="results"></div>
       </div>

@@ -76,10 +76,12 @@ def obter_opcoes_endpoint():
     description="Busca produtos com filtros opcionais (q, status, família, vigência) e paginação.",
     operation_id="produtos_listar",
 )
+
 def listar_produtos(
     q: Optional[str] = None,
     status: Optional[str] = "ATIVO",
     familia: Optional[int] = None,
+    fornecedor: Optional[str] = None,
     vigencia_em: Optional[date] = None,
     limit: int = 50,
     offset: int = 0,
@@ -91,6 +93,7 @@ def listar_produtos(
             q=q,
             status=status,
             familia=familia,
+            fornecedor=fornecedor,
             vigencia_em=vigencia_em,
             limit=limit,
             offset=offset,

@@ -283,6 +283,7 @@ def _desenhar_pdf(pedido: PedidoPdf, buffer: io.BytesIO, sem_validade: bool = Fa
         "Comissão",
         "Valor Retira",
         "Valor Entrega",
+        "Fornecedor"
     ]
 
     # ordena itens por quantidade (maior -> menor)
@@ -305,19 +306,21 @@ def _desenhar_pdf(pedido: PedidoPdf, buffer: io.BytesIO, sem_validade: bool = Fa
                 it.tabela_comissao or "",
                 "R$ " + _br_number(float(it.valor_retira or 0)),
                 "R$ " + _br_number(float(it.valor_entrega or 0)),
+                it.fornecedor or "",
             ]
         )
 
     # Larguras base em cm; escala para ocupar a largura inteira
     base_widths_cm = [
         1.7,  # Código
-        8.3,  # Produto
-        1.8,  # Embalagem
+        6.5,  # Produto  (Reduzido de 8.3)
+        1.5,  # Embalagem (Reduzido de 1.8)
         1.5,  # Qtd
         5.5,  # Cond. Pgto
-        2.7,  # Comissão
+        2.0,  # Comissão (Reduzido de 2.7)
         2.5,  # Valor Retira
         2.5,  # Valor Entrega
+        2.5,  # Fornecedor (Novo)
     ]
     total_base = sum(base_widths_cm)
     scale = (available_width / cm) / total_base
@@ -339,6 +342,7 @@ def _desenhar_pdf(pedido: PedidoPdf, buffer: io.BytesIO, sem_validade: bool = Fa
             ("VALIGN", (0, 0), (-1, -1), "MIDDLE"),
             ("ALIGN", (3, 1), (3, -1), "CENTER"),   # Qtd
             ("ALIGN", (6, 1), (7, -1), "RIGHT"),    # valores
+            ("ALIGN", (8, 1), (8, -1), "CENTER"),   # Fornecedor
         ]
     )
 
@@ -573,9 +577,9 @@ def gerar_pdf_lista_preco(pedido: PedidoPdf) -> bytes:
     # Sem Quantidade, Sem Obs.
     
     # 2) Tabela Itens
-    # Colunas: Código | Produto | Embal | Cond. | MK% | R$ C/Frete | MK C/F | R$ S/Frete | MK S/F
+    # Colunas: Código | Produto | Embal | Cond. | R$ C/Frete | R$ S/Frete | Markup % | Markup C/Frete | Markup S/Frete
     
-    header = ["Cód", "Produto", "Embal", "Cond.", "MK%", "R$ C/Frete", "MK C/F", "R$ S/Frete", "MK S/F"]
+    header = ["Cód", "Produto", "Embal", "Cond.", "R$ C/ Frete", "R$ S/Frete", "Markup %", "Markup C/Frete", "Markup S/Frete"]
     
     # Prepara dados
     itens_ordenados = sorted(pedido.itens, key=lambda it: it.produto or "")
@@ -609,23 +613,23 @@ def gerar_pdf_lista_preco(pedido: PedidoPdf) -> bytes:
             it.produto or "",
             it.embalagem or "",
             it.condicao_pagamento or "",
-            mk_str,
             _br_number(custo_cf),
-            _br_number(venda_cf),
             _br_number(custo_sf),
+            mk_str,
+            _br_number(venda_cf),
             _br_number(venda_sf),
         ])
     
     col_widths = [
-        1.6 * cm, # Cód
-        7.0 * cm, # Produto
-        2.0 * cm, # Embal
-        5.5 * cm, # Cond
-        1.2 * cm, # MK%
+        1.5 * cm, # Cód
+        6.0 * cm, # Produto
+        1.8 * cm, # Embal
+        4.0 * cm, # Cond
         2.2 * cm, # R$ C/Frete
-        2.2 * cm, # MK C/F
         2.2 * cm, # R$ S/Frete
-        2.2 * cm  # MK S/F
+        1.8 * cm, # Markup %
+        2.4 * cm, # Markup C/Frete
+        2.4 * cm  # Markup S/Frete
     ]
     # Ajusta largura total para ocupar available_width
     current_sum = sum(col_widths)
