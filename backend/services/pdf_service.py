@@ -534,9 +534,10 @@ def gerar_pdf_pedido(*args, destino_dir: str = "/tmp", sem_validade: bool = Fals
     return buffer.read()
 
 
-def gerar_pdf_lista_preco(pedido: PedidoPdf) -> bytes:
+def gerar_pdf_lista_preco(pedido: PedidoPdf, modo_frete: str = "ambos") -> bytes:
     """
     Gera PDF estilo 'Lista de Preço' (sem Qtd, sem Obs, valores com/sem frete).
+    modo_frete: 'com', 'sem', 'ambos'
     """
     buffer = io.BytesIO()
     pagesize = landscape(A4)
@@ -554,7 +555,14 @@ def gerar_pdf_lista_preco(pedido: PedidoPdf) -> bytes:
 
     c.setFillColor(colors.white)
     c.setFont("Helvetica-Bold", 14)
-    c.drawString(margin_x + 0.3 * cm, faixa_y + 0.3 * cm, "LISTA DE PREÇOS")
+    # Ajusta título conforme modo
+    titulo_map = {
+        "com": "LISTA DE PREÇOS (COM FRETE)",
+        "sem": "LISTA DE PREÇOS (SEM FRETE)",
+        "ambos": "LISTA DE PREÇOS"
+    }
+    titulo = titulo_map.get(modo_frete, "LISTA DE PREÇOS")
+    c.drawString(margin_x + 0.3 * cm, faixa_y + 0.3 * cm, titulo)
 
     # Data
     c.setFont("Helvetica", 10)
@@ -572,15 +580,39 @@ def gerar_pdf_lista_preco(pedido: PedidoPdf) -> bytes:
     
     y -= 1.0 * cm
 
-    # 2) Tabela Itens
-    # Colunas: Código | Produto | Embal | R$ Sem Frete | R$ Com Frete
-    # Sem Quantidade, Sem Obs.
+    # Definição das colunas dinâmicas
+    # Base: Cód, Produto, Embal, Cond., Markup %
+    cols_def = [
+        {"name": "Cód", "width": 1.5, "align": "CENTER"},
+        {"name": "Produto", "width": 6.0, "align": "CENTER"},
+        {"name": "Embal", "width": 1.8, "align": "CENTER"},
+        {"name": "Cond.", "width": 4.0, "align": "CENTER"},
+    ]
     
-    # 2) Tabela Itens
-    # Colunas: Código | Produto | Embal | Cond. | R$ C/Frete | R$ S/Frete | Markup % | Markup C/Frete | Markup S/Frete
-    
-    header = ["Cód", "Produto", "Embal", "Cond.", "R$ C/ Frete", "R$ S/Frete", "Markup %", "Markup C/Frete", "Markup S/Frete"]
-    
+    # Injeta Preço conforme modo (Antes do Markup %)
+    if modo_frete == "com":
+        cols_def.append({"name": "R$ C/ Frete", "width": 2.2, "align": "RIGHT"})
+    elif modo_frete == "sem":
+        cols_def.append({"name": "R$ S/Frete", "width": 2.2, "align": "RIGHT"})
+    else: # ambos
+        cols_def.append({"name": "R$ C/ Frete", "width": 2.2, "align": "RIGHT"})
+        cols_def.append({"name": "R$ S/Frete", "width": 2.2, "align": "RIGHT"})
+
+    cols_def.append({"name": "Markup %", "width": 1.8, "align": "RIGHT"})
+
+    # Injeta Markup Valor conforme modo
+    if modo_frete == "com":
+        cols_def.append({"name": "Markup C/Frete", "width": 2.4, "align": "RIGHT"})
+    elif modo_frete == "sem":
+        cols_def.append({"name": "Markup S/Frete", "width": 2.4, "align": "RIGHT"})
+    else: # ambos
+        cols_def.append({"name": "Markup C/Frete", "width": 2.4, "align": "RIGHT"})
+        cols_def.append({"name": "Markup S/Frete", "width": 2.4, "align": "RIGHT"})
+
+    # Extrai headers e widths
+    header = [c["name"] for c in cols_def]
+    col_widths = [c["width"] * cm for c in cols_def]
+
     # Prepara dados
     itens_ordenados = sorted(pedido.itens, key=lambda it: it.produto or "")
 
@@ -589,48 +621,47 @@ def gerar_pdf_lista_preco(pedido: PedidoPdf) -> bytes:
         markup_pct = it.markup or 0
         mk_str = f"{markup_pct:g}%" if markup_pct else "0%"
         
-        # Unit Values (using explicit fields from saving logic)
         val_unit = float(it.valor_retira or 0)
         frete_unit = float(it.valor_entrega or 0)
         
-        # R$ C/Frete (Cost w/ Freight) = Unit + Freight
-        # CORRECTION: valor_entrega already contains (Price + Freight) in link_pedido context
         custo_cf = frete_unit
-        
-        # MK C/F (Final Price w/ Freight)
         venda_cf = float(it.valor_final_markup or 0)
-        if venda_cf <= 0: venda_cf = custo_cf # fallback
+        if venda_cf <= 0: venda_cf = custo_cf 
 
-        # R$ S/Frete (Cost w/o Freight) = Unit
         custo_sf = val_unit
-
-        # MK S/F (Final Price w/o Freight)
         venda_sf = float(it.valor_s_frete_markup or 0)
-        if venda_sf <= 0: venda_sf = custo_sf # fallback
+        if venda_sf <= 0: venda_sf = custo_sf
 
-        data_rows.append([
+        # Monta a linha base
+        row = [
             it.codigo or "",
             it.produto or "",
             it.embalagem or "",
             it.condicao_pagamento or "",
-            _br_number(custo_cf),
-            _br_number(custo_sf),
-            mk_str,
-            _br_number(venda_cf),
-            _br_number(venda_sf),
-        ])
+        ]
+
+        # Append Preços
+        if modo_frete == "com":
+            row.append(_br_number(custo_cf))
+        elif modo_frete == "sem":
+            row.append(_br_number(custo_sf))
+        else:
+            row.append(_br_number(custo_cf))
+            row.append(_br_number(custo_sf))
+
+        row.append(mk_str)
+
+        # Append Markup R$
+        if modo_frete == "com":
+            row.append(_br_number(venda_cf))
+        elif modo_frete == "sem":
+            row.append(_br_number(venda_sf))
+        else:
+            row.append(_br_number(venda_cf))
+            row.append(_br_number(venda_sf))
+
+        data_rows.append(row)
     
-    col_widths = [
-        1.5 * cm, # Cód
-        6.0 * cm, # Produto
-        1.8 * cm, # Embal
-        4.0 * cm, # Cond
-        2.2 * cm, # R$ C/Frete
-        2.2 * cm, # R$ S/Frete
-        1.8 * cm, # Markup %
-        2.4 * cm, # Markup C/Frete
-        2.4 * cm  # Markup S/Frete
-    ]
     # Ajusta largura total para ocupar available_width
     current_sum = sum(col_widths)
     scale = available_width / current_sum

@@ -102,7 +102,7 @@ def abrir_link(code: str):
     })
 
 @router.get("/lista_preco/{code}")
-def baixar_lista_preco(code: str):
+def baixar_lista_preco(code: str, modo: str = "ambos"):
     from services.pdf_service import gerar_pdf_lista_preco
     
     with SessionLocal() as db:
@@ -110,22 +110,8 @@ def baixar_lista_preco(code: str):
         link, status = resolver_code(db, code)
         if status == "not_found":
             raise HTTPException(404, "Link não encontrado")
-        
-        # Recupera o pedido associado a este link?
-        # Links de pedido geralmente não têm um id_pedido direto se forem links de TABELA DE PREÇO (Gerar Link).
-        # Se for link de "Visualizar Pedido" (já criado)?
-        # Pelo código `gerar_link_code`, o link é amarrado a `tabela_id`.
-        # Mas `gerar_pdf_lista_preco` espera um objeto `PedidoPdf`.
-        # Precisamos simular um objeto PedidoPdf baseado na Tabela de Preço, sem ser um pedido real.
-        # Ou... o usuário salva um orçamento?
-        # O pedido_preview retorna JSON.
-        # Precisamos de algo como `carregar_pedido_preview_como_pdf`.
-        
-        # Vamos criar um helper rápido aqui ou em services para converter Tabela -> PedidoPdfFake
-        
-        # Como o user quer "gerar esse arquivo em pdf para ser enviado ao cliente como se fosse o link de orçamento",
-        # assumimos que ele quer os ITENS da Tabela, mas formatados.
-        
+            
+        # ... [rest of the logic remains same until generation call] ...
         tabela_id = link.tabela_id
         
         # Busca itens da tabela
@@ -179,7 +165,7 @@ def baixar_lista_preco(code: str):
             itens=itens
         )
         
-        pdf_bytes = gerar_pdf_lista_preco(fake_pedido)
+        pdf_bytes = gerar_pdf_lista_preco(fake_pedido, modo_frete=modo)
         
         return Response(content=pdf_bytes, media_type="application/pdf", headers={
             "Content-Disposition": f"attachment; filename=lista_precos_{code}.pdf"
