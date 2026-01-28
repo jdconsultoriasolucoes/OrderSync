@@ -84,34 +84,29 @@
             <label for="markup_global">Markup Global %</label>
             <div class="inline">
               <input id="markup_global" class="input-mini" type="number" step="0.01" min="0" placeholder="0.00" />
+              <button class="btn btn-sm d-none" id="btn-aplicar-markup-todos">Aplicar a todos</button>
             </div>
-          </div>
-          <div class="toolbar left-gap">
-            <button class="btn btn-sm" id="btn-aplicar-markup-todos">Aplicar a todos</button>
           </div>
         </div>
 
         <div class="grid-item area-cliente">
           <label for="cliente_nome">Cliente</label>
           <input id="cliente_nome" type="text" autocomplete="off" placeholder="Digite o nome ou CNPJ..." />
-          <input id="codigo_cliente" type="hidden" />
-          <input id="ramo_juridico" type="hidden" />
           <div id="cliente_suggestions" class="suggestions"></div>
-        </div>
 
-        <!-- Row 2 Items -->
-        <!-- IVA starts aligned with Cliente -->
-
-
-        <div class="grid-item area-iva">
-          <!-- Wrapper field/inline for consistency -->
-          <div class="field">
+          <div class="field mt-2">
             <div class="inline">
               <input id="iva_st_toggle" type="checkbox" disabled />
               <span class="hint" style="font-size: 0.85rem; color: var(--text);">Aplicar IVA_ST</span>
             </div>
           </div>
         </div>
+
+        <!-- Row 2 Items -->
+        <!-- IVA starts aligned with Cliente -->
+
+
+
 
       </div>
 

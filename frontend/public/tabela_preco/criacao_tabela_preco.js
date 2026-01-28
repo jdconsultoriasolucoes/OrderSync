@@ -231,13 +231,34 @@ async function mergeBufferFromPickerIfAny() {
       return;
     }
     const recebidos = JSON.parse(raw) || [];
+
+    // Auto-apply Globals to New Items
+    const mkGlobalRaw = document.getElementById('markup_global')?.value || '0';
+    const mkGlobal = parseFloat(mkGlobalRaw.replace(',', '.')) || 0;
+
+    const descCode = document.getElementById('desconto_global')?.value || '';
+    const condCode = document.getElementById('plano_pagamento')?.value || '';
+    const fatorGlobal = (descCode && mapaDescontos[descCode] != null) ? Number(mapaDescontos[descCode]) : null;
+
     const map = new Map((itens || []).map(x => [x.codigo_tabela, x]));
     for (const p of recebidos) {
-      // Se tivermos um markup de cliente já carregado, aplica nos novos itens
-      // (caso o item não traga markup específico ou seja 0)
-      if (!p.markup && currentClientMarkup) {
+      // 1) Apply Markup
+      if (mkGlobal > 0) {
+        p.markup = mkGlobal;
+      } else if (!p.markup && currentClientMarkup) {
         p.markup = currentClientMarkup;
       }
+
+      // 2) Apply Discount (Factor)
+      if (fatorGlobal != null) {
+        p.fator_comissao = fatorGlobal;
+      }
+
+      // 3) Apply Condition
+      if (condCode) {
+        p.plano_pagamento = condCode;
+      }
+
       map.set(p.codigo_tabela, { ...(map.get(p.codigo_tabela) || {}), ...p });
     }
     itens = Array.from(map.values());
@@ -805,14 +826,24 @@ function setupClienteAutocomplete() {
 function enforceIvaLockByCliente() {
   const ivaChk = document.getElementById('iva_st_toggle');
   const codigo = (document.getElementById('codigo_cliente')?.value || '').trim();
-  if (!ivaChk) return;
-
   const nome = (document.getElementById('cliente_nome')?.value || '').trim();
 
-  // Regra Simplificada Final:
-  // - Tem Código? => Travado (Vem do cadastro).
-  // - Não tem Código? => Liberado (Cliente livre ou "em digitação").
-  ivaChk.disabled = !!codigo;
+  if (!ivaChk) return;
+
+  // Regra Ajustada:
+  // - Tem Código? => Travado (Vem do cadastro, e usamos a pref do cliente).
+  // - Não tem Código mas tem Nome? => Liberado (Cliente avulso).
+  // - Sem Nome? => Travado (ainda não informou cliente).
+
+  if (codigo) {
+    ivaChk.disabled = true;
+  } else if (nome) {
+    ivaChk.disabled = false;
+  } else {
+    // Nada digitado
+    ivaChk.disabled = true;
+    ivaChk.checked = false;
+  }
 
   window.ivaStAtivo = !!ivaChk.checked;
 }
