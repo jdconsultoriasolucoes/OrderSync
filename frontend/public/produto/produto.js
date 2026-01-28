@@ -1067,6 +1067,7 @@ async function loadOptions() {
     // Mas se é select, só seleciona. Se for input com datalist...
     // O html é select.
     fill("familia", data.familia);
+    fill("marca", data.marca); // Populate Group (marca) select with data from t_familia_produtos
 
     // Fornecedor é input type="text" no HTML? Ou Select?
     // User image shows "Fornecedor" as text input visually (no arrow), but let's check HTML if we can.

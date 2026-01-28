@@ -1888,6 +1888,12 @@ document.addEventListener('DOMContentLoaded', () => {
       document.getElementById('btn-aplicar-todos')?.click();
     }
   });
+  document.getElementById('markup_global')?.addEventListener('keydown', (e) => {
+    if (e.key === 'Enter') {
+      e.preventDefault();
+      document.getElementById('btn-aplicar-markup-todos')?.click();
+    }
+  });
 
   document.getElementById('btn-aplicar-todos')?.addEventListener('click', aplicarFatorGlobal);
 

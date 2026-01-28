@@ -422,18 +422,25 @@ def get_product_options(db: Session) -> Dict[str, List[str]]:
     
     # Busca famílias na tabela dedicada t_familia_produtos
     familias = []
+    marcas = []
     try:
         rows_fam = db.execute(text("SELECT DISTINCT familia FROM public.t_familia_produtos ORDER BY familia")).fetchall()
         familias = [r[0] for r in rows_fam if r[0]]
+        
+        # User REQ: Busca MARCA (que será 'Grupo') da mesma tabela
+        rows_marca = db.execute(text("SELECT DISTINCT marca FROM public.t_familia_produtos ORDER BY marca")).fetchall()
+        marcas = [r[0] for r in rows_marca if r[0]]
     except Exception as e:
-        print(f"Erro ao buscar familias: {e}")
+        print(f"Erro ao buscar familias/marcas em t_familia_produtos: {e}")
         # fallback se a tabela não existir ou der erro
         familias = _distinct__list(ProdutoV2.familia)
+        marcas = _distinct__list(ProdutoV2.marca)
 
     return {
         "status_produto": _distinct__list(ProdutoV2.status_produto),
         "tipo_giro": _distinct__list(ProdutoV2.tipo_giro),
         "familia": familias,
+        "marca": marcas, # Enviando opções de Grupo (marca)
         "tipo": ["INSUMOS", "PET"], # Opções fixas
         "unidade": _distinct__list(ProdutoV2.unidade),
         "fornecedor": _distinct__list(ProdutoV2.fornecedor),
