@@ -57,7 +57,7 @@ const CONFIG = {
             { key: 'id', label: 'ID' },
             { key: 'tipo', label: 'Tipo' },
             { key: 'familia', label: 'Família' },
-            { key: 'marca', label: 'Marca' }
+            { key: 'marca', label: 'Grupo' }
         ],
         modalId: 'modal-familias',
         fillForm: (item) => {

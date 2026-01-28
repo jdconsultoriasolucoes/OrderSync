@@ -51,6 +51,7 @@ def filtrar_produtos_para_tabela_preco(
                     ELSE COALESCE(p.embalagem_venda, 'UN')
                 END AS embalagem,
                 p.peso AS peso_liquido,
+                p.peso_bruto,
                 p.preco AS valor,
                 p.ipi,
                 p.iva_st,

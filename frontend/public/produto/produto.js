@@ -270,11 +270,11 @@ function readForm() {
   });
 
   const imposto = {
-    ipi: getNumber("ipi"),
-    icms: getNumber("icms"),
-    iva_st: getNumber("iva_st"),
-    cbs: getNumber("cbs"),
-    ibs: getNumber("ibs"),
+    ipi: getNumber("ipi") ? getNumber("ipi") / 100 : null,
+    icms: getNumber("icms") ? getNumber("icms") / 100 : null,
+    iva_st: getNumber("iva_st") ? getNumber("iva_st") / 100 : null,
+    cbs: getNumber("cbs") ? getNumber("cbs") / 100 : null,
+    ibs: getNumber("ibs") ? getNumber("ibs") / 100 : null,
   };
   Object.keys(imposto).forEach((k) => {
     if (imposto[k] === undefined) delete imposto[k];
@@ -351,11 +351,12 @@ function fillForm(p) {
   }
 
   const imp = p.imposto || {};
-  set("ipi", imp.ipi);
-  set("icms", imp.icms);
-  set("iva_st", imp.iva_st);
-  set("cbs", imp.cbs);
-  set("ibs", imp.ibs);
+  const n100 = (v) => v != null ? (v * 100).toFixed(2) : "";
+  set("ipi", n100(imp.ipi));
+  set("icms", n100(imp.icms));
+  set("iva_st", n100(imp.iva_st));
+  set("cbs", n100(imp.cbs));
+  set("ibs", n100(imp.ibs));
 
   // Recalcula visualização
   // setTimeout para garantir que os valores entraram no DOM se houver async

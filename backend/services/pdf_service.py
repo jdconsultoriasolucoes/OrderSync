@@ -275,6 +275,7 @@ def _desenhar_pdf(pedido: PedidoPdf, buffer: io.BytesIO, sem_validade: bool = Fa
     # TABELA DE ITENS (multi-página)
     # =======================
     header = [
+        "Fornecedor",
         "Codigo",
         "Produto",
         "Embal",
@@ -283,7 +284,6 @@ def _desenhar_pdf(pedido: PedidoPdf, buffer: io.BytesIO, sem_validade: bool = Fa
         "Comissão",
         "Valor Retira",
         "Valor Entrega",
-        "Fornecedor"
     ]
 
     # ordena itens por quantidade (maior -> menor)
@@ -298,6 +298,7 @@ def _desenhar_pdf(pedido: PedidoPdf, buffer: io.BytesIO, sem_validade: bool = Fa
     for it in itens_ordenados:
         all_rows.append(
             [
+                it.fornecedor or "",
                 it.codigo,
                 it.produto,
                 it.embalagem or "",
@@ -306,12 +307,12 @@ def _desenhar_pdf(pedido: PedidoPdf, buffer: io.BytesIO, sem_validade: bool = Fa
                 it.tabela_comissao or "",
                 "R$ " + _br_number(float(it.valor_retira or 0)),
                 "R$ " + _br_number(float(it.valor_entrega or 0)),
-                it.fornecedor or "",
             ]
         )
 
     # Larguras base em cm; escala para ocupar a largura inteira
     base_widths_cm = [
+        2.5,  # Fornecedor (Novo - Inicio)
         1.7,  # Código
         6.5,  # Produto  (Reduzido de 8.3)
         1.5,  # Embalagem (Reduzido de 1.8)
@@ -320,7 +321,6 @@ def _desenhar_pdf(pedido: PedidoPdf, buffer: io.BytesIO, sem_validade: bool = Fa
         2.0,  # Comissão (Reduzido de 2.7)
         2.5,  # Valor Retira
         2.5,  # Valor Entrega
-        2.5,  # Fornecedor (Novo)
     ]
     total_base = sum(base_widths_cm)
     scale = (available_width / cm) / total_base
@@ -340,9 +340,9 @@ def _desenhar_pdf(pedido: PedidoPdf, buffer: io.BytesIO, sem_validade: bool = Fa
 
             ("FONTSIZE", (0, 1), (-1, -1), 8),
             ("VALIGN", (0, 0), (-1, -1), "MIDDLE"),
-            ("ALIGN", (3, 1), (3, -1), "CENTER"),   # Qtd
-            ("ALIGN", (6, 1), (7, -1), "RIGHT"),    # valores
-            ("ALIGN", (8, 1), (8, -1), "CENTER"),   # Fornecedor
+            ("ALIGN", (4, 1), (4, -1), "CENTER"),   # Qtd
+            ("ALIGN", (7, 1), (8, -1), "RIGHT"),    # valores
+            ("ALIGN", (0, 1), (0, -1), "CENTER"),   # Fornecedor
         ]
     )
 

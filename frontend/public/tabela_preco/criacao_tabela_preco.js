@@ -1051,6 +1051,7 @@ async function carregarItens() {
   itens = itens.map(p => ({ ...p, ipi: Number(p.ipi ?? 0), iva_st: Number(p.iva_st ?? 0) }));
   itens = itens.map(p => ({
     ...p, peso_liquido: Number(p.peso_liquido ?? p.peso ?? p.peso_kg ?? p.pesoLiquido ?? 0),
+    peso_bruto: Number(p.peso_bruto ?? 0),
     tipo: p.tipo ?? p.grupo ?? p.departamento ?? null
   }));
   // (opcional, mas recomendado) já limpa o buffer legado para não reaplicar depois
@@ -1296,7 +1297,9 @@ function buildFiscalInputsFromRow(tr) {
   // Item básico
   const produtoId = (tr.querySelector('td:nth-child(2)')?.textContent || '').trim();
   const tipo = String(item?.tipo || item?.grupo || item?.departamento || '').trim();
-  const peso_kg = Number(item?.peso_liquido ?? item?.peso ?? item?.peso_kg ?? item?.pesoLiquido ?? 0);
+  const peso_bruto = Number(item?.peso_bruto || 0);
+  const peso_liq = Number(item?.peso_liquido ?? item?.peso ?? item?.peso_kg ?? item?.pesoLiquido ?? 0);
+  const peso_kg = (peso_bruto > 0) ? peso_bruto : peso_liq;
 
   // Preço base (espelha sua lógica da tela): valor + acrescimo(condição) - desconto(fator)
   const valor = Number(item?.valor || 0);
@@ -1596,6 +1599,7 @@ async function salvarTabela() {
         descricao_produto: item.descricao,
         embalagem: item.embalagem || '',
         peso_liquido: Number(item.peso_liquido ?? 0),
+        peso_bruto: Number(item.peso_bruto ?? 0),
 
         valor_produto: Number(item.valor || 0),
         comissao_aplicada: Number(descontoValor.toFixed(2)),
@@ -1871,6 +1875,20 @@ document.addEventListener('DOMContentLoaded', () => {
   setMode(MODE.NEW);
   document.getElementById('btn-listar')?.addEventListener('click', () => { goToListarTabelas(); });
 
+  // Atalho ENTER para aplicar a todos
+  document.getElementById('plano_pagamento')?.addEventListener('keydown', (e) => {
+    if (e.key === 'Enter') {
+      e.preventDefault();
+      document.getElementById('btn-aplicar-condicao-todos')?.click();
+    }
+  });
+  document.getElementById('desconto_global')?.addEventListener('keydown', (e) => {
+    if (e.key === 'Enter') {
+      e.preventDefault();
+      document.getElementById('btn-aplicar-todos')?.click();
+    }
+  });
+
   document.getElementById('btn-aplicar-todos')?.addEventListener('click', aplicarFatorGlobal);
 
   document.getElementById('plano_pagamento')?.addEventListener('change', (e) => {
@@ -1964,40 +1982,40 @@ document.addEventListener('DOMContentLoaded', () => {
 
         // pergunta de decisão
         const querEnviar = confirm("Deseja mandar o link do orçamento?");
+
+        // CAPTURA ESTADO ANTES DO RESET
+        const freteKgParaModal = Number(document.getElementById('frete_kg')?.value || 0);
+
+        // RESET COMPLETO (VOLTAR A TELA ZERADA)
+        currentTabelaId = '';
+        sourceTabelaId = '';
+        window.currentTabelaId = '';
+        window.sourceTabelaId = '';
+
+        try { history.replaceState(null, '', location.pathname); } catch { }
+
+        // limpa cabeçalho + grade e volta pro modo original (inputs habilitados)
+        if (typeof limparFormularioCabecalho === 'function') limparFormularioCabecalho();
+        if (typeof limparGradeProdutos === 'function') limparGradeProdutos();
+
+        if (typeof setMode === 'function') setMode(MODE.NEW);
+        if (typeof setFormDisabled === 'function') setFormDisabled(false);
+        if (typeof toggleToolbarByMode === 'function') toggleToolbarByMode();
+        if (typeof refreshToolbarEnablement === 'function') refreshToolbarEnablement();
+
         if (querEnviar) {
           if (typeof window.__showGerarLinkModal === "function") {
             window.__showGerarLinkModal({
               tabelaId,
+              freteKg: freteKgParaModal, // Passa o frete capturado
               pedidoClientePath: "/tabela_preco/pedido_cliente.html",
             });
           } else {
             alert("Módulo de gerar link não carregado (../js/gerar_link_pedido.js).");
           }
-        } else {
-          // >>> Cancelou o envio do link: volta ao estado inicial (sem id, modo original)
-          currentTabelaId = '';
-          sourceTabelaId = '';
-          window.currentTabelaId = '';
-          window.sourceTabelaId = '';
-
-          // limpa URL (?id=)
-          try {
-            const u = new URL(location.href);
-            u.searchParams.delete('id');
-            history.replaceState(null, '', u.toString());
-          } catch { }
-
-          // limpa cabeçalho + grade e volta pro modo original (inputs habilitados)
-          if (typeof limparFormularioCabecalho === 'function') limparFormularioCabecalho();
-          if (typeof limparGradeProdutos === 'function') limparGradeProdutos();
-
-          if (typeof setMode === 'function') setMode(MODE.NEW); // ou o seu "modo inicial" da tela
-          if (typeof setFormDisabled === 'function') setFormDisabled(false);
-
-          if (typeof toggleToolbarByMode === 'function') toggleToolbarByMode();
-          if (typeof refreshToolbarEnablement === 'function') refreshToolbarEnablement();
-
         }
+
+        // Se NÃO quiser enviar, já está resetado.
 
       } catch (err) {
         // mostra 422 legível, se vier no formato FastAPI

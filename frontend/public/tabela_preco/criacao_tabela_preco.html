@@ -120,26 +120,32 @@
       <div class="grid-condition-discount">
 
         <!-- Condição -->
+        <!-- Condição -->
         <div class="grid-item">
           <div class="field">
             <label for="plano_pagamento">Condição de Pagamento</label>
-            <select id="plano_pagamento"></select>
+            <div class="d-flex gap-2">
+              <select id="plano_pagamento" class="form-select flex-grow-1"></select>
+              <button class="btn btn-sm" id="btn-aplicar-condicao-todos" style="white-space: nowrap;">Aplicar a
+                todos</button>
+            </div>
             <div class="hint" id="hint-condicao">Carregando...</div>
           </div>
-          <div class="toolbar left-gap">
-            <button class="btn btn-sm" id="btn-aplicar-condicao-todos">Aplicar a todos</button>
+          <div class="toolbar left-gap" style="margin-top: 4px;">
             <span class="pill"><span>Taxa:</span><strong id="pill-taxa">—</strong></span>
           </div>
         </div>
 
-        <!-- Desconto: Moved Back Here -->
+        <!-- Desconto: Reordered -->
         <div class="grid-item area-desconto">
           <div class="field">
             <label for="desconto_global">Desconto / Fator %</label>
-            <select id="desconto_global" class="grow"></select>
+            <div class="d-flex gap-2">
+              <select id="desconto_global" class="grow form-select flex-grow-1"></select>
+              <button class="btn btn-sm" id="btn-aplicar-todos" style="white-space: nowrap;">Aplicar a todos</button>
+            </div>
           </div>
-          <div class="toolbar left-gap">
-            <button class="btn btn-sm" id="btn-aplicar-todos">Aplicar a todos</button>
+          <div class="toolbar left-gap" style="margin-top: 4px;">
             <span class="pill"><span>Fator:</span><strong id="pill-fator">—</strong><span>%</span></span>
           </div>
         </div>

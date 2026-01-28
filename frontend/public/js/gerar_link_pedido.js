@@ -401,7 +401,7 @@ export function showGerarLinkModal({ tabelaId, freteKg }) {
       showPdfOptions((mode) => {
         const urlPdf = `${apiBase()}/link_pedido/lista_preco/${code}?modo=${mode}`;
         window.open(urlPdf, "_blank", "noopener,noreferrer");
-      });
+      }, temFrete); // Pass temFrete context
     };
   }
 
@@ -416,7 +416,12 @@ export function showGerarLinkModal({ tabelaId, freteKg }) {
   };
 }
 
-function showPdfOptions(onSelect) {
+function showPdfOptions(onSelect, temFrete = true) {
+  // Se não tem frete, desabilitamos "Com frete"(1) e "Ambos"(3).
+  // Indices ou data-mode: 'com', 'sem', 'ambos'.
+
+  const styleDisabled = 'opacity: 0.5; cursor: not-allowed; pointer-events: none; background: #eee; color: #999;';
+
   const html = `
   <div id="modalPdfOptions" class="glp-backdrop" style="z-index: 10000;">
     <div class="glp-modal" style="width: 320px; text-align: center;">
@@ -424,9 +429,9 @@ function showPdfOptions(onSelect) {
         <h3 style="font-size: 16px;">Opções de Lista de Preço</h3>
       </div>
       <div class="glp-body" style="display: flex; flex-direction: column; gap: 8px; padding: 16px;">
-        <button class="glp-option" data-mode="com">Com Frete</button>
+        <button class="glp-option" data-mode="com" style="${!temFrete ? styleDisabled : ''}">Com Frete</button>
         <button class="glp-option" data-mode="sem">Sem Frete</button>
-        <button class="glp-option" data-mode="ambos">Ambos (Padrão)</button>
+        <button class="glp-option" data-mode="ambos" style="${!temFrete ? styleDisabled : ''}">Ambos (Padrão)</button>
         <button class="glp-option" data-mode="cancel" style="border: 1px solid transparent; background: transparent; color: #888; font-size: 13px;">Cancelar</button>
       </div>
     </div>
@@ -447,6 +452,9 @@ function showPdfOptions(onSelect) {
   wrap.querySelectorAll("button").forEach(btn => {
     btn.onclick = (e) => {
       e.stopPropagation();
+      // Se estiver desabilitado visualmente, nao faz nada (embora pointer-events:none ja trate)
+      if (btn.style.pointerEvents === 'none') return;
+
       const mode = btn.dataset.mode;
       close();
       if (mode !== "cancel") {
