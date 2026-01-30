@@ -37,11 +37,11 @@ SELECT
     p.desconto_valor_tonelada,
     p.data_desconto_inicio,
     p.data_desconto_fim,
-    COALESCE(i.ipi, 0.00) AS ipi,
-    COALESCE(i.iva_st, 0.00) AS iva_st,
-    COALESCE(i.icms, 0.00) AS icms,
-    COALESCE(i.cbs, 0.00) AS cbs,
-    COALESCE(i.ibs, 0.00) AS ibs
+    COALESCE(i.ipi, 0.0000) AS ipi,
+    COALESCE(i.iva_st, 0.0000) AS iva_st,
+    COALESCE(i.icms, 0.0000) AS icms,
+    COALESCE(i.cbs, 0.0000) AS cbs,
+    COALESCE(i.ibs, 0.0000) AS ibs
 FROM t_cadastro_produto_v2 p
 LEFT JOIN t_imposto_v2 i ON p.id = i.produto_id;
     """

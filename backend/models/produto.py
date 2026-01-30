@@ -79,11 +79,11 @@ class ImpostoV2(Base):
     produto_id = Column(BigInteger, ForeignKey("t_cadastro_produto_v2.id", ondelete="CASCADE"),
                         unique=True, nullable=False)
 
-    ipi = Column(Numeric(5, 2))
-    icms = Column(Numeric(5, 2))
-    iva_st = Column(Numeric(6, 2))                       # Substituição Tributária (%)
-    cbs = Column(Numeric(5, 2))
-    ibs = Column(Numeric(5, 2))
+    ipi = Column(Numeric(10, 4))
+    icms = Column(Numeric(10, 4))
+    iva_st = Column(Numeric(10, 4))                       # Substituição Tributária (%)
+    cbs = Column(Numeric(10, 4))
+    ibs = Column(Numeric(10, 4))
 
     created_at = Column(DateTime(timezone=True), server_default=func.now(), nullable=False)
     updated_at = Column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now(), nullable=False)
