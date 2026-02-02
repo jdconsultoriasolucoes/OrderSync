@@ -522,6 +522,7 @@ function onDuplicar() {
   // if (cond) cond.value = '';
   // duplicado if (cond) cond.value = ''; // clean up
   // if (desc) desc.value = '';
+  console.log("onDuplicar: Preservando Frete, Condição e Desconto.");
 
   const mk = document.getElementById('markup_global');
   // if (mk) mk.value = ''; // KEEP

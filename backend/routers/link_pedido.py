@@ -148,16 +148,21 @@ def baixar_lista_preco(code: str, modo: str = "ambos"):
                 valor_s_frete_markup=float(r.get("valor_s_frete_markup") or 0)
             ))
             
+        # Busca validade global (mesma lógica do router meta/validade_global)
+        sql_val = text("SELECT MAX(CAST(validade_tabela AS DATE)) FROM t_cadastro_produto_v2 WHERE status_produto = 'ATIVO'")
+        val_db = db.execute(sql_val).scalar()
+        validade_fmt = val_db.strftime('%d/%m/%Y') if val_db else "Ver tabela"
+
         fake_pedido = PedidoPdf(
             id_pedido=0,
             codigo_cliente=head.get("codigo_cliente"),
             cliente=head.get("cliente"),
             nome_fantasia=head.get("nome_fantasia"),
-            data_pedido=head.get("criado_em") or datetime.now(),
+            data_pedido=datetime.now(), # <--- USA DATA ATUAL (Geração)
             data_entrega_ou_retirada=None,
             frete_total=0.0,
             frete_kg=float(head.get("frete_kg") or 0),
-            validade_tabela=head.get("validade").strftime('%d/%m/%Y') if head.get("validade") else "Ver tabela",
+            validade_tabela=validade_fmt, # <--- USA VALIDADE CALCULADA
             total_peso_bruto=0.0,
             total_peso_liquido=0.0,
             total_valor=0.0,
