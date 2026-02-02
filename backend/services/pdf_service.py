@@ -663,23 +663,23 @@ def gerar_pdf_lista_preco(pedido: PedidoPdf, modo_frete: str = "ambos") -> bytes
     
     # Injeta Preço 
     if modo_frete == "com":
-        cols_def.append({"name": "R$ Com Frete", "width": 2.0, "align": "RIGHT"})
+        cols_def.append({"name": "R$ C/ Frete", "width": 2.0, "align": "RIGHT"})
     elif modo_frete == "sem":
-        cols_def.append({"name": "R$ Sem Frete", "width": 2.0, "align": "RIGHT"})
+        cols_def.append({"name": "R$ S/Frete", "width": 2.0, "align": "RIGHT"})
     else: # ambos
-        cols_def.append({"name": "R$ Com Frete", "width": 1.8, "align": "RIGHT"})
-        cols_def.append({"name": "R$ Sem Frete", "width": 1.8, "align": "RIGHT"})
+        cols_def.append({"name": "R$ C/ Frete", "width": 1.8, "align": "RIGHT"})
+        cols_def.append({"name": "R$ S/Frete", "width": 1.8, "align": "RIGHT"})
 
-    cols_def.append({"name": "Mk %", "width": 1.2, "align": "RIGHT"})
+    cols_def.append({"name": "Markup %", "width": 1.2, "align": "RIGHT"})
 
     # Injeta Markup Valor
     if modo_frete == "com":
-        cols_def.append({"name": "Venda Com Frete", "width": 2.0, "align": "RIGHT"})
+        cols_def.append({"name": "Markup C/Frete", "width": 2.2, "align": "RIGHT"})
     elif modo_frete == "sem":
-        cols_def.append({"name": "Venda Sem Frete", "width": 2.0, "align": "RIGHT"})
+        cols_def.append({"name": "Markup S/Frete", "width": 2.2, "align": "RIGHT"})
     else: # ambos
-        cols_def.append({"name": "Vnd Com Frete", "width": 1.8, "align": "RIGHT"})
-        cols_def.append({"name": "Vnd Sem Frete", "width": 1.8, "align": "RIGHT"})
+        cols_def.append({"name": "Markup C/Frete", "width": 2.0, "align": "RIGHT"})
+        cols_def.append({"name": "Markup S/Frete", "width": 2.0, "align": "RIGHT"})
 
     # Extrai headers e widths
     header = [c["name"] for c in cols_def]

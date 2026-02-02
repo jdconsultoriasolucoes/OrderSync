@@ -519,9 +519,9 @@ function onDuplicar() {
   if (ramo) ramo.value = '';
 
   // if (frete) frete.value = 0; // KEEP
-  if (cond) cond.value = '';
+  // if (cond) cond.value = '';
   // duplicado if (cond) cond.value = ''; // clean up
-  if (desc) desc.value = '';
+  // if (desc) desc.value = '';
 
   const mk = document.getElementById('markup_global');
   // if (mk) mk.value = ''; // KEEP
