@@ -1452,14 +1452,25 @@ async function recalcLinha(tr) {
   const myId = String(nextId);
 
   const selPct = tr.querySelector('td:nth-child(8) select');
-  const codePct = selPct ? (selPct.value || '') : '';
-  const fator = (mapaDescontos[codePct] != null) ? Number(mapaDescontos[codePct]) : 0;
+  let codePct = selPct ? (selPct.value || '') : '';
+
+  // Fallback: se DOM vazio, tenta pegar do item
+  if (!codePct && item.__fator_codigo) codePct = item.__fator_codigo;
+
+  let fator = (mapaDescontos[codePct] != null) ? Number(mapaDescontos[codePct]) : 0;
+  if (fator === 0 && item.fator_comissao) fator = Number(item.fator_comissao);
 
   const freteKg = Number(document.getElementById('frete_kg').value || 0);
 
   // Condição por linha → taxa
   const selCond = tr.querySelector('td:nth-child(10) select');
-  const codCond = selCond ? selCond.value : '';
+  let codCond = selCond ? selCond.value : '';
+
+  // Fallback
+  if (!codCond && item.plano_pagamento) {
+    codCond = String(item.plano_pagamento).split(' - ')[0].trim();
+  }
+
   const taxaCond = mapaCondicoes[codCond] ?? 0;
 
   // base comercial (sem imposto)
@@ -1907,6 +1918,7 @@ async function onCancelar(e) {
           // repõe itens e re-renderiza grade
           itens = Array.isArray(t.produtos) ? t.produtos.map(p => mapBackendItemToFrontend(p, t)) : [];
           if (typeof renderTabela === 'function') renderTabela();
+          if (typeof recalcTudo === 'function') recalcTudo().catch(() => { });
 
           // volta a “apontar” para a origem
           currentTabelaId = String(sourceTabelaId);
