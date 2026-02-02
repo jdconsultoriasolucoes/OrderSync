@@ -537,12 +537,12 @@ function onDuplicar() {
   atualizarPillDesconto?.();
   refreshToolbarEnablement?.();
 
-  // Atualiza preços ao entrar no modo duplicar (novo orçamento)
+  // Renderiza IMEDIATAMENTE para não dar delay visual (mostra dados preservados)
+  renderTabela();
+
+  // Atualiza preços ao entrar no modo duplicar (em background)
   atualizarPrecosAtuais()
-    .then(() => {
-      renderTabela(); // Force refresh to ensure inputs/selects are populated from itens
-      return recalcTudo();
-    })
+    .then(() => recalcTudo())
     .catch(err => console.error("Erro ao atualizar preços em onDuplicar:", err));
 }
 
