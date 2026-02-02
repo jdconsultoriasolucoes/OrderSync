@@ -421,7 +421,7 @@ async function carregarPedido() {
           window.validadeGlobalISO = normalizarValidadeCampo(rawVal);
 
           if (window.linkExpirado) {
-            setCampoTexto("tempoRestante", "Validade vencida - valores sujeitos a alteração");
+            // setCampoTexto("tempoRestante", "Validade vencida - valores sujeitos a alteração");
             const el = document.getElementById("tempoRestante");
             if (el) el.style.color = "#d9534f"; // vermelho aviso
           } else {

@@ -534,84 +534,177 @@ def gerar_pdf_pedido(*args, destino_dir: str = "/tmp", sem_validade: bool = Fals
     return buffer.read()
 
 
+
 def gerar_pdf_lista_preco(pedido: PedidoPdf, modo_frete: str = "ambos") -> bytes:
     """
     Gera PDF estilo 'Lista de Preço' (sem Qtd, sem Obs, valores com/sem frete).
     modo_frete: 'com', 'sem', 'ambos'
     """
     buffer = io.BytesIO()
-    pagesize = landscape(A4)
+    # MUDANÇA: Portrait (Retrato) em vez de Landscape
+    pagesize = A4
     c = canvas.Canvas(buffer, pagesize=pagesize)
     width, height = pagesize
     margin_x = 0.7 * cm
     margin_y = 0.5 * cm
 
-    # 1) Cabeçalho simplificado (Faixa)
+    # ============================
+    # 1. LOGO (Igual ao _desenhar_pdf)
+    # ============================
+    base_dir = Path(__file__).resolve().parents[2]
+    logo_path = base_dir / "frontend" / "public" / "tabela_preco" / "logo_cliente_supra.png"
+
+    if not logo_path.exists():
+        static_dir = base_dir / "frontend" / "public"
+        for candidate in [
+            static_dir / "logo_cliente_supra.png",
+            static_dir / "logo.png",
+        ]:
+            if candidate.exists():
+                logo_path = candidate
+                break
+        else:
+            logo_path = None
+
+    logo_h = 0
+    # Logo no canto direito superior
+    if logo_path and logo_path.exists():
+        try:
+            img = ImageReader(str(logo_path))
+            logo_w = 3.0 * cm  # Largura do logo
+            iw, ih = img.getSize()
+            logo_h = logo_w * ih / iw
+            
+            # Posição: Canto Superior Direito
+            x_logo = width - margin_x - logo_w
+            y_logo = height - margin_y - logo_h
+            
+            c.drawImage(
+                img,
+                x_logo,
+                y_logo,
+                width=logo_w,
+                height=logo_h,
+                preserveAspectRatio=True,
+                mask="auto",
+            )
+        except Exception:
+            logo_h = 0
+
+    # ============================
+    # 2. CABEÇALHO (FAIXA)
+    # ============================
+    # Faixa ajustada para não cobrir o logo se eles se sobreporem
+    
+    top_contect_y = height - margin_y
+    if logo_h > 0:
+        # Deixa um gap abaixo do logo
+        top_contect_y = top_contect_y - logo_h - 0.2 * cm
+
     c.setFillColor(SUPRA_RED)
     faixa_h = 1.0 * cm
-    faixa_y = height - margin_y - faixa_h
+    faixa_y = top_contect_y - faixa_h
     available_width = width - 2 * margin_x
+    
     c.rect(margin_x, faixa_y, available_width, faixa_h, stroke=0, fill=1)
 
     c.setFillColor(colors.white)
-    c.setFont("Helvetica-Bold", 14)
-    # Ajusta título conforme modo
+    c.setFont("Helvetica-Bold", 12) # Fonte um pouco menor pois A4 Portrait é estreito
+    
     titulo_map = {
         "com": "LISTA DE PREÇOS (COM FRETE)",
         "sem": "LISTA DE PREÇOS (SEM FRETE)",
         "ambos": "LISTA DE PREÇOS"
     }
     titulo = titulo_map.get(modo_frete, "LISTA DE PREÇOS")
-    c.drawString(margin_x + 0.3 * cm, faixa_y + 0.3 * cm, titulo)
+    c.drawString(margin_x + 0.3 * cm, faixa_y + 0.35 * cm, titulo)
 
-    # Data
-    c.setFont("Helvetica", 10)
+    # ============================
+    # 3. VALIDADE E DATA
+    # ============================
+    c.setFont("Helvetica", 9)
+    # Data do Pedido/Geração
     data_str = pedido.data_pedido.strftime('%d/%m/%Y')
-    c.drawRightString(width - margin_x - 0.3 * cm, faixa_y + 0.3 * cm, f"Data: {data_str}")
+    
+    # Bloco alinhado à direita DENTRO da faixa
+    right_text_x = width - margin_x - 0.3 * cm
+    c.drawRightString(right_text_x, faixa_y + 0.6 * cm, f"Data: {data_str}")
+    
+    # Validade (se houver)
+    if pedido.validade_tabela and pedido.validade_tabela.lower() != "ver tabela":
+        c.drawRightString(right_text_x, faixa_y + 0.2 * cm, f"Validade: {pedido.validade_tabela}")
+    else:
+         pass
 
-    # Cliente
+    # ============================
+    # 4. INFO CLIENTE
+    # ============================
     y = faixa_y - 0.5 * cm
     c.setFillColor(SUPRA_DARK)
-    c.setFont("Helvetica-Bold", 10)
+    c.setFont("Helvetica-Bold", 9)
+    
     c.drawString(margin_x, y, f"Cliente: {pedido.cliente or ''}") 
     if pedido.nome_fantasia:
          c.drawString(margin_x, y - 0.4*cm, f"Fantasia: {pedido.nome_fantasia}")
          y -= 0.4*cm
     
-    y -= 1.0 * cm
+    y -= 0.8 * cm
 
-    # Definição das colunas dinâmicas
-    # Base: Cód, Produto, Embal, Cond., Markup %
+    # ============================
+    # 5. COLUNAS (Ajustadas para Portrait ~19cm)
+    # ============================
+    
     cols_def = [
-        {"name": "Cód", "width": 1.5, "align": "CENTER"},
-        {"name": "Produto", "width": 6.0, "align": "CENTER"},
-        {"name": "Embal", "width": 1.8, "align": "CENTER"},
-        {"name": "Cond.", "width": 4.0, "align": "CENTER"},
+        {"name": "Cód", "width": 1.2, "align": "CENTER"},
+        {"name": "Produto", "width": 5.0, "align": "LEFT"}, # Alinhado left fica melhor apertado
+        {"name": "Emb", "width": 1.1, "align": "CENTER"}, # Embalagem
+        {"name": "Condição", "width": 2.5, "align": "CENTER"}, 
     ]
     
-    # Injeta Preço conforme modo (Antes do Markup %)
+    # Injeta Preço 
     if modo_frete == "com":
-        cols_def.append({"name": "R$ C/ Frete", "width": 2.2, "align": "RIGHT"})
+        cols_def.append({"name": "R$ C/Frete", "width": 2.0, "align": "RIGHT"})
     elif modo_frete == "sem":
-        cols_def.append({"name": "R$ S/Frete", "width": 2.2, "align": "RIGHT"})
+        cols_def.append({"name": "R$ S/Frete", "width": 2.0, "align": "RIGHT"})
     else: # ambos
-        cols_def.append({"name": "R$ C/ Frete", "width": 2.2, "align": "RIGHT"})
-        cols_def.append({"name": "R$ S/Frete", "width": 2.2, "align": "RIGHT"})
+        cols_def.append({"name": "R$ C/Fr", "width": 1.8, "align": "RIGHT"})
+        cols_def.append({"name": "R$ S/Fr", "width": 1.8, "align": "RIGHT"})
 
-    cols_def.append({"name": "Markup %", "width": 1.8, "align": "RIGHT"})
+    cols_def.append({"name": "Mk %", "width": 1.2, "align": "RIGHT"})
 
-    # Injeta Markup Valor conforme modo
+    # Injeta Markup Valor
     if modo_frete == "com":
-        cols_def.append({"name": "Markup C/Frete", "width": 2.4, "align": "RIGHT"})
+        cols_def.append({"name": "Venda C/Fr", "width": 2.0, "align": "RIGHT"})
     elif modo_frete == "sem":
-        cols_def.append({"name": "Markup S/Frete", "width": 2.4, "align": "RIGHT"})
+        cols_def.append({"name": "Venda S/Fr", "width": 2.0, "align": "RIGHT"})
     else: # ambos
-        cols_def.append({"name": "Markup C/Frete", "width": 2.4, "align": "RIGHT"})
-        cols_def.append({"name": "Markup S/Frete", "width": 2.4, "align": "RIGHT"})
+        cols_def.append({"name": "Vnd C/Fr", "width": 1.8, "align": "RIGHT"})
+        cols_def.append({"name": "Vnd S/Fr", "width": 1.8, "align": "RIGHT"})
 
     # Extrai headers e widths
     header = [c["name"] for c in cols_def]
-    col_widths = [c["width"] * cm for c in cols_def]
+    
+    # Calcula escala para caber exatamente na largura
+    base_total = sum(c["width"] for c in cols_def)
+    scale = available_width / (base_total * cm)
+    
+    col_widths = [(c["width"] * scale) * cm for c in cols_def]
+    
+    # Estilo alinhamento dinâmico
+    align_styles = []
+    for idx, col in enumerate(cols_def):
+        align_styles.append(("ALIGN", (idx, 0), (idx, -1), col["align"]))
+
+    table_style = TableStyle([
+        ("BACKGROUND", (0, 0), (-1, 0), SUPRA_RED),
+        ("TEXTCOLOR", (0, 0), (-1, 0), colors.white),
+        ("FONTNAME", (0, 0), (-1, 0), "Helvetica-Bold"),
+        ("GRID", (0, 0), (-1, -1), 0.5, colors.black),
+        ("FONTSIZE", (0, 0), (-1, -1), 7), # Fonte p/ caber
+        ("VALIGN", (0, 0), (-1, -1), "MIDDLE"),
+        ("LEFTPADDING", (0, 0), (-1, -1), 2),
+        ("RIGHTPADDING", (0, 0), (-1, -1), 2),
+    ] + align_styles)
 
     # Prepara dados
     itens_ordenados = sorted(pedido.itens, key=lambda it: it.produto or "")
@@ -621,26 +714,26 @@ def gerar_pdf_lista_preco(pedido: PedidoPdf, modo_frete: str = "ambos") -> bytes
         markup_pct = it.markup or 0
         mk_str = f"{markup_pct:g}%" if markup_pct else "0%"
         
-        val_unit = float(it.valor_retira or 0)
-        frete_unit = float(it.valor_entrega or 0)
+        # Valores originais (Custo ou Base)
+        custo_cf = float(it.valor_entrega or 0)
+        custo_sf = float(it.valor_retira or 0)
         
-        custo_cf = frete_unit
+        # Valores de venda (Markup aplicado)
         venda_cf = float(it.valor_final_markup or 0)
-        if venda_cf <= 0: venda_cf = custo_cf 
-
-        custo_sf = val_unit
         venda_sf = float(it.valor_s_frete_markup or 0)
+        
+        # Fallback se zerado
+        if venda_cf <= 0: venda_cf = custo_cf
         if venda_sf <= 0: venda_sf = custo_sf
 
-        # Monta a linha base
         row = [
             it.codigo or "",
-            it.produto or "",
-            it.embalagem or "",
-            it.condicao_pagamento or "",
+            (it.produto or "")[:35], # Truncate produto name if too long
+            (it.embalagem or "")[:10],
+            (it.condicao_pagamento or "")[:20],
         ]
 
-        # Append Preços
+        # 1. Preço Base
         if modo_frete == "com":
             row.append(_br_number(custo_cf))
         elif modo_frete == "sem":
@@ -649,9 +742,10 @@ def gerar_pdf_lista_preco(pedido: PedidoPdf, modo_frete: str = "ambos") -> bytes
             row.append(_br_number(custo_cf))
             row.append(_br_number(custo_sf))
 
+        # 2. Markup %
         row.append(mk_str)
 
-        # Append Markup R$
+        # 3. Preço Venda
         if modo_frete == "com":
             row.append(_br_number(venda_cf))
         elif modo_frete == "sem":
@@ -662,34 +756,19 @@ def gerar_pdf_lista_preco(pedido: PedidoPdf, modo_frete: str = "ambos") -> bytes
 
         data_rows.append(row)
     
-    # Ajusta largura total para ocupar available_width
-    current_sum = sum(col_widths)
-    scale = available_width / current_sum
-    final_widths = [w * scale for w in col_widths]
-
-    table_style = TableStyle([
-        ("BACKGROUND", (0, 0), (-1, 0), SUPRA_RED),
-        ("TEXTCOLOR", (0, 0), (-1, 0), colors.white),
-        ("FONTNAME", (0, 0), (-1, 0), "Helvetica-Bold"),
-        ("ALIGN", (0, 0), (-1, 0), "CENTER"),
-        ("GRID", (0, 0), (-1, -1), 0.5, colors.black),
-        ("FONTSIZE", (0, 0), (-1, -1), 7), # Fonte um pouco menor pra caber
-        ("VALIGN", (0, 0), (-1, -1), "MIDDLE"),
-        ("ALIGN", (4, 1), (-1, -1), "RIGHT"), # Alinha valores à direita
-    ])
-
     rows_buffer = []
     current_y = y
     
+    # Função auxiliar para desenhar página
     def _draw_page(rows, y_pos):
-        tbl = Table([header] + rows, colWidths=final_widths)
+        tbl = Table([header] + rows, colWidths=col_widths)
         tbl.setStyle(table_style)
         _, h_tbl = tbl.wrap(available_width, height)
         tbl.drawOn(c, margin_x, y_pos - h_tbl)
         return y_pos - h_tbl
 
     for row in data_rows:
-        test_tbl = Table([header] + rows_buffer + [row], colWidths=final_widths)
+        test_tbl = Table([header] + rows_buffer + [row], colWidths=col_widths)
         test_tbl.setStyle(table_style)
         _, h_test = test_tbl.wrap(available_width, height)
         
@@ -697,6 +776,8 @@ def gerar_pdf_lista_preco(pedido: PedidoPdf, modo_frete: str = "ambos") -> bytes
             # Quebra página
             _draw_page(rows_buffer, current_y)
             c.showPage()
+            
+            # Recomeça no topo (sem logo grande nas próximas, só margem)
             current_y = height - margin_y
             rows_buffer = [row]
         else:
@@ -709,3 +790,4 @@ def gerar_pdf_lista_preco(pedido: PedidoPdf, modo_frete: str = "ambos") -> bytes
     c.save()
     buffer.seek(0)
     return buffer.read()
+

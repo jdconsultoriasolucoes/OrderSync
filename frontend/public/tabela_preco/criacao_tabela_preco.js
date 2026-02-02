@@ -452,6 +452,49 @@ function setFormDisabled(disabled) {
   if (chkAll) chkAll.disabled = disabled;
 }
 
+// Função auxiliar para mapear item do backend para o formato do frontend
+function mapBackendItemToFrontend(p, t) {
+  return {
+    // chaves que a grade espera:
+    id_linha: p.id_linha ?? p.idLinha ?? null,
+    codigo_tabela: p.codigo_produto_supra ?? p.codigo_tabela ?? '',
+    descricao: p.descricao_produto ?? p.descricao ?? '',
+    embalagem: p.embalagem ?? '',
+    peso_liquido: Number(p.peso_liquido ?? 0),
+    valor: Number(p.valor_produto ?? p.valor ?? 0),
+
+    // comerciais/fiscais
+    desconto: Number(p.comissao_aplicada ?? 0),      // mantém em R$ pra exibir
+    acrescimo: Number(p.ajuste_pagamento ?? 0),      // mantém em R$ pra exibir
+    plano_pagamento: p.codigo_plano_pagamento ?? p.plano_pagamento ?? null,
+    frete_kg: Number(p.frete_kg ?? 0),
+    ipi: Number(p.ipi ?? 0),
+    icms_st: Number(p.icms_st ?? 0),
+    iva_st: Number(p.iva_st ?? 0),
+    grupo: p.grupo ?? null,
+    departamento: p.departamento ?? null,
+
+    // totais que você já exibe na tela
+    total_sem_frete: Number(p.valor_s_frete ?? p.total_sem_frete ?? 0),
+
+    // Markup (carregar do backend)
+    markup: Number(p.markup ?? 0),
+    valor_final_markup: Number(p.valor_final_markup ?? 0),
+    valor_s_frete_markup: Number(p.valor_s_frete_markup ?? 0),
+
+    // guarda para reaproveitar na hora do POST
+    __descricao_fator_label: p.descricao_fator_comissao || null,
+    __plano_pagto_label: p.codigo_plano_pagamento || null, // já vem "COD - desc" às vezes
+    fornecedor: t.fornecedor || '',
+    status_atual: p.status_atual ?? 'ATIVO', // <--- Mapeia status
+
+    // Complementos finais
+    peso_liquido: Number(p.peso_liquido ?? p.peso ?? p.peso_kg ?? p.pesoLiquido ?? 0),
+    peso_bruto: Number(p.peso_bruto ?? 0),
+    tipo: p.tipo ?? p.grupo ?? p.departamento ?? null
+  };
+}
+
 function onDuplicar() {
   // guarda a tabela de ORIGEM para poder voltar na hora do Cancelar
   sourceTabelaId = currentTabelaId ? String(currentTabelaId) : null;
@@ -475,12 +518,13 @@ function onDuplicar() {
   if (cod) cod.value = '';
   if (ramo) ramo.value = '';
 
-  if (frete) frete.value = 0;
+  // if (frete) frete.value = 0; // KEEP
   if (cond) cond.value = '';
-  if (cond) cond.value = '';
+  // duplicado if (cond) cond.value = ''; // clean up
   if (desc) desc.value = '';
+
   const mk = document.getElementById('markup_global');
-  if (mk) mk.value = '';
+  // if (mk) mk.value = ''; // KEEP
 
   // flags de cliente “livre” e travas do IVA
   window.isClienteLivreSelecionado = false;
@@ -1806,7 +1850,7 @@ async function onCancelar(e) {
           document.getElementById('codigo_cliente').value = t.codigo_cliente || '';
 
           // repõe itens e re-renderiza grade
-          itens = Array.isArray(t.produtos) ? t.produtos.map(p => ({ ...p })) : [];
+          itens = Array.isArray(t.produtos) ? t.produtos.map(p => mapBackendItemToFrontend(p, t)) : [];
           if (typeof renderTabela === 'function') renderTabela();
 
           // volta a “apontar” para a origem
