@@ -539,7 +539,10 @@ function onDuplicar() {
 
   // Atualiza preços ao entrar no modo duplicar (novo orçamento)
   atualizarPrecosAtuais()
-    .then(() => recalcTudo())
+    .then(() => {
+      renderTabela(); // Force refresh to ensure inputs/selects are populated from itens
+      return recalcTudo();
+    })
     .catch(err => console.error("Erro ao atualizar preços em onDuplicar:", err));
 }
 
