@@ -631,7 +631,8 @@ def gerar_pdf_lista_preco(pedido: PedidoPdf, modo_frete: str = "ambos") -> bytes
     c.drawRightString(right_text_x, faixa_y + 0.6 * cm, f"Data: {data_str}")
     
     # Validade (se houver)
-    if pedido.validade_tabela and pedido.validade_tabela.lower() != "ver tabela":
+    # Validade (se houver)
+    if pedido.validade_tabela:
         c.drawRightString(right_text_x, faixa_y + 0.2 * cm, f"Proposta válida até: {pedido.validade_tabela}")
     else:
          pass
@@ -663,23 +664,23 @@ def gerar_pdf_lista_preco(pedido: PedidoPdf, modo_frete: str = "ambos") -> bytes
     
     # Injeta Preço 
     if modo_frete == "com":
-        cols_def.append({"name": "R$ C/ Frete", "width": 2.0, "align": "RIGHT"})
+        cols_def.append({"name": "R$ C/ Frete", "width": 2.0, "align": "CENTER"})
     elif modo_frete == "sem":
-        cols_def.append({"name": "R$ S/Frete", "width": 2.0, "align": "RIGHT"})
+        cols_def.append({"name": "R$ S/Frete", "width": 2.0, "align": "CENTER"})
     else: # ambos
-        cols_def.append({"name": "R$ C/ Frete", "width": 1.8, "align": "RIGHT"})
-        cols_def.append({"name": "R$ S/Frete", "width": 1.8, "align": "RIGHT"})
+        cols_def.append({"name": "R$ C/ Frete", "width": 1.8, "align": "CENTER"})
+        cols_def.append({"name": "R$ S/Frete", "width": 1.8, "align": "CENTER"})
 
-    cols_def.append({"name": "Markup %", "width": 1.2, "align": "RIGHT"})
+    cols_def.append({"name": "MKP %", "width": 1.2, "align": "CENTER"})
 
     # Injeta Markup Valor
     if modo_frete == "com":
-        cols_def.append({"name": "Markup C/Frete", "width": 2.2, "align": "RIGHT"})
+        cols_def.append({"name": "MKP C/Frete", "width": 2.2, "align": "CENTER"})
     elif modo_frete == "sem":
-        cols_def.append({"name": "Markup S/Frete", "width": 2.2, "align": "RIGHT"})
+        cols_def.append({"name": "MKP S/Frete", "width": 2.2, "align": "CENTER"})
     else: # ambos
-        cols_def.append({"name": "Markup C/Frete", "width": 2.0, "align": "RIGHT"})
-        cols_def.append({"name": "Markup S/Frete", "width": 2.0, "align": "RIGHT"})
+        cols_def.append({"name": "MKP C/Frete", "width": 2.0, "align": "CENTER"})
+        cols_def.append({"name": "MKP S/Frete", "width": 2.0, "align": "CENTER"})
 
     # Extrai headers e widths
     header = [c["name"] for c in cols_def]
