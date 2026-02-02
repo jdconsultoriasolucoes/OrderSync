@@ -632,7 +632,7 @@ def gerar_pdf_lista_preco(pedido: PedidoPdf, modo_frete: str = "ambos") -> bytes
     
     # Validade (se houver)
     if pedido.validade_tabela and pedido.validade_tabela.lower() != "ver tabela":
-        c.drawRightString(right_text_x, faixa_y + 0.2 * cm, f"Validade: {pedido.validade_tabela}")
+        c.drawRightString(right_text_x, faixa_y + 0.2 * cm, f"Proposta válida até: {pedido.validade_tabela}")
     else:
          pass
 
@@ -656,30 +656,30 @@ def gerar_pdf_lista_preco(pedido: PedidoPdf, modo_frete: str = "ambos") -> bytes
     
     cols_def = [
         {"name": "Cód", "width": 1.2, "align": "CENTER"},
-        {"name": "Produto", "width": 5.0, "align": "LEFT"}, # Alinhado left fica melhor apertado
-        {"name": "Emb", "width": 1.1, "align": "CENTER"}, # Embalagem
+        {"name": "Produto", "width": 5.0, "align": "LEFT"}, 
+        {"name": "Emb", "width": 1.1, "align": "CENTER"}, 
         {"name": "Condição", "width": 2.5, "align": "CENTER"}, 
     ]
     
     # Injeta Preço 
     if modo_frete == "com":
-        cols_def.append({"name": "R$ C/Frete", "width": 2.0, "align": "RIGHT"})
+        cols_def.append({"name": "R$ Com Frete", "width": 2.0, "align": "RIGHT"})
     elif modo_frete == "sem":
-        cols_def.append({"name": "R$ S/Frete", "width": 2.0, "align": "RIGHT"})
+        cols_def.append({"name": "R$ Sem Frete", "width": 2.0, "align": "RIGHT"})
     else: # ambos
-        cols_def.append({"name": "R$ C/Fr", "width": 1.8, "align": "RIGHT"})
-        cols_def.append({"name": "R$ S/Fr", "width": 1.8, "align": "RIGHT"})
+        cols_def.append({"name": "R$ Com Frete", "width": 1.8, "align": "RIGHT"})
+        cols_def.append({"name": "R$ Sem Frete", "width": 1.8, "align": "RIGHT"})
 
     cols_def.append({"name": "Mk %", "width": 1.2, "align": "RIGHT"})
 
     # Injeta Markup Valor
     if modo_frete == "com":
-        cols_def.append({"name": "Venda C/Fr", "width": 2.0, "align": "RIGHT"})
+        cols_def.append({"name": "Venda Com Frete", "width": 2.0, "align": "RIGHT"})
     elif modo_frete == "sem":
-        cols_def.append({"name": "Venda S/Fr", "width": 2.0, "align": "RIGHT"})
+        cols_def.append({"name": "Venda Sem Frete", "width": 2.0, "align": "RIGHT"})
     else: # ambos
-        cols_def.append({"name": "Vnd C/Fr", "width": 1.8, "align": "RIGHT"})
-        cols_def.append({"name": "Vnd S/Fr", "width": 1.8, "align": "RIGHT"})
+        cols_def.append({"name": "Vnd Com Frete", "width": 1.8, "align": "RIGHT"})
+        cols_def.append({"name": "Vnd Sem Frete", "width": 1.8, "align": "RIGHT"})
 
     # Extrai headers e widths
     header = [c["name"] for c in cols_def]

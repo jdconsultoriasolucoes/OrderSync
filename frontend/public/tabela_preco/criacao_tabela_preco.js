@@ -1848,6 +1848,57 @@ async function onCancelar(e) {
           document.getElementById('nome_tabela').value = t.nome_tabela || '';
           document.getElementById('cliente_nome').value = t.cliente_nome || t.cliente || '';
           document.getElementById('codigo_cliente').value = t.codigo_cliente || '';
+          document.getElementById('ramo_juridico').value = t.ramo_juridico || '';
+
+          // RESTORE GLOBAL FIELDS
+          const first = (Array.isArray(t.produtos) && t.produtos.length) ? t.produtos[0] : null;
+
+          const freteInput = document.getElementById('frete_kg');
+          if (freteInput) freteInput.value = String(first?.frete_kg ?? 0);
+
+          // Markup Global (inferir do primeiro item ou usar o que estava salvo se tiver campo na tabela)
+          const mkInput = document.getElementById('markup_global');
+          if (mkInput) {
+            const mkVal = first?.markup ?? 0;
+            mkInput.value = Number(mkVal).toFixed(2);
+          }
+
+          // Condição Pagamento
+          carregarCondicoes().then(() => {
+            const planoSel = document.getElementById('plano_pagamento');
+            if (planoSel) {
+              const planoVal = t.codigo_plano_pagamento ?? first?.codigo_plano_pagamento ?? '';
+              if (planoVal) {
+                const opt = Array.from(planoSel.options).find(o => (o.textContent || '').trim() === String(planoVal).trim() || o.value === String(planoVal));
+                if (opt) planoSel.value = opt.value;
+              } else {
+                planoSel.value = '';
+              }
+              atualizarPillTaxa?.();
+            }
+          });
+
+          // Fator Global
+          carregarDescontos().then(() => {
+            // Lógica de inferência do fator global igual ao carregarItens
+            const dg = document.getElementById('desconto_global');
+            if (dg) {
+              const fatores = (t.produtos || []).map(x => {
+                const c = x.descricao_fator_comissao || '';
+                const code = c.split(' - ')[0].trim();
+                return code;
+              }).filter(Boolean);
+
+              // Se todos forem iguais
+              if (fatores.length > 0 && fatores.every(f => f === fatores[0])) {
+                dg.value = fatores[0];
+              } else {
+                dg.value = '';
+              }
+              atualizarPillDesconto?.();
+            }
+          });
+
 
           // repõe itens e re-renderiza grade
           itens = Array.isArray(t.produtos) ? t.produtos.map(p => mapBackendItemToFrontend(p, t)) : [];
