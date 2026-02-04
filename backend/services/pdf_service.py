@@ -443,7 +443,13 @@ def _desenhar_pdf(pedido: PedidoPdf, buffer: io.BytesIO, sem_validade: bool = Fa
         c.restoreState()
 
     c.showPage()
-    c.save()
+    try:
+        c.save()
+    except Exception as e:
+        if "can only be saved once" in str(e):
+            pass # Ignora erro de duplo save se ocorrer
+        else:
+            raise e
     frete_table.setStyle(
         TableStyle(
             [

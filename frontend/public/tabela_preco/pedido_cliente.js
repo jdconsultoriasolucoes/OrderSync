@@ -632,6 +632,8 @@ async function confirmarPedido() {
 
     // --- Lógica de Download do PDF (Híbrido) ---
     if (data.pdf_base64) {
+      // Auto-download REMOVIDO a pedido
+      /*
       try {
         const link = document.createElement('a');
         link.href = `data:application/pdf;base64,${data.pdf_base64}`;
@@ -642,12 +644,43 @@ async function confirmarPedido() {
       } catch (errPDF) {
         console.error("Erro ao baixar PDF:", errPDF);
       }
+      */
+
+      // Store base64 for manual download
+      window.lastPdfBase64 = data.pdf_base64;
+      window.lastOrderId = pedidoIdConfirmado;
     }
 
     // Atualiza texto do modal para avisar do email/download
     const txtConfirm = document.querySelector('.confirm-text');
     if (txtConfirm) {
-      txtConfirm.innerHTML = "Orçamento confirmado com sucesso!<br>Uma cópia foi enviada para seu e-mail e o download do PDF deve iniciar automaticamente.";
+      txtConfirm.innerHTML = `
+        Orçamento confirmado com sucesso!<br>
+        Uma cópia foi enviada para seu e-mail.
+        <br><br>
+        <button id="btnBaixarManual" style="background-color: #28a745; color: white; border: none; padding: 10px 20px; border-radius: 5px; cursor: pointer; font-size: 1rem; margin-top: 10px;">
+          <i class="fas fa-file-pdf"></i> Baixar PDF do Orçamento
+        </button>
+      `;
+
+      // Bind click event after inserting HTML
+      setTimeout(() => {
+        const btn = document.getElementById('btnBaixarManual');
+        if (btn) {
+          btn.onclick = () => {
+            if (window.lastPdfBase64) {
+              const link = document.createElement('a');
+              link.href = `data:application/pdf;base64,${window.lastPdfBase64}`;
+              link.download = `Orcamento_${window.lastOrderId}.pdf`;
+              document.body.appendChild(link);
+              link.click();
+              document.body.removeChild(link);
+            } else {
+              alert("PDF não disponível para download momento.");
+            }
+          };
+        }
+      }, 100);
     }
 
     openConfirmModal(pedidoIdConfirmado);

@@ -17,7 +17,7 @@ def inspect_client_v2(code):
             if res1:
                  print("Match found! Relevant Fields:")
                  for k, v in res1.items():
-                     if 'nome' in k or 'razao' in k or (v is not None and str(v).strip() != ''):
+                     if 'nome' in k or 'razao' in k or 'email' in k or (v is not None and str(v).strip() != ''):
                          print(f"  {k}: {v}")
             else:
                  print("No match for cadastro_codigo_da_empresa")

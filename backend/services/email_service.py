@@ -120,13 +120,15 @@ def enviar_email_notificacao(
 
     # cópia opcional para o cliente responsável compras (controlada pela flag da mensagem)
     cc = []
-    if getattr(cfg_msg, "enviar_para_cliente", False):
-        email_cli = get_email_cliente_responsavel_compras(
-            db,
-            getattr(pedido, "codigo_cliente", None)  # deve casar com codigo_cliente do Cliente
-        )
-        if email_cli:
-            cc.append(email_cli)
+    # REMOVIDO: O cliente NÃO deve receber cópia deste e-mail (interno), pois o PDF interno tem dados sensíveis.
+    # O cliente recebe um e-mail separado (veja bloco abaixo 'Envio Opcional para o Cliente').
+    # if getattr(cfg_msg, "enviar_para_cliente", False):
+    #     email_cli = get_email_cliente_responsavel_compras(
+    #         db,
+    #         getattr(pedido, "codigo_cliente", None)  # deve casar com codigo_cliente do Cliente
+    #     )
+    #     if email_cli:
+    #         cc.append(email_cli)
 
     pedido_info = {
         "pedido_id": getattr(pedido, "id", ""),
