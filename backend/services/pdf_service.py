@@ -430,9 +430,48 @@ def _desenhar_pdf(pedido: PedidoPdf, buffer: io.BytesIO, sem_validade: bool = Fa
     data_fech.append(["Valor Frete:", "R$ " + _br_number(frete_total)])
     data_fech.append(["Total em Valor:", "R$ " + _br_number(total_valor)])
 
-    # ... (rest of logic) ...
+    # Cria tabelas para medir altura
+    t_fech = Table(data_fech, colWidths=[fech_block_width * 0.6, fech_block_width * 0.4])
+    t_fech.setStyle(TableStyle([
+        ("GRID", (0, 0), (-1, -1), 0.5, colors.black),
+        ("BACKGROUND", (0, 0), (-1, 0), colors.lightgrey), # Header do box
+        ("FONTNAME", (0, 0), (-1, 0), "Helvetica-Bold"),
+        ("FONTSIZE", (0, 0), (-1, -1), 8),
+        ("VALIGN", (0, 0), (-1, -1), "MIDDLE"),
+    ]))
+    
+    t_obs = Table([
+        ["Observações:", obs_text]
+    ], colWidths=[2.5 * cm, obs_block_width - 2.5 * cm])
+    t_obs.setStyle(TableStyle([
+         ("GRID", (0, 0), (-1, -1), 0.5, colors.black),
+         ("BACKGROUND", (0, 0), (0, 0), colors.lightgrey), # Header "Observações:"
+         ("FONTNAME", (0, 0), (0, 0), "Helvetica-Bold"),
+         ("FONTSIZE", (0, 0), (-1, -1), 8),
+         ("VALIGN", (0, 0), (-1, -1), "TOP"),
+         ("ALIGN", (0, 0), (0, 0), "LEFT"),
+    ]))
 
-    # WATERMARK
+    # Medir altura sem desenhar ainda
+    w_f, h_f = t_fech.wrap(fech_block_width, height)
+    w_o, h_o = t_obs.wrap(obs_block_width, height)
+    needed_height = max(h_f, h_o) + 1.0 * cm # margem de segurança
+
+    # Verifica se cabe na página atual
+    if y - needed_height < margin_y:
+        c.showPage()
+        y = height - margin_y # Reset topo da nova página
+    
+    # Agora desenha
+    t_fech.wrapOn(c, fech_block_width, height)
+    t_fech.drawOn(c, margin_x, y - h_f)
+
+    t_obs.wrapOn(c, obs_block_width, height)
+    # Obs alinhada pelo topo do box de fechamento? Ou pelo topo do y atual?
+    # Vamos alinhar pelo topo = y. 
+    t_obs.drawOn(c, margin_x + fech_block_width + gap, y - h_o)
+    
+    # WATERMARK (moved inside helper logic if needed, but handled at end)
     if sem_validade:
         c.saveState()
         c.setFont("Helvetica-Bold", 60)

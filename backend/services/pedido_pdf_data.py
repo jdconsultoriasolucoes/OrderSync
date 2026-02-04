@@ -72,10 +72,16 @@ def carregar_pedido_pdf(db, pedido_id: int) -> PedidoPdf:
             AND tp.ativo = TRUE
 
         -- Busca produto usando o fornecedor da tabela de preço para evitar duplicidade
-        LEFT JOIN t_cadastro_produto_v2 prod
+        -- FIX: Usar subquery para garantir 1 linha por código e evitar 0kg se fornecedor divergir
+        LEFT JOIN (
+            SELECT 
+                codigo_supra, 
+                MAX(peso) as peso, 
+                MAX(peso_bruto) as peso_bruto 
+            FROM t_cadastro_produto_v2 
+            GROUP BY codigo_supra
+        ) prod
             ON prod.codigo_supra = i.codigo
-            AND prod.fornecedor = tp.fornecedor
-            AND prod.status_produto = 'ATIVO'
 
         WHERE p.id_pedido = :pid
         ORDER BY i.quantidade DESC, i.id_item;
