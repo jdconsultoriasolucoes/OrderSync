@@ -128,15 +128,17 @@ def gerar_pdf_cliente_simplificado(pedido: PedidoPdf) -> bytes:
         else:
             valor_unitario = item.valor_retira
         
-        # Markup
+        # Markup - só mostrar se houver diferença real
         markup_display = "-"
-        if item.markup and item.markup > 0:
-            markup_display = f"{_br_number(item.markup, 2)}%"
-        
-        # Valor com markup
         valor_markup_display = "-"
+        
+        # Verificar se há markup aplicado (valor final diferente do valor base)
         if item.valor_final_markup and item.valor_final_markup > 0:
-            valor_markup_display = f"R$ {_br_number(item.valor_final_markup, 2)}"
+            # Comparar com o valor que está sendo usado
+            if abs(item.valor_final_markup - valor_unitario) > 0.01:  # Diferença maior que 1 centavo
+                if item.markup and item.markup > 0:
+                    markup_display = f"{_br_number(item.markup, 2)}%"
+                valor_markup_display = f"R$ {_br_number(item.valor_final_markup, 2)}"
         
         all_rows.append([
             item.codigo or "",
@@ -264,30 +266,31 @@ def gerar_pdf_cliente_simplificado(pedido: PedidoPdf) -> bytes:
             totais_width, totais_height = totais_table.wrap(6.5*cm, height)
             totais_table.drawOn(c, margin_x, y_cursor - totais_height)
             
-            # Observações (lado direito)
+            # Observações (lado direito, alinhado com totais)
             obs_x = margin_x + 7.5*cm
-            obs_y = y_cursor
+            obs_y = y_cursor  # Mesma altura inicial dos totais
             
             # Título com fundo colorido
             c.setFillColor(colors.Color(0.78, 0.70, 0.60))
-            c.rect(obs_x, obs_y, width - obs_x - margin_x, 0.5*cm, fill=1, stroke=0)
+            obs_title_height = 0.5*cm
+            c.rect(obs_x, obs_y - obs_title_height, width - obs_x - margin_x, obs_title_height, fill=1, stroke=0)
             
             c.setFillColor(colors.black)
             c.setFont("Helvetica-Bold", 9)
-            c.drawString(obs_x + 0.2*cm, obs_y + 0.15*cm, "Observações do Cliente:")
+            c.drawString(obs_x + 0.2*cm, obs_y - obs_title_height + 0.15*cm, "Observações do Cliente:")
             
-            # Caixa de observações
+            # Caixa de observações (alinhada com a altura dos totais)
             obs_box_width = width - obs_x - margin_x
-            obs_box_height = totais_height - 0.5*cm
+            obs_box_height = totais_height - obs_title_height
             c.setStrokeColor(colors.grey)
             c.setFillColor(colors.white)
-            c.rect(obs_x, obs_y - obs_box_height - 0.5*cm, obs_box_width, obs_box_height, fill=1, stroke=1)
+            c.rect(obs_x, obs_y - totais_height, obs_box_width, obs_box_height, fill=1, stroke=1)
             
             # Texto das observações
             if pedido.observacoes:
                 c.setFillColor(colors.black)
                 c.setFont("Helvetica", 8)
-                text_obj = c.beginText(obs_x + 0.2*cm, obs_y - 0.8*cm)
+                text_obj = c.beginText(obs_x + 0.2*cm, obs_y - obs_title_height - 0.3*cm)
                 text_obj.setFont("Helvetica", 8)
                 
                 # Quebrar em linhas
@@ -307,7 +310,7 @@ def gerar_pdf_cliente_simplificado(pedido: PedidoPdf) -> bytes:
             else:
                 c.setFillColor(colors.grey)
                 c.setFont("Helvetica-Oblique", 8)
-                c.drawString(obs_x + 0.2*cm, obs_y - 0.8*cm, "Digite aqui...")
+                c.drawString(obs_x + 0.2*cm, obs_y - obs_title_height - 0.3*cm, "Digite aqui...")
     
     # Finalizar
     c.showPage()
