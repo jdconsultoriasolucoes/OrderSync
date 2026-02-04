@@ -71,7 +71,7 @@ def gerar_pdf_cliente_simplificado(pedido: PedidoPdf) -> bytes:
         # Título
         c.setFont("Helvetica-Bold", 16)
         c.drawString(margin_x, y - 0.5*cm, "Solicitação de orçamento")
-        y -= 1.2*cm
+        y -= 1.8*cm  # Mais espaço para não pegar na logo
         
         # Criar tabela com informações do pedido (3 linhas)
         data_pedido_str = "---"
@@ -89,14 +89,17 @@ def gerar_pdf_cliente_simplificado(pedido: PedidoPdf) -> bytes:
             ["Data de entrega:", data_entrega_str]
         ]
         
+        # Largura total da tabela de produtos: 17cm (soma das colunas)
         info_table = Table(info_data, colWidths=[3.5*cm, 13.5*cm])
         info_table.setStyle(TableStyle([
-            # Labels (primeira coluna)
+            # Labels (primeira coluna) - com cor de fundo
+            ('BACKGROUND', (0, 0), (0, -1), colors.Color(0.78, 0.70, 0.60)),
             ('FONTNAME', (0, 0), (0, -1), 'Helvetica-Bold'),
             ('FONTSIZE', (0, 0), (-1, -1), 9),
             ('ALIGN', (0, 0), (0, -1), 'LEFT'),
             
             # Valores (segunda coluna)
+            ('BACKGROUND', (1, 0), (1, -1), colors.white),
             ('FONTNAME', (1, 0), (1, -1), 'Helvetica'),
             ('ALIGN', (1, 0), (1, -1), 'LEFT'),
             
@@ -123,16 +126,16 @@ def gerar_pdf_cliente_simplificado(pedido: PedidoPdf) -> bytes:
     else:
         header_valor = "Valor s/ Frete"
     
-    # Cabeçalho da tabela
+    # Cabeçalho da tabela (com abreviações)
     table_header = [
         "Código",
         "Produto",
         "Embal.",
         "Qtd",
         header_valor,
-        "Condição de\nPagamento",
+        "Cond. de\nPagamento",
         "Markup\n%",
-        "Valor C\nMarkup"
+        "VL. C\nMarkup"
     ]
     
     # Preparar todas as linhas de produtos
@@ -254,13 +257,13 @@ def gerar_pdf_cliente_simplificado(pedido: PedidoPdf) -> bytes:
         # ==================== TOTAIS E OBSERVAÇÕES (APENAS NA ÚLTIMA PÁGINA) ====================
         
         if is_last_page:
-            # Tabela de totais
+            # Tabela de totais (menor para dar mais espaço)
             totais_data = [
                 ["Total em Peso Bruto", f"{_br_number(pedido.total_peso_bruto, 0)} kg"],
-                ["Total em Valor", f"R$ {_br_number(pedido.total_valor, 2)}"]
+                ["Total em VL.", f"R$ {_br_number(pedido.total_valor, 2)}"]
             ]
             
-            totais_table = Table(totais_data, colWidths=[4*cm, 2.5*cm])
+            totais_table = Table(totais_data, colWidths=[3.5*cm, 2.5*cm])
             totais_table.setStyle(TableStyle([
                 ('BACKGROUND', (0, 0), (0, -1), colors.Color(0.78, 0.70, 0.60)),
                 ('TEXTCOLOR', (0, 0), (0, -1), colors.black),
@@ -279,13 +282,13 @@ def gerar_pdf_cliente_simplificado(pedido: PedidoPdf) -> bytes:
                 ('BOTTOMPADDING', (0, 0), (-1, -1), 5),
             ]))
             
-            totais_width, totais_height = totais_table.wrap(6.5*cm, height)
+            totais_width, totais_height = totais_table.wrap(6*cm, height)
             totais_y_base = y_cursor - totais_height
             totais_table.drawOn(c, margin_x, totais_y_base)
             
-            # Observações (lado direito)
+            # Observações (lado direito, mais próximo e menor)
             # O título deve começar na MESMA altura que o topo da tabela de totais
-            obs_x = margin_x + 7.5*cm
+            obs_x = margin_x + 6.5*cm  # Mais próximo dos totais
             obs_title_height = 0.5*cm
             
             # Desenhar título (alinhado com topo dos totais)
