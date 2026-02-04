@@ -107,10 +107,49 @@ const obsCounter = document.getElementById('obsCount');
 
 // -------------------- UI utils --------------------
 function setMensagem(texto, ok = false) {
-  if (!msgEl) return;
   msgEl.textContent = texto;
   msgEl.style.color = ok ? "green" : "red";
 }
+
+// --- Global Download Function for Stability ---
+window.baixarPdfManual = function () {
+  console.log("CLIQUE DOWNLOAD MANUAL");
+  console.log("lastPdfBase64 exists?", !!window.lastPdfBase64);
+  console.log("lastOrderId:", window.lastOrderId);
+
+  // 1. Tenta usar base64 em memória (mais garantido e imediato)
+  if (window.lastPdfBase64 && window.lastOrderId) {
+    try {
+      // ALERT DEBUG
+      // alert("Baixando via Base64...");
+      const link = document.createElement('a');
+      link.href = `data:application/pdf;base64,${window.lastPdfBase64}`;
+      link.download = `Orcamento_${window.lastOrderId}.pdf`;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      return;
+    } catch (e) {
+      console.error("Erro download base64 manual:", e);
+      alert("Erro ao baixar via Base64: " + e.message);
+    }
+  }
+
+  // 2. Fallback: Pega o code da URL
+  const pathParts = window.location.pathname.split('/').filter(Boolean);
+  const code = pathParts[pathParts.length - 1];
+
+  if (code && code.length > 3) {
+    console.log("Fallback CODE:", code);
+    window.open(API(`/link_pedido/pdf_cliente/${code}`), '_blank');
+  } else if (window.lastOrderId) {
+    // 3. Fallback: Se não tem code na URL (modo interno), usa ID
+    console.log("Fallback ID:", window.lastOrderId);
+    window.open(API(`/api/pedido/${window.lastOrderId}/pdf_cliente`), '_blank');
+  } else {
+    alert("Não foi possível identificar o link para download. Verifique seu e-mail para a cópia do orçamento.");
+  }
+};
 
 function atualizarObsCounter() {
   if (!taObs || !obsCounter) return;
@@ -639,23 +678,15 @@ async function confirmarPedido() {
 
     // --- Lógica de Download do PDF (Híbrido) ---
     if (data.pdf_base64) {
-      // Auto-download REMOVIDO a pedido
-      /*
-      try {
-        const link = document.createElement('a');
-        link.href = `data:application/pdf;base64,${data.pdf_base64}`;
-        link.download = `Orcamento_${pedidoIdConfirmado}.pdf`;
-        document.body.appendChild(link);
-        link.click();
-        document.body.removeChild(link);
-      } catch (errPDF) {
-        console.error("Erro ao baixar PDF:", errPDF);
-      }
-      */
+      console.log("PDF Base64 recebido! Length:", data.pdf_base64.length);
+      // alert("DEBUG: PDF Base64 chegou do servidor!");
 
       // Store base64 for manual download
       window.lastPdfBase64 = data.pdf_base64;
       window.lastOrderId = pedidoIdConfirmado;
+    } else {
+      console.warn("DEBUG: data.pdf_base64 veio vazio/nulo.");
+      // alert("DEBUG: data.pdf_base64 veio VAZIO.");
     }
 
     // Atualiza texto do modal para avisar do email/download
@@ -669,47 +700,10 @@ async function confirmarPedido() {
         Orçamento confirmado com sucesso!<br>
         <span style="color: ${data.email_enviado ? 'inherit' : '#d9534f'}">${msgEmail}</span>
         <br><br>
-        <button id="btnBaixarManual" style="background-color: #28a745; color: white; border: none; padding: 10px 20px; border-radius: 5px; cursor: pointer; font-size: 1rem; margin-top: 10px;">
+        <button id="btnBaixarManual" onclick="window.baixarPdfManual()" style="background-color: #28a745; color: white; border: none; padding: 10px 20px; border-radius: 5px; cursor: pointer; font-size: 1rem; margin-top: 10px;">
           <i class="fas fa-file-pdf"></i> Baixar PDF do Orçamento
         </button>
       `;
-
-      // Bind click event after inserting HTML
-      setTimeout(() => {
-        const btn = document.getElementById('btnBaixarManual');
-        if (btn) {
-          btn.onclick = () => {
-            // 1. Tenta usar base64 em memória (mais garantido e imediato)
-            if (window.lastPdfBase64 && window.lastOrderId) {
-              try {
-                const link = document.createElement('a');
-                link.href = `data:application/pdf;base64,${window.lastPdfBase64}`;
-                link.download = `Orcamento_${window.lastOrderId}.pdf`;
-                document.body.appendChild(link);
-                link.click();
-                document.body.removeChild(link);
-                return;
-              } catch (e) {
-                console.error("Erro download base64 manual:", e);
-              }
-            }
-
-            // 2. Fallback: Pega o code da URL
-            const pathParts = window.location.pathname.split('/').filter(Boolean);
-            const code = pathParts[pathParts.length - 1];
-
-            if (code && code.length > 3) {
-              window.open(API(`/link_pedido/pdf_cliente/${code}`), '_blank');
-            } else if (window.lastOrderId) {
-              // 3. Fallback: Se não tem code na URL (modo interno), usa ID
-              // Endpoint: /api/pedido/{id}/pdf_cliente
-              window.open(API(`/api/pedido/${window.lastOrderId}/pdf_cliente`), '_blank');
-            } else {
-              alert("Não foi possível identificar o link para download. Verifique seu e-mail para a cópia do orçamento.");
-            }
-          };
-        }
-      }, 100);
     }
 
     openConfirmModal(pedidoIdConfirmado);
