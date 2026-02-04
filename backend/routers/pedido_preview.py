@@ -138,8 +138,11 @@ async def pedido_preview(
 def confirmar_pedido(tabela_id: int, body: ConfirmarPedidoRequest):
     with SessionLocal() as db:
         try:
-            return criar_pedido_confirmado(db, tabela_id, body)
+            result = criar_pedido_confirmado(db, tabela_id, body)
+            db.commit()
+            return result
         except ValueError as ve:
+             db.rollback()
              raise HTTPException(status_code=400, detail=str(ve))
         except Exception as e:
              logger.exception(f"Erro confirmar_pedido: {e}")
