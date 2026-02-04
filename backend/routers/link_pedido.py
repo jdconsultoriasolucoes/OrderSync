@@ -199,13 +199,14 @@ def baixar_pdf_cliente(code: str):
         row = db.execute(text("""
             SELECT id_pedido, cliente 
             FROM tb_pedidos 
-            WHERE link_token = :c 
+            WHERE TRIM(link_token) = :c 
             ORDER BY id_pedido DESC 
             LIMIT 1
-        """), {"c": code}).mappings().first()
+        """), {"c": code.strip()}).mappings().first()
 
         if not row:
-            raise HTTPException(404, "Pedido não encontrado para este link ou link ainda não confirmado.")
+            # Debug: Mostrar o código que falhou
+            raise HTTPException(404, f"Pedido não encontrado para este link ({code}) ou link ainda não confirmado.")
         
         pedido_id = row["id_pedido"]
         cliente_nome = row["cliente"] or "Cliente"

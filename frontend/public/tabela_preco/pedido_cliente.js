@@ -552,7 +552,8 @@ async function confirmarPedido() {
     setMensagem("Enviando pedido...", true);
 
     // token do link curto (/p/{code})
-    const originCode = location.pathname.split('/').pop() || null;
+    const pathParts = location.pathname.split('/').filter(Boolean);
+    const originCode = pathParts.length > 0 ? pathParts[pathParts.length - 1] : null;
 
     // razão social mostrada na tela
     const clienteRazao = (document.getElementById('razaoSocialCliente')?.textContent || '').trim() || null;
