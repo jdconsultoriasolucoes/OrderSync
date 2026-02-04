@@ -124,7 +124,7 @@ def _desenhar_pdf(pedido: PedidoPdf, buffer: io.BytesIO, sem_validade: bool = Fa
     c.drawString(
         margin_x + 0.3 * cm,
         faixa_y - faixa_h + 0.35 * cm,
-        "DIGITAÇÃO DO ORÇAMENTO"
+        "ORÇAMENTO" if sem_validade else "PEDIDO DE VENDA"
     )
 
     # Data / Validade (Bloco direito do header)

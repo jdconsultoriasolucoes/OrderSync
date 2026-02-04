@@ -9,7 +9,11 @@ def carregar_pedido_pdf(db, pedido_id: int) -> PedidoPdf:
     sql = text("""
         SELECT
             p.id_pedido,
-            p.codigo_cliente,
+            CASE 
+                WHEN p.codigo_cliente IS NULL OR p.codigo_cliente = 'Não cadastrado' OR p.codigo_cliente = ''
+                THEN c.cadastro_codigo_da_empresa::text
+                ELSE p.codigo_cliente
+            END AS codigo_cliente,
             p.cliente,
             c.cadastro_nome_cliente AS nome_empresarial, /* RAZAO SOCIAL LEGAL V2 */
 
@@ -50,7 +54,8 @@ def carregar_pedido_pdf(db, pedido_id: int) -> PedidoPdf:
 
         FROM tb_pedidos p
         LEFT JOIN public.t_cadastro_cliente_v2 c
-            ON c.cadastro_codigo_da_empresa::text = p.codigo_cliente
+            ON c.cadastro_codigo_da_empresa::text = p.codigo_cliente  -- Match by code
+            OR c.cadastro_nome_cliente = p.cliente                    -- OR Match by name (fallback if code missing)
 
         -- AQUI o pulo do gato: "condensa" a tabela de preço em 1 linha por tabela
         LEFT JOIN (
@@ -128,9 +133,34 @@ def carregar_pedido_pdf(db, pedido_id: int) -> PedidoPdf:
             fornecedor=r.get("item_fornecedor") or "",
         ))
 
+    # PREFER V2 CODE IF AVAILABLE
+    # Se p.codigo_cliente for "Não cadastrado" ou null, e achamos match em c.codigo, usamos c.codigo
+    cod_final = head["codigo_cliente"]
+    # Se existe codigo da empresa na query (V2), vamos usar?
+    # O SQL acima nao seleciona c.cadastro_codigo_da_empresa explicitamente no SELECT list.
+    # Precisamos adicionar no SELECT lá de cima.
+    # Mas como não posso editar o SELECT list e o JOIN juntos facilmente sem reescrever tudo...
+    # Vou editar o SELECT list primeiro em outro passo ou assumir que vou reescrever o bloco todo.
+    # O replacement atual JÁ inclui o bloco todo.
+    # Vou ajustar o SELECT list aqui no replacement content.
+
+    # ... [See logic below in actual tool call] ...
+    # Wait, I need to verify I'm editing the whole function or block.
+    # The snippet covers from FROM tb_pedidos to return.
+    # But I missed the SELECT list at the top.
+    # Lines 8-148 cover pretty much the whole function.
+    # I should start the replacement at line 51 (FROM) and go down.
+    # But I also need to change the SELECT to get the V2 code.
+    
+    # Let's perform TWO replacements or replace the WHOLE function 
+    # to be safe and clean. 
+    # Logic:
+    # 1. Update SELECT to include `c.cadastro_codigo_da_empresa`
+    # 2. Update LEFT JOIN Logic
+    # 3. Update return logic to use V2 code if better.
     return PedidoPdf(
         id_pedido=head["id_pedido"],
-        codigo_cliente=head["codigo_cliente"],
+        codigo_cliente=head["codigo_cliente"], # Will fix this in next step
         cliente=head["cliente"] or "",
         nome_fantasia=head.get("nome_fantasia") or "Sem Nome Fantasia",
         razao_social=head.get("nome_empresarial") or None,
