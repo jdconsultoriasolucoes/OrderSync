@@ -565,11 +565,17 @@ def gerar_pdf_pedido(*args, destino_dir: str = "/tmp", sem_validade: bool = Fals
     if "sem_validade" in kwargs:
         sem_validade = kwargs["sem_validade"]
 
-    # Gera em memória (mais rápido e seguro que File IO)
-    buffer = io.BytesIO()
-    _desenhar_pdf(pedido, buffer, sem_validade=sem_validade)
-    buffer.seek(0)
-    return buffer.read()
+    # Escolher layout baseado em sem_validade
+    if sem_validade:
+        # Layout simplificado para o cliente
+        from services.pdf_cliente_layout import gerar_pdf_cliente_simplificado
+        return gerar_pdf_cliente_simplificado(pedido)
+    else:
+        # Layout completo para o vendedor
+        buffer = io.BytesIO()
+        _desenhar_pdf(pedido, buffer, sem_validade=False)
+        buffer.seek(0)
+        return buffer.read()
 
 
 

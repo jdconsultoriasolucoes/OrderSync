@@ -25,6 +25,9 @@ def carregar_pedido_pdf(db, pedido_id: int) -> PedidoPdf:
 
             p.confirmado_em,
             p.data_retirada,
+            p.validade_ate,
+            p.validade_dias,
+            p.usar_valor_com_frete,
             p.frete_total,
             p.peso_total_kg, /* Este costuma ser o peso considerado para frete (agora bruto) */
             p.total_pedido,
@@ -146,6 +149,20 @@ def carregar_pedido_pdf(db, pedido_id: int) -> PedidoPdf:
     if not final_cod or final_cod.strip() == "Não cadastrado":
         final_cod = "---"
 
+    # Formatar validade para exibição
+    validade_display = "Não se aplica"
+    if head.get("validade_ate"):
+        try:
+            from datetime import datetime
+            val_date = head["validade_ate"]
+            if isinstance(val_date, str):
+                val_date = datetime.strptime(val_date, "%Y-%m-%d").date()
+            validade_display = val_date.strftime("%d/%m/%Y")
+        except:
+            validade_display = str(head["validade_ate"])
+    elif head.get("validade_dias"):
+        validade_display = f"{head['validade_dias']} dias"
+
     return PedidoPdf(
         id_pedido=head["id_pedido"],
         codigo_cliente=final_cod,
@@ -156,7 +173,8 @@ def carregar_pedido_pdf(db, pedido_id: int) -> PedidoPdf:
         data_entrega_ou_retirada=head["data_retirada"],
         frete_total=float(head["frete_total"] or 0),
         frete_kg=float(head.get("frete_kg") or 0),
-        validade_tabela="Não se aplica",
+        validade_tabela=validade_display,
+        usar_valor_com_frete=bool(head.get("usar_valor_com_frete", True)),
         total_peso_bruto=sum_peso_bru,
         total_peso_liquido=sum_peso_liq,
         total_valor=float(head["total_pedido"] or 0),
