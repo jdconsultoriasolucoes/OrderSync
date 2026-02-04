@@ -543,7 +543,7 @@ function lockPageAfterConfirm() {
   // Desabilita todos os elementos interativos da página (menos o botão do modal)
   document.body.classList.add('page-locked');
   document.querySelectorAll('input, textarea, select, button').forEach(el => {
-    if (el.id === 'btnFecharConfirm') return;
+    if (el.id === 'btnFecharConfirm' || el.id === 'btnBaixarManual') return;
     el.disabled = true;
   });
   // Também evita scroll enquanto o modal estiver aberto
