@@ -17,6 +17,8 @@ logger = logging.getLogger("pedido_confirmacao_service")
 TZ = ZoneInfo("America/Sao_Paulo")
 
 def criar_pedido_confirmado(db: Session, tabela_id: int, body: ConfirmarPedidoRequest) -> Dict[str, Any]:
+    print(f"DEBUG: ConfirmarPedido - OriginCode: '{body.origin_code}' | Cliente: '{body.cliente}'")
+    
     # 1) validação básica
     if not body.produtos:
         raise ValueError("Nenhum item informado")

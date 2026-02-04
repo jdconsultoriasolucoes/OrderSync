@@ -555,6 +555,12 @@ async function confirmarPedido() {
     const pathParts = location.pathname.split('/').filter(Boolean);
     const originCode = pathParts.length > 0 ? pathParts[pathParts.length - 1] : null;
 
+    // DEBUG: Verificar se o código foi detectado
+    if (!originCode) {
+      alert("AVISO: Código do link não detectado (originCode is null). O download do PDF pode falhar.");
+    }
+    // console.log("OriginCode:", originCode);
+
     // razão social mostrada na tela
     const clienteRazao = (document.getElementById('razaoSocialCliente')?.textContent || '').trim() || null;
 
