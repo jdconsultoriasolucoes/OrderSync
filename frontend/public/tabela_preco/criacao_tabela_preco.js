@@ -852,8 +852,11 @@ function setupClienteAutocomplete() {
       e.preventDefault();
       if (items.length && idx >= 0) {
         selectItem(idx);
+      } else if (items.length) {
+        // Auto-select first item if list exists but nothing highlighted
+        selectItem(0);
       } else {
-        // aceita o que foi digitado
+        // aceita o que foi digitado (raw text)
         const val = (input.value || '').trim();
         if (!val) return;
         items = [{ __raw: true, nome: val }];
@@ -867,7 +870,28 @@ function setupClienteAutocomplete() {
     const el = e.target.closest('.suggest'); if (!el) return;
     selectItem(Number(el.dataset.i) || 0);
   });
-  input.addEventListener('blur', () => setTimeout(() => { box.innerHTML = ''; box.style.display = 'none'; }, 150));
+  input.addEventListener('blur', () => {
+    // --- AUTO-RECOVER on Blur ---
+    // Se o usuário saiu do campo e o código ficou vazio (porque editou o nome),
+    // tenta achar correspondência EXATA no que foi carregado/buscado para restaurar o código.
+    const codEl = document.getElementById('codigo_cliente');
+    if (codEl && !codEl.value && items.length > 0) {
+      const currentVal = (input.value || '').trim();
+      if (currentVal) {
+        // Procura match exato por NOME (case insensitive)
+        const matchIdx = items.findIndex(item =>
+          !item.__raw && (item.nome || '').toLowerCase() === currentVal.toLowerCase()
+        );
+
+        if (matchIdx >= 0) {
+          console.log("Auto-recovering client code for:", currentVal);
+          selectItem(matchIdx);
+        }
+      }
+    }
+
+    setTimeout(() => { box.innerHTML = ''; box.style.display = 'none'; }, 150);
+  });
 }
 
 // PATCH: bloqueio/controle do IVA_ST conforme cliente (livre x cadastrado)
@@ -1732,6 +1756,20 @@ async function salvarTabela() {
   const calcula_st = !!document.getElementById('iva_st_toggle')?.checked;
   // Se codigo_cliente for nulo, mande null (não grave "Não cadastrado" string)
   const payload = { nome_tabela, cliente, codigo_cliente, ramo_juridico, fornecedor: fornecedorHeader, calcula_st, produtos };
+
+  // --- SAFETY CHECK FOR EMAIL ---
+  // Se tem nome mas não tem código, o e-mail não vai funcionar.
+  if (cliente && !codigo_cliente) {
+    const confirmMsg = "⚠️ ATENÇÃO:\n\n" +
+      "O cliente informado NÃO foi vinculado ao cadastro (está sem código).\n" +
+      "Isso significa que o sistema NÃO conseguirá enviar o e-mail de confirmação automaticamente.\n\n" +
+      "Deseja salvar mesmo assim?";
+    if (!confirm(confirmMsg)) {
+      // Usuário cancelou para corrigir
+      document.getElementById('cliente_nome')?.focus();
+      return;
+    }
+  }
   try {
     const resp = await salvarTabelaPreco(payload);
     return resp;

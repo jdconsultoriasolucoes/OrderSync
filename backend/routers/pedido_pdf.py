@@ -26,13 +26,13 @@ def gerar_pdf_pedido_endpoint(pedido_id: int):
         except ValueError:
             raise HTTPException(status_code=404, detail="Pedido não encontrado")
 
-        path = gerar_pdf_pedido(pedido_pdf)
+        # Agora retorna bytes
+        pdf_bytes = gerar_pdf_pedido(pedido_pdf)
 
-        filename = os.path.basename(path)
         return StreamingResponse(
-            open(path, "rb"),
+            io.BytesIO(pdf_bytes),
             media_type="application/pdf",
-            headers={"Content-Disposition": f'inline; filename=\"{filename}\"'}
+            headers={"Content-Disposition": f'inline; filename="Pedido_{pedido_id}.pdf"'}
         )
 
 

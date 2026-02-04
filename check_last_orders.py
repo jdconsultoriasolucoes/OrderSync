@@ -2,7 +2,8 @@ import sys
 import os
 
 # Add backend directory to path so we can import modules
-sys.path.append(os.path.join(os.getcwd(), 'backend'))
+sys.path.append('backend')
+os.environ["DATABASE_URL"] = "postgresql://dispet_admin_:VTCgwlOp1saQYLdv2gLeHQOVdbhvZO33@dpg-d4781ehr0fns73f9ipc0-a.oregon-postgres.render.com/db_ordersync"
 
 try:
     from database import SessionLocal

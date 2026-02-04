@@ -659,11 +659,15 @@ async function confirmarPedido() {
     }
 
     // Atualiza texto do modal para avisar do email/download
+    const msgEmail = data.email_enviado === true
+      ? "Uma cópia foi enviada para seu e-mail."
+      : "E-mail não cadastrado (ou não configurado).";
+
     const txtConfirm = document.querySelector('.confirm-text');
     if (txtConfirm) {
       txtConfirm.innerHTML = `
         Orçamento confirmado com sucesso!<br>
-        Uma cópia foi enviada para seu e-mail.
+        <span style="color: ${data.email_enviado ? 'inherit' : '#d9534f'}">${msgEmail}</span>
         <br><br>
         <button id="btnBaixarManual" style="background-color: #28a745; color: white; border: none; padding: 10px 20px; border-radius: 5px; cursor: pointer; font-size: 1rem; margin-top: 10px;">
           <i class="fas fa-file-pdf"></i> Baixar PDF do Orçamento

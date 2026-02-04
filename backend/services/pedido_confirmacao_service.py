@@ -307,5 +307,16 @@ def criar_pedido_confirmado(db: Session, tabela_id: int, body: ConfirmarPedidoRe
             """), {"agora": agora, "id": new_id})
             db.commit()
 
-    # 9) resposta — SEM expor nada de e-mail
-    return {"id": new_id, "status": "CRIADO"}
+    # 9) resposta — com flag de email
+    # Verifica se realmente enviamos para o cliente (lógica duplicada da função enviar_email_notificacao,
+    # idealmente o enviar_email retornaria info, mas vamos inferir aqui para não refatorar tudo agora)
+    email_enviado_cliente = False
+    if EMAIL_MODE != "off":
+        try:
+             cfg_msg = _get_cfg_msg(db)
+             if cfg_msg.enviar_para_cliente and novo_pedido.cliente_email:
+                 email_enviado_cliente = True
+        except:
+             pass
+
+    return {"id": new_id, "status": "CRIADO", "email_enviado": email_enviado_cliente}
