@@ -89,8 +89,8 @@ def gerar_pdf_cliente_simplificado(pedido: PedidoPdf) -> bytes:
             ["Data de entrega:", data_entrega_str]
         ]
         
-        # Largura total da tabela de produtos: 17cm (soma das colunas)
-        info_table = Table(info_data, colWidths=[3.5*cm, 13.5*cm])
+        # Largura total padronizada: 17.3cm (mesma da tabela de produtos)
+        info_table = Table(info_data, colWidths=[3.5*cm, 13.8*cm])
         info_table.setStyle(TableStyle([
             # Labels (primeira coluna) - com cor de fundo
             ('BACKGROUND', (0, 0), (0, -1), colors.Color(0.78, 0.70, 0.60)),
@@ -257,12 +257,13 @@ def gerar_pdf_cliente_simplificado(pedido: PedidoPdf) -> bytes:
         # ==================== TOTAIS E OBSERVAÇÕES (APENAS NA ÚLTIMA PÁGINA) ====================
         
         if is_last_page:
-            # Tabela de totais (menor para dar mais espaço)
+            # Tabela de totais + Observações (largura total: 17.3cm)
             totais_data = [
                 ["Total em Peso Bruto", f"{_br_number(pedido.total_peso_bruto, 0)} kg"],
                 ["Total em VL.", f"R$ {_br_number(pedido.total_valor, 2)}"]
             ]
             
+            # Totais: 6cm, Observações: 11.3cm (total = 17.3cm)
             totais_table = Table(totais_data, colWidths=[3.5*cm, 2.5*cm])
             totais_table.setStyle(TableStyle([
                 ('BACKGROUND', (0, 0), (0, -1), colors.Color(0.78, 0.70, 0.60)),
@@ -286,21 +287,20 @@ def gerar_pdf_cliente_simplificado(pedido: PedidoPdf) -> bytes:
             totais_y_base = y_cursor - totais_height
             totais_table.drawOn(c, margin_x, totais_y_base)
             
-            # Observações (lado direito, mais próximo e menor)
-            # O título deve começar na MESMA altura que o topo da tabela de totais
-            obs_x = margin_x + 6.5*cm  # Mais próximo dos totais
+            # Observações (lado direito) - largura: 11.3cm para totalizar 17.3cm
+            obs_x = margin_x + 6*cm  # Logo após os totais
             obs_title_height = 0.5*cm
+            obs_box_width = 11.3*cm  # Largura calculada para totalizar 17.3cm
             
             # Desenhar título (alinhado com topo dos totais)
             c.setFillColor(colors.Color(0.78, 0.70, 0.60))
-            c.rect(obs_x, y_cursor - obs_title_height, width - obs_x - margin_x, obs_title_height, fill=1, stroke=0)
+            c.rect(obs_x, y_cursor - obs_title_height, obs_box_width, obs_title_height, fill=1, stroke=0)
             
             c.setFillColor(colors.black)
             c.setFont("Helvetica-Bold", 9)
             c.drawString(obs_x + 0.2*cm, y_cursor - obs_title_height + 0.15*cm, "Observações do Cliente:")
             
             # Caixa de observações (logo abaixo do título, termina na mesma altura que os totais)
-            obs_box_width = width - obs_x - margin_x
             obs_box_y_top = y_cursor - obs_title_height
             obs_box_height = totais_height - obs_title_height
             
