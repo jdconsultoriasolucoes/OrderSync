@@ -206,6 +206,7 @@ def baixar_pdf_cliente(code: str):
 
         if not row:
             # Debug: Mostrar o código que falhou
+            print(f"[baixar_pdf_cliente] Falha: Link token '{code}' não encontrado ou pedido não confirmado.")
             raise HTTPException(404, f"Pedido não encontrado para este link ({code}) ou link ainda não confirmado.")
         
         pedido_id = row["id_pedido"]
@@ -214,6 +215,8 @@ def baixar_pdf_cliente(code: str):
         try:
             from services.pedido_pdf_data import carregar_pedido_pdf
             from services.pdf_service import gerar_pdf_pedido
+            
+            print(f"[baixar_pdf_cliente] Gerando PDF para pedido_id={pedido_id} (Token: {code})")
             
             # Carrega dados
             pedido_pdf = carregar_pedido_pdf(db, pedido_id)

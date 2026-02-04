@@ -1800,6 +1800,7 @@ async function salvarTabela() {
     }
   }
   try {
+    console.log("Payload enviando para salvarTabelaPreco:", JSON.stringify(payload, null, 2));
     const resp = await salvarTabelaPreco(payload);
     return resp;
   } catch (e) {

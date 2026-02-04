@@ -150,7 +150,13 @@ def update_tabela(db: Session, id_tabela: int, body: TabelaSalvar, usuario_email
         for r in existentes:
             r.nome_tabela    = body.nome_tabela
             r.cliente        = body.cliente
-            r.codigo_cliente = body.codigo_cliente or "Não cadastrado"
+            # Proteção: só atualiza codigo_cliente se vier preenchido
+            if body.codigo_cliente:
+                r.codigo_cliente = body.codigo_cliente
+            elif not r.codigo_cliente:
+                # Se não tem nada no banco, define padrão
+                r.codigo_cliente = "Não cadastrado"
+            
             r.fornecedor     = body.fornecedor or ""
             r.calcula_st     = bool(getattr(body, "calcula_st", False))
             r.editado_em     = now

@@ -120,18 +120,23 @@ window.baixarPdfManual = function () {
   // 1. Tenta usar base64 em memória (mais garantido e imediato)
   if (window.lastPdfBase64 && window.lastOrderId) {
     try {
-      // ALERT DEBUG
-      // alert("Baixando via Base64...");
+      // Feedback visual
+      const btn = document.getElementById('btnBaixarManual');
+      if (btn) { btn.textContent = "Gerando PDF..."; btn.disabled = true; }
+
       const link = document.createElement('a');
       link.href = `data:application/pdf;base64,${window.lastPdfBase64}`;
       link.download = `Orcamento_${window.lastOrderId}.pdf`;
       document.body.appendChild(link);
       link.click();
       document.body.removeChild(link);
+
+      // Reset botão
+      setTimeout(() => { if (btn) { btn.textContent = "Baixar PDF do Orçamento"; btn.disabled = false; } }, 1000);
       return;
     } catch (e) {
       console.error("Erro download base64 manual:", e);
-      alert("Erro ao baixar via Base64: " + e.message);
+      alert("Houve um erro ao gerar o arquivo. Tente recarregar a página.");
     }
   }
 
