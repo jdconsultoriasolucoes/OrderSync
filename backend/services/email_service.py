@@ -120,8 +120,8 @@ def enviar_email_notificacao(
 
     # cópia opcional para o cliente responsável compras (controlada pela flag da mensagem)
     cc = []
-    # REMOVIDO: O cliente NÃO deve receber cópia deste e-mail (interno), pois o PDF interno tem dados sensíveis.
-    # O cliente recebe um e-mail separado (veja bloco abaixo 'Envio Opcional para o Cliente').
+    # REMOVIDO (CONFIRMADO PELO USUARIO): O cliente NÃO deve receber cópia deste e-mail (interno).
+    # O cliente recebe um e-mail separado com o PDF correto.
     # if getattr(cfg_msg, "enviar_para_cliente", False):
     #     email_cli = get_email_cliente_responsavel_compras(
     #         db,
