@@ -44,7 +44,7 @@ def gerar_pdf_cliente_simplificado(pedido: PedidoPdf) -> bytes:
     c = canvas.Canvas(buffer, pagesize=pagesize)
     width, height = pagesize
     
-    margin_x = 1.5 * cm
+    margin_x = 1.0 * cm  # Reduzido de 1.5cm para 1.0cm
     margin_y = 1.0 * cm
     
     # ==================== FUNÇÃO AUXILIAR: DESENHAR CABEÇALHO ====================
@@ -89,8 +89,8 @@ def gerar_pdf_cliente_simplificado(pedido: PedidoPdf) -> bytes:
             ["Data de entrega:", data_entrega_str]
         ]
         
-        # Largura total padronizada: 17.3cm (mesma da tabela de produtos)
-        info_table = Table(info_data, colWidths=[3.5*cm, 13.8*cm])
+        # Largura total padronizada: 19cm (mesma da tabela de produtos)
+        info_table = Table(info_data, colWidths=[3.5*cm, 15.5*cm])
         info_table.setStyle(TableStyle([
             # Labels (primeira coluna) - com cor de fundo
             ('BACKGROUND', (0, 0), (0, -1), colors.Color(0.78, 0.70, 0.60)),
@@ -172,8 +172,11 @@ def gerar_pdf_cliente_simplificado(pedido: PedidoPdf) -> bytes:
     
     # ==================== PAGINAÇÃO ====================
     
-    # Larguras das colunas (ajustadas para retrato)
-    col_widths = [1.8*cm, 5*cm, 1.2*cm, 1*cm, 2*cm, 3*cm, 1.3*cm, 2*cm]
+    # Larguras das colunas (ajustadas para retrato com margens menores)
+    # Total disponível: ~19cm (21cm - 2cm de margens)
+    col_widths = [1.6*cm, 5.0*cm, 1.1*cm, 0.9*cm, 2*cm, 5.2*cm, 1.2*cm, 2.0*cm]
+    # Total: 19cm
+    # Produto: 5.0cm, Cond. Pagamento: 5.2cm (+0.7cm), VL. C Markup: 2.0cm
     
     # Altura aproximada de cada linha
     row_height = 0.6*cm
@@ -257,13 +260,13 @@ def gerar_pdf_cliente_simplificado(pedido: PedidoPdf) -> bytes:
         # ==================== TOTAIS E OBSERVAÇÕES (APENAS NA ÚLTIMA PÁGINA) ====================
         
         if is_last_page:
-            # Tabela de totais + Observações (largura total: 17.3cm)
+            # Tabela de totais + Observações (largura total: 19cm)
             totais_data = [
                 ["Total em Peso Bruto", f"{_br_number(pedido.total_peso_bruto, 0)} kg"],
                 ["Total em VL.", f"R$ {_br_number(pedido.total_valor, 2)}"]
             ]
             
-            # Totais: 6cm, Observações: 11.3cm (total = 17.3cm)
+            # Totais: 6cm, Observações: 13cm (total = 19cm)
             totais_table = Table(totais_data, colWidths=[3.5*cm, 2.5*cm])
             totais_table.setStyle(TableStyle([
                 ('BACKGROUND', (0, 0), (0, -1), colors.Color(0.78, 0.70, 0.60)),
@@ -287,10 +290,10 @@ def gerar_pdf_cliente_simplificado(pedido: PedidoPdf) -> bytes:
             totais_y_base = y_cursor - totais_height
             totais_table.drawOn(c, margin_x, totais_y_base)
             
-            # Observações (lado direito) - largura: 11.3cm para totalizar 17.3cm
+            # Observações (lado direito) - largura: 13cm para totalizar 19cm
             obs_x = margin_x + 6*cm  # Logo após os totais
             obs_title_height = 0.5*cm
-            obs_box_width = 11.3*cm  # Largura calculada para totalizar 17.3cm
+            obs_box_width = 13*cm  # Largura calculada para totalizar 19cm
             
             # Desenhar título (alinhado com topo dos totais)
             c.setFillColor(colors.Color(0.78, 0.70, 0.60))
@@ -329,10 +332,6 @@ def gerar_pdf_cliente_simplificado(pedido: PedidoPdf) -> bytes:
                     text_obj.textLine(line.strip())
                 
                 c.drawText(text_obj)
-            else:
-                c.setFillColor(colors.grey)
-                c.setFont("Helvetica-Oblique", 8)
-                c.drawString(obs_x + 0.2*cm, obs_box_y_top - 0.3*cm, "Digite aqui...")
     
     # Finalizar
     c.showPage()

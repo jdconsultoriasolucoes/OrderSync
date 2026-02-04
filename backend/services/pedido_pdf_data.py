@@ -23,7 +23,7 @@ def carregar_pedido_pdf(db, pedido_id: int) -> PedidoPdf:
 
             t.frete_kg AS frete_kg,
 
-            p.confirmado_em,
+            p.confirmado_em AT TIME ZONE 'America/Sao_Paulo' AS confirmado_em,
             p.data_retirada,
             p.validade_ate,
             p.validade_dias,

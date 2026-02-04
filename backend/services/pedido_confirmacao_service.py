@@ -279,8 +279,8 @@ def criar_pedido_confirmado(db: Session, tabela_id: int, body: ConfirmarPedidoRe
                 # 1) carrega os dados do pedido no formato PedidoPdf
                 pedido_pdf = carregar_pedido_pdf(db, new_id)
 
-                # 2) gera o arquivo com layout do CLIENTE (sem validade/Orçamento)
-                pdf_bytes = gerar_pdf_pedido(pedido_pdf, sem_validade=True)
+                # 2) gera o arquivo com layout do VENDEDOR (completo, para email)
+                pdf_bytes = gerar_pdf_pedido(pedido_pdf, sem_validade=False)
                 
             except Exception as e_pdf:
                 logging.exception("Falha ao gerar PDF (ignorada): %s", e_pdf)
