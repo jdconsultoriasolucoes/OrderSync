@@ -49,6 +49,7 @@ def carregar_pedido_pdf(db, pedido_id: int) -> PedidoPdf:
             tp.valor_s_frete_markup   AS item_valor_s_frete_markup
 
         FROM tb_pedidos p
+        -- JOIN para pegar dados V2, inclusive o código real se existir
         LEFT JOIN public.t_cadastro_cliente_v2 c
             ON c.cadastro_codigo_da_empresa::text = p.codigo_cliente
 
@@ -72,7 +73,6 @@ def carregar_pedido_pdf(db, pedido_id: int) -> PedidoPdf:
             AND tp.ativo = TRUE
 
         -- Busca produto usando o fornecedor da tabela de preço para evitar duplicidade
-        -- FIX: Usar subquery para garantir 1 linha por código e evitar 0kg se fornecedor divergir
         LEFT JOIN (
             SELECT 
                 codigo_supra, 
@@ -134,34 +134,21 @@ def carregar_pedido_pdf(db, pedido_id: int) -> PedidoPdf:
             fornecedor=r.get("item_fornecedor") or "",
         ))
 
-    # PREFER V2 CODE IF AVAILABLE
-    # Se p.codigo_cliente for "Não cadastrado" ou null, e achamos match em c.codigo, usamos c.codigo
-    cod_final = head["codigo_cliente"]
-    # Se existe codigo da empresa na query (V2), vamos usar?
-    # O SQL acima nao seleciona c.cadastro_codigo_da_empresa explicitamente no SELECT list.
-    # Precisamos adicionar no SELECT lá de cima.
-    # Mas como não posso editar o SELECT list e o JOIN juntos facilmente sem reescrever tudo...
-    # Vou editar o SELECT list primeiro em outro passo ou assumir que vou reescrever o bloco todo.
-    # O replacement atual JÁ inclui o bloco todo.
-    # Vou ajustar o SELECT list aqui no replacement content.
-
-    # ... [See logic below in actual tool call] ...
-    # Wait, I need to verify I'm editing the whole function or block.
-    # The snippet covers from FROM tb_pedidos to return.
-    # But I missed the SELECT list at the top.
-    # Lines 8-148 cover pretty much the whole function.
-    # I should start the replacement at line 51 (FROM) and go down.
-    # But I also need to change the SELECT to get the V2 code.
+    # Tenta usar codigo do pedido, se não for "Não cadastrado"
+    raw_cod = head["codigo_cliente"]
+    final_cod = raw_cod
     
-    # Let's perform TWO replacements or replace the WHOLE function 
-    # to be safe and clean. 
-    # Logic:
-    # 1. Update SELECT to include `c.cadastro_codigo_da_empresa`
-    # 2. Update LEFT JOIN Logic
-    # 3. Update return logic to use V2 code if better.
+    # Se o pedido diz "Não cadastrado" ou nada, tentamos ver se o JOIN do cliente trouxe algo (o que seria estranho dado o ON, mas vai que...)
+    # Na verdade, se o ON falhou, c.* é null.
+    # Mas se p.codigo_cliente for um ID válido que bateu no ON, usamos ele.
+    
+    # Ajuste: se raw_cod for vazio/none, exibe traço
+    if not final_cod or final_cod.strip() == "Não cadastrado":
+        final_cod = "---"
+
     return PedidoPdf(
         id_pedido=head["id_pedido"],
-        codigo_cliente=head["codigo_cliente"], # Will fix this in next step
+        codigo_cliente=final_cod,
         cliente=head["cliente"] or "",
         nome_fantasia=head.get("nome_fantasia") or "Sem Nome Fantasia",
         razao_social=head.get("nome_empresarial") or None,

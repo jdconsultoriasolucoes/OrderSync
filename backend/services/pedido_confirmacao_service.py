@@ -125,6 +125,14 @@ def criar_pedido_confirmado(db: Session, tabela_id: int, body: ConfirmarPedidoRe
     data_retirada = _parse_date(body.data_retirada) or (link_row["data_prevista"] if link_row else None)
 
     codigo_cliente = (body.codigo_cliente or "").strip() or None
+    
+    # 🛡️ FALLBACK: Se o front não mandou o código (comum em links públicos),
+    # usamos o que está gravado no link (que é confiável).
+    if not codigo_cliente and link_row:
+        c_link = link_row.get("codigo_cliente")
+        if c_link and c_link.strip() and c_link != "Não cadastrado":
+            codigo_cliente = c_link.strip()
+
     if link_row:
         link_url = link_row.get("link_url")
     else:

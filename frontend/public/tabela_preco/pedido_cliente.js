@@ -705,10 +705,20 @@ async function confirmarPedido() {
         Orçamento confirmado com sucesso!<br>
         <span style="color: ${data.email_enviado ? 'inherit' : '#d9534f'}">${msgEmail}</span>
         <br><br>
-        <button id="btnBaixarManual" onclick="window.baixarPdfManual()" style="background-color: #28a745; color: white; border: none; padding: 10px 20px; border-radius: 5px; cursor: pointer; font-size: 1rem; margin-top: 10px;">
+        <button id="btnBaixarManual" class="btn-baixar-manual" style="background-color: #28a745; color: white; border: none; padding: 10px 20px; border-radius: 5px; cursor: pointer; font-size: 1rem; margin-top: 10px;">
           <i class="fas fa-file-pdf"></i> Baixar PDF do Orçamento
         </button>
       `;
+      // Attach listener dynamically to avoid scope/CSP issues
+      setTimeout(() => {
+        const btn = document.getElementById('btnBaixarManual');
+        if (btn) {
+          btn.onclick = window.baixarPdfManual; // Using direct property to ensure binding
+          console.log("Evento onclick vinculado ao botão PDF");
+        } else {
+          console.error("Botão PDF não encontrado para vincular evento");
+        }
+      }, 50);
     }
 
     openConfirmModal(pedidoIdConfirmado);
