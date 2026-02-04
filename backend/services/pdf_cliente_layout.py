@@ -146,7 +146,7 @@ def gerar_pdf_cliente_simplificado(pedido: PedidoPdf) -> bytes:
     table = Table(table_data, colWidths=col_widths)
     table.setStyle(TableStyle([
         # Cabeçalho
-        ('BACKGROUND', (0, 0), (-1, 0), colors.Color(0.85, 0.85, 0.85)),
+        ('BACKGROUND', (0, 0), (-1, 0), colors.Color(0.78, 0.70, 0.60)),  # Cor bege/marrom
         ('TEXTCOLOR', (0, 0), (-1, 0), colors.black),
         ('ALIGN', (0, 0), (-1, 0), 'CENTER'),
         ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
@@ -177,38 +177,66 @@ def gerar_pdf_cliente_simplificado(pedido: PedidoPdf) -> bytes:
     
     # ==================== RODAPÉ: TOTAIS E OBSERVAÇÕES ====================
     
-    # Totais (lado esquerdo)
-    totais_x = margin_x
-    totais_y = y_cursor
+    # Criar tabela de totais (lado esquerdo)
+    totais_data = [
+        ["Total em Peso Bruto", f"{_br_number(pedido.total_peso_bruto, 0)} kg"],
+        ["Total em Valor", f"R$ {_br_number(pedido.total_valor, 2)}"]
+    ]
     
+    totais_table = Table(totais_data, colWidths=[5*cm, 3*cm])
+    totais_table.setStyle(TableStyle([
+        # Cabeçalho (primeira coluna)
+        ('BACKGROUND', (0, 0), (0, -1), colors.Color(0.78, 0.70, 0.60)),  # Cor bege/marrom
+        ('TEXTCOLOR', (0, 0), (0, -1), colors.black),
+        ('FONTNAME', (0, 0), (0, -1), 'Helvetica-Bold'),
+        ('FONTSIZE', (0, 0), (0, -1), 10),
+        ('ALIGN', (0, 0), (0, -1), 'LEFT'),
+        
+        # Valores (segunda coluna)
+        ('BACKGROUND', (1, 0), (1, -1), colors.white),
+        ('FONTNAME', (1, 0), (1, -1), 'Helvetica'),
+        ('FONTSIZE', (1, 0), (1, -1), 10),
+        ('ALIGN', (1, 0), (1, -1), 'RIGHT'),
+        
+        # Bordas e padding
+        ('GRID', (0, 0), (-1, -1), 0.5, colors.grey),
+        ('VALIGN', (0, 0), (-1, -1), 'MIDDLE'),
+        ('LEFTPADDING', (0, 0), (-1, -1), 8),
+        ('RIGHTPADDING', (0, 0), (-1, -1), 8),
+        ('TOPPADDING', (0, 0), (-1, -1), 6),
+        ('BOTTOMPADDING', (0, 0), (-1, -1), 6),
+    ]))
+    
+    # Desenhar tabela de totais
+    totais_width, totais_height = totais_table.wrap(8*cm, height)
+    totais_table.drawOn(c, margin_x, y_cursor - totais_height)
+    
+    # Observações (lado direito, mais próximo)
+    obs_x = margin_x + 10*cm  # Ajustado para ficar mais próximo
+    obs_y = y_cursor
+    
+    # Título com fundo colorido
+    c.setFillColor(colors.Color(0.78, 0.70, 0.60))  # Cor bege/marrom
+    c.rect(obs_x, obs_y, width - obs_x - margin_x, 0.6*cm, fill=1, stroke=0)
+    
+    c.setFillColor(colors.black)
     c.setFont("Helvetica-Bold", 10)
-    c.drawString(totais_x, totais_y, "Total em Peso Bruto")
-    c.setFont("Helvetica", 10)
-    c.drawString(totais_x + 5*cm, totais_y, f"{_br_number(pedido.total_peso_bruto, 0)} kg")
-    
-    c.setFont("Helvetica-Bold", 10)
-    c.drawString(totais_x, totais_y - 0.6*cm, "Total em Valor")
-    c.setFont("Helvetica", 10)
-    c.drawString(totais_x + 5*cm, totais_y - 0.6*cm, f"R$ {_br_number(pedido.total_valor, 2)}")
-    
-    # Observações (lado direito)
-    obs_x = width / 2 + 1*cm
-    obs_y = totais_y
-    
-    c.setFont("Helvetica-Bold", 10)
-    c.drawString(obs_x, obs_y, "Observações do Cliente:")
+    c.drawString(obs_x + 0.3*cm, obs_y + 0.15*cm, "Observações do Cliente:")
     
     # Desenhar caixa de observações
     obs_box_width = width - obs_x - margin_x
-    obs_box_height = 3*cm
-    c.rect(obs_x, obs_y - obs_box_height - 0.3*cm, obs_box_width, obs_box_height)
+    obs_box_height = totais_height - 0.6*cm  # Mesma altura da tabela de totais
+    c.setStrokeColor(colors.grey)
+    c.setFillColor(colors.white)
+    c.rect(obs_x, obs_y - obs_box_height - 0.6*cm, obs_box_width, obs_box_height, fill=1, stroke=1)
     
     # Texto das observações
     if pedido.observacoes:
+        c.setFillColor(colors.black)
         c.setFont("Helvetica", 9)
         # Quebrar texto em linhas
         obs_text = pedido.observacoes[:500]  # Limitar tamanho
-        text_obj = c.beginText(obs_x + 0.2*cm, obs_y - 0.6*cm)
+        text_obj = c.beginText(obs_x + 0.3*cm, obs_y - 1.0*cm)
         text_obj.setFont("Helvetica", 9)
         
         # Quebrar em linhas de ~60 caracteres
@@ -225,8 +253,9 @@ def gerar_pdf_cliente_simplificado(pedido: PedidoPdf) -> bytes:
         
         c.drawText(text_obj)
     else:
-        c.setFont("Helvetica", 9)
-        c.drawString(obs_x + 0.2*cm, obs_y - 0.6*cm, "Digite aqui...")
+        c.setFillColor(colors.grey)
+        c.setFont("Helvetica-Oblique", 9)
+        c.drawString(obs_x + 0.3*cm, obs_y - 1.0*cm, "Digite aqui...")
     
     # Finalizar
     c.showPage()
