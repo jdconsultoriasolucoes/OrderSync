@@ -157,48 +157,79 @@ def _desenhar_pdf(pedido: PedidoPdf, buffer: io.BytesIO, sem_validade: bool = Fa
     cliente = pedido.cliente or ""
     razao_social = pedido.razao_social or pedido.nome_fantasia or ""
 
-    # larguras em cm (aprox.):
-    label_cod_w = 1.4 * cm
-    cod_val_w   = 3.5 * cm        # código ~5 cm
-    label_cli_w = 2.0 * cm
-    label_raz_w = 2.3 * cm
+    if sem_validade:
+        # Layout Cliente: Sem Código do Cliente no Header
+        label_cli_w = 2.0 * cm
+        label_raz_w = 2.3 * cm
+        restante    = available_width - (label_cli_w + label_raz_w)
+        cli_val_w   = max(restante * 0.55, 6.0 * cm)
+        raz_val_w   = max(restante * 0.45, 5.0 * cm)
 
-    restante    = available_width - (label_cod_w + cod_val_w + label_cli_w + label_raz_w)
-    cli_val_w   = max(restante * 0.55, 6.0 * cm)
-    raz_val_w   = max(restante * 0.45, 5.0 * cm)
+        bloco1_col_widths = [
+            label_cli_w, cli_val_w,
+            label_raz_w, raz_val_w,
+        ]
+        bloco1_data = [[
+            "Cliente:", cliente[:120],
+            "Razão Social:", razao_social[:80],
+        ]]
+        
+        # Style needs adjustment (indices shift)
+        # We need to apply a specific style for this layout or make the style dynamic
+        # Since I cannot easily dynamic the style below without changing the whole block, 
+        # I will change the logic to use a variable for style alignment or just standard right align.
+        # Actually, the style below uses hardcoded indices (0, 2, 4).
+        # For this Short layout (0, 2), index 4 will error.
+        # So I MUST change the style construction too.
+    else:
+        label_cod_w = 1.4 * cm
+        cod_val_w   = 3.5 * cm 
+        label_cli_w = 2.0 * cm
+        label_raz_w = 2.3 * cm
+        restante    = available_width - (label_cod_w + cod_val_w + label_cli_w + label_raz_w)
+        cli_val_w   = max(restante * 0.55, 6.0 * cm)
+        raz_val_w   = max(restante * 0.45, 5.0 * cm)
 
-    bloco1_col_widths = [
-        label_cod_w, cod_val_w,
-        label_cli_w, cli_val_w,
-        label_raz_w, raz_val_w,
+        bloco1_col_widths = [
+            label_cod_w, cod_val_w,
+            label_cli_w, cli_val_w,
+            label_raz_w, raz_val_w,
+        ]
+        bloco1_data = [[
+            "Código:", str(codigo_cliente),
+            "Cliente:", cliente[:120],
+            "Razão Social:", razao_social[:80],
+        ]]
+
+    style_cmds = [
+        ("BACKGROUND", (0, 0), (-1, -1), SUPRA_BG_LIGHT),
+        ("TEXTCOLOR", (0, 0), (-1, -1), SUPRA_DARK),
+        ("FONTNAME", (0, 0), (-1, -1), "Helvetica"),
+        ("FONTSIZE", (0, 0), (-1, -1), 9),
+        ("VALIGN", (0, 0), (-1, -1), "MIDDLE"),
+        ("LEFTPADDING", (0, 0), (-1, -1), 3),
+        ("RIGHTPADDING", (0, 0), (-1, -1), 3),
+        ("TOPPADDING", (0, 0), (-1, -1), 2),
+        ("BOTTOMPADDING", (0, 0), (-1, -1), 2),
+        ("GRID", (0, 0), (-1, -1), 0.5, colors.black),
     ]
 
-    bloco1_data = [[
-        "Código:", str(codigo_cliente),
-        "Cliente:", cliente[:120],
-        "Razão Social:", razao_social[:80],
-    ]]
+    if sem_validade:
+        # Layout Cliente: 4 Colunas (0=LabelCli, 1=ValCli, 2=LabelRaz, 3=ValRaz)
+        style_cmds.extend([
+            ("ALIGN", (0, 0), (0, 0), "RIGHT"),  # "Cliente:"
+            ("ALIGN", (2, 0), (2, 0), "RIGHT"),  # "Razão Social:"
+        ])
+    else:
+        # Layout Vendedor: 6 Colunas (0=LabelCod, 1=ValCod, 2=LabelCli, 3=ValCli, 4=LabelRaz, 5=ValRaz)
+        style_cmds.extend([
+            ("ALIGN", (0, 0), (0, 0), "RIGHT"),  # "Código:"
+            ("ALIGN", (2, 0), (2, 0), "RIGHT"),  # "Cliente:"
+            ("ALIGN", (4, 0), (4, 0), "RIGHT"),  # "Razão Social:"
+        ])
 
     bloco1_table = Table(bloco1_data, colWidths=bloco1_col_widths)
-    bloco1_table.setStyle(
-        TableStyle(
-            [
-                ("BACKGROUND", (0, 0), (-1, -1), SUPRA_BG_LIGHT),
-                ("TEXTCOLOR", (0, 0), (-1, -1), SUPRA_DARK),
-                ("FONTNAME", (0, 0), (-1, -1), "Helvetica"),
-                ("FONTSIZE", (0, 0), (-1, -1), 9),
-                ("VALIGN", (0, 0), (-1, -1), "MIDDLE"),
-                ("ALIGN", (0, 0), (0, 0), "RIGHT"),  # "Código:"
-                ("ALIGN", (2, 0), (2, 0), "RIGHT"),  # "Cliente:"
-                ("ALIGN", (4, 0), (4, 0), "RIGHT"),  # "Razão Social:"
-                ("LEFTPADDING", (0, 0), (-1, -1), 3),
-                ("RIGHTPADDING", (0, 0), (-1, -1), 3),
-                ("TOPPADDING", (0, 0), (-1, -1), 2),
-                ("BOTTOMPADDING", (0, 0), (-1, -1), 2),
-                ("GRID", (0, 0), (-1, -1), 0.5, colors.black),
-            ]
-        )
-    )
+    bloco1_table.setStyle(TableStyle(style_cmds))
 
     _, bloco1_h = bloco1_table.wrap(available_width, height)
     bloco1_table.drawOn(c, margin_x, y - bloco1_h)
