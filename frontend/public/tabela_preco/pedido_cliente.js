@@ -668,15 +668,15 @@ async function confirmarPedido() {
         const btn = document.getElementById('btnBaixarManual');
         if (btn) {
           btn.onclick = () => {
-            if (window.lastPdfBase64) {
-              const link = document.createElement('a');
-              link.href = `data:application/pdf;base64,${window.lastPdfBase64}`;
-              link.download = `Orcamento_${window.lastOrderId}.pdf`;
-              document.body.appendChild(link);
-              link.click();
-              document.body.removeChild(link);
+            // Pega o code da URL (ex: /p/XYZ123)
+            const pathParts = window.location.pathname.split('/').filter(Boolean);
+            const code = pathParts[pathParts.length - 1]; // assumindo que é sempre o último
+
+            if (code) {
+              // Abre em nova aba para download
+              window.open(API(`/link_pedido/pdf_cliente/${code}`), '_blank');
             } else {
-              alert("PDF não disponível para download momento.");
+              alert("Não foi possível identificar o código do pedido para download.");
             }
           };
         }

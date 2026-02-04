@@ -9,11 +9,7 @@ def carregar_pedido_pdf(db, pedido_id: int) -> PedidoPdf:
     sql = text("""
         SELECT
             p.id_pedido,
-            CASE 
-                WHEN p.codigo_cliente IS NULL OR p.codigo_cliente = 'Não cadastrado' OR p.codigo_cliente = ''
-                THEN c.cadastro_codigo_da_empresa::text
-                ELSE p.codigo_cliente
-            END AS codigo_cliente,
+            p.codigo_cliente,
             p.cliente,
             c.cadastro_nome_cliente AS nome_empresarial, /* RAZAO SOCIAL LEGAL V2 */
 
@@ -54,8 +50,7 @@ def carregar_pedido_pdf(db, pedido_id: int) -> PedidoPdf:
 
         FROM tb_pedidos p
         LEFT JOIN public.t_cadastro_cliente_v2 c
-            ON c.cadastro_codigo_da_empresa::text = p.codigo_cliente  -- Match by code
-            OR c.cadastro_nome_cliente = p.cliente                    -- OR Match by name (fallback if code missing)
+            ON c.cadastro_codigo_da_empresa::text = p.codigo_cliente
 
         -- AQUI o pulo do gato: "condensa" a tabela de preço em 1 linha por tabela
         LEFT JOIN (

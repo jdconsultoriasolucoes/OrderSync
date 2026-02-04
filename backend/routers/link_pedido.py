@@ -184,3 +184,53 @@ def baixar_lista_preco(code: str, modo: str = "ambos"):
         return Response(content=pdf_bytes, media_type="application/pdf", headers={
             "Content-Disposition": f'attachment; filename="Preco Lista - {safe_cliente}.pdf"'
         })
+
+@router.get("/pdf_cliente/{code}")
+def baixar_pdf_cliente(code: str):
+    """
+    Endpoint dedicado para o cliente baixar o PDF do orçamento (Layout Cliente).
+    Busca o pedido associado ao 'link_token' (que é o 'code').
+    """
+    with SessionLocal() as db:
+        # Busca o ID do pedido pelo link_token
+        # IMPORTANTE: Só retorna se o status for 'CONFIRMADO' ou 'EM SEPARAÇÃO' etc.
+        # Se houver múltiplos (retry?), pega o mais recente? O code deve ser único por tentativa?
+        # A rigor, 1 link = 1 pedido (na implementação atual de pedido_confirmacao_service).
+        row = db.execute(text("""
+            SELECT id_pedido, cliente 
+            FROM tb_pedidos 
+            WHERE link_token = :c 
+            ORDER BY id_pedido DESC 
+            LIMIT 1
+        """), {"c": code}).mappings().first()
+
+        if not row:
+            raise HTTPException(404, "Pedido não encontrado para este link ou link ainda não confirmado.")
+        
+        pedido_id = row["id_pedido"]
+        cliente_nome = row["cliente"] or "Cliente"
+
+        try:
+            from services.pedido_pdf_data import carregar_pedido_pdf
+            from services.pdf_service import gerar_pdf_pedido
+            
+            # Carrega dados
+            pedido_pdf = carregar_pedido_pdf(db, pedido_id)
+            
+            # Gera PDF com flag sem_validade=True (LAYOUT CLIENTE / ORÇAMENTO)
+            pdf_bytes = gerar_pdf_pedido(pedido_pdf, sem_validade=True)
+            
+            # Nome do arquivo seguro
+            import re
+            safe_cliente = re.sub(r'[^a-zA-Z0-9 \-_]', '', cliente_nome).strip()
+            safe_cliente = re.sub(r'\s+', ' ', safe_cliente)
+            filename = f"Orcamento_{pedido_id}_{safe_cliente}.pdf"
+            
+            return Response(content=pdf_bytes, media_type="application/pdf", headers={
+                "Content-Disposition": f'attachment; filename="{filename}"'
+            })
+            
+        except Exception as e:
+            # Logar erro real no server
+            print(f"Erro gerando PDF Cliente: {e}")
+            raise HTTPException(500, "Erro ao gerar PDF do pedido.")
