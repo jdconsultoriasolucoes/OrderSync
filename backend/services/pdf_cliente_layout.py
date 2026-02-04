@@ -73,7 +73,7 @@ def gerar_pdf_cliente_simplificado(pedido: PedidoPdf) -> bytes:
         c.drawString(margin_x, y - 0.5*cm, "Solicitação de orçamento")
         y -= 1.2*cm
         
-        # Criar tabela com informações do pedido
+        # Criar tabela com informações do pedido (3 linhas)
         data_pedido_str = "---"
         if pedido.data_pedido:
             data_pedido_str = pedido.data_pedido.strftime("%d/%m/%Y %H:%M:%S")
@@ -83,31 +83,30 @@ def gerar_pdf_cliente_simplificado(pedido: PedidoPdf) -> bytes:
             data_entrega_str = pedido.data_entrega_ou_retirada.strftime("%d/%m/%Y")
         
         info_data = [
-            ["Data do pedido:", data_pedido_str, "Validade:", pedido.validade_tabela or "Não se aplica"],
-            ["Cliente:", pedido.cliente or "---", "Data de entrega:", data_entrega_str]
+            ["Data do pedido:", data_pedido_str],
+            ["Cliente:", pedido.cliente or "---"],
+            ["Validade:", pedido.validade_tabela or "Não se aplica"],
+            ["Data de entrega:", data_entrega_str]
         ]
         
-        info_table = Table(info_data, colWidths=[3*cm, 6*cm, 2.5*cm, 5.5*cm])
+        info_table = Table(info_data, colWidths=[3.5*cm, 13.5*cm])
         info_table.setStyle(TableStyle([
-            # Labels (colunas 0 e 2)
+            # Labels (primeira coluna)
             ('FONTNAME', (0, 0), (0, -1), 'Helvetica-Bold'),
-            ('FONTNAME', (2, 0), (2, -1), 'Helvetica-Bold'),
             ('FONTSIZE', (0, 0), (-1, -1), 9),
             ('ALIGN', (0, 0), (0, -1), 'LEFT'),
-            ('ALIGN', (2, 0), (2, -1), 'LEFT'),
             
-            # Valores (colunas 1 e 3)
+            # Valores (segunda coluna)
             ('FONTNAME', (1, 0), (1, -1), 'Helvetica'),
-            ('FONTNAME', (3, 0), (3, -1), 'Helvetica'),
             ('ALIGN', (1, 0), (1, -1), 'LEFT'),
-            ('ALIGN', (3, 0), (3, -1), 'LEFT'),
             
-            # Sem bordas
+            # Bordas e padding
+            ('GRID', (0, 0), (-1, -1), 0.5, colors.grey),
             ('VALIGN', (0, 0), (-1, -1), 'MIDDLE'),
-            ('LEFTPADDING', (0, 0), (-1, -1), 0),
+            ('LEFTPADDING', (0, 0), (-1, -1), 5),
             ('RIGHTPADDING', (0, 0), (-1, -1), 5),
-            ('TOPPADDING', (0, 0), (-1, -1), 2),
-            ('BOTTOMPADDING', (0, 0), (-1, -1), 2),
+            ('TOPPADDING', (0, 0), (-1, -1), 4),
+            ('BOTTOMPADDING', (0, 0), (-1, -1), 4),
         ]))
         
         info_width, info_height = info_table.wrap(width - 2*margin_x, height)
@@ -281,29 +280,30 @@ def gerar_pdf_cliente_simplificado(pedido: PedidoPdf) -> bytes:
             ]))
             
             totais_width, totais_height = totais_table.wrap(6.5*cm, height)
-            totais_table.drawOn(c, margin_x, y_cursor - totais_height)
+            totais_y_base = y_cursor - totais_height
+            totais_table.drawOn(c, margin_x, totais_y_base)
             
-            # Observações (lado direito, PERFEITAMENTE alinhado com totais)
+            # Observações (lado direito)
+            # O título deve começar na MESMA altura que o topo da tabela de totais
             obs_x = margin_x + 7.5*cm
-            obs_y_top = y_cursor  # Topo alinhado com topo dos totais
-            
-            # Título com fundo colorido
-            c.setFillColor(colors.Color(0.78, 0.70, 0.60))
             obs_title_height = 0.5*cm
-            c.rect(obs_x, obs_y_top - obs_title_height, width - obs_x - margin_x, obs_title_height, fill=1, stroke=0)
+            
+            # Desenhar título (alinhado com topo dos totais)
+            c.setFillColor(colors.Color(0.78, 0.70, 0.60))
+            c.rect(obs_x, y_cursor - obs_title_height, width - obs_x - margin_x, obs_title_height, fill=1, stroke=0)
             
             c.setFillColor(colors.black)
             c.setFont("Helvetica-Bold", 9)
-            c.drawString(obs_x + 0.2*cm, obs_y_top - obs_title_height + 0.15*cm, "Observações do Cliente:")
+            c.drawString(obs_x + 0.2*cm, y_cursor - obs_title_height + 0.15*cm, "Observações do Cliente:")
             
-            # Caixa de observações (começa logo abaixo do título, alinha com base dos totais)
+            # Caixa de observações (logo abaixo do título, termina na mesma altura que os totais)
             obs_box_width = width - obs_x - margin_x
-            obs_box_y_top = obs_y_top - obs_title_height
+            obs_box_y_top = y_cursor - obs_title_height
             obs_box_height = totais_height - obs_title_height
             
             c.setStrokeColor(colors.grey)
             c.setFillColor(colors.white)
-            c.rect(obs_x, obs_box_y_top - obs_box_height, obs_box_width, obs_box_height, fill=1, stroke=1)
+            c.rect(obs_x, totais_y_base, obs_box_width, obs_box_height, fill=1, stroke=1)
             
             # Texto das observações
             if pedido.observacoes:
