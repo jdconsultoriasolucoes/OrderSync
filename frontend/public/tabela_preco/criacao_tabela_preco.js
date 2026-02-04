@@ -1006,6 +1006,15 @@ async function carregarItens() {
       document.getElementById('codigo_cliente').value = t.codigo_cliente || '';
       document.getElementById('ramo_juridico').value = t.ramo_juridico || '';
 
+      // --- SAFETY NET START ---
+      const elNome = document.getElementById('cliente_nome');
+      if (elNome) {
+        const rawName = (t.cliente_nome || t.cliente || '').trim();
+        elNome.dataset.originalName = rawName;
+        elNome.dataset.originalCode = (t.codigo_cliente || '').trim();
+      }
+      // --- SAFETY NET END ---
+
       // NOVO: aplicar flag de ST que veio do backend
       const ivaChk = document.getElementById('iva_st_toggle');
       const flagSt = !!t.calcula_st;
@@ -1752,7 +1761,23 @@ async function salvarTabela() {
   console.table(produtos.map(p => ({ id_linha: p.id_linha, codigo: p.codigo_produto_supra, valor: p.valor_produto, plano: p.codigo_plano_pagamento })));
 
   const fornecedorHeader = inferirFornecedorDaGrade();
-  const codigo_cliente = (document.getElementById('codigo_cliente')?.value || '').trim() || null;
+  let codigo_cliente = (document.getElementById('codigo_cliente')?.value || '').trim() || null;
+
+  // --- SAFETY NET CHECK ---
+  // Se o código sumiu, mas o nome é IDÊNTICO ao original carregado, restaura.
+  if (!codigo_cliente) {
+    const elNome = document.getElementById('cliente_nome');
+    if (elNome && elNome.dataset.originalCode) {
+      const curName = (elNome.value || '').trim();
+      if (curName && curName === elNome.dataset.originalName) {
+        console.warn("Safety Net: Restaurando código do cliente perdido na edição.");
+        codigo_cliente = elNome.dataset.originalCode;
+        // Opcional: bota de volta no input pra ficar bonito
+        const elCode = document.getElementById('codigo_cliente');
+        if (elCode) elCode.value = codigo_cliente;
+      }
+    }
+  }
   const calcula_st = !!document.getElementById('iva_st_toggle')?.checked;
   // Se codigo_cliente for nulo, mande null (não grave "Não cadastrado" string)
   const payload = { nome_tabela, cliente, codigo_cliente, ramo_juridico, fornecedor: fornecedorHeader, calcula_st, produtos };

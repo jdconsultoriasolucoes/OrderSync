@@ -119,12 +119,20 @@ def enviar_email_notificacao(
     # cópia opcional para o cliente responsável compras (controlada pela flag da mensagem)
     cc = []
     if getattr(cfg_msg, "enviar_para_cliente", False):
-        email_cli = get_email_cliente_responsavel_compras(
-            db,
-            getattr(pedido, "codigo_cliente", None)  # deve casar com codigo_cliente do Cliente
-        )
-        if email_cli:
-            cc.append(email_cli)
+        # 1) Tenta usar o email que veio no pedido (ex: do cadastro V1 ou digitado na hora)
+        email_pedido = getattr(pedido, "cliente_email", None)
+        
+        # 2) Se não tiver, tenta buscar pelo código no cadastro V2
+        email_v2 = None
+        if not email_pedido:
+             email_v2 = get_email_cliente_responsavel_compras(
+                db,
+                getattr(pedido, "codigo_cliente", None)
+            )
+
+        final_email = email_pedido or email_v2
+        if final_email:
+            cc.append(final_email)
 
     pedido_info = {
         "pedido_id": getattr(pedido, "id", ""),
@@ -165,53 +173,10 @@ def enviar_email_notificacao(
         to_all = [remetente]  # fallback
 
     with _abrir_conexao(cfg_smtp) as server:
-        # Envia para destinatários internos
+        # Envia para destinatários internos + CC (Cliente)
         server.sendmail(remetente, to_all, msg.as_string())
         
-        # ---------------------------------------------------------
-        # Envio Opcional para o Cliente (PDF sem validade)
-        # ---------------------------------------------------------
-        if cfg_msg.enviar_para_cliente and getattr(pedido, "cliente_email", None):
-            try:
-                from services.pdf_service import gerar_pdf_pedido
-                from services.pedido_pdf_data import carregar_pedido_pdf
-                
-                # Carregar dados completos para o PDF (o objeto 'pedido' atual é só um resumo/dummy)
-                pedido_full = carregar_pedido_pdf(db, int(pedido_info["pedido_id"]))
-                pdf_cliente_bytes = gerar_pdf_pedido(pedido_full, sem_validade=True)
-                
-                msg_cliente = MIMEMultipart()
-                msg_cliente["From"] = remetente
-                msg_cliente["To"] = pedido.cliente_email
-                msg_cliente["Subject"] = f"Confirmação de Orçamento #{pedido.id} - {pedido.cliente_nome}"
-                
-                # Corpo simples para o cliente
-                body_client = f"""\
-Prezado(a) {pedido.cliente_nome},
-
-Seu orçamento #{pedido.id} foi confirmado com sucesso.
-Segue em anexo a cópia do orçamento.
-
-Atenciosamente,
-Equipe OrderSync
-"""
-                msg_cliente.attach(MIMEText(body_client, "plain"))
-                
-                # Anexo (usando MIMEApplication para evitar erro de encoding)
-                part_c = MIMEApplication(pdf_cliente_bytes, _subtype="pdf")
-                part_c.add_header(
-                    "Content-Disposition", 
-                    "attachment", 
-                    filename=f"Orcamento_{pedido.id}.pdf"
-                )
-                msg_cliente.attach(part_c)
-                
-                server.sendmail(remetente, [pedido.cliente_email], msg_cliente.as_string())
-                print(f"Email enviado para cliente: {pedido.cliente_email}")
-                
-            except Exception as e:
-                print(f"Erro ao enviar email para cliente: {e}")
-
+        # O bloco redundante foi removido.
         server.quit()
 
 

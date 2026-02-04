@@ -679,15 +679,30 @@ async function confirmarPedido() {
         const btn = document.getElementById('btnBaixarManual');
         if (btn) {
           btn.onclick = () => {
-            // Pega o code da URL (ex: /p/XYZ123)
-            const pathParts = window.location.pathname.split('/').filter(Boolean);
-            const code = pathParts[pathParts.length - 1]; // assumindo que é sempre o último
+            // 1. Tenta usar base64 em memória (mais garantido e imediato)
+            if (window.lastPdfBase64 && window.lastOrderId) {
+              try {
+                const link = document.createElement('a');
+                link.href = `data:application/pdf;base64,${window.lastPdfBase64}`;
+                link.download = `Orcamento_${window.lastOrderId}.pdf`;
+                document.body.appendChild(link);
+                link.click();
+                document.body.removeChild(link);
+                return;
+              } catch (e) {
+                console.error("Erro download base64 manual:", e);
+              }
+            }
 
-            if (code) {
-              // Abre em nova aba para download
+            // 2. Fallback: Pega o code da URL (ex: /p/XYZ123)
+            const pathParts = window.location.pathname.split('/').filter(Boolean);
+            const code = pathParts[pathParts.length - 1];
+
+            if (code && code.length > 3) {
+              // Abre em nova aba para download via rota
               window.open(API(`/link_pedido/pdf_cliente/${code}`), '_blank');
             } else {
-              alert("Não foi possível identificar o código do pedido para download.");
+              alert("Não foi possível identificar o link para download. Verifique seu e-mail para a cópia do orçamento.");
             }
           };
         }
