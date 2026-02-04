@@ -44,15 +44,13 @@ def get_email_cliente_responsavel_compras(db: Session, codigo_cliente) -> Option
     if not codigo_cliente:
         return None
     
-    # Tenta converter para int, pois IDs são inteiros/bigint
-    try:
-        c_id = int(codigo_cliente)
-    except (ValueError, TypeError):
-        return None
+    # Busca pela string do código empresarial (cadastro_codigo_da_empresa)
+    # Não converte para int, pois pode ser alfanumérico ou ter zeros à esquerda
+    s_cod = str(codigo_cliente).strip()
 
     row = (
         db.query(ClienteModelV2.compras_email_resposavel)
-        .filter(ClienteModelV2.id == c_id)
+        .filter(ClienteModelV2.cadastro_codigo_da_empresa == s_cod)
         .first()
     )
     return row[0] if row and row[0] else None
