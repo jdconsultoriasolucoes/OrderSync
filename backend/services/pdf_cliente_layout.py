@@ -73,29 +73,46 @@ def gerar_pdf_cliente_simplificado(pedido: PedidoPdf) -> bytes:
         c.drawString(margin_x, y - 0.5*cm, "Solicitação de orçamento")
         y -= 1.2*cm
         
-        # Informações do pedido
-        c.setFont("Helvetica", 9)
-        
-        # Data do pedido
+        # Criar tabela com informações do pedido
         data_pedido_str = "---"
         if pedido.data_pedido:
             data_pedido_str = pedido.data_pedido.strftime("%d/%m/%Y %H:%M:%S")
-        c.drawString(margin_x, y, f"Data do pedido: {data_pedido_str}")
         
-        # Validade (lado direito)
-        validade_x = width / 2
-        c.drawString(validade_x, y, f"Validade: {pedido.validade_tabela or 'Não se aplica'}")
-        y -= 0.4*cm
-        
-        # Cliente
-        c.drawString(margin_x, y, f"Cliente: {pedido.cliente or '---'}")
-        
-        # Data de entrega (lado direito)
         data_entrega_str = "a combinar"
         if pedido.data_entrega_ou_retirada:
             data_entrega_str = pedido.data_entrega_ou_retirada.strftime("%d/%m/%Y")
-        c.drawString(validade_x, y, f"Data de entrega: {data_entrega_str}")
-        y -= 0.8*cm
+        
+        info_data = [
+            ["Data do pedido:", data_pedido_str, "Validade:", pedido.validade_tabela or "Não se aplica"],
+            ["Cliente:", pedido.cliente or "---", "Data de entrega:", data_entrega_str]
+        ]
+        
+        info_table = Table(info_data, colWidths=[3*cm, 6*cm, 2.5*cm, 5.5*cm])
+        info_table.setStyle(TableStyle([
+            # Labels (colunas 0 e 2)
+            ('FONTNAME', (0, 0), (0, -1), 'Helvetica-Bold'),
+            ('FONTNAME', (2, 0), (2, -1), 'Helvetica-Bold'),
+            ('FONTSIZE', (0, 0), (-1, -1), 9),
+            ('ALIGN', (0, 0), (0, -1), 'LEFT'),
+            ('ALIGN', (2, 0), (2, -1), 'LEFT'),
+            
+            # Valores (colunas 1 e 3)
+            ('FONTNAME', (1, 0), (1, -1), 'Helvetica'),
+            ('FONTNAME', (3, 0), (3, -1), 'Helvetica'),
+            ('ALIGN', (1, 0), (1, -1), 'LEFT'),
+            ('ALIGN', (3, 0), (3, -1), 'LEFT'),
+            
+            # Sem bordas
+            ('VALIGN', (0, 0), (-1, -1), 'MIDDLE'),
+            ('LEFTPADDING', (0, 0), (-1, -1), 0),
+            ('RIGHTPADDING', (0, 0), (-1, -1), 5),
+            ('TOPPADDING', (0, 0), (-1, -1), 2),
+            ('BOTTOMPADDING', (0, 0), (-1, -1), 2),
+        ]))
+        
+        info_width, info_height = info_table.wrap(width - 2*margin_x, height)
+        info_table.drawOn(c, margin_x, y - info_height)
+        y -= info_height + 0.5*cm
         
         return y
     
@@ -266,31 +283,33 @@ def gerar_pdf_cliente_simplificado(pedido: PedidoPdf) -> bytes:
             totais_width, totais_height = totais_table.wrap(6.5*cm, height)
             totais_table.drawOn(c, margin_x, y_cursor - totais_height)
             
-            # Observações (lado direito, alinhado com totais)
+            # Observações (lado direito, PERFEITAMENTE alinhado com totais)
             obs_x = margin_x + 7.5*cm
-            obs_y = y_cursor  # Mesma altura inicial dos totais
+            obs_y_top = y_cursor  # Topo alinhado com topo dos totais
             
             # Título com fundo colorido
             c.setFillColor(colors.Color(0.78, 0.70, 0.60))
             obs_title_height = 0.5*cm
-            c.rect(obs_x, obs_y - obs_title_height, width - obs_x - margin_x, obs_title_height, fill=1, stroke=0)
+            c.rect(obs_x, obs_y_top - obs_title_height, width - obs_x - margin_x, obs_title_height, fill=1, stroke=0)
             
             c.setFillColor(colors.black)
             c.setFont("Helvetica-Bold", 9)
-            c.drawString(obs_x + 0.2*cm, obs_y - obs_title_height + 0.15*cm, "Observações do Cliente:")
+            c.drawString(obs_x + 0.2*cm, obs_y_top - obs_title_height + 0.15*cm, "Observações do Cliente:")
             
-            # Caixa de observações (alinhada com a altura dos totais)
+            # Caixa de observações (começa logo abaixo do título, alinha com base dos totais)
             obs_box_width = width - obs_x - margin_x
+            obs_box_y_top = obs_y_top - obs_title_height
             obs_box_height = totais_height - obs_title_height
+            
             c.setStrokeColor(colors.grey)
             c.setFillColor(colors.white)
-            c.rect(obs_x, obs_y - totais_height, obs_box_width, obs_box_height, fill=1, stroke=1)
+            c.rect(obs_x, obs_box_y_top - obs_box_height, obs_box_width, obs_box_height, fill=1, stroke=1)
             
             # Texto das observações
             if pedido.observacoes:
                 c.setFillColor(colors.black)
                 c.setFont("Helvetica", 8)
-                text_obj = c.beginText(obs_x + 0.2*cm, obs_y - obs_title_height - 0.3*cm)
+                text_obj = c.beginText(obs_x + 0.2*cm, obs_box_y_top - 0.3*cm)
                 text_obj.setFont("Helvetica", 8)
                 
                 # Quebrar em linhas
@@ -310,7 +329,7 @@ def gerar_pdf_cliente_simplificado(pedido: PedidoPdf) -> bytes:
             else:
                 c.setFillColor(colors.grey)
                 c.setFont("Helvetica-Oblique", 8)
-                c.drawString(obs_x + 0.2*cm, obs_y - obs_title_height - 0.3*cm, "Digite aqui...")
+                c.drawString(obs_x + 0.2*cm, obs_box_y_top - 0.3*cm, "Digite aqui...")
     
     # Finalizar
     c.showPage()
