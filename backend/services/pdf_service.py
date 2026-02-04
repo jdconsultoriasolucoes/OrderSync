@@ -129,15 +129,23 @@ def _desenhar_pdf(pedido: PedidoPdf, buffer: io.BytesIO, sem_validade: bool = Fa
 
     # Data / Validade (Bloco direito do header)
     c.setFont("Helvetica", 10)
+    c.drawRightString(width - margin_x, faixa_y - faixa_h + 0.5 * cm, f"Data do Pedido: {pedido.data_pedido.strftime('%d/%m/%Y')}")
     
-    # Start y for the right-aligned text block
-    y_right_block_start = faixa_y - faixa_h + 0.35 * cm + 0.2 * cm
-
-    c.setFont("Helvetica", 9) 
-    c.drawRightString(width - margin_x - 0.3 * cm, y_right_block_start, f"Data do Orçamento: {pedido.data_pedido.strftime('%d/%m/%Y')}")
-    
-    if not sem_validade and pedido.validade_tabela:
-        c.drawRightString(width - margin_x - 0.3 * cm, y_right_block_start - 0.4 * cm, f"Proposta válida até: {pedido.validade_tabela}")
+    if sem_validade:
+        # Mostra validade calculada ou fixa
+        validade_str = "Consulte o vendedor"
+        if pedido.validade_tabela:
+             # Se vier do objeto PedidoPdf
+             validade_str = pedido.validade_tabela
+        
+        # Desenha logo abaixo da Data do Pedido
+        c.drawRightString(width - margin_x, faixa_y - faixa_h + 0.1 * cm, f"Validade da Proposta: {validade_str}")
+    else:
+        # Vendor layout (mantém original ou nada)
+        if pedido.validade_tabela:
+            c.drawRightString(width - margin_x, faixa_y - faixa_h + 0.1 * cm, f"Proposta válida até: {pedido.validade_tabela}")
+        else:
+            c.drawRightString(width - margin_x, faixa_y - faixa_h + 0.1 * cm, "Proposta válida até: Não se aplica")
 
     # Atualiza y para baixo da faixa
     y = faixa_y - faixa_h - 0.5 * cm
@@ -286,6 +294,7 @@ def _desenhar_pdf(pedido: PedidoPdf, buffer: io.BytesIO, sem_validade: bool = Fa
     # =======================
     # TABELA DE ITENS (multi-página)
     # =======================
+    # REVERTED: Sempre mostrar código do produto na tabela
     header = [
         "Fornecedor",
         "Codigo",
@@ -305,38 +314,37 @@ def _desenhar_pdf(pedido: PedidoPdf, buffer: io.BytesIO, sem_validade: bool = Fa
         reverse=True,
     )
 
-    # converte itens em linhas da tabela
-    all_rows = []
-    for it in itens_ordenados:
-        all_rows.append(
-            [
-                it.fornecedor or "",
-                it.codigo,
-                it.produto,
-                it.embalagem or "",
-                f"{it.quantidade:g}",
-                it.condicao_pagamento or "",
-                it.tabela_comissao or "",
-                "R$ " + _br_number(float(it.valor_retira or 0)),
-                "R$ " + _br_number(float(it.valor_entrega or 0)),
-            ]
-        )
-
-    # Larguras base em cm; escala para ocupar a largura inteira
+    # Define colunas e larguras base
     base_widths_cm = [
-        2.5,  # Fornecedor (Novo - Inicio)
+        2.5,  # Fornecedor
         1.7,  # Código
-        6.5,  # Produto  (Reduzido de 8.3)
-        1.5,  # Embalagem (Reduzido de 1.8)
+        6.5,  # Produto
+        1.5,  # Embalagem
         1.5,  # Qtd
         5.5,  # Cond. Pgto
-        2.0,  # Comissão (Reduzido de 2.7)
+        2.0,  # Comissão
         2.5,  # Valor Retira
         2.5,  # Valor Entrega
     ]
+
     total_base = sum(base_widths_cm)
     scale = (available_width / cm) / total_base
     col_widths = [w * scale * cm for w in base_widths_cm]
+
+    # converte itens em linhas da tabela
+    all_rows = []
+    for it in itens_ordenados:
+        all_rows.append([
+            it.fornecedor or "",
+            it.codigo,
+            it.produto,
+            it.embalagem or "",
+            f"{it.quantidade:g}",
+            it.condicao_pagamento or "",
+            it.tabela_comissao or "",
+            "R$ " + _br_number(float(it.valor_retira or 0)),
+            "R$ " + _br_number(float(it.valor_entrega or 0)),
+        ])
 
     # estilo da tabela de itens (reutilizado em todas as páginas)
     itens_table_style = TableStyle(
