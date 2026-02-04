@@ -1003,17 +1003,20 @@ async function carregarItens() {
       const t = await r.json();
       document.getElementById('nome_tabela').value = t.nome_tabela || '';
       document.getElementById('cliente_nome').value = t.cliente_nome || t.cliente || '';
-      document.getElementById('codigo_cliente').value = t.codigo_cliente || '';
       document.getElementById('ramo_juridico').value = t.ramo_juridico || '';
 
-      // --- SAFETY NET START ---
+      // --- ROBUST SAFETY NET (GLOBAL VAULT) ---
+      window.__clientState = {
+        originalName: (t.cliente_nome || t.cliente || '').trim(),
+        originalCode: (t.codigo_cliente || '').trim()
+      };
+      // Also update dataset for backwards compatibility/inspection
       const elNome = document.getElementById('cliente_nome');
       if (elNome) {
-        const rawName = (t.cliente_nome || t.cliente || '').trim();
-        elNome.dataset.originalName = rawName;
-        elNome.dataset.originalCode = (t.codigo_cliente || '').trim();
+        elNome.dataset.originalName = window.__clientState.originalName;
+        elNome.dataset.originalCode = window.__clientState.originalCode;
       }
-      // --- SAFETY NET END ---
+      // --- END VAULT ---
 
       // NOVO: aplicar flag de ST que veio do backend
       const ivaChk = document.getElementById('iva_st_toggle');
@@ -1763,21 +1766,22 @@ async function salvarTabela() {
   const fornecedorHeader = inferirFornecedorDaGrade();
   let codigo_cliente = (document.getElementById('codigo_cliente')?.value || '').trim() || null;
 
-  // --- SAFETY NET CHECK ---
-  // Se o código sumiu, mas o nome é IDÊNTICO ao original carregado, restaura.
-  if (!codigo_cliente) {
+  // --- SAFETY NET CHECK (GLOBAL VAULT) ---
+  if (!codigo_cliente && window.__clientState && window.__clientState.originalCode) {
     const elNome = document.getElementById('cliente_nome');
-    if (elNome && elNome.dataset.originalCode) {
-      const curName = (elNome.value || '').trim();
-      if (curName && curName === elNome.dataset.originalName) {
-        console.warn("Safety Net: Restaurando código do cliente perdido na edição.");
-        codigo_cliente = elNome.dataset.originalCode;
-        // Opcional: bota de volta no input pra ficar bonito
-        const elCode = document.getElementById('codigo_cliente');
-        if (elCode) elCode.value = codigo_cliente;
-      }
+    const curName = (elNome?.value || '').trim();
+
+    // Se o nome atual é igual ao original (guardado no cofre), restaura o código
+    if (curName && curName === window.__clientState.originalName) {
+      console.warn("Global Vault: Restaurando código do cliente perdido na edição.");
+      codigo_cliente = window.__clientState.originalCode;
+
+      // Visual feedback
+      const elCode = document.getElementById('codigo_cliente');
+      if (elCode) elCode.value = codigo_cliente;
     }
   }
+
   const calcula_st = !!document.getElementById('iva_st_toggle')?.checked;
   // Se codigo_cliente for nulo, mande null (não grave "Não cadastrado" string)
   const payload = { nome_tabela, cliente, codigo_cliente, ramo_juridico, fornecedor: fornecedorHeader, calcula_st, produtos };

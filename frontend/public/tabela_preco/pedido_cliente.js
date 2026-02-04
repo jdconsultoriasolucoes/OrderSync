@@ -694,13 +694,16 @@ async function confirmarPedido() {
               }
             }
 
-            // 2. Fallback: Pega o code da URL (ex: /p/XYZ123)
+            // 2. Fallback: Pega o code da URL
             const pathParts = window.location.pathname.split('/').filter(Boolean);
             const code = pathParts[pathParts.length - 1];
 
             if (code && code.length > 3) {
-              // Abre em nova aba para download via rota
               window.open(API(`/link_pedido/pdf_cliente/${code}`), '_blank');
+            } else if (window.lastOrderId) {
+              // 3. Fallback: Se não tem code na URL (modo interno), usa ID
+              // Endpoint: /api/pedido/{id}/pdf_cliente
+              window.open(API(`/api/pedido/${window.lastOrderId}/pdf_cliente`), '_blank');
             } else {
               alert("Não foi possível identificar o link para download. Verifique seu e-mail para a cópia do orçamento.");
             }
