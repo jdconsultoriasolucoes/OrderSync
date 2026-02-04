@@ -274,24 +274,29 @@ def criar_pedido_confirmado(db: Session, tabela_id: int, body: ConfirmarPedidoRe
     else:
         try:
             # Tenta gerar o PDF do pedido (com todos os detalhes)
-            pdf_bytes = None
+            pdf_bytes_vendedor = None
+            pdf_bytes_cliente = None
             try:
                 # 1) carrega os dados do pedido no formato PedidoPdf
                 pedido_pdf = carregar_pedido_pdf(db, new_id)
 
                 # 2) gera o arquivo com layout do VENDEDOR (completo, para email)
-                pdf_bytes = gerar_pdf_pedido(pedido_pdf, sem_validade=False)
+                pdf_bytes_vendedor = gerar_pdf_pedido(pedido_pdf, sem_validade=False)
+                
+                # 3) gera o arquivo com layout do CLIENTE (simplificado, para download)
+                pdf_bytes_cliente = gerar_pdf_pedido(pedido_pdf, sem_validade=True)
                 
             except Exception as e_pdf:
                 logging.exception("Falha ao gerar PDF (ignorada): %s", e_pdf)
-                pdf_bytes = None  # segue sem anexo
+                pdf_bytes_vendedor = None
+                pdf_bytes_cliente = None
 
             # Dispara o e-mail usando as configs da tela de Config Email
             enviar_email_notificacao(
                 db=db,
                 pedido=pedido_email,
                 link_pdf=None,      # se um dia gerar link público, preenche aqui
-                pdf_bytes=pdf_bytes
+                pdf_bytes=pdf_bytes_vendedor  # Email usa PDF do vendedor
             )
 
             # Se chegou até aqui sem exception, marca como ENVIADO
@@ -333,10 +338,11 @@ def criar_pedido_confirmado(db: Session, tabela_id: int, body: ConfirmarPedidoRe
              pass
     
     # Encode PDF to Base64 for immediate frontend download
+    # USA O PDF DO CLIENTE (não do vendedor)
     pdf_b64 = None
-    if pdf_bytes:
+    if pdf_bytes_cliente:
         import base64
-        pdf_b64 = base64.b64encode(pdf_bytes).decode('utf-8')
+        pdf_b64 = base64.b64encode(pdf_bytes_cliente).decode('utf-8')
 
     return {
         "id": new_id, 
