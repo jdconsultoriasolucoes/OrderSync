@@ -100,6 +100,19 @@
           window.entregaISO = (typeof d.data_prevista === 'string' ? d.data_prevista : null); // << NOVO
           console.log('[resolver] ok', d);
 
+          if (d.is_expired) {
+            document.body.innerHTML = `
+                <div style="display: flex; flex-direction: column; align-items: center; justify-content: center; height: 100vh; font-family: sans-serif; text-align: center; background-color: #f9f9f9;">
+                    <h1 style="color: #d9534f; margin-bottom: 1rem;">Link Expirado</h1>
+                    <p style="color: #333; font-size: 1.1rem; max-width: 500px; line-height: 1.5;">
+                        Este link de orçamento não é mais válido.<br>
+                        Por favor, entre em contato com a empresa para solicitar um novo link.
+                    </p>
+                </div>
+            `;
+            return;
+          }
+
           if (typeof window.carregarPedido === 'function') {
             window.carregarPedido();
           } else {
@@ -113,7 +126,7 @@
   <div id="confirmModal" class="modal" hidden>
     <div class="modal-backdrop"></div>
     <div class="modal-content" role="dialog" aria-modal="true" aria-labelledby="confirmTitle">
-      <h2 id="confirmTitle">Pedido confirmado ✅</h2>
+      <h2 id="confirmTitle">Orçamento confirmado ✅</h2>
       <p class="confirm-text">Recebemos seu pedido e ele já está sendo processado.</p>
       <p id="confirmPedidoInfo" class="confirm-info"></p>
       <button id="btnFecharConfirm" type="button" onclick="closeConfirmModal()">Fechar</button>

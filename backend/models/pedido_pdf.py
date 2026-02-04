@@ -25,6 +25,7 @@ class PedidoPdf(BaseModel):
 
     # NOVOS
     nome_fantasia: Optional[str] = None
+    razao_social: Optional[str] = None # LEGAL NAME (nome_cliente)
     frete_kg: Optional[float] = None
     validade_tabela: Optional[str] = "Não se aplica"
 

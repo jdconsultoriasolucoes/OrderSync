@@ -134,7 +134,7 @@ def _desenhar_pdf(pedido: PedidoPdf, buffer: io.BytesIO, sem_validade: bool = Fa
     y_right_block_start = faixa_y - faixa_h + 0.35 * cm + 0.2 * cm
 
     c.setFont("Helvetica", 9) 
-    c.drawRightString(width - margin_x - 0.3 * cm, y_right_block_start, f"Data do Pedido: {pedido.data_pedido.strftime('%d/%m/%Y')}")
+    c.drawRightString(width - margin_x - 0.3 * cm, y_right_block_start, f"Data do Orçamento: {pedido.data_pedido.strftime('%d/%m/%Y')}")
     
     if not sem_validade and pedido.validade_tabela:
         c.drawRightString(width - margin_x - 0.3 * cm, y_right_block_start - 0.4 * cm, f"Proposta válida até: {pedido.validade_tabela}")
@@ -147,7 +147,7 @@ def _desenhar_pdf(pedido: PedidoPdf, buffer: io.BytesIO, sem_validade: bool = Fa
     # =======================
     codigo_cliente = pedido.codigo_cliente or ""
     cliente = pedido.cliente or ""
-    razao_social = pedido.nome_fantasia or ""
+    razao_social = pedido.razao_social or pedido.nome_fantasia or ""
 
     # larguras em cm (aprox.):
     label_cod_w = 1.4 * cm
@@ -208,17 +208,242 @@ def _desenhar_pdf(pedido: PedidoPdf, buffer: io.BytesIO, sem_validade: bool = Fa
         data_entrega_str = ""
 
     # FRETE (agora mostra FRETE KG no topo - solicitado "inverter")
+    # SE FOR VERSAO CLIENTE (sem_validade), ESCONDER FRETE TOTAL DESTE BLOCO
     if frete_kg > 0:
         frete_str = "R$ " + _br_number(frete_kg)
     else:
         frete_str = "R$ 0,00"
 
-    frete_data = [
-        ["Frete Total:", frete_str],
-    ]
+    frete_data = []
+    if not sem_validade:
+        # Só mostra Frete Total no topo para Vendedor
+        frete_data.append(["Frete Total:", frete_str])
+    else:
+        # Cliente: Deixa em branco para manter alinhamento ou esconde
+        # Se deixar lista vazia, o Table pode reclamar. Vamos por placeholder vazio.
+        frete_data.append(["", ""]) 
+
     frete_col_widths = [3.0 * cm, 4.0 * cm]
 
     frete_table = Table(frete_data, colWidths=frete_col_widths)
+    frete_table.setStyle(
+        TableStyle(
+            [
+                ("BACKGROUND", (0, 0), (-1, -1), SUPRA_BG_LIGHT),
+                ("FONTNAME", (0, 0), (-1, -1), "Helvetica-Bold"),
+                ("TEXTCOLOR", (0, 0), (-1, -1), SUPRA_DARK),
+                ("FONTSIZE", (0, 0), (-1, -1), 9),
+                ("GRID", (0, 0), (-1, -1), 0.5, colors.black),
+                ("BOX", (0, 0), (-1, -1), 0.5, colors.black),
+                ("VALIGN", (0, 0), (-1, -1), "MIDDLE"),
+                ("ALIGN", (0, 0), (0, -1), "RIGHT"),
+                ("ALIGN", (1, 0), (1, -1), "LEFT"),
+            ]
+        )
+    )
+
+    # DATA DE RETIRADA/ENTREGA
+    data_data = [
+        ["Data Retirada/Entrega:", data_entrega_str],
+    ]
+    data_col_widths = [4.0 * cm, 5.0 * cm]
+
+    data_table = Table(data_data, colWidths=data_col_widths)
+    data_table.setStyle(
+        TableStyle(
+            [
+                ("BACKGROUND", (0, 0), (-1, -1), SUPRA_BG_LIGHT),
+                ("FONTNAME", (0, 0), (-1, -1), "Helvetica-Bold"),
+                ("TEXTCOLOR", (0, 0), (-1, -1), SUPRA_DARK),
+                ("FONTSIZE", (0, 0), (-1, -1), 9),
+                ("GRID", (0, 0), (-1, -1), 0.5, colors.black),
+                ("BOX", (0, 0), (-1, -1), 0.5, colors.black),
+                ("VALIGN", (0, 0), (-1, -1), "MIDDLE"),
+                ("ALIGN", (0, 0), (0, 0), "CENTER"),
+                ("ALIGN", (1, 0), (1, 0), "LEFT"),
+            ]
+        )
+    )
+
+    y = y - 0.1 * cm
+    bloco2_left_w = frete_col_widths[0] + frete_col_widths[1]
+    bloco2_right_w = data_col_widths[0] + data_col_widths[1]
+    bloco2_gap = available_width - bloco2_left_w - bloco2_right_w
+
+    _, frete_h = frete_table.wrap(bloco2_left_w, height)
+    _, data_h = data_table.wrap(bloco2_right_w, height)
+    bloco2_h = max(frete_h, data_h)
+
+    # Só desenha tabela frete se tiver dados visíveis ou se for layout fixo
+    # Se for sem_validade, frete_data tem ["", ""]. Vai desenhar caixa vazia.
+    # Usuário pediu pra RISCAR, ou seja, sumir? Se for sumir, melhor não desenhar.
+    if not sem_validade:
+        frete_table.drawOn(c, margin_x, y - frete_h)
+    
+    data_table.drawOn(c, margin_x + bloco2_left_w + bloco2_gap, y - data_h)
+    y = y - bloco2_h + -0.3 * cm
+
+    # =======================
+    # TABELA DE ITENS (multi-página)
+    # =======================
+    header = [
+        "Fornecedor",
+        "Codigo",
+        "Produto",
+        "Embal",
+        "Qtd",
+        "Cond. Pgto",
+        "Comissão",
+        "Valor Retira",
+        "Valor Entrega",
+    ]
+
+    # ordena itens por quantidade (maior -> menor)
+    itens_ordenados = sorted(
+        pedido.itens,
+        key=lambda it: float(getattr(it, "quantidade", 0) or 0),
+        reverse=True,
+    )
+
+    # converte itens em linhas da tabela
+    all_rows = []
+    for it in itens_ordenados:
+        all_rows.append(
+            [
+                it.fornecedor or "",
+                it.codigo,
+                it.produto,
+                it.embalagem or "",
+                f"{it.quantidade:g}",
+                it.condicao_pagamento or "",
+                it.tabela_comissao or "",
+                "R$ " + _br_number(float(it.valor_retira or 0)),
+                "R$ " + _br_number(float(it.valor_entrega or 0)),
+            ]
+        )
+
+    # Larguras base em cm; escala para ocupar a largura inteira
+    base_widths_cm = [
+        2.5,  # Fornecedor (Novo - Inicio)
+        1.7,  # Código
+        6.5,  # Produto  (Reduzido de 8.3)
+        1.5,  # Embalagem (Reduzido de 1.8)
+        1.5,  # Qtd
+        5.5,  # Cond. Pgto
+        2.0,  # Comissão (Reduzido de 2.7)
+        2.5,  # Valor Retira
+        2.5,  # Valor Entrega
+    ]
+    total_base = sum(base_widths_cm)
+    scale = (available_width / cm) / total_base
+    col_widths = [w * scale * cm for w in base_widths_cm]
+
+    # estilo da tabela de itens (reutilizado em todas as páginas)
+    itens_table_style = TableStyle(
+        [
+            ("BACKGROUND", (0, 0), (-1, 0), SUPRA_RED),
+            ("TEXTCOLOR", (0, 0), (-1, 0), colors.white),
+            ("FONTNAME", (0, 0), (-1, 0), "Helvetica-Bold"),
+            ("FONTSIZE", (0, 0), (-1, 0), 9),
+            ("ALIGN", (0, 0), (-1, 0), "CENTER"),
+
+            ("GRID", (0, 0), (-1, -1), 0.5, colors.black),
+            ("BOX", (0, 0), (-1, -1), 0.5, colors.black),
+
+            ("FONTSIZE", (0, 1), (-1, -1), 8),
+            ("VALIGN", (0, 0), (-1, -1), "MIDDLE"),
+            ("ALIGN", (4, 1), (4, -1), "CENTER"),   # Qtd
+            ("ALIGN", (7, 1), (8, -1), "RIGHT"),    # valores
+            ("ALIGN", (0, 1), (0, -1), "CENTER"),   # Fornecedor
+        ]
+    )
+
+    itens_x = margin_x
+    current_y = y  # posição vertical atual para itens
+
+    # quebra em várias páginas, se necessário
+    rows_buffer = []
+
+    def _desenhar_tabela_pagina(rows, y_top):
+        if not rows:
+            return y_top
+        data_page = [header] + rows
+        table = Table(data_page, colWidths=col_widths)
+        table.setStyle(itens_table_style)
+        _, table_height = table.wrap(available_width, height)
+        table.drawOn(c, itens_x, y_top - table_height)
+        return y_top - table_height - 0.5 * cm
+
+    for row in all_rows:
+        # testa se cabe adicionar mais uma linha nesta página
+        teste_rows = rows_buffer + [row]
+        data_test = [header] + teste_rows
+        table_test = Table(data_test, colWidths=col_widths)
+        table_test.setStyle(itens_table_style)
+        _, test_height = table_test.wrap(available_width, height)
+
+        if current_y - test_height < margin_y:
+            # não cabe -> desenha o que já temos nesta página
+            current_y = _desenhar_tabela_pagina(rows_buffer, current_y)
+            rows_buffer = []
+
+            # nova página somente com continuação dos itens (sem cabeçalho do pedido)
+            c.showPage()
+            current_y = height - margin_y
+
+        rows_buffer.append(row)
+
+    # desenha o resto (última página de itens)
+    current_y = _desenhar_tabela_pagina(rows_buffer, current_y)
+
+    # atualiza y global para a próxima seção (fechamento/observações)
+    y = current_y
+
+    # =======================
+    # FECHAMENTO + OBSERVAÇÕES
+    # =======================
+    obs_text = (pedido.observacoes or "").strip()
+
+    # largura dos dois blocos na mesma linha
+    gap = 0.3 * cm
+    fech_block_width = available_width * 0.45   # fechamento à esquerda
+    obs_block_width = available_width - fech_block_width - gap
+
+    # NOVO: Peso Bruto vs Liquido
+    total_peso_liq_raw = getattr(pedido, "total_peso_liquido", 0.0) or 0.0
+    total_peso_bru_raw = getattr(pedido, "total_peso_bruto", 0.0) or 0.0
+
+    def _fmt_peso(p):
+        return _br_number(int(p + 0.5) if p >= 0 else int(p - 0.5), 0, " kg")
+
+    total_valor = float(pedido.total_valor or 0)
+
+    # Cria lista de fechamento
+    data_fech = [
+        ["Fechamento do Orçamento:", ""],
+    ]
+    # SÓ MOSTRA PESO LIQUIDO SE NAO FOR VERSAO CLIENTE
+    if not sem_validade:
+        data_fech.append(["Total em Peso Líquido:", _fmt_peso(total_peso_liq_raw)])
+        
+    data_fech.append(["Total em Peso Bruto:",   _fmt_peso(total_peso_bru_raw)])
+    data_fech.append(["Valor Frete:", "R$ " + _br_number(frete_total)])
+    data_fech.append(["Total em Valor:", "R$ " + _br_number(total_valor)])
+
+    # ... (rest of logic) ...
+
+    # WATERMARK
+    if sem_validade:
+        c.saveState()
+        c.setFont("Helvetica-Bold", 60)
+        c.setFillColor(colors.Color(0.8, 0.8, 0.8, alpha=0.3))
+        c.translate(width/2, height/2)
+        c.rotate(45)
+        c.drawCentredString(0, 0, "ORÇAMENTO")
+        c.restoreState()
+
+    c.showPage()
+    c.save()
     frete_table.setStyle(
         TableStyle(
             [

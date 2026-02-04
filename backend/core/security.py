@@ -19,7 +19,7 @@ SECRET_KEY = os.environ.get("SECRET_KEY", _DEFAULT_KEY)
 if SECRET_KEY == _DEFAULT_KEY:
     logger.warning("⚠️  SECURITY WARNING: Using default insecure SECRET_KEY! Please set SECRET_KEY in .env")
 ALGORITHM = "HS256"
-ACCESS_TOKEN_EXPIRE_MINUTES = 30
+ACCESS_TOKEN_EXPIRE_MINUTES = 60
 
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 

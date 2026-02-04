@@ -625,10 +625,29 @@ async function confirmarPedido() {
 
     const data = await resp.json();
     const pedidoIdConfirmado = data?.id ?? data?.pedido_id;
-    if (!pedidoIdConfirmado) throw new Error("Resposta sem id do pedido.");
 
     if (!pedidoIdConfirmado) {
       throw new Error("Resposta sem id do pedido.");
+    }
+
+    // --- Lógica de Download do PDF (Híbrido) ---
+    if (data.pdf_base64) {
+      try {
+        const link = document.createElement('a');
+        link.href = `data:application/pdf;base64,${data.pdf_base64}`;
+        link.download = `Orcamento_${pedidoIdConfirmado}.pdf`;
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+      } catch (errPDF) {
+        console.error("Erro ao baixar PDF:", errPDF);
+      }
+    }
+
+    // Atualiza texto do modal para avisar do email/download
+    const txtConfirm = document.querySelector('.confirm-text');
+    if (txtConfirm) {
+      txtConfirm.innerHTML = "Orçamento confirmado com sucesso!<br>Uma cópia foi enviada para seu e-mail e o download do PDF deve iniciar automaticamente.";
     }
 
     openConfirmModal(pedidoIdConfirmado);

@@ -143,7 +143,7 @@ def enviar_email_notificacao(
     msg["To"]   = ", ".join(destinatarios) if destinatarios else remetente
     if cc:
         msg["Cc"] = ", ".join(cc)
-    base_subject = assunto or "Pedido confirmado"
+    base_subject = assunto or "Orçamento confirmado"
     if pedido_info.get("pedido_id"):
         msg["Subject"] = f"{base_subject} #{pedido_info['pedido_id']}"
     else:
@@ -158,7 +158,7 @@ def enviar_email_notificacao(
 
     if pdf_bytes:
         part = MIMEApplication(pdf_bytes, _subtype="pdf")
-        filename = f"pedido_{pedido_info['pedido_id']}.pdf"
+        filename = f"Orcamento_{pedido_info['pedido_id']}.pdf"
         part.add_header("Content-Disposition", "attachment", filename=filename)
         msg.attach(part)
 
@@ -204,7 +204,7 @@ Equipe OrderSync
                 part_c.add_header(
                     "Content-Disposition", 
                     "attachment", 
-                    filename=f"Pedido_{pedido.id}.pdf"
+                    filename=f"Orcamento_{pedido.id}.pdf"
                 )
                 msg_cliente.attach(part_c)
                 

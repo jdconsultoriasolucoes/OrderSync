@@ -72,7 +72,38 @@ const Auth = {
             return;
         }
 
-        // Inactivity Timer (15 minutes)
+        // Initialize Auto-Refresh (every 10 minutes)
+        if (!window.autoRefreshTimerInitialized) {
+            setInterval(async () => {
+                const token = Auth.getToken();
+                if (!token) return;
+
+                try {
+                    const res = await fetch(`${window.API_BASE}/token/refresh`, {
+                        method: "POST",
+                        headers: { "Authorization": `Bearer ${token}` }
+                    });
+
+                    if (res.ok) {
+                        const data = await res.json();
+                        if (data.access_token) {
+                            localStorage.setItem(AUTH_TOKEN_KEY, data.access_token);
+                            console.log("Token refreshed automatically.");
+                        }
+                    } else {
+                        console.warn("Failed to refresh token automatically.");
+                    }
+                } catch (e) {
+                    console.error("Auto-refresh error:", e);
+                }
+            }, 10 * 60 * 1000); // 10 minutes
+            window.autoRefreshTimerInitialized = true;
+        }
+
+        // Inactivity Timer (15 minutes - Client Side Check)
+        // Note: The concept is that while the user is active (auto-refresh happens), 
+        // the session is effectively infinite. This timer handles if they leave the 
+        // machine completely alone.
         if (!window.inactivityTimerInitialized) {
             let inactivityTimer;
             const resetTimer = () => {
@@ -80,7 +111,7 @@ const Auth = {
                 inactivityTimer = setTimeout(() => {
                     alert("Sessão expirada por inatividade (15min).");
                     Auth.logout();
-                }, 15 * 60 * 1000);
+                }, 15 * 60 * 1000); // 15 mins
             };
 
             window.addEventListener('mousemove', resetTimer);

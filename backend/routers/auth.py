@@ -7,6 +7,7 @@ from sqlalchemy.orm import Session
 from database import SessionLocal
 from models.usuario import UsuarioModel
 from core.security import verify_password, create_access_token, ACCESS_TOKEN_EXPIRE_MINUTES
+from core.deps import get_current_user
 from schemas.usuario import Token
 
 router = APIRouter(prefix="/token", tags=["auth"])
@@ -47,6 +48,28 @@ def login_for_access_token(form_data: OAuth2PasswordRequestForm = Depends(), db:
         "funcao": user.funcao,
         "nome": user.nome,
         "reset_senha_obrigatorio": user.reset_senha_obrigatorio or False
+    }
+
+@router.post("/refresh", response_model=Token)
+def refresh_token(
+    current_user: UsuarioModel = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    """
+    Renova o token de acesso para o usuário logado.
+    """
+    access_token_expires = timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES)
+    access_token = create_access_token(
+        data={"sub": current_user.email, "role": current_user.funcao},
+        expires_delta=access_token_expires
+    )
+    
+    return {
+        "access_token": access_token,
+        "token_type": "bearer",
+        "funcao": current_user.funcao,
+        "nome": current_user.nome,
+        "reset_senha_obrigatorio": current_user.reset_senha_obrigatorio or False
     }
 
 from schemas.usuario import UsuarioForgotPassword, UsuarioResetSenha

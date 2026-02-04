@@ -11,13 +11,14 @@ def carregar_pedido_pdf(db, pedido_id: int) -> PedidoPdf:
             p.id_pedido,
             p.codigo_cliente,
             p.cliente,
+            c.cadastro_nome_cliente AS nome_empresarial, /* RAZAO SOCIAL LEGAL V2 */
 
             CASE
-                WHEN c.nome_fantasia IS NULL
-                OR c.nome_fantasia = 'nan'
-                OR c.nome_fantasia = ''
+                WHEN c.cadastro_nome_fantasia IS NULL
+                OR c.cadastro_nome_fantasia = 'nan'
+                OR c.cadastro_nome_fantasia = ''
                 THEN 'Sem Nome Fantasia'
-                ELSE c.nome_fantasia
+                ELSE c.cadastro_nome_fantasia
             END AS nome_fantasia,
 
             t.frete_kg AS frete_kg,
@@ -28,7 +29,8 @@ def carregar_pedido_pdf(db, pedido_id: int) -> PedidoPdf:
             p.peso_total_kg, /* Este costuma ser o peso considerado para frete (agora bruto) */
             p.total_pedido,
             p.observacoes,
-
+            
+            i.id_item, /* REQUIRED FOR DEDUPLICATION */
             i.codigo              AS item_codigo,
             i.nome                AS item_nome,
             i.embalagem           AS item_embalagem,
@@ -47,8 +49,8 @@ def carregar_pedido_pdf(db, pedido_id: int) -> PedidoPdf:
             tp.valor_s_frete_markup   AS item_valor_s_frete_markup
 
         FROM tb_pedidos p
-        LEFT JOIN public.t_cadastro_cliente c
-            ON c.codigo::text = p.codigo_cliente
+        LEFT JOIN public.t_cadastro_cliente_v2 c
+            ON c.cadastro_codigo_da_empresa::text = p.codigo_cliente
 
         -- AQUI o pulo do gato: "condensa" a tabela de preço em 1 linha por tabela
         LEFT JOIN (
@@ -73,6 +75,7 @@ def carregar_pedido_pdf(db, pedido_id: int) -> PedidoPdf:
         LEFT JOIN t_cadastro_produto_v2 prod
             ON prod.codigo_supra = i.codigo
             AND prod.fornecedor = tp.fornecedor
+            AND prod.status_produto = 'ATIVO'
 
         WHERE p.id_pedido = :pid
         ORDER BY i.quantidade DESC, i.id_item;
@@ -85,12 +88,19 @@ def carregar_pedido_pdf(db, pedido_id: int) -> PedidoPdf:
     head = rows[0]
 
     itens = []
+    seen_items = set() # Track processed items
     
     # Recalcula pesos
     sum_peso_liq = 0.0
     sum_peso_bru = 0.0
 
     for r in rows:
+        # DEDUPLICATION CHECK
+        item_id = r["id_item"]
+        if item_id in seen_items:
+            continue
+        seen_items.add(item_id)
+
         qtd = float(r["item_quantidade"] or 0)
         
         # Pesos unitários
@@ -123,6 +133,7 @@ def carregar_pedido_pdf(db, pedido_id: int) -> PedidoPdf:
         codigo_cliente=head["codigo_cliente"],
         cliente=head["cliente"] or "",
         nome_fantasia=head.get("nome_fantasia") or "Sem Nome Fantasia",
+        razao_social=head.get("nome_empresarial") or None,
         data_pedido=head["confirmado_em"],
         data_entrega_ou_retirada=head["data_retirada"],
         frete_total=float(head["frete_total"] or 0),
