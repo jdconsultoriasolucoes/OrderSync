@@ -714,6 +714,8 @@ async function confirmarPedido() {
         const btn = document.getElementById('btnBaixarManual');
         if (btn) {
           btn.onclick = window.baixarPdfManual; // Using direct property to ensure binding
+          btn.disabled = false; // Force enable
+          btn.style.pointerEvents = 'auto'; // Force clickable
           console.log("Evento onclick vinculado ao botão PDF");
         } else {
           console.error("Botão PDF não encontrado para vincular evento");

@@ -223,6 +223,12 @@ body.page-locked .documento *:not(#confirmModal):not(.modal-content):not(.btn-mo
   cursor: not-allowed !important;
 }
 
+/* Exceção: botão de download do PDF deve permanecer clicável */
+#btnBaixarManual {
+  cursor: pointer !important;
+  pointer-events: auto !important;
+}
+
 .hidden {
   display: none !important;
 }
