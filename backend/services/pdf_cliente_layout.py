@@ -128,6 +128,7 @@ def gerar_pdf_cliente_simplificado(pedido: PedidoPdf) -> bytes:
     
     # Cabeçalho da tabela (com abreviações)
     table_header = [
+        "#",
         "Código",
         "Produto",
         "Embal.",
@@ -140,7 +141,7 @@ def gerar_pdf_cliente_simplificado(pedido: PedidoPdf) -> bytes:
     
     # Preparar todas as linhas de produtos
     all_rows = []
-    for item in pedido.itens:
+    for idx, item in enumerate(pedido.itens, start=1):
         # Escolher valor correto
         if pedido.usar_valor_com_frete:
             valor_unitario = item.valor_entrega
@@ -160,6 +161,7 @@ def gerar_pdf_cliente_simplificado(pedido: PedidoPdf) -> bytes:
                 valor_markup_display = f"R$ {_br_number(item.valor_final_markup, 2)}"
         
         all_rows.append([
+            str(idx),
             item.codigo or "",
             item.produto or "",
             item.embalagem or "",
@@ -174,7 +176,10 @@ def gerar_pdf_cliente_simplificado(pedido: PedidoPdf) -> bytes:
     
     # Larguras das colunas (ajustadas para retrato com margens menores)
     # Total disponível: ~19cm (21cm - 2cm de margens)
-    col_widths = [1.6*cm, 5.0*cm, 1.1*cm, 0.9*cm, 2*cm, 5.2*cm, 1.2*cm, 2.0*cm]
+    # Maior largura total (19cm) - ajustar outras colunas para caber a nova
+    # # (0.8cm), Cod(1.6), Prod(4.5), Emb(1.1), Qtd(0.9), Val(2.0), Cond(5.2), Mk(1.2), VMk(2.0) = 19.3 (Muito largo)
+    # Ajustando: #:0.8, Cod:1.5, Prod:4.2, Emb:1.1, Qtd:0.9, Val:1.9, Cond:4.8, Mk:1.1, VMk:1.9 = 18.2 (OK)
+    col_widths = [0.8*cm, 1.5*cm, 4.2*cm, 1.1*cm, 0.9*cm, 1.9*cm, 4.8*cm, 1.1*cm, 1.9*cm]
     # Total: 19cm
     # Produto: 5.0cm, Cond. Pagamento: 5.2cm (+0.7cm), VL. C Markup: 2.0cm
     

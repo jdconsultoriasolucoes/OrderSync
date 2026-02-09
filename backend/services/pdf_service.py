@@ -327,6 +327,7 @@ def _desenhar_pdf(pedido: PedidoPdf, buffer: io.BytesIO, sem_validade: bool = Fa
     # =======================
     # REVERTED: Sempre mostrar código do produto na tabela
     header = [
+        "#",
         "Fornecedor",
         "Codigo",
         "Produto",
@@ -347,6 +348,7 @@ def _desenhar_pdf(pedido: PedidoPdf, buffer: io.BytesIO, sem_validade: bool = Fa
 
     # Define colunas e larguras base
     base_widths_cm = [
+        0.8,  # Item (#)
         2.5,  # Fornecedor
         1.7,  # Código
         6.5,  # Produto
@@ -364,8 +366,9 @@ def _desenhar_pdf(pedido: PedidoPdf, buffer: io.BytesIO, sem_validade: bool = Fa
 
     # converte itens em linhas da tabela
     all_rows = []
-    for it in itens_ordenados:
+    for idx, it in enumerate(itens_ordenados, start=1):
         all_rows.append([
+            str(idx),
             it.fornecedor or "",
             it.codigo,
             it.produto,
@@ -393,7 +396,8 @@ def _desenhar_pdf(pedido: PedidoPdf, buffer: io.BytesIO, sem_validade: bool = Fa
             ("VALIGN", (0, 0), (-1, -1), "MIDDLE"),
             ("ALIGN", (4, 1), (4, -1), "CENTER"),   # Qtd
             ("ALIGN", (7, 1), (8, -1), "RIGHT"),    # valores
-            ("ALIGN", (0, 1), (0, -1), "CENTER"),   # Fornecedor
+            ("ALIGN", (0, 1), (0, -1), "CENTER"),   # (#) Item
+            ("ALIGN", (1, 1), (1, -1), "CENTER"),   # Fornecedor
         ]
     )
 

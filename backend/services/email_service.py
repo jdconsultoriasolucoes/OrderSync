@@ -125,9 +125,11 @@ def enviar_email_notificacao(
         # 2) Se não tiver, tenta buscar pelo código no cadastro V2
         email_v2 = None
         if not email_pedido:
+             c_temp = getattr(pedido, "codigo_cliente", None)
+             print(f"DEBUG: enviar_email_notificacao - Buscando email por codigo_cliente: '{c_temp}'")
              email_v2 = get_email_cliente_responsavel_compras(
                 db,
-                getattr(pedido, "codigo_cliente", None)
+                c_temp
             )
 
         final_email = email_pedido or email_v2

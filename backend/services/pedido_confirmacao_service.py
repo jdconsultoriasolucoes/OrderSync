@@ -242,6 +242,7 @@ def criar_pedido_confirmado(db: Session, tabela_id: int, body: ConfirmarPedidoRe
     # 7) Monta um "pedido" mínimo só para o serviço de e-mail
     # Fetch customer email for the "Client Copy" feature
     from services.email_service import get_email_cliente_responsavel_compras
+    print(f"DEBUG: CriarPedido - Buscando email inicial para codigo: '{codigo_cliente}'")
     client_email_addr = get_email_cliente_responsavel_compras(db, codigo_cliente)
 
     class PedidoEmailDummy:

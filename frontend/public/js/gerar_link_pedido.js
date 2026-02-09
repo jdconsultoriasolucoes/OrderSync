@@ -38,9 +38,9 @@ function ensureModalInjected() {
           <label>Link gerado</label>
           <input type="text" id="glpLinkInput" readonly>
           <div class="glp-actions">
+            <button id="glpPriceList" style="background:#6c757d;">Lista de Preço</button>
             <button id="glpCopy">Copiar link</button>
             <button id="glpOpen">Visualizar</button>
-            <button id="glpPriceList" style="background:#6c757d;">Lista de Preço</button>
             <button id="glpWhats">WhatsApp</button>
           </div>
           <p id="glpHint" class="glp-hint"></p>

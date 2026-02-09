@@ -187,6 +187,7 @@ function renderTabela() {
 
     const tr = document.createElement("tr");
     tr.innerHTML = `
+      <td>${i + 1}</td>
       <td>${item.codigo ?? ""}</td>
       <td>${item.nome ?? ""}</td>
       <td>${item.embalagem ?? ""}</td>
