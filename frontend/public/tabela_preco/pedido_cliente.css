@@ -233,6 +233,14 @@ body.page-locked .documento *:not(#confirmModal):not(.modal-content):not(.btn-mo
   display: none !important;
 }
 
+/* FORÇA A EXIBIÇÃO DA COLUNA 5 (Quantidade) e 10 (Valor Markup) */
+#tabelaProdutos th:nth-child(5),
+#tabelaProdutos td:nth-child(5),
+#tabelaProdutos th:nth-child(10),
+#tabelaProdutos td:nth-child(10) {
+  display: table-cell !important;
+}
+
 /* esconde a coluna 6 (Peso) da tabela - ajustado para +1 coluna (#) */
 #tabelaProdutos th:nth-child(6),
 #tabelaProdutos td:nth-child(6),
