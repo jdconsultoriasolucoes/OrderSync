@@ -44,7 +44,7 @@ def gerar_link_code(db, tabela_id: int, com_frete: bool, data_prevista_str: str 
             row = db.execute(text("SELECT codigo_cliente FROM tb_tabela_preco WHERE id_tabela = :tid"), {"tid": tabela_id}).mappings().first()
             if row and row["codigo_cliente"]:
                 cod = str(row["codigo_cliente"]).strip()
-        exceptException:
+        except Exception:
             pass
 
     if not cod:
