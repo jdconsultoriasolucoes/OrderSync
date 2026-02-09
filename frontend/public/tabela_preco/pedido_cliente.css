@@ -233,12 +233,12 @@ body.page-locked .documento *:not(#confirmModal):not(.modal-content):not(.btn-mo
   display: none !important;
 }
 
-/* esconde a coluna 5 (Peso) da tabela */
-#tabelaProdutos th:nth-child(5),
-#tabelaProdutos td:nth-child(5),
-/* esconde a coluna 10 (Subtotal) da tabela */
-#tabelaProdutos th:nth-child(10),
-#tabelaProdutos td:nth-child(10) {
+/* esconde a coluna 6 (Peso) da tabela - ajustado para +1 coluna (#) */
+#tabelaProdutos th:nth-child(6),
+#tabelaProdutos td:nth-child(6),
+/* esconde a coluna 11 (Subtotal) da tabela - ajustado para +1 coluna (#) */
+#tabelaProdutos th:nth-child(11),
+#tabelaProdutos td:nth-child(11) {
   display: none !important;
 }
 
