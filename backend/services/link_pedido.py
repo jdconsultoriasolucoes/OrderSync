@@ -36,7 +36,20 @@ def gerar_link_code(db, tabela_id: int, com_frete: bool, data_prevista_str: str 
     expires_at = calcular_expires_at_global(db)
     data_prevista = _parse_iso_date(data_prevista_str)
 
-    cod = (codigo_cliente or "").strip() or "Não cadastrado"
+    cod = (codigo_cliente or "").strip()
+    
+    # Se não veio código no body, vamos tentar pegar da própria tabela pra garantir
+    if not cod:
+        try:
+            row = db.execute(text("SELECT codigo_cliente FROM tb_tabela_preco WHERE id_tabela = :tid"), {"tid": tabela_id}).mappings().first()
+            if row and row["codigo_cliente"]:
+                cod = str(row["codigo_cliente"]).strip()
+        exceptException:
+            pass
+
+    if not cod:
+        cod = "Não cadastrado"
+
     cod = cod[:80]
     
     link = PedidoLink(
