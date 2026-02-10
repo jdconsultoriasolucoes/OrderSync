@@ -293,6 +293,39 @@
         </form>
       </section>
 
+      </section>
+
+      <!-- Guia: Mensagem Cliente -->
+      <section id="tab-mensagem-cliente" class="tab-panel" role="tabpanel" aria-labelledby="Mensagem Cliente">
+        <div class="field checkbox"
+          style="margin-bottom: 20px; padding: 10px; background: #eff6ff; border-radius: 6px; border: 1px solid #bfdbfe;">
+          <input id="enviar_para_cliente" type="checkbox" />
+          <label for="enviar_para_cliente" style="font-weight:600; color:#1e40af;">Habilitar envio de e-mail para o
+            cliente</label>
+        </div>
+
+        <form id="form-mensagem-cliente" class="form">
+          <div class="field">
+            <label>Assunto (Cliente)</label>
+            <input id="assunto_cliente" type="text" placeholder="Confirmação do seu orçamento {{pedido_id}}" />
+          </div>
+
+          <div class="field">
+            <label>Corpo do e-mail (Cliente) <small>(HTML permitido)</small></label>
+            <textarea id="corpo_html_cliente" rows="8"
+              placeholder="<p>Olá {{cliente_nome}}, recebemos seu pedido {{pedido_id}}...</p>"></textarea>
+            <p class="help">Placeholders: <code>{{pedido_id}}</code>, <code>{{cliente_nome}}</code>,
+              <code>{{total_pedido}}</code>, <code>{{link_pdf}}</code>
+            </p>
+          </div>
+
+          <div class="actions">
+            <!-- Botão Salvar Geral (reaproveitado ou duplicado) -->
+            <button type="button" class="btn primary btnSalvarGeral">Salvar Tudo</button>
+          </div>
+        </form>
+      </section>
+
       <!-- Guia: SMTP -->
       <section id="tab-smtp" class="tab-panel" role="tabpanel" aria-labelledby="SMTP">
         <form id="form-smtp" class="form">
