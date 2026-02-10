@@ -40,6 +40,7 @@ def render_placeholders(template: str, pedido_info: dict, link_pdf: Optional[str
 # ------------------------
 # Busca e-mail do cliente (usa codigo_cliente como ID do V2)
 # ------------------------
+def get_email_cliente_responsavel_compras(db: Session, codigo_cliente) -> Optional[str]:
     print(f"DEBUG: get_email_cliente_responsavel_compras - Recebido codigo='{codigo_cliente}' (type:{type(codigo_cliente)})")
     
     if not codigo_cliente:

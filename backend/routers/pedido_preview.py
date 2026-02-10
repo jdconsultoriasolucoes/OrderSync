@@ -17,6 +17,7 @@ from schemas.pedido_confirmacao import ConfirmarPedidoRequest
 from services.pedido_confirmacao_service import criar_pedido_confirmado
 
 router = APIRouter(prefix="/pedido", tags=["Pedido"])
+logger = logging.getLogger(__name__)
 TZ = ZoneInfo("America/Sao_Paulo")
 
 # ----- Models de resposta (shape que a tela pedido_cliente já consome) -----
