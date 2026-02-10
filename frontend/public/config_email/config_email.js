@@ -41,8 +41,8 @@ async function detectEndpoints() {
       const ok = await probeBase(base);
       if (ok) {
         ENDPOINTS = {
-          mensagem:    `${base}/mensagem`,
-          smtp:        `${base}/smtp`,
+          mensagem: `${base}/mensagem`,
+          smtp: `${base}/smtp`,
           testarEnvio: `${base}/teste_envio`,
           // OBS: não há /smtp/teste no seu backend
         };
@@ -59,7 +59,7 @@ async function detectEndpoints() {
 }
 
 // === Tabs ========================================================
-function initTabs(){
+function initTabs() {
   document.querySelectorAll(".tab").forEach(btn => {
     btn.addEventListener("click", () => {
       const id = btn.dataset.tab;
@@ -85,11 +85,11 @@ async function putJSON(url, data) {
   if (!r.ok) throw new Error(`HTTP ${r.status} em PUT ${url}`);
   return await r.json().catch(() => ({}));
 }
-function setVal(id, v)   { const el = document.getElementById(id); if (el) el.value = v ?? ""; }
+function setVal(id, v) { const el = document.getElementById(id); if (el) el.value = v ?? ""; }
 function setCheck(id, v) { const el = document.getElementById(id); if (el) el.checked = !!v; }
-function getVal(id)      { return (document.getElementById(id)?.value ?? "").trim(); }
-function getCheck(id)    { return !!document.getElementById(id)?.checked; }
-function toast(ok, msg)  { alert(msg || (ok ? "Salvo!" : "Falhou")); }
+function getVal(id) { return (document.getElementById(id)?.value ?? "").trim(); }
+function getCheck(id) { return !!document.getElementById(id)?.checked; }
+function toast(ok, msg) { alert(msg || (ok ? "Salvo!" : "Falhou")); }
 function normalizeAppPassword(pwd) { return (pwd || "").replace(/\s+/g, ""); }
 
 // === Fluxo principal =============================================
@@ -109,7 +109,11 @@ async function init() {
   }
 
   // Bind botões
-  document.getElementById("btnSalvarMensagem").addEventListener("click", salvarMensagem);
+  // Bind botões (Atualizado para classe genérica)
+  document.querySelectorAll(".btnSalvarGeral").forEach(btn => {
+    btn.addEventListener("click", salvarMensagem);
+  });
+
   document.getElementById("btnTestarEnvio").addEventListener("click", testarEnvio);
   document.getElementById("btnSalvarSMTP").addEventListener("click", salvarSMTP);
   document.getElementById("btnTestarSMTP").addEventListener("click", testarSMTP);
@@ -126,6 +130,11 @@ async function carregarMensagem() {
     setVal("assunto_padrao", d?.assunto_padrao || "Novo pedido {{pedido_id}}");
     setVal("corpo_html", d?.corpo_html || "");
     setCheck("enviar_para_cliente", d?.enviar_para_cliente ?? false);
+
+    // Novos campos Cliente
+    setVal("assunto_cliente", d?.assunto_cliente || "Orçamento confirmado {{pedido_id}}");
+    setVal("corpo_html_cliente", d?.corpo_html_cliente || "");
+
   } catch (e) { console.error("Erro ao carregar mensagem:", e); }
 }
 
@@ -134,11 +143,14 @@ async function salvarMensagem() {
     destinatario_interno: getVal("destinatario_interno"),
     assunto_padrao: getVal("assunto_padrao"),
     corpo_html: getVal("corpo_html"),
-    enviar_para_cliente: getCheck("enviar_para_cliente")
+    enviar_para_cliente: getCheck("enviar_para_cliente"),
+    // Novos campos
+    assunto_cliente: getVal("assunto_cliente"),
+    corpo_html_cliente: getVal("corpo_html_cliente")
   };
   try {
     await putJSON(ENDPOINTS.mensagem, payload);
-    toast(true, "Mensagem salva.");
+    toast(true, "Configurações de Mensagem salvas.");
   } catch (e) {
     console.error(e);
     toast(false, "Falha ao salvar mensagem.");
@@ -147,11 +159,11 @@ async function salvarMensagem() {
 
 async function testarEnvio() {
   try {
-    const r = await fetch(ENDPOINTS.testarEnvio, { method:"POST" });
+    const r = await fetch(ENDPOINTS.testarEnvio, { method: "POST" });
     const ok = r.ok;
-    const t  = await r.text().catch(()=> "");
+    const t = await r.text().catch(() => "");
     toast(ok, ok ? "E-mail de teste enviado." : `Falha no teste de envio. ${t}`);
-  } catch(e){
+  } catch (e) {
     console.error(e);
     toast(false, "Erro ao testar envio (ver console).");
   }

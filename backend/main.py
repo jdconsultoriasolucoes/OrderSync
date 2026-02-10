@@ -37,6 +37,10 @@ def startup_ensure_admin():
     # --- FIX CRITICO: Criar tabelas antes de consultar ---
     from database import Base, engine
     Base.metadata.create_all(bind=engine)
+
+    # --- MIGRAÇOES DE SCHEMA (Colunas novas) ---
+    from services.db_migrations import run_migrations
+    run_migrations()
     
     db = SessionLocal()
     try:

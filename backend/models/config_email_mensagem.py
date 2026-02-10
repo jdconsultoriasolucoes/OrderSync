@@ -9,3 +9,7 @@ class ConfigEmailMensagem(Base):
     assunto_padrao = Column(Text, nullable=False)         # ex: "Novo pedido {{pedido_id}} - {{cliente_nome}}"
     corpo_html = Column(Text, nullable=False)             # corpo com placeholders
     enviar_para_cliente = Column(Boolean, nullable=False, default=False)
+    
+    # NOVAS COLUNAS V2 (separados para cliente)
+    assunto_cliente = Column(Text, nullable=True)         # ex: "Confirmação do seu orçamento {{pedido_id}}"
+    corpo_html_cliente = Column(Text, nullable=True)      # corpo específico para o cliente

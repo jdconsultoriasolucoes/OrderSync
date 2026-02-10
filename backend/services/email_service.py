@@ -144,83 +144,117 @@ def enviar_email_notificacao(
     db: Session,
     pedido,
     link_pdf: Optional[str] = None,
-    pdf_bytes: Optional[bytes] = None
+    pdf_bytes: Optional[bytes] = None,
+    pdf_bytes_cliente: Optional[bytes] = None
 ) -> None:
     cfg_smtp = _get_cfg_smtp(db)
     cfg_msg  = _get_cfg_msg(db)
 
     remetente = (getattr(cfg_smtp, "remetente_email", "") or getattr(cfg_smtp, "smtp_user", "")).strip()
 
-    # destinatários internos (separados por vírgula) — compatível com sua tela
-    # destinatários internos (separados por vírgula) — compatível com sua tela
-    destinatarios = []
+    # 1. Identificar Destinatários Internos
+    destinatarios_internos = []
     if getattr(cfg_msg, "destinatario_interno", None):
-        destinatarios = [e.strip() for e in cfg_msg.destinatario_interno.split(",") if e.strip()]
-
-    # cópia opcional para o cliente responsável compras (controlada pela flag da mensagem)
-    cc = []
+        destinatarios_internos = [e.strip() for e in cfg_msg.destinatario_interno.split(",") if e.strip()]
+    
+    # 2. Identificar Email Cliente
+    email_cliente = None
     if getattr(cfg_msg, "enviar_para_cliente", False):
-        # 1) Tenta usar o email que veio no pedido (ex: do cadastro V1 ou digitado na hora)
+        # Tenta usar o email que veio no pedido (ex: do cadastro V1 ou digitado na hora)
         email_pedido = getattr(pedido, "cliente_email", None)
         
-        # 2) Se não tiver, tenta buscar pelo código no cadastro V2
+        # Se não tiver, tenta buscar pelo código no cadastro V2
         email_v2 = None
         if not email_pedido:
              c_temp = getattr(pedido, "codigo_cliente", None)
-             print(f"DEBUG: enviar_email_notificacao - Buscando email por codigo_cliente: '{c_temp}'")
-             email_v2 = get_email_cliente_responsavel_compras(
-                db,
-                c_temp
-            )
+             email_v2 = get_email_cliente_responsavel_compras(db, c_temp)
 
-        final_email = email_pedido or email_v2
-        if final_email:
-            cc.append(final_email)
-
+        email_cliente = email_pedido or email_v2
+        
     pedido_info = {
         "pedido_id": getattr(pedido, "id", ""),
         "cliente_nome": getattr(pedido, "cliente_nome", "") or getattr(pedido, "nome_cliente", ""),
         "total_pedido": getattr(pedido, "total_pedido", ""),
     }
 
-    assunto    = render_placeholders(getattr(cfg_msg, "assunto_padrao", "") or "", pedido_info, link_pdf)
-    corpo_html = render_placeholders(getattr(cfg_msg, "corpo_html", "") or "", pedido_info, link_pdf)
-    corpo_txt  = ""  # opcional: adicione um campo texto na config se quiser
+    # =========================================================================
+    # ENVIO 1: INTERNO (Para a equipe de vendas)
+    # =========================================================================
+    if destinatarios_internos:
+        try:
+            assunto    = render_placeholders(getattr(cfg_msg, "assunto_padrao", "") or "", pedido_info, link_pdf)
+            corpo_html = render_placeholders(getattr(cfg_msg, "corpo_html", "") or "", pedido_info, link_pdf)
+            
+            msg = MIMEMultipart("mixed")
+            msg["From"] = remetente
+            msg["To"]   = ", ".join(destinatarios_internos)
+            
+            base_subject = assunto or "Novo Pedido (Interno)"
+            if pedido_info.get("pedido_id"):
+                msg["Subject"] = f"{base_subject}" # O placeholder já deve cuidar do ID se configurado
+            else:
+                msg["Subject"] = base_subject
 
-    msg = MIMEMultipart("mixed")
-    msg["From"] = remetente
-    msg["To"]   = ", ".join(destinatarios) if destinatarios else remetente
-    if cc:
-        msg["Cc"] = ", ".join(cc)
-    base_subject = assunto or "Orçamento confirmado"
-    if pedido_info.get("pedido_id"):
-        msg["Subject"] = f"{base_subject} #{pedido_info['pedido_id']}"
-    else:
-        msg["Subject"] = base_subject
-    
-    alt = MIMEMultipart("alternative")
-    if corpo_txt:
-        alt.attach(MIMEText(corpo_txt, "plain", "utf-8"))
-    if corpo_html:
-        alt.attach(MIMEText(corpo_html, "html", "utf-8"))
-    msg.attach(alt)
+            alt = MIMEMultipart("alternative")
+            if corpo_html:
+                alt.attach(MIMEText(corpo_html, "html", "utf-8"))
+            else:
+                alt.attach(MIMEText("Novo pedido recebido.", "plain", "utf-8"))
+            msg.attach(alt)
 
-    if pdf_bytes:
-        part = MIMEApplication(pdf_bytes, _subtype="pdf")
-        filename = f"Orcamento_{pedido_info['pedido_id']}.pdf"
-        part.add_header("Content-Disposition", "attachment", filename=filename)
-        msg.attach(part)
+            # Anexo: PDF Vendedor (Completo) - usa pdf_bytes
+            if pdf_bytes:
+                part = MIMEApplication(pdf_bytes, _subtype="pdf")
+                filename = f"Pedido_{pedido_info['pedido_id']}_Interno.pdf"
+                part.add_header("Content-Disposition", "attachment", filename=filename)
+                msg.attach(part)
 
-    to_all = destinatarios + cc if cc else destinatarios
-    if not to_all:
-        to_all = [remetente]  # fallback
-
-    with _abrir_conexao(cfg_smtp) as server:
-        # Envia para destinatários internos + CC (Cliente)
-        server.sendmail(remetente, to_all, msg.as_string())
+            with _abrir_conexao(cfg_smtp) as server:
+                server.sendmail(remetente, destinatarios_internos, msg.as_string())
+                print(f"Email Interno enviado para: {destinatarios_internos}")
         
-        # O bloco redundante foi removido.
-        server.quit()
+        except Exception as e:
+            print(f"Erro ao enviar email interno: {e}")
+            # Não aborta, tenta enviar o do cliente
+
+    # =========================================================================
+    # ENVIO 2: CLIENTE (Se habilitado e tiver email)
+    # =========================================================================
+    if email_cliente:
+        try:
+            # Usa campos específicos de cliente ou fallback para o padrão se vazio (opcional, mas melhor não)
+            assunto_cli = getattr(cfg_msg, "assunto_cliente", "") or "Confirmação de Pedido"
+            corpo_cli   = getattr(cfg_msg, "corpo_html_cliente", "") or "<p>Seu pedido foi recebido.</p>"
+            
+            assunto    = render_placeholders(assunto_cli, pedido_info, link_pdf)
+            corpo_html = render_placeholders(corpo_cli, pedido_info, link_pdf)
+            
+            msg = MIMEMultipart("mixed")
+            msg["From"] = remetente
+            msg["To"]   = email_cliente
+            msg["Subject"] = assunto
+
+            alt = MIMEMultipart("alternative")
+            alt.attach(MIMEText(corpo_html, "html", "utf-8"))
+            msg.attach(alt)
+
+            # Anexo: PDF Cliente (Simplificado) - usa pdf_bytes_cliente
+            # Se não vier o específico, usa o pdf_bytes (fallback? melhor não, user pediu diferente)
+            anexo_bytes = pdf_bytes_cliente if pdf_bytes_cliente else pdf_bytes
+            
+            if anexo_bytes:
+                part = MIMEApplication(anexo_bytes, _subtype="pdf")
+                filename = f"Orcamento_{pedido_info['pedido_id']}.pdf"
+                part.add_header("Content-Disposition", "attachment", filename=filename)
+                msg.attach(part)
+
+            with _abrir_conexao(cfg_smtp) as server:
+                server.sendmail(remetente, [email_cliente], msg.as_string())
+                print(f"Email Cliente enviado para: {email_cliente}")
+
+        except Exception as e:
+            print(f"Erro ao enviar email cliente: {e}")
+            raise e # Relança para o caller saber que falhou pelo menos um envio importante
 
 
 def enviar_email_recuperacao_senha(db: Session, email_destino: str, link_reset: str) -> None:

@@ -252,7 +252,8 @@
       </div>
 
       <nav class="tabs" role="tablist" aria-label="Configuração de e-mail">
-        <button class="tab active" data-tab="tab-mensagem" role="tab" aria-selected="true">Mensagem</button>
+        <button class="tab active" data-tab="tab-mensagem" role="tab" aria-selected="true">Mensagem (Interna)</button>
+        <button class="tab" data-tab="tab-mensagem-cliente" role="tab" aria-selected="false">Mensagem (Cliente)</button>
         <button class="tab" data-tab="tab-smtp" role="tab" aria-selected="false">SMTP</button>
       </nav>
 
@@ -279,14 +280,15 @@
             </p>
           </div>
 
-          <div class="field checkbox">
-            <input id="enviar_para_cliente" type="checkbox" />
-            <label for="enviar_para_cliente">Enviar também para o cliente</label>
+          <div class="field checkbox" style="display:none">
+            <!-- Deixando oculto aqui pois movi para a aba Cliente, mas o ID precisa existir ou code js precisa ajustar getCheck -->
+            <!-- Melhor remover do HTML e no JS se não achar retorna false, mas o JS usa getCheck('enviar_para_cliente') que busca pelo ID. 
+                  Como movi o ID para a outra aba, aqui ele não deve existir com o mesmo ID. -->
           </div>
 
           <div class="actions">
-            <button type="button" id="btnSalvarMensagem" class="btn primary">Salvar</button>
-            <button type="button" id="btnTestarEnvio" class="btn">Testar envio</button>
+            <button type="button" class="btn primary btnSalvarGeral">Salvar Tudo</button>
+            <button type="button" id="btnTestarEnvio" class="btn">Testar envio (Interno)</button>
           </div>
         </form>
       </section>

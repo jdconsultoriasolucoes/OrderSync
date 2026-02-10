@@ -307,7 +307,8 @@ def criar_pedido_confirmado(db: Session, tabela_id: int, body: ConfirmarPedidoRe
                 db=db,
                 pedido=pedido_email,
                 link_pdf=None,      # se um dia gerar link público, preenche aqui
-                pdf_bytes=pdf_bytes_vendedor  # Email usa PDF do vendedor
+                pdf_bytes=pdf_bytes_vendedor,  # Email Interno usa PDF do vendedor
+                pdf_bytes_cliente=pdf_bytes_cliente # Email Cliente usa PDF cliente
             )
 
             # Se chegou até aqui sem exception, marca como ENVIADO
