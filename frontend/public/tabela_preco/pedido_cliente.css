@@ -147,11 +147,15 @@ table td:nth-child(11) {
 }
 
 input[type="number"] {
-  width: 70px;
+  width: 100%;
+  max-width: 70px;
+  /* Mantém o tamanho original como máximo */
   padding: 6px;
   font-size: 14px;
   border: 1px solid #aaa;
   border-radius: 4px;
+  box-sizing: border-box;
+  /* Garante que padding não estoure a largura */
 }
 
 .acoes {
