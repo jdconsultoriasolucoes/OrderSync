@@ -133,6 +133,16 @@ def criar_pedido_confirmado(db: Session, tabela_id: int, body: ConfirmarPedidoRe
         if c_link and c_link.strip() and c_link != "Não cadastrado":
             codigo_cliente = c_link.strip()
 
+    # 🛡️ FALLBACK 2: Se ainda não temos código (ou é "Não cadastrado"),
+    # tentamos pegar direto da tabela de preço original
+    if not codigo_cliente or codigo_cliente == "Não cadastrado":
+        try:
+             row_tab = db.execute(text("SELECT codigo_cliente FROM tb_tabela_preco WHERE id_tabela = :tid"), {"tid": tabela_id}).mappings().first()
+             if row_tab and row_tab["codigo_cliente"]:
+                 codigo_cliente = str(row_tab["codigo_cliente"]).strip()
+        except Exception as e:
+             print(f"DEBUG: Erro ao buscar codigo na tabela: {e}")
+
     if link_row:
         link_url = link_row.get("link_url")
     else:
