@@ -185,3 +185,123 @@ def preview_linha(payload: LinhaPreviewIn, db: Session = Depends(get_db)):
         print("ERRO preview_linha:", repr(e))
         raise HTTPException(status_code=500, detail=f"Falha ao calcular preview fiscal: {repr(e)}")
 
+# --------- Batch Endpoint ---------
+
+class LinhaPreviewBatchIn(BaseModel):
+    # Cabeçalho comum (evita redundância)
+    cliente_codigo: Optional[Union[int, str]] = None
+    forcar_iva_st: bool = False
+    ramo_juridico: Optional[str] = None # fallback global
+    
+    # Itens
+    itens: List[LinhaPreviewIn]
+
+class LinhaPreviewBatchOut(BaseModel):
+    results: List[LinhaPreviewOut]
+
+def carregar_produtos_batch(db: Session, pids: List[str]) -> dict:
+    if not pids: return {}
+    # distinct pids
+    uq = list(set(pids))
+    try:
+        # Postgres supports = ANY(array)
+        rows = db.execute(text("""
+            SELECT
+              b.codigo_supra,
+              b.tipo,
+              b.peso    AS peso_kg,
+              b.iva_st,
+              b.ipi,
+              b.icms
+            FROM public.v_produto_v2_preco b
+            WHERE b.status_produto = 'ATIVO' 
+              AND b.codigo_supra::text = ANY(:pids)
+        """), {"pids": uq}).mappings().all()
+        # map by codigo_supra
+        return {str(r["codigo_supra"]): dict(r) for r in rows}
+    except Exception as e:
+        print("ERRO carregar_produtos_batch:", repr(e))
+        return {}
+
+@router.post("/preview-batch", response_model=LinhaPreviewBatchOut)
+def preview_batch(payload: LinhaPreviewBatchIn, db: Session = Depends(get_db)):
+    try:
+        # 1. Carrega Cliente (1x)
+        cliente = {}
+        if payload.cliente_codigo:
+            try:
+                val_str = str(payload.cliente_codigo).strip()
+                cliente = carregar_cliente(db, val_str)
+            except: pass
+            
+        tipo_cliente_db = cliente.get("cadastro_tipo_cliente") if cliente else None
+        # Se payload.ramo_juridico vier, usamos como fallback/override global
+        tipo_cliente_global = tipo_cliente_db or payload.ramo_juridico
+
+        # 2. Carrega Produtos (Batch)
+        all_pids = [it.produto_id for it in payload.itens if it.produto_id]
+        produtos_map = carregar_produtos_batch(db, all_pids)
+
+        results = []
+        
+        for it in payload.itens:
+            # Fallback local se vier no item
+            produto = produtos_map.get(str(it.produto_id), {})
+            
+            # tipo cliente: global ou local do item (se houver override no item, mas geralmente é header)
+            # O item tem ramo_juridico opcional? Tem.
+            tipo_cliente = tipo_cliente_global or it.ramo_juridico
+            
+            tipo = produto.get("tipo") or it.tipo
+            
+            peso = produto.get("peso_kg") or it.peso_kg
+            peso = D(peso)
+            
+            ipi_prod = D(produto.get("ipi", 0))
+            # regra pet/insumos <= 10kg
+            ipi = ipi_prod if ((_norm(tipo) == "pet" or _norm(tipo) == "insumos") and peso is not None and peso <= D(10)) else D(0)
+
+            iva_st = D(produto.get("iva_st", 0))
+            icms = D(produto.get("icms", 0.18))
+
+            # forcar_iva_st pode vir do header ou do item?
+            # O header batch tem `forcar_iva_st`. O item NÃO tem no schema original `LinhaPreviewIn` (tem sim! linha 23).
+            # Vamos usar o do item se definido, ou herdar? 
+            # Na V1, `preview_linha` recebe `forcar_iva_st` no payload.
+            # Aqui vamos assumir que o front passa no ITEM o valor correto (já combinado header+linha).
+            # MAS o front atual monta o payload item a item. 
+            # O LinhaPreviewBatchIn tem `forcar_iva_st` global.
+            # Vamos priorizar o do item se o front mandar.
+            forcado = it.forcar_iva_st or payload.forcar_iva_st
+
+            aplica, motivos = decide_st(
+                tipo=tipo,
+                tipo_cliente=tipo_cliente,
+                forcar_iva_st=forcado
+            )
+            
+            comp = calcular_linha(
+                preco_unit=it.preco_unit,
+                quantidade=it.quantidade,
+                desconto_linha=it.desconto_linha,
+                frete_linha=it.frete_linha,
+                ipi=ipi, icms=icms, iva_st=iva_st,
+                aplica_st=aplica
+            )
+            
+            results.append(LinhaPreviewOut(
+                aplica_iva_st=aplica, motivos_iva_st=motivos,
+                subtotal_mercadoria=float(comp["subtotal"]),
+                base_ipi=float(comp["base_ipi"]), ipi=float(comp["ipi"]),
+                base_icms_proprio=float(comp["base_icms"]), icms_proprio=float(comp["icms_proprio"]),
+                base_st=float(comp["base_st"]), icms_st_cheio=float(comp["icms_st_cheio"]), icms_st_reter=float(comp["icms_st_reter"]),
+                desconto_linha=float(money(it.desconto_linha)), frete_linha=float(money(it.frete_linha)),
+                total_linha=float(comp["total_sem_st"]), total_linha_com_st=float(comp["total_com_st"]),
+                total_impostos_linha=float(comp["total_impostos"])
+            ))
+            
+        return LinhaPreviewBatchOut(results=results)
+
+    except Exception as e:
+        print("ERRO preview_batch:", repr(e))
+        raise HTTPException(status_code=500, detail=f"Falha ao calcular batch: {repr(e)}")

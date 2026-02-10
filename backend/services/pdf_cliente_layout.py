@@ -139,6 +139,14 @@ def gerar_pdf_cliente_simplificado(pedido: PedidoPdf) -> bytes:
         "VL. C\nMarkup"
     ]
     
+    # Imports necessários para Paragraph
+    from reportlab.lib.styles import getSampleStyleSheet
+    from reportlab.platypus import Paragraph
+    styles = getSampleStyleSheet()
+    style_normal = styles["Normal"]
+    style_normal.fontSize = 7
+    style_normal.leading = 8
+
     # Preparar todas as linhas de produtos
     all_rows = []
     for idx, item in enumerate(pedido.itens, start=1):
@@ -160,14 +168,18 @@ def gerar_pdf_cliente_simplificado(pedido: PedidoPdf) -> bytes:
                     markup_display = f"{_br_number(item.markup, 2)}%"
                 valor_markup_display = f"R$ {_br_number(item.valor_final_markup, 2)}"
         
+        # WRAPPING: Usar Paragraph para Produto e Condição Pagamento
+        p_produto = Paragraph(item.produto or "", style_normal)
+        p_condicao = Paragraph(item.condicao_pagamento or "", style_normal)
+
         all_rows.append([
             str(idx),
             item.codigo or "",
-            item.produto or "",
+            p_produto,    # Paragraph
             item.embalagem or "",
             str(int(item.quantidade)) if item.quantidade else "0",
             f"R$ {_br_number(valor_unitario, 2)}",
-            item.condicao_pagamento or "",
+            p_condicao,   # Paragraph
             markup_display,
             valor_markup_display
         ])

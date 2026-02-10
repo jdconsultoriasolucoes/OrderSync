@@ -164,7 +164,11 @@ function atualizarObsCounter() {
 
 function renderTabela() {
   if (!tbody) return;
+
+  // Otimização: Renderizar tudo em um fragmento
+  const fragment = document.createDocumentFragment();
   tbody.innerHTML = "";
+
   produtos.forEach((item, i) => {
     // Logica de preço unitário:
     // Se tiver markup, o preço "unitario" p/ calculo do total/subtotal É o preço markup.
@@ -177,7 +181,6 @@ function renderTabela() {
     // Valor c/ Markup (se existir > 0)
     const valorMarkup = usarValorComFrete ? (item.valor_com_frete_markup || 0) : (item.valor_sem_frete_markup || 0);
 
-    // Preço efetivo (se markup > 0, usa ele. Se não, usa base)
     // Preço efetivo (se markup > 0, usa ele. Se não, usa base)
     // NOTE: Usuário pediu para ignorar Markup no cálculo do TOTAL. O total deve ser sobre o valor COM/SEM frete (Base).
     // O Markup é apenas visual/informativo.
@@ -199,7 +202,7 @@ function renderTabela() {
       <td class="col-markup text-right">${item.markup > 0 ? fmtBRL.format(usarValorComFrete ? item.valor_com_frete_markup : item.valor_sem_frete_markup) : "-"}</td>
       <td id="subtotal-${i}">${fmtBRL.format(subtotal)}</td>
     `;
-    tbody.appendChild(tr);
+
     // Peso total inicial (peso unitário × quantidade inicial)
     const pesoUnit = Number(item.peso ?? 0);
     const qtdInicial = Number(item.quantidade) || 0;
@@ -209,8 +212,10 @@ function renderTabela() {
       pesoCell.textContent = formatIntBR(pesoTotal, { mode: "trunc" });
     }
 
-
+    fragment.appendChild(tr);
   });
+
+  tbody.appendChild(fragment);
 
   // Listeners de quantidade
   tbody.querySelectorAll("input.qtd").forEach((input) => {

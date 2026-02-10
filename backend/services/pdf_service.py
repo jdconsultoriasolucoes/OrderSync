@@ -366,15 +366,26 @@ def _desenhar_pdf(pedido: PedidoPdf, buffer: io.BytesIO, sem_validade: bool = Fa
 
     # converte itens em linhas da tabela
     all_rows = []
+    # converte itens em linhas da tabela
+    # Estilo Normal para usar no Paragraph dentro da célula
+    style_normal = styles["Normal"]
+    style_normal.fontSize = 8
+    style_normal.leading = 9 # entrelinha menor para caber melhor
+
     for idx, it in enumerate(itens_ordenados, start=1):
+        # Envolve textos longos em Paragraph para quebrar linha
+        p_fornecedor = Paragraph(it.fornecedor or "", style_normal)
+        p_produto = Paragraph(it.produto or "", style_normal)
+        p_condicao = Paragraph(it.condicao_pagamento or "", style_normal)
+        
         all_rows.append([
             str(idx),
-            it.fornecedor or "",
+            p_fornecedor, # Agora é um Flowable, não string
             it.codigo,
-            it.produto,
+            p_produto,    # Agora é um Flowable, não string
             it.embalagem or "",
             f"{it.quantidade:g}",
-            it.condicao_pagamento or "",
+            p_condicao,   # Agora é um Flowable
             it.tabela_comissao or "",
             "R$ " + _br_number(float(it.valor_retira or 0)),
             "R$ " + _br_number(float(it.valor_entrega or 0)),

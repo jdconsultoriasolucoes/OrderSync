@@ -1596,25 +1596,174 @@ async function recalcLinha(tr) {
 }
 
 
+async function previewFiscalBatch(payload) {
+  const r = await fetch(`${API_BASE}/fiscal/preview-batch`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(payload),
+  });
+  if (!r.ok) {
+    const txt = await r.text().catch(() => '');
+    throw new Error(txt || 'Falha ao calcular preview batch');
+  }
+  return r.json();
+}
+
+function applyFiscalToRow(tr, f) {
+  const idx = Number(tr.dataset.idx);
+  const item = itens[idx]; if (!item) return;
+
+  item.ipi = Number((f.ipi ?? 0).toFixed(2));
+  item.iva_st = Number((f.base_st ?? 0).toFixed(2));
+  item.icms_st = Number((f.icms_proprio ?? 0).toFixed(2));
+
+  const setCell = (sel, val) => {
+    const el = tr.querySelector(sel);
+    if (el) el.textContent = fmtMoney(val);
+  };
+
+  setCell('.col-ipi', f.ipi);
+  setCell('.col-base-st', f.base_st);
+  setCell('.col-icms-proprio', f.icms_proprio);
+  setCell('.col-icms-st-cheio', f.icms_st_cheio);
+  setCell('.col-icms-st-reter', f.icms_st_reter);
+  setCell('.col-total', f.total_linha_com_st);
+
+  const totalFiscal = Number(f.total_linha_com_st ?? f.total_linha ?? 0);
+  const totalComercial = totalFiscal;
+
+  // Recalculo reverso do sem frete
+  const freteValor = item._freteValor || 0; // Salvo no passo comercial
+  const totalSemFrete = totalComercial - Number(freteValor || 0);
+
+  const tdSemFrete = tr.querySelector('.col-total-sem-frete');
+  if (tdSemFrete) tdSemFrete.textContent = fmtMoney(totalSemFrete);
+
+  // --- CÁLCULO DAS COLUNAS DE MARKUP ---
+  const mkPct = Number(item.markup || 0);
+  const factor = 1 + (mkPct / 100);
+
+  const valFinMk = Number((totalComercial * factor).toFixed(2));
+  const valSemMk = Number((totalSemFrete * factor).toFixed(2));
+
+  item.valor_final_markup = valFinMk;
+  item.valor_s_frete_markup = valSemMk;
+
+  const tdsMk = tr.querySelectorAll('.col-mk-derived');
+  if (tdsMk.length === 2) {
+    tdsMk[0].textContent = fmtMoney(valFinMk);
+    tdsMk[1].textContent = fmtMoney(valSemMk);
+  }
+
+  setCell('.col-total', totalComercial);
+  item._totalComercial = Number(totalComercial || 0);
+  item.total_sem_frete = Math.max(0, item._totalComercial - freteValor);
+
+  const td = tr.querySelector('.col-total-sem-frete');
+  if (td) td.textContent = fmtMoney(item.total_sem_frete || 0);
+
+  // Sync missing fields
+  item.valor_liquido = f.total_linha; // Compatibilidade
+  item._motivos_iva = f.motivos_iva_st;
+}
+
 async function recalcTudo() {
-  if (__recalcRunning) {           // já tem uma rodada em andamento?
-    __recalcPending = true;        // marca que ficou pendente rodar de novo
-    return;                        // deixa a rodada atual terminar
+  if (__recalcRunning) {
+    __recalcPending = true;
+    return;
   }
   __recalcRunning = true;
+  document.body.style.cursor = 'wait'; // Feedback visual
 
   try {
     do {
-      __recalcPending = false;     // vamos processar o "snapshot" atual
+      __recalcPending = false;
       const rows = Array.from(document.querySelectorAll('#tbody-itens tr'));
+
+      // 1. Coletar payloads (Commercial Calc)
+      const batchItems = [];
+      const rowMap = []; // index -> { tr, item }
+
       for (const tr of rows) {
-        // eslint-disable-next-line no-await-in-loop
-        await recalcLinha(tr);     // 1 a 1, na ordem, para estabilidade visual
+        // Ignora linhas que já foram removidas do DOM (safety check)
+        if (!tr.isConnected) continue;
+
+        const idx = Number(tr.dataset.idx);
+        const item = itens[idx]; if (!item) continue;
+
+        // --- Lógica Comercial (Copied/Adapted from recalcLinha) ---
+        const selPct = tr.querySelector('td:nth-child(8) select');
+        let codePct = selPct ? (selPct.value || '') : '';
+        if (!codePct && item.__fator_codigo) codePct = item.__fator_codigo;
+        let fator = (mapaDescontos[codePct] != null) ? Number(mapaDescontos[codePct]) : 0;
+        if (fator === 0 && item.fator_comissao) fator = Number(item.fator_comissao);
+
+        const freteKg = Number(document.getElementById('frete_kg').value || 0);
+        const selCond = tr.querySelector('td:nth-child(10) select');
+        let codCond = selCond ? selCond.value : '';
+        if (!codCond && item.plano_pagamento) {
+          codCond = String(item.plano_pagamento).split(' - ')[0].trim();
+        }
+        const taxaCond = mapaCondicoes[codCond] ?? 0;
+
+        const { acrescimoCond, freteValor, descontoValor, precoBase } =
+          calcularLinha(item, fator, taxaCond, freteKg);
+
+        // Atualiza DOM Comercial
+        const setTxt = (nth, v) => { const cel = tr.querySelector(`td:nth-child(${nth})`); if (cel) cel.textContent = fmtMoney(v); };
+        setTxt(9, descontoValor);
+        setTxt(11, acrescimoCond);
+        setTxt(12, freteValor);
+
+        // Build Payload
+        const built = buildFiscalInputsFromRow(tr);
+        built.payload.preco_unit = precoBase;
+        built.payload.frete_linha = freteValor;
+
+        // Save state for update step
+        item._freteValor = Number(freteValor || 0);
+
+        batchItems.push(built.payload);
+        rowMap.push(tr);
       }
-      // Se, enquanto rodávamos, alguém pediu outra rodada, repete o laço
+
+      if (batchItems.length === 0) continue;
+
+      // 2. Batch Request
+      const codigo_cliente = (document.getElementById('codigo_cliente')?.value || '').trim() || null;
+      const ramoJuridico = (document.getElementById('ramo_juridico')?.value || '').trim() || null;
+      const forcarST = !!document.getElementById('iva_st_toggle')?.checked;
+
+      const batchPayload = {
+        cliente_codigo: codigo_cliente,
+        forcar_iva_st: forcarST,
+        ramo_juridico: ramoJuridico,
+        itens: batchItems
+      };
+
+      try {
+        const resp = await previewFiscalBatch(batchPayload);
+        const results = resp.results || [];
+
+        // 3. Apply Results
+        results.forEach((res, i) => {
+          const tr = rowMap[i];
+          // Só aplica se a linha ainda estiver conectada ao DOM (evita erro em deleção rápida)
+          if (tr && tr.isConnected) {
+            applyFiscalToRow(tr, res);
+          }
+        });
+
+      } catch (err) {
+        console.error("Batch recalc failed:", err);
+        // Feedback para o user não salvar dados incompletos
+        alert("Erro de conexão ao calcular impostos. Verifique sua internet e tente novamente.");
+      }
+
     } while (__recalcPending);
   } finally {
     __recalcRunning = false;
+    document.body.style.cursor = 'default';
   }
 }
 
@@ -1675,6 +1824,11 @@ function inferirFornecedorDaGrade() {
 }
 
 async function salvarTabela() {
+  if (__recalcRunning || __recalcPending) {
+    alert("Aguarde o término do cálculo de impostos para salvar.");
+    return;
+  }
+
   const linhas = document.querySelectorAll('#tbody-itens tr');
   if (linhas.length === 0) {
     alert('Adicione pelo menos 1 produto à tabela antes de salvar.');
