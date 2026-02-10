@@ -41,16 +41,11 @@ def render_placeholders(template: str, pedido_info: dict, link_pdf: Optional[str
 # Busca e-mail do cliente (usa codigo_cliente como ID do V2)
 # ------------------------
 def get_email_cliente_responsavel_compras(db: Session, codigo_cliente) -> Optional[str]:
-    print(f"DEBUG: get_email_cliente_responsavel_compras - Recebido codigo='{codigo_cliente}' (type:{type(codigo_cliente)})")
-    
     if not codigo_cliente:
-        print("DEBUG: codigo_cliente vazio/nulo. Abortando busca.")
         return None
     
     # Busca pela string do código empresarial (cadastro_codigo_da_empresa)
-    # Não converte para int, pois pode ser alfanumérico ou ter zeros à esquerda
     s_cod = str(codigo_cliente).strip()
-    print(f"DEBUG: Consultando s_cod='{s_cod}'")
 
     row = (
         db.query(
@@ -65,11 +60,9 @@ def get_email_cliente_responsavel_compras(db: Session, codigo_cliente) -> Option
     )
     
     if not row:
-        print(f"DEBUG: NENHUM REGISTRO encontrado na tabela ClienteModelV2 para cadastro_codigo_da_empresa='{s_cod}'")
+        print(f"DEBUG: Cliente '{s_cod}' não encontrado para busca de e-mail.")
         return None
         
-    print(f"DEBUG: Registro encontrado para '{s_cod}'. Emails: Compras='{row.compras_email_resposavel}', NFe='{row.faturamento_email_danfe}'")
-    
     # Prioridade de emails
     emails = [
         row.compras_email_resposavel,
@@ -82,10 +75,9 @@ def get_email_cliente_responsavel_compras(db: Session, codigo_cliente) -> Option
     # Retorna o primeiro que não for vazio
     for e in emails:
         if e and str(e).strip():
-            print(f"DEBUG: Email escolhido: '{str(e).strip()}'")
+            print(f"DEBUG: Email encontrado para cliente '{s_cod}': {str(e).strip()}")
             return str(e).strip()
             
-    print("DEBUG: Cliente encontrado, mas TODOS os campos de email estavam vazios.")
     return None
         
     # Prioridade de emails
