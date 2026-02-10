@@ -49,11 +49,35 @@ def get_email_cliente_responsavel_compras(db: Session, codigo_cliente) -> Option
     s_cod = str(codigo_cliente).strip()
 
     row = (
-        db.query(ClienteModelV2.compras_email_resposavel)
+        db.query(
+            ClienteModelV2.compras_email_resposavel,
+            ClienteModelV2.faturamento_email_danfe,
+            ClienteModelV2.recebimento_email,
+            ClienteModelV2.cobranca_resp_email,
+            ClienteModelV2.legal_email
+        )
         .filter(ClienteModelV2.cadastro_codigo_da_empresa == s_cod)
         .first()
     )
-    return row[0] if row and row[0] else None
+    
+    if not row:
+        return None
+        
+    # Prioridade de emails
+    emails = [
+        row.compras_email_resposavel,
+        row.faturamento_email_danfe,
+        row.recebimento_email,
+        row.cobranca_resp_email,
+        row.legal_email
+    ]
+    
+    # Retorna o primeiro que não for vazio
+    for e in emails:
+        if e and str(e).strip():
+            return str(e).strip()
+            
+    return None
 
 
 # ------------------------
