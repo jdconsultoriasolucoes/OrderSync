@@ -77,7 +77,17 @@ def create_tabela(db: Session, body: TabelaSalvar, usuario_email: str) -> Dict[s
         logger.info("[create_tabela] header id=%s nome=%s cliente=%s", id_tabela, body.nome_tabela, body.cliente)
 
         inseridos = 0
+        processed_codes = set()
         for i, produto in enumerate(body.produtos, start=1):
+            cod = (getattr(produto, "codigo_produto_supra", "") or "").strip()
+            if not cod: continue
+            
+            # Deduplication Check
+            if cod in processed_codes:
+                logger.warning(f"[create_tabela] Skipping duplicate product code {cod} in payload.")
+                continue
+            processed_codes.add(cod)
+
             params = {
                 "id_tabela": int(id_tabela),
                 "nome_tabela": body.nome_tabela or "",
@@ -144,7 +154,13 @@ def update_tabela(db: Session, id_tabela: int, body: TabelaSalvar, usuario_email
             return None
 
         por_id = {r.id_linha: r for r in existentes}
-        por_codigo = { (r.codigo_produto_supra or "").strip(): r for r in existentes if (r.codigo_produto_supra or "").strip() }
+        # Prepare lookup by code, but handle potential database duplicates by taking the first or last? 
+        # Ideally DB constraint prevents them, but if they exist, we must be careful.
+        por_codigo = {}
+        for r in existentes:
+            c = (r.codigo_produto_supra or "").strip()
+            if c:
+                por_codigo[c] = r
 
         # Update Cabeçalho (em todas as linhas)
         for r in existentes:
