@@ -8,7 +8,7 @@ from jose import JWTError, jwt
 
 from database import SessionLocal
 from models.usuario import UsuarioModel
-from schemas.usuario import UsuarioCreate, UsuarioPublic, UsuarioUpdateSenha, UsuarioResetSenha, UsuarioUpdate, UsuarioChangePassword
+from schemas.usuario import UsuarioCreate, UsuarioPublic, UsuarioUpdateSenha, UsuarioResetSenha, UsuarioUpdate, UsuarioChangePassword, UsuarioAdminResetSenha
 from core.security import get_password_hash, SECRET_KEY, ALGORITHM, verify_password
 
 from core.deps import get_db, get_current_user, oauth2_scheme
@@ -92,7 +92,7 @@ def alterar_minha_senha(
 @router.post("/{user_id}/reset-senha")
 def resetar_senha_usuario(
     user_id: int,
-    dados: UsuarioResetSenha,
+    dados: UsuarioAdminResetSenha,
     db: Session = Depends(get_db),
     current_user: UsuarioModel = Depends(get_current_user)
 ):

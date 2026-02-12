@@ -67,6 +67,13 @@ class UsuarioResetSenha(BaseModel):
     def valid_senha_nova(cls, v):
         return validate_strength(v)
 
+class UsuarioAdminResetSenha(BaseModel):
+    senha_nova: str
+
+    @validator('senha_nova')
+    def valid_senha_nova(cls, v):
+        return validate_strength(v)
+
 class UsuarioForgotPassword(BaseModel):
     email: str
 
