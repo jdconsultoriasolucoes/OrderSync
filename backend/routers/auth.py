@@ -34,6 +34,10 @@ def login_for_access_token(form_data: OAuth2PasswordRequestForm = Depends(), db:
     if not user.ativo:
         raise HTTPException(status_code=400, detail="Inactive user")
 
+    # Enforce Email Verification
+    if not user.email_verificado:
+         raise HTTPException(status_code=403, detail="Email não verificado. Verifique sua caixa de entrada.")
+
     # Create Token
     access_token_expires = timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES)
     access_token = create_access_token(
@@ -148,3 +152,21 @@ def reset_password(data: UsuarioResetSenha, db: Session = Depends(get_db)):
     db.commit()
     
     return {"message": "Senha atualizada com sucesso."}
+
+@router.get("/verify-email")
+def verify_email(token: str, db: Session = Depends(get_db)):
+    """
+    Verifica o token e ativa o e-mail do usuário.
+    """
+    user = db.query(UsuarioModel).filter(UsuarioModel.token_verificacao == token).first()
+    if not user:
+        raise HTTPException(status_code=400, detail="Token de verificação inválido ou expirado.")
+    
+    if user.email_verificado:
+        return {"message": "E-mail já verificado."}
+        
+    user.email_verificado = True
+    user.token_verificacao = None # Opcional: limpar token ou guardar histórico
+    db.commit()
+    
+    return {"message": "E-mail verificado com sucesso!"}

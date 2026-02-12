@@ -300,3 +300,44 @@ def enviar_email_recuperacao_senha(db: Session, email_destino: str, link_reset: 
         print(f"Erro ao enviar email de recuperação: {e}")
         # Não lançar exceção para não expor erro ao usuário (security by obscurity, ou melhor, UX)
         # Mas logar é importante.
+
+def enviar_email_verificacao(db: Session, email_destino: str, link_verificacao: str) -> None:
+    """
+    Envia e-mail com link de verificação de conta.
+    """
+    cfg_smtp = _get_cfg_smtp(db)
+    remetente = (getattr(cfg_smtp, "remetente_email", "") or getattr(cfg_smtp, "smtp_user", "")).strip()
+    
+    assunto = "Verifique seu e-mail - OrderSync"
+    
+    corpo_html = f"""
+    <html>
+    <body style="font-family: Arial, sans-serif; color: #333;">
+        <div style="max-width: 600px; margin: 0 auto; padding: 20px; border: 1px solid #eee; border-radius: 8px;">
+            <h2 style="color: #2563eb;">Bem-vindo ao OrderSync!</h2>
+            <p>Sua conta foi criada com sucesso, mas precisamos verificar seu e-mail antes de liberar o acesso.</p>
+            <p>Clique no botão abaixo para confirmar:</p>
+            <p style="text-align: center; margin: 30px 0;">
+                <a href="{link_verificacao}" style="background-color: #059669; color: white; padding: 12px 24px; text-decoration: none; border-radius: 5px; font-weight: bold;">Confirmar meu E-mail</a>
+            </p>
+            <p>Se o botão não funcionar, copie e cole o link abaixo no seu navegador:</p>
+            <p style="font-size: 12px; color: #666; word-break: break-all;">{link_verificacao}</p>
+        </div>
+    </body>
+    </html>
+    """
+    
+    msg = MIMEMultipart("alternative")
+    msg["From"] = remetente
+    msg["To"] = email_destino
+    msg["Subject"] = assunto
+    
+    msg.attach(MIMEText(corpo_html, "html", "utf-8"))
+    
+    try:
+        with _abrir_conexao(cfg_smtp) as server:
+            server.sendmail(remetente, [email_destino], msg.as_string())
+            print(f"Email de verificação enviado para: {email_destino}")
+    except Exception as e:
+        print(f"Erro ao enviar email de verificação: {e}")
+        raise e # Aqui lançamos pois é crítico na criação

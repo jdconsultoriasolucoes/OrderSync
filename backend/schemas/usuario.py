@@ -23,6 +23,14 @@ class UsuarioBase(BaseModel):
     funcao: str = "vendedor"
     ativo: bool = True
 
+    @validator('email')
+    def validate_email(cls, v):
+        # Strict regex for email validation
+        regex = r'^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$'
+        if not re.match(regex, v):
+            raise ValueError('Email inválido')
+        return v
+
 class UsuarioCreate(UsuarioBase):
     senha: str
 

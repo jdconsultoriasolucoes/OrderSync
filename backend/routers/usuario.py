@@ -47,7 +47,14 @@ def create_user(
     if db.query(UsuarioModel).filter(UsuarioModel.email == usuario.email).first():
         raise HTTPException(status_code=400, detail="Email already registered")
     
+    import uuid
+    from services.email_service import enviar_email_verificacao
+    
     hashed_pw = get_password_hash(usuario.senha)
+    
+    # Gerar token de verificação
+    token_verif = str(uuid.uuid4())
+    
     db_user = UsuarioModel(
         nome=usuario.nome,
         email=usuario.email,
@@ -55,11 +62,25 @@ def create_user(
         funcao=usuario.funcao,
         ativo=usuario.ativo,
         criado_por=current_user_email,
-        reset_senha_obrigatorio=True
+        reset_senha_obrigatorio=True,
+        email_verificado=False, # Requer verificação
+        token_verificacao=token_verif
     )
     db.add(db_user)
     db.commit()
     db.refresh(db_user)
+    
+    # Enviar E-mail
+    try:
+        # Link do Frontend (ajustar conforme ambiente)
+        # TODO: Usar variável de ambiente para URL do frontend
+        base_url = "http://127.0.0.1:5500" 
+        link = f"{base_url}/public/login/verify.html?token={token_verif}"
+        enviar_email_verificacao(db, usuario.email, link)
+    except Exception as e:
+        print(f"Erro ao enviar email de verificação: {e}")
+        # Opcional: rollback ou avisar que falhou envio
+        
     return db_user
 
 @router.get("/", response_model=List[UsuarioPublic])

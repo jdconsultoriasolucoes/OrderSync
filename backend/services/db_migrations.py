@@ -26,4 +26,23 @@ def run_migrations():
                 db.rollback()
                 logger.error(f"Falha ao adicionar colunas: {e}")
 
+                logger.error(f"Falha ao adicionar colunas: {e}")
+
+        # 2. Usuario: email_verificado, token_verificacao
+        try:
+            db.execute(text("SELECT email_verificado FROM t_usuario LIMIT 1"))
+        except Exception:
+            db.rollback()
+            logger.info("Adicionando colunas de verificação de email em t_usuario...")
+            try:
+                db.execute(text("ALTER TABLE t_usuario ADD COLUMN email_verificado BOOLEAN DEFAULT FALSE"))
+                db.execute(text("ALTER TABLE t_usuario ADD COLUMN token_verificacao TEXT"))
+                # Mark existing users as verified to avoid lockout
+                db.execute(text("UPDATE t_usuario SET email_verificado = TRUE"))
+                db.commit()
+                logger.info("Colunas de verificação adicionadas com sucesso.")
+            except Exception as e:
+                db.rollback()
+                logger.error(f"Falha ao adicionar colunas em t_usuario: {e}")
+
     logger.info("Migrações concluídas.")

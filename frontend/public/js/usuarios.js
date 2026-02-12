@@ -169,6 +169,7 @@ window.excluirUsuario = async (id) => {
 window.abrirModalReset = (id, email) => {
     document.getElementById("reset-user-id").value = id;
     document.getElementById("reset-user-email").innerText = email;
-    document.getElementById("nova-senha").value = "";
+    // Security Fix: Clear the password field to prevent showing previous input
+    document.getElementById("reset-nova-senha").value = "";
     document.getElementById("modal-reset").style.display = "flex";
 };
