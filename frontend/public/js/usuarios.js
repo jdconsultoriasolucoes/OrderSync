@@ -24,6 +24,9 @@ document.addEventListener("DOMContentLoaded", () => {
                     method = "PUT";
                     // No password update here, only create
                     delete data.senha;
+                } else {
+                    // Creation mode: remove empty user_id
+                    delete data.user_id;
                 }
 
                 const res = await fetch(url, {

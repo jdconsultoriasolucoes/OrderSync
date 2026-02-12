@@ -208,20 +208,62 @@ document.addEventListener("click", (e) => {
 
   const tabelaId = btn.dataset.id;
   const freteStr = btn.dataset.freteKg;
-  const freteKg =
-    freteStr === undefined || freteStr === null || freteStr === ""
-      ? null
-      : Number(String(freteStr).replace(",", "."));
-
-  if (!tabelaId) return alert("ID da tabela não encontrado.");
-  if (typeof window.__showGerarLinkModal !== "function") {
-    // If not loaded yet, wait or alert
-    return alert("Módulo de gerar link não carregado ou erro de carregamento.");
+  let freteKg = null;
+  if (freteStr !== undefined && freteStr !== null && freteStr !== "") {
+    freteKg = Number(String(freteStr).replace(",", "."));
   }
 
-  window.__showGerarLinkModal({
-    tabelaId,
-    freteKg,
-    pedidoClientePath: "/tabela_preco/pedido_cliente.html",
-  });
+  if (!tabelaId) return alert("ID da tabela não encontrado.");
+
+  if (window.__showGerarLinkModal) {
+    window.__showGerarLinkModal({
+      tabelaId,
+      freteKg,
+      pedidoClientePath: "/tabela_preco/pedido_cliente.html",
+    });
+  } else {
+    console.warn("Módulo de gerar link não carregado ou erro de carregamento.");
+  }
 });
+
+function setupUpdatePrices() {
+  const btn = document.getElementById("btn-update-prices");
+  if (!btn) return;
+
+  btn.addEventListener("click", async () => {
+    if (!confirm("Isso irá atualizar os preços base de TODAS as tabelas ativas com base no cadastro de produtos atual (PDF). Deseja continuar?")) {
+      return;
+    }
+
+    const originalText = btn.textContent;
+    btn.textContent = "Processando...";
+    btn.disabled = true;
+
+    try {
+      const response = await fetch(`${API_BASE}/tabela_preco/recalcular_massivo`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json"
+        },
+        body: JSON.stringify({}) // Sem parâmetros por enquanto
+      });
+
+      if (!response.ok) {
+        const errText = await response.text();
+        throw new Error(errText || "Erro ao atualizar preços.");
+      }
+
+      const result = await response.json();
+      alert(`Sucesso! \n${result.tabelas_afetadas} tabelas analisadas.\n${result.linhas_atualizadas} produtos atualizados.`);
+      carregarTabelas(); // Recarrega a lista para refletir datas de edição
+
+    } catch (error) {
+      console.error("Erro no update massivo:", error);
+      alert("Falha ao atualizar preços: " + error.message);
+    } finally {
+      btn.textContent = originalText;
+      btn.disabled = false;
+    }
+  });
+}
+window.setupUpdatePrices = setupUpdatePrices; // Expose if needed

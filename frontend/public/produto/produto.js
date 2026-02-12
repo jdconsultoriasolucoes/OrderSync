@@ -489,6 +489,8 @@ const doSearch = debounce(async () => {
     const params = new URLSearchParams();
     if (q) params.append("q", q);
     if (forn) params.append("fornecedor", forn);
+    // Fix: Clear status filter to search ALL products (including Inactive)
+    params.append("status", "");
     params.append("limit", "50");
     params.append("offset", "0");
 
