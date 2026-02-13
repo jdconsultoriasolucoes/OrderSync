@@ -2451,7 +2451,25 @@ document.addEventListener('DOMContentLoaded', () => {
     setupClienteAutocomplete(); // ✅ Fix: Initialize autocomplete
     await Promise.all([carregarCondicoes(), carregarDescontos()]);
 
-    const temIdNaUrl = !!new URLSearchParams(location.search).get('id');
+    // 1. Garante ID a partir da URL (Essencial para EDIT/VIEW)
+    const idUrl = new URLSearchParams(location.search).get('id');
+    if (idUrl) {
+      setTabelaIds(idUrl);
+    }
+
+    // 2. Verifica se estamos "Voltando" do Picker
+    const ctx = getCtxId();
+    const returnMode = sessionStorage.getItem(`TP_RETURN_MODE:${ctx}`);
+
+    // Se NÃO estivermos voltando do picker (e não for Reload), é uma entrada fresca (ex: vindo da lista)
+    // Então limpamos qualquer memória "curta" antiga para não carregar lixo.
+    if (!returnMode && !__IS_RELOAD) {
+      console.log("Entrada fresca (não retornando do picker). Limpando TP_ATUAL.");
+      sessionStorage.removeItem(`TP_ATUAL:${ctx}`);
+      sessionStorage.removeItem(`TP_BUFFER:${ctx}`);
+    }
+
+    const temIdNaUrl = !!idUrl;
 
     // 🔒 Se tem id na URL (edição/visualização), NÃO limpe/restaure snapshot agora
     if (!temIdNaUrl) {
