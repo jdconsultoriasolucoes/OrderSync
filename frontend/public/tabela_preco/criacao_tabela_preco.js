@@ -2271,6 +2271,38 @@ async function carregarItens() {
     }
     const t = await r.json();
 
+    // --- RESTORE HEADER FIELDS ---
+    // Recupera os dados do cabeçalho que vieram do backend
+    const nomeEl = document.getElementById('nome_tabela');
+    const cliEl = document.getElementById('cliente_nome');
+    const codEl = document.getElementById('codigo_cliente');
+    const ramoEl = document.getElementById('ramo_juridico');
+    const freteEl = document.getElementById('frete_kg');
+    const validadeEl = document.getElementById('validade_tabela');
+    const diasEl = document.getElementById('dias_restantes');
+
+    if (nomeEl) nomeEl.value = t.nome_tabela || '';
+    if (cliEl) cliEl.value = t.cliente_nome || t.cliente || '';
+    if (codEl) codEl.value = t.codigo_cliente || '';
+    if (ramoEl) ramoEl.value = t.ramo_juridico || '';
+
+    // Frete: se tiver no header da resposta ou inferir do primeiro item?
+    // Geralmente vem nos itens, mas se tiver 'frete_kg' no T, usa.
+    // Se não, tenta pegar do primeiro item.
+    if (freteEl) {
+      if (t.frete_kg != null) freteEl.value = Number(t.frete_kg);
+      else if (t.produtos && t.produtos.length > 0) freteEl.value = Number(t.produtos[0].frete_kg || 0);
+    }
+
+    // Configurações globais (IVA, Markup) se disponíveis no objeto T
+    const ivaChk = document.getElementById('iva_st_toggle');
+    if (ivaChk) {
+      ivaChk.checked = !!(t.calcula_st ?? t.iva_st ?? false);
+      window.ivaStAtivo = ivaChk.checked;
+      // Se é edição, geralmente o IVA vem travado conforme cadastro do cliente?
+      // Vamos manter a lógica de 'enforceIvaLockByCliente' depois se necessário.
+    }
+
     // Map backend -> frontend
     itens = (t.produtos || []).map(p => mapBackendItemToFrontend(p, t));
 
@@ -2278,6 +2310,11 @@ async function carregarItens() {
     // mapBackendItemToFrontend já lida bem.
 
     renderTabela();
+
+    // Atualiza UI baseada no cabeçalho carregado
+    if (typeof refreshToolbarEnablement === 'function') refreshToolbarEnablement();
+    if (typeof enforceIvaLockByCliente === 'function') enforceIvaLockByCliente();
+
   } catch (err) {
     console.error("Falha ao carregar itens do backend:", err);
     alert("Não foi possível carregar os itens da tabela. Verifique a conexão.");
@@ -2455,18 +2492,36 @@ document.addEventListener('DOMContentLoaded', () => {
     const idUrl = new URLSearchParams(location.search).get('id');
     if (idUrl) {
       setTabelaIds(idUrl);
+    } else {
+      // Se não veio na URL, verifica se estamos voltando de uma operação (Picker)
+      // Recupera o contexto salvo
+      const pendingCtx = sessionStorage.getItem('TP_CTX_ID');
+      if (pendingCtx && pendingCtx !== 'new') {
+        // Só restaura o ID se tivermos um 'Modo de Retorno' setado,
+        // indicando que saímos intencionalmente desta tela e estamos voltando.
+        const retMode = sessionStorage.getItem(`TP_RETURN_MODE:${pendingCtx}`);
+        if (retMode) {
+          console.log("Restaurando contexto pendente (voltou do picker):", pendingCtx);
+          setTabelaIds(pendingCtx);
+        }
+      }
     }
 
-    // 2. Verifica se estamos "Voltando" do Picker
+    // 2. Verifica se estamos "Voltando" do Picker (agora com ID correto setado se aplicável)
     const ctx = getCtxId();
     const returnMode = sessionStorage.getItem(`TP_RETURN_MODE:${ctx}`);
 
     // Se NÃO estivermos voltando do picker (e não for Reload), é uma entrada fresca (ex: vindo da lista)
     // Então limpamos qualquer memória "curta" antiga para não carregar lixo.
+    // Isso atende ao pedido: "não carregue cache desnecessário".
     if (!returnMode && !__IS_RELOAD) {
-      console.log("Entrada fresca (não retornando do picker). Limpando TP_ATUAL.");
+      console.log("Entrada fresca. Limpando cache de sessão para:", ctx);
       sessionStorage.removeItem(`TP_ATUAL:${ctx}`);
       sessionStorage.removeItem(`TP_BUFFER:${ctx}`);
+      // Se for contexto 'new', limpa snapshots também para garantir limpeza
+      if (ctx === 'new') {
+        sessionStorage.removeItem(`TP_HEADER_SNAPSHOT:${ctx}`);
+      }
     }
 
     const temIdNaUrl = !!idUrl;
