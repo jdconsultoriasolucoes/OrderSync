@@ -2232,6 +2232,58 @@ async function atualizarValidadeCabecalhoGlobal() {
   }
 }
 
+// Carrega itens: da memória (prioridade) ou do backend
+async function carregarItens() {
+  const ctx = getCtxId();
+
+  // 1) Tenta recuperar da memória local (TP_ATUAL)
+  // Isso garante que, ao voltar do "Adicionar Produto", não perderemos o que já estava na tela.
+  const memoria = sessionStorage.getItem(`TP_ATUAL:${ctx}`);
+  if (memoria) {
+    try {
+      const saved = JSON.parse(memoria);
+      if (Array.isArray(saved) && saved.length > 0) {
+        console.log("carregarItens: Usando memória local (TP_ATUAL)", saved.length, "itens.");
+        itens = saved;
+        renderTabela();
+        return;
+      }
+    } catch (e) { console.warn("Erro ao ler TP_ATUAL", e); }
+  }
+
+  // 2) Se não tiver memória, busca do banco (Apenas se tiver ID e não for DUP "limpo")
+  if (!currentTabelaId) {
+    itens = [];
+    renderTabela();
+    return;
+  }
+
+  try {
+    const r = await fetch(`${API_BASE}/tabela_preco/${currentTabelaId}`, { cache: 'no-store' });
+    if (!r.ok) {
+      if (r.status === 404) {
+        console.warn("Tabela não encontrada no banco (404). Iniciando vazia.");
+        itens = [];
+        renderTabela();
+        return;
+      }
+      throw new Error(`Erro ${r.status}`);
+    }
+    const t = await r.json();
+
+    // Map backend -> frontend
+    itens = (t.produtos || []).map(p => mapBackendItemToFrontend(p, t));
+
+    // Se for modo DUP, talvez queiramos reprocessar IDs?
+    // mapBackendItemToFrontend já lida bem.
+
+    renderTabela();
+  } catch (err) {
+    console.error("Falha ao carregar itens do backend:", err);
+    alert("Não foi possível carregar os itens da tabela. Verifique a conexão.");
+  }
+}
+
 // === Bootstrap ===
 document.addEventListener('DOMContentLoaded', () => {
   // Eventos globais
@@ -2261,25 +2313,19 @@ document.addEventListener('DOMContentLoaded', () => {
   document.getElementById('btn-aplicar-todos')?.addEventListener('click', aplicarFatorGlobal);
 
   document.getElementById('plano_pagamento')?.addEventListener('change', (e) => {
-    // 👇 marca que o usuário editou manualmente o header
     e.currentTarget.dataset.userEdited = '1';
     atualizarPillTaxa();
-    // Auto-apply immediately on change
     document.getElementById('btn-aplicar-condicao-todos')?.click();
     refreshToolbarEnablement(); saveHeaderSnapshot();
   });
   document.getElementById('frete_kg')?.addEventListener('input', () => {
     recalcTudo();
     refreshToolbarEnablement();
-
   });
-  // Habilitar/Desabilitar "Remover selecionados" ao marcar/desmarcar linhas individuais
+
   document.getElementById('tbody-itens')?.addEventListener('change', (e) => {
     if (e.target && e.target.classList.contains('chk-linha')) {
-      // Atualiza o estado do botão
       if (typeof refreshToolbarEnablement === 'function') refreshToolbarEnablement();
-
-      // Sincroniza o "selecionar todos"
       const all = document.querySelectorAll('#tbody-itens .chk-linha');
       const marked = document.querySelectorAll('#tbody-itens .chk-linha:checked');
       const chkAll = document.getElementById('chk-all');
@@ -2289,28 +2335,21 @@ document.addEventListener('DOMContentLoaded', () => {
 
   atualizarValidadeCabecalhoGlobal();
 
-  // Selecionar todos — robusto (funciona em click e change)
   (function bindChkAll() {
     const chkAll = document.getElementById('chk-all');
     if (!chkAll) return;
-
     const toggleAll = (e) => {
       const checked = (e && e.currentTarget) ? !!e.currentTarget.checked : !!chkAll.checked;
-      document.querySelectorAll('#tbody-itens .chk-linha')
-        .forEach(cb => { cb.checked = checked; });
-
-      // Atualiza habilitação do botão "Remover selecionados"
+      document.querySelectorAll('#tbody-itens .chk-linha').forEach(cb => { cb.checked = checked; });
       if (typeof refreshToolbarEnablement === 'function') refreshToolbarEnablement();
     };
-
-    // Usa os dois eventos para não depender do timing do 'change'
     chkAll.addEventListener('click', toggleAll);
     chkAll.addEventListener('change', toggleAll);
   })();
 
   document.getElementById('btn-buscar')?.addEventListener('click', () => {
-    saveHeaderSnapshot();  // <-- salva topo
-    preparePickerBridgeBeforeNavigate(); // (ver tópico 3)
+    saveHeaderSnapshot();
+    preparePickerBridgeBeforeNavigate();
     snapshotSelecionadosParaPicker();
     window.location.href = 'tabela_preco.html';
   });
