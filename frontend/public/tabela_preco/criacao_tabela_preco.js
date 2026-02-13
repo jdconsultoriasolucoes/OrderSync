@@ -141,9 +141,10 @@ function saveHeaderSnapshot() {
   sessionStorage.setItem(`TP_HEADER_SNAPSHOT:${ctx}`, JSON.stringify(getHeaderSnapshot()));
 }
 
-function restoreHeaderSnapshotIfNew() {
+function restoreHeaderSnapshotIfNew(force = false) {
   // Só restaura em NEW (sem id na URL) para não sujar edição/visualização
-  if (currentTabelaId) return;
+  // EXCETO se 'force' for true (usado ao voltar do picker)
+  if (currentTabelaId && !force) return;
 
   const ctx = getCtxId();
   const raw = sessionStorage.getItem(`TP_HEADER_SNAPSHOT:${ctx}`);
@@ -2527,11 +2528,15 @@ document.addEventListener('DOMContentLoaded', () => {
     const temIdNaUrl = !!idUrl;
 
     // 🔒 Se tem id na URL (edição/visualização), NÃO limpe/restaure snapshot agora
-    if (!temIdNaUrl) {
+    // EXCETO se estivermos VOLTANDO do picker (returnMode existe) -> aí queremos restaurar o estado visual anterior
+    if (!temIdNaUrl || returnMode) {
       if (__IS_RELOAD) {
-        limparFormularioCabecalho?.();
+        // Se for reload, talvez não devêssemos limpar se tiver returnMode? 
+        // Por segurança, se for reload real, limpa. Mas se for navegação, restaura.
+        // O __IS_RELOAD detecta F5. Se for F5, ok limpar.
+        if (!__IS_RELOAD) restoreHeaderSnapshotIfNew(true);
       } else {
-        restoreHeaderSnapshotIfNew?.();
+        restoreHeaderSnapshotIfNew(true);
       }
     }
 
