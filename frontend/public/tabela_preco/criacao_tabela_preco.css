@@ -177,16 +177,13 @@ body {
   background: #fff;
 }
 
-/* Bottom Grid (Condition / Discount / Frete) */
+/* Bottom Grid (Condition / Discount / Frete / Markup) */
 .grid-condition-discount {
   display: grid;
   /* 
-     1fr 1fr auto strategy:
-     - Condição (1fr)
-     - Desconto (1fr)
-     - Frete (Auto - sized to content ~80px)
+     1fr 1fr auto auto strategy:
   */
-  grid-template-columns: 1fr 1fr auto;
+  grid-template-columns: 1fr 1fr auto auto;
   gap: 16px;
   margin-top: 24px;
 }
@@ -829,4 +826,34 @@ body {
   text-align: center;
   padding: 32px 16px;
   color: var(--muted);
+}
+/* Override for Markup Field Grid */
+.grid-condition-discount {
+  grid-template-columns: 1fr 1fr auto auto !important;
+}
+
+/* Ensure markup field is visible if hidden by some other rule */
+.field-markup {
+  display: block;
+}
+
+/* Mobile Edit/Dup buttons */
+.btn-icon-mobile.hidden {
+  display: none !important;
+}
+
+
+/* Override for Markup Field Grid */
+.grid-condition-discount {
+  grid-template-columns: 1fr 1fr auto auto !important;
+}
+
+/* Ensure markup field is visible if hidden by some other rule */
+.field-markup {
+  display: block;
+}
+
+/* Mobile Edit/Dup buttons */
+.btn-icon-mobile.hidden {
+  display: none !important;
 }

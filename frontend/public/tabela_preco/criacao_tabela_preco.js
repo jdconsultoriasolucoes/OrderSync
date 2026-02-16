@@ -1254,12 +1254,20 @@ function criarLinha(item, idx) {
   const inpMarkup = document.createElement('input');
   inpMarkup.type = 'number'; inpMarkup.step = '0.01'; inpMarkup.className = 'field-markup num';
   // Use existing item markup or fallback to client default
-  const mVal = (item.markup != null) ? Number(item.markup) : currentClientMarkup;
+  // Use existing item markup or fallback to client default or Header default
+  // Priority: Item > Header Input > Global Default
+  const headerMarkup = parseFloat(document.getElementById('markup_global')?.value?.replace(',', '.') || 0);
+
+  let mVal = 0;
+  if (item.markup != null) {
+    mVal = Number(item.markup);
+  } else if (headerMarkup > 0) {
+    mVal = headerMarkup;
+  } else {
+    mVal = (typeof currentClientMarkup !== 'undefined') ? Number(currentClientMarkup) : 0;
+  }
+
   item.markup = mVal; // Sync item
-  inpMarkup.value = fmtMoney(mVal); // Format for display? Or raw? input type=number needs dot. 
-  // Wait, local String uses comma? step 0.01. Input number usually requires dot.
-  // fmtMoney uses comma.
-  // Let's use clean input
   inpMarkup.value = mVal.toFixed(2);
   inpMarkup.style.width = '70px';
   inpMarkup.addEventListener('change', () => {
@@ -1416,6 +1424,16 @@ function renderTabela() {
       atualizarPillTaxa?.();
     }
   } catch { }
+
+
+  // Force re-apply filter logic if any
+  const term = document.getElementById('filter-dt-itens')?.value?.toLowerCase()?.trim();
+  if (term) {
+    document.querySelectorAll('#tbody-itens tr').forEach(tr => {
+      const text = tr.textContent.toLowerCase();
+      tr.style.display = text.includes(term) ? '' : 'none';
+    });
+  }
 
   // ✅ Mobile Render Hook
   if (typeof renderMobileCards === 'function') renderMobileCards();
@@ -2127,6 +2145,20 @@ document.addEventListener('DOMContentLoaded', () => {
     });
   })();
 
+  document.getElementById('link-mobile-listar')?.addEventListener('click', (e) => {
+    e.preventDefault();
+    document.querySelector('.sidebar').classList.remove('active');
+    document.getElementById('overlay').style.display = 'none';
+    document.getElementById('btn-listar')?.click();
+  });
+
+  document.getElementById('link-mobile-buscar')?.addEventListener('click', (e) => {
+    e.preventDefault();
+    document.querySelector('.sidebar').classList.remove('active');
+    document.getElementById('overlay').style.display = 'none';
+    document.getElementById('btn-buscar')?.click();
+  });
+
   document.getElementById('btn-cancelar')?.addEventListener('click', onCancelar);
   document.getElementById('btn-editar')?.addEventListener('click', onEditar);
   document.getElementById('btn-duplicar')?.addEventListener('click', onDuplicar);
@@ -2245,32 +2277,65 @@ document.addEventListener('DOMContentLoaded', () => {
 });
 
 
-document.getElementById('btn-aplicar-condicao-todos')?.addEventListener('click', () => {
-  const cod = document.getElementById('plano_pagamento')?.value || '';
-  document.querySelectorAll('#tbody-itens tr').forEach(tr => {
-    const sel = tr.querySelector('td:nth-child(10) select');
-    if (!sel) return;
-    sel.value = cod;
-    // 🔑 garante persistência em itens[idx] + recálculo
-    sel.dispatchEvent(new Event('change', { bubbles: true }));
+// === AUTO APPLY LOGIC (Substituindo botões) ===
+
+document.getElementById('plano_pagamento')?.addEventListener('change', (e) => {
+  const cod = e.target.value || '';
+  // Aplica a TODOS os itens
+  itens.forEach(it => {
+    it.plano_pagamento = cod || null;
+    it.__plano_pagto_label = e.target.options[e.target.selectedIndex]?.textContent || '';
   });
-  setTimeout(() => {
-    Promise.resolve(recalcTudo()).catch(() => { });
-  }, 0);
+  // Re-renderiza para atualizar select boxes das linhas
+  renderTabela();
+  // Dispara recálculo de valores
+  setTimeout(() => Promise.resolve(recalcTudo()).catch(() => { }), 0);
+
   const hdr = document.getElementById('plano_pagamento');
-  if (hdr) hdr.dataset.userEdited = '';
-  snapshotSelecionadosParaPicker?.();
-});
-document.getElementById('iva_st_toggle')?.addEventListener('change', (e) => {
-  ivaStAtivo = !!e.target.checked;
-  Promise.resolve(recalcTudo()).catch(err => console.debug('recalcTudo falhou:', err));
+  if (hdr) hdr.dataset.userEdited = '1'; /* Marca como editado pelo user */
+  atualizarPillTaxa();
 });
 
 document.getElementById('desconto_global')?.addEventListener('change', (e) => {
-  // 👇 marca que o usuário editou manualmente o header
-  e.currentTarget.dataset.userEdited = '1';
+  const code = e.target.value || '';
+  const frac = (Object.prototype.hasOwnProperty.call(mapaDescontos, code) ? Number(mapaDescontos[code]) : 0);
+
+  itens.forEach(it => {
+    it.fator_comissao = (!isNaN(frac) ? frac : 0);
+    it.__fator_codigo = code;
+    it.__descricao_fator_label = e.target.options[e.target.selectedIndex]?.textContent || '';
+    it.__overridePercent = false; // Reset override flag as we are applying global
+  });
+
+  renderTabela();
+  setTimeout(() => Promise.resolve(recalcTudo()).catch(() => { }), 0);
+
+  e.target.dataset.userEdited = '1';
   atualizarPillDesconto();
   saveHeaderSnapshot();
+});
+
+document.getElementById('frete_kg')?.addEventListener('change', (e) => {
+  // Frete é calculado na hora do buildFiscalInputs, 
+  // mas precisamos disparar recalcTudo para atualizar totais
+  Promise.resolve(recalcTudo()).catch(() => { });
+});
+
+document.getElementById('markup_global')?.addEventListener('change', (e) => {
+  let val = parseFloat(e.target.value.replace(',', '.')) || 0;
+  itens.forEach(it => {
+    it.markup = val;
+  });
+  renderTabela();
+  // recalcTudo não é estritamente necessário se renderTabela já chamou criarLinha que usa markup,
+  // mas recalcLinha é chamado no criarLinha.
+  // Garantia:
+  setTimeout(() => Promise.resolve(recalcTudo()).catch(() => { }), 0);
+});
+
+document.getElementById('iva_st_toggle')?.addEventListener('change', (e) => {
+  ivaStAtivo = !!e.target.checked;
+  Promise.resolve(recalcTudo()).catch(err => console.debug('recalcTudo falhou:', err));
 });
 
 window.addEventListener('pageshow', () => {
@@ -2403,3 +2468,90 @@ document.addEventListener('DOMContentLoaded', () => {
     });
   });
 });
+
+// =========================================================
+// MOBILE RENDER CARDS (Re-implementação/Override)
+// =========================================================
+function renderMobileCards() {
+  const container = document.getElementById('mobile-card-container');
+  if (!container) return;
+  container.innerHTML = '';
+
+  if (!itens || itens.length === 0) {
+    container.innerHTML = `<div class='empty-state-mobile'><p>Nenhum produto selecionado.</p><button onclick='document.getElementById(\"btn-buscar\").click()' class='btn btn-primary btn-sm'>Adicionar Produtos</button></div>`;
+    return;
+  }
+
+  itens.forEach((item, idx) => {
+    const valor = Number(item.valor || 0);
+    const total = Number(item._totalComercial || item.total_sem_frete || 0);
+    const mkPct = Number(item.markup || 0);
+    const valFinalMk = Number(item.valor_final_markup || 0);
+
+    const card = document.createElement('div');
+    card.className = 'mobile-card';
+    card.innerHTML = `
+      <div class='card-header-row' onclick='toggleCardDetails(${idx})'>
+        <div>
+           <div class='card-title'>${item.codigo_tabela || '?'} - ${item.descricao || 'Sem descrição'}</div>
+           <div class='card-subtitle'>${item.embalagem || ''} • ${fmt4(item.peso_liquido)}kg • ${item.grupo || ''}</div>
+        </div>
+        <div class='card-price-highlight'>${fmtMoney(valFinalMk > 0 ? valFinalMk : total)}</div>
+      </div>
+      
+      <div id='card-details-${idx}' class='card-details hidden' style='margin-top:12px; border-top:1px dashed #eee; padding-top:8px;'>
+         <div class='grid-2' style='display:grid; grid-template-columns:1fr 1fr; gap:8px;'>
+            <div class='card-field'>
+               <label>Valor Unit.</label>
+               <input type='text' value='${fmtMoney(valor)}' disabled>
+            </div>
+             <div class='card-field'>
+               <label>Markup %</label>
+               <input type='number' step='0.01' value='${mkPct.toFixed(2)}' onchange='updateItemField(${idx}, \"markup\", this.value)'>
+            </div>
+         </div>
+
+         <div style='margin-top:12px; background:#f8fafc; padding:8px; border-radius:6px;'>
+            <p style='font-weight:600; margin-bottom:4px; font-size:0.8rem;'>Fiscal</p>
+            <div style='display:grid; grid-template-columns:1fr 1fr 1fr; gap:8px; font-size:0.75rem;'>
+                <div><span style='color:#64748b;'>IPI</span><br><strong>${fmtMoney(item.ipi || 0)}</strong></div>
+                <div><span style='color:#64748b;'>ICMS ST</span><br><strong>${fmtMoney(item.icms_st || 0)}</strong></div>
+                <div><span style='color:#64748b;'>IVA ST</span><br><strong>${fmtMoney(item.iva_st || 0)}</strong></div>
+            </div>
+         </div>
+         
+         <div class='card-actions'>
+           <button class='btn-card-action btn-card-remove' onclick='removerItemMobile(${idx})'>Remover</button>
+         </div>
+      </div>
+    `;
+    container.appendChild(card);
+  });
+
+  const totalVal = itens.reduce((acc, it) => acc + (it.valor_final_markup || it._totalComercial || 0), 0);
+  document.getElementById('mobile-total-itens').textContent = `${itens.length} itens`;
+  document.getElementById('mobile-total-valor').textContent = fmtMoney(totalVal);
+
+  const btnEdit = document.getElementById('btn-mobile-edit');
+  const btnDup = document.getElementById('btn-mobile-dup');
+  if (btnEdit && btnDup) {
+    const canEdit = !!window.currentTabelaId || !!getIdFromUrl();
+    if (canEdit) {
+      btnEdit.classList.remove('hidden');
+      btnDup.classList.remove('hidden');
+      btnEdit.onclick = () => document.getElementById('btn-editar').click();
+      btnDup.onclick = () => document.getElementById('btn-duplicar').click();
+    } else {
+      btnEdit.classList.add('hidden');
+      btnDup.classList.add('hidden');
+    }
+  }
+}
+
+window.removerItemMobile = function (idx) {
+  if (!confirm('Remover este item?')) return;
+  itens.splice(idx, 1);
+  renderTabela();
+  snapshotSelecionadosParaPicker();
+  refreshToolbarEnablement();
+};
