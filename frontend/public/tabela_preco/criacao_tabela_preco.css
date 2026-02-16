@@ -212,6 +212,21 @@ body {
   .grid-condition-discount {
     grid-template-columns: 1fr;
   }
+
+  /* Responsive Header for Mobile */
+  .section-header-flex {
+    flex-wrap: wrap;
+  }
+
+  .header-info-group {
+    order: 3;
+    width: 100%;
+    margin-top: 8px;
+    justify-content: flex-start;
+    margin-left: 0 !important;
+    margin-right: 0 !important;
+    gap: 16px;
+  }
 }
 
 /* "Table-like" clean design for the bottom groups */
@@ -801,59 +816,32 @@ body {
   border-radius: 50%;
   background: #f1f5f9;
   border: none;
-  font-size: 1.5rem;
-  color: var(--accent-2);
   display: flex;
   align-items: center;
   justify-content: center;
-  cursor: pointer;
+  font-size: 1.2rem;
+  color: var(--text);
+  box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+  transition: transform 0.2s;
+}
+
+.btn-icon-mobile:active {
+  transform: scale(0.95);
 }
 
 .btn-primary-mobile {
-  background: var(--accent-2);
-  color: white;
+  background: var(--accent);
+  color: #fff;
   border: none;
-  padding: 0 24px;
-  border-radius: 22px;
+  padding: 0 20px;
+  border-radius: 20px;
   font-weight: 600;
   font-size: 1rem;
-  height: 44px;
-  cursor: pointer;
-  box-shadow: 0 4px 12px rgba(59, 130, 246, 0.3);
+  box-shadow: 0 4px 10px rgba(34, 197, 94, 0.3);
 }
 
 .empty-state-mobile {
   text-align: center;
-  padding: 32px 16px;
+  padding: 40px 20px;
   color: var(--muted);
-}
-/* Override for Markup Field Grid */
-.grid-condition-discount {
-  grid-template-columns: 1fr 1fr auto auto !important;
-}
-
-/* Ensure markup field is visible if hidden by some other rule */
-.field-markup {
-  display: block;
-}
-
-/* Mobile Edit/Dup buttons */
-.btn-icon-mobile.hidden {
-  display: none !important;
-}
-
-
-/* Override for Markup Field Grid */
-.grid-condition-discount {
-  grid-template-columns: 1fr 1fr auto auto !important;
-}
-
-/* Ensure markup field is visible if hidden by some other rule */
-.field-markup {
-  display: block;
-}
-
-/* Mobile Edit/Dup buttons */
-.btn-icon-mobile.hidden {
-  display: none !important;
 }

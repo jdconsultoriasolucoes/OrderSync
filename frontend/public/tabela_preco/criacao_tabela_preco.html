@@ -58,6 +58,21 @@
     <section class="card pad" aria-labelledby="sec-topo">
       <div class="section-header-flex clickable-header" id="toggle-header">
         <h2 id="sec-topo" class="section-title" style="margin: 0;">Dados principais</h2>
+
+        <!-- Moved Validity/Time Here -->
+        <div class="header-info-group" style="margin-left: auto; margin-right: 16px;">
+          <div class="info-item">
+            <span class="info-label">Validade:</span>
+            <input id="validade_tabela" class="transparent-input" type="text" readonly tabindex="-1"
+              style="width: 100px; text-align: right;" />
+          </div>
+          <div class="info-item">
+            <span class="info-label">Tempo:</span>
+            <input id="dias_restantes" class="transparent-input" type="text" readonly tabindex="-1"
+              style="width: 140px; text-align: right;" />
+          </div>
+        </div>
+
         <div class="header-controls">
           <span class="chevron-header">▼</span>
         </div>
@@ -65,16 +80,6 @@
 
       <!-- Collapsible Content -->
       <div id="header-content" class="header-content expanded">
-        <div class="header-info-group">
-          <div class="info-item">
-            <span class="info-label">Validade:</span>
-            <input id="validade_tabela" class="transparent-input" type="text" readonly tabindex="-1" />
-          </div>
-          <div class="info-item">
-            <span class="info-label">Tempo:</span>
-            <input id="dias_restantes" class="transparent-input" type="text" readonly tabindex="-1" />
-          </div>
-        </div>
 
         <div class="custom-grid" style="margin-top: 16px;">
           <!-- Row 1 Items -->
@@ -103,7 +108,7 @@
           </div>
         </div>
 
-        <!-- Bottom (Condition / Discount) -->
+        <!-- Bottom (Condition / Discount / Markup / Frete) -->
         <div class="grid-condition-discount">
           <!-- Condição -->
           <div class="grid-item">
@@ -113,7 +118,7 @@
               <div class="hint" id="hint-condicao">Carregando...</div>
             </div>
             <div class="toolbar left-gap desktop-only">
-              <button class="btn btn-sm" id="btn-aplicar-condicao-todos">Aplicar a todos</button>
+              <!-- Button removed -->
               <span class="pill"><span>Taxa:</span><strong id="pill-taxa">—</strong></span>
             </div>
           </div>
@@ -125,9 +130,19 @@
               <select id="desconto_global" class="grow"></select>
             </div>
             <div class="toolbar left-gap desktop-only">
-              <button class="btn btn-sm" id="btn-aplicar-todos">Aplicar a todos</button>
+              <!-- Button removed -->
               <span class="pill"><span>Fator:</span><strong id="pill-fator">—</strong><span>%</span></span>
             </div>
+          </div>
+
+          <!-- Markup Global (Restored) -->
+          <div class="grid-item area-markup">
+            <div class="field">
+              <label for="markup_global">Markup Global %</label>
+              <input id="markup_global" class="input-mini" type="number" step="0.01" min="0" placeholder="0.00"
+                inputmode="decimal" />
+            </div>
+            <!-- No apply button needed (auto) -->
           </div>
 
           <!-- Frete -->
