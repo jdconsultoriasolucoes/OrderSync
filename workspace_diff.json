@@ -1,0 +1,446 @@
+﻿{
+    "OnlyInDev":  [
+                      "\\backend\\inspect_data.py",
+                      "\\scripts\\reset_pg8000.py",
+                      "\\backend\\test_alias.py",
+                      "\\scripts\\debug_login_internal.py",
+                      "\\scripts\\create_user_table.py",
+                      "\\scripts\\test_client_data_direct.py",
+                      "\\.env.example",
+                      "\\backend\\check_schema.py",
+                      "\\backend\\test\\test_security_rules.py",
+                      "\\backend\\create_history_table.py",
+                      "\\scripts\\check_client_specific.py",
+                      "\\scripts\\reset_app_engine.py",
+                      "\\frontend\\public\\js\\auth.js",
+                      "\\frontend\\public\\usuarios.html",
+                      "\\scripts\\check_syntax.py",
+                      "\\scripts\\fix_table_164.py",
+                      "\\backend\\check_dupes.py",
+                      "\\inspect_pdf_table.py",
+                      "\\backend\\routers\\auth.py",
+                      "\\scripts\\migrate_markup_cols.py",
+                      "\\frontend\\public\\login\\forgot.html",
+                      "\\backend\\scripts\\migrate_ramo_juridico.py",
+                      "\\backend\\test\\test_auth_integration.py",
+                      "\\inspect_filhos.py",
+                      "\\frontend\\public\\login\\login.html",
+                      "\\frontend\\public\\login\\login.js",
+                      "\\backend\\check_order.py",
+                      "\\scripts\\check_markup_values.py",
+                      "\\check_remote_endpoint.py",
+                      "\\inspect_triggers.py",
+                      "\\scripts\\inspect_v1_cols.py",
+                      "\\backend\\inspect_db.py",
+                      "\\backend\\schemas\\pedido_confirmacao.py",
+                      "\\workspace_diff.json",
+                      "\\backend\\test_update.py",
+                      "\\scripts\\update_pet_fields.sql",
+                      "\\scripts\\add_markup_columns.py",
+                      "\\backend\\add_marca_column.py",
+                      "\\backend\\find_order.py",
+                      "\\scripts\\force_st_164.py",
+                      "\\frontend\\public\\tabela_preco\\listar_tabela_temp.css",
+                      "\\compare_workspaces.ps1",
+                      "\\backend\\models\\usuario.py",
+                      "\\scripts\\fix_all_dispet.py",
+                      "\\backend\\schemas\\usuario.py",
+                      "\\scripts\\check_migration_v2.py",
+                      "\\scripts\\test_auth_flow.py",
+                      "\\scripts\\check_migration.py",
+                      "\\scripts\\inspect_tables_debug.py",
+                      "\\scripts\\inspect_tables_recent.py",
+                      "\\backend\\inspect_db_items.py",
+                      "\\backend\\revert_test.py",
+                      "\\backend\\sample_db_items.py",
+                      "\\backend\\models\\pedido.py",
+                      "\\backend\\routers\\usuario.py",
+                      "\\frontend\\public\\login\\reset.html",
+                      "\\scripts\\test_client_data.py",
+                      "\\scripts\\reset_admin.py",
+                      "\\scripts\\check_validity.py",
+                      "\\scripts\\test_password_flow.py",
+                      "\\backend\\fix_tabela_names.py",
+                      "\\scripts\\check_client_dispet.py",
+                      "\\backend\\inspect_status.py",
+                      "\\scripts\\migrate_v1_v2_clientes.py",
+                      "\\scripts\\inspect_tables_confirm.py",
+                      "\\scripts\\reset_raw.py",
+                      "\\backend\\inspect_pedidos.py",
+                      "\\scripts\\check_port.py",
+                      "\\add_filhos_column.py",
+                      "\\.env",
+                      "\\scripts\\add_audit_columns.py",
+                      "\\backend\\add_user_column.py",
+                      "\\backend\\models\\cliente_v2.py",
+                      "\\backend\\core\\security.py",
+                      "\\verify_imports.py",
+                      "\\backend\\test\\test_password_reset.py",
+                      "\\backend\\check_tabela.py",
+                      "\\backend\\add_column_tabela_nome.py",
+                      "\\backend\\core\\deps.py",
+                      "\\frontend\\public\\js\\usuarios.js",
+                      "\\scripts\\update_validity.py",
+                      "\\inspect_families.py",
+                      "\\backend\\check_tables.py"
+                  ],
+    "Different":  [
+                      {
+                          "DevSize":  13013,
+                          "Path":  "\\frontend\\public\\tabela_preco\\tabela_preco.js",
+                          "Reason":  "Size",
+                          "ProdSize":  13016
+                      },
+                      {
+                          "DevSize":  2038,
+                          "Path":  "\\backend\\routers\\pedido_pdf.py",
+                          "Reason":  "Size",
+                          "ProdSize":  2018
+                      },
+                      {
+                          "DevSize":  12434,
+                          "Path":  "\\backend\\routers\\pedidos.py",
+                          "Reason":  "Size",
+                          "ProdSize":  10019
+                      },
+                      {
+                          "DevSize":  862,
+                          "Path":  "\\backend\\models\\pedido_pdf.py",
+                          "Reason":  "Size",
+                          "ProdSize":  807
+                      },
+                      {
+                          "DevSize":  21792,
+                          "Path":  "\\backend\\services\\produto_pdf.py",
+                          "Reason":  "Size",
+                          "ProdSize":  20719
+                      },
+                      {
+                          "DevSize":  1951,
+                          "Path":  "\\backend\\routers\\cliente.py",
+                          "Reason":  "Size",
+                          "ProdSize":  1469
+                      },
+                      {
+                          "DevSize":  903,
+                          "Path":  "\\backend\\models\\pedido_link.py",
+                          "Reason":  "Size",
+                          "ProdSize":  855
+                      },
+                      {
+                          "DevSize":  3321,
+                          "Path":  "\\backend\\services\\fiscal.py",
+                          "Reason":  "Size",
+                          "ProdSize":  3324
+                      },
+                      {
+                          "DevSize":  274,
+                          "Path":  "\\backend\\requirements.txt",
+                          "Reason":  "Size",
+                          "ProdSize":  184
+                      },
+                      {
+                          "DevSize":  9307,
+                          "Path":  "\\backend\\main.py",
+                          "Reason":  "Size",
+                          "ProdSize":  7263
+                      },
+                      {
+                          "DevSize":  5952,
+                          "Path":  "\\frontend\\public\\pedido\\pedido.html",
+                          "Reason":  "Size",
+                          "ProdSize":  4149
+                      },
+                      {
+                          "DevSize":  1161,
+                          "Path":  "\\frontend\\public\\navbar.css",
+                          "Reason":  "Size",
+                          "ProdSize":  1159
+                      },
+                      {
+                          "DevSize":  4895,
+                          "Path":  "\\backend\\schemas\\tabela_preco.py",
+                          "Reason":  "Size",
+                          "ProdSize":  4718
+                      },
+                      {
+                          "DevSize":  4896,
+                          "Path":  "\\frontend\\index.html",
+                          "Reason":  "Size",
+                          "ProdSize":  4184
+                      },
+                      {
+                          "DevSize":  18258,
+                          "Path":  "\\backend\\services\\pdf_service.py",
+                          "Reason":  "Size",
+                          "ProdSize":  17469
+                      },
+                      {
+                          "DevSize":  82436,
+                          "Path":  "\\frontend\\public\\tabela_preco\\criacao_tabela_preco.js",
+                          "Reason":  "Size",
+                          "ProdSize":  76353
+                      },
+                      {
+                          "DevSize":  784,
+                          "Path":  "\\backend\\database.py",
+                          "Reason":  "Size",
+                          "ProdSize":  735
+                      },
+                      {
+                          "DevSize":  15825,
+                          "Path":  "\\backend\\routers\\tabela_preco.py",
+                          "Reason":  "Size",
+                          "ProdSize":  24057
+                      },
+                      {
+                          "DevSize":  10951,
+                          "Path":  "\\frontend\\public\\config_email\\config_email.html",
+                          "Reason":  "Size",
+                          "ProdSize":  4601
+                      },
+                      {
+                          "DevSize":  4039,
+                          "Path":  "\\backend\\models\\produto.py",
+                          "Reason":  "Size",
+                          "ProdSize":  3860
+                      },
+                      {
+                          "DevSize":  11424,
+                          "Path":  "\\frontend\\public\\tabela_preco\\criacao_tabela_preco.css",
+                          "Reason":  "Size",
+                          "ProdSize":  6458
+                      },
+                      {
+                          "DevSize":  63281,
+                          "Path":  "\\frontend\\public\\clientes\\cliente.html",
+                          "Reason":  "Size",
+                          "ProdSize":  49925
+                      },
+                      {
+                          "DevSize":  3752,
+                          "Path":  "\\backend\\services\\pedidos.py",
+                          "Reason":  "Size",
+                          "ProdSize":  3759
+                      },
+                      {
+                          "DevSize":  6684,
+                          "Path":  "\\frontend\\public\\tabela_preco\\pedido_cliente.css",
+                          "Reason":  "Size",
+                          "ProdSize":  6508
+                      },
+                      {
+                          "DevSize":  10123,
+                          "Path":  "\\backend\\services\\email_service.py",
+                          "Reason":  "Size",
+                          "ProdSize":  5977
+                      },
+                      {
+                          "DevSize":  934,
+                          "Path":  "\\backend\\schemas\\config_email.py",
+                          "Reason":  "Size",
+                          "ProdSize":  920
+                      },
+                      {
+                          "DevSize":  403,
+                          "Path":  "\\frontend\\package.json",
+                          "Reason":  "Size",
+                          "ProdSize":  405
+                      },
+                      {
+                          "DevSize":  3874,
+                          "Path":  "\\backend\\routers\\link_pedido.py",
+                          "Reason":  "Size",
+                          "ProdSize":  3236
+                      },
+                      {
+                          "DevSize":  703,
+                          "Path":  "\\backend\\models\\config_email_smtp.py",
+                          "Reason":  "Size",
+                          "ProdSize":  652
+                      },
+                      {
+                          "DevSize":  11264,
+                          "Path":  "\\backend\\schemas\\cliente.py",
+                          "Reason":  "Size",
+                          "ProdSize":  11220
+                      },
+                      {
+                          "DevSize":  14045,
+                          "Path":  "\\frontend\\public\\js\\gerar_link_pedido.js",
+                          "Reason":  "Size",
+                          "ProdSize":  13858
+                      },
+                      {
+                          "DevSize":  8213,
+                          "Path":  "\\backend\\services\\produto_pdf_data.py",
+                          "Reason":  "Size",
+                          "ProdSize":  7811
+                      },
+                      {
+                          "DevSize":  40986,
+                          "Path":  "\\frontend\\public\\produto\\produto.js",
+                          "Reason":  "Size",
+                          "ProdSize":  35310
+                      },
+                      {
+                          "DevSize":  365,
+                          "Path":  "\\frontend\\public\\js\\config.js",
+                          "Reason":  "Size",
+                          "ProdSize":  212
+                      },
+                      {
+                          "DevSize":  2498,
+                          "Path":  "\\backend\\models\\tabela_preco.py",
+                          "Reason":  "Size",
+                          "ProdSize":  2217
+                      },
+                      {
+                          "DevSize":  10496,
+                          "Path":  "\\backend\\routers\\admin_config_email.py",
+                          "Reason":  "Size",
+                          "ProdSize":  10226
+                      },
+                      {
+                          "DevSize":  28009,
+                          "Path":  "\\frontend\\public\\tabela_preco\\pedido_cliente.js",
+                          "Reason":  "Size",
+                          "ProdSize":  24074
+                      },
+                      {
+                          "DevSize":  9382,
+                          "Path":  "\\backend\\routers\\produto.py",
+                          "Reason":  "Size",
+                          "ProdSize":  7360
+                      },
+                      {
+                          "DevSize":  3454,
+                          "Path":  "\\frontend\\public\\tabela_preco\\listar_tabelas.html",
+                          "Reason":  "Size",
+                          "ProdSize":  3078
+                      },
+                      {
+                          "DevSize":  3281,
+                          "Path":  "\\backend\\services\\pedido_pdf_data.py",
+                          "Reason":  "Size",
+                          "ProdSize":  3206
+                      },
+                      {
+                          "DevSize":  4508,
+                          "Path":  "\\frontend\\public\\clientes\\modal_clientes.html",
+                          "Reason":  "Size",
+                          "ProdSize":  3824
+                      },
+                      {
+                          "DevSize":  7271,
+                          "Path":  "\\backend\\routers\\fiscal.py",
+                          "Reason":  "Size",
+                          "ProdSize":  5591
+                      },
+                      {
+                          "DevSize":  6159,
+                          "Path":  "\\backend\\routers\\pedido_preview.py",
+                          "Reason":  "Size",
+                          "ProdSize":  16798
+                      },
+                      {
+                          "DevSize":  6779,
+                          "Path":  "\\frontend\\public\\tabela_preco\\listar_tabelas.js",
+                          "Reason":  "Size",
+                          "ProdSize":  4498
+                      },
+                      {
+                          "DevSize":  7091,
+                          "Path":  "\\frontend\\public\\pedido\\pedido.css",
+                          "Reason":  "Size",
+                          "ProdSize":  6890
+                      },
+                      {
+                          "DevSize":  2561,
+                          "Path":  "\\backend\\services\\link_pedido.py",
+                          "Reason":  "Size",
+                          "ProdSize":  2558
+                      },
+                      {
+                          "DevSize":  5105,
+                          "Path":  "\\frontend\\public\\tabela_preco\\pedido_cliente.html",
+                          "Reason":  "Size",
+                          "ProdSize":  4908
+                      },
+                      {
+                          "DevSize":  13612,
+                          "Path":  "\\backend\\services\\tabela_preco.py",
+                          "Reason":  "Size",
+                          "ProdSize":  1704
+                      },
+                      {
+                          "DevSize":  20055,
+                          "Path":  "\\backend\\services\\cliente.py",
+                          "Reason":  "Size",
+                          "ProdSize":  2938
+                      },
+                      {
+                          "DevSize":  18327,
+                          "Path":  "\\frontend\\public\\produto\\produto.html",
+                          "Reason":  "Size",
+                          "ProdSize":  14749
+                      },
+                      {
+                          "DevSize":  14265,
+                          "Path":  "\\backend\\services\\produto_regras.py",
+                          "Reason":  "Size",
+                          "ProdSize":  6267
+                      },
+                      {
+                          "DevSize":  12414,
+                          "Path":  "\\backend\\services\\pedido_confirmacao_service.py",
+                          "Reason":  "Size",
+                          "ProdSize":  1567
+                      },
+                      {
+                          "DevSize":  3741,
+                          "Path":  "\\backend\\schemas\\produto.py",
+                          "Reason":  "Size",
+                          "ProdSize":  3328
+                      },
+                      {
+                          "DevSize":  10911,
+                          "Path":  "\\frontend\\public\\tabela_preco\\criacao_tabela_preco.html",
+                          "Reason":  "Size",
+                          "ProdSize":  8075
+                      },
+                      {
+                          "DevSize":  26837,
+                          "Path":  "\\frontend\\public\\pedido\\pedido.js",
+                          "Reason":  "Size",
+                          "ProdSize":  15776
+                      },
+                      {
+                          "DevSize":  4465,
+                          "Path":  "\\frontend\\public\\config_email\\config_email.css",
+                          "Reason":  "Size",
+                          "ProdSize":  2135
+                      },
+                      {
+                          "DevSize":  7473,
+                          "Path":  "\\frontend\\public\\tabela_preco\\listar_tabela.css",
+                          "Reason":  "Size",
+                          "ProdSize":  6953
+                      },
+                      {
+                          "DevSize":  2981,
+                          "Path":  "\\frontend\\public\\clientes\\cliente.css",
+                          "Reason":  "Size",
+                          "ProdSize":  2747
+                      },
+                      {
+                          "DevSize":  3215,
+                          "Path":  "\\frontend\\styles.css",
+                          "Reason":  "Size",
+                          "ProdSize":  3166
+                      }
+                  ],
+    "OnlyInProd":  [
+                       "\\backend\\models\\cliente.py"
+                   ]
+}

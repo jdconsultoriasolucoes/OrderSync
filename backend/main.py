@@ -11,7 +11,7 @@ from fastapi.staticfiles import StaticFiles
 from pathlib import Path  
 # Routers
 from routers.tabela_preco import router_meta, router as router_tabela
-from routers import pedido_preview, link_pedido, admin_config_email, cliente, listas, fiscal,pedidos,net_diag, produto, pedido_pdf, auth, usuario
+from routers import pedido_preview, link_pedido, admin_config_email, cliente, listas, fiscal,pedidos,net_diag, produto, pedido_pdf, auth, usuario, fornecedor
 from database import SessionLocal
 # ---- logging base (simples) ----
 logging.basicConfig(level=logging.INFO)
@@ -34,6 +34,13 @@ def startup_ensure_admin():
     from database import SessionLocal
     from models.usuario import UsuarioModel
     from core.security import get_password_hash
+    # --- FIX CRITICO: Criar tabelas antes de consultar ---
+    from database import Base, engine
+    Base.metadata.create_all(bind=engine)
+
+    # --- MIGRAÇOES DE SCHEMA (Colunas novas) ---
+    from services.db_migrations import run_migrations
+    run_migrations()
     
     db = SessionLocal()
     try:
@@ -137,7 +144,7 @@ app.include_router(router_meta)                # /tabela_preco/meta/*
 app.include_router(router_tabela)              # /tabela_preco/*
 app.include_router(cliente.router, prefix="/cliente", tags=["Cliente"])
 app.include_router(listas.router, prefix="/listas", tags=["Listas"])
-app.include_router(fiscal.router)              # (sem prefixo se o router já tiver)
+app.include_router(fiscal.router, prefix="/fiscal")              # (prefixo padronizado)
 app.include_router(pedido_preview.router)
 app.include_router(link_pedido.router)
 app.include_router(link_pedido.router_short)
@@ -148,6 +155,10 @@ app.include_router(produto.router)
 app.include_router(pedido_pdf.router)
 app.include_router(auth.router)
 app.include_router(usuario.router)
+app.include_router(fornecedor.router)
+
+from routers import system_tables
+app.include_router(system_tables.router)
 
 # ---- Static (se precisar servir arquivos públicos do front) ----
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
@@ -216,26 +227,29 @@ async def no_cache_static_tabela_preco(request, call_next):
 
 
 # ---- CORS: adicionar por ÚLTIMO (camada mais externa) ----
+
+# ---- CORS: Usando Regex para garantir todos os subdominios Render ----
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=ALLOWED_ORIGINS,     # não usar "*" se há credenciais
+    # Permite qualquer subdominio ordersync-XXXX.onrender.com
+    allow_origin_regex=r"https://ordersync.*\.onrender\.com$",
     allow_credentials=True,
-    allow_methods=["*"],               # GET/POST/PUT/PATCH/DELETE/OPTIONS
+    allow_methods=["*"],
     allow_headers=["*"],
     expose_headers=["x-cors-debug", "x-error-id"],
     max_age=86400,
 )
 
-# # Alternativa, se o subdomínio do Render variar:
 # app.add_middleware(
 #     CORSMiddleware,
-#     allow_origin_regex=r"https://ordersync-[a-z0-9]+\.onrender\.com$",
+#     allow_origins=ALLOWED_ORIGINS,     # não usar "*" se há credenciais
 #     allow_credentials=True,
-#     allow_methods=["*"],
+#     allow_methods=["*"],               # GET/POST/PUT/PATCH/DELETE/OPTIONS
 #     allow_headers=["*"],
 #     expose_headers=["x-cors-debug", "x-error-id"],
 #     max_age=86400,
 # )
+
 
 
 
