@@ -1,6 +1,6 @@
 from fastapi import APIRouter, Depends
 from sqlalchemy.orm import Session
-from database import get_db
+from core.deps import get_db
 # Se houver modelos ou schemas, importar aqui.
 
 router = APIRouter(prefix="/fornecedor", tags=["Fornecedor"])
