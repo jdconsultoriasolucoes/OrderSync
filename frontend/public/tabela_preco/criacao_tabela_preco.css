@@ -621,12 +621,7 @@ body {
     display: block !important;
   }
 
-  /* Flex mobile adjustments */
-  .mobile-only.mobile-bulk-actions {
-    display: flex !important;
-    gap: 10px;
-    margin-top: 16px;
-  }
+
 
   .mobile-only.mobile-toolbar {
     display: block !important;
