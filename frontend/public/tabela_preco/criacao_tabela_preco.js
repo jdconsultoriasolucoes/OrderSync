@@ -10,64 +10,162 @@ function toggleHeader() {
   content.classList.toggle('expanded');
 }
 
+// =========================================================
+// MOBILE RENDER CARDS (Re-implementação/Override)
+// =========================================================
 function renderMobileCards() {
   const container = document.getElementById('mobile-card-container');
   if (!container) return;
-
   container.innerHTML = '';
 
   if (!itens || itens.length === 0) {
-    container.innerHTML = `
-          <div class="empty-state-mobile">
-              <p>Nenhum produto selecionado.</p>
-              <button onclick="onBuscar()" class="btn btn-primary btn-sm">Adicionar Produtos</button>
-          </div>
-      `;
+    // Note: ensure onBuscar or document.getElementById('btn-buscar') works
+    container.innerHTML = `<div class='empty-state-mobile'><p>Nenhum produto selecionado.</p><button onclick='document.getElementById(\"btn-buscar\").click()' class='btn btn-primary btn-sm'>Adicionar Produtos</button></div>`;
+    updateMobileToolbar();
     return;
   }
 
-  itens.forEach((item, index) => {
+  itens.forEach((item, idx) => {
+    const valor = Number(item.valor || 0);
+    // Use stored totals if available, otherwise fallback
+    const total = Number(item.valor_final_markup || item._totalComercial || item.total_sem_frete || 0);
+    const mkPct = Number(item.markup || 0);
+
+    // Fiscal Values (Stored in R$ from backend preview)
+    const ipiVal = Number(item.ipi || 0);
+    const icmsStVal = Number(item.icms_st || 0);
+    const ivaStVal = Number(item.iva_st || 0);
+
     const card = document.createElement('div');
     card.className = 'mobile-card';
-
-    const valorFinal = fmtMoney(item.valor_final || 0);
-    const descFator = item.fator || 0;
-
     card.innerHTML = `
-          <div class="card-header-row">
-              <div>
-                  <div class="card-title">${item.descricao || 'Produto sem nome'}</div>
-                  <div class="card-subtitle">${item.codigo || '-'}</div>
-              </div>
-              <div class="card-price-highlight">R$ ${valorFinal}</div>
-          </div>
-          
-          <div class="card-body-row">
-             <div class="card-field">
-                <label>Fator %</label>
-                <input type="number" step="0.01" value="${descFator}" onchange="updateItemField(${index}, 'fator', this.value)">
-             </div>
-              <div class="card-field">
-                <label>Valor Unit.</label>
-                <input type="text" value="${fmtMoney(item.valor)}" disabled>
-             </div>
-          </div>
-          
-          <div class="card-actions">
-              <button class="btn-card-action" onclick="toggleCardDetails(${index})">Ver Detalhes</button>
-              <button class="btn-card-action btn-card-remove" onclick="removerItem(${index})">Remover</button>
-          </div>
-          
-          <div id="card-details-${index}" class="hidden" style="margin-top: 12px; border-top: 1px solid var(--border); padding-top: 8px;">
-             <!-- Details content could go here -->
-             <small>Detalhes fiscais em breve...</small>
-          </div>
-      `;
+      <div class='card-header-row' onclick='toggleCardDetails(${idx})' style='cursor:pointer'>
+        <div style='flex:1'>
+           <div class='card-title'>${item.codigo_tabela || '?'} - ${item.descricao || 'Sem descrição'}</div>
+           <div class='card-subtitle'>${item.embalagem || ''} • ${fmt4(item.peso_liquido)}kg</div>
+        </div>
+        <div class='card-price-highlight'>
+           <div style='font-size:0.8rem; color:#64748b; font-weight:400'>Total</div>
+           ${fmtMoney(total)}
+        </div>
+      </div>
+      
+      <div id='card-details-${idx}' class='card-details hidden' style='margin-top:12px; border-top:1px dashed #eee; padding-top:8px;'>
+         <div class='grid-2' style='display:grid; grid-template-columns:1fr 1fr; gap:8px;'>
+            <div class='card-field'>
+               <label>Valor Unit.</label>
+               <input type='text' value='${fmtMoney(valor)}' disabled style='background:#f1f5f9'>
+            </div>
+             <div class='card-field'>
+               <label>Markup %</label>
+               <input type='number' step='0.01' value='${mkPct.toFixed(2)}' onchange='updateItemField(${idx}, "markup", this.value)'>
+            </div>
+         </div>
+
+         <!-- Fator e Condição (Mobile Inputs) -->
+          <div class='grid-2' style='display:grid; grid-template-columns:1fr 1fr; gap:8px; margin-top:8px;'>
+            <div class='card-field'>
+               <label>Fator %</label>
+               <input type='number' step='0.01' value='${(Number(item.fator_comissao || 0) * 100).toFixed(2)}' onchange='updateItemField(${idx}, "fator", this.value)'>
+            </div>
+             <div class='card-field'>
+               <label>Condição (R$)</label>
+               <input type='text' value='${fmtMoney(item.acrescimo || 0)}' disabled style='background:#f1f5f9'>
+            </div>
+         </div>
+
+
+         <div style='margin-top:12px; background:#f8fafc; padding:8px; border-radius:6px;'>
+            <p style='font-weight:600; margin-bottom:4px; font-size:0.8rem; border-bottom:1px solid #e2e8f0; padding-bottom:4px'>Detalhes Fiscais</p>
+            <div style='display:grid; grid-template-columns:1fr 1fr 1fr; gap:8px; font-size:0.75rem; text-align:center'>
+                <div><span style='color:#64748b; display:block'>IPI</span><strong>${fmtMoney(ipiVal)}</strong></div>
+                <div><span style='color:#64748b; display:block'>ICMS ST</span><strong>${fmtMoney(icmsStVal)}</strong></div>
+                <div><span style='color:#64748b; display:block'>IVA ST</span><strong>${fmtMoney(ivaStVal)}</strong></div>
+            </div>
+         </div>
+         
+         <div class='card-actions'>
+           <button class='btn-card-action btn-card-remove' onclick='removerItemMobile(${idx})'>Remover item</button>
+         </div>
+      </div>
+    `;
     container.appendChild(card);
   });
 
   updateMobileToolbar();
+  setupMobileButtons();
 }
+
+function setupMobileButtons() {
+  // Listar & Cancelar
+  const btnList = document.getElementById('btn-mobile-list');
+  const btnCancel = document.getElementById('btn-mobile-cancel');
+
+  // ADJUST URL HERE IF NEEDED. Using relative path based on file location
+  if (btnList) btnList.onclick = () => window.location.href = '../gerenciar_tabelas/gerenciar_tabelas.html';
+
+  if (btnCancel) {
+    if (currentTabelaId) {
+      btnCancel.classList.remove('hidden');
+      btnCancel.onclick = () => document.getElementById('btn-cancelar')?.click();
+    } else {
+      btnCancel.classList.add('hidden');
+    }
+  }
+
+  const btnEdit = document.getElementById('btn-mobile-edit');
+  const btnDup = document.getElementById('btn-mobile-dup');
+  const btnSave = document.getElementById('btn-mobile-save');
+  const btnAdd = document.getElementById('btn-mobile-add');
+
+  if (btnSave) btnSave.onclick = () => document.getElementById('btn-salvar')?.click();
+  if (btnAdd) btnAdd.onclick = () => document.getElementById('btn-buscar')?.click();
+
+  if (btnEdit && btnDup) {
+    const hasId = !!currentTabelaId;
+    const isView = (currentMode === 'view');
+
+    if (hasId && isView) {
+      btnEdit.classList.remove('hidden');
+      btnDup.classList.remove('hidden');
+      btnEdit.onclick = () => document.getElementById('btn-editar')?.click();
+      btnDup.onclick = () => document.getElementById('btn-duplicar')?.click();
+    } else {
+      btnEdit.classList.add('hidden');
+      btnDup.classList.add('hidden');
+    }
+  }
+}
+
+window.removerItemMobile = function (idx) {
+  if (!confirm('Remover este item?')) return;
+  itens.splice(idx, 1);
+  renderTabela();
+};
+
+window.updateItemField = function (index, field, value) {
+  if (!itens[index]) return;
+  const val = parseFloat(value.replace(',', '.')) || 0;
+
+  if (field === 'markup') {
+    itens[index].markup = val;
+  } else if (field === 'fator') {
+    itens[index].fator_comissao = val / 100;
+    itens[index].__overridePercent = true;
+  }
+
+  // Recalc single item via TR for consistency
+  const tr = document.querySelector(`tr[data-idx="${index}"]`);
+  if (tr) {
+    recalcLinha(tr).then(() => {
+      renderMobileCards();
+    });
+  } else {
+    recalcTudo().then(() => {
+      renderMobileCards();
+    });
+  }
+};
 
 function updateMobileToolbar() {
   const totalItens = itens ? itens.length : 0;
@@ -83,19 +181,20 @@ function updateMobileToolbar() {
 // Hook into existing renderTabela
 const originalRenderTabela = window.renderTabela || function () { };
 window.renderTabela = function () {
-  // Call original logic (Desktop Table)
-  // We need to ensure the original function is accessible or rebuilt. 
-  // Since we are editing the file, we can just edit the definition of renderTabela directly in a replaced block if we can find it, 
-  // or we can append this overload if the original was defined globally.
-  // However, looking at the file content previously, renderTabela was likely defined in the file.
-  // Let's assume we are appending this to the end or finding the renderTabela definition.
+  // Call original logic if needed, but since we are overriding it effectively for mobile updates...
+  // Actually, we need to let the DESKTOP table render too.
+  // The original function might be defined LATER in the file (if we are at line 84).
+  // Checks if 'originalRenderTabela' is empty.
 
-  // For now, let's just make sure we call renderMobileCards whenever we render the table.
+  // Let's assume the desktop logic is elsewhere. 
+  // We will just invoke renderMobileCards at the end of the *actual* renderTabela logic if we can find it.
+
+  // WAIT: The code at line 13 shows 'renderMobileCards'.
+  // The code at line 85 defines 'window.renderTabela'.
+
+  // Use a simpler approach: define renderTabela properly if it doesn't exist, or append.
+  if (typeof originalRenderTabela === 'function') originalRenderTabela();
   renderMobileCards();
-
-  // ... logic to render desktop table ... 
-  // The original renderTabela function implementation should be preserved or we need to find where it is and inject the call.
-  // I will look for the renderTabela definition in the file to properly inject the call.
 };
 
 // ... existing code ...
@@ -1426,19 +1525,6 @@ function renderTabela() {
   } catch { }
 
 
-  // Force re-apply filter logic if any
-  const term = document.getElementById('filter-dt-itens')?.value?.toLowerCase()?.trim();
-  const rows = document.querySelectorAll('#tbody-itens tr');
-
-  rows.forEach(tr => {
-    if (!term) {
-      tr.style.display = '';
-    } else {
-      const text = tr.textContent.toLowerCase();
-      tr.style.display = text.includes(term) ? '' : 'none';
-    }
-  });
-
   // ✅ Mobile Render Hook
   if (typeof renderMobileCards === 'function') renderMobileCards();
 }
@@ -2457,20 +2543,7 @@ document.addEventListener('DOMContentLoaded', () => {
     toolbar.insertBefore(btnDense, toolbar.firstChild);
   }
 
-  // Filter Logic
-  document.getElementById('filter-dt-itens')?.addEventListener('input', (e) => {
-    const term = e.target.value.toLowerCase().trim();
-    const rows = document.querySelectorAll('#tbody-itens tr');
 
-    rows.forEach(tr => {
-      if (!term) {
-        tr.style.display = '';
-        return;
-      }
-      const text = tr.textContent.toLowerCase();
-      tr.style.display = text.includes(term) ? '' : 'none';
-    });
-  });
 });
 
 // =========================================================
