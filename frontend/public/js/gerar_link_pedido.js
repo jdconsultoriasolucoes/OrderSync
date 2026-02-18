@@ -41,6 +41,7 @@ function ensureModalInjected() {
             <button id="glpCopy">Copiar link</button>
             <button id="glpOpen">Visualizar</button>
             <button id="glpWhats">WhatsApp</button>
+            <button id="glpPdf" style="background:#e11d48">Gerar PDF</button>
           </div>
           <p id="glpHint" class="glp-hint"></p>
         </div>
@@ -391,12 +392,11 @@ export function showGerarLinkModal({ tabelaId, freteKg }) {
     const wa = `https://wa.me/?text=${encodeURIComponent(msg)}`;
     window.open(wa, "_blank", "noopener");
   };
-}
 
-/** Handler plugável */
-export function gerarLinkHandler(getTabelaIdFn) {
-  return () => {
-    const tabelaId = typeof getTabelaIdFn === "function" ? getTabelaIdFn() : getTabelaIdFn;
-    showGerarLinkModal({ tabelaId });
+  // Botão Gerar PDF
+  modal.querySelector("#glpPdf").onclick = () => {
+    const baseURL = apiBase() ? apiBase() : "";
+    const url = `${baseURL}/tabela_preco/${tabelaId}/pdf`;
+    window.open(url, "_blank", "noopener,noreferrer");
   };
 }

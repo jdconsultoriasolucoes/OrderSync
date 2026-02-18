@@ -16,7 +16,12 @@ from sqlalchemy.exc import SQLAlchemyError, IntegrityError, DataError
 import re
 from fastapi import Depends
 from core.deps import get_current_user, get_db
+from core.deps import get_current_user, get_db
 from models.usuario import UsuarioModel
+from fastapi.responses import StreamingResponse
+import io
+from services.tabela_pdf_service import carregar_tabela_como_pdf_obj
+from services.pdf_service import gerar_pdf_pedido
 
 logger = logging.getLogger("tabela_preco")
 
@@ -431,3 +436,22 @@ def atualizar_tabela(
         if isinstance(e, HTTPException):
             raise e
         raise HTTPException(status_code=500, detail=f"Erro interno: {e}")
+
+@router.get("/{tabela_id}/pdf")
+def gerar_pdf_tabela(tabela_id: int):
+    try:
+        with SessionLocal() as db:
+            pdf_obj = carregar_tabela_como_pdf_obj(db, tabela_id)
+            # Gera PDF bytes
+            pdf_bytes = gerar_pdf_pedido(pdf_obj, sem_validade=False) # Mostra validade se tiver
+            
+        return StreamingResponse(
+            io.BytesIO(pdf_bytes),
+            media_type="application/pdf",
+            headers={"Content-Disposition": f'inline; filename="orcamento_{tabela_id}.pdf"'}
+        )
+    except ValueError as e:
+        raise HTTPException(status_code=404, detail=str(e))
+    except Exception as e:
+        logger.error(f"Erro ao gerar PDF da tabela {tabela_id}: {e}")
+        raise HTTPException(status_code=500, detail=f"Erro ao gerar PDF: {e}")
