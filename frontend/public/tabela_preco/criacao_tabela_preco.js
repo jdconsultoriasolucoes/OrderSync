@@ -2801,7 +2801,7 @@ function setupMobileToolbar() {
 
 function renderMobileCards() {
   const container = document.getElementById('mobile-card-container');
-  if (!container) return; // Not present?
+  if (!container) return;
 
   // Sync toolbar totals
   const totalItens = (itens || []).length;
@@ -2828,6 +2828,10 @@ function renderMobileCards() {
     return;
   }
 
+  // Check if editing is allowed
+  const isEditable = (currentMode === MODE.NEW || currentMode === MODE.EDIT || currentMode === MODE.DUP);
+  const markupDisabled = !isEditable;
+
   // Render List
   container.innerHTML = '';
   itens.forEach((item, idx) => {
@@ -2839,9 +2843,21 @@ function renderMobileCards() {
     const desc = item.descricao || 'Produto sem nome';
     const codigo = item.codigo_tabela || '';
     const emb = item.embalagem || '';
-    const total = item._totalComercial || 0;
+    const total = item._totalComercial || 0; // Valor Final (R$)
     const isInactive = item.status_atual === 'INATIVO';
     const statusBadge = isInactive ? '<span class="badge-inactive">INATIVO</span>' : '';
+
+    // Calculation Fields
+    const valorUnit = item.valor || 0;
+    const fator = item._fatorApplied || 0; // Need to ensure this is saved/avail
+    // Fallback if _fatorApplied not set: assume from global/item logic
+    // Actually, let's use what we have. 
+    // Markup
+    const markupVal = item.markup || 0;
+
+    // Frete
+    const freteVal = item._freteValor || 0;
+    const semFrete = item.total_sem_frete || 0;
 
     // Card Content
     card.innerHTML = `
@@ -2857,18 +2873,44 @@ function renderMobileCards() {
       </div>
       
       <div class="header-content">
+        <!-- Row 1: Markup & Unit Value -->
         <div class="card-body-row">
-            <!-- Markup -->
             <div class="card-field">
                 <label>Markup %</label>
-                <input type="number" class="mobile-input-markup" value="${item.markup || 0}" step="0.01">
+                <input type="number" class="mobile-input-markup" value="${markupVal}" step="0.01" ${markupDisabled ? 'disabled' : ''}>
             </div>
-             <!-- Price Unit -->
             <div class="card-field">
                 <label>Vlr. Unit.</label>
-                <input type="text" value="${fmtMoney(item.valor)}" disabled>
+                <input type="text" value="${fmtMoney(valorUnit)}" disabled>
             </div>
         </div>
+
+        <!-- Row 2: Fator & Frete -->
+        <div class="card-body-row">
+             <div class="card-field">
+                <label>Fator %</label>
+                <!-- Simplified: assuming read-only for now on mobile unless we add select -->
+                 <input type="text" value="${fmtMoney(fator)}" disabled> 
+            </div>
+             <div class="card-field">
+                <label>Frete (R$)</label>
+                <input type="text" value="${fmtMoney(freteVal)}" disabled>
+            </div>
+        </div>
+
+        <!-- Row 3: Totals -->
+        <div class="card-body-row">
+             <div class="card-field">
+                <label>Vlr s/ Frete</label>
+                <input type="text" value="${fmtMoney(semFrete)}" disabled>
+            </div>
+             <div class="card-field" style="font-weight:bold; color:var(--text)">
+                <label>Vlr c/ Frete</label>
+                <input type="text" value="${fmtMoney(total)}" disabled style="font-weight:bold">
+            </div>
+        </div>
+
+
          <div class="card-body-row">
             <div class="card-field" style="grid-column: span 2">
                 <label>Condição Pagto</label>
@@ -2876,19 +2918,8 @@ function renderMobileCards() {
             </div>
         </div>
 
-        <div class="card-body-row">
-             <div class="card-field">
-                <label>IPI</label>
-                <input type="text" value="${fmtMoney(item.ipi)}" disabled>
-            </div>
-             <div class="card-field">
-                <label>ICMS ST</label>
-                <input type="text" value="${fmtMoney(item.icms_st)}" disabled>
-            </div>
-        </div>
-
          <div class="card-actions">
-            <button class="btn-card-action btn-card-remove">Remover</button>
+            <button class="btn-card-action btn-card-remove" ${markupDisabled ? 'disabled style="opacity:0.5"' : ''}>Remover</button>
          </div>
       </div>
     `;
@@ -2907,27 +2938,31 @@ function renderMobileCards() {
 
     // Remove
     const btnRem = card.querySelector('.btn-card-remove');
-    btnRem.addEventListener('click', (e) => {
-      e.stopPropagation();
-      // Remove item logic
-      itens.splice(idx, 1);
-      renderTabela(); // Re-renders both
-      snapshotSelecionadosParaPicker();
-      refreshToolbarEnablement();
-    });
+    if (!markupDisabled) {
+      btnRem.addEventListener('click', (e) => {
+        e.stopPropagation();
+        itens.splice(idx, 1);
+        renderTabela();
+        snapshotSelecionadosParaPicker();
+        refreshToolbarEnablement();
+      });
+    }
 
     // Markup Change
     const mkInput = card.querySelector('.mobile-input-markup');
-    mkInput.addEventListener('change', (e) => {
-      e.stopPropagation();
-      const val = parseFloat(e.target.value);
-      if (!isNaN(val)) {
-        item.markup = val;
-        renderTabela();
-        recalcTudo();
-      }
-    });
-    mkInput.addEventListener('click', (e) => e.stopPropagation());
+    if (!markupDisabled) {
+      mkInput.addEventListener('change', (e) => {
+        e.stopPropagation();
+        const val = parseFloat(e.target.value);
+        if (!isNaN(val)) {
+          item.markup = val;
+          // Force global recalc to update all fields
+          renderTabela();
+          recalcTudo();
+        }
+      });
+      mkInput.addEventListener('click', (e) => e.stopPropagation());
+    }
 
     container.appendChild(card);
   });

@@ -640,7 +640,7 @@ body {
   }
 
   .page-container {
-    padding-bottom: 80px;
+    padding-bottom: 120px !important;
     /* Space for sticky footer */
   }
 }
