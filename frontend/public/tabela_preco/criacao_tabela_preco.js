@@ -2384,6 +2384,18 @@ document.addEventListener('DOMContentLoaded', () => {
 // =========================================================
 // MOBILE RENDER CARDS (Re-implementação/Override)
 // =========================================================
+
+// Helper para obter options do desktop
+function getOptionsFromDesktopSelect(selectId, selectedVal) {
+  const sel = document.getElementById(selectId);
+  if (!sel) return '';
+  return Array.from(sel.options).map(opt => {
+    if (!opt.value) return '';
+    const isSel = String(opt.value) === String(selectedVal);
+    return `<option value="${opt.value}" ${isSel ? 'selected' : ''}>${opt.textContent}</option>`;
+  }).join('');
+}
+
 function renderMobileCards() {
   const container = document.getElementById('mobile-card-container');
   if (!container) return;
@@ -2395,28 +2407,52 @@ function renderMobileCards() {
     return;
   }
 
+  // Prepara options uma vez
+  const optsCond = getOptionsFromDesktopSelect('plano_pagamento', null);
+  const optsDesc = getOptionsFromDesktopSelect('desconto_global', null);
+
   itens.forEach((item, idx) => {
     const valor = Number(item.valor || 0);
-    // Use stored totals if available, otherwise fallback
-    const total = Number(item.valor_final_markup || item._totalComercial || item.total_sem_frete || 0);
-    const mkPct = Number(item.markup || 0);
 
-    // Fiscal Values (Stored in R$ from backend preview)
+    // Totais calculados (fallback para 0 se falhar)
+    const totalComFrete = Number(item.valor_final_markup || item._totalComercial || 0);
+    const totalSemFrete = Number(item.valor_s_frete_markup || item.total_sem_frete || 0);
+
+    const mkPct = Number(item.markup || 0);
     const ipiVal = Number(item.ipi || 0);
     const icmsStVal = Number(item.icms_st || 0);
     const ivaStVal = Number(item.iva_st || 0);
+
+    // Identifica valores selecionados
+    // Workaround: Tenta achar no desktop table TR correspondente se existir para marcar 'selected'
+    let currentFatorCode = '';
+    let currentCondCode = item.plano_pagamento || ''; // salvo no item
+
+    const tr = document.querySelector(`#tbody-itens tr[data-idx="${idx}"]`);
+    if (tr) {
+      const selFator = tr.querySelector('td:nth-child(8) select');
+      if (selFator) currentFatorCode = selFator.value;
+      const selCond = tr.querySelector('td:nth-child(10) select');
+      if (selCond && !currentCondCode) currentCondCode = selCond.value;
+    }
+
+    // Reconstrói options marcando o selected
+    const myOptsCond = optsCond.replace(`value="${currentCondCode}"`, `value="${currentCondCode}" selected`);
+    const myOptsDesc = optsDesc.replace(`value="${currentFatorCode}"`, `value="${currentFatorCode}" selected`);
 
     const card = document.createElement('div');
     card.className = 'mobile-card';
     card.innerHTML = `
       <div class='card-header-row' onclick='toggleCardDetails(${idx})' style='cursor:pointer'>
         <div style='flex:1'>
-           <div class='card-title'>${item.codigo_tabela || '?'} - ${item.descricao || 'Sem descrição'}</div>
+           <div class='card-title' style='font-size: 0.9rem; font-weight: 600;'>${item.codigo_tabela || '?'} - ${item.descricao || 'Sem descrição'}</div>
            <div class='card-subtitle'>${item.embalagem || ''} • ${fmt4(item.peso_liquido)}kg</div>
         </div>
-        <div class='card-price-highlight'>
-           <div style='font-size:0.8rem; color:#64748b; font-weight:400'>Total</div>
-           ${fmtMoney(total)}
+        <div class='card-price-highlight' style='text-align:right'>
+           <div style='font-size:0.75rem; color:#64748b; margin-bottom:2px'>Total c/ Frete</div>
+           <strong style='font-size:0.95rem; color:var(--primary-color)'>${fmtMoney(totalComFrete)}</strong>
+           <div style='font-size:0.75rem; color:#64748b; margin-top:4px'>Total s/ Frete</div>
+           <span style='font-size:0.85rem; color:#334155'>${fmtMoney(totalSemFrete)}</span>
         </div>
       </div>
       
@@ -2432,25 +2468,35 @@ function renderMobileCards() {
             </div>
          </div>
 
-         <!-- Fator e Condição (Mobile Inputs) -->
+         <!-- Fator e Condição (Selects) -->
           <div class='grid-2' style='display:grid; grid-template-columns:1fr 1fr; gap:8px; margin-top:8px;'>
             <div class='card-field'>
                <label>Fator %</label>
-               <input type='number' step='0.01' value='${(Number(item.fator_comissao || 0) * 100).toFixed(2)}' onchange='updateItemField(${idx}, "fator", this.value)'>
+               <select onchange='updateItemField(${idx}, "fator_code", this.value)' style='width:100%; padding:8px; border:1px solid #ccc; border-radius:4px'>
+                  <option value="">Original</option>
+                  ${myOptsDesc}
+               </select>
             </div>
              <div class='card-field'>
-               <label>Condição (R$)</label>
-               <input type='text' value='${fmtMoney(item.acrescimo || 0)}' disabled style='background:#f1f5f9'>
+               <label>Condição</label>
+               <select onchange='updateItemField(${idx}, "cond_code", this.value)' style='width:100%; padding:8px; border:1px solid #ccc; border-radius:4px'>
+                  <option value="">Padrão</option>
+                  ${myOptsCond}
+               </select>
             </div>
          </div>
-
-         <!-- Frete (Novo) -->
+         
          <div class='grid-2' style='display:grid; grid-template-columns:1fr 1fr; gap:8px; margin-top:8px;'>
             <div class='card-field'>
                <label>Frete (R$)</label>
                <input type='text' value='${fmtMoney(item._freteValor || item.frete_linha || 0)}' disabled style='background:#f1f5f9'>
             </div>
+             <div class='card-field'>
+               <label>Cond. (R$)</label>
+               <input type='text' value='${fmtMoney(item.acrescimo || 0)}' disabled style='background:#f1f5f9'>
+            </div>
          </div>
+
 
          <div style='margin-top:12px; background:#f8fafc; padding:8px; border-radius:6px;'>
             <p style='font-weight:600; margin-bottom:4px; font-size:0.8rem; border-bottom:1px solid #e2e8f0; padding-bottom:4px'>Detalhes Fiscais</p>
