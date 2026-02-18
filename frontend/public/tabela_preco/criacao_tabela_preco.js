@@ -1436,6 +1436,21 @@ async function recalcLinha(tr) {
   tr.querySelector('td:nth-child(11)').textContent = fmtMoney(acrescimoCond); // Cond. (R$)
   tr.querySelector('td:nth-child(12)').textContent = fmtMoney(freteValor);    // Frete (R$)
 
+  // ✅ SALVA TOTAIS COMERCIAIS (FALLBACK) 
+  // Garante que o item tenha valores mesmo que Fiscal falhe ou demore
+  // Total Comercial Base = Valor - Desconto + Acrescimo + Frete
+  // Nota: O Fiscal vai sobrescrever isso com precisão de impostos depois.
+  const totalComercialBase = liquido + acrescimoCond + freteValor;
+  item._freteValor = Number(freteValor || 0);
+  item._totalComercial = Number(totalComercialBase || 0);
+  item.total_sem_frete = Math.max(0, item._totalComercial - item._freteValor);
+
+  // Markup Base
+  const mkPctBase = Number(item.markup || 0);
+  const factorBase = 1 + (mkPctBase / 100);
+  item.valor_final_markup = Number((totalComercialBase * factorBase).toFixed(2));
+  item.valor_s_frete_markup = Number((item.total_sem_frete * factorBase).toFixed(2));
+
 
 
   try {
@@ -2429,6 +2444,13 @@ function renderMobileCards() {
             </div>
          </div>
 
+         <!-- Frete (Novo) -->
+         <div class='grid-2' style='display:grid; grid-template-columns:1fr 1fr; gap:8px; margin-top:8px;'>
+            <div class='card-field'>
+               <label>Frete (R$)</label>
+               <input type='text' value='${fmtMoney(item._freteValor || item.frete_linha || 0)}' disabled style='background:#f1f5f9'>
+            </div>
+         </div>
 
          <div style='margin-top:12px; background:#f8fafc; padding:8px; border-radius:6px;'>
             <p style='font-weight:600; margin-bottom:4px; font-size:0.8rem; border-bottom:1px solid #e2e8f0; padding-bottom:4px'>Detalhes Fiscais</p>
@@ -2467,7 +2489,7 @@ function setupMobileButtons() {
   const btnCancel = document.getElementById('btn-mobile-cancel');
 
   // ADJUST URL HERE IF NEEDED. Using relative path based on file location
-  if (btnList) btnList.onclick = () => window.location.href = '../gerenciar_tabelas/gerenciar_tabelas.html';
+  if (btnList) btnList.onclick = () => window.location.href = 'listar_tabelas.html';
 
   if (btnCancel) {
     if (currentTabelaId) {
@@ -2508,18 +2530,45 @@ window.removerItemMobile = function (idx) {
   renderTabela();
 };
 
+
 window.updateItemField = function (index, field, value) {
   if (!itens[index]) return;
-  const val = parseFloat(value.replace(',', '.')) || 0;
 
   if (field === 'markup') {
+    const val = parseFloat(value.replace(',', '.')) || 0;
     itens[index].markup = val;
-  } else if (field === 'fator') {
-    itens[index].fator_comissao = val / 100;
-    itens[index].__overridePercent = true;
+    // Dispara recalc
+    triggerRowRecalc(index);
+
+  } else if (field === 'fator_code') {
+    // Sincroniza com desktop (se existir TR)
+    syncDesktopSelect(index, 8, value);
+
+  } else if (field === 'cond_code') {
+    // Sincroniza com desktop (se existir TR)
+    syncDesktopSelect(index, 10, value);
   }
 
-  // Recalc single item via TR for consistency
+  // Se for algo que precisa de recalc, a sincronia com TR e triggerRowRecalc resolve
+};
+
+function syncDesktopSelect(index, colIndex, val) {
+  const tr = document.querySelector(`tr[data-idx="${index}"]`);
+  if (!tr) return;
+  const sel = tr.querySelector(`td:nth-child(${colIndex}) select`);
+  if (sel) {
+    sel.value = val;
+    // Dispara change no select para qualquer listener
+    sel.dispatchEvent(new Event('change', { bubbles: true }));
+    // Mas o listener do select pode não estar global?
+    // No código principal, não vi listener especifico por linha além do `recalcTudo` se algo mudar?
+    // O `recalcLinha` le do DOM. Então só atualizar o value basta se chamarmos recalcLinha.
+    recalcLinha(tr).then(() => renderMobileCards());
+  }
+}
+
+
+function triggerRowRecalc(index) {
   const tr = document.querySelector(`tr[data-idx="${index}"]`);
   if (tr) {
     recalcLinha(tr).then(() => {
@@ -2530,4 +2579,5 @@ window.updateItemField = function (index, field, value) {
       renderMobileCards();
     });
   }
-};
+}
+
