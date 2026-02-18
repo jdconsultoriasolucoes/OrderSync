@@ -1548,6 +1548,8 @@ async function recalcTudo() {
     } while (__recalcPending);
   } finally {
     __recalcRunning = false;
+    // ✅ Atualiza cards mobile com os novos valores calculados
+    if (typeof renderMobileCards === 'function') renderMobileCards();
   }
 }
 
@@ -2404,6 +2406,7 @@ function renderMobileCards() {
   if (!itens || itens.length === 0) {
     container.innerHTML = `<div class='empty-state-mobile'><p>Nenhum produto selecionado.</p><button onclick='document.getElementById(\"btn-buscar\").click()' class='btn btn-primary btn-sm'>Adicionar Produtos</button></div>`;
     updateMobileToolbar();
+    setupMobileButtons(); // ✅ Garante que os botões funcionem mesmo sem itens
     return;
   }
 
