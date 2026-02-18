@@ -825,7 +825,14 @@ async function carregarCondicoes() {
   sel.appendChild(option('Selecione…', ''));
   const r = await fetch(`${API_BASE}/tabela_preco/condicoes_pagamento`);
   const data = await r.json();
-  data.forEach(c => { mapaCondicoes[c.codigo] = Number(c.taxa_condicao) || 0; sel.appendChild(option(`${c.codigo} - ${c.descricao}`, c.codigo)); });
+  data.forEach(c => {
+    mapaCondicoes[c.codigo] = Number(c.taxa_condicao) || 0;
+    // Se código e descrição forem iguais (ex "Padrão"), mostra só um. Se não, mostra "COD - Desc"
+    const texto = (c.codigo && c.descricao && c.codigo !== c.descricao)
+      ? `${c.codigo} - ${c.descricao}`
+      : (c.descricao || c.codigo);
+    sel.appendChild(option(texto, c.codigo));
+  });
   document.getElementById('hint-condicao').textContent = 'Pronto.';
   atualizarPillTaxa();
 }
@@ -919,12 +926,26 @@ async function carregarItens() {
       const first = (Array.isArray(t.produtos) && t.produtos.length) ? t.produtos[0] : null;
       const freteInput = document.getElementById('frete_kg');
       const planoSel = document.getElementById('plano_pagamento');
+
       if (planoSel) {
         const planoVal = t.codigo_plano_pagamento ?? first?.codigo_plano_pagamento ?? '';
         if (planoVal) {
-          const opt = Array.from(planoSel.options)
-            .find(o => (o.textContent || '').trim() === String(planoVal).trim() || o.value === String(planoVal));
-          if (opt) planoSel.value = opt.value;
+          // Tenta achar pelo value OU pelo text
+          const valStr = String(planoVal).trim();
+          let opt = Array.from(planoSel.options)
+            .find(o => (o.textContent || '').trim() === valStr || o.value === valStr);
+
+          // Se não achou na lista oficial, cria uma option "forçada" para exibir
+          // exatamente o que veio do banco (ex: mudou no ERP mas a tabela antiga preserva).
+          if (!opt) {
+            opt = document.createElement('option');
+            opt.value = valStr;
+            opt.textContent = valStr; // Mostra o valor cru do banco, como pedido
+            planoSel.appendChild(opt);
+            // Opcional: registrar no mapa para cálculos, se souber a taxa.
+            // Como não sabemos a taxa nova, assume 0 ou tenta extrair se o formato for "Taxa...".
+          }
+          planoSel.value = opt.value;
         } else {
           planoSel.value = '';
         }
@@ -1405,36 +1426,68 @@ window.toggleCardDetails = function (index) {
   if (el) el.classList.toggle('hidden');
 };
 
-window.updateItemField = function (index, field, value) {
+window.updateItemField = async function (index, field, value) {
   if (!itens[index]) return;
+  const item = itens[index];
+  const tr = document.querySelector(`#tbody-itens tr[data-idx="${index}"]`);
 
-  if (field === 'fator') {
-    const val = Number(value);
-    // Find code for this factor if possible, or just set it
-    // Reuse logic from desktop change event if possible or simplify
-    itens[index].fator_comissao = val;
-    itens[index].__overridePercent = true;
+  // --- Fator % ---
+  if (field === 'fator_code' || field === 'fator') {
+    const code = value || '';
+    const frac = (Object.prototype.hasOwnProperty.call(mapaDescontos, code) ? Number(mapaDescontos[code]) : 0);
 
-    // Trigger recalc - we need to find the TR to pass to recalcLinha or just recalcTudo
-    // Since we are changing data directly, recalcTudo is safer though heavier. 
-    // Or we can simulate the desktop behavior.
+    // Atualiza Item
+    item.fator_comissao = (!isNaN(frac) ? frac : 0);
+    item.__fator_codigo = code;
+    item.__overridePercent = true;
 
-    // Sync with desktop UI for consistency
-    const tr = document.querySelector(`tr[data-idx="${index}"]`);
+    // Sincroniza Desktop (se existir)
     if (tr) {
       const sel = tr.querySelector('td:nth-child(8) select');
-      // Try to find matching option
-      if (sel) {
-        // Approximate match or raw set? 
-        // Creating a custom option might be needed if not in list.
-        // For now, let's just trigger recalc.
-        recalcLinha(tr).then(() => renderMobileCards());
-      } else {
-        recalcTudo();
-      }
-    } else {
-      recalcTudo();
+      if (sel) sel.value = code;
     }
+  }
+
+  // --- Condição (Cond. Pagto) ---
+  if (field === 'cond_code') {
+    const code = value || '';
+
+    // Atualiza Item (Mantendo "Code - Desc" se possível, ou só Code)
+    // Desktop listener faz: codCondLinha | selCond.options...
+    // Aqui vamos salvar o código e deixar o render ou o save resolverem o label completo
+    item.plano_pagamento = code;
+
+    // Sincroniza Desktop
+    if (tr) {
+      const sel = tr.querySelector('td:nth-child(10) select');
+      if (sel) sel.value = code;
+    }
+  }
+
+  // --- Markup ---
+  if (field === 'markup') {
+    item.markup = Number(value);
+  }
+
+  // Recalcula e Re-renderiza Mobile
+  if (tr) {
+    await recalcLinha(tr);
+  } else {
+    // Fallback sem TR (recalcTudo é mais garantido mas lento, ou tentar simular)
+    // Mas como renderMobileCards depende de tr... vamos chamar recalcTudo
+    await recalcTudo();
+  }
+  renderMobileCards();
+
+  // Dispara eventos no desktop para Side-Effects (Header Sync, etc)
+  if (tr) {
+    setTimeout(() => {
+      if (field.includes('fator') || field === 'cond_code') {
+        const nth = (field === 'cond_code') ? 10 : 8;
+        const sel = tr.querySelector(`td:nth-child(${nth}) select`);
+        if (sel) sel.dispatchEvent(new Event('change', { bubbles: true }));
+      }
+    }, 50);
   }
 };
 
@@ -1838,7 +1891,46 @@ function getIdFromUrl() {
   }
 }
 
+// Helper para mapear backend -> frontend (evita duplicidade e perda de dados)
+function mapBackendItemToFrontend(p, t) {
+  const base = {
+    id_linha: p.id_linha ?? p.idLinha ?? null,
+    codigo_tabela: p.codigo_produto_supra ?? p.codigo_tabela ?? '',
+    descricao: p.descricao_produto ?? p.descricao ?? '',
+    embalagem: p.embalagem ?? '',
+    peso_liquido: Number(p.peso_liquido ?? 0),
+    valor: Number(p.valor_produto ?? p.valor ?? 0),
+
+    desconto: Number(p.comissao_aplicada ?? 0),
+    acrescimo: Number(p.ajuste_pagamento ?? 0),
+    plano_pagamento: p.codigo_plano_pagamento ?? p.plano_pagamento ?? null,
+    frete_kg: Number(p.frete_kg ?? 0),
+    ipi: Number(p.ipi ?? 0),
+    icms_st: Number(p.icms_st ?? 0),
+    iva_st: Number(p.iva_st ?? 0),
+    grupo: p.grupo ?? null,
+    departamento: p.departamento ?? null,
+
+    total_sem_frete: Number(p.valor_s_frete ?? p.total_sem_frete ?? 0),
+
+    markup: Number(p.markup ?? 0),
+    valor_final_markup: Number(p.valor_final_markup ?? 0),
+    valor_s_frete_markup: Number(p.valor_s_frete_markup ?? 0),
+
+    __descricao_fator_label: p.descricao_fator_comissao || null,
+    __plano_pagto_label: p.codigo_plano_pagamento || null,
+    fornecedor: (t && t.fornecedor) || ''
+  };
+
+  // Ajustes finais
+  base.peso_liquido = Number(base.peso_liquido ?? p.peso ?? p.peso_kg ?? p.pesoLiquido ?? 0);
+  base.tipo = p.tipo ?? p.grupo ?? p.departamento ?? null;
+
+  return base;
+}
+
 // CANCELAR — EDIT->VIEW(mesma) | DUP->VIEW(origem) | VIEW->NEW(limpo) | NEW->NEW(limpo)
+
 async function onCancelar(e) {
   if (e) e.preventDefault?.();
 
@@ -1879,7 +1971,9 @@ async function onCancelar(e) {
           if (document.getElementById('cliente_nome')) document.getElementById('cliente_nome').value = t.cliente_nome || t.cliente || '';
           if (document.getElementById('codigo_cliente')) document.getElementById('codigo_cliente').value = t.codigo_cliente || '';
           // Restaura itens
-          itens = Array.isArray(t.produtos) ? t.produtos.map(p => ({ ...p })) : [];
+          // Restaura itens usando o helper
+          itens = Array.isArray(t.produtos) ? t.produtos.map(p => mapBackendItemToFrontend(p, t)) : [];
+
           renderTabela();
           recalcTudo(); // recalcula novos valores originais
         }
@@ -1904,7 +1998,8 @@ async function onCancelar(e) {
           document.getElementById('codigo_cliente').value = t.codigo_cliente || '';
 
           // repõe itens e re-renderiza grade
-          itens = Array.isArray(t.produtos) ? t.produtos.map(p => ({ ...p })) : [];
+          itens = Array.isArray(t.produtos) ? t.produtos.map(p => mapBackendItemToFrontend(p, t)) : [];
+
           if (typeof renderTabela === 'function') renderTabela();
 
           // volta a “apontar” para a origem
@@ -2502,17 +2597,23 @@ function renderMobileCards() {
     const ivaStVal = Number(item.iva_st || 0);
 
     // Identifica valores selecionados
-    // Workaround: Tenta achar no desktop table TR correspondente se existir para marcar 'selected'
+    // Estratégia: Prioriza ler do TR desktop (que já rodou a lógica complexa de inferência),
+    // senão faz o parse manual igual ao criarLinha.
     let currentFatorCode = '';
-    let currentCondCode = item.plano_pagamento || ''; // salvo no item
+    let currentCondCode = '';
 
     const tr = document.querySelector(`#tbody-itens tr[data-idx="${idx}"]`);
     if (tr) {
       const selFator = tr.querySelector('td:nth-child(8) select');
       if (selFator) currentFatorCode = selFator.value;
       const selCond = tr.querySelector('td:nth-child(10) select');
-      if (selCond && !currentCondCode) currentCondCode = selCond.value;
+      if (selCond) currentCondCode = selCond.value;
     }
+
+    if (!currentCondCode) {
+      currentCondCode = String(item.plano_pagamento || '').split(' - ')[0].trim();
+    }
+
 
     // Reconstrói options marcando o selected
     const myOptsCond = optsCond.replace(`value="${currentCondCode}"`, `value="${currentCondCode}" selected`);
