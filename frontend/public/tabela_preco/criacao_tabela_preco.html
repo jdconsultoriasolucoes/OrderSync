@@ -240,6 +240,34 @@
         </table>
       </div>
     </section>
+
+    <!-- Container: Mobile Cards (injected via JS) -->
+    <div id="mobile-card-container" class="mobile-only mobile-card-list">
+      <!-- Cards will be rendered here -->
+      <div class="empty-state-mobile">
+        <p>Nenhum produto selecionado.</p>
+        <button id="btn-mobile-add-initial" class="btn btn-primary btn-sm">Adicionar Produtos</button>
+      </div>
+    </div>
+
+    <!-- Mobile Sticky Bottom Toolbar -->
+    <div class="mobile-toolbar mobile-only">
+      <div class="mobile-toolbar-content">
+        <div class="mobile-toolbar-info">
+          <span id="mobile-total-itens">0 itens</span>
+          <span id="mobile-total-valor">R$ 0,00</span>
+        </div>
+        <div class="mobile-toolbar-actions">
+          <button id="btn-mobile-list" class="btn-icon-mobile" title="Listar Tabelas"
+            style="margin-right:auto">☰</button>
+          <button id="btn-mobile-cancel" class="btn-icon-mobile hidden" title="Cancelar">✕</button>
+          <button id="btn-mobile-edit" class="btn-icon-mobile hidden" title="Editar">✎</button>
+          <button id="btn-mobile-dup" class="btn-icon-mobile hidden" title="Duplicar">⧉</button>
+          <button id="btn-mobile-add" class="btn-icon-mobile" title="Adicionar">+</button>
+          <button id="btn-mobile-save" class="btn-primary-mobile">Salvar</button>
+        </div>
+      </div>
+    </div>
   </div>
   <!-- Lógica totalmente externa -->
   <script type="module">

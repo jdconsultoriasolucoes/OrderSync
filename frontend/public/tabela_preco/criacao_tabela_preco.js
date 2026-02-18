@@ -1478,6 +1478,8 @@ function renderTabela() {
       atualizarPillTaxa?.();
     }
   } catch { }
+  // Mobile Render Hook
+  if (typeof renderMobileCards === 'function') renderMobileCards();
 }
 
 async function recalcLinha(tr) {
@@ -1766,6 +1768,7 @@ async function recalcTudo() {
   } finally {
     __recalcRunning = false;
     document.body.style.cursor = 'default';
+    if (typeof renderMobileCards === 'function') renderMobileCards();
   }
 }
 
@@ -2325,6 +2328,9 @@ async function carregarItens() {
 
 // === Bootstrap ===
 document.addEventListener('DOMContentLoaded', () => {
+  // Config Mobile
+  if (typeof setupMobileToolbar === 'function') setupMobileToolbar();
+
   // Eventos globais
   setMode(MODE.NEW);
   document.getElementById('btn-listar')?.addEventListener('click', () => { goToListarTabelas(); });
@@ -2746,8 +2752,206 @@ function handleFieldChange(e) {
   if (el.classList.contains('field-error')) {
     el.classList.remove('field-error');
     const msg = el.nextElementSibling;
-    if (msg && msg.classList.contains('field-error-msg')) {
-      msg.remove();
-    }
   }
 }
+
+// =========================================
+// MOBILE LOGIC RESTORATION
+// =========================================
+
+function toggleHeader() {
+  const content = document.getElementById('header-content');
+  const header = document.getElementById('toggle-header');
+  if (!content) return;
+  content.classList.toggle('expanded');
+}
+
+function setupMobileToolbar() {
+  // Bind Toolbar Buttons
+  document.getElementById('btn-mobile-list')?.addEventListener('click', () => goToListarTabelas());
+
+  document.getElementById('btn-mobile-cancel')?.addEventListener('click', (e) => {
+    onCancelar(e);
+    // Force mobile refresh
+    setTimeout(renderMobileCards, 50);
+  });
+
+  document.getElementById('btn-mobile-edit')?.addEventListener('click', () => {
+    onEditar();
+    setTimeout(renderMobileCards, 50);
+  });
+
+  document.getElementById('btn-mobile-dup')?.addEventListener('click', () => {
+    onDuplicar();
+    setTimeout(renderMobileCards, 50);
+  });
+
+  document.getElementById('btn-mobile-save')?.addEventListener('click', () => salvarTabela());
+
+  // Add/Initial Add - Focus on search or open modal if needed
+  const focusSearch = () => {
+    // Scroll to top or search
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+    const btn = document.getElementById('btn-buscar');
+    if (btn && !btn.classList.contains('hidden')) btn.click();
+  };
+  document.getElementById('btn-mobile-add')?.addEventListener('click', focusSearch);
+  document.getElementById('btn-mobile-add-initial')?.addEventListener('click', focusSearch);
+}
+
+function renderMobileCards() {
+  const container = document.getElementById('mobile-card-container');
+  if (!container) return; // Not present?
+
+  // Sync toolbar totals
+  const totalItens = (itens || []).length;
+  const totalValor = itens.reduce((acc, it) => acc + (it._totalComercial || 0), 0);
+
+  const elItens = document.getElementById('mobile-total-itens');
+  if (elItens) elItens.textContent = `${totalItens} item(s)`;
+
+  const elValor = document.getElementById('mobile-total-valor');
+  if (elValor) elValor.textContent = fmtMoney(totalValor);
+
+  // If empty
+  if (itens.length === 0) {
+    container.innerHTML = `
+        <div class="empty-state-mobile">
+          <p>Nenhum produto selecionado.</p>
+          <button id="btn-mobile-add-initial-2" class="btn btn-primary btn-sm">Adicionar Produtos</button>
+        </div>`;
+    document.getElementById('btn-mobile-add-initial-2')?.addEventListener('click', () => {
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+      const btn = document.getElementById('btn-buscar');
+      if (btn) btn.click();
+    });
+    return;
+  }
+
+  // Render List
+  container.innerHTML = '';
+  itens.forEach((item, idx) => {
+    const card = document.createElement('div');
+    card.className = 'mobile-card';
+    card.dataset.idx = idx;
+
+    // Basic Data
+    const desc = item.descricao || 'Produto sem nome';
+    const codigo = item.codigo_tabela || '';
+    const emb = item.embalagem || '';
+    const total = item._totalComercial || 0;
+    const isInactive = item.status_atual === 'INATIVO';
+    const statusBadge = isInactive ? '<span class="badge-inactive">INATIVO</span>' : '';
+
+    // Card Content
+    card.innerHTML = `
+      <div class="card-header-row clickable-header">
+        <div style="flex:1">
+            <div class="card-title">${statusBadge}${desc}</div>
+            <div class="card-subtitle">${codigo} ${emb ? ' - ' + emb : ''}</div>
+        </div>
+        <div class="card-price-highlight">
+            ${fmtMoney(total)}
+        </div>
+        <div class="chevron-header" style="margin-left:8px">▼</div>
+      </div>
+      
+      <div class="header-content">
+        <div class="card-body-row">
+            <!-- Markup -->
+            <div class="card-field">
+                <label>Markup %</label>
+                <input type="number" class="mobile-input-markup" value="${item.markup || 0}" step="0.01">
+            </div>
+             <!-- Price Unit -->
+            <div class="card-field">
+                <label>Vlr. Unit.</label>
+                <input type="text" value="${fmtMoney(item.valor)}" disabled>
+            </div>
+        </div>
+         <div class="card-body-row">
+            <div class="card-field" style="grid-column: span 2">
+                <label>Condição Pagto</label>
+                <input type="text" value="${item.plano_pagamento || ''}" disabled style="background:#f9f9f9; color:#666">
+            </div>
+        </div>
+
+        <div class="card-body-row">
+             <div class="card-field">
+                <label>IPI</label>
+                <input type="text" value="${fmtMoney(item.ipi)}" disabled>
+            </div>
+             <div class="card-field">
+                <label>ICMS ST</label>
+                <input type="text" value="${fmtMoney(item.icms_st)}" disabled>
+            </div>
+        </div>
+
+         <div class="card-actions">
+            <button class="btn-card-action btn-card-remove">Remover</button>
+         </div>
+      </div>
+    `;
+
+    // Events
+
+    // Toggle Expand
+    const header = card.querySelector('.clickable-header');
+    header.addEventListener('click', () => {
+      const content = card.querySelector('.header-content');
+      content.classList.toggle('expanded');
+      // Rotate chevron
+      const chev = header.querySelector('.chevron-header');
+      if (chev) chev.style.transform = content.classList.contains('expanded') ? 'rotate(180deg)' : 'rotate(0deg)';
+    });
+
+    // Remove
+    const btnRem = card.querySelector('.btn-card-remove');
+    btnRem.addEventListener('click', (e) => {
+      e.stopPropagation();
+      // Remove item logic
+      itens.splice(idx, 1);
+      renderTabela(); // Re-renders both
+      snapshotSelecionadosParaPicker();
+      refreshToolbarEnablement();
+    });
+
+    // Markup Change
+    const mkInput = card.querySelector('.mobile-input-markup');
+    mkInput.addEventListener('change', (e) => {
+      e.stopPropagation();
+      const val = parseFloat(e.target.value);
+      if (!isNaN(val)) {
+        item.markup = val;
+        renderTabela();
+        recalcTudo();
+      }
+    });
+    mkInput.addEventListener('click', (e) => e.stopPropagation());
+
+    container.appendChild(card);
+  });
+}
+
+// Hook into toggleToolbarByMode to sync mobile buttons
+const _originalToggleToolbar = toggleToolbarByMode;
+toggleToolbarByMode = function () {
+  if (typeof _originalToggleToolbar === 'function') _originalToggleToolbar();
+
+  // Mobile logic mirror
+  const show = (id, visible) => {
+    const el = document.getElementById(id);
+    if (el) el.classList.toggle('hidden', !visible);
+  };
+
+  const hasId = !!currentTabelaId;
+  const isView = currentMode === MODE.VIEW;
+  const isEditLike = currentMode === MODE.EDIT || currentMode === MODE.DUP || currentMode === MODE.NEW;
+  const isEditOrDup = currentMode === MODE.EDIT || currentMode === MODE.DUP;
+
+  show('btn-mobile-list', currentMode === MODE.NEW);
+  show('btn-mobile-cancel', isEditOrDup || (isView && hasId));
+  show('btn-mobile-edit', isView && hasId);
+  show('btn-mobile-dup', isView && hasId);
+  show('btn-mobile-save', isEditLike);
+};
