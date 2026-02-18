@@ -1308,1217 +1308,1219 @@ function buildFiscalInputsFromRow(tr) {
     fator_percent: fatorPct, condicao_codigo: codCond, taxa_condicao: taxaCond,
     payload, precoBase, liquido
   };
+}
 
-  // === Controle de Modo e Toolbar ===
-  function setMode(mode) {
-    currentMode = mode;
-    document.body.dataset.mode = mode;
-    toggleToolbarByMode();
-    const isView = (mode === MODE.VIEW);
-    setFormDisabled(isView);
+
+// === Controle de Modo e Toolbar ===
+function setMode(mode) {
+  currentMode = mode;
+  document.body.dataset.mode = mode;
+  toggleToolbarByMode();
+  const isView = (mode === MODE.VIEW);
+  setFormDisabled(isView);
+}
+
+function toggleToolbarByMode() {
+  const isView = (currentMode === MODE.VIEW);
+
+  // Desktop
+  document.getElementById('btn-buscar')?.classList.toggle('hidden', isView);
+  document.getElementById('btn-remover-selecionados')?.classList.toggle('hidden', isView);
+  document.getElementById('btn-salvar')?.classList.toggle('hidden', isView);
+
+  document.getElementById('btn-editar')?.classList.toggle('hidden', !isView);
+  document.getElementById('btn-duplicar')?.classList.toggle('hidden', !isView);
+  document.getElementById('btn-cancelar')?.classList.toggle('hidden', isView);
+
+  // Botão Listar sempre visível
+  document.getElementById('btn-listar')?.classList.remove('hidden');
+
+  // Mobile Botões
+  if (typeof setupMobileButtons === 'function') setupMobileButtons();
+}
+
+function setFormDisabled(disabled) {
+  // Cabeçalho
+  const ids = ['nome_tabela', 'cliente_nome', 'iva_st_toggle', 'plano_pagamento', 'desconto_global', 'markup_global', 'frete_kg'];
+  ids.forEach(id => {
+    const el = document.getElementById(id);
+    if (el) el.disabled = disabled;
+  });
+
+  // Grade Desktop
+  const inputs = document.querySelectorAll('#tbody-itens input, #tbody-itens select');
+  inputs.forEach(el => el.disabled = disabled);
+
+  // Mobile Cards (Recria para aplicar estado)
+  // Evita loop infinito se renderMobileCards chamar algo que chame isso, mas renderMobileCards é "safe"
+  if (typeof renderMobileCards === 'function') renderMobileCards();
+}
+
+function renderTabela() {
+  const tbody = document.getElementById('tbody-itens');
+  if (tbody) {
+    tbody.innerHTML = '';
+    itens.forEach((it, i) => tbody.appendChild(criarLinha(it, i)));
   }
 
-  function toggleToolbarByMode() {
-    const isView = (currentMode === MODE.VIEW);
+  if (typeof refreshToolbarEnablement === 'function') refreshToolbarEnablement();
 
-    // Desktop
-    document.getElementById('btn-buscar')?.classList.toggle('hidden', isView);
-    document.getElementById('btn-remover-selecionados')?.classList.toggle('hidden', isView);
-    document.getElementById('btn-salvar')?.classList.toggle('hidden', isView);
+  // === Inferir cabeçalho a partir da grade (uniformidade) ===
+  try {
+    const selsPct = Array.from(document.querySelectorAll('#tbody-itens tr td:nth-child(8) select'));
+    const selsCond = Array.from(document.querySelectorAll('#tbody-itens tr td:nth-child(10) select'));
 
-    document.getElementById('btn-editar')?.classList.toggle('hidden', !isView);
-    document.getElementById('btn-duplicar')?.classList.toggle('hidden', !isView);
-    document.getElementById('btn-cancelar')?.classList.toggle('hidden', isView);
+    // Fator (%)
+    const valsPct = new Set(selsPct.map(s => (s.value || '').trim()).filter(v => v !== ''));
+    const hdrPct = document.getElementById('desconto_global');
+    if (hdrPct && hdrPct.dataset.userEdited !== '1') {
+      hdrPct.value = (valsPct.size === 1) ? [...valsPct][0] : '';
+      atualizarPillDesconto?.();
+    }
 
-    // Botão Listar sempre visível
-    document.getElementById('btn-listar')?.classList.remove('hidden');
+    // Condição de pagamento
+    const valsCond = new Set(selsCond.map(s => (s.value || '').trim()).filter(v => v !== ''));
+    const hdrCond = document.getElementById('plano_pagamento');
+    if (hdrCond && hdrCond.dataset.userEdited !== '1') {
+      hdrCond.value = (valsCond.size === 1) ? [...valsCond][0] : '';
+      atualizarPillTaxa?.();
+    }
+  } catch { }
 
-    // Mobile Botões
-    if (typeof setupMobileButtons === 'function') setupMobileButtons();
-  }
 
-  function setFormDisabled(disabled) {
-    // Cabeçalho
-    const ids = ['nome_tabela', 'cliente_nome', 'iva_st_toggle', 'plano_pagamento', 'desconto_global', 'markup_global', 'frete_kg'];
-    ids.forEach(id => {
-      const el = document.getElementById(id);
-      if (el) el.disabled = disabled;
-    });
+  // ✅ Mobile Render Hook
+  if (typeof renderMobileCards === 'function') renderMobileCards();
 
-    // Grade Desktop
+  // ✅ Garante que se estiver em VIEW, as novas linhas nasçam desabilitadas
+  if (currentMode === MODE.VIEW) {
     const inputs = document.querySelectorAll('#tbody-itens input, #tbody-itens select');
-    inputs.forEach(el => el.disabled = disabled);
-
-    // Mobile Cards (Recria para aplicar estado)
-    // Evita loop infinito se renderMobileCards chamar algo que chame isso, mas renderMobileCards é "safe"
-    if (typeof renderMobileCards === 'function') renderMobileCards();
+    inputs.forEach(el => el.disabled = true);
   }
+}
 
-  function renderTabela() {
-    const tbody = document.getElementById('tbody-itens');
-    if (tbody) {
-      tbody.innerHTML = '';
-      itens.forEach((it, i) => tbody.appendChild(criarLinha(it, i)));
-    }
+// === Mobile Helpers ===
 
-    if (typeof refreshToolbarEnablement === 'function') refreshToolbarEnablement();
+window.toggleCardDetails = function (index) {
+  const el = document.getElementById(`card-details-${index}`);
+  if (el) el.classList.toggle('hidden');
+};
 
-    // === Inferir cabeçalho a partir da grade (uniformidade) ===
-    try {
-      const selsPct = Array.from(document.querySelectorAll('#tbody-itens tr td:nth-child(8) select'));
-      const selsCond = Array.from(document.querySelectorAll('#tbody-itens tr td:nth-child(10) select'));
+window.updateItemField = function (index, field, value) {
+  if (!itens[index]) return;
 
-      // Fator (%)
-      const valsPct = new Set(selsPct.map(s => (s.value || '').trim()).filter(v => v !== ''));
-      const hdrPct = document.getElementById('desconto_global');
-      if (hdrPct && hdrPct.dataset.userEdited !== '1') {
-        hdrPct.value = (valsPct.size === 1) ? [...valsPct][0] : '';
-        atualizarPillDesconto?.();
-      }
+  if (field === 'fator') {
+    const val = Number(value);
+    // Find code for this factor if possible, or just set it
+    // Reuse logic from desktop change event if possible or simplify
+    itens[index].fator_comissao = val;
+    itens[index].__overridePercent = true;
 
-      // Condição de pagamento
-      const valsCond = new Set(selsCond.map(s => (s.value || '').trim()).filter(v => v !== ''));
-      const hdrCond = document.getElementById('plano_pagamento');
-      if (hdrCond && hdrCond.dataset.userEdited !== '1') {
-        hdrCond.value = (valsCond.size === 1) ? [...valsCond][0] : '';
-        atualizarPillTaxa?.();
-      }
-    } catch { }
+    // Trigger recalc - we need to find the TR to pass to recalcLinha or just recalcTudo
+    // Since we are changing data directly, recalcTudo is safer though heavier. 
+    // Or we can simulate the desktop behavior.
 
-
-    // ✅ Mobile Render Hook
-    if (typeof renderMobileCards === 'function') renderMobileCards();
-
-    // ✅ Garante que se estiver em VIEW, as novas linhas nasçam desabilitadas
-    if (currentMode === MODE.VIEW) {
-      const inputs = document.querySelectorAll('#tbody-itens input, #tbody-itens select');
-      inputs.forEach(el => el.disabled = true);
-    }
-  }
-
-  // === Mobile Helpers ===
-
-  window.toggleCardDetails = function (index) {
-    const el = document.getElementById(`card-details-${index}`);
-    if (el) el.classList.toggle('hidden');
-  };
-
-  window.updateItemField = function (index, field, value) {
-    if (!itens[index]) return;
-
-    if (field === 'fator') {
-      const val = Number(value);
-      // Find code for this factor if possible, or just set it
-      // Reuse logic from desktop change event if possible or simplify
-      itens[index].fator_comissao = val;
-      itens[index].__overridePercent = true;
-
-      // Trigger recalc - we need to find the TR to pass to recalcLinha or just recalcTudo
-      // Since we are changing data directly, recalcTudo is safer though heavier. 
-      // Or we can simulate the desktop behavior.
-
-      // Sync with desktop UI for consistency
-      const tr = document.querySelector(`tr[data-idx="${index}"]`);
-      if (tr) {
-        const sel = tr.querySelector('td:nth-child(8) select');
-        // Try to find matching option
-        if (sel) {
-          // Approximate match or raw set? 
-          // Creating a custom option might be needed if not in list.
-          // For now, let's just trigger recalc.
-          recalcLinha(tr).then(() => renderMobileCards());
-        } else {
-          recalcTudo();
-        }
+    // Sync with desktop UI for consistency
+    const tr = document.querySelector(`tr[data-idx="${index}"]`);
+    if (tr) {
+      const sel = tr.querySelector('td:nth-child(8) select');
+      // Try to find matching option
+      if (sel) {
+        // Approximate match or raw set? 
+        // Creating a custom option might be needed if not in list.
+        // For now, let's just trigger recalc.
+        recalcLinha(tr).then(() => renderMobileCards());
       } else {
         recalcTudo();
       }
+    } else {
+      recalcTudo();
     }
-  };
+  }
+};
 
-  // Event Listeners for Mobile
-  document.addEventListener('DOMContentLoaded', () => {
-    document.getElementById('toggle-header')?.addEventListener('click', toggleHeader);
+// Event Listeners for Mobile
+document.addEventListener('DOMContentLoaded', () => {
+  document.getElementById('toggle-header')?.addEventListener('click', toggleHeader);
 
-    document.getElementById('btn-mobile-add')?.addEventListener('click', () => {
-      document.getElementById('btn-buscar')?.click();
-    });
-
-    document.getElementById('btn-mobile-save')?.addEventListener('click', () => {
-      document.getElementById('btn-salvar')?.click();
-    });
-
-    document.getElementById('btn-mobile-apply-cond')?.addEventListener('click', () => {
-      document.getElementById('btn-aplicar-condicao-todos')?.click();
-    });
-
-    document.getElementById('btn-mobile-apply-desc')?.addEventListener('click', () => {
-      document.getElementById('btn-aplicar-todos')?.click();
-    });
+  document.getElementById('btn-mobile-add')?.addEventListener('click', () => {
+    document.getElementById('btn-buscar')?.click();
   });
 
-  async function recalcLinha(tr) {
+  document.getElementById('btn-mobile-save')?.addEventListener('click', () => {
+    document.getElementById('btn-salvar')?.click();
+  });
 
-    const idx = Number(tr.dataset.idx);
-    const item = itens[idx]; if (!item) return;
+  document.getElementById('btn-mobile-apply-cond')?.addEventListener('click', () => {
+    document.getElementById('btn-aplicar-condicao-todos')?.click();
+  });
 
-    const nextId = (Number(tr.dataset.reqId || 0) + 1);
-    tr.dataset.reqId = String(nextId);
-    const myId = String(nextId);
+  document.getElementById('btn-mobile-apply-desc')?.addEventListener('click', () => {
+    document.getElementById('btn-aplicar-todos')?.click();
+  });
+});
 
-    const selPct = tr.querySelector('td:nth-child(8) select');
-    const codePct = selPct ? (selPct.value || '') : '';
-    const fator = (mapaDescontos[codePct] != null) ? Number(mapaDescontos[codePct]) : 0;
+async function recalcLinha(tr) {
 
-    const freteKg = Number(document.getElementById('frete_kg').value || 0);
+  const idx = Number(tr.dataset.idx);
+  const item = itens[idx]; if (!item) return;
 
-    // Condição por linha → taxa
-    const selCond = tr.querySelector('td:nth-child(10) select');
-    const codCond = selCond ? selCond.value : '';
-    const taxaCond = mapaCondicoes[codCond] ?? 0;
+  const nextId = (Number(tr.dataset.reqId || 0) + 1);
+  tr.dataset.reqId = String(nextId);
+  const myId = String(nextId);
 
-    // base comercial (sem imposto)
-    const { acrescimoCond, freteValor, descontoValor, precoBase, liquido } =
-      calcularLinha(item, fator, taxaCond, freteKg);
+  const selPct = tr.querySelector('td:nth-child(8) select');
+  const codePct = selPct ? (selPct.value || '') : '';
+  const fator = (mapaDescontos[codePct] != null) ? Number(mapaDescontos[codePct]) : 0;
 
-    // pinta colunas comerciais
-    tr.querySelector('td:nth-child(9)').textContent = fmtMoney(descontoValor); // Desc. aplicado
-    tr.querySelector('td:nth-child(11)').textContent = fmtMoney(acrescimoCond); // Cond. (R$)
-    tr.querySelector('td:nth-child(12)').textContent = fmtMoney(freteValor);    // Frete (R$)
+  const freteKg = Number(document.getElementById('frete_kg').value || 0);
 
-    // ✅ SALVA TOTAIS COMERCIAIS (FALLBACK) 
-    // Garante que o item tenha valores mesmo que Fiscal falhe ou demore
-    // Total Comercial Base = Valor - Desconto + Acrescimo + Frete
-    // Nota: O Fiscal vai sobrescrever isso com precisão de impostos depois.
-    const totalComercialBase = liquido + acrescimoCond + freteValor;
+  // Condição por linha → taxa
+  const selCond = tr.querySelector('td:nth-child(10) select');
+  const codCond = selCond ? selCond.value : '';
+  const taxaCond = mapaCondicoes[codCond] ?? 0;
+
+  // base comercial (sem imposto)
+  const { acrescimoCond, freteValor, descontoValor, precoBase, liquido } =
+    calcularLinha(item, fator, taxaCond, freteKg);
+
+  // pinta colunas comerciais
+  tr.querySelector('td:nth-child(9)').textContent = fmtMoney(descontoValor); // Desc. aplicado
+  tr.querySelector('td:nth-child(11)').textContent = fmtMoney(acrescimoCond); // Cond. (R$)
+  tr.querySelector('td:nth-child(12)').textContent = fmtMoney(freteValor);    // Frete (R$)
+
+  // ✅ SALVA TOTAIS COMERCIAIS (FALLBACK) 
+  // Garante que o item tenha valores mesmo que Fiscal falhe ou demore
+  // Total Comercial Base = Valor - Desconto + Acrescimo + Frete
+  // Nota: O Fiscal vai sobrescrever isso com precisão de impostos depois.
+  const totalComercialBase = liquido + acrescimoCond + freteValor;
+  item._freteValor = Number(freteValor || 0);
+  item._totalComercial = Number(totalComercialBase || 0);
+  item.total_sem_frete = Math.max(0, item._totalComercial - item._freteValor);
+
+  // Markup Base
+  const mkPctBase = Number(item.markup || 0);
+  const factorBase = 1 + (mkPctBase / 100);
+  item.valor_final_markup = Number((totalComercialBase * factorBase).toFixed(2));
+  item.valor_s_frete_markup = Number((item.total_sem_frete * factorBase).toFixed(2));
+
+
+
+  try {
+    const built = buildFiscalInputsFromRow(tr);
+
+    // usa exatamente o que JÁ calculamos nesta função
+    built.payload.preco_unit = precoBase;   // já calculado acima
+    built.payload.frete_linha = freteValor;  // já calculado acima
+
+    const f = await previewFiscalLinha(built.payload);
+    item.ipi = Number((f.ipi ?? 0).toFixed(2));
+    item.iva_st = Number((f.base_st ?? 0).toFixed(2));
+    item.icms_st = Number((f.icms_proprio ?? 0).toFixed(2));
+
+    if (tr.dataset.reqId !== myId) return;
+
+    const setCell = (sel, val) => {
+      const el = tr.querySelector(sel);
+      if (el) el.textContent = fmtMoney(val);
+    };
+
+    setCell('.col-ipi', f.ipi);
+    setCell('.col-base-st', f.base_st);
+    setCell('.col-icms-proprio', f.icms_proprio);
+    setCell('.col-icms-st-cheio', f.icms_st_cheio);
+    setCell('.col-icms-st-reter', f.icms_st_reter);
+    setCell('.col-total', f.total_linha_com_st); // ou total_linha
+
+    const totalFiscal = Number(f.total_linha_com_st ?? f.total_linha ?? 0);
+
+    // ✅ aplica CONDIÇÃO (R$) sobre o líquido e soma no total final exibido
+    const totalComercial = totalFiscal;
+
+    const totalSemFrete = totalComercial - Number(freteValor || 0);
+    const tdSemFrete = tr.querySelector('.col-total-sem-frete');
+    if (tdSemFrete) tdSemFrete.textContent = fmtMoney(totalSemFrete);
+
+    // --- CÁLCULO DAS COLUNAS DE MARKUP ---
+    // Calcula SEMPRE para garantir que o item tenha os valores corretos para o Save
+    const mkPct = Number(item.markup || 0);
+    const factor = 1 + (mkPct / 100);
+
+    const valFinMk = Number((totalComercial * factor).toFixed(2));
+    const valSemMk = Number((totalSemFrete * factor).toFixed(2));
+
+    // Persiste no objeto item
+    item.valor_final_markup = valFinMk;
+    item.valor_s_frete_markup = valSemMk;
+
+    // Atualiza DOM se as colunas existirem
+    const tdsMk = tr.querySelectorAll('.col-mk-derived');
+    if (tdsMk.length === 2) {
+      tdsMk[0].textContent = fmtMoney(valFinMk);
+      tdsMk[1].textContent = fmtMoney(valSemMk);
+    }
+
+    setCell('.col-total', totalComercial);
     item._freteValor = Number(freteValor || 0);
-    item._totalComercial = Number(totalComercialBase || 0);
+    item._totalComercial = Number(totalComercial || 0);
     item.total_sem_frete = Math.max(0, item._totalComercial - item._freteValor);
 
-    // Markup Base
-    const mkPctBase = Number(item.markup || 0);
-    const factorBase = 1 + (mkPctBase / 100);
-    item.valor_final_markup = Number((totalComercialBase * factorBase).toFixed(2));
-    item.valor_s_frete_markup = Number((item.total_sem_frete * factorBase).toFixed(2));
+    const td = tr.querySelector('.col-total-sem-frete');
+    if (td) td.textContent = fmtMoney(item.total_sem_frete || 0);
 
+  } catch (e) {
+    if (tr.dataset.reqId === myId && tr.isConnected) {
+      const msg = String(e && (e.name || e.message || e));
+      const isAbort = /abort|aborted|cancel|canceled|cancelled/i.test(msg);
 
-
-    try {
-      const built = buildFiscalInputsFromRow(tr);
-
-      // usa exatamente o que JÁ calculamos nesta função
-      built.payload.preco_unit = precoBase;   // já calculado acima
-      built.payload.frete_linha = freteValor;  // já calculado acima
-
-      const f = await previewFiscalLinha(built.payload);
-      item.ipi = Number((f.ipi ?? 0).toFixed(2));
-      item.iva_st = Number((f.base_st ?? 0).toFixed(2));
-      item.icms_st = Number((f.icms_proprio ?? 0).toFixed(2));
-
-      if (tr.dataset.reqId !== myId) return;
-
-      const setCell = (sel, val) => {
-        const el = tr.querySelector(sel);
-        if (el) el.textContent = fmtMoney(val);
-      };
-
-      setCell('.col-ipi', f.ipi);
-      setCell('.col-base-st', f.base_st);
-      setCell('.col-icms-proprio', f.icms_proprio);
-      setCell('.col-icms-st-cheio', f.icms_st_cheio);
-      setCell('.col-icms-st-reter', f.icms_st_reter);
-      setCell('.col-total', f.total_linha_com_st); // ou total_linha
-
-      const totalFiscal = Number(f.total_linha_com_st ?? f.total_linha ?? 0);
-
-      // ✅ aplica CONDIÇÃO (R$) sobre o líquido e soma no total final exibido
-      const totalComercial = totalFiscal;
-
-      const totalSemFrete = totalComercial - Number(freteValor || 0);
-      const tdSemFrete = tr.querySelector('.col-total-sem-frete');
-      if (tdSemFrete) tdSemFrete.textContent = fmtMoney(totalSemFrete);
-
-      // --- CÁLCULO DAS COLUNAS DE MARKUP ---
-      // Calcula SEMPRE para garantir que o item tenha os valores corretos para o Save
-      const mkPct = Number(item.markup || 0);
-      const factor = 1 + (mkPct / 100);
-
-      const valFinMk = Number((totalComercial * factor).toFixed(2));
-      const valSemMk = Number((totalSemFrete * factor).toFixed(2));
-
-      // Persiste no objeto item
-      item.valor_final_markup = valFinMk;
-      item.valor_s_frete_markup = valSemMk;
-
-      // Atualiza DOM se as colunas existirem
-      const tdsMk = tr.querySelectorAll('.col-mk-derived');
-      if (tdsMk.length === 2) {
-        tdsMk[0].textContent = fmtMoney(valFinMk);
-        tdsMk[1].textContent = fmtMoney(valSemMk);
-      }
-
-      setCell('.col-total', totalComercial);
-      item._freteValor = Number(freteValor || 0);
-      item._totalComercial = Number(totalComercial || 0);
-      item.total_sem_frete = Math.max(0, item._totalComercial - item._freteValor);
-
-      const td = tr.querySelector('.col-total-sem-frete');
-      if (td) td.textContent = fmtMoney(item.total_sem_frete || 0);
-
-    } catch (e) {
-      if (tr.dataset.reqId === myId && tr.isConnected) {
-        const msg = String(e && (e.name || e.message || e));
-        const isAbort = /abort|aborted|cancel|canceled|cancelled/i.test(msg);
-
-        if (!isAbort) {
-          console.warn('[Fiscal ERROR ignorado]', msg);
-          // ⚠️ Não zera mais os valores já exibidos
-        }
+      if (!isAbort) {
+        console.warn('[Fiscal ERROR ignorado]', msg);
+        // ⚠️ Não zera mais os valores já exibidos
       }
     }
   }
+}
 
 
-  async function recalcTudo() {
-    if (__recalcRunning) {
-      __recalcPending = true;
-      return;
-    }
-    __recalcRunning = true;
+async function recalcTudo() {
+  if (__recalcRunning) {
+    __recalcPending = true;
+    return;
+  }
+  __recalcRunning = true;
 
-    try {
-      do {
-        __recalcPending = false;
-        const rows = Array.from(document.querySelectorAll('#tbody-itens tr'));
+  try {
+    do {
+      __recalcPending = false;
+      const rows = Array.from(document.querySelectorAll('#tbody-itens tr'));
 
-        // ✅ PARALLEL EXECUTION (Performance Fix)
-        // Dispara todos os requests de uma vez
-        const promises = rows.map(tr => recalcLinha(tr));
-        await Promise.all(promises);
+      // ✅ PARALLEL EXECUTION (Performance Fix)
+      // Dispara todos os requests de uma vez
+      const promises = rows.map(tr => recalcLinha(tr));
+      await Promise.all(promises);
 
-      } while (__recalcPending);
-    } finally {
-      __recalcRunning = false;
-      if (typeof renderMobileCards === 'function') renderMobileCards();
-    }
+    } while (__recalcPending);
+  } finally {
+    __recalcRunning = false;
+    if (typeof renderMobileCards === 'function') renderMobileCards();
+  }
+}
+
+async function aplicarFatorGlobal() {
+  const selGlobal = document.getElementById('desconto_global');
+  const code = selGlobal?.value || '';
+  const fator = mapaDescontos[code];
+
+  if (fator == null || isNaN(fator)) {
+    alert('Escolha um desconto válido.');
+    return;
   }
 
-  async function aplicarFatorGlobal() {
-    const selGlobal = document.getElementById('desconto_global');
-    const code = selGlobal?.value || '';
-    const fator = mapaDescontos[code];
-
-    if (fator == null || isNaN(fator)) {
-      alert('Escolha um desconto válido.');
-      return;
-    }
-
-    // Aplica em cada linha e sincroniza o select da linha
-    document.querySelectorAll('#tbody-itens tr').forEach(tr => {
-      const sel = tr.querySelector('td:nth-child(8) select'); // coluna unificada
-      if (!sel) return;
-      sel.value = code;
-      // 🔑 dispara o mesmo fluxo do usuário (atualiza itens[idx] e recalcula)
-      sel.dispatchEvent(new Event('change', { bubbles: true }));
-    });
-    await Promise.resolve(recalcTudo()).catch(() => { });
-    const hdr = document.getElementById('desconto_global');
-    if (hdr) { hdr.dataset.userEdited = ''; } // destrava
-    atualizarPillDesconto();
-    snapshotSelecionadosParaPicker?.();
-
-  }
-
-  // Mantém o picker em dia com o que está na grade do PAI
-  function snapshotSelecionadosParaPicker() {
-    try { sessionStorage.setItem('criacao_tabela_preco_produtos', JSON.stringify(itens || [])); }
-    catch (e) { console.warn('snapshotSelecionadosParaPicker falhou:', e); }
-  }
-
-  function removerSelecionados() {
-    const novas = [];
-    const rows = Array.from(document.querySelectorAll('#tbody-itens tr'));
-    rows.forEach((tr, i) => {
-      const chk = tr.querySelector('input.chk-linha');
-      if (chk && chk.checked) return; // descarta selecionadas
-      novas.push(itens[i]);
-    });
-    itens = novas;
-    renderTabela();
-    // ✅ mantém o picker alinhado após remoção
-    snapshotSelecionadosParaPicker();
-    // reset visual e estado dos botões
-    const chkAll = document.getElementById('chk-all');
-    if (chkAll) chkAll.checked = false;
-    if (typeof refreshToolbarEnablement === 'function') refreshToolbarEnablement();
-  }
-
-  function inferirFornecedorDaGrade() {
-    const lista = Array.from(new Set((itens || []).map(x => x.fornecedor).filter(Boolean)));
-    return lista.length === 1 ? lista[0] : (lista[0] || '');
-  }
-
-  async function salvarTabela() {
-    const linhas = document.querySelectorAll('#tbody-itens tr');
-    if (linhas.length === 0) {
-      alert('Adicione pelo menos 1 produto à tabela antes de salvar.');
-      // foca em algo útil da sua UI (ajuste se tiver um botão/field específico)
-      document.querySelector('#busca_produto, #nome_tabela')?.focus();
-      return;
-    }
-
-    const { ok } = RequiredValidator.check(RequiredValidator.REQUIRED_FIELDS, document);
-    if (!ok) {
-      alert('Existem campos obrigatórios pendentes. Corrija os destaques em vermelho.');
-      return;
-    }
-
-    const nome_tabela = document.getElementById('nome_tabela').value.trim();
-    const cliente = document.getElementById('cliente_nome').value.trim();
-    const frete_kg = Number(document.getElementById('frete_kg').value || 0);
-    const ramo_juridico = document.getElementById('ramo_juridico').value || null;
-
-    const produtos = Array.from(document.querySelectorAll('#tbody-itens tr'))
-      .map(tr => {
-        const idx = Number(tr.dataset.idx);
-        const item = itens[idx];
-
-        const selPct = tr.querySelector('td:nth-child(8) select');
-        const codePct = selPct ? selPct.value : '';
-        const fator = (mapaDescontos[codePct] != null) ? Number(mapaDescontos[codePct]) : 0;
-
-        const selCond = tr.querySelector('td:nth-child(10) select');
-        const codCond = selCond ? (selCond.value || '') : '';
-        const condLabel = (selCond?.options[selCond.selectedIndex]?.textContent || '').trim();
-
-        const taxaCond = mapaCondicoes[codCond] || 0;
-        const { acrescimoCond, freteValor, descontoValor } =
-          calcularLinha(item, fator, taxaCond, frete_kg /* ivaStAtivo é ignorado aqui */);
-
-        const fatorLabel = selPct ? (selPct.options[selPct.selectedIndex]?.textContent || '').trim() : '';
-
-        let planoToSave = condLabel || '';
-        if (codCond) {
-          if (!planoToSave || !planoToSave.startsWith(codCond)) {
-            planoToSave = planoToSave ? `${codCond} - ${planoToSave}` : codCond;
-          }
-        }
-        // objeto do item (NÃO coloque nome_tabela/cliente/fornecedor aqui)
-        const produto = {
-          codigo_produto_supra: item.codigo_tabela,
-          descricao_produto: item.descricao,
-          embalagem: item.embalagem || '',
-          peso_liquido: Number(item.peso_liquido ?? 0),
-
-          valor_produto: Number(item.valor || 0),
-          comissao_aplicada: Number(descontoValor.toFixed(2)),
-          ajuste_pagamento: Number(acrescimoCond.toFixed(2)),
-          descricao_fator_comissao: fatorLabel,
-          codigo_plano_pagamento: planoToSave,
-
-          valor_frete_aplicado: Number(freteValor.toFixed(2)),
-          frete_kg: Number(frete_kg || 0),
-          valor_frete: Number((item._totalComercial || 0).toFixed(2)),
-          valor_s_frete: Number((item.total_sem_frete || 0).toFixed(2)),
-
-          // Novos campos de Markup
-          markup: Number(item.markup || 0),
-          valor_final_markup: Number(item.valor_final_markup || 0),
-          valor_s_frete_markup: Number(item.valor_s_frete_markup || 0),
-
-          grupo: item.grupo || null,
-          departamento: item.departamento || null,
-          ipi: Number(item.ipi || 0),
-          icms_st: Number(item.icms_st || 0),
-          iva_st: Number(item.iva_st || 0)
-        };
-
-        // id_linha: DOM primeiro; fallback pro array
-        if (tr.dataset.idLinha) {
-          produto.id_linha = Number(tr.dataset.idLinha);
-        } else if (itens[idx]?.id_linha != null) {
-          produto.id_linha = itens[idx].id_linha;
-        }
-
-        return produto; // ✅ dentro do map
-      })
-      .filter(p => p.codigo_produto_supra && p.descricao_produto);
-
-    console.table(produtos.map(p => ({ id_linha: p.id_linha, codigo: p.codigo_produto_supra, valor: p.valor_produto, plano: p.codigo_plano_pagamento })));
-
-    const fornecedorHeader = inferirFornecedorDaGrade();
-    const codigo_cliente = (document.getElementById('codigo_cliente')?.value || '').trim() || null;
-    const calcula_st = !!document.getElementById('iva_st_toggle')?.checked;
-    // Se codigo_cliente for nulo, mande null (não grave "Não cadastrado" string)
-    const payload = { nome_tabela, cliente, codigo_cliente, ramo_juridico, fornecedor: fornecedorHeader, calcula_st, produtos };
-    try {
-      const resp = await salvarTabelaPreco(payload);
-      return resp;
-    } catch (e) {
-      console.error(e);
-      alert(e.message || 'Erro ao salvar a tabela.');
-      return null;
-    }
-  }
-
-
-  function validarCabecalhoMinimo() {
-    const nome = document.getElementById('nome_tabela')?.value?.trim();
-    const cliente = document.getElementById('cliente_nome')?.value?.trim();
-
-    if (!nome || !cliente) return false;
-
-    // valida ordem das datas (se ambos presentes)
-
-    return true;
-  }
-
-  // Habilitar/desabilitar (Salvar e Remover) conforme conteúdo
-  function refreshToolbarEnablement() {
-    const temLinhas = document.querySelectorAll('#tbody-itens tr').length > 0;
-    const algumaMarcada = document.querySelectorAll('#tbody-itens .chk-linha:checked').length > 0;
-    const cabecalhoOk = validarCabecalhoMinimo();
-
-    const btnSalvar = document.getElementById('btn-salvar');
-    const btnRemover = document.getElementById('btn-remover-selecionados');
-
-    if (btnSalvar) btnSalvar.disabled = !(temLinhas && cabecalhoOk);
-    if (btnRemover) btnRemover.disabled = !algumaMarcada;
-  }
-  function limparFormularioCabecalho() {
-    // Campos principais
-    document.getElementById('nome_tabela').value = '';
-    document.getElementById('cliente_nome').value = '';
-    document.getElementById('codigo_cliente').value = '';
-
-    // Parâmetros globais
-    const frete = document.getElementById('frete_kg');
-    if (frete) frete.value = 0;
-
-    const cond = document.getElementById('plano_pagamento');
-    if (cond) cond.value = '';
-
-    const descGlobal = document.getElementById('desconto_global');
-    if (descGlobal) descGlobal.value = '';
-
-    // Pill de taxa
-    const pill = document.getElementById('pill-taxa');
-    if (pill) pill.textContent = '—';
-
-    // Recalcula estado/habilitação
-    if (typeof recalcTudo === 'function') recalcTudo();
-    if (typeof refreshToolbarEnablement === 'function') refreshToolbarEnablement();
-  }
-
-  function limparGradeProdutos() {
-    try { sessionStorage.removeItem('criacao_tabela_preco_produtos'); } catch (e) { }
-
-    // Zera fonte de dados e DOM
-    if (Array.isArray(itens)) itens = [];
-    const tbody = document.getElementById('tbody-itens');
-    if (tbody) tbody.innerHTML = '';
-
-    // Desmarca “selecionar todos”
-    const chkAll = document.getElementById('chk-all');
-    if (chkAll) chkAll.checked = false;
-
-    // Recalcula estado/habilitação
-    if (typeof recalcTudo === 'function') recalcTudo();
-    if (typeof refreshToolbarEnablement === 'function') refreshToolbarEnablement();
-  }
-
-  function getIdFromUrl() {
-    try {
-      const id = new URLSearchParams(window.location.search).get('id');
-      return id ? String(id) : null;
-    } catch {
-      return null;
-    }
-  }
-
-  // CANCELAR — EDIT->VIEW(mesma) | DUP->VIEW(origem) | VIEW->NEW(limpo) | NEW->NEW(limpo)
-  async function onCancelar(e) {
-    if (e) e.preventDefault?.();
-
-    // NEW → mantém NEW zerado
-    if (currentMode === MODE.NEW) {
-      if (typeof limparFormularioCabecalho === 'function') limparFormularioCabecalho();
-      if (typeof limparGradeProdutos === 'function') limparGradeProdutos();
-
-      setMode(MODE.NEW);
-      return;
-    }
-
-    // EDIT → VIEW (mesma tabela, travada)
-    if (currentMode === MODE.EDIT) {
-      if (!currentTabelaId) {
-        const idUrl = getIdFromUrl();
-        const mem = sessionStorage.getItem('TP_LAST_VIEW_ID');
-        const ctx = sessionStorage.getItem('TP_CTX_ID');
-        const cand = idUrl || (mem && mem !== 'new' ? mem : null) || (ctx && ctx !== 'new' ? ctx : null);
-        if (cand) currentTabelaId = String(cand);
-      }
-      setMode(MODE.VIEW);
-      if (typeof setFormDisabled === 'function') setFormDisabled(true);
-      if (typeof toggleToolbarByMode === 'function') toggleToolbarByMode();
-      if (typeof refreshToolbarEnablement === 'function') refreshToolbarEnablement();
-
-      // ✅ REVERT CHANGES: Recarrega dados originais do backend
-      if (currentTabelaId) {
-        try {
-          // Reutiliza lógica de carregarItens/carregarTabela
-          // Mas como carregarItens pega do URL ou currentTabelaId, podemos chamar init ou parte dele.
-          // Simplificação: reload via fetch direto para garantir reset visual
-          const r = await fetch(`${API_BASE}/tabela_preco/${encodeURIComponent(currentTabelaId)}`);
-          if (r.ok) {
-            const t = await r.json();
-            // Restaura cabeçalho
-            if (document.getElementById('nome_tabela')) document.getElementById('nome_tabela').value = t.nome_tabela || '';
-            if (document.getElementById('cliente_nome')) document.getElementById('cliente_nome').value = t.cliente_nome || t.cliente || '';
-            if (document.getElementById('codigo_cliente')) document.getElementById('codigo_cliente').value = t.codigo_cliente || '';
-            // Restaura itens
-            itens = Array.isArray(t.produtos) ? t.produtos.map(p => ({ ...p })) : [];
-            renderTabela();
-            recalcTudo(); // recalcula novos valores originais
-          }
-        } catch (e) { console.warn('Erro ao reverter alterações:', e); }
-      }
-
-      sessionStorage.removeItem('TP_LAST_VIEW_ID');
-      return;
-    }
-
-    // DUP → VIEW (tabela ORIGEM, travada) — sem navegar
-    if (currentMode === MODE.DUP) {
-      if (sourceTabelaId) {
-        try {
-          const r = await fetch(`${API_BASE}/tabela_preco/${encodeURIComponent(sourceTabelaId)}`);
-          if (r.ok) {
-            const t = await r.json();
-
-            // repõe cabeçalho
-            document.getElementById('nome_tabela').value = t.nome_tabela || '';
-            document.getElementById('cliente_nome').value = t.cliente_nome || t.cliente || '';
-            document.getElementById('codigo_cliente').value = t.codigo_cliente || '';
-
-            // repõe itens e re-renderiza grade
-            itens = Array.isArray(t.produtos) ? t.produtos.map(p => ({ ...p })) : [];
-            if (typeof renderTabela === 'function') renderTabela();
-
-            // volta a “apontar” para a origem
-            currentTabelaId = String(sourceTabelaId);
-          } else {
-            console.warn('Cancelar DUP: não consegui recarregar a origem, mantendo tela atual.');
-          }
-        } catch (err) {
-          console.warn('Cancelar DUP: erro ao recarregar a origem:', err);
-        }
-      }
-
-      if (!currentTabelaId) {
-        const srcMem = sessionStorage.getItem('TP_SOURCE_ID');
-        const last = sessionStorage.getItem('TP_LAST_VIEW_ID');
-        const url = getIdFromUrl();
-        const ctx = sessionStorage.getItem('TP_CTX_ID');
-        const cand = sourceTabelaId || (srcMem && srcMem !== 'new' ? srcMem : null)
-          || (last && last !== 'new' ? last : null)
-          || url || (ctx && ctx !== 'new' ? ctx : null);
-        if (cand) currentTabelaId = String(cand);
-      }
-      sourceTabelaId = null;
-      sessionStorage.removeItem('TP_SOURCE_ID');
-
-
-      // trava e mostra botões de decisão (Editar/Duplicar)
-      setMode(MODE.VIEW);
-      if (typeof setFormDisabled === 'function') setFormDisabled(true);
-      if (typeof toggleToolbarByMode === 'function') toggleToolbarByMode();
-      if (typeof refreshToolbarEnablement === 'function') refreshToolbarEnablement();
-      return;
-    }
-
-    if (currentMode === MODE.VIEW) {
-      if (currentTabelaId) {
-        currentTabelaId = null; sourceTabelaId = null;
-        limparFormularioCabecalho?.(); limparGradeProdutos?.();
-        return setMode(MODE.NEW);
-      }
-
-      // Sem id (tela em branco) → aí sim limpa para NEW
-      if (typeof limparFormularioCabecalho === 'function') limparFormularioCabecalho();
-      if (typeof limparGradeProdutos === 'function') limparGradeProdutos();
-      currentTabelaId = null;
-      sourceTabelaId = null;
-
-
-      setMode(MODE.NEW);
-      if (typeof setFormDisabled === 'function') setFormDisabled(false);
-      if (typeof toggleToolbarByMode === 'function') toggleToolbarByMode();
-      if (typeof refreshToolbarEnablement === 'function') refreshToolbarEnablement();
-      return;
-    }
-  }
-
-  function goToListarTabelas() {
-    const ctx = getCtxId();
-    clearPickerBridgeFor(ctx);
-    window.location.href = 'listar_tabelas.html';
-  }
-
-
-  function mergeItensExistentesENovos(existentes, novos) {
-    const map = new Map((existentes || []).map(x => [x.codigo_tabela, x]));
-    (novos || []).forEach(nv => {
-      const prev = map.get(nv.codigo_tabela);
-      map.set(nv.codigo_tabela, prev ? { ...prev, ...nv } : nv);
-    });
-    return Array.from(map.values());
-  }
-
-  async function atualizarValidadeCabecalhoGlobal() {
-    try {
-      const r = await fetch(ENDPOINT_VALIDADE, { cache: 'no-store' });
-      if (!r.ok) return;
-      const data = await r.json();
-
-      const elDate = document.getElementById('validade_tabela');
-      const elDias = document.getElementById('dias_restantes');
-
-      if (elDate) elDate.value = data.validade_tabela_br || '';
-      if (elDias) {
-        const n = data.dias_restantes;
-        if (n == null) { elDias.value = '—'; elDias.dataset.status = 'nao_definida'; }
-        else if (n >= 0) { elDias.value = `Faltam ${n} dia${n === 1 ? '' : 's'}`; elDias.dataset.status = n <= 7 ? 'alerta' : 'ok'; }
-        else { const k = Math.abs(n); elDias.value = `Expirada há ${k} dia${k === 1 ? '' : 's'}`; elDias.dataset.status = 'expirada'; }
-      }
-    } catch (e) {
-      console.error('validade_global:', e);
-    }
-  }
-
-  // === Bootstrap ===
-  document.addEventListener('DOMContentLoaded', () => {
-    // Eventos globais
-    setMode(MODE.NEW);
-    document.getElementById('btn-listar')?.addEventListener('click', () => { goToListarTabelas(); });
-
-    document.getElementById('btn-aplicar-todos')?.addEventListener('click', aplicarFatorGlobal);
-
-    document.getElementById('plano_pagamento')?.addEventListener('change', (e) => {
-      // 👇 marca que o usuário editou manualmente o header
-      e.currentTarget.dataset.userEdited = '1';
-      atualizarPillTaxa(); recalcTudo(); refreshToolbarEnablement(); saveHeaderSnapshot();
-    });
-    document.getElementById('frete_kg')?.addEventListener('input', () => {
-      recalcTudo();
-      refreshToolbarEnablement();
-
-    });
-    // Habilitar/Desabilitar "Remover selecionados" ao marcar/desmarcar linhas individuais
-    document.getElementById('tbody-itens')?.addEventListener('change', (e) => {
-      if (e.target && e.target.classList.contains('chk-linha')) {
-        // Atualiza o estado do botão
-        if (typeof refreshToolbarEnablement === 'function') refreshToolbarEnablement();
-
-        // Sincroniza o "selecionar todos"
-        const all = document.querySelectorAll('#tbody-itens .chk-linha');
-        const marked = document.querySelectorAll('#tbody-itens .chk-linha:checked');
-        const chkAll = document.getElementById('chk-all');
-        if (chkAll) chkAll.checked = (all.length > 0 && marked.length === all.length);
-      }
-    });
-
-    atualizarValidadeCabecalhoGlobal();
-
-    // Selecionar todos — robusto (funciona em click e change)
-    (function bindChkAll() {
-      const chkAll = document.getElementById('chk-all');
-      if (!chkAll) return;
-
-      const toggleAll = (e) => {
-        const checked = (e && e.currentTarget) ? !!e.currentTarget.checked : !!chkAll.checked;
-        document.querySelectorAll('#tbody-itens .chk-linha')
-          .forEach(cb => { cb.checked = checked; });
-
-        // Atualiza habilitação do botão "Remover selecionados"
-        if (typeof refreshToolbarEnablement === 'function') refreshToolbarEnablement();
-      };
-
-      // Usa os dois eventos para não depender do timing do 'change'
-      chkAll.addEventListener('click', toggleAll);
-      chkAll.addEventListener('change', toggleAll);
-    })();
-
-    document.getElementById('btn-buscar')?.addEventListener('click', () => {
-      saveHeaderSnapshot();  // <-- salva topo
-      preparePickerBridgeBeforeNavigate(); // (ver tópico 3)
-      snapshotSelecionadosParaPicker();
-      window.location.href = 'tabela_preco.html';
-    });
-
-    document.getElementById('btn-remover-selecionados')?.addEventListener('click', () => {
-      removerSelecionados();
-      refreshToolbarEnablement();
-      snapshotSelecionadosParaPicker();
-    });
-
-    // handler único (sem aninhar addEventListener dentro de outro)
-    (() => {
-      const btn = document.getElementById('btn-salvar');
-      if (!btn) return;
-
-      btn.type = 'button';
-      let saving = false;
-
-      btn.addEventListener('click', async (e) => {
-        e.preventDefault();
-        if (saving) return;
-        saving = true;
-        btn.disabled = true;
-
-        try {
-          const resp = await salvarTabela(); // agora retorna JSON
-          if (!resp) return;
-          const qtd = resp?.itens_inseridos ?? resp?.qtd_produtos ?? itens.length;
-          alert(`Tabela salva! ${qtd} produtos incluídos.`);
-
-
-          // pegue o ID
-          const tabelaId = resp?.tabela_id || resp?.id_tabela || resp?.id || window.currentTabelaId;
-          if (!tabelaId) {
-            alert("Tabela salva, mas o ID não veio no retorno do backend. Ajuste o /tabela_preco/salvar para devolver o id.");
-            return;
-          }
-
-          // pergunta de decisão
-          const querEnviar = confirm("Deseja mandar o link do orçamento?");
-          if (querEnviar) {
-            if (typeof window.__showGerarLinkModal === "function") {
-              window.__showGerarLinkModal({
-                tabelaId,
-                pedidoClientePath: "/tabela_preco/pedido_cliente.html",
-              });
-            } else {
-              alert("Módulo de gerar link não carregado (../js/gerar_link_pedido.js).");
-            }
-          } else {
-            // >>> Cancelou o envio do link: volta ao estado inicial (sem id, modo original)
-            currentTabelaId = '';
-            sourceTabelaId = '';
-            window.currentTabelaId = '';
-            window.sourceTabelaId = '';
-
-            // limpa URL (?id=)
-            try {
-              const u = new URL(location.href);
-              u.searchParams.delete('id');
-              history.replaceState(null, '', u.toString());
-            } catch { }
-
-            // limpa cabeçalho + grade e volta pro modo original (inputs habilitados)
-            if (typeof limparFormularioCabecalho === 'function') limparFormularioCabecalho();
-            if (typeof limparGradeProdutos === 'function') limparGradeProdutos();
-
-            if (typeof setMode === 'function') setMode(MODE.NEW); // ou o seu "modo inicial" da tela
-            if (typeof setFormDisabled === 'function') setFormDisabled(false);
-
-            if (typeof toggleToolbarByMode === 'function') toggleToolbarByMode();
-            if (typeof refreshToolbarEnablement === 'function') refreshToolbarEnablement();
-
-          }
-
-        } catch (err) {
-          // mostra 422 legível, se vier no formato FastAPI
-          const msg = (err && err.message) ? err.message : 'Erro ao salvar a tabela.';
-          alert(msg);
-          console.error(err);
-        } finally {
-          saving = false;
-          btn.disabled = false;
-          toggleToolbarByMode?.();
-          refreshToolbarEnablement?.();
-        }
-      });
-    })();
-
-    document.getElementById('link-mobile-listar')?.addEventListener('click', (e) => {
-      e.preventDefault();
-      document.querySelector('.sidebar').classList.remove('active');
-      document.getElementById('overlay').style.display = 'none';
-      document.getElementById('btn-listar')?.click();
-    });
-
-    document.getElementById('link-mobile-buscar')?.addEventListener('click', (e) => {
-      e.preventDefault();
-      document.querySelector('.sidebar').classList.remove('active');
-      document.getElementById('overlay').style.display = 'none';
-      document.getElementById('btn-buscar')?.click();
-    });
-
-    document.getElementById('btn-cancelar')?.addEventListener('click', onCancelar);
-    document.getElementById('btn-editar')?.addEventListener('click', onEditar);
-    document.getElementById('btn-duplicar')?.addEventListener('click', onDuplicar);
-
-    // Init
-    (async function init() {
-      await Promise.all([carregarCondicoes(), carregarDescontos()]);
-
-      const temIdNaUrl = !!new URLSearchParams(location.search).get('id');
-
-      // 🔒 Se tem id na URL (edição/visualização), NÃO limpe/restaure snapshot agora
-      if (!temIdNaUrl) {
-        if (__IS_RELOAD) {
-          limparFormularioCabecalho?.();
-        } else {
-          restoreHeaderSnapshotIfNew?.();
-        }
-      }
-
-      // Se tem id, NÃO limpa cabeçalho antes de carregar
-      if (!temIdNaUrl) {
-        if (__IS_RELOAD) {
-          limparFormularioCabecalho?.();
-        } else {
-          restoreHeaderSnapshotIfNew?.();
-        }
-      }
-
-      await carregarItens();                       // carrega itens salvos/edição
-      const q = new URLSearchParams(location.search);
-      const action = q.get('action') || q.get('mode') || q.get('modo');
-      let modeRestored = false;
-      if (!action) {
-        const ctx = sessionStorage.getItem('TP_CTX_ID') || getCtxId();
-        const ret = sessionStorage.getItem(`TP_RETURN_MODE:${ctx}`);
-        if (ret) {
-          if (ret === MODE.EDIT) setMode(MODE.EDIT);
-          else if (ret === MODE.DUP) setMode(MODE.DUP);
-          else if (ret === MODE.NEW) setMode(MODE.NEW);
-          sessionStorage.removeItem(`TP_RETURN_MODE:${ctx}`);
-          modeRestored = true;
-        }
-      }
-      if (!modeRestored) {
-        if (currentTabelaId) {
-          if (action === 'edit') setMode(MODE.EDIT);
-          else if (action === 'duplicate') onDuplicar();
-          else setMode(MODE.VIEW);
-        } else {
-          setMode(MODE.NEW);
-        }
-      }
-
-      // ✅ agora sim, com o modo correto, mescla o buffer do picker
-      if (!__IS_RELOAD) await mergeBufferFromPickerIfAny?.();
-
-      await Promise.resolve(recalcTudo()).catch(() => { });
-      refreshToolbarEnablement?.();
-      setupClienteAutocomplete();
-      enforceIvaLockByCliente();
-
-      // —— quando o usuário editar manualmente o NOME do cliente ——
-      const inpNome = document.getElementById('cliente_nome');
-      const hidCodigo = document.getElementById('codigo_cliente');
-      const hidRamo = document.getElementById('ramo_juridico');
-
-      inpNome?.addEventListener('input', () => {
-        // Se o campo ficar vazio, não considere mais “cliente cadastrado”
-        if (!inpNome.value.trim()) {
-          if (hidCodigo) hidCodigo.value = '';
-          if (hidRamo) hidRamo.value = '';
-          recalcTudo();                         // dispara o preview em todas as linhas
-        }
-        enforceIvaLockByCliente();
-        saveHeaderSnapshot?.();
-      });
-
-      // Se algum outro código limpar/alterar esses campos, recalcule também
-      hidCodigo?.addEventListener('change', () => {
-        enforceIvaLockByCliente();   // 👈 acrescenta
-        saveHeaderSnapshot?.();      // 👈 acrescenta
-        recalcTudo();
-      });
-
-      hidRamo?.addEventListener('change', () => {
-        saveHeaderSnapshot?.();      // 👈 opcional
-        recalcTudo();
-      });
-
-
-      if (!action) {
-        const ctx = sessionStorage.getItem('TP_CTX_ID') || getCtxId();
-        const ret = sessionStorage.getItem(`TP_RETURN_MODE:${ctx}`);
-        if (ret) {
-          if (ret === MODE.EDIT) setMode(MODE.EDIT);
-          else if (ret === MODE.DUP) setMode(MODE.DUP);
-          else if (ret === MODE.NEW) setMode(MODE.NEW);
-          sessionStorage.removeItem(`TP_RETURN_MODE:${ctx}`);
-          modeRestored = true;
-        }
-      }
-
-      if (!modeRestored) {
-        if (currentTabelaId) {
-          if (action === 'edit') setMode(MODE.EDIT);
-          else if (action === 'duplicate') onDuplicar(); // usa o fluxo que guarda a origem
-          else setMode(MODE.VIEW);
-        } else {
-          setMode(MODE.NEW);
-        }
-
-      }
-      refreshToolbarEnablement();
-      await Promise.resolve(recalcTudo()).catch(() => { });
-    })();
+  // Aplica em cada linha e sincroniza o select da linha
+  document.querySelectorAll('#tbody-itens tr').forEach(tr => {
+    const sel = tr.querySelector('td:nth-child(8) select'); // coluna unificada
+    if (!sel) return;
+    sel.value = code;
+    // 🔑 dispara o mesmo fluxo do usuário (atualiza itens[idx] e recalcula)
+    sel.dispatchEvent(new Event('change', { bubbles: true }));
   });
+  await Promise.resolve(recalcTudo()).catch(() => { });
+  const hdr = document.getElementById('desconto_global');
+  if (hdr) { hdr.dataset.userEdited = ''; } // destrava
+  atualizarPillDesconto();
+  snapshotSelecionadosParaPicker?.();
+
+}
+
+// Mantém o picker em dia com o que está na grade do PAI
+function snapshotSelecionadosParaPicker() {
+  try { sessionStorage.setItem('criacao_tabela_preco_produtos', JSON.stringify(itens || [])); }
+  catch (e) { console.warn('snapshotSelecionadosParaPicker falhou:', e); }
+}
+
+function removerSelecionados() {
+  const novas = [];
+  const rows = Array.from(document.querySelectorAll('#tbody-itens tr'));
+  rows.forEach((tr, i) => {
+    const chk = tr.querySelector('input.chk-linha');
+    if (chk && chk.checked) return; // descarta selecionadas
+    novas.push(itens[i]);
+  });
+  itens = novas;
+  renderTabela();
+  // ✅ mantém o picker alinhado após remoção
+  snapshotSelecionadosParaPicker();
+  // reset visual e estado dos botões
+  const chkAll = document.getElementById('chk-all');
+  if (chkAll) chkAll.checked = false;
+  if (typeof refreshToolbarEnablement === 'function') refreshToolbarEnablement();
+}
+
+function inferirFornecedorDaGrade() {
+  const lista = Array.from(new Set((itens || []).map(x => x.fornecedor).filter(Boolean)));
+  return lista.length === 1 ? lista[0] : (lista[0] || '');
+}
+
+async function salvarTabela() {
+  const linhas = document.querySelectorAll('#tbody-itens tr');
+  if (linhas.length === 0) {
+    alert('Adicione pelo menos 1 produto à tabela antes de salvar.');
+    // foca em algo útil da sua UI (ajuste se tiver um botão/field específico)
+    document.querySelector('#busca_produto, #nome_tabela')?.focus();
+    return;
+  }
+
+  const { ok } = RequiredValidator.check(RequiredValidator.REQUIRED_FIELDS, document);
+  if (!ok) {
+    alert('Existem campos obrigatórios pendentes. Corrija os destaques em vermelho.');
+    return;
+  }
+
+  const nome_tabela = document.getElementById('nome_tabela').value.trim();
+  const cliente = document.getElementById('cliente_nome').value.trim();
+  const frete_kg = Number(document.getElementById('frete_kg').value || 0);
+  const ramo_juridico = document.getElementById('ramo_juridico').value || null;
+
+  const produtos = Array.from(document.querySelectorAll('#tbody-itens tr'))
+    .map(tr => {
+      const idx = Number(tr.dataset.idx);
+      const item = itens[idx];
+
+      const selPct = tr.querySelector('td:nth-child(8) select');
+      const codePct = selPct ? selPct.value : '';
+      const fator = (mapaDescontos[codePct] != null) ? Number(mapaDescontos[codePct]) : 0;
+
+      const selCond = tr.querySelector('td:nth-child(10) select');
+      const codCond = selCond ? (selCond.value || '') : '';
+      const condLabel = (selCond?.options[selCond.selectedIndex]?.textContent || '').trim();
+
+      const taxaCond = mapaCondicoes[codCond] || 0;
+      const { acrescimoCond, freteValor, descontoValor } =
+        calcularLinha(item, fator, taxaCond, frete_kg /* ivaStAtivo é ignorado aqui */);
+
+      const fatorLabel = selPct ? (selPct.options[selPct.selectedIndex]?.textContent || '').trim() : '';
+
+      let planoToSave = condLabel || '';
+      if (codCond) {
+        if (!planoToSave || !planoToSave.startsWith(codCond)) {
+          planoToSave = planoToSave ? `${codCond} - ${planoToSave}` : codCond;
+        }
+      }
+      // objeto do item (NÃO coloque nome_tabela/cliente/fornecedor aqui)
+      const produto = {
+        codigo_produto_supra: item.codigo_tabela,
+        descricao_produto: item.descricao,
+        embalagem: item.embalagem || '',
+        peso_liquido: Number(item.peso_liquido ?? 0),
+
+        valor_produto: Number(item.valor || 0),
+        comissao_aplicada: Number(descontoValor.toFixed(2)),
+        ajuste_pagamento: Number(acrescimoCond.toFixed(2)),
+        descricao_fator_comissao: fatorLabel,
+        codigo_plano_pagamento: planoToSave,
+
+        valor_frete_aplicado: Number(freteValor.toFixed(2)),
+        frete_kg: Number(frete_kg || 0),
+        valor_frete: Number((item._totalComercial || 0).toFixed(2)),
+        valor_s_frete: Number((item.total_sem_frete || 0).toFixed(2)),
+
+        // Novos campos de Markup
+        markup: Number(item.markup || 0),
+        valor_final_markup: Number(item.valor_final_markup || 0),
+        valor_s_frete_markup: Number(item.valor_s_frete_markup || 0),
+
+        grupo: item.grupo || null,
+        departamento: item.departamento || null,
+        ipi: Number(item.ipi || 0),
+        icms_st: Number(item.icms_st || 0),
+        iva_st: Number(item.iva_st || 0)
+      };
+
+      // id_linha: DOM primeiro; fallback pro array
+      if (tr.dataset.idLinha) {
+        produto.id_linha = Number(tr.dataset.idLinha);
+      } else if (itens[idx]?.id_linha != null) {
+        produto.id_linha = itens[idx].id_linha;
+      }
+
+      return produto; // ✅ dentro do map
+    })
+    .filter(p => p.codigo_produto_supra && p.descricao_produto);
+
+  console.table(produtos.map(p => ({ id_linha: p.id_linha, codigo: p.codigo_produto_supra, valor: p.valor_produto, plano: p.codigo_plano_pagamento })));
+
+  const fornecedorHeader = inferirFornecedorDaGrade();
+  const codigo_cliente = (document.getElementById('codigo_cliente')?.value || '').trim() || null;
+  const calcula_st = !!document.getElementById('iva_st_toggle')?.checked;
+  // Se codigo_cliente for nulo, mande null (não grave "Não cadastrado" string)
+  const payload = { nome_tabela, cliente, codigo_cliente, ramo_juridico, fornecedor: fornecedorHeader, calcula_st, produtos };
+  try {
+    const resp = await salvarTabelaPreco(payload);
+    return resp;
+  } catch (e) {
+    console.error(e);
+    alert(e.message || 'Erro ao salvar a tabela.');
+    return null;
+  }
+}
 
 
-  // === AUTO APPLY LOGIC (Substituindo botões) ===
+function validarCabecalhoMinimo() {
+  const nome = document.getElementById('nome_tabela')?.value?.trim();
+  const cliente = document.getElementById('cliente_nome')?.value?.trim();
+
+  if (!nome || !cliente) return false;
+
+  // valida ordem das datas (se ambos presentes)
+
+  return true;
+}
+
+// Habilitar/desabilitar (Salvar e Remover) conforme conteúdo
+function refreshToolbarEnablement() {
+  const temLinhas = document.querySelectorAll('#tbody-itens tr').length > 0;
+  const algumaMarcada = document.querySelectorAll('#tbody-itens .chk-linha:checked').length > 0;
+  const cabecalhoOk = validarCabecalhoMinimo();
+
+  const btnSalvar = document.getElementById('btn-salvar');
+  const btnRemover = document.getElementById('btn-remover-selecionados');
+
+  if (btnSalvar) btnSalvar.disabled = !(temLinhas && cabecalhoOk);
+  if (btnRemover) btnRemover.disabled = !algumaMarcada;
+}
+function limparFormularioCabecalho() {
+  // Campos principais
+  document.getElementById('nome_tabela').value = '';
+  document.getElementById('cliente_nome').value = '';
+  document.getElementById('codigo_cliente').value = '';
+
+  // Parâmetros globais
+  const frete = document.getElementById('frete_kg');
+  if (frete) frete.value = 0;
+
+  const cond = document.getElementById('plano_pagamento');
+  if (cond) cond.value = '';
+
+  const descGlobal = document.getElementById('desconto_global');
+  if (descGlobal) descGlobal.value = '';
+
+  // Pill de taxa
+  const pill = document.getElementById('pill-taxa');
+  if (pill) pill.textContent = '—';
+
+  // Recalcula estado/habilitação
+  if (typeof recalcTudo === 'function') recalcTudo();
+  if (typeof refreshToolbarEnablement === 'function') refreshToolbarEnablement();
+}
+
+function limparGradeProdutos() {
+  try { sessionStorage.removeItem('criacao_tabela_preco_produtos'); } catch (e) { }
+
+  // Zera fonte de dados e DOM
+  if (Array.isArray(itens)) itens = [];
+  const tbody = document.getElementById('tbody-itens');
+  if (tbody) tbody.innerHTML = '';
+
+  // Desmarca “selecionar todos”
+  const chkAll = document.getElementById('chk-all');
+  if (chkAll) chkAll.checked = false;
+
+  // Recalcula estado/habilitação
+  if (typeof recalcTudo === 'function') recalcTudo();
+  if (typeof refreshToolbarEnablement === 'function') refreshToolbarEnablement();
+}
+
+function getIdFromUrl() {
+  try {
+    const id = new URLSearchParams(window.location.search).get('id');
+    return id ? String(id) : null;
+  } catch {
+    return null;
+  }
+}
+
+// CANCELAR — EDIT->VIEW(mesma) | DUP->VIEW(origem) | VIEW->NEW(limpo) | NEW->NEW(limpo)
+async function onCancelar(e) {
+  if (e) e.preventDefault?.();
+
+  // NEW → mantém NEW zerado
+  if (currentMode === MODE.NEW) {
+    if (typeof limparFormularioCabecalho === 'function') limparFormularioCabecalho();
+    if (typeof limparGradeProdutos === 'function') limparGradeProdutos();
+
+    setMode(MODE.NEW);
+    return;
+  }
+
+  // EDIT → VIEW (mesma tabela, travada)
+  if (currentMode === MODE.EDIT) {
+    if (!currentTabelaId) {
+      const idUrl = getIdFromUrl();
+      const mem = sessionStorage.getItem('TP_LAST_VIEW_ID');
+      const ctx = sessionStorage.getItem('TP_CTX_ID');
+      const cand = idUrl || (mem && mem !== 'new' ? mem : null) || (ctx && ctx !== 'new' ? ctx : null);
+      if (cand) currentTabelaId = String(cand);
+    }
+    setMode(MODE.VIEW);
+    if (typeof setFormDisabled === 'function') setFormDisabled(true);
+    if (typeof toggleToolbarByMode === 'function') toggleToolbarByMode();
+    if (typeof refreshToolbarEnablement === 'function') refreshToolbarEnablement();
+
+    // ✅ REVERT CHANGES: Recarrega dados originais do backend
+    if (currentTabelaId) {
+      try {
+        // Reutiliza lógica de carregarItens/carregarTabela
+        // Mas como carregarItens pega do URL ou currentTabelaId, podemos chamar init ou parte dele.
+        // Simplificação: reload via fetch direto para garantir reset visual
+        const r = await fetch(`${API_BASE}/tabela_preco/${encodeURIComponent(currentTabelaId)}`);
+        if (r.ok) {
+          const t = await r.json();
+          // Restaura cabeçalho
+          if (document.getElementById('nome_tabela')) document.getElementById('nome_tabela').value = t.nome_tabela || '';
+          if (document.getElementById('cliente_nome')) document.getElementById('cliente_nome').value = t.cliente_nome || t.cliente || '';
+          if (document.getElementById('codigo_cliente')) document.getElementById('codigo_cliente').value = t.codigo_cliente || '';
+          // Restaura itens
+          itens = Array.isArray(t.produtos) ? t.produtos.map(p => ({ ...p })) : [];
+          renderTabela();
+          recalcTudo(); // recalcula novos valores originais
+        }
+      } catch (e) { console.warn('Erro ao reverter alterações:', e); }
+    }
+
+    sessionStorage.removeItem('TP_LAST_VIEW_ID');
+    return;
+  }
+
+  // DUP → VIEW (tabela ORIGEM, travada) — sem navegar
+  if (currentMode === MODE.DUP) {
+    if (sourceTabelaId) {
+      try {
+        const r = await fetch(`${API_BASE}/tabela_preco/${encodeURIComponent(sourceTabelaId)}`);
+        if (r.ok) {
+          const t = await r.json();
+
+          // repõe cabeçalho
+          document.getElementById('nome_tabela').value = t.nome_tabela || '';
+          document.getElementById('cliente_nome').value = t.cliente_nome || t.cliente || '';
+          document.getElementById('codigo_cliente').value = t.codigo_cliente || '';
+
+          // repõe itens e re-renderiza grade
+          itens = Array.isArray(t.produtos) ? t.produtos.map(p => ({ ...p })) : [];
+          if (typeof renderTabela === 'function') renderTabela();
+
+          // volta a “apontar” para a origem
+          currentTabelaId = String(sourceTabelaId);
+        } else {
+          console.warn('Cancelar DUP: não consegui recarregar a origem, mantendo tela atual.');
+        }
+      } catch (err) {
+        console.warn('Cancelar DUP: erro ao recarregar a origem:', err);
+      }
+    }
+
+    if (!currentTabelaId) {
+      const srcMem = sessionStorage.getItem('TP_SOURCE_ID');
+      const last = sessionStorage.getItem('TP_LAST_VIEW_ID');
+      const url = getIdFromUrl();
+      const ctx = sessionStorage.getItem('TP_CTX_ID');
+      const cand = sourceTabelaId || (srcMem && srcMem !== 'new' ? srcMem : null)
+        || (last && last !== 'new' ? last : null)
+        || url || (ctx && ctx !== 'new' ? ctx : null);
+      if (cand) currentTabelaId = String(cand);
+    }
+    sourceTabelaId = null;
+    sessionStorage.removeItem('TP_SOURCE_ID');
+
+
+    // trava e mostra botões de decisão (Editar/Duplicar)
+    setMode(MODE.VIEW);
+    if (typeof setFormDisabled === 'function') setFormDisabled(true);
+    if (typeof toggleToolbarByMode === 'function') toggleToolbarByMode();
+    if (typeof refreshToolbarEnablement === 'function') refreshToolbarEnablement();
+    return;
+  }
+
+  if (currentMode === MODE.VIEW) {
+    if (currentTabelaId) {
+      currentTabelaId = null; sourceTabelaId = null;
+      limparFormularioCabecalho?.(); limparGradeProdutos?.();
+      return setMode(MODE.NEW);
+    }
+
+    // Sem id (tela em branco) → aí sim limpa para NEW
+    if (typeof limparFormularioCabecalho === 'function') limparFormularioCabecalho();
+    if (typeof limparGradeProdutos === 'function') limparGradeProdutos();
+    currentTabelaId = null;
+    sourceTabelaId = null;
+
+
+    setMode(MODE.NEW);
+    if (typeof setFormDisabled === 'function') setFormDisabled(false);
+    if (typeof toggleToolbarByMode === 'function') toggleToolbarByMode();
+    if (typeof refreshToolbarEnablement === 'function') refreshToolbarEnablement();
+    return;
+  }
+}
+
+function goToListarTabelas() {
+  const ctx = getCtxId();
+  clearPickerBridgeFor(ctx);
+  window.location.href = 'listar_tabelas.html';
+}
+
+
+function mergeItensExistentesENovos(existentes, novos) {
+  const map = new Map((existentes || []).map(x => [x.codigo_tabela, x]));
+  (novos || []).forEach(nv => {
+    const prev = map.get(nv.codigo_tabela);
+    map.set(nv.codigo_tabela, prev ? { ...prev, ...nv } : nv);
+  });
+  return Array.from(map.values());
+}
+
+async function atualizarValidadeCabecalhoGlobal() {
+  try {
+    const r = await fetch(ENDPOINT_VALIDADE, { cache: 'no-store' });
+    if (!r.ok) return;
+    const data = await r.json();
+
+    const elDate = document.getElementById('validade_tabela');
+    const elDias = document.getElementById('dias_restantes');
+
+    if (elDate) elDate.value = data.validade_tabela_br || '';
+    if (elDias) {
+      const n = data.dias_restantes;
+      if (n == null) { elDias.value = '—'; elDias.dataset.status = 'nao_definida'; }
+      else if (n >= 0) { elDias.value = `Faltam ${n} dia${n === 1 ? '' : 's'}`; elDias.dataset.status = n <= 7 ? 'alerta' : 'ok'; }
+      else { const k = Math.abs(n); elDias.value = `Expirada há ${k} dia${k === 1 ? '' : 's'}`; elDias.dataset.status = 'expirada'; }
+    }
+  } catch (e) {
+    console.error('validade_global:', e);
+  }
+}
+
+// === Bootstrap ===
+document.addEventListener('DOMContentLoaded', () => {
+  // Eventos globais
+  setMode(MODE.NEW);
+  document.getElementById('btn-listar')?.addEventListener('click', () => { goToListarTabelas(); });
+
+  document.getElementById('btn-aplicar-todos')?.addEventListener('click', aplicarFatorGlobal);
 
   document.getElementById('plano_pagamento')?.addEventListener('change', (e) => {
-    const cod = e.target.value || '';
-    // Aplica a TODOS os itens
-    itens.forEach(it => {
-      it.plano_pagamento = cod || null;
-      it.__plano_pagto_label = e.target.options[e.target.selectedIndex]?.textContent || '';
-    });
-    // Re-renderiza para atualizar select boxes das linhas
-    renderTabela();
-    // Dispara recálculo de valores
-    setTimeout(() => Promise.resolve(recalcTudo()).catch(() => { }), 0);
-
-    const hdr = document.getElementById('plano_pagamento');
-    if (hdr) hdr.dataset.userEdited = '1'; /* Marca como editado pelo user */
-    atualizarPillTaxa();
+    // 👇 marca que o usuário editou manualmente o header
+    e.currentTarget.dataset.userEdited = '1';
+    atualizarPillTaxa(); recalcTudo(); refreshToolbarEnablement(); saveHeaderSnapshot();
   });
+  document.getElementById('frete_kg')?.addEventListener('input', () => {
+    recalcTudo();
+    refreshToolbarEnablement();
 
-  document.getElementById('desconto_global')?.addEventListener('change', (e) => {
-    const code = e.target.value || '';
-    const frac = (Object.prototype.hasOwnProperty.call(mapaDescontos, code) ? Number(mapaDescontos[code]) : 0);
-
-    itens.forEach(it => {
-      it.fator_comissao = (!isNaN(frac) ? frac : 0);
-      it.__fator_codigo = code;
-      it.__descricao_fator_label = e.target.options[e.target.selectedIndex]?.textContent || '';
-      it.__overridePercent = false; // Reset override flag as we are applying global
-    });
-
-    renderTabela();
-    setTimeout(() => Promise.resolve(recalcTudo()).catch(() => { }), 0);
-
-    e.target.dataset.userEdited = '1';
-    atualizarPillDesconto();
-    saveHeaderSnapshot();
   });
+  // Habilitar/Desabilitar "Remover selecionados" ao marcar/desmarcar linhas individuais
+  document.getElementById('tbody-itens')?.addEventListener('change', (e) => {
+    if (e.target && e.target.classList.contains('chk-linha')) {
+      // Atualiza o estado do botão
+      if (typeof refreshToolbarEnablement === 'function') refreshToolbarEnablement();
 
-  document.getElementById('frete_kg')?.addEventListener('change', (e) => {
-    // Frete é calculado na hora do buildFiscalInputs, 
-    // mas precisamos disparar recalcTudo para atualizar totais
-    Promise.resolve(recalcTudo()).catch(() => { });
-  });
-
-  document.getElementById('markup_global')?.addEventListener('change', (e) => {
-    let val = parseFloat(e.target.value.replace(',', '.')) || 0;
-    itens.forEach(it => {
-      it.markup = val;
-    });
-    renderTabela();
-    // recalcTudo não é estritamente necessário se renderTabela já chamou criarLinha que usa markup,
-    // mas recalcLinha é chamado no criarLinha.
-    // Garantia:
-    setTimeout(() => Promise.resolve(recalcTudo()).catch(() => { }), 0);
-  });
-
-  document.getElementById('iva_st_toggle')?.addEventListener('change', (e) => {
-    ivaStAtivo = !!e.target.checked;
-    Promise.resolve(recalcTudo()).catch(err => console.debug('recalcTudo falhou:', err));
-  });
-
-  window.addEventListener('pageshow', () => {
-    if (typeof recalcTudo === 'function') {
-      queueMicrotask(() => Promise.resolve(recalcTudo()).catch(() => { }));
+      // Sincroniza o "selecionar todos"
+      const all = document.querySelectorAll('#tbody-itens .chk-linha');
+      const marked = document.querySelectorAll('#tbody-itens .chk-linha:checked');
+      const chkAll = document.getElementById('chk-all');
+      if (chkAll) chkAll.checked = (all.length > 0 && marked.length === all.length);
     }
   });
 
-  document.addEventListener('input', handleFieldChange, true);
-  document.addEventListener('change', handleFieldChange, true);
+  atualizarValidadeCabecalhoGlobal();
 
-  // =========================================================
-  // CORREÇÃO DE AUTENTICAÇÃO (401)
-  // Reescrevendo/definindo explicitamente a função de salvar
-  // para garantir o envio do token.
-  // =========================================================
-  async function salvarTabelaPreco(payload) {
-    const url = `${API_BASE}/tabela_preco/salvar`;
-    const token = localStorage.getItem("ordersync_token");
+  // Selecionar todos — robusto (funciona em click e change)
+  (function bindChkAll() {
+    const chkAll = document.getElementById('chk-all');
+    if (!chkAll) return;
 
-    // Se for edição (tem ID), usar PUT em vez de POST (ou ajustar endpoint conforme backend)
-    // O backend atual /tabela_preco/salvar é POST e cria nova tabela.
-    // Se quisermos atualizar, o endpoint é PUT /tabela_preco/{id}.
+    const toggleAll = (e) => {
+      const checked = (e && e.currentTarget) ? !!e.currentTarget.checked : !!chkAll.checked;
+      document.querySelectorAll('#tbody-itens .chk-linha')
+        .forEach(cb => { cb.checked = checked; });
 
-    if (window.currentTabelaId) {
-      // EDIÇÃO
-      const putUrl = `${API_BASE}/tabela_preco/${window.currentTabelaId}`;
-      const r = await fetch(putUrl, {
-        method: "PUT",
-        headers: {
-          "Content-Type": "application/json",
-          "Authorization": `Bearer ${token}`
-        },
-        body: JSON.stringify(payload)
-      });
-      if (!r.ok) {
-        const txt = await r.text().catch(() => "");
-        if (r.status === 401) throw new Error("Não autorizado (401). Faça login novamente.");
-        throw new Error(`Falha ao atualizar (401/500). ${txt}`);
-      }
-      return await r.json();
-    } else {
-      // CRIAÇÃO
-      const r = await fetch(url, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          "Authorization": `Bearer ${token}`
-        },
-        body: JSON.stringify(payload)
-      });
-      if (!r.ok) {
-        const txt = await r.text().catch(() => "");
-        if (r.status === 401) throw new Error("Não autorizado (401). Faça login novamente.");
-        throw new Error(`Falha ao salvar (401/500). ${txt}`);
-      }
-      return await r.json();
-    }
-  }
+      // Atualiza habilitação do botão "Remover selecionados"
+      if (typeof refreshToolbarEnablement === 'function') refreshToolbarEnablement();
+    };
 
-  function handleFieldChange(e) {
-    const el = e.target;
-    if (!el || !(el instanceof HTMLElement)) return;
+    // Usa os dois eventos para não depender do timing do 'change'
+    chkAll.addEventListener('click', toggleAll);
+    chkAll.addEventListener('change', toggleAll);
+  })();
 
-    // Se o campo estava marcado com erro, limpamos
-    if (el.classList.contains('field-error')) {
-      el.classList.remove('field-error');
-      const msg = el.nextElementSibling;
-      if (msg && msg.classList.contains('field-error-msg')) {
-        msg.remove();
-      }
-    }
-  }
+  document.getElementById('btn-buscar')?.addEventListener('click', () => {
+    saveHeaderSnapshot();  // <-- salva topo
+    preparePickerBridgeBeforeNavigate(); // (ver tópico 3)
+    snapshotSelecionadosParaPicker();
+    window.location.href = 'tabela_preco.html';
+  });
 
-  // === Desktop Advanced Features ===
+  document.getElementById('btn-remover-selecionados')?.addEventListener('click', () => {
+    removerSelecionados();
+    refreshToolbarEnablement();
+    snapshotSelecionadosParaPicker();
+  });
 
-  var isDenseMode = false;
+  // handler único (sem aninhar addEventListener dentro de outro)
+  (() => {
+    const btn = document.getElementById('btn-salvar');
+    if (!btn) return;
 
-  function toggleDenseMode() {
-    isDenseMode = !isDenseMode;
-    const tableWrap = document.querySelector('.table-wrap');
-    if (tableWrap) {
-      tableWrap.classList.toggle('dense-mode', isDenseMode);
-    }
-    const btn = document.getElementById('btn-dense-mode');
-    if (btn) btn.classList.toggle('active', isDenseMode);
-  }
+    btn.type = 'button';
+    let saving = false;
 
-  // Shortcut Keys
-  document.addEventListener('keydown', (e) => {
-    // F2 to Save
-    if (e.key === 'F2') {
+    btn.addEventListener('click', async (e) => {
       e.preventDefault();
-      document.getElementById('btn-salvar')?.click();
-    }
-    // Insert to Add Products (Search)
-    if (e.key === 'Insert') {
-      e.preventDefault();
-      document.getElementById('btn-buscar')?.click();
-    }
+      if (saving) return;
+      saving = true;
+      btn.disabled = true;
+
+      try {
+        const resp = await salvarTabela(); // agora retorna JSON
+        if (!resp) return;
+        const qtd = resp?.itens_inseridos ?? resp?.qtd_produtos ?? itens.length;
+        alert(`Tabela salva! ${qtd} produtos incluídos.`);
+
+
+        // pegue o ID
+        const tabelaId = resp?.tabela_id || resp?.id_tabela || resp?.id || window.currentTabelaId;
+        if (!tabelaId) {
+          alert("Tabela salva, mas o ID não veio no retorno do backend. Ajuste o /tabela_preco/salvar para devolver o id.");
+          return;
+        }
+
+        // pergunta de decisão
+        const querEnviar = confirm("Deseja mandar o link do orçamento?");
+        if (querEnviar) {
+          if (typeof window.__showGerarLinkModal === "function") {
+            window.__showGerarLinkModal({
+              tabelaId,
+              pedidoClientePath: "/tabela_preco/pedido_cliente.html",
+            });
+          } else {
+            alert("Módulo de gerar link não carregado (../js/gerar_link_pedido.js).");
+          }
+        } else {
+          // >>> Cancelou o envio do link: volta ao estado inicial (sem id, modo original)
+          currentTabelaId = '';
+          sourceTabelaId = '';
+          window.currentTabelaId = '';
+          window.sourceTabelaId = '';
+
+          // limpa URL (?id=)
+          try {
+            const u = new URL(location.href);
+            u.searchParams.delete('id');
+            history.replaceState(null, '', u.toString());
+          } catch { }
+
+          // limpa cabeçalho + grade e volta pro modo original (inputs habilitados)
+          if (typeof limparFormularioCabecalho === 'function') limparFormularioCabecalho();
+          if (typeof limparGradeProdutos === 'function') limparGradeProdutos();
+
+          if (typeof setMode === 'function') setMode(MODE.NEW); // ou o seu "modo inicial" da tela
+          if (typeof setFormDisabled === 'function') setFormDisabled(false);
+
+          if (typeof toggleToolbarByMode === 'function') toggleToolbarByMode();
+          if (typeof refreshToolbarEnablement === 'function') refreshToolbarEnablement();
+
+        }
+
+      } catch (err) {
+        // mostra 422 legível, se vier no formato FastAPI
+        const msg = (err && err.message) ? err.message : 'Erro ao salvar a tabela.';
+        alert(msg);
+        console.error(err);
+      } finally {
+        saving = false;
+        btn.disabled = false;
+        toggleToolbarByMode?.();
+        refreshToolbarEnablement?.();
+      }
+    });
+  })();
+
+  document.getElementById('link-mobile-listar')?.addEventListener('click', (e) => {
+    e.preventDefault();
+    document.querySelector('.sidebar').classList.remove('active');
+    document.getElementById('overlay').style.display = 'none';
+    document.getElementById('btn-listar')?.click();
   });
 
-  // Inject Dense Mode Button into Toolbar (if not exists)
-  document.addEventListener('DOMContentLoaded', () => {
-    const toolbar = document.querySelector('.toolbar.desktop-only');
-    if (toolbar) {
-      const btnDense = document.createElement('button');
-      btnDense.id = 'btn-dense-mode';
-      btnDense.className = 'btn';
-      btnDense.textContent = 'Modo Compacto';
-      btnDense.title = 'Alternar visualização compacta';
-      btnDense.onclick = toggleDenseMode;
-
-      // Insert before Listar tables or at the beginning
-      toolbar.insertBefore(btnDense, toolbar.firstChild);
-    }
-
-
+  document.getElementById('link-mobile-buscar')?.addEventListener('click', (e) => {
+    e.preventDefault();
+    document.querySelector('.sidebar').classList.remove('active');
+    document.getElementById('overlay').style.display = 'none';
+    document.getElementById('btn-buscar')?.click();
   });
 
-  // =========================================================
-  // MOBILE RENDER CARDS (Re-implementação/Override)
-  // =========================================================
-  // =========================================================
-  // MOBILE RENDER CARDS (Re-implementação/Override)
-  // =========================================================
+  document.getElementById('btn-cancelar')?.addEventListener('click', onCancelar);
+  document.getElementById('btn-editar')?.addEventListener('click', onEditar);
+  document.getElementById('btn-duplicar')?.addEventListener('click', onDuplicar);
 
-  // Helper para obter options do desktop
-  function getOptionsFromDesktopSelect(selectId, selectedVal) {
-    const sel = document.getElementById(selectId);
-    if (!sel) return '';
-    return Array.from(sel.options).map(opt => {
-      if (!opt.value) return '';
-      const isSel = String(opt.value) === String(selectedVal);
-      return `<option value="${opt.value}" ${isSel ? 'selected' : ''}>${opt.textContent}</option>`;
-    }).join('');
-  }
+  // Init
+  (async function init() {
+    await Promise.all([carregarCondicoes(), carregarDescontos()]);
 
-  function renderMobileCards() {
-    const container = document.getElementById('mobile-card-container');
-    if (!container) return;
-    container.innerHTML = '';
+    const temIdNaUrl = !!new URLSearchParams(location.search).get('id');
 
-    if (!itens || itens.length === 0) {
-      container.innerHTML = `<div class='empty-state-mobile'><p>Nenhum produto selecionado.</p><button onclick='document.getElementById(\"btn-buscar\").click()' class='btn btn-primary btn-sm'>Adicionar Produtos</button></div>`;
-      updateMobileToolbar();
-      setupMobileButtons(); // ✅ Garante que os botões funcionem mesmo sem itens
-      return;
+    // 🔒 Se tem id na URL (edição/visualização), NÃO limpe/restaure snapshot agora
+    if (!temIdNaUrl) {
+      if (__IS_RELOAD) {
+        limparFormularioCabecalho?.();
+      } else {
+        restoreHeaderSnapshotIfNew?.();
+      }
     }
 
-    // Prepara options uma vez
-    const optsCond = getOptionsFromDesktopSelect('plano_pagamento', null);
-    const optsDesc = getOptionsFromDesktopSelect('desconto_global', null);
+    // Se tem id, NÃO limpa cabeçalho antes de carregar
+    if (!temIdNaUrl) {
+      if (__IS_RELOAD) {
+        limparFormularioCabecalho?.();
+      } else {
+        restoreHeaderSnapshotIfNew?.();
+      }
+    }
 
-    itens.forEach((item, idx) => {
-      const valor = Number(item.valor || 0);
-      const isLocked = (currentMode === MODE.VIEW); // Verifica modo leitura
+    await carregarItens();                       // carrega itens salvos/edição
+    const q = new URLSearchParams(location.search);
+    const action = q.get('action') || q.get('mode') || q.get('modo');
+    let modeRestored = false;
+    if (!action) {
+      const ctx = sessionStorage.getItem('TP_CTX_ID') || getCtxId();
+      const ret = sessionStorage.getItem(`TP_RETURN_MODE:${ctx}`);
+      if (ret) {
+        if (ret === MODE.EDIT) setMode(MODE.EDIT);
+        else if (ret === MODE.DUP) setMode(MODE.DUP);
+        else if (ret === MODE.NEW) setMode(MODE.NEW);
+        sessionStorage.removeItem(`TP_RETURN_MODE:${ctx}`);
+        modeRestored = true;
+      }
+    }
+    if (!modeRestored) {
+      if (currentTabelaId) {
+        if (action === 'edit') setMode(MODE.EDIT);
+        else if (action === 'duplicate') onDuplicar();
+        else setMode(MODE.VIEW);
+      } else {
+        setMode(MODE.NEW);
+      }
+    }
 
-      // Totais calculados (fallback para 0 se falhar)
-      const totalComFrete = Number(item.valor_final_markup || item._totalComercial || 0);
-      const totalSemFrete = Number(item.valor_s_frete_markup || item.total_sem_frete || 0);
+    // ✅ agora sim, com o modo correto, mescla o buffer do picker
+    if (!__IS_RELOAD) await mergeBufferFromPickerIfAny?.();
 
-      const mkPct = Number(item.markup || 0);
-      const ipiVal = Number(item.ipi || 0);
-      const icmsStVal = Number(item.icms_st || 0);
-      const ivaStVal = Number(item.iva_st || 0);
+    await Promise.resolve(recalcTudo()).catch(() => { });
+    refreshToolbarEnablement?.();
+    setupClienteAutocomplete();
+    enforceIvaLockByCliente();
 
-      // Identifica valores selecionados
-      // Workaround: Tenta achar no desktop table TR correspondente se existir para marcar 'selected'
-      let currentFatorCode = '';
-      let currentCondCode = item.plano_pagamento || ''; // salvo no item
+    // —— quando o usuário editar manualmente o NOME do cliente ——
+    const inpNome = document.getElementById('cliente_nome');
+    const hidCodigo = document.getElementById('codigo_cliente');
+    const hidRamo = document.getElementById('ramo_juridico');
 
-      const tr = document.querySelector(`#tbody-itens tr[data-idx="${idx}"]`);
-      if (tr) {
-        const selFator = tr.querySelector('td:nth-child(8) select');
-        if (selFator) currentFatorCode = selFator.value;
-        const selCond = tr.querySelector('td:nth-child(10) select');
-        if (selCond && !currentCondCode) currentCondCode = selCond.value;
+    inpNome?.addEventListener('input', () => {
+      // Se o campo ficar vazio, não considere mais “cliente cadastrado”
+      if (!inpNome.value.trim()) {
+        if (hidCodigo) hidCodigo.value = '';
+        if (hidRamo) hidRamo.value = '';
+        recalcTudo();                         // dispara o preview em todas as linhas
+      }
+      enforceIvaLockByCliente();
+      saveHeaderSnapshot?.();
+    });
+
+    // Se algum outro código limpar/alterar esses campos, recalcule também
+    hidCodigo?.addEventListener('change', () => {
+      enforceIvaLockByCliente();   // 👈 acrescenta
+      saveHeaderSnapshot?.();      // 👈 acrescenta
+      recalcTudo();
+    });
+
+    hidRamo?.addEventListener('change', () => {
+      saveHeaderSnapshot?.();      // 👈 opcional
+      recalcTudo();
+    });
+
+
+    if (!action) {
+      const ctx = sessionStorage.getItem('TP_CTX_ID') || getCtxId();
+      const ret = sessionStorage.getItem(`TP_RETURN_MODE:${ctx}`);
+      if (ret) {
+        if (ret === MODE.EDIT) setMode(MODE.EDIT);
+        else if (ret === MODE.DUP) setMode(MODE.DUP);
+        else if (ret === MODE.NEW) setMode(MODE.NEW);
+        sessionStorage.removeItem(`TP_RETURN_MODE:${ctx}`);
+        modeRestored = true;
+      }
+    }
+
+    if (!modeRestored) {
+      if (currentTabelaId) {
+        if (action === 'edit') setMode(MODE.EDIT);
+        else if (action === 'duplicate') onDuplicar(); // usa o fluxo que guarda a origem
+        else setMode(MODE.VIEW);
+      } else {
+        setMode(MODE.NEW);
       }
 
-      // Reconstrói options marcando o selected
-      const myOptsCond = optsCond.replace(`value="${currentCondCode}"`, `value="${currentCondCode}" selected`);
-      const myOptsDesc = optsDesc.replace(`value="${currentFatorCode}"`, `value="${currentFatorCode}" selected`);
+    }
+    refreshToolbarEnablement();
+    await Promise.resolve(recalcTudo()).catch(() => { });
+  })();
+});
 
-      const card = document.createElement('div');
-      card.className = 'mobile-card';
-      card.innerHTML = `
+
+// === AUTO APPLY LOGIC (Substituindo botões) ===
+
+document.getElementById('plano_pagamento')?.addEventListener('change', (e) => {
+  const cod = e.target.value || '';
+  // Aplica a TODOS os itens
+  itens.forEach(it => {
+    it.plano_pagamento = cod || null;
+    it.__plano_pagto_label = e.target.options[e.target.selectedIndex]?.textContent || '';
+  });
+  // Re-renderiza para atualizar select boxes das linhas
+  renderTabela();
+  // Dispara recálculo de valores
+  setTimeout(() => Promise.resolve(recalcTudo()).catch(() => { }), 0);
+
+  const hdr = document.getElementById('plano_pagamento');
+  if (hdr) hdr.dataset.userEdited = '1'; /* Marca como editado pelo user */
+  atualizarPillTaxa();
+});
+
+document.getElementById('desconto_global')?.addEventListener('change', (e) => {
+  const code = e.target.value || '';
+  const frac = (Object.prototype.hasOwnProperty.call(mapaDescontos, code) ? Number(mapaDescontos[code]) : 0);
+
+  itens.forEach(it => {
+    it.fator_comissao = (!isNaN(frac) ? frac : 0);
+    it.__fator_codigo = code;
+    it.__descricao_fator_label = e.target.options[e.target.selectedIndex]?.textContent || '';
+    it.__overridePercent = false; // Reset override flag as we are applying global
+  });
+
+  renderTabela();
+  setTimeout(() => Promise.resolve(recalcTudo()).catch(() => { }), 0);
+
+  e.target.dataset.userEdited = '1';
+  atualizarPillDesconto();
+  saveHeaderSnapshot();
+});
+
+document.getElementById('frete_kg')?.addEventListener('change', (e) => {
+  // Frete é calculado na hora do buildFiscalInputs, 
+  // mas precisamos disparar recalcTudo para atualizar totais
+  Promise.resolve(recalcTudo()).catch(() => { });
+});
+
+document.getElementById('markup_global')?.addEventListener('change', (e) => {
+  let val = parseFloat(e.target.value.replace(',', '.')) || 0;
+  itens.forEach(it => {
+    it.markup = val;
+  });
+  renderTabela();
+  // recalcTudo não é estritamente necessário se renderTabela já chamou criarLinha que usa markup,
+  // mas recalcLinha é chamado no criarLinha.
+  // Garantia:
+  setTimeout(() => Promise.resolve(recalcTudo()).catch(() => { }), 0);
+});
+
+document.getElementById('iva_st_toggle')?.addEventListener('change', (e) => {
+  ivaStAtivo = !!e.target.checked;
+  Promise.resolve(recalcTudo()).catch(err => console.debug('recalcTudo falhou:', err));
+});
+
+window.addEventListener('pageshow', () => {
+  if (typeof recalcTudo === 'function') {
+    queueMicrotask(() => Promise.resolve(recalcTudo()).catch(() => { }));
+  }
+});
+
+document.addEventListener('input', handleFieldChange, true);
+document.addEventListener('change', handleFieldChange, true);
+
+// =========================================================
+// CORREÇÃO DE AUTENTICAÇÃO (401)
+// Reescrevendo/definindo explicitamente a função de salvar
+// para garantir o envio do token.
+// =========================================================
+async function salvarTabelaPreco(payload) {
+  const url = `${API_BASE}/tabela_preco/salvar`;
+  const token = localStorage.getItem("ordersync_token");
+
+  // Se for edição (tem ID), usar PUT em vez de POST (ou ajustar endpoint conforme backend)
+  // O backend atual /tabela_preco/salvar é POST e cria nova tabela.
+  // Se quisermos atualizar, o endpoint é PUT /tabela_preco/{id}.
+
+  if (window.currentTabelaId) {
+    // EDIÇÃO
+    const putUrl = `${API_BASE}/tabela_preco/${window.currentTabelaId}`;
+    const r = await fetch(putUrl, {
+      method: "PUT",
+      headers: {
+        "Content-Type": "application/json",
+        "Authorization": `Bearer ${token}`
+      },
+      body: JSON.stringify(payload)
+    });
+    if (!r.ok) {
+      const txt = await r.text().catch(() => "");
+      if (r.status === 401) throw new Error("Não autorizado (401). Faça login novamente.");
+      throw new Error(`Falha ao atualizar (401/500). ${txt}`);
+    }
+    return await r.json();
+  } else {
+    // CRIAÇÃO
+    const r = await fetch(url, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "Authorization": `Bearer ${token}`
+      },
+      body: JSON.stringify(payload)
+    });
+    if (!r.ok) {
+      const txt = await r.text().catch(() => "");
+      if (r.status === 401) throw new Error("Não autorizado (401). Faça login novamente.");
+      throw new Error(`Falha ao salvar (401/500). ${txt}`);
+    }
+    return await r.json();
+  }
+}
+
+function handleFieldChange(e) {
+  const el = e.target;
+  if (!el || !(el instanceof HTMLElement)) return;
+
+  // Se o campo estava marcado com erro, limpamos
+  if (el.classList.contains('field-error')) {
+    el.classList.remove('field-error');
+    const msg = el.nextElementSibling;
+    if (msg && msg.classList.contains('field-error-msg')) {
+      msg.remove();
+    }
+  }
+}
+
+// === Desktop Advanced Features ===
+
+var isDenseMode = false;
+
+function toggleDenseMode() {
+  isDenseMode = !isDenseMode;
+  const tableWrap = document.querySelector('.table-wrap');
+  if (tableWrap) {
+    tableWrap.classList.toggle('dense-mode', isDenseMode);
+  }
+  const btn = document.getElementById('btn-dense-mode');
+  if (btn) btn.classList.toggle('active', isDenseMode);
+}
+
+// Shortcut Keys
+document.addEventListener('keydown', (e) => {
+  // F2 to Save
+  if (e.key === 'F2') {
+    e.preventDefault();
+    document.getElementById('btn-salvar')?.click();
+  }
+  // Insert to Add Products (Search)
+  if (e.key === 'Insert') {
+    e.preventDefault();
+    document.getElementById('btn-buscar')?.click();
+  }
+});
+
+// Inject Dense Mode Button into Toolbar (if not exists)
+document.addEventListener('DOMContentLoaded', () => {
+  const toolbar = document.querySelector('.toolbar.desktop-only');
+  if (toolbar) {
+    const btnDense = document.createElement('button');
+    btnDense.id = 'btn-dense-mode';
+    btnDense.className = 'btn';
+    btnDense.textContent = 'Modo Compacto';
+    btnDense.title = 'Alternar visualização compacta';
+    btnDense.onclick = toggleDenseMode;
+
+    // Insert before Listar tables or at the beginning
+    toolbar.insertBefore(btnDense, toolbar.firstChild);
+  }
+
+
+});
+
+// =========================================================
+// MOBILE RENDER CARDS (Re-implementação/Override)
+// =========================================================
+// =========================================================
+// MOBILE RENDER CARDS (Re-implementação/Override)
+// =========================================================
+
+// Helper para obter options do desktop
+function getOptionsFromDesktopSelect(selectId, selectedVal) {
+  const sel = document.getElementById(selectId);
+  if (!sel) return '';
+  return Array.from(sel.options).map(opt => {
+    if (!opt.value) return '';
+    const isSel = String(opt.value) === String(selectedVal);
+    return `<option value="${opt.value}" ${isSel ? 'selected' : ''}>${opt.textContent}</option>`;
+  }).join('');
+}
+
+function renderMobileCards() {
+  const container = document.getElementById('mobile-card-container');
+  if (!container) return;
+  container.innerHTML = '';
+
+  if (!itens || itens.length === 0) {
+    container.innerHTML = `<div class='empty-state-mobile'><p>Nenhum produto selecionado.</p><button onclick='document.getElementById(\"btn-buscar\").click()' class='btn btn-primary btn-sm'>Adicionar Produtos</button></div>`;
+    updateMobileToolbar();
+    setupMobileButtons(); // ✅ Garante que os botões funcionem mesmo sem itens
+    return;
+  }
+
+  // Prepara options uma vez
+  const optsCond = getOptionsFromDesktopSelect('plano_pagamento', null);
+  const optsDesc = getOptionsFromDesktopSelect('desconto_global', null);
+
+  itens.forEach((item, idx) => {
+    const valor = Number(item.valor || 0);
+    const isLocked = (currentMode === MODE.VIEW); // Verifica modo leitura
+
+    // Totais calculados (fallback para 0 se falhar)
+    const totalComFrete = Number(item.valor_final_markup || item._totalComercial || 0);
+    const totalSemFrete = Number(item.valor_s_frete_markup || item.total_sem_frete || 0);
+
+    const mkPct = Number(item.markup || 0);
+    const ipiVal = Number(item.ipi || 0);
+    const icmsStVal = Number(item.icms_st || 0);
+    const ivaStVal = Number(item.iva_st || 0);
+
+    // Identifica valores selecionados
+    // Workaround: Tenta achar no desktop table TR correspondente se existir para marcar 'selected'
+    let currentFatorCode = '';
+    let currentCondCode = item.plano_pagamento || ''; // salvo no item
+
+    const tr = document.querySelector(`#tbody-itens tr[data-idx="${idx}"]`);
+    if (tr) {
+      const selFator = tr.querySelector('td:nth-child(8) select');
+      if (selFator) currentFatorCode = selFator.value;
+      const selCond = tr.querySelector('td:nth-child(10) select');
+      if (selCond && !currentCondCode) currentCondCode = selCond.value;
+    }
+
+    // Reconstrói options marcando o selected
+    const myOptsCond = optsCond.replace(`value="${currentCondCode}"`, `value="${currentCondCode}" selected`);
+    const myOptsDesc = optsDesc.replace(`value="${currentFatorCode}"`, `value="${currentFatorCode}" selected`);
+
+    const card = document.createElement('div');
+    card.className = 'mobile-card';
+    card.innerHTML = `
       <div class='card-header-row' onclick='toggleCardDetails(${idx})' style='cursor:pointer'>
         <div style='flex:1'>
            <div class='card-title' style='font-size: 0.9rem; font-weight: 600;'>${item.codigo_tabela || '?'} - ${item.descricao || 'Sem descrição'}</div>
@@ -2594,121 +2596,122 @@ function buildFiscalInputsFromRow(tr) {
          </div>
       </div>
     `;
-      container.appendChild(card);
-    });
+    container.appendChild(card);
+  });
 
-    updateMobileToolbar();
-    setupMobileButtons();
-  }
-
-
-
-  function updateMobileToolbar() {
-
-    const totalVal = (itens || []).reduce((acc, it) => acc + (Number(it.valor_final_markup) || Number(it._totalComercial) || 0), 0);
-    const qtd = (itens || []).length;
-
-    const lblItens = document.getElementById('mobile-total-itens');
-    const lblVal = document.getElementById('mobile-total-valor');
-    if (lblItens) lblItens.textContent = `${qtd} itens`;
-    if (lblVal) lblVal.textContent = fmtMoney(totalVal);
-  }
-
-  function setupMobileButtons() {
-    // Listar & Cancelar
-    const btnList = document.getElementById('btn-mobile-list');
-    const btnCancel = document.getElementById('btn-mobile-cancel');
-
-    // ADJUST URL HERE IF NEEDED. Using relative path based on file location
-    if (btnList) btnList.onclick = () => window.location.href = 'listar_tabelas.html';
-
-    if (btnCancel) {
-      if (currentTabelaId) {
-        btnCancel.classList.remove('hidden');
-        btnCancel.onclick = () => document.getElementById('btn-cancelar')?.click();
-      } else {
-        btnCancel.classList.add('hidden');
-      }
-    }
-
-    const btnEdit = document.getElementById('btn-mobile-edit');
-    const btnDup = document.getElementById('btn-mobile-dup');
-    const btnSave = document.getElementById('btn-mobile-save');
-    const btnAdd = document.getElementById('btn-mobile-add');
-
-    if (btnSave) btnSave.onclick = () => document.getElementById('btn-salvar')?.click();
-    if (btnAdd) btnAdd.onclick = () => document.getElementById('btn-buscar')?.click();
-
-    if (btnEdit && btnDup) {
-      const hasId = !!currentTabelaId;
-      const isView = (currentMode === 'view');
-
-      if (hasId && isView) {
-        btnEdit.classList.remove('hidden');
-        btnDup.classList.remove('hidden');
-        btnEdit.onclick = () => document.getElementById('btn-editar')?.click();
-        btnDup.onclick = () => document.getElementById('btn-duplicar')?.click();
-      } else {
-        btnEdit.classList.add('hidden');
-        btnDup.classList.add('hidden');
-      }
-    }
-  }
-
-  window.removerItemMobile = function (idx) {
-    if (!confirm('Remover este item?')) return;
-    itens.splice(idx, 1);
-    renderTabela();
-  };
+  updateMobileToolbar();
+  setupMobileButtons();
+}
 
 
-  window.updateItemField = function (index, field, value) {
-    if (!itens[index]) return;
-
-    if (field === 'markup') {
-      const val = parseFloat(value.replace(',', '.')) || 0;
-      itens[index].markup = val;
-      // Dispara recalc
-      triggerRowRecalc(index);
-
-    } else if (field === 'fator_code') {
-      // Sincroniza com desktop (se existir TR)
-      syncDesktopSelect(index, 8, value);
-
-    } else if (field === 'cond_code') {
-      // Sincroniza com desktop (se existir TR)
-      syncDesktopSelect(index, 10, value);
-    }
-
-    // Se for algo que precisa de recalc, a sincronia com TR e triggerRowRecalc resolve
-  };
-
-  function syncDesktopSelect(index, colIndex, val) {
-    const tr = document.querySelector(`tr[data-idx="${index}"]`);
-    if (!tr) return;
-    const sel = tr.querySelector(`td:nth-child(${colIndex}) select`);
-    if (sel) {
-      sel.value = val;
-      // Dispara change no select para qualquer listener
-      sel.dispatchEvent(new Event('change', { bubbles: true }));
-      // Mas o listener do select pode não estar global?
-      // No código principal, não vi listener especifico por linha além do `recalcTudo` se algo mudar?
-      // O `recalcLinha` le do DOM. Então só atualizar o value basta se chamarmos recalcLinha.
-      recalcLinha(tr).then(() => renderMobileCards());
-    }
-  }
 
 
-  function triggerRowRecalc(index) {
-    const tr = document.querySelector(`tr[data-idx="${index}"]`);
-    if (tr) {
-      recalcLinha(tr).then(() => {
-        renderMobileCards();
-      });
+function updateMobileToolbar() {
+
+  const totalVal = (itens || []).reduce((acc, it) => acc + (Number(it.valor_final_markup) || Number(it._totalComercial) || 0), 0);
+  const qtd = (itens || []).length;
+
+  const lblItens = document.getElementById('mobile-total-itens');
+  const lblVal = document.getElementById('mobile-total-valor');
+  if (lblItens) lblItens.textContent = `${qtd} itens`;
+  if (lblVal) lblVal.textContent = fmtMoney(totalVal);
+}
+
+function setupMobileButtons() {
+  // Listar & Cancelar
+  const btnList = document.getElementById('btn-mobile-list');
+  const btnCancel = document.getElementById('btn-mobile-cancel');
+
+  // ADJUST URL HERE IF NEEDED. Using relative path based on file location
+  if (btnList) btnList.onclick = () => window.location.href = 'listar_tabelas.html';
+
+  if (btnCancel) {
+    if (currentTabelaId) {
+      btnCancel.classList.remove('hidden');
+      btnCancel.onclick = () => document.getElementById('btn-cancelar')?.click();
     } else {
-      recalcTudo().then(() => {
-        renderMobileCards();
-      });
+      btnCancel.classList.add('hidden');
     }
   }
+
+  const btnEdit = document.getElementById('btn-mobile-edit');
+  const btnDup = document.getElementById('btn-mobile-dup');
+  const btnSave = document.getElementById('btn-mobile-save');
+  const btnAdd = document.getElementById('btn-mobile-add');
+
+  if (btnSave) btnSave.onclick = () => document.getElementById('btn-salvar')?.click();
+  if (btnAdd) btnAdd.onclick = () => document.getElementById('btn-buscar')?.click();
+
+  if (btnEdit && btnDup) {
+    const hasId = !!currentTabelaId;
+    const isView = (currentMode === 'view');
+
+    if (hasId && isView) {
+      btnEdit.classList.remove('hidden');
+      btnDup.classList.remove('hidden');
+      btnEdit.onclick = () => document.getElementById('btn-editar')?.click();
+      btnDup.onclick = () => document.getElementById('btn-duplicar')?.click();
+    } else {
+      btnEdit.classList.add('hidden');
+      btnDup.classList.add('hidden');
+    }
+  }
+}
+
+window.removerItemMobile = function (idx) {
+  if (!confirm('Remover este item?')) return;
+  itens.splice(idx, 1);
+  renderTabela();
+};
+
+
+window.updateItemField = function (index, field, value) {
+  if (!itens[index]) return;
+
+  if (field === 'markup') {
+    const val = parseFloat(value.replace(',', '.')) || 0;
+    itens[index].markup = val;
+    // Dispara recalc
+    triggerRowRecalc(index);
+
+  } else if (field === 'fator_code') {
+    // Sincroniza com desktop (se existir TR)
+    syncDesktopSelect(index, 8, value);
+
+  } else if (field === 'cond_code') {
+    // Sincroniza com desktop (se existir TR)
+    syncDesktopSelect(index, 10, value);
+  }
+
+  // Se for algo que precisa de recalc, a sincronia com TR e triggerRowRecalc resolve
+};
+
+function syncDesktopSelect(index, colIndex, val) {
+  const tr = document.querySelector(`tr[data-idx="${index}"]`);
+  if (!tr) return;
+  const sel = tr.querySelector(`td:nth-child(${colIndex}) select`);
+  if (sel) {
+    sel.value = val;
+    // Dispara change no select para qualquer listener
+    sel.dispatchEvent(new Event('change', { bubbles: true }));
+    // Mas o listener do select pode não estar global?
+    // No código principal, não vi listener especifico por linha além do `recalcTudo` se algo mudar?
+    // O `recalcLinha` le do DOM. Então só atualizar o value basta se chamarmos recalcLinha.
+    recalcLinha(tr).then(() => renderMobileCards());
+  }
+}
+
+
+function triggerRowRecalc(index) {
+  const tr = document.querySelector(`tr[data-idx="${index}"]`);
+  if (tr) {
+    recalcLinha(tr).then(() => {
+      renderMobileCards();
+    });
+  } else {
+    recalcTudo().then(() => {
+      renderMobileCards();
+    });
+  }
+}
 
