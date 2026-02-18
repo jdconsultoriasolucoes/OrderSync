@@ -50,6 +50,8 @@ def get_mensagem_cfg(db: Session = Depends(get_db)):
             assunto_padrao="Novo pedido {{pedido_id}}",
             corpo_html="",
             enviar_para_cliente=False,
+            assunto_cliente="Orçamento confirmado {{pedido_id}}",
+            corpo_html_cliente="",
         )
     return cfg
 
@@ -74,6 +76,8 @@ def update_mensagem_cfg(
             assunto_padrao=data.assunto_padrao,
             corpo_html=data.corpo_html,
             enviar_para_cliente=data.enviar_para_cliente,
+            assunto_cliente=data.assunto_cliente,
+            corpo_html_cliente=data.corpo_html_cliente,
             atualizado_por=current_user.email,
         )
         db.add(cfg)
@@ -82,6 +86,10 @@ def update_mensagem_cfg(
         cfg.assunto_padrao = data.assunto_padrao
         cfg.corpo_html = data.corpo_html
         cfg.enviar_para_cliente = data.enviar_para_cliente
+        # Atualiza campos novos
+        cfg.assunto_cliente = data.assunto_cliente
+        cfg.corpo_html_cliente = data.corpo_html_cliente
+        
         cfg.atualizado_por = current_user.email
 
     db.commit()

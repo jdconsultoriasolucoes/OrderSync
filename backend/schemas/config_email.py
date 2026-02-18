@@ -8,6 +8,8 @@ class ConfigEmailMensagemBase(BaseModel):
     assunto_padrao: str
     corpo_html: str
     enviar_para_cliente: bool
+    assunto_cliente: Optional[str] = None
+    corpo_html_cliente: Optional[str] = None
 
 class ConfigEmailMensagemOut(ConfigEmailMensagemBase):
     id: int

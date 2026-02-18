@@ -1,5 +1,3 @@
-# services/produto_regras.py
-
 from typing import Any, Dict, List, Optional, Tuple
 from datetime import datetime
 
@@ -34,66 +32,151 @@ def _sincronizar_um_grupo(
         "inseridos": 0,
     }
 
+    # Identificar famílias distintas NA LISTA ATIVA
+    familias_pdf = db.execute(text("""
+        SELECT DISTINCT familia 
+        FROM public.t_preco_produto_pdf_v2 
+        WHERE ativo=TRUE AND fornecedor=:f AND lista=:l AND familia IS NOT NULL
+    """), {"f": fornecedor, "l": lista}).fetchall()
+    
+    familias_nomes = [row[0] for row in familias_pdf]
+    mapa_familia_id = {}
+    
+    # 1. Buscar IDs já existentes na tabela t_familia_produtos
+    if familias_nomes:
+        # Busca por familia (nome "cru" do PDF - antigo familia_carga)
+        ftxt = text("SELECT familia, id FROM public.t_familia_produtos WHERE tipo=:tipo AND familia IN :fams")
+        existing_fams = db.execute(ftxt, {"tipo": lista, "fams": tuple(familias_nomes)}).fetchall()
+        for f_nome, f_id in existing_fams:
+            mapa_familia_id[f_nome] = f_id
+
+    # 2. Identificar novas familias que precisam ser criadas
+    familias_novas = [f for f in familias_nomes if f not in mapa_familia_id]
+    familias_novas.sort()
+    
+    if familias_novas:
+        # Determinar MAX id atual na tabela t_familia_produtos para esse TIPO
+        max_id = db.execute(
+            text("SELECT MAX(id) FROM public.t_familia_produtos WHERE tipo = :lista"),
+            {"lista": lista}
+        ).scalar() or 0
+        
+        # Inserir as novas famílias
+        # Preenche familia (raw) e marca (clean) com o mesmo valor inicial
+        for f_novo in familias_novas:
+            max_id += 10
+            # Insert into t_familia_produtos explicitly
+            db.execute(
+                text("INSERT INTO public.t_familia_produtos (id, tipo, familia, marca) VALUES (:id, :tipo, :fam, :marca)"),
+                {"id": max_id, "tipo": lista, "fam": f_novo, "marca": f_novo}
+            )
+            mapa_familia_id[f_novo] = max_id
+        
+        # db.commit() -> Removed to keep transaction atomic (will commit at end of func)
+    # Build CTE for mapping
+    cte_body = ""
+    binds = {}
+    if mapa_familia_id:
+        values_parts = []
+        for i, (fname, fid) in enumerate(mapa_familia_id.items()):
+            pname = f"fn_{i}"
+            pid = f"fid_{i}"
+            binds[pname] = fname
+            binds[pid] = fid
+            values_parts.append(f"(:{pname}, :{pid})")
+        cte_body = ", ".join(values_parts)
+    else:
+        # Fallback dummy CTE if no families (shouldn't happen active lists usually have items)
+        cte_body = "('RESERVED_DUMMY', 0)"
+
     # 1) Atualizar produtos que BATEM no join
+    # Agora com CTE de familias para update do id_familia
     update_sql = text(
-        """
-        WITH lista_ativa AS (
+        f"""
+        WITH map_fam(nome_fam_raw, id_fam) AS (
+            VALUES {cte_body}
+        ),
+        lista_ativa AS (
             SELECT
-                fornecedor,
-                lista,
-                codigo,
-                familia,
-                descricao,
-                preco_ton,
-                preco_sc,
-                validade_tabela
-            FROM public.t_preco_produto_pdf_v2
-            WHERE ativo = TRUE
-              AND fornecedor = :fornecedor
-              AND lista = :lista
+                l.fornecedor,
+                l.lista,
+                l.codigo,
+                l.familia,
+                l.descricao,
+                l.preco_ton,
+                l.preco_sc,
+                l.validade_tabela,
+                l.filhos,
+                m.id_fam
+            FROM public.t_preco_produto_pdf_v2 l
+            LEFT JOIN map_fam m ON m.nome_fam_raw = l.familia
+            WHERE l.ativo = TRUE
+              AND l.fornecedor = :fornecedor
+              AND l.lista = :lista
+        ),
+        matches AS (
+             SELECT DISTINCT ON (la.codigo)
+                p.id,
+                la.*,
+                fp.marca as marca_oficial
+             FROM lista_ativa la
+             LEFT JOIN public.t_familia_produtos fp ON fp.id = la.id_fam
+             JOIN public.t_cadastro_produto_v2 p
+               ON TRIM(p.tipo) = la.lista
+               AND TRIM(p.codigo_supra) = la.codigo
+               AND (
+                 p.fornecedor = la.fornecedor
+                 OR p.fornecedor IS NULL
+                 OR p.fornecedor = ''
+                 OR p.fornecedor ILIKE '%' || la.fornecedor || '%'
+               )
+             ORDER BY 
+                la.codigo, 
+                -- Priority: Exact Match > Partial > Null > ID Desc
+                CASE WHEN p.fornecedor = la.fornecedor THEN 1 
+                     WHEN p.fornecedor ILIKE '%' || la.fornecedor || '%' THEN 2
+                     ELSE 3 END ASC,
+                p.id DESC
         )
         UPDATE public.t_cadastro_produto_v2 AS p
            SET preco_anterior          = p.preco,
                preco_tonelada_anterior = p.preco_tonelada,
-               preco                   = la.preco_sc,
-               preco_tonelada          = la.preco_ton,
-               validade_tabela         = la.validade_tabela
-        FROM lista_ativa AS la
-        WHERE p.fornecedor   = la.fornecedor
-          AND p.tipo         = la.lista
-          AND p.codigo_supra = la.codigo
+               preco                   = m.preco_sc,
+               preco_tonelada          = m.preco_ton,
+               validade_tabela         = m.validade_tabela,
+               familia                 = m.familia, 
+               marca                   = COALESCE(m.marca_oficial, m.familia),
+               fornecedor              = m.fornecedor,
+               filhos                  = m.filhos,
+               status_anterior         = p.status_produto,
+               status_produto          = 'ATIVO',
+               updated_at              = NOW(),
+               id_familia              = COALESCE(p.id_familia, m.id_fam)
+        FROM matches AS m
+        WHERE p.id = m.id
+        RETURNING p.codigo_supra
         """
     )
-
-    res = db.execute(update_sql, {"fornecedor": fornecedor, "lista": lista})
-    res = db.execute(update_sql, {"fornecedor": fornecedor, "lista": lista})
-    stats["atualizados"] = res.rowcount or 0
-
-    # 1.1) Atualizar 'filhos' (ordem) para produtos que já existem
-    update_filhos_sql = text(
-        """
-        WITH lista_ativa AS (
-            SELECT codigo, filhos
-            FROM public.t_preco_produto_pdf_v2
-            WHERE ativo = TRUE
-              AND fornecedor = :fornecedor
-              AND lista = :lista
-        )
-        UPDATE public.t_cadastro_produto_v2 AS p
-           SET filhos = la.filhos
-        FROM lista_ativa AS la
-        WHERE p.fornecedor   = :fornecedor
-          AND p.tipo         = :lista
-          AND p.codigo_supra = la.codigo
-        """
-    )
-    db.execute(update_filhos_sql, {"fornecedor": fornecedor, "lista": lista})
+    
+    # Merge params
+    run_params = {**{"fornecedor": fornecedor, "lista": lista}, **binds}
+    res = db.execute(update_sql, run_params)
+    
+    # Capturar códigos ativados/atualizados
+    codigos_ativados = [row[0] for row in res.fetchall()]
+    stats["atualizados"] = len(codigos_ativados)
+    
+    if codigos_ativados:
+        print(f"=== [Sincronizacao PDF] Produtos ATIVADOS/ATUALIZADOS ({len(codigos_ativados)}) para {fornecedor}/{lista}: ===")
+        print(codigos_ativados)
+        print("=================================================================================")
 
     # 2) Inativar produtos que sumiram da lista ativa
     inativar_sql = text(
         """
         UPDATE public.t_cadastro_produto_v2 AS p
-           SET status_produto = 'NÃO ATIVO'
+           SET status_produto = 'NÃO ATIVO',
+               updated_at = NOW()
         WHERE p.fornecedor = :fornecedor
           AND p.tipo       = :lista
           AND p.codigo_supra NOT IN (
@@ -109,157 +192,10 @@ def _sincronizar_um_grupo(
     res = db.execute(inativar_sql, {"fornecedor": fornecedor, "lista": lista})
     stats["inativados"] = res.rowcount or 0
 
-    stats["inativados"] = res.rowcount or 0
-
-    # -- Nova Lógica de ID Familia --
-    # Verificar famílias novas na lista ativa que não têm correspondência na t_cadastro_produto_v2
-    # ou que simplesmente ainda não têm ID definido (caso de produtos novos).
-    # Na verdade, a regra é: Se vier uma família NO PDF que não existe no banco (pelo nome?), cria ID novo.
-    # Mas familias são strings. 
-    
-    # 2.1 Identificar famílias distintas NA LISTA ATIVA
-    familias_pdf = db.execute(text("""
-        SELECT DISTINCT familia 
-        FROM public.t_preco_produto_pdf_v2 
-        WHERE ativo=TRUE AND fornecedor=:f AND lista=:l AND familia IS NOT NULL
-    """), {"f": fornecedor, "l": lista}).fetchall()
-    
-    familias_nomes = [row[0] for row in familias_pdf]
-    
-    # Para cada família do PDF, verificar se já existe ID na t_cadastro_produto_v2
-    # (busca glogalmente pelo nome da família, independente de fornecedor? 
-    #  Geralmente familia é global, mas aqui parece vinculado a produto. 
-    #  Vou assumir busca global pelo nome da familia na tabela de produtos).
-    
-    mapa_familia_id = {}
-    
-    # Burcar IDs existentes
-    if familias_nomes:
-        ftxt = text("SELECT DISTINCT familia, id_familia FROM public.t_cadastro_produto_v2 WHERE familia IN :fams AND id_familia IS NOT NULL")
-        # bindparam não aceita lista direto as vezes no text puro sem expandir, mas o driver psycopg2 costuma aceitar tuple/list com IN
-        # Vamos fazer um loop seguro ou tentar IN.
-        # SQLAlchemy aceita IN :fams se passarmos tuple.
-        existing_fams = db.execute(ftxt, {"fams": tuple(familias_nomes)}).fetchall()
-        for f_nome, f_id in existing_fams:
-            mapa_familia_id[f_nome] = f_id
-
-    # Determinar MAX id atual
-    max_id = db.execute(text("SELECT MAX(id_familia) FROM public.t_cadastro_produto_v2")).scalar() or 0
-    
-    # Atribuir IDs para as novas
-    # Ordenar familias novas para manter consistência de atribuição
-    familias_novas = [f for f in familias_nomes if f not in mapa_familia_id]
-    familias_novas.sort() # Alfa order
-    
-    for f_novo in familias_novas:
-        max_id += 10
-        mapa_familia_id[f_novo] = max_id
-        
-    # Agora temos mapa_familia_id completo para o PDF atual.
-    # Precisamos usar isso no INSERT. Como o INSERT é via SELECT, 
-    # não dá pra injetar o mapa fácil no SQL puro massivo.
-    # Solução: Criar tabela temporária ou atualizar a tabela PDF com o ID Familia calculado.
-    
-    # Vamos atualizar a t_preco_produto_pdf_v2 com o id_familia calculado para facilitar o insert
-    # Primeiro adicionar coluna se não existir (mas é tabela fixa... não devo alterar schema dinamicamente em prod).
-    # Melhor: Fazer o INSERT em loop ou:
-    # 1. Criar tabela temporária de mapping (familia, id)
-    # 2. Fazer Join no Insert.
-    
-    # Opção Simples: Update row-by-row na tabela PDF é lento? Não são tantas familias.
-    # Mas a tabela PDF não tem coluna id_familia. E user não pediu pra criar nela.
-    # User pediu pra criar no cadastro.
-    
-    # Vou usar CASE/WHEN gigante no INSERT? Pode quebrar se forem muitas familias.
-    # Melhor: Criar tabela temporária (VALUES) na query.
-    
-    # Construction of VALUES list for joining
-    # ('FAM A', 10), ('FAM B', 20)
-    
-    values_list = []
-    for fam, fid in mapa_familia_id.items():
-        # Escape single quotes in family name just in case (SQL injection risk avoided by using params usually, but constructing VALUES string needs care)
-        # Vamos usar parametros numerados ou json.
-        # Simplificação: Se familias forem poucas.
-        pass
-        
-    # Create temp table logic via CTE
-    # WITH map_fam(nome, id) AS (VALUES (:f1, :i1), (:f2, :i2)...)
-    
-    # Se lista for vazia, skip
-    
-    if mapa_familia_id:
-        # Build params for CTE
-        binds = {}
-        values_parts = []
-        for i, (fname, fid) in enumerate(mapa_familia_id.items()):
-            pname = f"fn_{i}"
-            pid = f"fid_{i}"
-            binds[pname] = fname
-            binds[pid] = fid
-            values_parts.append(f"(:{pname}, :{pid})")
-            
-        cte_body = ", ".join(values_parts)
-        
-        # 3) Inserir produtos novos
-    inserir_sql = text(
-        """
-        WITH lista_ativa AS (
-            SELECT
-                fornecedor,
-                lista,
-                familia,
-                codigo,
-                descricao,
-                preco_ton,
-                preco_sc,
-                validade_tabela
-            FROM public.t_preco_produto_pdf_v2
-            WHERE ativo = TRUE
-              AND fornecedor = :fornecedor
-              AND lista = :lista
-        ),
-        nao_cadastrados AS (
-            SELECT la.*
-            FROM lista_ativa la
-            LEFT JOIN public.t_cadastro_produto_v2 p
-              ON  p.fornecedor   = la.fornecedor
-              AND p.tipo         = la.lista
-              AND p.codigo_supra = la.codigo
-            WHERE p.id IS NULL
-        )
-        INSERT INTO public.t_cadastro_produto_v2 (
-            tipo,
-            familia,
-            codigo_supra,
-            nome_produto,
-            preco_tonelada,
-            preco,
-            validade_tabela,
-            fornecedor,
-            status_produto,
-            created_at,
-            updated_at
-        )
-        SELECT
-            lista              AS tipo,
-            familia            AS familia,
-            codigo             AS codigo_supra,
-            descricao          AS nome_produto,
-            preco_ton          AS preco_tonelada,
-            preco_sc           AS preco,
-            validade_tabela    AS validade_tabela,
-            fornecedor         AS fornecedor,
-            'ATIVO'            AS status_produto,
-            NOW()              AS created_at,
-            NOW()              AS updated_at
-        FROM nao_cadastrados
-        """
-    )
-
+    # 3) Inserir produtos novos
     inserir_sql = text(
         f"""
-        WITH map_fam(nome_fam, id_fam) AS (
+        WITH map_fam(nome_fam_raw, id_fam) AS (
             VALUES {cte_body}
         ),
         lista_ativa AS (
@@ -275,23 +211,26 @@ def _sincronizar_um_grupo(
                 l.filhos,
                 m.id_fam
             FROM public.t_preco_produto_pdf_v2 l
-            LEFT JOIN map_fam m ON m.nome_fam = l.familia
+            LEFT JOIN map_fam m ON m.nome_fam_raw = l.familia
             WHERE l.ativo = TRUE
               AND l.fornecedor = :fornecedor
               AND l.lista = :lista
         ),
         nao_cadastrados AS (
-            SELECT la.*
+            SELECT 
+                la.*,
+                fp.marca as marca_oficial
             FROM lista_ativa la
+            LEFT JOIN public.t_familia_produtos fp ON fp.id = la.id_fam
             LEFT JOIN public.t_cadastro_produto_v2 p
-              ON  p.fornecedor   = la.fornecedor
-              AND p.tipo         = la.lista
-              AND p.codigo_supra = la.codigo
+              ON  TRIM(p.tipo) = la.lista
+              AND TRIM(p.codigo_supra) = la.codigo
             WHERE p.id IS NULL
         )
         INSERT INTO public.t_cadastro_produto_v2 (
             tipo,
             familia,
+            marca,
             id_familia,
             codigo_supra,
             nome_produto,
@@ -304,9 +243,10 @@ def _sincronizar_um_grupo(
             created_at,
             updated_at
         )
-        SELECT
+        SELECT DISTINCT ON (codigo)
             lista,
             familia,
+            COALESCE(marca_oficial, familia),
             id_fam,
             codigo,
             descricao,
@@ -319,10 +259,11 @@ def _sincronizar_um_grupo(
             NOW(),
             NOW()
         FROM nao_cadastrados
+        ON CONFLICT (fornecedor, tipo, codigo_supra) DO NOTHING
         RETURNING id
         """
     )
-
+     
     # Merge binds with existing params
     full_params = {**{"fornecedor": fornecedor, "lista": lista}, **binds}
     
@@ -334,12 +275,6 @@ def _sincronizar_um_grupo(
     # 4) Create Zeroed Tax Records for new products
     if new_ids:
         # Prepare bulk insert for taxes
-        # We need to act quickly, so raw SQL is best. 
-        # t_imposto_v2 columns: id (bigserial), produto_id, ipi, icms, iva_st, cbs, ibs, created_at, updated_at
-        
-        # We can construct a VALUES clause or use executemany via simple loop if safer.
-        # But we can use SELECT UNNEST to be cleaner in one query.
-        
         tax_sql = text("""
             INSERT INTO public.t_imposto_v2 (produto_id, ipi, icms, iva_st, cbs, ibs, created_at, updated_at)
             SELECT 

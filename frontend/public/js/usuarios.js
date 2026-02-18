@@ -24,6 +24,9 @@ document.addEventListener("DOMContentLoaded", () => {
                     method = "PUT";
                     // No password update here, only create
                     delete data.senha;
+                } else {
+                    // Creation mode: remove empty user_id
+                    delete data.user_id;
                 }
 
                 const res = await fetch(url, {
@@ -32,7 +35,17 @@ document.addEventListener("DOMContentLoaded", () => {
                     body: JSON.stringify(data)
                 });
 
-                if (!res.ok) throw new Error((await res.json()).detail || "Erro na operação");
+                if (!res.ok) {
+                    const errData = await res.json();
+                    let errorMsg = errData.detail || "Erro na operação";
+
+                    // If detail is an array (Pydantic validation error)
+                    if (Array.isArray(errorMsg)) {
+                        errorMsg = errorMsg.map(e => `- ${e.msg}`).join("\n");
+                    }
+
+                    throw new Error(errorMsg);
+                }
 
                 alert(isEdit ? "Usuário atualizado!" : "Usuário criado!");
                 document.getElementById("modal-novo").style.display = "none";
@@ -48,7 +61,7 @@ document.addEventListener("DOMContentLoaded", () => {
     document.getElementById("form-reset-senha").addEventListener("submit", async (e) => {
         e.preventDefault();
         const id = document.getElementById("reset-user-id").value;
-        const senha = document.getElementById("nova-senha").value;
+        const senha = document.getElementById("reset-nova-senha").value;
 
         if (confirm("Confirma o reset de senha?")) {
             try {
@@ -57,7 +70,14 @@ document.addEventListener("DOMContentLoaded", () => {
                     headers: { "Content-Type": "application/json" },
                     body: JSON.stringify({ senha_nova: senha })
                 });
-                if (!res.ok) throw new Error((await res.json()).detail || "Erro ao resetar");
+                if (!res.ok) {
+                    const errData = await res.json();
+                    let errorMsg = errData.detail || "Erro ao resetar";
+                    if (Array.isArray(errorMsg)) {
+                        errorMsg = errorMsg.map(e => `- ${e.msg}`).join("\n");
+                    }
+                    throw new Error(errorMsg);
+                }
                 alert("Senha resetada com sucesso!");
                 document.getElementById("modal-reset").style.display = "none";
             } catch (err) {
@@ -149,6 +169,7 @@ window.excluirUsuario = async (id) => {
 window.abrirModalReset = (id, email) => {
     document.getElementById("reset-user-id").value = id;
     document.getElementById("reset-user-email").innerText = email;
-    document.getElementById("nova-senha").value = "";
+    // Security Fix: Clear the password field to prevent showing previous input
+    document.getElementById("reset-nova-senha").value = "";
     document.getElementById("modal-reset").style.display = "flex";
 };

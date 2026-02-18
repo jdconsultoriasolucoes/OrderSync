@@ -3,6 +3,8 @@ import smtplib
 from email.mime.multipart import MIMEMultipart
 from email.mime.application import MIMEApplication
 from email.mime.text import MIMEText
+from email.mime.base import MIMEBase
+from email import encoders
 from typing import Optional
 import ssl, smtplib
 from sqlalchemy.orm import Session
@@ -42,18 +44,57 @@ def get_email_cliente_responsavel_compras(db: Session, codigo_cliente) -> Option
     if not codigo_cliente:
         return None
     
-    # Tenta converter para int, pois IDs são inteiros/bigint
-    try:
-        c_id = int(codigo_cliente)
-    except (ValueError, TypeError):
-        return None
+    # Busca pela string do código empresarial (cadastro_codigo_da_empresa)
+    s_cod = str(codigo_cliente).strip()
 
     row = (
-        db.query(ClienteModelV2.compras_email_resposavel)
-        .filter(ClienteModelV2.id == c_id)
+        db.query(
+            ClienteModelV2.compras_email_resposavel,
+            ClienteModelV2.faturamento_email_danfe,
+            ClienteModelV2.recebimento_email,
+            ClienteModelV2.cobranca_resp_email,
+            ClienteModelV2.legal_email
+        )
+        .filter(ClienteModelV2.cadastro_codigo_da_empresa == s_cod)
         .first()
     )
-    return row[0] if row and row[0] else None
+    
+    if not row:
+        print(f"DEBUG: Cliente '{s_cod}' não encontrado para busca de e-mail.")
+        return None
+        
+    # Prioridade de emails
+    emails = [
+        row.compras_email_resposavel,
+        row.faturamento_email_danfe,
+        row.recebimento_email,
+        row.cobranca_resp_email,
+        row.legal_email
+    ]
+    
+    # Retorna o primeiro que não for vazio
+    for e in emails:
+        if e and str(e).strip():
+            print(f"DEBUG: Email encontrado para cliente '{s_cod}': {str(e).strip()}")
+            return str(e).strip()
+            
+    return None
+        
+    # Prioridade de emails
+    emails = [
+        row.compras_email_resposavel,
+        row.faturamento_email_danfe,
+        row.recebimento_email,
+        row.cobranca_resp_email,
+        row.legal_email
+    ]
+    
+    # Retorna o primeiro que não for vazio
+    for e in emails:
+        if e and str(e).strip():
+            return str(e).strip()
+            
+    return None
 
 
 # ------------------------
@@ -103,113 +144,117 @@ def enviar_email_notificacao(
     db: Session,
     pedido,
     link_pdf: Optional[str] = None,
-    pdf_bytes: Optional[bytes] = None
+    pdf_bytes: Optional[bytes] = None,
+    pdf_bytes_cliente: Optional[bytes] = None
 ) -> None:
     cfg_smtp = _get_cfg_smtp(db)
     cfg_msg  = _get_cfg_msg(db)
 
     remetente = (getattr(cfg_smtp, "remetente_email", "") or getattr(cfg_smtp, "smtp_user", "")).strip()
 
-    # destinatários internos (separados por vírgula) — compatível com sua tela
-    # destinatários internos (separados por vírgula) — compatível com sua tela
-    destinatarios = []
+    # 1. Identificar Destinatários Internos
+    destinatarios_internos = []
     if getattr(cfg_msg, "destinatario_interno", None):
-        destinatarios = [e.strip() for e in cfg_msg.destinatario_interno.split(",") if e.strip()]
-
-    # cópia opcional para o cliente responsável compras (controlada pela flag da mensagem)
-    cc = []
+        destinatarios_internos = [e.strip() for e in cfg_msg.destinatario_interno.split(",") if e.strip()]
+    
+    # 2. Identificar Email Cliente
+    email_cliente = None
     if getattr(cfg_msg, "enviar_para_cliente", False):
-        email_cli = get_email_cliente_responsavel_compras(
-            db,
-            getattr(pedido, "codigo_cliente", None)  # deve casar com codigo_cliente do Cliente
-        )
-        if email_cli:
-            cc.append(email_cli)
+        # Tenta usar o email que veio no pedido (ex: do cadastro V1 ou digitado na hora)
+        email_pedido = getattr(pedido, "cliente_email", None)
+        
+        # Se não tiver, tenta buscar pelo código no cadastro V2
+        email_v2 = None
+        if not email_pedido:
+             c_temp = getattr(pedido, "codigo_cliente", None)
+             email_v2 = get_email_cliente_responsavel_compras(db, c_temp)
 
+        email_cliente = email_pedido or email_v2
+        
     pedido_info = {
         "pedido_id": getattr(pedido, "id", ""),
         "cliente_nome": getattr(pedido, "cliente_nome", "") or getattr(pedido, "nome_cliente", ""),
         "total_pedido": getattr(pedido, "total_pedido", ""),
     }
 
-    assunto    = render_placeholders(getattr(cfg_msg, "assunto_padrao", "") or "", pedido_info, link_pdf)
-    corpo_html = render_placeholders(getattr(cfg_msg, "corpo_html", "") or "", pedido_info, link_pdf)
-    corpo_txt  = ""  # opcional: adicione um campo texto na config se quiser
+    # =========================================================================
+    # ENVIO 1: INTERNO (Para a equipe de vendas)
+    # =========================================================================
+    if destinatarios_internos:
+        try:
+            assunto    = render_placeholders(getattr(cfg_msg, "assunto_padrao", "") or "", pedido_info, link_pdf)
+            corpo_html = render_placeholders(getattr(cfg_msg, "corpo_html", "") or "", pedido_info, link_pdf)
+            
+            msg = MIMEMultipart("mixed")
+            msg["From"] = remetente
+            msg["To"]   = ", ".join(destinatarios_internos)
+            
+            base_subject = assunto or "Novo Pedido (Interno)"
+            if pedido_info.get("pedido_id"):
+                msg["Subject"] = f"{base_subject}" # O placeholder já deve cuidar do ID se configurado
+            else:
+                msg["Subject"] = base_subject
 
-    msg = MIMEMultipart("mixed")
-    msg["From"] = remetente
-    msg["To"]   = ", ".join(destinatarios) if destinatarios else remetente
-    if cc:
-        msg["Cc"] = ", ".join(cc)
-    base_subject = assunto or "Pedido confirmado"
-    if pedido_info.get("pedido_id"):
-        msg["Subject"] = f"{base_subject} #{pedido_info['pedido_id']}"
-    else:
-        msg["Subject"] = base_subject
-    
-    alt = MIMEMultipart("alternative")
-    if corpo_txt:
-        alt.attach(MIMEText(corpo_txt, "plain", "utf-8"))
-    if corpo_html:
-        alt.attach(MIMEText(corpo_html, "html", "utf-8"))
-    msg.attach(alt)
+            alt = MIMEMultipart("alternative")
+            if corpo_html:
+                alt.attach(MIMEText(corpo_html, "html", "utf-8"))
+            else:
+                alt.attach(MIMEText("Novo pedido recebido.", "plain", "utf-8"))
+            msg.attach(alt)
 
-    if pdf_bytes:
-        part = MIMEApplication(pdf_bytes, _subtype="pdf")
-        filename = f"pedido_{pedido_info['pedido_id']}.pdf"
-        part.add_header("Content-Disposition", "attachment", filename=filename)
-        msg.attach(part)
+            # Anexo: PDF Vendedor (Completo) - usa pdf_bytes
+            if pdf_bytes:
+                part = MIMEApplication(pdf_bytes, _subtype="pdf")
+                filename = f"Pedido_{pedido_info['pedido_id']}_Interno.pdf"
+                part.add_header("Content-Disposition", "attachment", filename=filename)
+                msg.attach(part)
 
-    to_all = destinatarios + cc if cc else destinatarios
-    if not to_all:
-        to_all = [remetente]  # fallback
-
-    with _abrir_conexao(cfg_smtp) as server:
-        # Envia para destinatários internos
-        server.sendmail(remetente, to_all, msg.as_string())
+            with _abrir_conexao(cfg_smtp) as server:
+                server.sendmail(remetente, destinatarios_internos, msg.as_string())
+                print(f"Email Interno enviado para: {destinatarios_internos}")
         
-        # ---------------------------------------------------------
-        # Envio Opcional para o Cliente (PDF sem validade)
-        # ---------------------------------------------------------
-        if cfg_msg.enviar_para_cliente and getattr(pedido, "cliente_email", None):
-            try:
-                from services.pdf_service import gerar_pdf_pedido
-                pdf_cliente_bytes = gerar_pdf_pedido(pedido, sem_validade=True)
-                
-                msg_cliente = MIMEMultipart()
-                msg_cliente["From"] = remetente
-                msg_cliente["To"] = pedido.cliente_email
-                msg_cliente["Subject"] = f"Confirmação de Pedido #{pedido.id} - {pedido.cliente_nome}"
-                
-                # Corpo simples para o cliente
-                body_client = f"""\
-Prezado(a) {pedido.cliente_nome},
+        except Exception as e:
+            print(f"Erro ao enviar email interno: {e}")
+            # Não aborta, tenta enviar o do cliente
 
-Seu pedido #{pedido.id} foi confirmado com sucesso.
-Segue em anexo a cópia do pedido.
+    # =========================================================================
+    # ENVIO 2: CLIENTE (Se habilitado e tiver email)
+    # =========================================================================
+    if email_cliente:
+        try:
+            # Usa campos específicos de cliente ou fallback para o padrão se vazio (opcional, mas melhor não)
+            assunto_cli = getattr(cfg_msg, "assunto_cliente", "") or "Confirmação de Pedido"
+            corpo_cli   = getattr(cfg_msg, "corpo_html_cliente", "") or "<p>Seu pedido foi recebido.</p>"
+            
+            assunto    = render_placeholders(assunto_cli, pedido_info, link_pdf)
+            corpo_html = render_placeholders(corpo_cli, pedido_info, link_pdf)
+            
+            msg = MIMEMultipart("mixed")
+            msg["From"] = remetente
+            msg["To"]   = email_cliente
+            msg["Subject"] = assunto
 
-Atenciosamente,
-Equipe OrderSync
-"""
-                msg_cliente.attach(MIMEText(body_client, "plain"))
-                
-                # Anexo
-                part_c = MIMEBase("application", "octet-stream")
-                part_c.set_payload(pdf_cliente_bytes)
-                encoders.encode_base64(part_c)
-                part_c.add_header(
-                    "Content-Disposition",
-                    f"attachment; filename=Pedido_{pedido.id}.pdf",
-                )
-                msg_cliente.attach(part_c)
-                
-                server.sendmail(remetente, [pedido.cliente_email], msg_cliente.as_string())
-                print(f"Email enviado para cliente: {pedido.cliente_email}")
-                
-            except Exception as e:
-                print(f"Erro ao enviar email para cliente: {e}")
+            alt = MIMEMultipart("alternative")
+            alt.attach(MIMEText(corpo_html, "html", "utf-8"))
+            msg.attach(alt)
 
-        server.quit()
+            # Anexo: PDF Cliente (Simplificado) - usa pdf_bytes_cliente
+            # Se não vier o específico, usa o pdf_bytes (fallback? melhor não, user pediu diferente)
+            anexo_bytes = pdf_bytes_cliente if pdf_bytes_cliente else pdf_bytes
+            
+            if anexo_bytes:
+                part = MIMEApplication(anexo_bytes, _subtype="pdf")
+                filename = f"Orcamento_{pedido_info['pedido_id']}.pdf"
+                part.add_header("Content-Disposition", "attachment", filename=filename)
+                msg.attach(part)
+
+            with _abrir_conexao(cfg_smtp) as server:
+                server.sendmail(remetente, [email_cliente], msg.as_string())
+                print(f"Email Cliente enviado para: {email_cliente}")
+
+        except Exception as e:
+            print(f"Erro ao enviar email cliente: {e}")
+            raise e # Relança para o caller saber que falhou pelo menos um envio importante
 
 
 def enviar_email_recuperacao_senha(db: Session, email_destino: str, link_reset: str) -> None:
@@ -255,3 +300,44 @@ def enviar_email_recuperacao_senha(db: Session, email_destino: str, link_reset: 
         print(f"Erro ao enviar email de recuperação: {e}")
         # Não lançar exceção para não expor erro ao usuário (security by obscurity, ou melhor, UX)
         # Mas logar é importante.
+
+def enviar_email_verificacao(db: Session, email_destino: str, link_verificacao: str) -> None:
+    """
+    Envia e-mail com link de verificação de conta.
+    """
+    cfg_smtp = _get_cfg_smtp(db)
+    remetente = (getattr(cfg_smtp, "remetente_email", "") or getattr(cfg_smtp, "smtp_user", "")).strip()
+    
+    assunto = "Verifique seu e-mail - OrderSync"
+    
+    corpo_html = f"""
+    <html>
+    <body style="font-family: Arial, sans-serif; color: #333;">
+        <div style="max-width: 600px; margin: 0 auto; padding: 20px; border: 1px solid #eee; border-radius: 8px;">
+            <h2 style="color: #2563eb;">Bem-vindo ao OrderSync!</h2>
+            <p>Sua conta foi criada com sucesso, mas precisamos verificar seu e-mail antes de liberar o acesso.</p>
+            <p>Clique no botão abaixo para confirmar:</p>
+            <p style="text-align: center; margin: 30px 0;">
+                <a href="{link_verificacao}" style="background-color: #059669; color: white; padding: 12px 24px; text-decoration: none; border-radius: 5px; font-weight: bold;">Confirmar meu E-mail</a>
+            </p>
+            <p>Se o botão não funcionar, copie e cole o link abaixo no seu navegador:</p>
+            <p style="font-size: 12px; color: #666; word-break: break-all;">{link_verificacao}</p>
+        </div>
+    </body>
+    </html>
+    """
+    
+    msg = MIMEMultipart("alternative")
+    msg["From"] = remetente
+    msg["To"] = email_destino
+    msg["Subject"] = assunto
+    
+    msg.attach(MIMEText(corpo_html, "html", "utf-8"))
+    
+    try:
+        with _abrir_conexao(cfg_smtp) as server:
+            server.sendmail(remetente, [email_destino], msg.as_string())
+            print(f"Email de verificação enviado para: {email_destino}")
+    except Exception as e:
+        print(f"Erro ao enviar email de verificação: {e}")
+        raise e # Aqui lançamos pois é crítico na criação

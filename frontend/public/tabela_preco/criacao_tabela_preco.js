@@ -1,23 +1,6 @@
-// ... existing code ...
-
-// === Mobile Logic ===
-
-function toggleHeader() {
-  const content = document.getElementById('header-content');
-  const header = document.getElementById('toggle-header');
-  if (!content || !header) return;
-
-  content.classList.toggle('expanded');
-}
-
-
-
-
-
-// ... existing code ...
-
+// === Config ===
 // Config is now imported via config.js
-const API_BASE = window.API_BASE || "http://127.0.0.1:8000";
+const API_BASE = window.API_BASE || "https://ordersync-backend-59d2.onrender.com"; // Restored & Safe
 // window.API_BASE already set by config.js
 const ENDPOINT_VALIDADE = `${API_BASE}/tabela_preco/meta/validade_global`;
 
@@ -145,6 +128,7 @@ function getHeaderSnapshot() {
     frete_kg: val("frete_kg") || "0",
     plano_pagamento: val("plano_pagamento"),
     desconto_global: val("desconto_global"),
+    markup_global: val("markup_global"), // ✅ Persist Markup Global Field
     cliente_livre: !!window.isClienteLivreSelecionado,
     cliente_livre: !!window.isClienteLivreSelecionado,
     iva_enabled: !$("iva_st_toggle")?.disabled,
@@ -157,9 +141,10 @@ function saveHeaderSnapshot() {
   sessionStorage.setItem(`TP_HEADER_SNAPSHOT:${ctx}`, JSON.stringify(getHeaderSnapshot()));
 }
 
-function restoreHeaderSnapshotIfNew() {
+function restoreHeaderSnapshotIfNew(force = false) {
   // Só restaura em NEW (sem id na URL) para não sujar edição/visualização
-  if (currentTabelaId) return;
+  // EXCETO se 'force' for true (usado ao voltar do picker)
+  if (currentTabelaId && !force) return;
 
   const ctx = getCtxId();
   const raw = sessionStorage.getItem(`TP_HEADER_SNAPSHOT:${ctx}`);
@@ -182,6 +167,7 @@ function restoreHeaderSnapshotIfNew() {
     // ---- Selects (este método deve ser chamado DEPOIS de carregarCondicoes/Descontos)
     set('plano_pagamento', snap.plano_pagamento || '');
     set('desconto_global', snap.desconto_global || '');
+    set('markup_global', snap.markup_global || ''); // ✅ Restore Markup Global
 
     // ---- IVA_ST e flags do cliente livre
     const ivaChk = document.getElementById('iva_st_toggle');
@@ -213,6 +199,13 @@ function clearPickerBridgeFor(ctx) {
   try { sessionStorage.removeItem(`TP_BUFFER:${ctx}`); } catch { }
 }
 
+function clearFullSnapshot() {
+  const ctx = getCtxId();
+  try { sessionStorage.removeItem(`TP_HEADER_SNAPSHOT:${ctx}`); } catch { }
+  try { sessionStorage.removeItem(`TP_RETURN_MODE:${ctx}`); } catch { }
+  clearPickerBridgeFor(ctx);
+}
+
 function preparePickerBridgeBeforeNavigate() {
   const ctx = getCtxId();
   sessionStorage.setItem('TP_CTX_ID', ctx);
@@ -239,13 +232,34 @@ async function mergeBufferFromPickerIfAny() {
       return;
     }
     const recebidos = JSON.parse(raw) || [];
+
+    // Auto-apply Globals to New Items
+    const mkGlobalRaw = document.getElementById('markup_global')?.value || '0';
+    const mkGlobal = parseFloat(mkGlobalRaw.replace(',', '.')) || 0;
+
+    const descCode = document.getElementById('desconto_global')?.value || '';
+    const condCode = document.getElementById('plano_pagamento')?.value || '';
+    const fatorGlobal = (descCode && mapaDescontos[descCode] != null) ? Number(mapaDescontos[descCode]) : null;
+
     const map = new Map((itens || []).map(x => [x.codigo_tabela, x]));
     for (const p of recebidos) {
-      // Se tivermos um markup de cliente já carregado, aplica nos novos itens
-      // (caso o item não traga markup específico ou seja 0)
-      if (!p.markup && currentClientMarkup) {
+      // 1) Apply Markup
+      if (mkGlobal > 0) {
+        p.markup = mkGlobal;
+      } else if (!p.markup && currentClientMarkup) {
         p.markup = currentClientMarkup;
       }
+
+      // 2) Apply Discount (Factor)
+      if (fatorGlobal != null) {
+        p.fator_comissao = fatorGlobal;
+      }
+
+      // 3) Apply Condition
+      if (condCode) {
+        p.plano_pagamento = condCode;
+      }
+
       map.set(p.codigo_tabela, { ...(map.get(p.codigo_tabela) || {}), ...p });
     }
     itens = Array.from(map.values());
@@ -342,7 +356,10 @@ async function atualizarPrecosAtuais() {
       );
 
       if (!Number.isNaN(valorNum) && valorNum > 0) {
-        mapa[chave] = valorNum;
+        mapa[chave] = {
+          valor: valorNum,
+          peso_bruto: Number(p.peso_bruto || 0)
+        };
       }
     }
 
@@ -378,13 +395,31 @@ async function atualizarPrecosAtuais() {
   let mudou = false;
   itens = (itens || []).map(it => {
     const key = String(it.codigo_tabela ?? "").trim();
-    const novo = key && Object.prototype.hasOwnProperty.call(mapa, key)
+    const data = key && Object.prototype.hasOwnProperty.call(mapa, key)
       ? mapa[key]
       : null;
 
-    if (novo != null && !Number.isNaN(novo) && Number(novo) !== Number(it.valor)) {
-      mudou = true;
-      return { ...it, valor: Number(novo) };
+    if (data) {
+      // Se tivermos dados novos...
+      const novoValor = data.valor;
+      const novoPesoBruto = data.peso_bruto;
+
+      let mudouItem = false;
+
+      // Atualiza valor se mudou
+      if (novoValor != null && !Number.isNaN(novoValor) && Number(novoValor) !== Number(it.valor)) {
+        it.valor = Number(novoValor);
+        mudouItem = true;
+      }
+
+      // Atualiza peso_bruto se mudou (ou se não tinha)
+      if (novoPesoBruto != null && Number(novoPesoBruto) !== Number(it.peso_bruto || 0)) {
+        it.peso_bruto = Number(novoPesoBruto);
+        mudouItem = true;
+      }
+
+      if (mudouItem) mudou = true;
+      return it;
     }
     return it;
   });
@@ -418,6 +453,49 @@ function setFormDisabled(disabled) {
   if (chkAll) chkAll.disabled = disabled;
 }
 
+// Função auxiliar para mapear item do backend para o formato do frontend
+function mapBackendItemToFrontend(p, t) {
+  return {
+    // chaves que a grade espera:
+    id_linha: p.id_linha ?? p.idLinha ?? null,
+    codigo_tabela: p.codigo_produto_supra ?? p.codigo_tabela ?? '',
+    descricao: p.descricao_produto ?? p.descricao ?? '',
+    embalagem: p.embalagem ?? '',
+    peso_liquido: Number(p.peso_liquido ?? 0),
+    valor: Number(p.valor_produto ?? p.valor ?? 0),
+
+    // comerciais/fiscais
+    desconto: Number(p.comissao_aplicada ?? 0),      // mantém em R$ pra exibir
+    acrescimo: Number(p.ajuste_pagamento ?? 0),      // mantém em R$ pra exibir
+    plano_pagamento: p.codigo_plano_pagamento ?? p.plano_pagamento ?? null,
+    frete_kg: Number(p.frete_kg ?? 0),
+    ipi: Number(p.ipi ?? 0),
+    icms_st: Number(p.icms_st ?? 0),
+    iva_st: Number(p.iva_st ?? 0),
+    grupo: p.grupo ?? null,
+    departamento: p.departamento ?? null,
+
+    // totais que você já exibe na tela
+    total_sem_frete: Number(p.valor_s_frete ?? p.total_sem_frete ?? 0),
+
+    // Markup (carregar do backend)
+    markup: Number(p.markup ?? 0),
+    valor_final_markup: Number(p.valor_final_markup ?? 0),
+    valor_s_frete_markup: Number(p.valor_s_frete_markup ?? 0),
+
+    // guarda para reaproveitar na hora do POST
+    __descricao_fator_label: p.descricao_fator_comissao || null,
+    __plano_pagto_label: p.codigo_plano_pagamento || null, // já vem "COD - desc" às vezes
+    fornecedor: t.fornecedor || '',
+    status_atual: p.status_atual ?? 'ATIVO', // <--- Mapeia status
+
+    // Complementos finais
+    peso_liquido: Number(p.peso_liquido ?? p.peso ?? p.peso_kg ?? p.pesoLiquido ?? 0),
+    peso_bruto: Number(p.peso_bruto ?? 0),
+    tipo: p.tipo ?? p.grupo ?? p.departamento ?? null
+  };
+}
+
 function onDuplicar() {
   // guarda a tabela de ORIGEM para poder voltar na hora do Cancelar
   sourceTabelaId = currentTabelaId ? String(currentTabelaId) : null;
@@ -441,9 +519,14 @@ function onDuplicar() {
   if (cod) cod.value = '';
   if (ramo) ramo.value = '';
 
-  if (frete) frete.value = 0;
-  if (cond) cond.value = '';
-  if (desc) desc.value = '';
+  // if (frete) frete.value = 0; // KEEP
+  // if (cond) cond.value = '';
+  // duplicado if (cond) cond.value = ''; // clean up
+  // if (desc) desc.value = '';
+  console.log("onDuplicar: Preservando Frete, Condição e Desconto.");
+
+  const mk = document.getElementById('markup_global');
+  // if (mk) mk.value = ''; // KEEP
 
   // flags de cliente “livre” e travas do IVA
   window.isClienteLivreSelecionado = false;
@@ -454,6 +537,14 @@ function onDuplicar() {
   atualizarPillTaxa?.();
   atualizarPillDesconto?.();
   refreshToolbarEnablement?.();
+
+  // Renderiza IMEDIATAMENTE para não dar delay visual (mostra dados preservados)
+  renderTabela();
+
+  // Atualiza preços ao entrar no modo duplicar (em background)
+  atualizarPrecosAtuais()
+    .then(() => recalcTudo())
+    .catch(err => console.error("Erro ao atualizar preços em onDuplicar:", err));
 }
 
 // MOSTRAR/OCULTAR botões corretamente em todos os modos
@@ -493,6 +584,10 @@ function toggleToolbarByMode() {
 function onEditar() {
   if (currentTabelaId) sessionStorage.setItem('TP_LAST_VIEW_ID', String(currentTabelaId));
   setMode(MODE.EDIT);
+  // Atualiza preços ao entrar no modo edição
+  atualizarPrecosAtuais()
+    .then(() => recalcTudo())
+    .catch(err => console.error("Erro ao atualizar preços em onEditar:", err));
 }
 
 // Atalhos
@@ -511,6 +606,7 @@ const fmtPct = (v) => (Number(v || 0)).toLocaleString('pt-BR', { minimumFraction
 function calcularLinha(item, fator, taxaCond, freteKg) {
   const valor = Number(item.valor || 0);
   const peso = Number(item.peso_liquido || 0);
+  const pesoBruto = Number(item.peso_bruto || 0);
 
   // 1) DESCONTO/FATOR → base líquida
   const descontoValor = valor * Number(fator || 0);
@@ -519,8 +615,9 @@ function calcularLinha(item, fator, taxaCond, freteKg) {
   // 2) Condição SOBRE o líquido
   const acrescimoCond = liquido * Number(taxaCond || 0);
 
-  // 3) Frete (continua por KG — só soma no total)
-  const freteValor = (Number(freteKg || 0) / 1000) * peso;
+  // 3) Frete (agora usa Peso Bruto se disponível, senão Liquido)
+  const pesoParaFrete = (pesoBruto > 0) ? pesoBruto : peso;
+  const freteValor = (Number(freteKg || 0) / 1000) * pesoParaFrete;
 
   // 4) Preço comercial sem impostos (líquido + condição)
   const precoBase = liquido + acrescimoCond;
@@ -736,6 +833,16 @@ function setupClienteAutocomplete() {
   }
 
   input.addEventListener('input', () => {
+    // 🧹 Limpa ID se digitar algo novo (assume novo/livre até selecionar)
+    const codEl = document.getElementById('codigo_cliente');
+    if (codEl && codEl.value) codEl.value = '';
+
+    const ramoEl = document.getElementById('ramo_juridico');
+    if (ramoEl) ramoEl.value = '';
+
+    window.isClienteLivreSelecionado = false; // Reset flag, rely on text presence
+    enforceIvaLockByCliente();
+
     clearTimeout(timer);
     timer = setTimeout(() => { doSearch(input.value); }, 250);
   });
@@ -746,8 +853,11 @@ function setupClienteAutocomplete() {
       e.preventDefault();
       if (items.length && idx >= 0) {
         selectItem(idx);
+      } else if (items.length) {
+        // Auto-select first item if list exists but nothing highlighted
+        selectItem(0);
       } else {
-        // aceita o que foi digitado
+        // aceita o que foi digitado (raw text)
         const val = (input.value || '').trim();
         if (!val) return;
         items = [{ __raw: true, nome: val }];
@@ -761,57 +871,61 @@ function setupClienteAutocomplete() {
     const el = e.target.closest('.suggest'); if (!el) return;
     selectItem(Number(el.dataset.i) || 0);
   });
-  input.addEventListener('blur', () => setTimeout(() => { box.innerHTML = ''; box.style.display = 'none'; }, 150));
+  input.addEventListener('blur', () => {
+    // --- AUTO-RECOVER on Blur ---
+    // Se o usuário saiu do campo e o código ficou vazio (porque editou o nome),
+    // tenta achar correspondência EXATA no que foi carregado/buscado para restaurar o código.
+    const codEl = document.getElementById('codigo_cliente');
+    if (codEl && !codEl.value && items.length > 0) {
+      const currentVal = (input.value || '').trim();
+      if (currentVal) {
+        // Procura match exato por NOME (case insensitive)
+        const matchIdx = items.findIndex(item =>
+          !item.__raw && (item.nome || '').toLowerCase() === currentVal.toLowerCase()
+        );
+
+        if (matchIdx >= 0) {
+          console.log("Auto-recovering client code for:", currentVal);
+          selectItem(matchIdx);
+        }
+      }
+    }
+
+    setTimeout(() => { box.innerHTML = ''; box.style.display = 'none'; }, 150);
+  });
 }
 
 // PATCH: bloqueio/controle do IVA_ST conforme cliente (livre x cadastrado)
 function enforceIvaLockByCliente() {
   const ivaChk = document.getElementById('iva_st_toggle');
   const codigo = (document.getElementById('codigo_cliente')?.value || '').trim();
+  const nome = (document.getElementById('cliente_nome')?.value || '').trim();
+
   if (!ivaChk) return;
 
-  if (codigo) {                         // cliente cadastrado
-    ivaChk.disabled = true;            // 🔒 travado
-    // não muda o checked aqui (pode já ter vindo do cadastro)
+  // Regra Ajustada:
+  // - Tem Código? => Travado (Vem do cadastro, e usamos a pref do cliente).
+  // - Não tem Código mas tem Nome? => Liberado (Cliente avulso).
+  // - Sem Nome? => Travado (ainda não informou cliente).
+
+  if (codigo) {
+    ivaChk.disabled = true;
+  } else if (nome) {
+    ivaChk.disabled = false;
   } else {
-    // sem código: só habilita se já selecionou “Usar: ...”
-    ivaChk.disabled = !window.isClienteLivreSelecionado;
+    // Nada digitado
+    ivaChk.disabled = true;
+    ivaChk.checked = false;
   }
+
   window.ivaStAtivo = !!ivaChk.checked;
 }
 
 
 
 // --- Persistência compacta ---
-async function salvarTabelaPreco(payload) {
-  const isEdicao = (currentMode === MODE.EDIT) && !!currentTabelaId;
-
-  const url = isEdicao
-    ? `${API_BASE}/tabela_preco/${encodeURIComponent(currentTabelaId)}`
-    : `${API_BASE}/tabela_preco/salvar`;
-
-  const method = isEdicao ? 'PUT' : 'POST';
-
-  const resp = await fetch(url, {
-    method,
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(payload),
-  });
-
-  const raw = await resp.text();
-  let data = null; try { data = JSON.parse(raw); } catch { }
-
-  if (!resp.ok) {
-    // trata 422 bonitinho, se vier
-    try {
-      const j = JSON.parse(raw);
-      if (j?.detail) throw new Error(typeof j.detail === 'string' ? j.detail
-        : j.detail.map(d => `• ${d.loc?.join('.')}: ${d.msg}`).join('\n'));
-    } catch { }
-    throw new Error(`Falha ao salvar (${resp.status}). ${raw}`);
-  }
-  return data;
-}
+// Função de salvar removida daqui (duplicada).
+// Veja implementação unificada no final do arquivo.
 
 
 function option(text, value) {
@@ -825,14 +939,7 @@ async function carregarCondicoes() {
   sel.appendChild(option('Selecione…', ''));
   const r = await fetch(`${API_BASE}/tabela_preco/condicoes_pagamento`);
   const data = await r.json();
-  data.forEach(c => {
-    mapaCondicoes[c.codigo] = Number(c.taxa_condicao) || 0;
-    // Se código e descrição forem iguais (ex "Padrão"), mostra só um. Se não, mostra "COD - Desc"
-    const texto = (c.codigo && c.descricao && c.codigo !== c.descricao)
-      ? `${c.codigo} - ${c.descricao}`
-      : (c.descricao || c.codigo);
-    sel.appendChild(option(texto, c.codigo));
-  });
+  data.forEach(c => { mapaCondicoes[c.codigo] = Number(c.taxa_condicao) || 0; sel.appendChild(option(`${c.codigo} - ${c.descricao}`, c.codigo)); });
   document.getElementById('hint-condicao').textContent = 'Pronto.';
   atualizarPillTaxa();
 }
@@ -897,8 +1004,20 @@ async function carregarItens() {
       const t = await r.json();
       document.getElementById('nome_tabela').value = t.nome_tabela || '';
       document.getElementById('cliente_nome').value = t.cliente_nome || t.cliente || '';
-      document.getElementById('codigo_cliente').value = t.codigo_cliente || '';
       document.getElementById('ramo_juridico').value = t.ramo_juridico || '';
+
+      // --- ROBUST SAFETY NET (GLOBAL VAULT) ---
+      window.__clientState = {
+        originalName: (t.cliente_nome || t.cliente || '').trim(),
+        originalCode: (t.codigo_cliente || '').trim()
+      };
+      // Also update dataset for backwards compatibility/inspection
+      const elNome = document.getElementById('cliente_nome');
+      if (elNome) {
+        elNome.dataset.originalName = window.__clientState.originalName;
+        elNome.dataset.originalCode = window.__clientState.originalCode;
+      }
+      // --- END VAULT ---
 
       // NOVO: aplicar flag de ST que veio do backend
       const ivaChk = document.getElementById('iva_st_toggle');
@@ -926,26 +1045,12 @@ async function carregarItens() {
       const first = (Array.isArray(t.produtos) && t.produtos.length) ? t.produtos[0] : null;
       const freteInput = document.getElementById('frete_kg');
       const planoSel = document.getElementById('plano_pagamento');
-
       if (planoSel) {
         const planoVal = t.codigo_plano_pagamento ?? first?.codigo_plano_pagamento ?? '';
         if (planoVal) {
-          // Tenta achar pelo value OU pelo text
-          const valStr = String(planoVal).trim();
-          let opt = Array.from(planoSel.options)
-            .find(o => (o.textContent || '').trim() === valStr || o.value === valStr);
-
-          // Se não achou na lista oficial, cria uma option "forçada" para exibir
-          // exatamente o que veio do banco (ex: mudou no ERP mas a tabela antiga preserva).
-          if (!opt) {
-            opt = document.createElement('option');
-            opt.value = valStr;
-            opt.textContent = valStr; // Mostra o valor cru do banco, como pedido
-            planoSel.appendChild(opt);
-            // Opcional: registrar no mapa para cálculos, se souber a taxa.
-            // Como não sabemos a taxa nova, assume 0 ou tenta extrair se o formato for "Taxa...".
-          }
-          planoSel.value = opt.value;
+          const opt = Array.from(planoSel.options)
+            .find(o => (o.textContent || '').trim() === String(planoVal).trim() || o.value === String(planoVal));
+          if (opt) planoSel.value = opt.value;
         } else {
           planoSel.value = '';
         }
@@ -987,7 +1092,8 @@ async function carregarItens() {
         // guarda para reaproveitar na hora do POST
         __descricao_fator_label: p.descricao_fator_comissao || null,
         __plano_pagto_label: p.codigo_plano_pagamento || null, // já vem "COD - desc" às vezes
-        fornecedor: t.fornecedor || ''
+        fornecedor: t.fornecedor || '',
+        status_atual: p.status_atual ?? 'ATIVO' // <--- Mapeia status
       }));
 
       itens = itens.map(p => ({
@@ -996,12 +1102,20 @@ async function carregarItens() {
 
       }));
       renderTabela();
-      if (typeof recalcTudo === 'function') {
-        await Promise.resolve(recalcTudo()).catch(() => { });
-      }
+      // Removido bloqueio do recálculo para renderização instantânea
+      // if (typeof recalcTudo === 'function') {
+      //   await Promise.resolve(recalcTudo()).catch(() => { });
+      // }
 
       // Atualiza a pill e recálculo
       atualizarPillTaxa();
+
+      // Checa por inativos
+      const inativos = itens.filter(i => i.status_atual && i.status_atual !== 'ATIVO');
+      if (inativos.length > 0) {
+        // setTimeout para não bloquear a renderização inicial
+        setTimeout(() => alert(`⚠️ ATENÇÃO: Existem ${inativos.length} produtos com status INATIVO nesta tabela.\nPor favor, remova-os.`), 500);
+      }
 
 
       // >>> NOVO: fator global (se todos iguais)
@@ -1053,6 +1167,7 @@ async function carregarItens() {
   itens = itens.map(p => ({ ...p, ipi: Number(p.ipi ?? 0), iva_st: Number(p.iva_st ?? 0) }));
   itens = itens.map(p => ({
     ...p, peso_liquido: Number(p.peso_liquido ?? p.peso ?? p.peso_kg ?? p.pesoLiquido ?? 0),
+    peso_bruto: Number(p.peso_bruto ?? 0),
     tipo: p.tipo ?? p.grupo ?? p.departamento ?? null
   }));
   // (opcional, mas recomendado) já limpa o buffer legado para não reaplicar depois
@@ -1070,7 +1185,16 @@ function criarLinha(item, idx) {
   tdSel.appendChild(chk);
 
   const tdCod = document.createElement('td'); tdCod.textContent = item.codigo_tabela || '';
-  const tdDesc = document.createElement('td'); tdDesc.textContent = item.descricao || '';
+  const tdDesc = document.createElement('td');
+
+  if (item.status_atual && item.status_atual !== 'ATIVO') {
+    tr.classList.add('row-inactive');
+    tdDesc.innerHTML = `<span class="badge-inactive">INATIVO</span> ${item.descricao || ''}`;
+    tr.title = `Produto com status: ${item.status_atual}`;
+  } else {
+    tdDesc.textContent = item.descricao || '';
+  }
+
   const tdEmb = document.createElement('td'); tdEmb.textContent = item.embalagem || '';
   const tdPeso = document.createElement('td'); tdPeso.className = 'num'; tdPeso.textContent = fmt4(item.peso_liquido || 0);
   const tdValor = document.createElement('td'); tdValor.className = 'num'; tdValor.textContent = fmtMoney(item.valor || 0);
@@ -1137,6 +1261,8 @@ function criarLinha(item, idx) {
 
   tdPercent.appendChild(selPercent);
 
+  const tdDescAplic = document.createElement('td'); tdDescAplic.className = 'num'; tdDescAplic.textContent = '0,00';
+
   // Condição por linha (código) — NOVO
   const tdCondCod = document.createElement('td');
   const selCond = document.createElement('select');
@@ -1191,21 +1317,12 @@ function criarLinha(item, idx) {
   const inpMarkup = document.createElement('input');
   inpMarkup.type = 'number'; inpMarkup.step = '0.01'; inpMarkup.className = 'field-markup num';
   // Use existing item markup or fallback to client default
-  // Use existing item markup or fallback to client default or Header default
-  // Priority: Item > Header Input > Global Default
-  const headerMarkup = parseFloat(document.getElementById('markup_global')?.value?.replace(',', '.') || 0);
-
-  let mVal = 0;
-  if (item.markup != null) {
-    mVal = Number(item.markup);
-  } else if (headerMarkup > 0) {
-    mVal = headerMarkup;
-  } else {
-    mVal = (typeof currentClientMarkup !== 'undefined') ? Number(currentClientMarkup) : 0;
-  }
-
+  const mVal = (item.markup != null) ? Number(item.markup) : currentClientMarkup;
   item.markup = mVal; // Sync item
-  inpMarkup.value = mVal.toFixed(2);
+  inpMarkup.value = mVal.toFixed(2); // Format for display? Or raw? input type=number needs dot. 
+  // Wait, local String uses comma? step 0.01. Input number usually requires dot.
+  // fmtMoney uses comma.
+  // Let's use clean input
   inpMarkup.style.width = '70px';
   inpMarkup.addEventListener('change', () => {
     let v = parseFloat(inpMarkup.value.replace(',', '.')); // Fix potential comma issue
@@ -1226,14 +1343,15 @@ function criarLinha(item, idx) {
   tdSemFreteMarkup.textContent = '0,00';
 
   const tdFrete = document.createElement('td'); tdFrete.className = 'num'; tdFrete.textContent = '0,00';
-  const tdDescAplic = document.createElement('td'); tdDescAplic.className = 'num'; tdDescAplic.textContent = '0,00';
 
-  // IPI e IVA_ST (%) — NOVOS
-  const tdIpiR$ = document.createElement('td'); tdIpiR$.className = 'num col-ipi'; tdIpiR$.textContent = '0,00';
-  const tdBaseStR$ = document.createElement('td'); tdBaseStR$.className = 'num col-base-st'; tdBaseStR$.textContent = '0,00';
-  const tdIcmsProp$ = document.createElement('td'); tdIcmsProp$.className = 'num col-icms-proprio'; tdIcmsProp$.textContent = '0,00';
-  const tdIcmsCheio$ = document.createElement('td'); tdIcmsCheio$.className = 'num col-icms-st-cheio'; tdIcmsCheio$.textContent = '0,00';
+
+  // IPI e IVA_ST (%) — Inicializar com o valor salvo no item, se houver
+  const tdIpiR$ = document.createElement('td'); tdIpiR$.className = 'num col-ipi'; tdIpiR$.textContent = fmtMoney(item.ipi || 0);
+  const tdBaseStR$ = document.createElement('td'); tdBaseStR$.className = 'num col-base-st'; tdBaseStR$.textContent = fmtMoney(item.iva_st || 0);
+  const tdIcmsProp$ = document.createElement('td'); tdIcmsProp$.className = 'num col-icms-proprio'; tdIcmsProp$.textContent = fmtMoney(item.icms_st || 0); // Nota: icms_st aqui mapeia para col-icms-proprio no backend? Revisar se necessário, mantendo compatibilidade
+  const tdIcmsCheio$ = document.createElement('td'); tdIcmsCheio$.className = 'num col-icms-st-cheio'; tdIcmsCheio$.textContent = '0,00'; // Cheio/Reter geralmente não salvos individualmente no item simples, recalculados
   const tdIcmsReter$ = document.createElement('td'); tdIcmsReter$.className = 'num col-icms-st-reter'; tdIcmsReter$.textContent = '0,00';
+
 
   const tdGrupo = document.createElement('td'); tdGrupo.textContent = [item.grupo, item.departamento].filter(Boolean).join(' / ');
   const tdFinal = document.createElement('td'); tdFinal.className = 'num col-total'; tdFinal.textContent = fmtMoney(item.valor || 0); tr.appendChild(tdFinal);
@@ -1296,7 +1414,9 @@ function buildFiscalInputsFromRow(tr) {
   // Item básico
   const produtoId = (tr.querySelector('td:nth-child(2)')?.textContent || '').trim();
   const tipo = String(item?.tipo || item?.grupo || item?.departamento || '').trim();
-  const peso_kg = Number(item?.peso_liquido ?? item?.peso ?? item?.peso_kg ?? item?.pesoLiquido ?? 0);
+  const peso_bruto = Number(item?.peso_bruto || 0);
+  const peso_liq = Number(item?.peso_liquido ?? item?.peso ?? item?.peso_kg ?? item?.pesoLiquido ?? 0);
+  const peso_kg = (peso_bruto > 0) ? peso_bruto : peso_liq;
 
   // Preço base (espelha sua lógica da tela): valor + acrescimo(condição) - desconto(fator)
   const valor = Number(item?.valor || 0);
@@ -1331,59 +1451,10 @@ function buildFiscalInputsFromRow(tr) {
   };
 }
 
-
-// === Controle de Modo e Toolbar ===
-function setMode(mode) {
-  currentMode = mode;
-  document.body.dataset.mode = mode;
-  toggleToolbarByMode();
-  const isView = (mode === MODE.VIEW);
-  setFormDisabled(isView);
-}
-
-function toggleToolbarByMode() {
-  const isView = (currentMode === MODE.VIEW);
-
-  // Desktop
-  document.getElementById('btn-buscar')?.classList.toggle('hidden', isView);
-  document.getElementById('btn-remover-selecionados')?.classList.toggle('hidden', isView);
-  document.getElementById('btn-salvar')?.classList.toggle('hidden', isView);
-
-  document.getElementById('btn-editar')?.classList.toggle('hidden', !isView);
-  document.getElementById('btn-duplicar')?.classList.toggle('hidden', !isView);
-  document.getElementById('btn-cancelar')?.classList.toggle('hidden', isView);
-
-  // Botão Listar sempre visível
-  document.getElementById('btn-listar')?.classList.remove('hidden');
-
-  // Mobile Botões
-  if (typeof setupMobileButtons === 'function') setupMobileButtons();
-}
-
-function setFormDisabled(disabled) {
-  // Cabeçalho
-  const ids = ['nome_tabela', 'cliente_nome', 'iva_st_toggle', 'plano_pagamento', 'desconto_global', 'markup_global', 'frete_kg'];
-  ids.forEach(id => {
-    const el = document.getElementById(id);
-    if (el) el.disabled = disabled;
-  });
-
-  // Grade Desktop
-  const inputs = document.querySelectorAll('#tbody-itens input, #tbody-itens select');
-  inputs.forEach(el => el.disabled = disabled);
-
-  // Mobile Cards (Recria para aplicar estado)
-  // Evita loop infinito se renderMobileCards chamar algo que chame isso, mas renderMobileCards é "safe"
-  if (typeof renderMobileCards === 'function') renderMobileCards();
-}
-
 function renderTabela() {
   const tbody = document.getElementById('tbody-itens');
-  if (tbody) {
-    tbody.innerHTML = '';
-    itens.forEach((it, i) => tbody.appendChild(criarLinha(it, i)));
-  }
-
+  tbody.innerHTML = '';
+  itens.forEach((it, i) => tbody.appendChild(criarLinha(it, i)));
   if (typeof refreshToolbarEnablement === 'function') refreshToolbarEnablement();
 
   // === Inferir cabeçalho a partir da grade (uniformidade) ===
@@ -1407,110 +1478,7 @@ function renderTabela() {
       atualizarPillTaxa?.();
     }
   } catch { }
-
-
-  // ✅ Mobile Render Hook
-  if (typeof renderMobileCards === 'function') renderMobileCards();
-
-  // ✅ Garante que se estiver em VIEW, as novas linhas nasçam desabilitadas
-  if (currentMode === MODE.VIEW) {
-    const inputs = document.querySelectorAll('#tbody-itens input, #tbody-itens select');
-    inputs.forEach(el => el.disabled = true);
-  }
 }
-
-// === Mobile Helpers ===
-
-window.toggleCardDetails = function (index) {
-  const el = document.getElementById(`card-details-${index}`);
-  if (el) el.classList.toggle('hidden');
-};
-
-window.updateItemField = async function (index, field, value) {
-  if (!itens[index]) return;
-  const item = itens[index];
-  const tr = document.querySelector(`#tbody-itens tr[data-idx="${index}"]`);
-
-  // --- Fator % ---
-  if (field === 'fator_code' || field === 'fator') {
-    const code = value || '';
-    const frac = (Object.prototype.hasOwnProperty.call(mapaDescontos, code) ? Number(mapaDescontos[code]) : 0);
-
-    // Atualiza Item
-    item.fator_comissao = (!isNaN(frac) ? frac : 0);
-    item.__fator_codigo = code;
-    item.__overridePercent = true;
-
-    // Sincroniza Desktop (se existir)
-    if (tr) {
-      const sel = tr.querySelector('td:nth-child(8) select');
-      if (sel) sel.value = code;
-    }
-  }
-
-  // --- Condição (Cond. Pagto) ---
-  if (field === 'cond_code') {
-    const code = value || '';
-
-    // Atualiza Item (Mantendo "Code - Desc" se possível, ou só Code)
-    // Desktop listener faz: codCondLinha | selCond.options...
-    // Aqui vamos salvar o código e deixar o render ou o save resolverem o label completo
-    item.plano_pagamento = code;
-
-    // Sincroniza Desktop
-    if (tr) {
-      const sel = tr.querySelector('td:nth-child(10) select');
-      if (sel) sel.value = code;
-    }
-  }
-
-  // --- Markup ---
-  if (field === 'markup') {
-    item.markup = Number(value);
-  }
-
-  // Recalcula e Re-renderiza Mobile
-  if (tr) {
-    await recalcLinha(tr);
-  } else {
-    // Fallback sem TR (recalcTudo é mais garantido mas lento, ou tentar simular)
-    // Mas como renderMobileCards depende de tr... vamos chamar recalcTudo
-    await recalcTudo();
-  }
-  renderMobileCards();
-
-  // Dispara eventos no desktop para Side-Effects (Header Sync, etc)
-  if (tr) {
-    setTimeout(() => {
-      if (field.includes('fator') || field === 'cond_code') {
-        const nth = (field === 'cond_code') ? 10 : 8;
-        const sel = tr.querySelector(`td:nth-child(${nth}) select`);
-        if (sel) sel.dispatchEvent(new Event('change', { bubbles: true }));
-      }
-    }, 50);
-  }
-};
-
-// Event Listeners for Mobile
-document.addEventListener('DOMContentLoaded', () => {
-  document.getElementById('toggle-header')?.addEventListener('click', toggleHeader);
-
-  document.getElementById('btn-mobile-add')?.addEventListener('click', () => {
-    document.getElementById('btn-buscar')?.click();
-  });
-
-  document.getElementById('btn-mobile-save')?.addEventListener('click', () => {
-    document.getElementById('btn-salvar')?.click();
-  });
-
-  document.getElementById('btn-mobile-apply-cond')?.addEventListener('click', () => {
-    document.getElementById('btn-aplicar-condicao-todos')?.click();
-  });
-
-  document.getElementById('btn-mobile-apply-desc')?.addEventListener('click', () => {
-    document.getElementById('btn-aplicar-todos')?.click();
-  });
-});
 
 async function recalcLinha(tr) {
 
@@ -1522,14 +1490,25 @@ async function recalcLinha(tr) {
   const myId = String(nextId);
 
   const selPct = tr.querySelector('td:nth-child(8) select');
-  const codePct = selPct ? (selPct.value || '') : '';
-  const fator = (mapaDescontos[codePct] != null) ? Number(mapaDescontos[codePct]) : 0;
+  let codePct = selPct ? (selPct.value || '') : '';
+
+  // Fallback: se DOM vazio, tenta pegar do item
+  if (!codePct && item.__fator_codigo) codePct = item.__fator_codigo;
+
+  let fator = (mapaDescontos[codePct] != null) ? Number(mapaDescontos[codePct]) : 0;
+  if (fator === 0 && item.fator_comissao) fator = Number(item.fator_comissao);
 
   const freteKg = Number(document.getElementById('frete_kg').value || 0);
 
   // Condição por linha → taxa
   const selCond = tr.querySelector('td:nth-child(10) select');
-  const codCond = selCond ? selCond.value : '';
+  let codCond = selCond ? selCond.value : '';
+
+  // Fallback
+  if (!codCond && item.plano_pagamento) {
+    codCond = String(item.plano_pagamento).split(' - ')[0].trim();
+  }
+
   const taxaCond = mapaCondicoes[codCond] ?? 0;
 
   // base comercial (sem imposto)
@@ -1540,21 +1519,6 @@ async function recalcLinha(tr) {
   tr.querySelector('td:nth-child(9)').textContent = fmtMoney(descontoValor); // Desc. aplicado
   tr.querySelector('td:nth-child(11)').textContent = fmtMoney(acrescimoCond); // Cond. (R$)
   tr.querySelector('td:nth-child(12)').textContent = fmtMoney(freteValor);    // Frete (R$)
-
-  // ✅ SALVA TOTAIS COMERCIAIS (FALLBACK) 
-  // Garante que o item tenha valores mesmo que Fiscal falhe ou demore
-  // Total Comercial Base = Valor - Desconto + Acrescimo + Frete
-  // Nota: O Fiscal vai sobrescrever isso com precisão de impostos depois.
-  const totalComercialBase = liquido + acrescimoCond + freteValor;
-  item._freteValor = Number(freteValor || 0);
-  item._totalComercial = Number(totalComercialBase || 0);
-  item.total_sem_frete = Math.max(0, item._totalComercial - item._freteValor);
-
-  // Markup Base
-  const mkPctBase = Number(item.markup || 0);
-  const factorBase = 1 + (mkPctBase / 100);
-  item.valor_final_markup = Number((totalComercialBase * factorBase).toFixed(2));
-  item.valor_s_frete_markup = Number((item.total_sem_frete * factorBase).toFixed(2));
 
 
 
@@ -1634,27 +1598,174 @@ async function recalcLinha(tr) {
 }
 
 
+async function previewFiscalBatch(payload) {
+  const r = await fetch(`${API_BASE}/fiscal/preview-batch`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(payload),
+  });
+  if (!r.ok) {
+    const txt = await r.text().catch(() => '');
+    throw new Error(txt || 'Falha ao calcular preview batch');
+  }
+  return r.json();
+}
+
+function applyFiscalToRow(tr, f) {
+  const idx = Number(tr.dataset.idx);
+  const item = itens[idx]; if (!item) return;
+
+  item.ipi = Number((f.ipi ?? 0).toFixed(2));
+  item.iva_st = Number((f.base_st ?? 0).toFixed(2));
+  item.icms_st = Number((f.icms_proprio ?? 0).toFixed(2));
+
+  const setCell = (sel, val) => {
+    const el = tr.querySelector(sel);
+    if (el) el.textContent = fmtMoney(val);
+  };
+
+  setCell('.col-ipi', f.ipi);
+  setCell('.col-base-st', f.base_st);
+  setCell('.col-icms-proprio', f.icms_proprio);
+  setCell('.col-icms-st-cheio', f.icms_st_cheio);
+  setCell('.col-icms-st-reter', f.icms_st_reter);
+  setCell('.col-total', f.total_linha_com_st);
+
+  const totalFiscal = Number(f.total_linha_com_st ?? f.total_linha ?? 0);
+  const totalComercial = totalFiscal;
+
+  // Recalculo reverso do sem frete
+  const freteValor = item._freteValor || 0; // Salvo no passo comercial
+  const totalSemFrete = totalComercial - Number(freteValor || 0);
+
+  const tdSemFrete = tr.querySelector('.col-total-sem-frete');
+  if (tdSemFrete) tdSemFrete.textContent = fmtMoney(totalSemFrete);
+
+  // --- CÁLCULO DAS COLUNAS DE MARKUP ---
+  const mkPct = Number(item.markup || 0);
+  const factor = 1 + (mkPct / 100);
+
+  const valFinMk = Number((totalComercial * factor).toFixed(2));
+  const valSemMk = Number((totalSemFrete * factor).toFixed(2));
+
+  item.valor_final_markup = valFinMk;
+  item.valor_s_frete_markup = valSemMk;
+
+  const tdsMk = tr.querySelectorAll('.col-mk-derived');
+  if (tdsMk.length === 2) {
+    tdsMk[0].textContent = fmtMoney(valFinMk);
+    tdsMk[1].textContent = fmtMoney(valSemMk);
+  }
+
+  setCell('.col-total', totalComercial);
+  item._totalComercial = Number(totalComercial || 0);
+  item.total_sem_frete = Math.max(0, item._totalComercial - freteValor);
+
+  const td = tr.querySelector('.col-total-sem-frete');
+  if (td) td.textContent = fmtMoney(item.total_sem_frete || 0);
+
+  // Sync missing fields
+  item.valor_liquido = f.total_linha; // Compatibilidade
+  item._motivos_iva = f.motivos_iva_st;
+}
+
 async function recalcTudo() {
   if (__recalcRunning) {
     __recalcPending = true;
     return;
   }
   __recalcRunning = true;
+  document.body.style.cursor = 'wait'; // Feedback visual
 
   try {
     do {
       __recalcPending = false;
       const rows = Array.from(document.querySelectorAll('#tbody-itens tr'));
 
-      // ✅ PARALLEL EXECUTION (Performance Fix)
-      // Dispara todos os requests de uma vez
-      const promises = rows.map(tr => recalcLinha(tr));
-      await Promise.all(promises);
+      // 1. Coletar payloads (Commercial Calc)
+      const batchItems = [];
+      const rowMap = []; // index -> { tr, item }
+
+      for (const tr of rows) {
+        // Ignora linhas que já foram removidas do DOM (safety check)
+        if (!tr.isConnected) continue;
+
+        const idx = Number(tr.dataset.idx);
+        const item = itens[idx]; if (!item) continue;
+
+        // --- Lógica Comercial (Copied/Adapted from recalcLinha) ---
+        const selPct = tr.querySelector('td:nth-child(8) select');
+        let codePct = selPct ? (selPct.value || '') : '';
+        if (!codePct && item.__fator_codigo) codePct = item.__fator_codigo;
+        let fator = (mapaDescontos[codePct] != null) ? Number(mapaDescontos[codePct]) : 0;
+        if (fator === 0 && item.fator_comissao) fator = Number(item.fator_comissao);
+
+        const freteKg = Number(document.getElementById('frete_kg').value || 0);
+        const selCond = tr.querySelector('td:nth-child(10) select');
+        let codCond = selCond ? selCond.value : '';
+        if (!codCond && item.plano_pagamento) {
+          codCond = String(item.plano_pagamento).split(' - ')[0].trim();
+        }
+        const taxaCond = mapaCondicoes[codCond] ?? 0;
+
+        const { acrescimoCond, freteValor, descontoValor, precoBase } =
+          calcularLinha(item, fator, taxaCond, freteKg);
+
+        // Atualiza DOM Comercial
+        const setTxt = (nth, v) => { const cel = tr.querySelector(`td:nth-child(${nth})`); if (cel) cel.textContent = fmtMoney(v); };
+        setTxt(9, descontoValor);
+        setTxt(11, acrescimoCond);
+        setTxt(12, freteValor);
+
+        // Build Payload
+        const built = buildFiscalInputsFromRow(tr);
+        built.payload.preco_unit = precoBase;
+        built.payload.frete_linha = freteValor;
+
+        // Save state for update step
+        item._freteValor = Number(freteValor || 0);
+
+        batchItems.push(built.payload);
+        rowMap.push(tr);
+      }
+
+      if (batchItems.length === 0) continue;
+
+      // 2. Batch Request
+      const codigo_cliente = (document.getElementById('codigo_cliente')?.value || '').trim() || null;
+      const ramoJuridico = (document.getElementById('ramo_juridico')?.value || '').trim() || null;
+      const forcarST = !!document.getElementById('iva_st_toggle')?.checked;
+
+      const batchPayload = {
+        cliente_codigo: codigo_cliente,
+        forcar_iva_st: forcarST,
+        ramo_juridico: ramoJuridico,
+        itens: batchItems
+      };
+
+      try {
+        const resp = await previewFiscalBatch(batchPayload);
+        const results = resp.results || [];
+
+        // 3. Apply Results
+        results.forEach((res, i) => {
+          const tr = rowMap[i];
+          // Só aplica se a linha ainda estiver conectada ao DOM (evita erro em deleção rápida)
+          if (tr && tr.isConnected) {
+            applyFiscalToRow(tr, res);
+          }
+        });
+
+      } catch (err) {
+        console.error("Batch recalc failed:", err);
+        // Feedback para o user não salvar dados incompletos
+        alert("Erro de conexão ao calcular impostos. Verifique sua internet e tente novamente.");
+      }
 
     } while (__recalcPending);
   } finally {
     __recalcRunning = false;
-    if (typeof renderMobileCards === 'function') renderMobileCards();
+    document.body.style.cursor = 'default';
   }
 }
 
@@ -1674,6 +1785,7 @@ async function aplicarFatorGlobal() {
     if (!sel) return;
     sel.value = code;
     // 🔑 dispara o mesmo fluxo do usuário (atualiza itens[idx] e recalcula)
+    console.log(`Aplicando Fator Global: ${code} na linha com select`, sel);
     sel.dispatchEvent(new Event('change', { bubbles: true }));
   });
   await Promise.resolve(recalcTudo()).catch(() => { });
@@ -1714,6 +1826,11 @@ function inferirFornecedorDaGrade() {
 }
 
 async function salvarTabela() {
+  if (__recalcRunning || __recalcPending) {
+    alert("Aguarde o término do cálculo de impostos para salvar.");
+    return;
+  }
+
   const linhas = document.querySelectorAll('#tbody-itens tr');
   if (linhas.length === 0) {
     alert('Adicione pelo menos 1 produto à tabela antes de salvar.');
@@ -1764,6 +1881,7 @@ async function salvarTabela() {
         descricao_produto: item.descricao,
         embalagem: item.embalagem || '',
         peso_liquido: Number(item.peso_liquido ?? 0),
+        peso_bruto: Number(item.peso_bruto ?? 0),
 
         valor_produto: Number(item.valor || 0),
         comissao_aplicada: Number(descontoValor.toFixed(2)),
@@ -1802,11 +1920,43 @@ async function salvarTabela() {
   console.table(produtos.map(p => ({ id_linha: p.id_linha, codigo: p.codigo_produto_supra, valor: p.valor_produto, plano: p.codigo_plano_pagamento })));
 
   const fornecedorHeader = inferirFornecedorDaGrade();
-  const codigo_cliente = (document.getElementById('codigo_cliente')?.value || '').trim() || null;
+  let codigo_cliente = (document.getElementById('codigo_cliente')?.value || '').trim() || null;
+
+  // --- SAFETY NET CHECK (GLOBAL VAULT) ---
+  if (!codigo_cliente && window.__clientState && window.__clientState.originalCode) {
+    const elNome = document.getElementById('cliente_nome');
+    const curName = (elNome?.value || '').trim();
+
+    // Se o nome atual é igual ao original (guardado no cofre), restaura o código
+    if (curName && curName === window.__clientState.originalName) {
+      console.warn("Global Vault: Restaurando código do cliente perdido na edição.");
+      codigo_cliente = window.__clientState.originalCode;
+
+      // Visual feedback
+      const elCode = document.getElementById('codigo_cliente');
+      if (elCode) elCode.value = codigo_cliente;
+    }
+  }
+
   const calcula_st = !!document.getElementById('iva_st_toggle')?.checked;
   // Se codigo_cliente for nulo, mande null (não grave "Não cadastrado" string)
   const payload = { nome_tabela, cliente, codigo_cliente, ramo_juridico, fornecedor: fornecedorHeader, calcula_st, produtos };
+
+  // --- SAFETY CHECK FOR EMAIL ---
+  // Se tem nome mas não tem código, o e-mail não vai funcionar.
+  if (cliente && !codigo_cliente) {
+    const confirmMsg = "⚠️ ATENÇÃO:\n\n" +
+      "O cliente informado NÃO foi vinculado ao cadastro (está sem código).\n" +
+      "Isso significa que o sistema NÃO conseguirá enviar o e-mail de confirmação automaticamente.\n\n" +
+      "Deseja salvar mesmo assim?";
+    if (!confirm(confirmMsg)) {
+      // Usuário cancelou para corrigir
+      document.getElementById('cliente_nome')?.focus();
+      return;
+    }
+  }
   try {
+    console.log("Payload enviando para salvarTabelaPreco:", JSON.stringify(payload, null, 2));
     const resp = await salvarTabelaPreco(payload);
     return resp;
   } catch (e) {
@@ -1841,6 +1991,7 @@ function refreshToolbarEnablement() {
   if (btnRemover) btnRemover.disabled = !algumaMarcada;
 }
 function limparFormularioCabecalho() {
+  clearFullSnapshot();
   // Campos principais
   document.getElementById('nome_tabela').value = '';
   document.getElementById('cliente_nome').value = '';
@@ -1857,6 +2008,9 @@ function limparFormularioCabecalho() {
   if (descGlobal) descGlobal.value = '';
 
   // Pill de taxa
+  const mk = document.getElementById('markup_global');
+  if (mk) mk.value = '';
+
   const pill = document.getElementById('pill-taxa');
   if (pill) pill.textContent = '—';
 
@@ -1891,46 +2045,7 @@ function getIdFromUrl() {
   }
 }
 
-// Helper para mapear backend -> frontend (evita duplicidade e perda de dados)
-function mapBackendItemToFrontend(p, t) {
-  const base = {
-    id_linha: p.id_linha ?? p.idLinha ?? null,
-    codigo_tabela: p.codigo_produto_supra ?? p.codigo_tabela ?? '',
-    descricao: p.descricao_produto ?? p.descricao ?? '',
-    embalagem: p.embalagem ?? '',
-    peso_liquido: Number(p.peso_liquido ?? 0),
-    valor: Number(p.valor_produto ?? p.valor ?? 0),
-
-    desconto: Number(p.comissao_aplicada ?? 0),
-    acrescimo: Number(p.ajuste_pagamento ?? 0),
-    plano_pagamento: p.codigo_plano_pagamento ?? p.plano_pagamento ?? null,
-    frete_kg: Number(p.frete_kg ?? 0),
-    ipi: Number(p.ipi ?? 0),
-    icms_st: Number(p.icms_st ?? 0),
-    iva_st: Number(p.iva_st ?? 0),
-    grupo: p.grupo ?? null,
-    departamento: p.departamento ?? null,
-
-    total_sem_frete: Number(p.valor_s_frete ?? p.total_sem_frete ?? 0),
-
-    markup: Number(p.markup ?? 0),
-    valor_final_markup: Number(p.valor_final_markup ?? 0),
-    valor_s_frete_markup: Number(p.valor_s_frete_markup ?? 0),
-
-    __descricao_fator_label: p.descricao_fator_comissao || null,
-    __plano_pagto_label: p.codigo_plano_pagamento || null,
-    fornecedor: (t && t.fornecedor) || ''
-  };
-
-  // Ajustes finais
-  base.peso_liquido = Number(base.peso_liquido ?? p.peso ?? p.peso_kg ?? p.pesoLiquido ?? 0);
-  base.tipo = p.tipo ?? p.grupo ?? p.departamento ?? null;
-
-  return base;
-}
-
 // CANCELAR — EDIT->VIEW(mesma) | DUP->VIEW(origem) | VIEW->NEW(limpo) | NEW->NEW(limpo)
-
 async function onCancelar(e) {
   if (e) e.preventDefault?.();
 
@@ -1956,30 +2071,6 @@ async function onCancelar(e) {
     if (typeof setFormDisabled === 'function') setFormDisabled(true);
     if (typeof toggleToolbarByMode === 'function') toggleToolbarByMode();
     if (typeof refreshToolbarEnablement === 'function') refreshToolbarEnablement();
-
-    // ✅ REVERT CHANGES: Recarrega dados originais do backend
-    if (currentTabelaId) {
-      try {
-        // Reutiliza lógica de carregarItens/carregarTabela
-        // Mas como carregarItens pega do URL ou currentTabelaId, podemos chamar init ou parte dele.
-        // Simplificação: reload via fetch direto para garantir reset visual
-        const r = await fetch(`${API_BASE}/tabela_preco/${encodeURIComponent(currentTabelaId)}`);
-        if (r.ok) {
-          const t = await r.json();
-          // Restaura cabeçalho
-          if (document.getElementById('nome_tabela')) document.getElementById('nome_tabela').value = t.nome_tabela || '';
-          if (document.getElementById('cliente_nome')) document.getElementById('cliente_nome').value = t.cliente_nome || t.cliente || '';
-          if (document.getElementById('codigo_cliente')) document.getElementById('codigo_cliente').value = t.codigo_cliente || '';
-          // Restaura itens
-          // Restaura itens usando o helper
-          itens = Array.isArray(t.produtos) ? t.produtos.map(p => mapBackendItemToFrontend(p, t)) : [];
-
-          renderTabela();
-          recalcTudo(); // recalcula novos valores originais
-        }
-      } catch (e) { console.warn('Erro ao reverter alterações:', e); }
-    }
-
     sessionStorage.removeItem('TP_LAST_VIEW_ID');
     return;
   }
@@ -1996,11 +2087,61 @@ async function onCancelar(e) {
           document.getElementById('nome_tabela').value = t.nome_tabela || '';
           document.getElementById('cliente_nome').value = t.cliente_nome || t.cliente || '';
           document.getElementById('codigo_cliente').value = t.codigo_cliente || '';
+          document.getElementById('ramo_juridico').value = t.ramo_juridico || '';
+
+          // RESTORE GLOBAL FIELDS
+          const first = (Array.isArray(t.produtos) && t.produtos.length) ? t.produtos[0] : null;
+
+          const freteInput = document.getElementById('frete_kg');
+          if (freteInput) freteInput.value = String(first?.frete_kg ?? 0);
+
+          // Markup Global (inferir do primeiro item ou usar o que estava salvo se tiver campo na tabela)
+          const mkInput = document.getElementById('markup_global');
+          if (mkInput) {
+            const mkVal = first?.markup ?? 0;
+            mkInput.value = Number(mkVal).toFixed(2);
+          }
+
+          // Condição Pagamento
+          // Condição Pagamento
+          await carregarCondicoes();
+          const planoSel = document.getElementById('plano_pagamento');
+          if (planoSel) {
+            const planoVal = t.codigo_plano_pagamento ?? first?.codigo_plano_pagamento ?? '';
+            if (planoVal) {
+              const opt = Array.from(planoSel.options).find(o => (o.textContent || '').trim() === String(planoVal).trim() || o.value === String(planoVal));
+              if (opt) planoSel.value = opt.value;
+            } else {
+              planoSel.value = '';
+            }
+            atualizarPillTaxa?.();
+          }
+
+          // Fator Global
+          await carregarDescontos();
+          // Lógica de inferência do fator global igual ao carregarItens
+          const dg = document.getElementById('desconto_global');
+          if (dg) {
+            const fatores = (t.produtos || []).map(x => {
+              const c = x.descricao_fator_comissao || '';
+              const code = c.split(' - ')[0].trim();
+              return code;
+            }).filter(Boolean);
+
+            // Se todos forem iguais
+            if (fatores.length > 0 && fatores.every(f => f === fatores[0])) {
+              dg.value = fatores[0];
+            } else {
+              dg.value = '';
+            }
+            atualizarPillDesconto?.();
+          }
+
 
           // repõe itens e re-renderiza grade
           itens = Array.isArray(t.produtos) ? t.produtos.map(p => mapBackendItemToFrontend(p, t)) : [];
-
           if (typeof renderTabela === 'function') renderTabela();
+          if (typeof recalcTudo === 'function') recalcTudo().catch(() => { });
 
           // volta a “apontar” para a origem
           currentTabelaId = String(sourceTabelaId);
@@ -2093,31 +2234,137 @@ async function atualizarValidadeCabecalhoGlobal() {
   }
 }
 
+// Carrega itens: da memória (prioridade) ou do backend
+async function carregarItens() {
+  const ctx = getCtxId();
+
+  // 1) Tenta recuperar da memória local (TP_ATUAL)
+  // Isso garante que, ao voltar do "Adicionar Produto", não perderemos o que já estava na tela.
+  const memoria = sessionStorage.getItem(`TP_ATUAL:${ctx}`);
+  if (memoria) {
+    try {
+      const saved = JSON.parse(memoria);
+      if (Array.isArray(saved) && saved.length > 0) {
+        console.log("carregarItens: Usando memória local (TP_ATUAL)", saved.length, "itens.");
+        itens = saved;
+        renderTabela();
+        return;
+      }
+    } catch (e) { console.warn("Erro ao ler TP_ATUAL", e); }
+  }
+
+  // 2) Se não tiver memória, busca do banco (Apenas se tiver ID e não for DUP "limpo")
+  if (!currentTabelaId) {
+    itens = [];
+    renderTabela();
+    return;
+  }
+
+  try {
+    const r = await fetch(`${API_BASE}/tabela_preco/${currentTabelaId}`, { cache: 'no-store' });
+    if (!r.ok) {
+      if (r.status === 404) {
+        console.warn("Tabela não encontrada no banco (404). Iniciando vazia.");
+        itens = [];
+        renderTabela();
+        return;
+      }
+      throw new Error(`Erro ${r.status}`);
+    }
+    const t = await r.json();
+
+    // --- RESTORE HEADER FIELDS ---
+    // Recupera os dados do cabeçalho que vieram do backend
+    const nomeEl = document.getElementById('nome_tabela');
+    const cliEl = document.getElementById('cliente_nome');
+    const codEl = document.getElementById('codigo_cliente');
+    const ramoEl = document.getElementById('ramo_juridico');
+    const freteEl = document.getElementById('frete_kg');
+    const validadeEl = document.getElementById('validade_tabela');
+    const diasEl = document.getElementById('dias_restantes');
+
+    if (nomeEl) nomeEl.value = t.nome_tabela || '';
+    if (cliEl) cliEl.value = t.cliente_nome || t.cliente || '';
+    if (codEl) codEl.value = t.codigo_cliente || '';
+    if (ramoEl) ramoEl.value = t.ramo_juridico || '';
+
+    // Frete: se tiver no header da resposta ou inferir do primeiro item?
+    // Geralmente vem nos itens, mas se tiver 'frete_kg' no T, usa.
+    // Se não, tenta pegar do primeiro item.
+    if (freteEl) {
+      if (t.frete_kg != null) freteEl.value = Number(t.frete_kg);
+      else if (t.produtos && t.produtos.length > 0) freteEl.value = Number(t.produtos[0].frete_kg || 0);
+    }
+
+    // Configurações globais (IVA, Markup) se disponíveis no objeto T
+    const ivaChk = document.getElementById('iva_st_toggle');
+    if (ivaChk) {
+      ivaChk.checked = !!(t.calcula_st ?? t.iva_st ?? false);
+      window.ivaStAtivo = ivaChk.checked;
+      // Se é edição, geralmente o IVA vem travado conforme cadastro do cliente?
+      // Vamos manter a lógica de 'enforceIvaLockByCliente' depois se necessário.
+    }
+
+    // Map backend -> frontend
+    itens = (t.produtos || []).map(p => mapBackendItemToFrontend(p, t));
+
+    // Se for modo DUP, talvez queiramos reprocessar IDs?
+    // mapBackendItemToFrontend já lida bem.
+
+    renderTabela();
+
+    // Atualiza UI baseada no cabeçalho carregado
+    if (typeof refreshToolbarEnablement === 'function') refreshToolbarEnablement();
+    if (typeof enforceIvaLockByCliente === 'function') enforceIvaLockByCliente();
+
+  } catch (err) {
+    console.error("Falha ao carregar itens do backend:", err);
+    alert("Não foi possível carregar os itens da tabela. Verifique a conexão.");
+  }
+}
+
 // === Bootstrap ===
 document.addEventListener('DOMContentLoaded', () => {
   // Eventos globais
   setMode(MODE.NEW);
   document.getElementById('btn-listar')?.addEventListener('click', () => { goToListarTabelas(); });
 
+  // Atalho ENTER para aplicar a todos
+  document.getElementById('plano_pagamento')?.addEventListener('keydown', (e) => {
+    if (e.key === 'Enter') {
+      e.preventDefault();
+      document.getElementById('btn-aplicar-condicao-todos')?.click();
+    }
+  });
+  document.getElementById('desconto_global')?.addEventListener('keydown', (e) => {
+    if (e.key === 'Enter') {
+      e.preventDefault();
+      document.getElementById('btn-aplicar-todos')?.click();
+    }
+  });
+  document.getElementById('markup_global')?.addEventListener('keydown', (e) => {
+    if (e.key === 'Enter') {
+      e.preventDefault();
+      document.getElementById('btn-aplicar-markup-todos')?.click();
+    }
+  });
+
   document.getElementById('btn-aplicar-todos')?.addEventListener('click', aplicarFatorGlobal);
 
   document.getElementById('plano_pagamento')?.addEventListener('change', (e) => {
-    // 👇 marca que o usuário editou manualmente o header
     e.currentTarget.dataset.userEdited = '1';
-    atualizarPillTaxa(); recalcTudo(); refreshToolbarEnablement(); saveHeaderSnapshot();
+    atualizarPillTaxa();
+    document.getElementById('btn-aplicar-condicao-todos')?.click();
+    refreshToolbarEnablement(); saveHeaderSnapshot();
   });
   document.getElementById('frete_kg')?.addEventListener('input', () => {
     recalcTudo();
     refreshToolbarEnablement();
-
   });
-  // Habilitar/Desabilitar "Remover selecionados" ao marcar/desmarcar linhas individuais
+
   document.getElementById('tbody-itens')?.addEventListener('change', (e) => {
     if (e.target && e.target.classList.contains('chk-linha')) {
-      // Atualiza o estado do botão
       if (typeof refreshToolbarEnablement === 'function') refreshToolbarEnablement();
-
-      // Sincroniza o "selecionar todos"
       const all = document.querySelectorAll('#tbody-itens .chk-linha');
       const marked = document.querySelectorAll('#tbody-itens .chk-linha:checked');
       const chkAll = document.getElementById('chk-all');
@@ -2127,28 +2374,21 @@ document.addEventListener('DOMContentLoaded', () => {
 
   atualizarValidadeCabecalhoGlobal();
 
-  // Selecionar todos — robusto (funciona em click e change)
   (function bindChkAll() {
     const chkAll = document.getElementById('chk-all');
     if (!chkAll) return;
-
     const toggleAll = (e) => {
       const checked = (e && e.currentTarget) ? !!e.currentTarget.checked : !!chkAll.checked;
-      document.querySelectorAll('#tbody-itens .chk-linha')
-        .forEach(cb => { cb.checked = checked; });
-
-      // Atualiza habilitação do botão "Remover selecionados"
+      document.querySelectorAll('#tbody-itens .chk-linha').forEach(cb => { cb.checked = checked; });
       if (typeof refreshToolbarEnablement === 'function') refreshToolbarEnablement();
     };
-
-    // Usa os dois eventos para não depender do timing do 'change'
     chkAll.addEventListener('click', toggleAll);
     chkAll.addEventListener('change', toggleAll);
   })();
 
   document.getElementById('btn-buscar')?.addEventListener('click', () => {
-    saveHeaderSnapshot();  // <-- salva topo
-    preparePickerBridgeBeforeNavigate(); // (ver tópico 3)
+    saveHeaderSnapshot();
+    preparePickerBridgeBeforeNavigate();
     snapshotSelecionadosParaPicker();
     window.location.href = 'tabela_preco.html';
   });
@@ -2187,42 +2427,45 @@ document.addEventListener('DOMContentLoaded', () => {
           return;
         }
 
+        // Sucesso absoluto: limpa snapshot para não voltar sujeira se recarregar
+        clearFullSnapshot();
+
         // pergunta de decisão
         const querEnviar = confirm("Deseja mandar o link do orçamento?");
+
+        // CAPTURA ESTADO ANTES DO RESET
+        const freteKgParaModal = Number(document.getElementById('frete_kg')?.value || 0);
+
+        // RESET COMPLETO (VOLTAR A TELA ZERADA)
+        currentTabelaId = '';
+        sourceTabelaId = '';
+        window.currentTabelaId = '';
+        window.sourceTabelaId = '';
+
+        try { history.replaceState(null, '', location.pathname); } catch { }
+
+        // limpa cabeçalho + grade e volta pro modo original (inputs habilitados)
+        if (typeof limparFormularioCabecalho === 'function') limparFormularioCabecalho();
+        if (typeof limparGradeProdutos === 'function') limparGradeProdutos();
+
+        if (typeof setMode === 'function') setMode(MODE.NEW);
+        if (typeof setFormDisabled === 'function') setFormDisabled(false);
+        if (typeof toggleToolbarByMode === 'function') toggleToolbarByMode();
+        if (typeof refreshToolbarEnablement === 'function') refreshToolbarEnablement();
+
         if (querEnviar) {
           if (typeof window.__showGerarLinkModal === "function") {
             window.__showGerarLinkModal({
               tabelaId,
+              freteKg: freteKgParaModal, // Passa o frete capturado
               pedidoClientePath: "/tabela_preco/pedido_cliente.html",
             });
           } else {
             alert("Módulo de gerar link não carregado (../js/gerar_link_pedido.js).");
           }
-        } else {
-          // >>> Cancelou o envio do link: volta ao estado inicial (sem id, modo original)
-          currentTabelaId = '';
-          sourceTabelaId = '';
-          window.currentTabelaId = '';
-          window.sourceTabelaId = '';
-
-          // limpa URL (?id=)
-          try {
-            const u = new URL(location.href);
-            u.searchParams.delete('id');
-            history.replaceState(null, '', u.toString());
-          } catch { }
-
-          // limpa cabeçalho + grade e volta pro modo original (inputs habilitados)
-          if (typeof limparFormularioCabecalho === 'function') limparFormularioCabecalho();
-          if (typeof limparGradeProdutos === 'function') limparGradeProdutos();
-
-          if (typeof setMode === 'function') setMode(MODE.NEW); // ou o seu "modo inicial" da tela
-          if (typeof setFormDisabled === 'function') setFormDisabled(false);
-
-          if (typeof toggleToolbarByMode === 'function') toggleToolbarByMode();
-          if (typeof refreshToolbarEnablement === 'function') refreshToolbarEnablement();
-
         }
+
+        // Se NÃO quiser enviar, já está resetado.
 
       } catch (err) {
         // mostra 422 legível, se vier no formato FastAPI
@@ -2238,36 +2481,63 @@ document.addEventListener('DOMContentLoaded', () => {
     });
   })();
 
-  document.getElementById('link-mobile-listar')?.addEventListener('click', (e) => {
-    e.preventDefault();
-    document.querySelector('.sidebar').classList.remove('active');
-    document.getElementById('overlay').style.display = 'none';
-    document.getElementById('btn-listar')?.click();
-  });
-
-  document.getElementById('link-mobile-buscar')?.addEventListener('click', (e) => {
-    e.preventDefault();
-    document.querySelector('.sidebar').classList.remove('active');
-    document.getElementById('overlay').style.display = 'none';
-    document.getElementById('btn-buscar')?.click();
-  });
-
   document.getElementById('btn-cancelar')?.addEventListener('click', onCancelar);
   document.getElementById('btn-editar')?.addEventListener('click', onEditar);
   document.getElementById('btn-duplicar')?.addEventListener('click', onDuplicar);
 
   // Init
   (async function init() {
+    setupClienteAutocomplete(); // ✅ Fix: Initialize autocomplete
     await Promise.all([carregarCondicoes(), carregarDescontos()]);
 
-    const temIdNaUrl = !!new URLSearchParams(location.search).get('id');
+    // 1. Garante ID a partir da URL (Essencial para EDIT/VIEW)
+    const idUrl = new URLSearchParams(location.search).get('id');
+    if (idUrl) {
+      setTabelaIds(idUrl);
+    } else {
+      // Se não veio na URL, verifica se estamos voltando de uma operação (Picker)
+      // Recupera o contexto salvo
+      const pendingCtx = sessionStorage.getItem('TP_CTX_ID');
+      if (pendingCtx && pendingCtx !== 'new') {
+        // Só restaura o ID se tivermos um 'Modo de Retorno' setado,
+        // indicando que saímos intencionalmente desta tela e estamos voltando.
+        const retMode = sessionStorage.getItem(`TP_RETURN_MODE:${pendingCtx}`);
+        if (retMode) {
+          console.log("Restaurando contexto pendente (voltou do picker):", pendingCtx);
+          setTabelaIds(pendingCtx);
+        }
+      }
+    }
+
+    // 2. Verifica se estamos "Voltando" do Picker (agora com ID correto setado se aplicável)
+    const ctx = getCtxId();
+    const returnMode = sessionStorage.getItem(`TP_RETURN_MODE:${ctx}`);
+
+    // Se NÃO estivermos voltando do picker (e não for Reload), é uma entrada fresca (ex: vindo da lista)
+    // Então limpamos qualquer memória "curta" antiga para não carregar lixo.
+    // Isso atende ao pedido: "não carregue cache desnecessário".
+    if (!returnMode && !__IS_RELOAD) {
+      console.log("Entrada fresca. Limpando cache de sessão para:", ctx);
+      sessionStorage.removeItem(`TP_ATUAL:${ctx}`);
+      sessionStorage.removeItem(`TP_BUFFER:${ctx}`);
+      // Se for contexto 'new', limpa snapshots também para garantir limpeza
+      if (ctx === 'new') {
+        sessionStorage.removeItem(`TP_HEADER_SNAPSHOT:${ctx}`);
+      }
+    }
+
+    const temIdNaUrl = !!idUrl;
 
     // 🔒 Se tem id na URL (edição/visualização), NÃO limpe/restaure snapshot agora
-    if (!temIdNaUrl) {
+    // EXCETO se estivermos VOLTANDO do picker (returnMode existe) -> aí queremos restaurar o estado visual anterior
+    if (!temIdNaUrl || returnMode) {
       if (__IS_RELOAD) {
-        limparFormularioCabecalho?.();
+        // Se for reload, talvez não devêssemos limpar se tiver returnMode? 
+        // Por segurança, se for reload real, limpa. Mas se for navegação, restaura.
+        // O __IS_RELOAD detecta F5. Se for F5, ok limpar.
+        if (!__IS_RELOAD) restoreHeaderSnapshotIfNew(true);
       } else {
-        restoreHeaderSnapshotIfNew?.();
+        restoreHeaderSnapshotIfNew(true);
       }
     }
 
@@ -2308,127 +2578,99 @@ document.addEventListener('DOMContentLoaded', () => {
     // ✅ agora sim, com o modo correto, mescla o buffer do picker
     if (!__IS_RELOAD) await mergeBufferFromPickerIfAny?.();
 
-    await Promise.resolve(recalcTudo()).catch(() => { });
-    refreshToolbarEnablement?.();
-    setupClienteAutocomplete();
-    enforceIvaLockByCliente();
-
-    // —— quando o usuário editar manualmente o NOME do cliente ——
-    const inpNome = document.getElementById('cliente_nome');
-    const hidCodigo = document.getElementById('codigo_cliente');
-    const hidRamo = document.getElementById('ramo_juridico');
-
-    inpNome?.addEventListener('input', () => {
-      // Se o campo ficar vazio, não considere mais “cliente cadastrado”
-      if (!inpNome.value.trim()) {
-        if (hidCodigo) hidCodigo.value = '';
-        if (hidRamo) hidRamo.value = '';
-        recalcTudo();                         // dispara o preview em todas as linhas
-      }
-      enforceIvaLockByCliente();
-      saveHeaderSnapshot?.();
-    });
-
-    // Se algum outro código limpar/alterar esses campos, recalcule também
-    hidCodigo?.addEventListener('change', () => {
-      enforceIvaLockByCliente();   // 👈 acrescenta
-      saveHeaderSnapshot?.();      // 👈 acrescenta
-      recalcTudo();
-    });
-
-    hidRamo?.addEventListener('change', () => {
-      saveHeaderSnapshot?.();      // 👈 opcional
-      recalcTudo();
-    });
-
-
-    if (!action) {
-      const ctx = sessionStorage.getItem('TP_CTX_ID') || getCtxId();
-      const ret = sessionStorage.getItem(`TP_RETURN_MODE:${ctx}`);
-      if (ret) {
-        if (ret === MODE.EDIT) setMode(MODE.EDIT);
-        else if (ret === MODE.DUP) setMode(MODE.DUP);
-        else if (ret === MODE.NEW) setMode(MODE.NEW);
-        sessionStorage.removeItem(`TP_RETURN_MODE:${ctx}`);
-        modeRestored = true;
-      }
+    // SE for modo Edição ou Duplicação, atualiza preços com o cadastro atual
+    // (mas não bloqueia a UI totalmente, deixa rodar)
+    if (currentMode === MODE.EDIT || currentMode === MODE.DUP) {
+      // Dispara atualização de preços E recálculo em background
+      // O usuário já vê a tabela com valores antigos/salvos imediatamente
+      atualizarPrecosAtuais()
+        .then(() => recalcTudo())
+        .catch(err => console.error("Erro ao atualizar preços/recalcular em background:", err));
+    } else {
+      // Se for View ou New (sem buffer), roda um recalcTudo "fire-and-forget" 
+      // para garantir totais visuais, mas renderTabela já deve ter mostrado algo.
+      Promise.resolve(recalcTudo()).catch(() => { });
     }
 
-    if (!modeRestored) {
-      if (currentTabelaId) {
-        if (action === 'edit') setMode(MODE.EDIT);
-        else if (action === 'duplicate') onDuplicar(); // usa o fluxo que guarda a origem
-        else setMode(MODE.VIEW);
-      } else {
-        setMode(MODE.NEW);
-      }
-
-    }
     refreshToolbarEnablement();
-    await Promise.resolve(recalcTudo()).catch(() => { });
   })();
 });
 
 
-// === AUTO APPLY LOGIC (Substituindo botões) ===
-
-document.getElementById('plano_pagamento')?.addEventListener('change', (e) => {
-  const cod = e.target.value || '';
-  // Aplica a TODOS os itens
-  itens.forEach(it => {
-    it.plano_pagamento = cod || null;
-    it.__plano_pagto_label = e.target.options[e.target.selectedIndex]?.textContent || '';
+document.getElementById('btn-aplicar-condicao-todos')?.addEventListener('click', () => {
+  const cod = document.getElementById('plano_pagamento')?.value || '';
+  document.querySelectorAll('#tbody-itens tr').forEach(tr => {
+    const sel = tr.querySelector('td:nth-child(10) select');
+    if (!sel) return;
+    sel.value = cod;
+    // 🔑 garante persistência em itens[idx] + recálculo
+    console.log(`Aplicando Condição Global: ${cod} na linha com select`, sel);
+    sel.dispatchEvent(new Event('change', { bubbles: true }));
   });
-  // Re-renderiza para atualizar select boxes das linhas
-  renderTabela();
-  // Dispara recálculo de valores
-  setTimeout(() => Promise.resolve(recalcTudo()).catch(() => { }), 0);
-
+  setTimeout(() => {
+    Promise.resolve(recalcTudo()).catch(() => { });
+  }, 0);
   const hdr = document.getElementById('plano_pagamento');
-  if (hdr) hdr.dataset.userEdited = '1'; /* Marca como editado pelo user */
-  atualizarPillTaxa();
+  if (hdr) hdr.dataset.userEdited = '';
+  snapshotSelecionadosParaPicker?.();
 });
 
-document.getElementById('desconto_global')?.addEventListener('change', (e) => {
-  const code = e.target.value || '';
-  const frac = (Object.prototype.hasOwnProperty.call(mapaDescontos, code) ? Number(mapaDescontos[code]) : 0);
+document.getElementById('btn-aplicar-markup-todos')?.addEventListener('click', () => {
+  const mkInput = document.getElementById('markup_global');
+  // replace comma with dot for parsing
+  let raw = mkInput?.value || '';
+  raw = raw.replace(',', '.');
 
-  itens.forEach(it => {
-    it.fator_comissao = (!isNaN(frac) ? frac : 0);
-    it.__fator_codigo = code;
-    it.__descricao_fator_label = e.target.options[e.target.selectedIndex]?.textContent || '';
-    it.__overridePercent = false; // Reset override flag as we are applying global
+  // Se estiver vazio, assumir 0? O usuário disse "se colocar 0".
+  // Mas se parseFloat falhar em string vazia, retorna NaN.
+  if (raw.trim() === '') {
+    // Opção: ou alerta ou considera 0. Vamos manter alerta se vazio, 
+    // mas garantir que '0' passe.
+  }
+
+  const val = parseFloat(raw);
+
+  if (isNaN(val)) {
+    alert('Informe um valor de Markup válido.');
+    return;
+  }
+
+  // Format consistent to 2 decimal places for input value
+  if (mkInput) mkInput.value = val.toFixed(2);
+
+  document.querySelectorAll('#tbody-itens tr').forEach(tr => {
+    const inp = tr.querySelector('.field-markup');
+    if (inp) {
+      // Set value and trigger change to calc
+      inp.value = val.toFixed(2);
+      inp.dispatchEvent(new Event('change', { bubbles: true }));
+    }
   });
 
-  renderTabela();
-  setTimeout(() => Promise.resolve(recalcTudo()).catch(() => { }), 0);
 
-  e.target.dataset.userEdited = '1';
-  atualizarPillDesconto();
+
+  // Save snapshot of header field
   saveHeaderSnapshot();
 });
 
-document.getElementById('frete_kg')?.addEventListener('change', (e) => {
-  // Frete é calculado na hora do buildFiscalInputs, 
-  // mas precisamos disparar recalcTudo para atualizar totais
-  Promise.resolve(recalcTudo()).catch(() => { });
-});
-
-document.getElementById('markup_global')?.addEventListener('change', (e) => {
-  let val = parseFloat(e.target.value.replace(',', '.')) || 0;
-  itens.forEach(it => {
-    it.markup = val;
-  });
-  renderTabela();
-  // recalcTudo não é estritamente necessário se renderTabela já chamou criarLinha que usa markup,
-  // mas recalcLinha é chamado no criarLinha.
-  // Garantia:
-  setTimeout(() => Promise.resolve(recalcTudo()).catch(() => { }), 0);
+document.getElementById('markup_global')?.addEventListener('change', () => {
+  // Auto-apply immediately on change/blur
+  document.getElementById('btn-aplicar-markup-todos')?.click();
+  saveHeaderSnapshot();
 });
 
 document.getElementById('iva_st_toggle')?.addEventListener('change', (e) => {
   ivaStAtivo = !!e.target.checked;
   Promise.resolve(recalcTudo()).catch(err => console.debug('recalcTudo falhou:', err));
+});
+
+document.getElementById('desconto_global')?.addEventListener('change', (e) => {
+  // 👇 marca que o usuário editou manualmente o header
+  e.currentTarget.dataset.userEdited = '1';
+  atualizarPillDesconto();
+  // Auto-apply immediately on change
+  document.getElementById('btn-aplicar-todos')?.click();
+  saveHeaderSnapshot();
 });
 
 window.addEventListener('pageshow', () => {
@@ -2445,48 +2687,55 @@ document.addEventListener('change', handleFieldChange, true);
 // Reescrevendo/definindo explicitamente a função de salvar
 // para garantir o envio do token.
 // =========================================================
+// =========================================================
+// FUNÇÃO DE SALVAR UNIFICADA (CRIAÇÃO E EDIÇÃO)
+// =========================================================
 async function salvarTabelaPreco(payload) {
-  const url = `${API_BASE}/tabela_preco/salvar`;
   const token = localStorage.getItem("ordersync_token");
 
-  // Se for edição (tem ID), usar PUT em vez de POST (ou ajustar endpoint conforme backend)
-  // O backend atual /tabela_preco/salvar é POST e cria nova tabela.
-  // Se quisermos atualizar, o endpoint é PUT /tabela_preco/{id}.
+  // A lógica de "Edição" depende se temos um ID de tabela carregado E se o modo é compatível (não DUP/NEW)
+  // Mas se tivermos ID e o usuário clicou em salvar, assumimos que é update daquele ID,
+  // exceto se mode for DUP (nesse caso ID é null).
+  const idParaSalvar = (currentMode !== MODE.DUP && currentMode !== MODE.NEW) ? currentTabelaId : null;
+  // Fallback: se window.currentTabelaId existir e não for DUP, usa ele.
+  // (Pode ocorrer se o modo visual não atualizou, mas temos ID no contexto)
+  const finalId = idParaSalvar || ((currentMode !== MODE.DUP && currentMode !== MODE.NEW) ? window.currentTabelaId : null);
 
-  if (window.currentTabelaId) {
-    // EDIÇÃO
-    const putUrl = `${API_BASE}/tabela_preco/${window.currentTabelaId}`;
-    const r = await fetch(putUrl, {
-      method: "PUT",
-      headers: {
-        "Content-Type": "application/json",
-        "Authorization": `Bearer ${token}`
-      },
-      body: JSON.stringify(payload)
-    });
-    if (!r.ok) {
-      const txt = await r.text().catch(() => "");
-      if (r.status === 401) throw new Error("Não autorizado (401). Faça login novamente.");
-      throw new Error(`Falha ao atualizar (401/500). ${txt}`);
-    }
-    return await r.json();
+  let url, method;
+
+  if (finalId) {
+    // UPDATE
+    url = `${API_BASE}/tabela_preco/${finalId}`;
+    method = "PUT";
+    console.log("Salvando tabela (UPDATE):", finalId);
   } else {
-    // CRIAÇÃO
-    const r = await fetch(url, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        "Authorization": `Bearer ${token}`
-      },
-      body: JSON.stringify(payload)
-    });
-    if (!r.ok) {
-      const txt = await r.text().catch(() => "");
-      if (r.status === 401) throw new Error("Não autorizado (401). Faça login novamente.");
-      throw new Error(`Falha ao salvar (401/500). ${txt}`);
-    }
-    return await r.json();
+    // CREATE
+    url = `${API_BASE}/tabela_preco/salvar`;
+    method = "POST";
+    console.log("Salvando tabela (CREATE)");
   }
+
+  const r = await fetch(url, {
+    method,
+    headers: {
+      "Content-Type": "application/json",
+      "Authorization": `Bearer ${token}`
+    },
+    body: JSON.stringify(payload)
+  });
+
+  if (!r.ok) {
+    const txt = await r.text().catch(() => "");
+    if (r.status === 401) throw new Error("Tempo expirado: faça o login");
+    // Tenta parsear erro estruturado
+    try {
+      const j = JSON.parse(txt);
+      if (j.detail) throw new Error(typeof j.detail === 'string' ? j.detail : JSON.stringify(j.detail));
+    } catch (e) { /* ignora erro de parse */ }
+    throw new Error(`Falha ao salvar (${r.status}). ${txt}`);
+  }
+
+  return await r.json();
 }
 
 function handleFieldChange(e) {
@@ -2502,317 +2751,3 @@ function handleFieldChange(e) {
     }
   }
 }
-
-// === Desktop Advanced Features ===
-
-var isDenseMode = false;
-
-function toggleDenseMode() {
-  isDenseMode = !isDenseMode;
-  const tableWrap = document.querySelector('.table-wrap');
-  if (tableWrap) {
-    tableWrap.classList.toggle('dense-mode', isDenseMode);
-  }
-  const btn = document.getElementById('btn-dense-mode');
-  if (btn) btn.classList.toggle('active', isDenseMode);
-}
-
-// Shortcut Keys
-document.addEventListener('keydown', (e) => {
-  // F2 to Save
-  if (e.key === 'F2') {
-    e.preventDefault();
-    document.getElementById('btn-salvar')?.click();
-  }
-  // Insert to Add Products (Search)
-  if (e.key === 'Insert') {
-    e.preventDefault();
-    document.getElementById('btn-buscar')?.click();
-  }
-});
-
-// Inject Dense Mode Button into Toolbar (if not exists)
-document.addEventListener('DOMContentLoaded', () => {
-  const toolbar = document.querySelector('.toolbar.desktop-only');
-  if (toolbar) {
-    const btnDense = document.createElement('button');
-    btnDense.id = 'btn-dense-mode';
-    btnDense.className = 'btn';
-    btnDense.textContent = 'Modo Compacto';
-    btnDense.title = 'Alternar visualização compacta';
-    btnDense.onclick = toggleDenseMode;
-
-    // Insert before Listar tables or at the beginning
-    toolbar.insertBefore(btnDense, toolbar.firstChild);
-  }
-
-
-});
-
-// =========================================================
-// MOBILE RENDER CARDS (Re-implementação/Override)
-// =========================================================
-// =========================================================
-// MOBILE RENDER CARDS (Re-implementação/Override)
-// =========================================================
-
-// Helper para obter options do desktop
-function getOptionsFromDesktopSelect(selectId, selectedVal) {
-  const sel = document.getElementById(selectId);
-  if (!sel) return '';
-  return Array.from(sel.options).map(opt => {
-    if (!opt.value) return '';
-    const isSel = String(opt.value) === String(selectedVal);
-    return `<option value="${opt.value}" ${isSel ? 'selected' : ''}>${opt.textContent}</option>`;
-  }).join('');
-}
-
-function renderMobileCards() {
-  const container = document.getElementById('mobile-card-container');
-  if (!container) return;
-  container.innerHTML = '';
-
-  if (!itens || itens.length === 0) {
-    container.innerHTML = `<div class='empty-state-mobile'><p>Nenhum produto selecionado.</p><button onclick='document.getElementById(\"btn-buscar\").click()' class='btn btn-primary btn-sm'>Adicionar Produtos</button></div>`;
-    updateMobileToolbar();
-    setupMobileButtons(); // ✅ Garante que os botões funcionem mesmo sem itens
-    return;
-  }
-
-  // Prepara options uma vez
-  const optsCond = getOptionsFromDesktopSelect('plano_pagamento', null);
-  const optsDesc = getOptionsFromDesktopSelect('desconto_global', null);
-
-  itens.forEach((item, idx) => {
-    const valor = Number(item.valor || 0);
-    const isLocked = (currentMode === MODE.VIEW); // Verifica modo leitura
-
-    // Totais calculados (fallback para 0 se falhar)
-    const totalComFrete = Number(item.valor_final_markup || item._totalComercial || 0);
-    const totalSemFrete = Number(item.valor_s_frete_markup || item.total_sem_frete || 0);
-
-    const mkPct = Number(item.markup || 0);
-    const ipiVal = Number(item.ipi || 0);
-    const icmsStVal = Number(item.icms_st || 0);
-    const ivaStVal = Number(item.iva_st || 0);
-
-    // Identifica valores selecionados
-    // Estratégia: Prioriza ler do TR desktop (que já rodou a lógica complexa de inferência),
-    // senão faz o parse manual igual ao criarLinha.
-    let currentFatorCode = '';
-    let currentCondCode = '';
-
-    const tr = document.querySelector(`#tbody-itens tr[data-idx="${idx}"]`);
-    if (tr) {
-      const selFator = tr.querySelector('td:nth-child(8) select');
-      if (selFator) currentFatorCode = selFator.value;
-      const selCond = tr.querySelector('td:nth-child(10) select');
-      if (selCond) currentCondCode = selCond.value;
-    }
-
-    if (!currentCondCode) {
-      currentCondCode = String(item.plano_pagamento || '').split(' - ')[0].trim();
-    }
-
-
-    // Reconstrói options marcando o selected
-    const myOptsCond = optsCond.replace(`value="${currentCondCode}"`, `value="${currentCondCode}" selected`);
-    const myOptsDesc = optsDesc.replace(`value="${currentFatorCode}"`, `value="${currentFatorCode}" selected`);
-
-    const card = document.createElement('div');
-    card.className = 'mobile-card';
-    card.innerHTML = `
-      <div class='card-header-row' onclick='toggleCardDetails(${idx})' style='cursor:pointer'>
-        <div style='flex:1'>
-           <div class='card-title' style='font-size: 0.9rem; font-weight: 600;'>${item.codigo_tabela || '?'} - ${item.descricao || 'Sem descrição'}</div>
-           <div class='card-subtitle'>${item.embalagem || ''} • ${fmt4(item.peso_liquido)}kg</div>
-        </div>
-        <div class='card-price-highlight' style='text-align:right'>
-           <div style='font-size:0.75rem; color:#64748b; margin-bottom:2px'>Total c/ Frete</div>
-           <strong style='font-size:0.95rem; color:var(--primary-color)'>${fmtMoney(totalComFrete)}</strong>
-           <div style='font-size:0.75rem; color:#64748b; margin-top:4px'>Total s/ Frete</div>
-           <span style='font-size:0.85rem; color:#334155'>${fmtMoney(totalSemFrete)}</span>
-        </div>
-      </div>
-      
-      <div id='card-details-${idx}' class='card-details hidden' style='margin-top:12px; border-top:1px dashed #eee; padding-top:8px;'>
-         <div class='grid-2' style='display:grid; grid-template-columns:1fr 1fr; gap:8px;'>
-            <div class='card-field'>
-               <label>Valor Unit.</label>
-               <input type='text' value='${fmtMoney(valor)}' disabled style='background:#f1f5f9'>
-            </div>
-             <div class='card-field'>
-               <label>Markup %</label>
-               <input type='number' step='0.01' value='${mkPct.toFixed(2)}' 
-                      ${isLocked ? 'disabled' : ''} 
-                      onchange='updateItemField(${idx}, "markup", this.value)'>
-            </div>
-         </div>
-
-         <!-- Fator e Condição (Selects) -->
-          <div class='grid-2' style='display:grid; grid-template-columns:1fr 1fr; gap:8px; margin-top:8px;'>
-            <div class='card-field'>
-               <label>Fator %</label>
-               <select ${isLocked ? 'disabled' : ''} 
-                       onchange='updateItemField(${idx}, "fator_code", this.value)' 
-                       style='width:100%; padding:8px; border:1px solid #ccc; border-radius:4px; background:${isLocked ? '#f1f5f9' : '#fff'}'>
-                  <option value="">Original</option>
-                  ${myOptsDesc}
-               </select>
-            </div>
-             <div class='card-field'>
-               <label>Condição</label>
-               <select ${isLocked ? 'disabled' : ''}
-                       onchange='updateItemField(${idx}, "cond_code", this.value)' 
-                       style='width:100%; padding:8px; border:1px solid #ccc; border-radius:4px; background:${isLocked ? '#f1f5f9' : '#fff'}'>
-                  <option value="">Padrão</option>
-                  ${myOptsCond}
-               </select>
-            </div>
-         </div>
-         
-         <div class='grid-2' style='display:grid; grid-template-columns:1fr 1fr; gap:8px; margin-top:8px;'>
-            <div class='card-field'>
-               <label>Frete (R$)</label>
-               <input type='text' value='${fmtMoney(item._freteValor || item.frete_linha || 0)}' disabled style='background:#f1f5f9'>
-            </div>
-             <div class='card-field'>
-               <label>Cond. (R$)</label>
-               <input type='text' value='${fmtMoney(item.acrescimo || 0)}' disabled style='background:#f1f5f9'>
-            </div>
-         </div>
-
-
-         <div style='margin-top:12px; background:#f8fafc; padding:8px; border-radius:6px;'>
-            <p style='font-weight:600; margin-bottom:4px; font-size:0.8rem; border-bottom:1px solid #e2e8f0; padding-bottom:4px'>Detalhes Fiscais</p>
-            <div style='display:grid; grid-template-columns:1fr 1fr 1fr; gap:8px; font-size:0.75rem; text-align:center'>
-                <div><span style='color:#64748b; display:block'>IPI</span><strong>${fmtMoney(ipiVal)}</strong></div>
-                <div><span style='color:#64748b; display:block'>ICMS ST</span><strong>${fmtMoney(icmsStVal)}</strong></div>
-                <div><span style='color:#64748b; display:block'>IVA ST</span><strong>${fmtMoney(ivaStVal)}</strong></div>
-            </div>
-         </div>
-         
-         <div class='card-actions'>
-           <button class='btn-card-action btn-card-remove' onclick='removerItemMobile(${idx})'>Remover item</button>
-         </div>
-      </div>
-    `;
-    container.appendChild(card);
-  });
-
-  updateMobileToolbar();
-  setupMobileButtons();
-}
-
-
-
-
-function updateMobileToolbar() {
-
-  const totalVal = (itens || []).reduce((acc, it) => acc + (Number(it.valor_final_markup) || Number(it._totalComercial) || 0), 0);
-  const qtd = (itens || []).length;
-
-  const lblItens = document.getElementById('mobile-total-itens');
-  const lblVal = document.getElementById('mobile-total-valor');
-  if (lblItens) lblItens.textContent = `${qtd} itens`;
-  if (lblVal) lblVal.textContent = fmtMoney(totalVal);
-}
-
-function setupMobileButtons() {
-  // Listar & Cancelar
-  const btnList = document.getElementById('btn-mobile-list');
-  const btnCancel = document.getElementById('btn-mobile-cancel');
-
-  // ADJUST URL HERE IF NEEDED. Using relative path based on file location
-  if (btnList) btnList.onclick = () => window.location.href = 'listar_tabelas.html';
-
-  if (btnCancel) {
-    if (currentTabelaId) {
-      btnCancel.classList.remove('hidden');
-      btnCancel.onclick = () => document.getElementById('btn-cancelar')?.click();
-    } else {
-      btnCancel.classList.add('hidden');
-    }
-  }
-
-  const btnEdit = document.getElementById('btn-mobile-edit');
-  const btnDup = document.getElementById('btn-mobile-dup');
-  const btnSave = document.getElementById('btn-mobile-save');
-  const btnAdd = document.getElementById('btn-mobile-add');
-
-  if (btnSave) btnSave.onclick = () => document.getElementById('btn-salvar')?.click();
-  if (btnAdd) btnAdd.onclick = () => document.getElementById('btn-buscar')?.click();
-
-  if (btnEdit && btnDup) {
-    const hasId = !!currentTabelaId;
-    const isView = (currentMode === 'view');
-
-    if (hasId && isView) {
-      btnEdit.classList.remove('hidden');
-      btnDup.classList.remove('hidden');
-      btnEdit.onclick = () => document.getElementById('btn-editar')?.click();
-      btnDup.onclick = () => document.getElementById('btn-duplicar')?.click();
-    } else {
-      btnEdit.classList.add('hidden');
-      btnDup.classList.add('hidden');
-    }
-  }
-}
-
-window.removerItemMobile = function (idx) {
-  if (!confirm('Remover este item?')) return;
-  itens.splice(idx, 1);
-  renderTabela();
-};
-
-
-window.updateItemField = function (index, field, value) {
-  if (!itens[index]) return;
-
-  if (field === 'markup') {
-    const val = parseFloat(value.replace(',', '.')) || 0;
-    itens[index].markup = val;
-    // Dispara recalc
-    triggerRowRecalc(index);
-
-  } else if (field === 'fator_code') {
-    // Sincroniza com desktop (se existir TR)
-    syncDesktopSelect(index, 8, value);
-
-  } else if (field === 'cond_code') {
-    // Sincroniza com desktop (se existir TR)
-    syncDesktopSelect(index, 10, value);
-  }
-
-  // Se for algo que precisa de recalc, a sincronia com TR e triggerRowRecalc resolve
-};
-
-function syncDesktopSelect(index, colIndex, val) {
-  const tr = document.querySelector(`tr[data-idx="${index}"]`);
-  if (!tr) return;
-  const sel = tr.querySelector(`td:nth-child(${colIndex}) select`);
-  if (sel) {
-    sel.value = val;
-    // Dispara change no select para qualquer listener
-    sel.dispatchEvent(new Event('change', { bubbles: true }));
-    // Mas o listener do select pode não estar global?
-    // No código principal, não vi listener especifico por linha além do `recalcTudo` se algo mudar?
-    // O `recalcLinha` le do DOM. Então só atualizar o value basta se chamarmos recalcLinha.
-    recalcLinha(tr).then(() => renderMobileCards());
-  }
-}
-
-
-function triggerRowRecalc(index) {
-  const tr = document.querySelector(`tr[data-idx="${index}"]`);
-  if (tr) {
-    recalcLinha(tr).then(() => {
-      renderMobileCards();
-    });
-  } else {
-    recalcTudo().then(() => {
-      renderMobileCards();
-    });
-  }
-}
-

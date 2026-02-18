@@ -37,36 +37,6 @@ def safe_float(val: Any, default: float = 0.0) -> float:
 def _row_to_out(db: Session, row: Dict[str, Any], include_imposto: bool = True) -> ProdutoV2Out:
     data = dict(row)
     
-    # --- Recuperação de dados faltantes (se a View não trouxer) ---
-    product_id = data.get("id")
-    if product_id:
-        # Se 'preco_anterior' ou 'validade_tabela' estiverem ausentes logicamente da view,
-        # buscamos na tabela física para garantir cálculo correto de indicadores.
-        needs_fetch = False
-        if data.get("preco_anterior") is None: needs_fetch = True
-        if data.get("validade_tabela") is None: needs_fetch = True
-
-        if needs_fetch:
-            # Consulta fallback leve
-            res = db.execute(
-                text("SELECT preco, preco_anterior, validade_tabela, preco_tonelada, preco_tonelada_anterior FROM t_cadastro_produto_v2 WHERE id = :id"),
-                {"id": product_id}
-            ).mappings().first()
-            if res:
-                if data.get("preco_anterior") is None:
-                    data["preco_anterior"] = res["preco_anterior"]
-                if data.get("validade_tabela") is None:
-                    data["validade_tabela"] = res["validade_tabela"]
-                
-                # Garante atuais/anteriores de tonelada para calculo de reajuste preciso
-                if data.get("preco_tonelada_anterior") is None:
-                    data["preco_tonelada_anterior"] = res["preco_tonelada_anterior"]
-                
-                if data.get("preco") is None:
-                    data["preco"] = res["preco"]
-                if data.get("preco_tonelada") is None:
-                    data["preco_tonelada"] = res["preco_tonelada"]
-
     # --- Lógica de campos calculados (se não vierem da View/DB) ---
     
     # 1) Reajuste Percentual
@@ -318,11 +288,13 @@ def get_produto(db: Session, produto_id: int) -> ProdutoV2Out:
     return _row_to_out(db, row)
 
 
+
 def list_produtos(
     db: Session,
     q: Optional[str],
     status: Optional[str],
     familia: Optional[int],
+    fornecedor: Optional[str],
     vigencia_em: Optional[date],
     limit: int,
     offset: int,
@@ -339,6 +311,9 @@ def list_produtos(
     if familia is not None:
         base += " AND familia = :familia"
         params["familia"] = familia
+    if fornecedor:
+        base += " AND fornecedor = :fornecedor"
+        params["fornecedor"] = fornecedor
     if vigencia_em:
         base += " AND validade_tabela <= :vig"
         params["vig"] = vigencia_em
@@ -444,11 +419,28 @@ def get_product_options(db: Session) -> Dict[str, List[str]]:
         # query distinct, filter not null, order by value
         rows = db.query(col).distinct().filter(col != None).order_by(col).all()
         return [r[0] for r in rows if r[0]]
+    
+    # Busca famílias na tabela dedicada t_familia_produtos
+    familias = []
+    marcas = []
+    try:
+        rows_fam = db.execute(text("SELECT DISTINCT familia FROM public.t_familia_produtos ORDER BY familia")).fetchall()
+        familias = [r[0] for r in rows_fam if r[0]]
+        
+        # User REQ: Busca MARCA (que será 'Grupo') da mesma tabela
+        rows_marca = db.execute(text("SELECT DISTINCT marca FROM public.t_familia_produtos ORDER BY marca")).fetchall()
+        marcas = [r[0] for r in rows_marca if r[0]]
+    except Exception as e:
+        print(f"Erro ao buscar familias/marcas em t_familia_produtos: {e}")
+        # fallback se a tabela não existir ou der erro
+        familias = _distinct__list(ProdutoV2.familia)
+        marcas = _distinct__list(ProdutoV2.marca)
 
     return {
         "status_produto": _distinct__list(ProdutoV2.status_produto),
         "tipo_giro": _distinct__list(ProdutoV2.tipo_giro),
-        "familia": _distinct__list(ProdutoV2.familia),
+        "familia": familias,
+        "marca": marcas, # Enviando opções de Grupo (marca)
         "tipo": ["INSUMOS", "PET"], # Opções fixas
         "unidade": _distinct__list(ProdutoV2.unidade),
         "fornecedor": _distinct__list(ProdutoV2.fornecedor),
@@ -531,7 +523,8 @@ def salvar_t_preco_produto_pdf(
             data_ingestao,
             nome_arquivo,
             ativo,
-            usuario
+            usuario,
+            filhos
         )
         VALUES (
             :fornecedor,
@@ -546,7 +539,8 @@ def salvar_t_preco_produto_pdf(
             :data_ingestao,
             :nome_arquivo,
             :ativo,
-            :usuario
+            :usuario,
+            :filhos
         )
         """
     )

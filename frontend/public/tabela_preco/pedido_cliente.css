@@ -59,6 +59,8 @@ table {
   width: 100%;
   border-collapse: collapse;
   margin-bottom: 30px;
+  table-layout: fixed;
+  /* Fixa largura das colunas para forçar quebra */
 }
 
 table thead {
@@ -71,14 +73,89 @@ table td {
   border: 1px solid #ccc;
   text-align: left;
   font-size: 14px;
+  white-space: normal;
+  /* Permite quebra de linha */
+  word-wrap: break-word;
+  /* Quebra palavras longas se necessário */
+  overflow-wrap: break-word;
+}
+
+/* Coluna 1: # */
+table th:nth-child(1),
+table td:nth-child(1) {
+  width: 4%;
+}
+
+/* Coluna 2: Código */
+table th:nth-child(2),
+table td:nth-child(2) {
+  width: 8%;
+}
+
+/* Coluna 3: Produto (MAIOR) */
+table th:nth-child(3),
+table td:nth-child(3) {
+  width: 25%;
+}
+
+/* Coluna 4: Embal. */
+table th:nth-child(4),
+table td:nth-child(4) {
+  width: 7%;
+}
+
+/* Coluna 5: Qtd */
+table th:nth-child(5),
+table td:nth-child(5) {
+  width: 7%;
+}
+
+/* Coluna 6: Peso */
+table th:nth-child(6),
+table td:nth-child(6) {
+  width: 6%;
+}
+
+/* Coluna 7: Valor */
+table th:nth-child(7),
+table td:nth-child(7) {
+  width: 9%;
+}
+
+/* Coluna 8: Condição (GRANDE) */
+table th:nth-child(8),
+table td:nth-child(8) {
+  width: 15%;
+}
+
+/* Coluna 9: Markup % */
+table th:nth-child(9),
+table td:nth-child(9) {
+  width: 6%;
+}
+
+/* Coluna 10: Valor C Markup */
+table th:nth-child(10),
+table td:nth-child(10) {
+  width: 9%;
+}
+
+/* Coluna 11: Subtotal */
+table th:nth-child(11),
+table td:nth-child(11) {
+  width: 9%;
 }
 
 input[type="number"] {
-  width: 70px;
+  width: 100%;
+  max-width: 70px;
+  /* Mantém o tamanho original como máximo */
   padding: 6px;
   font-size: 14px;
   border: 1px solid #aaa;
   border-radius: 4px;
+  box-sizing: border-box;
+  /* Garante que padding não estoure a largura */
 }
 
 .acoes {
@@ -223,16 +300,30 @@ body.page-locked .documento *:not(#confirmModal):not(.modal-content):not(.btn-mo
   cursor: not-allowed !important;
 }
 
+/* Exceção: botão de download do PDF deve permanecer clicável */
+#btnBaixarManual {
+  cursor: pointer !important;
+  pointer-events: auto !important;
+}
+
 .hidden {
   display: none !important;
 }
 
-/* esconde a coluna 5 (Peso) da tabela */
+/* FORÇA A EXIBIÇÃO DA COLUNA 5 (Quantidade) e 10 (Valor Markup) */
 #tabelaProdutos th:nth-child(5),
 #tabelaProdutos td:nth-child(5),
-/* esconde a coluna 10 (Subtotal) da tabela */
 #tabelaProdutos th:nth-child(10),
 #tabelaProdutos td:nth-child(10) {
+  display: table-cell !important;
+}
+
+/* esconde a coluna 6 (Peso) da tabela - ajustado para +1 coluna (#) */
+#tabelaProdutos th:nth-child(6),
+#tabelaProdutos td:nth-child(6),
+/* esconde a coluna 11 (Subtotal) da tabela - ajustado para +1 coluna (#) */
+#tabelaProdutos th:nth-child(11),
+#tabelaProdutos td:nth-child(11) {
   display: none !important;
 }
 

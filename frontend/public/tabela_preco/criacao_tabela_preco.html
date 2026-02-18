@@ -8,6 +8,7 @@
 
   <!-- Bootstrap igual à tela de cliente -->
   <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+  <link rel="icon" href="../logo.png">
 
   <!-- CSS específico da página -->
   <link rel="stylesheet" href="criacao_tabela_preco.css">
@@ -20,6 +21,7 @@
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600&display=swap" rel="stylesheet">
   <script src="../js/config.js"></script>
   <script src="../js/auth.js"></script>
+  <script src="../js/sidebar_control.js"></script>
   <script src="criacao_tabela_preco.js" defer></script>
 </head>
 
@@ -36,7 +38,7 @@
     <ul>
       <li><a href="/">Home</a></li>
       <li><a href="/clientes/cliente.html">Cadastrar Cliente</a></li>
-      <li><a href="#">Atualizar Catálogo</a></li>
+      <li><a href="/gerenciar_tabelas/gerenciar_tabelas.html">Atualizar Catálogo</a></li>
       <li><a href="/pedido/pedido.html">Consultar Pedidos</a></li>
       <li><a href="#">Exportar Relatórios</a></li>
       <li><a href="/tabela_preco/criacao_tabela_preco.html">Tabela Preço</a></li>
@@ -56,105 +58,101 @@
     <h1> Criação de Tabela de Preço </h1>
 
     <section class="card pad" aria-labelledby="sec-topo">
-      <div class="section-header-flex clickable-header" id="toggle-header">
+      <div class="section-header-flex">
         <h2 id="sec-topo" class="section-title" style="margin: 0;">Dados principais</h2>
-
-        <!-- Moved Validity/Time Here -->
-        <div class="header-info-group" style="margin-left: auto; margin-right: 16px;">
+        <div class="header-info-group">
           <div class="info-item">
             <span class="info-label">Validade:</span>
-            <input id="validade_tabela" class="transparent-input" type="text" readonly tabindex="-1"
-              style="width: 100px; text-align: right;" />
+            <input id="validade_tabela" class="transparent-input" type="text" readonly tabindex="-1" />
           </div>
           <div class="info-item">
             <span class="info-label">Tempo:</span>
-            <input id="dias_restantes" class="transparent-input" type="text" readonly tabindex="-1"
-              style="width: 140px; text-align: right;" />
+            <input id="dias_restantes" class="transparent-input" type="text" readonly tabindex="-1" />
           </div>
-        </div>
-
-        <div class="header-controls">
-          <span class="chevron-header">▼</span>
         </div>
       </div>
 
-      <!-- Collapsible Content -->
-      <div id="header-content" class="header-content expanded">
+      <div class="custom-grid" style="margin-top: 16px;">
 
-        <div class="custom-grid" style="margin-top: 16px;">
-          <!-- Row 1 Items -->
-          <div class="grid-item area-nome">
-            <label for="nome_tabela">Nome da Tabela</label>
-            <input id="nome_tabela" type="text" placeholder="Ex.: Tabela Promocional Set/25" />
-          </div>
+        <!-- Row 1 Items -->
+        <div class="grid-item area-nome">
+          <label for="nome_tabela">Nome da Tabela</label>
+          <input id="nome_tabela" type="text" placeholder="Ex.: Tabela Promocional Set/25" />
+        </div>
 
-          <div class="grid-item area-cliente">
-            <label for="cliente_nome">Cliente</label>
-            <input id="cliente_nome" type="text" autocomplete="off" placeholder="Digite o nome ou CNPJ..."
-              inputmode="search" />
-            <input id="codigo_cliente" type="hidden" />
-            <input id="ramo_juridico" type="hidden" />
-            <div id="cliente_suggestions" class="suggestions"></div>
-          </div>
-
-          <!-- Row 2 Items -->
-          <div class="grid-item area-iva">
-            <div class="field">
-              <div class="inline">
-                <input id="iva_st_toggle" type="checkbox" disabled />
-                <span class="hint" style="font-size: 0.85rem; color: var(--text);">Aplicar IVA_ST</span>
-              </div>
+        <div class="grid-item area-markup">
+          <div class="field">
+            <label for="markup_global">Markup Global %</label>
+            <div class="inline">
+              <input id="markup_global" class="input-mini" type="number" step="0.01" min="0" placeholder="0.00" />
+              <button class="btn btn-sm d-none" id="btn-aplicar-markup-todos">Aplicar a todos</button>
             </div>
           </div>
         </div>
 
-        <!-- Bottom (Condition / Discount / Markup / Frete) -->
-        <div class="grid-condition-discount">
-          <!-- Condição -->
-          <div class="grid-item">
-            <div class="field">
-              <label for="plano_pagamento">Cond. Pagto.</label>
-              <select id="plano_pagamento"></select>
-              <div class="hint" id="hint-condicao">Carregando...</div>
-            </div>
-            <div class="toolbar left-gap desktop-only">
-              <!-- Button removed -->
-              <span class="pill"><span>Taxa:</span><strong id="pill-taxa">—</strong></span>
-            </div>
-          </div>
+        <div class="grid-item area-cliente">
+          <label for="cliente_nome">Cliente</label>
+          <input id="cliente_nome" type="text" autocomplete="off" placeholder="Digite o nome ou CNPJ..." />
+          <input id="codigo_cliente" type="hidden" />
+          <input id="ramo_juridico" type="hidden" />
+          <div id="cliente_suggestions" class="suggestions"></div>
 
-          <!-- Desconto -->
-          <div class="grid-item area-desconto">
-            <div class="field">
-              <label for="desconto_global">Desconto / Fator %</label>
-              <select id="desconto_global" class="grow"></select>
-            </div>
-            <div class="toolbar left-gap desktop-only">
-              <!-- Button removed -->
-              <span class="pill"><span>Fator:</span><strong id="pill-fator">—</strong><span>%</span></span>
-            </div>
-          </div>
-
-          <!-- Markup Global (Restored) -->
-          <div class="grid-item area-markup">
-            <div class="field">
-              <label for="markup_global">Markup Global %</label>
-              <input id="markup_global" class="input-mini" type="number" step="0.01" min="0" placeholder="0.00"
-                inputmode="decimal" />
-            </div>
-            <!-- No apply button needed (auto) -->
-          </div>
-
-          <!-- Frete -->
-          <div class="grid-item field-frete">
-            <div class="field">
-              <label for="frete_kg">Frete/KG</label>
-              <input id="frete_kg" class="input-mini" type="number" step="0.01" min="0" value="0" inputmode="decimal" />
+          <div class="field mt-2">
+            <div class="inline">
+              <input id="iva_st_toggle" type="checkbox" disabled />
+              <span class="hint" style="font-size: 0.85rem; color: var(--text);">Aplicar IVA_ST</span>
             </div>
           </div>
         </div>
 
-        <!-- Mobile Actions for Bulk Apply (Only visible on mobile) -->
+        <!-- Row 2 Items -->
+        <!-- IVA starts aligned with Cliente -->
+
+
+
+
+      </div>
+
+
+      <!-- Bottom (Condition / Discount) -->
+      <div class="grid-condition-discount">
+
+        <!-- Condição -->
+        <!-- Condição -->
+        <div class="grid-item">
+          <div class="field">
+            <label for="plano_pagamento">Condição de Pagamento</label>
+            <div class="d-flex gap-2 align-items-center">
+              <select id="plano_pagamento" class="form-select flex-grow-1"></select>
+              <span class="pill ms-2" style="white-space: nowrap;">Taxa: <strong id="pill-taxa">—</strong></span>
+              <button class="btn btn-sm d-none" id="btn-aplicar-condicao-todos" style="white-space: nowrap;">Aplicar a
+                todos</button>
+            </div>
+            <div class="hint" id="hint-condicao">Carregando...</div>
+          </div>
+        </div>
+
+        <!-- Desconto: Reordered -->
+        <div class="grid-item area-desconto">
+          <div class="field">
+            <label for="desconto_global">Desconto / Fator %</label>
+            <div class="d-flex gap-2 align-items-center">
+              <select id="desconto_global" class="grow form-select flex-grow-1"></select>
+              <span class="pill ms-2" style="white-space: nowrap;">Fator: <strong
+                  id="pill-fator">—</strong><span>%</span></span>
+              <button class="btn btn-sm d-none" id="btn-aplicar-todos" style="white-space: nowrap;">Aplicar a
+                todos</button>
+            </div>
+          </div>
+        </div>
+
+        <!-- Frete: Moved Here -->
+        <div class="grid-item field-frete">
+          <div class="field">
+            <label for="frete_kg">Frete/KG</label>
+            <input id="frete_kg" class="input-mini" type="number" step="0" min="0" value="0" />
+          </div>
+        </div>
 
       </div>
     </section>
@@ -162,12 +160,10 @@
     <div class="divider"></div>
 
     <!-- BASE: Tabela de itens selecionados -->
-    <section class="card pad" aria-labelledby="sec-itens" style="margin-bottom: 80px;">
-      <!-- Margin for sticky footer -->
+    <section class="card pad" aria-labelledby="sec-itens">
       <h2 id="sec-itens" class="section-title">Produtos selecionados</h2>
 
-      <!-- Desktop Toolbar -->
-      <div class="toolbar desktop-only" id="toolbar-acoes">
+      <div class="toolbar" id="toolbar-acoes">
         <button id="btn-listar" class="btn">Listar Tabelas</button>
         <button id="btn-buscar" class="btn btn-primary">Buscar Produtos</button>
         <button id="btn-editar" class="btn hidden">Editar</button>
@@ -177,14 +173,13 @@
         <button id="btn-cancelar" class="btn hidden">Cancelar</button>
       </div>
 
-      <!-- Container: Desktop Table -->
-      <div class="table-wrap desktop-only">
+      <div class="table-wrap">
         <table id="tabela-itens">
           <thead>
             <tr>
               <th><input id="chk-all" type="checkbox" /></th>
               <th>Código</th>
-              <!-- Toggle Produto -->
+              <!-- Toggle Produto: controla Embalagem(4), Grupo(5), Peso(6) -->
               <th class="th-toggle-prod">
                 <label class="st-toggle-in-th" title="Mostrar/ocultar detalhes do produto">
                   <input id="prod-toggle" type="checkbox" />
@@ -197,7 +192,7 @@
               <th class="right">Peso Líq.</th>
               <th class="right">Valor Unitário</th>
 
-              <!-- Toggle Desconto -->
+              <!-- Toggle Desconto: controla Desc. aplicado(9) -->
               <th class="right th-toggle-desc">
                 <label class="st-toggle-in-th" title="Mostrar/ocultar valor do desconto">
                   <input id="desc-toggle" type="checkbox" />
@@ -207,7 +202,7 @@
               </th>
               <th class="right">Desc. aplicado (R$)</th>
 
-              <!-- Toggle Condição -->
+              <!-- Toggle Condição: controla Cond. Pagto R$(11) -->
               <th class="th-toggle-cond">
                 <label class="st-toggle-in-th" title="Mostrar/ocultar valor da condição">
                   <input id="cond-toggle" type="checkbox" />
@@ -217,17 +212,17 @@
               </th>
               <th class="right">Cond. Pagto (R$)</th>
               <th class="right">Frete (R$)</th>
-              <th class="right">IPI (R$)</th>
+              <th class="right">IPI (R$)</th> <!-- foi IPI (%) -->
               <th class="th-st">
                 <label class="st-toggle-in-th" title="Mostrar/ocultar detalhes de ST">
                   <input id="st-toggle" type="checkbox" />
                   <span class="st-title">Base ST (R$)</span>
                   <span class="chevron">▶</span>
                 </label>
-              </th>
-              <th class="right">ICMS próprio (R$)</th>
-              <th class="right">ICMS ST cheio (R$)</th>
-              <th class="right">ICMS ST a reter (R$)</th>
+              </th> <!-- novo, no lugar do IVA_ST (%) -->
+              <th class="right">ICMS próprio (R$)</th> <!-- novo -->
+              <th class="right">ICMS ST cheio (R$)</th><!-- novo -->
+              <th class="right">ICMS ST a reter (R$)</th><!-- novo -->
               <th class="right">Valor Final (R$)</th>
               <th class="right">Valor s/ Frete (R$)</th>
               <th class="right th-markup">
@@ -244,34 +239,7 @@
           <tbody id="tbody-itens"></tbody>
         </table>
       </div>
-
-      <!-- Container: Mobile Cards (injected via JS) -->
-      <div id="mobile-card-container" class="mobile-only mobile-card-list">
-        <!-- Cards will be rendered here -->
-        <div class="empty-state-mobile">
-          <p>Nenhum produto selecionado.</p>
-          <button id="btn-mobile-add-initial" class="btn btn-primary btn-sm">Adicionar Produtos</button>
-        </div>
-      </div>
     </section>
-  </div>
-
-  <!-- Mobile Sticky Bottom Toolbar -->
-  <div class="mobile-toolbar mobile-only">
-    <div class="mobile-toolbar-content">
-      <div class="mobile-toolbar-info">
-        <span id="mobile-total-itens">0 itens</span>
-        <span id="mobile-total-valor">R$ 0,00</span>
-      </div>
-      <div class="mobile-toolbar-actions">
-        <button id="btn-mobile-list" class="btn-icon-mobile" title="Listar Tabelas" style="margin-right:auto">☰</button>
-        <button id="btn-mobile-cancel" class="btn-icon-mobile hidden" title="Cancelar">✕</button>
-        <button id="btn-mobile-edit" class="btn-icon-mobile hidden" title="Editar">✎</button>
-        <button id="btn-mobile-dup" class="btn-icon-mobile hidden" title="Duplicar">⧉</button>
-        <button id="btn-mobile-add" class="btn-icon-mobile" title="Adicionar">+</button>
-        <button id="btn-mobile-save" class="btn-primary-mobile">Salvar</button>
-      </div>
-    </div>
   </div>
   <!-- Lógica totalmente externa -->
   <script type="module">

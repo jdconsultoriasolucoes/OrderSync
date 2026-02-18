@@ -29,7 +29,7 @@ const comFreteParam = comFreteFromCode ?? comFreteParamQS;
 const razaoParam = url.searchParams.get("razao_social");
 const condPagtoParam = url.searchParams.get("cond_pagto");
 
-const API_BASE = (typeof window !== "undefined" && window.API_BASE) ? window.API_BASE : location.origin;
+const API_BASE = window.API_BASE || "https://ordersync-backend-59d2.onrender.com"; // Restored & Safe
 const API = (p) => {
   const base = (typeof window !== "undefined" && window.API_BASE ? window.API_BASE : location.origin) || "";
   // remove barra final do base e garante que p tem barra inicial
@@ -107,10 +107,54 @@ const obsCounter = document.getElementById('obsCount');
 
 // -------------------- UI utils --------------------
 function setMensagem(texto, ok = false) {
-  if (!msgEl) return;
   msgEl.textContent = texto;
   msgEl.style.color = ok ? "green" : "red";
 }
+
+// --- Global Download Function for Stability ---
+window.baixarPdfManual = function () {
+  console.log("CLIQUE DOWNLOAD MANUAL");
+  console.log("lastPdfBase64 exists?", !!window.lastPdfBase64);
+  console.log("lastOrderId:", window.lastOrderId);
+
+  // 1. Tenta usar base64 em memória (mais garantido e imediato)
+  if (window.lastPdfBase64 && window.lastOrderId) {
+    try {
+      // Feedback visual
+      const btn = document.getElementById('btnBaixarManual');
+      if (btn) { btn.textContent = "Gerando PDF..."; btn.disabled = true; }
+
+      const link = document.createElement('a');
+      link.href = `data:application/pdf;base64,${window.lastPdfBase64}`;
+      link.download = `Orcamento_${window.lastOrderId}.pdf`;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+
+      // Reset botão
+      setTimeout(() => { if (btn) { btn.textContent = "Baixar PDF do Orçamento"; btn.disabled = false; } }, 1000);
+      return;
+    } catch (e) {
+      console.error("Erro download base64 manual:", e);
+      alert("Houve um erro ao gerar o arquivo. Tente recarregar a página.");
+    }
+  }
+
+  // 2. Fallback: Pega o code da URL
+  const pathParts = window.location.pathname.split('/').filter(Boolean);
+  const code = pathParts[pathParts.length - 1];
+
+  if (code && code.length > 3) {
+    console.log("Fallback CODE:", code);
+    window.open(API(`/link_pedido/pdf_cliente/${code}`), '_blank');
+  } else if (window.lastOrderId) {
+    // 3. Fallback: Se não tem code na URL (modo interno), usa ID
+    console.log("Fallback ID:", window.lastOrderId);
+    window.open(API(`/api/pedido/${window.lastOrderId}/pdf_cliente`), '_blank');
+  } else {
+    alert("Não foi possível identificar o link para download. Verifique seu e-mail para a cópia do orçamento.");
+  }
+};
 
 function atualizarObsCounter() {
   if (!taObs || !obsCounter) return;
@@ -120,7 +164,11 @@ function atualizarObsCounter() {
 
 function renderTabela() {
   if (!tbody) return;
+
+  // Otimização: Renderizar tudo em um fragmento
+  const fragment = document.createDocumentFragment();
   tbody.innerHTML = "";
+
   produtos.forEach((item, i) => {
     // Logica de preço unitário:
     // Se tiver markup, o preço "unitario" p/ calculo do total/subtotal É o preço markup.
@@ -134,14 +182,15 @@ function renderTabela() {
     const valorMarkup = usarValorComFrete ? (item.valor_com_frete_markup || 0) : (item.valor_sem_frete_markup || 0);
 
     // Preço efetivo (se markup > 0, usa ele. Se não, usa base)
-    // NOTE: Se markup for 0, valorMarkup esperado é 0 ou igual base?
-    // O backend retorna 0 se não tiver. Então se for 0, usamos base.
-    const precoEfetivo = valorMarkup > 0 ? valorMarkup : valorBase;
+    // NOTE: Usuário pediu para ignorar Markup no cálculo do TOTAL. O total deve ser sobre o valor COM/SEM frete (Base).
+    // O Markup é apenas visual/informativo.
+    const precoCalculo = valorBase;
 
-    const subtotal = precoEfetivo * (Number(item.quantidade) || 0);
+    const subtotal = precoCalculo * (Number(item.quantidade) || 0);
 
     const tr = document.createElement("tr");
     tr.innerHTML = `
+      <td>${i + 1}</td>
       <td>${item.codigo ?? ""}</td>
       <td>${item.nome ?? ""}</td>
       <td>${item.embalagem ?? ""}</td>
@@ -153,7 +202,7 @@ function renderTabela() {
       <td class="col-markup text-right">${item.markup > 0 ? fmtBRL.format(usarValorComFrete ? item.valor_com_frete_markup : item.valor_sem_frete_markup) : "-"}</td>
       <td id="subtotal-${i}">${fmtBRL.format(subtotal)}</td>
     `;
-    tbody.appendChild(tr);
+
     // Peso total inicial (peso unitário × quantidade inicial)
     const pesoUnit = Number(item.peso ?? 0);
     const qtdInicial = Number(item.quantidade) || 0;
@@ -163,8 +212,10 @@ function renderTabela() {
       pesoCell.textContent = formatIntBR(pesoTotal, { mode: "trunc" });
     }
 
-
+    fragment.appendChild(tr);
   });
+
+  tbody.appendChild(fragment);
 
   // Listeners de quantidade
   tbody.querySelectorAll("input.qtd").forEach((input) => {
@@ -195,9 +246,10 @@ function onQtdChange(e) {
     ? (produtos[idx].valor_com_frete_markup || 0)
     : (produtos[idx].valor_sem_frete_markup || 0);
 
-  const precoEfetivo = valorMarkup > 0 ? valorMarkup : valorBase;
+  // USER REQUEST: Cálculo deve ser sobre o valor da nota (Base), ignorando Markup no total
+  const precoCalculo = valorBase;
 
-  const subtotal = quantidade * precoEfetivo;
+  const subtotal = quantidade * precoCalculo;
   const cell = document.getElementById(`subtotal-${idx}`);
   if (cell) cell.textContent = fmtBRL.format(subtotal);
 
@@ -218,9 +270,10 @@ function atualizarTotal() {
   const total = produtos.reduce((acc, item) => {
     const vBase = usarValorComFrete ? item.valor_com_frete : item.valor_sem_frete;
     const vMk = usarValorComFrete ? (item.valor_com_frete_markup || 0) : (item.valor_sem_frete_markup || 0);
-    const vEf = vMk > 0 ? vMk : vBase;
+    // USER REQUEST: Total ignorando markup
+    const vCalc = vBase;
 
-    return acc + vEf * (Number(item.quantidade) || 0);
+    return acc + vCalc * (Number(item.quantidade) || 0);
   }, 0);
   if (totalEl) totalEl.textContent = fmtBRL.format(total);
   if (btnConfirmar) btnConfirmar.disabled = total <= 0;
@@ -300,8 +353,8 @@ async function carregarPedido() {
           // --- Lógica de Link Expirado ---
           if (info.is_expired) {
             window.linkExpirado = true; // flag global
-            setMensagem("Este link de pedido está expirado.", false);
-            if (btnConfirmar) btnConfirmar.disabled = true;
+            setMensagem("Este link de pedido está com validade vencida, mas você pode confirmar normalmente.", false);
+            // if (btnConfirmar) btnConfirmar.disabled = true; // REMOVIDO: permitir confirmar mesmo vencido
           }
 
           // --- Lógica de Pedido Já Confirmado ---
@@ -418,7 +471,7 @@ async function carregarPedido() {
           window.validadeGlobalISO = normalizarValidadeCampo(rawVal);
 
           if (window.linkExpirado) {
-            setCampoTexto("tempoRestante", "Validade vencida - valores sujeitos a alteração");
+            // setCampoTexto("tempoRestante", "Validade vencida - valores sujeitos a alteração");
             const el = document.getElementById("tempoRestante");
             if (el) el.style.color = "#d9534f"; // vermelho aviso
           } else {
@@ -496,7 +549,7 @@ function lockPageAfterConfirm() {
   // Desabilita todos os elementos interativos da página (menos o botão do modal)
   document.body.classList.add('page-locked');
   document.querySelectorAll('input, textarea, select, button').forEach(el => {
-    if (el.id === 'btnFecharConfirm') return;
+    if (el.id === 'btnFecharConfirm' || el.id === 'btnBaixarManual') return;
     el.disabled = true;
   });
   // Também evita scroll enquanto o modal estiver aberto
@@ -549,7 +602,14 @@ async function confirmarPedido() {
     setMensagem("Enviando pedido...", true);
 
     // token do link curto (/p/{code})
-    const originCode = location.pathname.split('/').pop() || null;
+    const pathParts = location.pathname.split('/').filter(Boolean);
+    const originCode = pathParts.length > 0 ? pathParts[pathParts.length - 1] : null;
+
+    // DEBUG: Verificar se o código foi detectado
+    if (!originCode) {
+      alert("AVISO: Código do link não detectado (originCode is null). O download do PDF pode falhar.");
+    }
+    // console.log("OriginCode:", originCode);
 
     // razão social mostrada na tela
     const clienteRazao = (document.getElementById('razaoSocialCliente')?.textContent || '').trim() || null;
@@ -584,8 +644,9 @@ async function confirmarPedido() {
           const vMkCom = x.valor_com_frete_markup || 0;
 
           // Se markup > 0, usa ele.
-          const pSem = (vMkSem > 0) ? vMkSem : vBaseSem;
-          const pCom = (vMkCom > 0) ? vMkCom : vBaseCom;
+          // USER REQUEST: Salvar o pedido com valor BASE, ignorando markup no valor final do pedido.
+          const pSem = vBaseSem;
+          const pCom = vBaseCom;
 
           return {
             codigo: x.codigo,
@@ -621,10 +682,51 @@ async function confirmarPedido() {
 
     const data = await resp.json();
     const pedidoIdConfirmado = data?.id ?? data?.pedido_id;
-    if (!pedidoIdConfirmado) throw new Error("Resposta sem id do pedido.");
 
     if (!pedidoIdConfirmado) {
       throw new Error("Resposta sem id do pedido.");
+    }
+
+    // --- Lógica de Download do PDF (Híbrido) ---
+    if (data.pdf_base64) {
+      console.log("PDF Base64 recebido! Length:", data.pdf_base64.length);
+      // alert("DEBUG: PDF Base64 chegou do servidor!");
+
+      // Store base64 for manual download
+      window.lastPdfBase64 = data.pdf_base64;
+      window.lastOrderId = pedidoIdConfirmado;
+    } else {
+      console.warn("DEBUG: data.pdf_base64 veio vazio/nulo.");
+      // alert("DEBUG: data.pdf_base64 veio VAZIO.");
+    }
+
+    // Atualiza texto do modal para avisar do email/download
+    const msgEmail = data.email_enviado === true
+      ? "Uma cópia foi enviada para seu e-mail."
+      : "E-mail não cadastrado (ou não configurado).";
+
+    const txtConfirm = document.querySelector('.confirm-text');
+    if (txtConfirm) {
+      txtConfirm.innerHTML = `
+        Orçamento confirmado com sucesso!<br>
+        <span style="color: ${data.email_enviado ? 'inherit' : '#d9534f'}">${msgEmail}</span>
+        <br><br>
+        <button id="btnBaixarManual" class="btn-baixar-manual" style="background-color: #28a745; color: white; border: none; padding: 10px 20px; border-radius: 5px; cursor: pointer; font-size: 1rem; margin-top: 10px;">
+          <i class="fas fa-file-pdf"></i> Baixar PDF do Orçamento
+        </button>
+      `;
+      // Attach listener dynamically to avoid scope/CSP issues
+      setTimeout(() => {
+        const btn = document.getElementById('btnBaixarManual');
+        if (btn) {
+          btn.onclick = window.baixarPdfManual; // Using direct property to ensure binding
+          btn.disabled = false; // Force enable
+          btn.style.pointerEvents = 'auto'; // Force clickable
+          console.log("Evento onclick vinculado ao botão PDF");
+        } else {
+          console.error("Botão PDF não encontrado para vincular evento");
+        }
+      }, 50);
     }
 
     openConfirmModal(pedidoIdConfirmado);

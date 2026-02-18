@@ -20,6 +20,7 @@ class CadastroCliente(BaseModel):
     id: int
     codigo_da_empresa: Optional[str]
     ativo: Optional[bool]
+    tipo_pessoa: Optional[str]
     tipo_cliente: Optional[str]
     tipo_venda: Optional[str]
     tipo_compra: Optional[str]

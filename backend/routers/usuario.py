@@ -8,7 +8,7 @@ from jose import JWTError, jwt
 
 from database import SessionLocal
 from models.usuario import UsuarioModel
-from schemas.usuario import UsuarioCreate, UsuarioPublic, UsuarioUpdateSenha, UsuarioResetSenha, UsuarioUpdate, UsuarioChangePassword
+from schemas.usuario import UsuarioCreate, UsuarioPublic, UsuarioUpdateSenha, UsuarioResetSenha, UsuarioUpdate, UsuarioChangePassword, UsuarioAdminResetSenha
 from core.security import get_password_hash, SECRET_KEY, ALGORITHM, verify_password
 
 from core.deps import get_db, get_current_user, oauth2_scheme
@@ -47,18 +47,40 @@ def create_user(
     if db.query(UsuarioModel).filter(UsuarioModel.email == usuario.email).first():
         raise HTTPException(status_code=400, detail="Email already registered")
     
+    import uuid
+    from services.email_service import enviar_email_verificacao
+    
     hashed_pw = get_password_hash(usuario.senha)
+    
+    # Gerar token de verificação
+    token_verif = str(uuid.uuid4())
+    
     db_user = UsuarioModel(
         nome=usuario.nome,
         email=usuario.email,
         senha_hash=hashed_pw,
         funcao=usuario.funcao,
         ativo=usuario.ativo,
-        criado_por=current_user_email
+        criado_por=current_user_email,
+        reset_senha_obrigatorio=True,
+        email_verificado=False, # Requer verificação
+        token_verificacao=token_verif
     )
     db.add(db_user)
     db.commit()
     db.refresh(db_user)
+    
+    # Enviar E-mail
+    try:
+        # Link do Frontend (ajustar conforme ambiente)
+        # TODO: Usar variável de ambiente para URL do frontend
+        base_url = "http://127.0.0.1:5500" 
+        link = f"{base_url}/public/login/verify.html?token={token_verif}"
+        enviar_email_verificacao(db, usuario.email, link)
+    except Exception as e:
+        print(f"Erro ao enviar email de verificação: {e}")
+        # Opcional: rollback ou avisar que falhou envio
+        
     return db_user
 
 @router.get("/", response_model=List[UsuarioPublic])
@@ -84,13 +106,14 @@ def alterar_minha_senha(
     # Update
     current_user.senha_hash = get_password_hash(dados.nova_senha)
     current_user.data_atualizacao = datetime.now()
+    current_user.reset_senha_obrigatorio = False
     db.commit()
     return {"message": "Senha alterada com sucesso"}
 
 @router.post("/{user_id}/reset-senha")
 def resetar_senha_usuario(
     user_id: int,
-    dados: UsuarioResetSenha,
+    dados: UsuarioAdminResetSenha,
     db: Session = Depends(get_db),
     current_user: UsuarioModel = Depends(get_current_user)
 ):

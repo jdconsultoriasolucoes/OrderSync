@@ -40,11 +40,11 @@ def _br_number(value, decimals=2, suffix=""):
     return s + suffix
 
 
-def gerar_pdf_pedido(pedido: PedidoPdf, sem_validade: bool = False) -> bytes:
-    buffer = io.BytesIO()
-    _desenhar_pdf(pedido, buffer, sem_validade=sem_validade)
-    buffer.seek(0)
-    return buffer.read()
+# def gerar_pdf_pedido(pedido: PedidoPdf, sem_validade: bool = False) -> bytes:
+#     buffer = io.BytesIO()
+#     _desenhar_pdf(pedido, buffer, sem_validade=sem_validade)
+#     buffer.seek(0)
+#     return buffer.read()
 
 
 def _desenhar_pdf(pedido: PedidoPdf, buffer: io.BytesIO, sem_validade: bool = False) -> None:
@@ -129,15 +129,23 @@ def _desenhar_pdf(pedido: PedidoPdf, buffer: io.BytesIO, sem_validade: bool = Fa
 
     # Data / Validade (Bloco direito do header)
     c.setFont("Helvetica", 10)
+    c.drawRightString(width - margin_x, faixa_y - faixa_h + 0.5 * cm, f"Data do Pedido: {pedido.data_pedido.strftime('%d/%m/%Y')}")
     
-    # Start y for the right-aligned text block
-    y_right_block_start = faixa_y - faixa_h + 0.35 * cm + 0.2 * cm
-
-    c.setFont("Helvetica", 9) 
-    c.drawRightString(width - margin_x - 0.3 * cm, y_right_block_start, f"Data do Pedido: {pedido.data_pedido.strftime('%d/%m/%Y')}")
-    
-    if not sem_validade and pedido.validade_tabela:
-        c.drawRightString(width - margin_x - 0.3 * cm, y_right_block_start - 0.4 * cm, f"Proposta válida até: {pedido.validade_tabela}")
+    if sem_validade:
+        # Mostra validade calculada ou fixa
+        validade_str = "Consulte o vendedor"
+        if pedido.validade_tabela:
+             # Se vier do objeto PedidoPdf
+             validade_str = pedido.validade_tabela
+        
+        # Desenha logo abaixo da Data do Pedido
+        c.drawRightString(width - margin_x, faixa_y - faixa_h + 0.1 * cm, f"Validade da Proposta: {validade_str}")
+    else:
+        # Vendor layout (mantém original ou nada)
+        if pedido.validade_tabela:
+            c.drawRightString(width - margin_x, faixa_y - faixa_h + 0.1 * cm, f"Proposta válida até: {pedido.validade_tabela}")
+        else:
+            c.drawRightString(width - margin_x, faixa_y - faixa_h + 0.1 * cm, "Proposta válida até: Não se aplica")
 
     # Atualiza y para baixo da faixa
     y = faixa_y - faixa_h - 0.5 * cm
@@ -147,50 +155,81 @@ def _desenhar_pdf(pedido: PedidoPdf, buffer: io.BytesIO, sem_validade: bool = Fa
     # =======================
     codigo_cliente = pedido.codigo_cliente or ""
     cliente = pedido.cliente or ""
-    razao_social = pedido.nome_fantasia or ""
+    razao_social = pedido.razao_social or pedido.nome_fantasia or ""
 
-    # larguras em cm (aprox.):
-    label_cod_w = 1.4 * cm
-    cod_val_w   = 3.5 * cm        # código ~5 cm
-    label_cli_w = 2.0 * cm
-    label_raz_w = 2.3 * cm
+    if sem_validade:
+        # Layout Cliente: Sem Código do Cliente no Header
+        label_cli_w = 2.0 * cm
+        label_raz_w = 2.3 * cm
+        restante    = available_width - (label_cli_w + label_raz_w)
+        cli_val_w   = max(restante * 0.55, 6.0 * cm)
+        raz_val_w   = max(restante * 0.45, 5.0 * cm)
 
-    restante    = available_width - (label_cod_w + cod_val_w + label_cli_w + label_raz_w)
-    cli_val_w   = max(restante * 0.55, 6.0 * cm)
-    raz_val_w   = max(restante * 0.45, 5.0 * cm)
+        bloco1_col_widths = [
+            label_cli_w, cli_val_w,
+            label_raz_w, raz_val_w,
+        ]
+        bloco1_data = [[
+            "Cliente:", cliente[:120],
+            "Razão Social:", razao_social[:80],
+        ]]
+        
+        # Style needs adjustment (indices shift)
+        # We need to apply a specific style for this layout or make the style dynamic
+        # Since I cannot easily dynamic the style below without changing the whole block, 
+        # I will change the logic to use a variable for style alignment or just standard right align.
+        # Actually, the style below uses hardcoded indices (0, 2, 4).
+        # For this Short layout (0, 2), index 4 will error.
+        # So I MUST change the style construction too.
+    else:
+        label_cod_w = 1.4 * cm
+        cod_val_w   = 3.5 * cm 
+        label_cli_w = 2.0 * cm
+        label_raz_w = 2.3 * cm
+        restante    = available_width - (label_cod_w + cod_val_w + label_cli_w + label_raz_w)
+        cli_val_w   = max(restante * 0.55, 6.0 * cm)
+        raz_val_w   = max(restante * 0.45, 5.0 * cm)
 
-    bloco1_col_widths = [
-        label_cod_w, cod_val_w,
-        label_cli_w, cli_val_w,
-        label_raz_w, raz_val_w,
+        bloco1_col_widths = [
+            label_cod_w, cod_val_w,
+            label_cli_w, cli_val_w,
+            label_raz_w, raz_val_w,
+        ]
+        bloco1_data = [[
+            "Código:", str(codigo_cliente),
+            "Cliente:", cliente[:120],
+            "Razão Social:", razao_social[:80],
+        ]]
+
+    style_cmds = [
+        ("BACKGROUND", (0, 0), (-1, -1), SUPRA_BG_LIGHT),
+        ("TEXTCOLOR", (0, 0), (-1, -1), SUPRA_DARK),
+        ("FONTNAME", (0, 0), (-1, -1), "Helvetica"),
+        ("FONTSIZE", (0, 0), (-1, -1), 9),
+        ("VALIGN", (0, 0), (-1, -1), "MIDDLE"),
+        ("LEFTPADDING", (0, 0), (-1, -1), 3),
+        ("RIGHTPADDING", (0, 0), (-1, -1), 3),
+        ("TOPPADDING", (0, 0), (-1, -1), 2),
+        ("BOTTOMPADDING", (0, 0), (-1, -1), 2),
+        ("GRID", (0, 0), (-1, -1), 0.5, colors.black),
     ]
 
-    bloco1_data = [[
-        "Código:", str(codigo_cliente),
-        "Cliente:", cliente[:120],
-        "Razão Social:", razao_social[:80],
-    ]]
+    if sem_validade:
+        # Layout Cliente: 4 Colunas (0=LabelCli, 1=ValCli, 2=LabelRaz, 3=ValRaz)
+        style_cmds.extend([
+            ("ALIGN", (0, 0), (0, 0), "RIGHT"),  # "Cliente:"
+            ("ALIGN", (2, 0), (2, 0), "RIGHT"),  # "Razão Social:"
+        ])
+    else:
+        # Layout Vendedor: 6 Colunas (0=LabelCod, 1=ValCod, 2=LabelCli, 3=ValCli, 4=LabelRaz, 5=ValRaz)
+        style_cmds.extend([
+            ("ALIGN", (0, 0), (0, 0), "RIGHT"),  # "Código:"
+            ("ALIGN", (2, 0), (2, 0), "RIGHT"),  # "Cliente:"
+            ("ALIGN", (4, 0), (4, 0), "RIGHT"),  # "Razão Social:"
+        ])
 
     bloco1_table = Table(bloco1_data, colWidths=bloco1_col_widths)
-    bloco1_table.setStyle(
-        TableStyle(
-            [
-                ("BACKGROUND", (0, 0), (-1, -1), SUPRA_BG_LIGHT),
-                ("TEXTCOLOR", (0, 0), (-1, -1), SUPRA_DARK),
-                ("FONTNAME", (0, 0), (-1, -1), "Helvetica"),
-                ("FONTSIZE", (0, 0), (-1, -1), 9),
-                ("VALIGN", (0, 0), (-1, -1), "MIDDLE"),
-                ("ALIGN", (0, 0), (0, 0), "RIGHT"),  # "Código:"
-                ("ALIGN", (2, 0), (2, 0), "RIGHT"),  # "Cliente:"
-                ("ALIGN", (4, 0), (4, 0), "RIGHT"),  # "Razão Social:"
-                ("LEFTPADDING", (0, 0), (-1, -1), 3),
-                ("RIGHTPADDING", (0, 0), (-1, -1), 3),
-                ("TOPPADDING", (0, 0), (-1, -1), 2),
-                ("BOTTOMPADDING", (0, 0), (-1, -1), 2),
-                ("GRID", (0, 0), (-1, -1), 0.5, colors.black),
-            ]
-        )
-    )
+    bloco1_table.setStyle(TableStyle(style_cmds))
 
     _, bloco1_h = bloco1_table.wrap(available_width, height)
     bloco1_table.drawOn(c, margin_x, y - bloco1_h)
@@ -207,15 +246,22 @@ def _desenhar_pdf(pedido: PedidoPdf, buffer: io.BytesIO, sem_validade: bool = Fa
     else:
         data_entrega_str = ""
 
-    # FRETE (apenas total – sem "frete por kg")
-    if frete_total > 0:
-        frete_str = "R$ " + _br_number(frete_total)
+    # FRETE (agora mostra FRETE KG no topo - solicitado "inverter")
+    # SE FOR VERSAO CLIENTE (sem_validade), ESCONDER FRETE TOTAL DESTE BLOCO
+    if frete_kg > 0:
+        frete_str = "R$ " + _br_number(frete_kg)
     else:
         frete_str = "R$ 0,00"
 
-    frete_data = [
-        ["Frete Total:", frete_str],
-    ]
+    frete_data = []
+    if not sem_validade:
+        # Só mostra Frete Total no topo para Vendedor
+        frete_data.append(["Frete Total:", frete_str])
+    else:
+        # Cliente: Deixa em branco para manter alinhamento ou esconde
+        # Se deixar lista vazia, o Table pode reclamar. Vamos por placeholder vazio.
+        frete_data.append(["", ""]) 
+
     frete_col_widths = [3.0 * cm, 4.0 * cm]
 
     frete_table = Table(frete_data, colWidths=frete_col_widths)
@@ -267,14 +313,22 @@ def _desenhar_pdf(pedido: PedidoPdf, buffer: io.BytesIO, sem_validade: bool = Fa
     _, data_h = data_table.wrap(bloco2_right_w, height)
     bloco2_h = max(frete_h, data_h)
 
-    frete_table.drawOn(c, margin_x, y - frete_h)
+    # Só desenha tabela frete se tiver dados visíveis ou se for layout fixo
+    # Se for sem_validade, frete_data tem ["", ""]. Vai desenhar caixa vazia.
+    # Usuário pediu pra RISCAR, ou seja, sumir? Se for sumir, melhor não desenhar.
+    if not sem_validade:
+        frete_table.drawOn(c, margin_x, y - frete_h)
+    
     data_table.drawOn(c, margin_x + bloco2_left_w + bloco2_gap, y - data_h)
     y = y - bloco2_h + -0.3 * cm
 
     # =======================
     # TABELA DE ITENS (multi-página)
     # =======================
+    # REVERTED: Sempre mostrar código do produto na tabela
     header = [
+        "#",
+        "Fornecedor",
         "Codigo",
         "Produto",
         "Embal",
@@ -292,36 +346,50 @@ def _desenhar_pdf(pedido: PedidoPdf, buffer: io.BytesIO, sem_validade: bool = Fa
         reverse=True,
     )
 
-    # converte itens em linhas da tabela
-    all_rows = []
-    for it in itens_ordenados:
-        all_rows.append(
-            [
-                it.codigo,
-                it.produto,
-                it.embalagem or "",
-                f"{it.quantidade:g}",
-                it.condicao_pagamento or "",
-                it.tabela_comissao or "",
-                "R$ " + _br_number(float(it.valor_retira or 0)),
-                "R$ " + _br_number(float(it.valor_entrega or 0)),
-            ]
-        )
-
-    # Larguras base em cm; escala para ocupar a largura inteira
+    # Define colunas e larguras base
     base_widths_cm = [
+        0.8,  # Item (#)
+        2.5,  # Fornecedor
         1.7,  # Código
-        8.3,  # Produto
-        1.8,  # Embalagem
+        6.5,  # Produto
+        1.5,  # Embalagem
         1.5,  # Qtd
         5.5,  # Cond. Pgto
-        2.7,  # Comissão
+        2.0,  # Comissão
         2.5,  # Valor Retira
         2.5,  # Valor Entrega
     ]
+
     total_base = sum(base_widths_cm)
     scale = (available_width / cm) / total_base
     col_widths = [w * scale * cm for w in base_widths_cm]
+
+    # converte itens em linhas da tabela
+    all_rows = []
+    # converte itens em linhas da tabela
+    # Estilo Normal para usar no Paragraph dentro da célula
+    style_normal = styles["Normal"]
+    style_normal.fontSize = 8
+    style_normal.leading = 9 # entrelinha menor para caber melhor
+
+    for idx, it in enumerate(itens_ordenados, start=1):
+        # Envolve textos longos em Paragraph para quebrar linha
+        p_fornecedor = Paragraph(it.fornecedor or "", style_normal)
+        p_produto = Paragraph(it.produto or "", style_normal)
+        p_condicao = Paragraph(it.condicao_pagamento or "", style_normal)
+        
+        all_rows.append([
+            str(idx),
+            p_fornecedor, # Agora é um Flowable, não string
+            it.codigo,
+            p_produto,    # Agora é um Flowable, não string
+            it.embalagem or "",
+            f"{it.quantidade:g}",
+            p_condicao,   # Agora é um Flowable
+            it.tabela_comissao or "",
+            "R$ " + _br_number(float(it.valor_retira or 0)),
+            "R$ " + _br_number(float(it.valor_entrega or 0)),
+        ])
 
     # estilo da tabela de itens (reutilizado em todas as páginas)
     itens_table_style = TableStyle(
@@ -337,8 +405,10 @@ def _desenhar_pdf(pedido: PedidoPdf, buffer: io.BytesIO, sem_validade: bool = Fa
 
             ("FONTSIZE", (0, 1), (-1, -1), 8),
             ("VALIGN", (0, 0), (-1, -1), "MIDDLE"),
-            ("ALIGN", (3, 1), (3, -1), "CENTER"),   # Qtd
-            ("ALIGN", (6, 1), (7, -1), "RIGHT"),    # valores
+            ("ALIGN", (4, 1), (4, -1), "CENTER"),   # Qtd
+            ("ALIGN", (7, 1), (8, -1), "RIGHT"),    # valores
+            ("ALIGN", (0, 1), (0, -1), "CENTER"),   # (#) Item
+            ("ALIGN", (1, 1), (1, -1), "CENTER"),   # Fornecedor
         ]
     )
 
@@ -393,134 +463,391 @@ def _desenhar_pdf(pedido: PedidoPdf, buffer: io.BytesIO, sem_validade: bool = Fa
     fech_block_width = available_width * 0.45   # fechamento à esquerda
     obs_block_width = available_width - fech_block_width - gap
 
-    # Peso bruto total – arredondar "regra de escola": 65,4 -> 65 | 65,5 -> 66
-    total_peso_raw = float(pedido.total_peso_bruto or 0)
+    # NOVO: Peso Bruto vs Liquido
+    total_peso_liq_raw = getattr(pedido, "total_peso_liquido", 0.0) or 0.0
+    total_peso_bru_raw = getattr(pedido, "total_peso_bruto", 0.0) or 0.0
 
-    if total_peso_raw >= 0:
-        total_peso_kg = int(total_peso_raw + 0.5)
-    else:
-        total_peso_kg = int(total_peso_raw - 0.5)
+    def _fmt_peso(p):
+        return _br_number(int(p + 0.5) if p >= 0 else int(p - 0.5), 0, " kg")
 
     total_valor = float(pedido.total_valor or 0)
 
+    # Cria lista de fechamento
     data_fech = [
         ["Fechamento do Orçamento:", ""],
-        ["Total em Peso Bruto:", _br_number(total_peso_kg, 0, " kg")],
-        ["Valor Frete:", "R$ " + _br_number(frete_total)],
-        ["Total em Valor:", "R$ " + _br_number(total_valor)],
     ]
+    # SÓ MOSTRA PESO LIQUIDO SE NAO FOR VERSAO CLIENTE
+    if not sem_validade:
+        data_fech.append(["Total em Peso Líquido:", _fmt_peso(total_peso_liq_raw)])
+        
+    data_fech.append(["Total em Peso Bruto:",   _fmt_peso(total_peso_bru_raw)])
+    data_fech.append(["Valor Frete:", "R$ " + _br_number(frete_total)])
+    data_fech.append(["Total em Valor:", "R$ " + _br_number(total_valor)])
 
-    fech_col_widths = [fech_block_width * 0.6, fech_block_width * 0.4]
-
-    fech_table = Table(data_fech, colWidths=fech_col_widths)
-    fech_table.setStyle(
-        TableStyle(
-            [
-                ("BACKGROUND", (0, 0), (-1, -1), SUPRA_BG_LIGHT),
-                ("FONTNAME", (0, 0), (0, 0), "Helvetica-Bold"),
-                ("TEXTCOLOR", (0, 0), (-1, -1), SUPRA_DARK),
-                ("FONTSIZE", (0, 0), (-1, -1), 9),
-                ("GRID", (0, 0), (-1, -1), 0.5, colors.black),
-                ("BOX", (0, 0), (-1, -1), 0.5, colors.black),
-                ("VALIGN", (0, 0), (-1, -1), "MIDDLE"),
-                ("ALIGN", (0, 0), (0, 0), "CENTER"),
-                ("ALIGN", (1, 0), (1, 0), "LEFT"),
-            ]
-        )
-    )
-
-    # Observações (DIREITA, SEMPRE APARECE) – com quebra de linha automática
-    obs_para = Paragraph(obs_text.replace("\n", "<br/>"), obs_style)
-
-    data_obs = [["Observações:", obs_para]]
-    obs_col_widths = [2.8 * cm, obs_block_width - 2.8 * cm]
-
-    obs_table = Table(data_obs, colWidths=obs_col_widths)
-    obs_table.setStyle(
-        TableStyle(
-            [
-                ("BACKGROUND", (0, 0), (0, 0), SUPRA_BG_LIGHT),
-                ("FONTNAME", (0, 0), (0, 0), "Helvetica-Bold"),
-                ("TEXTCOLOR", (0, 0), (-1, -1), SUPRA_DARK),
-                ("FONTSIZE", (0, 0), (-1, -1), 9),
-                ("GRID", (0, 0), (-1, -1), 0.5, colors.black),
-                ("BOX", (0, 0), (-1, -1), 0.5, colors.black),
-                ("VALIGN", (0, 0), (-1, -1), "MIDDLE"),
-                ("ALIGN", (0, 0), (0, 0), "CENTER"),
-                ("ALIGN", (1, 0), (1, 0), "LEFT"),
-            ]
-        )
-    )
-
-    # desenha lado a lado na mesma "altura"
-    y_top = y
-    fech_x = itens_x
-    obs_x = itens_x + fech_block_width + gap
-
-    _, fech_h = fech_table.wrap(fech_block_width, height)
-    _, obs_h = obs_table.wrap(obs_block_width, height)
-    max_h = max(fech_h, obs_h)
-
-    # se não couber na página atual, joga fechamento/obs para a próxima página
-    if y_top - max_h < margin_y:
-        c.showPage()
-        y_top = height - margin_y
-        fech_x = itens_x
-        obs_x = itens_x + fech_block_width + gap
-
-    fech_table.drawOn(c, fech_x, y_top - fech_h)
-    obs_table.drawOn(c, obs_x, y_top - obs_h)
-
-    y = y_top - max_h - 0.3 * cm
-
-    # rodapé
-    c.setFont("Helvetica", 8)
-    c.drawString(itens_x, y, "Documento gerado automaticamente pelo OrderSync.")
+    # Cria tabelas para medir altura
+    t_fech = Table(data_fech, colWidths=[fech_block_width * 0.6, fech_block_width * 0.4])
+    t_fech.setStyle(TableStyle([
+        ("GRID", (0, 0), (-1, -1), 0.5, colors.black),
+        ("BACKGROUND", (0, 0), (-1, 0), colors.lightgrey), # Header do box
+        ("FONTNAME", (0, 0), (-1, 0), "Helvetica-Bold"),
+        ("FONTSIZE", (0, 0), (-1, -1), 8),
+        ("VALIGN", (0, 0), (-1, -1), "MIDDLE"),
+    ]))
     
-    if sem_validade:
-        c.drawCentredString(width / 2, 1 * cm, "* Confirmação da Solicitação de Orçamento *")
+    t_obs = Table([
+        ["Observações:", obs_text]
+    ], colWidths=[2.5 * cm, obs_block_width - 2.5 * cm])
+    t_obs.setStyle(TableStyle([
+         ("GRID", (0, 0), (-1, -1), 0.5, colors.black),
+         ("BACKGROUND", (0, 0), (0, 0), colors.lightgrey), # Header "Observações:"
+         ("FONTNAME", (0, 0), (0, 0), "Helvetica-Bold"),
+         ("FONTSIZE", (0, 0), (-1, -1), 8),
+         ("VALIGN", (0, 0), (-1, -1), "TOP"),
+         ("ALIGN", (0, 0), (0, 0), "LEFT"),
+    ]))
 
+    # Medir altura sem desenhar ainda
+    w_f, h_f = t_fech.wrap(fech_block_width, height)
+    w_o, h_o = t_obs.wrap(obs_block_width, height)
+    needed_height = max(h_f, h_o) + 1.0 * cm # margem de segurança
+
+    # Verifica se cabe na página atual
+    if y - needed_height < margin_y:
+        c.showPage()
+        y = height - margin_y # Reset topo da nova página
+    
+    # Agora desenha
+    t_fech.wrapOn(c, fech_block_width, height)
+    t_fech.drawOn(c, margin_x, y - h_f)
+
+    t_obs.wrapOn(c, obs_block_width, height)
+    # Obs alinhada pelo topo do box de fechamento? Ou pelo topo do y atual?
+    # Vamos alinhar pelo topo = y. 
+    t_obs.drawOn(c, margin_x + fech_block_width + gap, y - h_o)
+    
+    # WATERMARK (moved inside helper logic if needed, but handled at end)
+    if sem_validade:
+        c.saveState()
+        c.setFont("Helvetica-Bold", 60)
+        c.setFillColor(colors.Color(0.8, 0.8, 0.8, alpha=0.3))
+        c.translate(width/2, height/2)
+        c.rotate(45)
+        c.drawCentredString(0, 0, "ORÇAMENTO")
+        c.restoreState()
+
+    c.showPage()
+    try:
+        c.save()
+    except Exception as e:
+        if "can only be saved once" in str(e):
+            pass # Ignora erro de duplo save se ocorrer
+        else:
+            raise e
+def gerar_pdf_pedido(*args, destino_dir: str = "/tmp", sem_validade: bool = False, **kwargs) -> bytes:
+    """
+    Gera PDF do pedido.
+    Assinaturas suportadas:
+    1) gerar_pdf_pedido(pedido_pdf: PedidoPdf, sem_validade=...) -> bytes
+    2) gerar_pdf_pedido(db: Session, pedido_id: int, sem_validade=...) -> bytes
+    """
+    pedido = None
+    
+    # Caso 1: Passou objeto PedidoPdf direto
+    if len(args) == 1:
+        if isinstance(args[0], PedidoPdf):
+            pedido = args[0]
+        # Se for Session, cai no logic abaixo? Não, Session é arg 0.
+        # Vamos checar types.
+    
+    # Caso 2: Passou (db, pedido_id)
+    if not pedido and len(args) >= 2:
+        db = args[0]
+        pid = args[1]
+        pedido = carregar_pedido_pdf(db, int(pid))
+        
+    # Caso kwargs (db=..., pedido_id=...)
+    if not pedido and "db" in kwargs and "pedido_id" in kwargs:
+         pedido = carregar_pedido_pdf(kwargs["db"], int(kwargs["pedido_id"]))
+
+    if not pedido:
+         # Tenta recuperar do args[0] se for PedidoPdf, pois a checagem len(args)==1 pode falhar se passarem mais args opcionais
+         if len(args) > 0 and isinstance(args[0], PedidoPdf):
+             pedido = args[0]
+         else:
+             raise TypeError("Uso inválido de gerar_pdf_pedido. Espetado (PedidoPdf) ou (db, id).")
+
+    # Override do sem_validade se vier no kwargs
+    if "sem_validade" in kwargs:
+        sem_validade = kwargs["sem_validade"]
+
+    # Escolher layout baseado em sem_validade
+    if sem_validade:
+        # Layout simplificado para o cliente
+        from services.pdf_cliente_layout import gerar_pdf_cliente_simplificado
+        return gerar_pdf_cliente_simplificado(pedido)
+    else:
+        # Layout completo para o vendedor
+        buffer = io.BytesIO()
+        _desenhar_pdf(pedido, buffer, sem_validade=False)
+        buffer.seek(0)
+        return buffer.read()
+
+
+
+def gerar_pdf_lista_preco(pedido: PedidoPdf, modo_frete: str = "ambos") -> bytes:
+    """
+    Gera PDF estilo 'Lista de Preço' (sem Qtd, sem Obs, valores com/sem frete).
+    modo_frete: 'com', 'sem', 'ambos'
+    """
+    buffer = io.BytesIO()
+    # MUDANÇA: Portrait (Retrato) em vez de Landscape
+    pagesize = A4
+    c = canvas.Canvas(buffer, pagesize=pagesize)
+    width, height = pagesize
+    margin_x = 0.7 * cm
+    margin_y = 0.5 * cm
+
+    # ============================
+    # 1. LOGO (Igual ao _desenhar_pdf)
+    # ============================
+    base_dir = Path(__file__).resolve().parents[2]
+    logo_path = base_dir / "frontend" / "public" / "tabela_preco" / "logo_cliente_supra.png"
+
+    if not logo_path.exists():
+        static_dir = base_dir / "frontend" / "public"
+        for candidate in [
+            static_dir / "logo_cliente_supra.png",
+            static_dir / "logo.png",
+        ]:
+            if candidate.exists():
+                logo_path = candidate
+                break
+        else:
+            logo_path = None
+
+    logo_h = 0
+    # Logo no canto direito superior
+    if logo_path and logo_path.exists():
+        try:
+            img = ImageReader(str(logo_path))
+            logo_w = 3.0 * cm  # Largura do logo
+            iw, ih = img.getSize()
+            logo_h = logo_w * ih / iw
+            
+            # Posição: Canto Superior Direito
+            x_logo = width - margin_x - logo_w
+            y_logo = height - margin_y - logo_h
+            
+            c.drawImage(
+                img,
+                x_logo,
+                y_logo,
+                width=logo_w,
+                height=logo_h,
+                preserveAspectRatio=True,
+                mask="auto",
+            )
+        except Exception:
+            logo_h = 0
+
+    # ============================
+    # 2. CABEÇALHO (FAIXA)
+    # ============================
+    # Faixa ajustada para não cobrir o logo se eles se sobreporem
+    
+    top_contect_y = height - margin_y
+    if logo_h > 0:
+        # Deixa um gap abaixo do logo
+        top_contect_y = top_contect_y - logo_h - 0.2 * cm
+
+    c.setFillColor(SUPRA_RED)
+    faixa_h = 1.0 * cm
+    faixa_y = top_contect_y - faixa_h
+    available_width = width - 2 * margin_x
+    
+    c.rect(margin_x, faixa_y, available_width, faixa_h, stroke=0, fill=1)
+
+    c.setFillColor(colors.white)
+    c.setFont("Helvetica-Bold", 12) # Fonte um pouco menor pois A4 Portrait é estreito
+    
+    titulo_map = {
+        "com": "LISTA DE PREÇOS (COM FRETE)",
+        "sem": "LISTA DE PREÇOS (SEM FRETE)",
+        "ambos": "LISTA DE PREÇOS"
+    }
+    titulo = titulo_map.get(modo_frete, "LISTA DE PREÇOS")
+    c.drawString(margin_x + 0.3 * cm, faixa_y + 0.35 * cm, titulo)
+
+    # ============================
+    # 3. VALIDADE E DATA
+    # ============================
+    c.setFont("Helvetica", 9)
+    # Data do Pedido/Geração
+    data_str = pedido.data_pedido.strftime('%d/%m/%Y')
+    
+    # Bloco alinhado à direita DENTRO da faixa
+    right_text_x = width - margin_x - 0.3 * cm
+    c.drawRightString(right_text_x, faixa_y + 0.6 * cm, f"Data: {data_str}")
+    
+    # Validade (se houver)
+    # Validade (se houver)
+    if pedido.validade_tabela:
+        c.drawRightString(right_text_x, faixa_y + 0.2 * cm, f"Proposta válida até: {pedido.validade_tabela}")
+    else:
+         pass
+
+    # ============================
+    # 4. INFO CLIENTE
+    # ============================
+    y = faixa_y - 0.5 * cm
+    c.setFillColor(SUPRA_DARK)
+    c.setFont("Helvetica-Bold", 9)
+    
+    c.drawString(margin_x, y, f"Cliente: {pedido.cliente or ''}") 
+    if pedido.nome_fantasia:
+         c.drawString(margin_x, y - 0.4*cm, f"Fantasia: {pedido.nome_fantasia}")
+         y -= 0.4*cm
+    
+    y -= 0.8 * cm
+
+    # ============================
+    # 5. COLUNAS (Ajustadas para Portrait ~19cm)
+    # ============================
+    
+    cols_def = [
+        {"name": "Cód", "width": 1.2, "align": "CENTER"},
+        {"name": "Produto", "width": 5.0, "align": "LEFT"}, 
+        {"name": "Emb", "width": 1.1, "align": "CENTER"}, 
+        {"name": "Condição", "width": 2.5, "align": "CENTER"}, 
+    ]
+    
+    # Injeta Preço 
+    if modo_frete == "com":
+        cols_def.append({"name": "R$ C/ Frete", "width": 2.0, "align": "CENTER"})
+    elif modo_frete == "sem":
+        cols_def.append({"name": "R$ S/Frete", "width": 2.0, "align": "CENTER"})
+    else: # ambos
+        cols_def.append({"name": "R$ C/ Frete", "width": 1.8, "align": "CENTER"})
+        cols_def.append({"name": "R$ S/Frete", "width": 1.8, "align": "CENTER"})
+
+    cols_def.append({"name": "MKP %", "width": 1.2, "align": "CENTER"})
+
+    # Injeta Markup Valor
+    if modo_frete == "com":
+        cols_def.append({"name": "MKP C/Frete", "width": 2.2, "align": "CENTER"})
+    elif modo_frete == "sem":
+        cols_def.append({"name": "MKP S/Frete", "width": 2.2, "align": "CENTER"})
+    else: # ambos
+        cols_def.append({"name": "MKP C/Frete", "width": 2.0, "align": "CENTER"})
+        cols_def.append({"name": "MKP S/Frete", "width": 2.0, "align": "CENTER"})
+
+    # Extrai headers e widths
+    header = [c["name"] for c in cols_def]
+    
+    # Calcula escala para caber exatamente na largura
+    base_total = sum(c["width"] for c in cols_def)
+    scale = available_width / (base_total * cm)
+    
+    col_widths = [(c["width"] * scale) * cm for c in cols_def]
+    
+    # Estilo alinhamento dinâmico
+    align_styles = []
+    for idx, col in enumerate(cols_def):
+        align_styles.append(("ALIGN", (idx, 0), (idx, -1), col["align"]))
+
+    table_style = TableStyle([
+        ("BACKGROUND", (0, 0), (-1, 0), SUPRA_RED),
+        ("TEXTCOLOR", (0, 0), (-1, 0), colors.white),
+        ("FONTNAME", (0, 0), (-1, 0), "Helvetica-Bold"),
+        ("GRID", (0, 0), (-1, -1), 0.5, colors.black),
+        ("FONTSIZE", (0, 0), (-1, -1), 7), # Fonte p/ caber
+        ("VALIGN", (0, 0), (-1, -1), "MIDDLE"),
+        ("LEFTPADDING", (0, 0), (-1, -1), 2),
+        ("RIGHTPADDING", (0, 0), (-1, -1), 2),
+    ] + align_styles)
+
+    # Prepara dados
+    itens_ordenados = sorted(pedido.itens, key=lambda it: it.produto or "")
+
+    data_rows = []
+    for it in itens_ordenados:
+        markup_pct = it.markup or 0
+        mk_str = f"{markup_pct:g}%" if markup_pct else "0%"
+        
+        # Valores originais (Custo ou Base)
+        custo_cf = float(it.valor_entrega or 0)
+        custo_sf = float(it.valor_retira or 0)
+        
+        # Valores de venda (Markup aplicado)
+        venda_cf = float(it.valor_final_markup or 0)
+        venda_sf = float(it.valor_s_frete_markup or 0)
+        
+        # Fallback se zerado
+        if venda_cf <= 0: venda_cf = custo_cf
+        if venda_sf <= 0: venda_sf = custo_sf
+
+        row = [
+            it.codigo or "",
+            (it.produto or "")[:35], # Truncate produto name if too long
+            (it.embalagem or "")[:10],
+            (it.condicao_pagamento or "")[:20],
+        ]
+
+        # 1. Preço Base
+        if modo_frete == "com":
+            row.append(_br_number(custo_cf))
+        elif modo_frete == "sem":
+            row.append(_br_number(custo_sf))
+        else:
+            row.append(_br_number(custo_cf))
+            row.append(_br_number(custo_sf))
+
+        # 2. Markup %
+        row.append(mk_str)
+
+        # 3. Preço Venda
+        if modo_frete == "com":
+            row.append(_br_number(venda_cf))
+        elif modo_frete == "sem":
+            row.append(_br_number(venda_sf))
+        else:
+            row.append(_br_number(venda_cf))
+            row.append(_br_number(venda_sf))
+
+        data_rows.append(row)
+    
+    rows_buffer = []
+    current_y = y
+    
+    # Função auxiliar para desenhar página
+    def _draw_page(rows, y_pos):
+        tbl = Table([header] + rows, colWidths=col_widths)
+        tbl.setStyle(table_style)
+        _, h_tbl = tbl.wrap(available_width, height)
+        tbl.drawOn(c, margin_x, y_pos - h_tbl)
+        return y_pos - h_tbl
+
+    for row in data_rows:
+        test_tbl = Table([header] + rows_buffer + [row], colWidths=col_widths)
+        test_tbl.setStyle(table_style)
+        _, h_test = test_tbl.wrap(available_width, height)
+        
+        if current_y - h_test < margin_y:
+            # Quebra página
+            _draw_page(rows_buffer, current_y)
+            c.showPage()
+            
+            # Recomeça no topo (sem logo grande nas próximas, só margem)
+            current_y = height - margin_y
+            rows_buffer = [row]
+        else:
+            rows_buffer.append(row)
+
+    if rows_buffer:
+        _draw_page(rows_buffer, current_y)
 
     c.showPage()
     c.save()
+    buffer.seek(0)
+    return buffer.read()
 
-
-def gerar_pdf_pedido(*args, destino_dir: str = "/tmp", **kwargs):
-    """
-    Wrapper compatível com os dois jeitos de uso:
-
-    1) JEITO ANTIGO:
-        pedido_pdf = carregar_pedido_pdf(db, pedido_id)
-        path_pdf = gerar_pdf_pedido(pedido_pdf)
-        -> retorna STRING com o caminho do PDF
-
-    2) JEITO NOVO:
-        pdf_bytes = gerar_pdf_pedido(db, pedido_id, destino_dir=...)
-        -> retorna BYTES do PDF
-    """
-    if len(args) == 1 and isinstance(args[0], PedidoPdf):
-        # JEITO ANTIGO: gerar a partir de um PedidoPdf já carregado
-        pedido = args[0]
-        os.makedirs(destino_dir, exist_ok=True)
-        path = os.path.join(destino_dir, f"pedido_{pedido.id_pedido}.pdf")
-        _desenhar_pdf(pedido, path)
-        return path
-
-    # JEITO NOVO: (db, pedido_id)
-    if len(args) >= 2:
-        db = args[0]
-        pedido_id = args[1]
-    elif "db" in kwargs and "pedido_id" in kwargs:
-        db = kwargs["db"]
-        pedido_id = kwargs["pedido_id"]
-    else:
-        raise TypeError("Uso inválido de gerar_pdf_pedido")
-
-    pedido = carregar_pedido_pdf(db, int(pedido_id))
-    os.makedirs(destino_dir, exist_ok=True)
-    path = os.path.join(destino_dir, f"pedido_{pedido.id_pedido}.pdf")
-    _desenhar_pdf(pedido, path)
-
-    # no jeito novo, devolve bytes (pra anexo de e-mail)
-    with open(path, "rb") as f:
-        return f.read()

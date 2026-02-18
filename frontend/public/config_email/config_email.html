@@ -187,6 +187,7 @@
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600&display=swap" rel="stylesheet">
 
   <script src="../js/auth.js"></script>
+  <script src="../js/sidebar_control.js"></script>
   <script>
     if (window.Auth) {
       window.Auth.checkAuth();
@@ -201,7 +202,7 @@
     // Actually, let's use the one from the bottom of the original file which seemed more recent/active context?
     // "https://ordersync-backend-59d2.onrender.com" was in both.
 
-    window.API_BASE = "https://ordersync-backend-edjq.onrender.com";
+    window.API_BASE = "https://ordersync-backend-59d2.onrender.com";
     window.CONFIG_EMAIL_BASE = window.API_BASE + "/admin/config_email";
     window.NETDIAG_BASE = window.API_BASE + "/admin/netdiag";
 
@@ -229,7 +230,7 @@
     <ul>
       <li><a href="/">Home</a></li>
       <li><a href="/clientes/cliente.html">Cadastrar Cliente</a></li>
-      <li><a href="#">Atualizar Catálogo</a></li>
+      <li><a href="/gerenciar_tabelas/gerenciar_tabelas.html">Atualizar Catálogo</a></li>
       <li><a href="/pedido/pedido.html">Consultar Pedidos</a></li>
       <li><a href="#">Exportar Relatórios</a></li>
       <li><a href="/tabela_preco/criacao_tabela_preco.html">Tabela Preço</a></li>
@@ -251,7 +252,8 @@
       </div>
 
       <nav class="tabs" role="tablist" aria-label="Configuração de e-mail">
-        <button class="tab active" data-tab="tab-mensagem" role="tab" aria-selected="true">Mensagem</button>
+        <button class="tab active" data-tab="tab-mensagem" role="tab" aria-selected="true">Mensagem (Interna)</button>
+        <button class="tab" data-tab="tab-mensagem-cliente" role="tab" aria-selected="false">Mensagem (Cliente)</button>
         <button class="tab" data-tab="tab-smtp" role="tab" aria-selected="false">SMTP</button>
       </nav>
 
@@ -278,14 +280,48 @@
             </p>
           </div>
 
-          <div class="field checkbox">
-            <input id="enviar_para_cliente" type="checkbox" />
-            <label for="enviar_para_cliente">Enviar também para o cliente</label>
+          <div class="field checkbox" style="display:none">
+            <!-- Deixando oculto aqui pois movi para a aba Cliente, mas o ID precisa existir ou code js precisa ajustar getCheck -->
+            <!-- Melhor remover do HTML e no JS se não achar retorna false, mas o JS usa getCheck('enviar_para_cliente') que busca pelo ID. 
+                  Como movi o ID para a outra aba, aqui ele não deve existir com o mesmo ID. -->
           </div>
 
           <div class="actions">
-            <button type="button" id="btnSalvarMensagem" class="btn primary">Salvar</button>
-            <button type="button" id="btnTestarEnvio" class="btn">Testar envio</button>
+            <button type="button" class="btn primary btnSalvarGeral">Salvar Tudo</button>
+            <button type="button" id="btnTestarEnvio" class="btn">Testar envio (Interno)</button>
+          </div>
+        </form>
+      </section>
+
+      </section>
+
+      <!-- Guia: Mensagem Cliente -->
+      <section id="tab-mensagem-cliente" class="tab-panel" role="tabpanel" aria-labelledby="Mensagem Cliente">
+        <div class="field checkbox"
+          style="margin-bottom: 20px; padding: 10px; background: #eff6ff; border-radius: 6px; border: 1px solid #bfdbfe;">
+          <input id="enviar_para_cliente" type="checkbox" />
+          <label for="enviar_para_cliente" style="font-weight:600; color:#1e40af;">Habilitar envio de e-mail para o
+            cliente</label>
+        </div>
+
+        <form id="form-mensagem-cliente" class="form">
+          <div class="field">
+            <label>Assunto (Cliente)</label>
+            <input id="assunto_cliente" type="text" placeholder="Confirmação do seu orçamento {{pedido_id}}" />
+          </div>
+
+          <div class="field">
+            <label>Corpo do e-mail (Cliente) <small>(HTML permitido)</small></label>
+            <textarea id="corpo_html_cliente" rows="8"
+              placeholder="<p>Olá {{cliente_nome}}, recebemos seu pedido {{pedido_id}}...</p>"></textarea>
+            <p class="help">Placeholders: <code>{{pedido_id}}</code>, <code>{{cliente_nome}}</code>,
+              <code>{{total_pedido}}</code>, <code>{{link_pdf}}</code>
+            </p>
+          </div>
+
+          <div class="actions">
+            <!-- Botão Salvar Geral (reaproveitado ou duplicado) -->
+            <button type="button" class="btn primary btnSalvarGeral">Salvar Tudo</button>
           </div>
         </form>
       </section>

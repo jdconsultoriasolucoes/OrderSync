@@ -1,21 +1,48 @@
 import logging
+from sqlalchemy import text
+from database import SessionLocal
 
 logger = logging.getLogger("ordersync.migrations")
 
 def run_migrations():
     """
-    Executa migrações manuais de schema que o SQLAlchemy 
-    não faz automaticamente (ou para garantir colunas específicas).
+    Verifica e aplica migrações de schema (colunas novas)
+    que o Alembic não gerencia ou para evitar complexidade de migration tools.
     """
-    try:
-        logger.info("Verificando migrações de schema...")
-        # Placeholder: Se houver comandos SQL específicos para rodar, 
-        # eles viriam aqui. Por enquanto, apenas logamos.
-        # Exemplo:
-        # from database import engine
-        # with engine.connect() as conn:
-        #     conn.execute("ALTER TABLE ... ADD COLUMN IF NOT EXISTS ...")
-        
-        logger.info("Migrações verificadas (Nenhuma ação pendente).")
-    except Exception as e:
-        logger.error(f"Erro ao executar migrações: {e}")
+    logger.info("Iniciando migrações de schema...")
+    with SessionLocal() as db:
+        # 1. ConfigEmailMensagem: assunto_cliente, corpo_html_cliente
+        try:
+            db.execute(text("SELECT assunto_cliente FROM config_email_mensagem LIMIT 1"))
+        except Exception:
+            db.rollback()
+            logger.info("Adicionando colunas de email cliente na config_email_mensagem...")
+            try:
+                db.execute(text("ALTER TABLE config_email_mensagem ADD COLUMN assunto_cliente TEXT"))
+                db.execute(text("ALTER TABLE config_email_mensagem ADD COLUMN corpo_html_cliente TEXT"))
+                db.commit()
+                logger.info("Colunas adicionadas com sucesso.")
+            except Exception as e:
+                db.rollback()
+                logger.error(f"Falha ao adicionar colunas: {e}")
+
+                logger.error(f"Falha ao adicionar colunas: {e}")
+
+        # 2. Usuario: email_verificado, token_verificacao
+        try:
+            db.execute(text("SELECT email_verificado FROM t_usuario LIMIT 1"))
+        except Exception:
+            db.rollback()
+            logger.info("Adicionando colunas de verificação de email em t_usuario...")
+            try:
+                db.execute(text("ALTER TABLE t_usuario ADD COLUMN email_verificado BOOLEAN DEFAULT FALSE"))
+                db.execute(text("ALTER TABLE t_usuario ADD COLUMN token_verificacao TEXT"))
+                # Mark existing users as verified to avoid lockout
+                db.execute(text("UPDATE t_usuario SET email_verificado = TRUE"))
+                db.commit()
+                logger.info("Colunas de verificação adicionadas com sucesso.")
+            except Exception as e:
+                db.rollback()
+                logger.error(f"Falha ao adicionar colunas em t_usuario: {e}")
+
+    logger.info("Migrações concluídas.")

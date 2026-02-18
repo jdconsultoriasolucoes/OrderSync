@@ -72,6 +72,7 @@ class ProdutoCalculo(BaseModel):
     ipi: Optional[float] = 0.0
     iva_st: Optional[float] = 0.0
     tipo: Optional[str] = None
+    peso_bruto: Optional[float] = 0.0
     
 class ParametrosCalculo(BaseModel):
     produtos: List[ProdutoCalculo]

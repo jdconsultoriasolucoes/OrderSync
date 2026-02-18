@@ -72,7 +72,38 @@ const Auth = {
             return;
         }
 
-        // Inactivity Timer (15 minutes)
+        // Initialize Auto-Refresh (every 10 minutes)
+        if (!window.autoRefreshTimerInitialized) {
+            setInterval(async () => {
+                const token = Auth.getToken();
+                if (!token) return;
+
+                try {
+                    const res = await fetch(`${window.API_BASE}/token/refresh`, {
+                        method: "POST",
+                        headers: { "Authorization": `Bearer ${token}` }
+                    });
+
+                    if (res.ok) {
+                        const data = await res.json();
+                        if (data.access_token) {
+                            localStorage.setItem(AUTH_TOKEN_KEY, data.access_token);
+                            console.log("Token refreshed automatically.");
+                        }
+                    } else {
+                        console.warn("Failed to refresh token automatically.");
+                    }
+                } catch (e) {
+                    console.error("Auto-refresh error:", e);
+                }
+            }, 10 * 60 * 1000); // 10 minutes
+            window.autoRefreshTimerInitialized = true;
+        }
+
+        // Inactivity Timer (15 minutes - Client Side Check)
+        // Note: The concept is that while the user is active (auto-refresh happens), 
+        // the session is effectively infinite. This timer handles if they leave the 
+        // machine completely alone.
         if (!window.inactivityTimerInitialized) {
             let inactivityTimer;
             const resetTimer = () => {
@@ -80,7 +111,7 @@ const Auth = {
                 inactivityTimer = setTimeout(() => {
                     alert("Sessão expirada por inatividade (15min).");
                     Auth.logout();
-                }, 15 * 60 * 1000);
+                }, 15 * 60 * 1000); // 15 mins
             };
 
             window.addEventListener('mousemove', resetTimer);
@@ -169,4 +200,75 @@ document.addEventListener("DOMContentLoaded", () => {
         `;
         document.body.insertAdjacentHTML("beforeend", modalHtml);
     }
+    // Check for forced reset
+    const checkForcedReset = () => {
+        if (localStorage.getItem("ordersync_reset_required") === "true") {
+            const modal = document.getElementById("modal-trocar-senha");
+            if (modal) {
+                modal.style.display = "flex";
+                // Prevent closing by hiding the close button or re-opening?
+                // For better UX, allow close but re-open on navigation? 
+                // Let's just open it for now.
+
+                // Optional: Hide close button to force action
+                const closeBtn = modal.querySelector(".close-btn");
+                if (closeBtn) closeBtn.style.display = "none";
+
+                const cancelBtn = modal.querySelector("button[onclick*='closeChangePasswordModal']");
+                if (cancelBtn) cancelBtn.style.display = "none";
+            }
+        }
+    };
+
+    // Allow manual opening
+    window.Auth.openChangePasswordModal = () => {
+        const modal = document.getElementById("modal-trocar-senha");
+        if (modal) {
+            document.getElementById("form-trocar-senha").reset();
+            modal.style.display = "flex";
+        }
+    };
+
+    // Allow external closing if needed manually
+    window.Auth.closeChangePasswordModal = () => {
+        const modal = document.getElementById("modal-trocar-senha");
+        if (modal) modal.style.display = "none";
+    };
+
+    window.Auth.confirmarTrocaSenha = async (e) => {
+        e.preventDefault();
+        const senhaAtual = document.getElementById("senha-atual").value;
+        const novaSenha = document.getElementById("nova-senha").value;
+        const confirm = document.getElementById("confirm-nova-senha").value;
+
+        if (novaSenha !== confirm) {
+            alert("As senhas não conferem.");
+            return;
+        }
+
+        try {
+            const res = await fetch(`${window.API_BASE}/usuarios/me/senha`, {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ senha_atual: senhaAtual, nova_senha: novaSenha })
+            });
+
+            if (!res.ok) {
+                const err = await res.json();
+                throw new Error(err.detail || "Erro ao alterar senha");
+            }
+
+            alert("Senha alterada com sucesso!");
+            document.getElementById("modal-trocar-senha").style.display = "none";
+            document.getElementById("form-trocar-senha").reset();
+
+            // Clear forced reset flag
+            localStorage.removeItem("ordersync_reset_required");
+
+        } catch (err) {
+            alert("Erro: " + err.message);
+        }
+    };
+
+    setTimeout(checkForcedReset, 1000); // Check shortly after load
 });

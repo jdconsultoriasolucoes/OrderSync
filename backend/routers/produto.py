@@ -76,10 +76,12 @@ def obter_opcoes_endpoint():
     description="Busca produtos com filtros opcionais (q, status, família, vigência) e paginação.",
     operation_id="produtos_listar",
 )
+
 def listar_produtos(
     q: Optional[str] = None,
-    status: Optional[str] = None,
+    status: Optional[str] = "ATIVO",
     familia: Optional[int] = None,
+    fornecedor: Optional[str] = None,
     vigencia_em: Optional[date] = None,
     limit: int = 50,
     offset: int = 0,
@@ -91,6 +93,7 @@ def listar_produtos(
             q=q,
             status=status,
             familia=familia,
+            fornecedor=fornecedor,
             vigencia_em=vigencia_em,
             limit=limit,
             offset=offset,
@@ -196,6 +199,7 @@ def excluir_produto_endpoint(produto_id: int):
 async def importar_lista(
     request: Request,
     tipo_lista: str = Form(..., description="Tipo de lista: INSUMOS ou PET"),
+    fornecedor: Optional[str] = Form(None, description="Nome do fornecedor (opcional, sobrescreve detecção)"),
     validade_tabela: Optional[str] = Form(None),
     file: UploadFile = File(...),
     # Note: Using Depends in Form/File upload might be tricky if not done right, 
@@ -239,7 +243,7 @@ async def importar_lista(
                 )
 
     try:
-        df = parse_lista_precos(file.file, tipo_lista=tipo, filename=file.filename)
+        df = parse_lista_precos(file.file, tipo_lista=tipo, filename=file.filename, fornecedor_selecionado=fornecedor)
     except Exception as e:
         raise HTTPException(status_code=400, detail=f"Erro ao ler PDF: {e}")
 
@@ -276,20 +280,32 @@ async def importar_lista(
 
 class RenovarValidadeReq(BaseModel):
     nova_validade: date
+    tipo: Optional[str] = "TODOS" # TODOS, INSUMOS, PET
 
 @router.post("/renovar_validade_global")
 def renovar_validade_global(payload: RenovarValidadeReq, current_user: UsuarioModel = Depends(get_current_user)):
     with SessionLocal() as db:
         from sqlalchemy import text
         try:
-            # Atualiza todos os produtos ativos com a nova data
-            res = db.execute(text("""
+            # Filtro base
+            where_clause = "UPPER(status_produto) = 'ATIVO'"
+            params = {"val": payload.nova_validade, "user": current_user.email}
+
+            # Filtro opcional por tipo
+            if payload.tipo and payload.tipo.upper() != "TODOS":
+                where_clause += " AND tipo = :tipo"
+                params["tipo"] = payload.tipo.upper()
+
+            # Atualiza todos os produtos ativos com a nova data (e filtro opcional)
+            query = f"""
                 UPDATE t_cadastro_produto_v2
                 SET validade_tabela = :val,
                     atualizado_por = :user,
                     updated_at = NOW()
-                WHERE UPPER(status_produto) = 'ATIVO'
-            """), {"val": payload.nova_validade, "user": current_user.email})
+                WHERE {where_clause}
+            """
+
+            res = db.execute(text(query), params)
             
             db.commit()
             return {"ok": True, "linhas_afetadas": res.rowcount, "nova_validade": payload.nova_validade}

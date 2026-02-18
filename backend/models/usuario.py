@@ -14,3 +14,7 @@ class UsuarioModel(Base):
     data_criacao = Column(DateTime, default=func.now())
     data_atualizacao = Column(DateTime, default=func.now(), onupdate=func.now())
     criado_por = Column(String, nullable=True)
+    criado_por = Column(String, nullable=True)
+    reset_senha_obrigatorio = Column(Boolean, default=False)
+    email_verificado = Column(Boolean, default=False)
+    token_verificacao = Column(String, nullable=True)

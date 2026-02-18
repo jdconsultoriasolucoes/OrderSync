@@ -16,13 +16,18 @@ def calcular_valores_dos_produtos(payload: ParametrosCalculo) -> List[ProdutoCal
 
     for produto in payload.produtos:
         valor = produto.valor
-        peso = produto.peso_liquido or 0.0
+        peso_liquido = produto.peso_liquido or 0.0
+        # Tenta pegar peso_bruto do payload, se não tiver, usa o liquido
+        peso_bruto = getattr(produto, "peso_bruto", 0.0) or 0.0
+        
+        peso_para_frete = peso_bruto if peso_bruto > 0 else peso_liquido
+
         is_pet = (str(produto.tipo or "").strip().lower() == "pet")
-        ipi_item = (produto.ipi or 0.0) if (is_pet and peso <= 10) else 0.0
+        ipi_item = (produto.ipi or 0.0) if (is_pet and peso_liquido <= 10) else 0.0
         
         iva_st = produto.iva_st or 0.0
 
-        frete_kg = (payload.frete_unitario / 1000) * peso
+        frete_kg = (payload.frete_unitario / 1000) * peso_para_frete
         ajuste_pagamento = valor * payload.acrescimo_pagamento
         comissao_aplicada = valor * payload.fator_comissao
 
@@ -72,7 +77,17 @@ def create_tabela(db: Session, body: TabelaSalvar, usuario_email: str) -> Dict[s
         logger.info("[create_tabela] header id=%s nome=%s cliente=%s", id_tabela, body.nome_tabela, body.cliente)
 
         inseridos = 0
+        processed_codes = set()
         for i, produto in enumerate(body.produtos, start=1):
+            cod = (getattr(produto, "codigo_produto_supra", "") or "").strip()
+            if not cod: continue
+            
+            # Deduplication Check
+            if cod in processed_codes:
+                logger.warning(f"[create_tabela] Skipping duplicate product code {cod} in payload.")
+                continue
+            processed_codes.add(cod)
+
             params = {
                 "id_tabela": int(id_tabela),
                 "nome_tabela": body.nome_tabela or "",
@@ -139,13 +154,25 @@ def update_tabela(db: Session, id_tabela: int, body: TabelaSalvar, usuario_email
             return None
 
         por_id = {r.id_linha: r for r in existentes}
-        por_codigo = { (r.codigo_produto_supra or "").strip(): r for r in existentes if (r.codigo_produto_supra or "").strip() }
+        # Prepare lookup by code, but handle potential database duplicates by taking the first or last? 
+        # Ideally DB constraint prevents them, but if they exist, we must be careful.
+        por_codigo = {}
+        for r in existentes:
+            c = (r.codigo_produto_supra or "").strip()
+            if c:
+                por_codigo[c] = r
 
         # Update Cabeçalho (em todas as linhas)
         for r in existentes:
             r.nome_tabela    = body.nome_tabela
             r.cliente        = body.cliente
-            r.codigo_cliente = body.codigo_cliente or "Não cadastrado"
+            # Proteção: só atualiza codigo_cliente se vier preenchido
+            if body.codigo_cliente:
+                r.codigo_cliente = body.codigo_cliente
+            elif not r.codigo_cliente:
+                # Se não tem nada no banco, define padrão
+                r.codigo_cliente = "Não cadastrado"
+            
             r.fornecedor     = body.fornecedor or ""
             r.calcula_st     = bool(getattr(body, "calcula_st", False))
             r.editado_em     = now

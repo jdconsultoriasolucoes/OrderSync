@@ -17,6 +17,8 @@ logger = logging.getLogger("pedido_confirmacao_service")
 TZ = ZoneInfo("America/Sao_Paulo")
 
 def criar_pedido_confirmado(db: Session, tabela_id: int, body: ConfirmarPedidoRequest) -> Dict[str, Any]:
+    print(f"DEBUG: ConfirmarPedido - OriginCode: '{body.origin_code}' | Cliente: '{body.cliente}'")
+    
     # 1) validação básica
     if not body.produtos:
         raise ValueError("Nenhum item informado")
@@ -123,6 +125,24 @@ def criar_pedido_confirmado(db: Session, tabela_id: int, body: ConfirmarPedidoRe
     data_retirada = _parse_date(body.data_retirada) or (link_row["data_prevista"] if link_row else None)
 
     codigo_cliente = (body.codigo_cliente or "").strip() or None
+    
+    # 🛡️ FALLBACK: Se o front não mandou o código (comum em links públicos),
+    # usamos o que está gravado no link (que é confiável).
+    if not codigo_cliente and link_row:
+        c_link = link_row.get("codigo_cliente")
+        if c_link and c_link.strip() and c_link != "Não cadastrado":
+            codigo_cliente = c_link.strip()
+
+    # 🛡️ FALLBACK 2: Se ainda não temos código (ou é "Não cadastrado"),
+    # tentamos pegar direto da tabela de preço original
+    if not codigo_cliente or codigo_cliente == "Não cadastrado":
+        try:
+             row_tab = db.execute(text("SELECT codigo_cliente FROM tb_tabela_preco WHERE id_tabela = :tid"), {"tid": tabela_id}).mappings().first()
+             if row_tab and row_tab["codigo_cliente"]:
+                 codigo_cliente = str(row_tab["codigo_cliente"]).strip()
+        except Exception as e:
+             print(f"DEBUG: Erro ao buscar codigo na tabela: {e}")
+
     if link_row:
         link_url = link_row.get("link_url")
     else:
@@ -230,18 +250,25 @@ def criar_pedido_confirmado(db: Session, tabela_id: int, body: ConfirmarPedidoRe
     db.commit()
 
     # 7) Monta um "pedido" mínimo só para o serviço de e-mail
+    # Fetch customer email for the "Client Copy" feature
+    from services.email_service import get_email_cliente_responsavel_compras
+    print(f"DEBUG: CriarPedido - Buscando email inicial para codigo: '{codigo_cliente}'")
+    client_email_addr = get_email_cliente_responsavel_compras(db, codigo_cliente)
+
     class PedidoEmailDummy:
-        def __init__(self, id_pedido, codigo_cliente, cliente_nome, total_pedido):
+        def __init__(self, id_pedido, codigo_cliente, cliente_nome, total_pedido, cliente_email):
             self.id = id_pedido
             self.codigo_cliente = codigo_cliente
             self.cliente_nome = cliente_nome
             self.total_pedido = total_pedido
+            self.cliente_email = cliente_email
 
     pedido_email = PedidoEmailDummy(
         id_pedido=new_id,
         codigo_cliente=codigo_cliente,
         cliente_nome=(body.cliente or "").strip() or "---",
         total_pedido=round(total_pedido, 2),
+        cliente_email=client_email_addr
     )
 
     # 8) E-mail best-effort (com PDF)
@@ -258,24 +285,30 @@ def criar_pedido_confirmado(db: Session, tabela_id: int, body: ConfirmarPedidoRe
     else:
         try:
             # Tenta gerar o PDF do pedido (com todos os detalhes)
-            pdf_bytes = None
+            pdf_bytes_vendedor = None
+            pdf_bytes_cliente = None
             try:
                 # 1) carrega os dados do pedido no formato PedidoPdf
                 pedido_pdf = carregar_pedido_pdf(db, new_id)
 
-                # 2) gera o arquivo (agora retorna bytes diretos)
-                pdf_bytes = gerar_pdf_pedido(pedido_pdf)
+                # 2) gera o arquivo com layout do VENDEDOR (completo, para email)
+                pdf_bytes_vendedor = gerar_pdf_pedido(pedido_pdf, sem_validade=False)
+                
+                # 3) gera o arquivo com layout do CLIENTE (simplificado, para download)
+                pdf_bytes_cliente = gerar_pdf_pedido(pedido_pdf, sem_validade=True)
                 
             except Exception as e_pdf:
                 logging.exception("Falha ao gerar PDF (ignorada): %s", e_pdf)
-                pdf_bytes = None  # segue sem anexo
+                pdf_bytes_vendedor = None
+                pdf_bytes_cliente = None
 
             # Dispara o e-mail usando as configs da tela de Config Email
             enviar_email_notificacao(
                 db=db,
                 pedido=pedido_email,
                 link_pdf=None,      # se um dia gerar link público, preenche aqui
-                pdf_bytes=pdf_bytes
+                pdf_bytes=pdf_bytes_vendedor,  # Email Interno usa PDF do vendedor
+                pdf_bytes_cliente=pdf_bytes_cliente # Email Cliente usa PDF cliente
             )
 
             # Se chegou até aqui sem exception, marca como ENVIADO
@@ -299,5 +332,27 @@ def criar_pedido_confirmado(db: Session, tabela_id: int, body: ConfirmarPedidoRe
             """), {"agora": agora, "id": new_id})
             db.commit()
 
-    # 9) resposta — SEM expor nada de e-mail
-    return {"id": new_id, "status": "CRIADO"}
+    # 9) resposta — com flag de email e PDF Base64
+    email_enviado_cliente = False
+    if EMAIL_MODE != "off":
+        # Verificamos se o status foi gravado como 'ENVIADO'
+        try:
+            rs = db.execute(text("SELECT link_status FROM tb_pedidos WHERE id_pedido = :id"), {"id": new_id}).scalar()
+            if rs == 'ENVIADO':
+                email_enviado_cliente = True
+        except Exception:
+            pass
+    
+    # Encode PDF to Base64 for immediate frontend download
+    # USA O PDF DO CLIENTE (não do vendedor)
+    pdf_b64 = None
+    if pdf_bytes_cliente:
+        import base64
+        pdf_b64 = base64.b64encode(pdf_bytes_cliente).decode('utf-8')
+
+    return {
+        "id": new_id, 
+        "status": "CRIADO", 
+        "email_enviado": email_enviado_cliente,
+        "pdf_base64": pdf_b64
+    }

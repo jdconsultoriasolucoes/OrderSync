@@ -1,17 +1,17 @@
 // ==================== produto.js ====================
 
 // === Config ===
-const API_BASE = "https://ordersync-backend-edjq.onrender.com";
+const API_BASE = window.API_BASE || "https://ordersync-backend-59d2.onrender.com"; // Restored & Safe
 window.API_BASE = API_BASE;
 
 // candidatos de rotas (ordem de preferência)
 const CANDIDATES = [
-  `${API_BASE}/api/produtos`,
-  `${API_BASE}/api/produto`,
-  `${API_BASE}/api/produtos_v2`,
+  `${API_BASE}/api/produto`,        // Preferido (singular)
+  `${API_BASE}/api/produtos`,       // Fallback
   `${API_BASE}/api/produto_v2`,
-  `${API_BASE}/produtos`,
+  `${API_BASE}/api/produtos_v2`,
   `${API_BASE}/produto`,
+  `${API_BASE}/produtos`,
 ];
 
 const ENDPOINTS_AUX = {
@@ -270,11 +270,11 @@ function readForm() {
   });
 
   const imposto = {
-    ipi: getNumber("ipi"),
-    icms: getNumber("icms"),
-    iva_st: getNumber("iva_st"),
-    cbs: getNumber("cbs"),
-    ibs: getNumber("ibs"),
+    ipi: getNumber("ipi") ? getNumber("ipi") / 100 : null,
+    icms: getNumber("icms") ? getNumber("icms") / 100 : null,
+    iva_st: getNumber("iva_st") ? getNumber("iva_st") / 100 : null,
+    cbs: getNumber("cbs") ? getNumber("cbs") / 100 : null,
+    ibs: getNumber("ibs") ? getNumber("ibs") / 100 : null,
   };
   Object.keys(imposto).forEach((k) => {
     if (imposto[k] === undefined) delete imposto[k];
@@ -351,11 +351,12 @@ function fillForm(p) {
   }
 
   const imp = p.imposto || {};
-  set("ipi", imp.ipi);
-  set("icms", imp.icms);
-  set("iva_st", imp.iva_st);
-  set("cbs", imp.cbs);
-  set("ibs", imp.ibs);
+  const n100 = (v) => v != null ? (v * 100).toFixed(2) : "";
+  set("ipi", n100(imp.ipi));
+  set("icms", n100(imp.icms));
+  set("iva_st", n100(imp.iva_st));
+  set("cbs", n100(imp.cbs));
+  set("ibs", n100(imp.ibs));
 
   // Recalcula visualização
   // setTimeout para garantir que os valores entraram no DOM se houver async
@@ -407,6 +408,7 @@ function parseDateBrToISO(input) {
   return `${y}-${M}-${d}`;
 }
 
+
 // ---------- busca / modal ----------
 function renderSearchResults(items) {
   const box = $("search-results");
@@ -423,6 +425,7 @@ function renderSearchResults(items) {
     <tr data-id="${p.id}">
       <td>${p.codigo_supra || ""}</td>
       <td>${p.nome_produto || ""}</td>
+      <td>${p.fornecedor || ""}</td>
       <td>${p.preco != null ? p.preco.toFixed(2) : ""}</td>
       <td>${p.unidade || ""}</td>
       <td>${p.status_produto || ""}</td>
@@ -437,6 +440,7 @@ function renderSearchResults(items) {
         <tr>
           <th>Código</th>
           <th>Descrição</th>
+          <th>Fornecedor</th>
           <th>Preço</th>
           <th>Unid.</th>
           <th>Status</th>
@@ -466,18 +470,31 @@ function renderSearchResults(items) {
 
 const doSearch = debounce(async () => {
   const inp = $("search-input");
+  const selForn = $("search-fornecedor");
   const box = $("search-results");
   if (!inp || !box) return;
 
   const q = inp.value.trim();
-  if (!q) {
-    box.innerHTML = `<div class="empty">Digite parte do código ou descrição…</div>`;
+  const forn = selForn ? selForn.value : "";
+
+  // Se vazio, limpa
+  if (!q && !forn) {
+    box.innerHTML = `<div class="empty">Digite algo ou selecione fornecedor...</div>`;
     return;
   }
 
   try {
     const base = await resolveProdutosEndpoint();
-    const url = `${base}?q=${encodeURIComponent(q)}&limit=50&offset=0`;
+    // Monta Query String
+    const params = new URLSearchParams();
+    if (q) params.append("q", q);
+    if (forn) params.append("fornecedor", forn);
+    // Fix: Clear status filter to search ALL products (including Inactive)
+    params.append("status", "");
+    params.append("limit", "50");
+    params.append("offset", "0");
+
+    const url = `${base}?${params.toString()}`;
     const data = await fetchJSON(url);
     renderSearchResults(data);
   } catch (e) {
@@ -485,6 +502,62 @@ const doSearch = debounce(async () => {
     box.innerHTML = `<div class="empty">Erro ao buscar produtos.</div>`;
   }
 }, 400);
+
+async function loadSearchFornecedores() {
+  const el = $("search-fornecedor");
+  if (!el) return;
+  // Se já tiver opções (além do default), não recarrega
+  if (el.options.length > 1) return;
+
+  try {
+    const url = `${API_BASE}/api/fornecedores`;
+    // ou use endpoint de opções do produto se preferir, 
+    // mas vamos tentar usar o mesmo loadFornecedores se possivel, ou fetch direto.
+    // O backend tem GET /api/produto/opcoes ? Tem GET /api/fornecedores
+    // Vamos usar /api/fornecedores que já vimos em loadFornecedores
+
+    // Pequena duplicacao para garantir contexto isolado do modal de busca
+    const data = await fetchJSON(url);
+    // data deve ser lista de { nome_fornecedor, ... }
+
+    el.innerHTML = '<option value="">Todos Fornecedores</option>' +
+      data.map(f => `<option value="${f.nome_fornecedor}">${f.nome_fornecedor}</option>`).join("");
+
+  } catch (e) {
+    console.error("Erro ao carregar fornecedores search:", e);
+  }
+}
+
+// Hook para abrir modal e carregar fornecedores
+function setupSearchModal() {
+  const btn = $("btn-buscar");
+  const modal = $("search-modal");
+  const close = $("search-close");
+  const cancel = $("search-cancel");
+  const inp = $("search-input");
+  const selForn = $("search-fornecedor");
+
+  if (btn && modal) {
+    btn.addEventListener("click", () => {
+      modal.classList.remove("hidden");
+      if (modal.showModal) modal.showModal(); // se for dialog
+      loadSearchFornecedores();
+      if (inp) inp.focus();
+    });
+  }
+
+  const hide = () => {
+    if (modal.close) modal.close();
+    else modal.classList.add("hidden");
+  };
+
+  if (close) close.addEventListener("click", hide);
+  if (cancel) cancel.addEventListener("click", hide);
+
+  if (inp) inp.addEventListener("input", doSearch);
+  if (selForn) selForn.addEventListener("change", doSearch);
+}
+
 
 // ---------- Cálculo de Preço Final (Promoção) ----------
 function calculateFinalPrice() {
@@ -728,6 +801,26 @@ async function uploadListaPdf(file) {
   }
 }
 
+// ---------- Carregar Fornecedores ----------
+async function loadFornecedores() {
+  const el = $("import_fornecedor");
+  if (!el) return;
+  try {
+    const url = `${API_BASE}/api/fornecedores`;
+    const data = await fetchJSON(url);
+
+    // Sort logic just in case backend didn't
+    // data.sort((a,b) => a.nome_fornecedor.localeCompare(b.nome_fornecedor));
+
+    el.innerHTML = '<option value="">Selecione...</option>' +
+      data.map(f => `<option value="${f.nome_fornecedor}">${f.nome_fornecedor}</option>`).join("");
+  } catch (e) {
+    console.error("Erro ao carregar fornecedores:", e);
+    // Don't break UI, just leave empty or show error option
+    el.innerHTML = '<option value="">Erro ao carregar</option>';
+  }
+}
+
 // ---------- Importar PDF (INS/PET + validade) ----------
 function setupImportarPdf() {
   const btnImportar = $("btn-importar");
@@ -756,13 +849,17 @@ function setupImportarPdf() {
     return parseDateBrToISO(s);
   };
 
-  const doImport = async ({ tipo, validadeISO, file }) => {
+  const doImport = async ({ tipo, validadeISO, file, fornecedor }) => {
     if (!tipo) {
       alert("Tipo inválido. Use INSUMOS ou PET.");
       return;
     }
     if (!validadeISO) {
       alert("Data de validade inválida. Use dd/mm/aaaa ou selecione no calendário.");
+      return;
+    }
+    if (!fornecedor) {
+      alert("Selecione o fornecedor.");
       return;
     }
     if (!file) {
@@ -786,6 +883,7 @@ function setupImportarPdf() {
       const formData = new FormData();
       formData.append("tipo_lista", tipo);
       formData.append("validade_tabela", validadeISO); // yyyy-mm-dd
+      formData.append("fornecedor", fornecedor);
       formData.append("file", file);
 
       const resp = await fetch(url, { method: "POST", body: formData });
@@ -805,7 +903,7 @@ function setupImportarPdf() {
         return;
       }
 
-      const { total_linhas_pdf, lista, fornecedor, sync } = data;
+      const { total_linhas_pdf, lista, fornecedor: fornecedorResult, sync } = data;
 
       // Compatibilidade com API nova (sync) e antiga (inseridos/atualizados na raiz)
       let inseridos = data.inseridos ?? 0;
@@ -825,7 +923,7 @@ function setupImportarPdf() {
 
       // opção de baixar o relatório em PDF
       const listaFinal = lista || tipo;
-      const fornecedorFinal = fornecedor || "";
+      const fornecedorFinal = fornecedorResult || "";
 
       if (listaFinal && fornecedorFinal) {
         const relatorioUrl = `${importBase}/relatorio-lista?fornecedor=${encodeURIComponent(
@@ -867,6 +965,7 @@ function setupImportarPdf() {
       // modalTipo.value = "";
       // modalValidade.value = "";
       // modalArquivo.value = "";
+      loadFornecedores();
       openModal();
     });
 
@@ -884,8 +983,9 @@ function setupImportarPdf() {
         const tipo = normalizeTipo(modalTipo.value);
         const validadeISO = normalizeValidISO(modalValidade.value);
         const file = modalArquivo.files?.[0];
+        const fornecedor = $("import_fornecedor")?.value;
 
-        const ok = await doImport({ tipo, validadeISO, file });
+        const ok = await doImport({ tipo, validadeISO, file, fornecedor });
         if (ok) {
           // opcional: fecha e reseta se deu certo
           modalArquivo.value = "";
@@ -969,6 +1069,7 @@ async function loadOptions() {
     // Mas se é select, só seleciona. Se for input com datalist...
     // O html é select.
     fill("familia", data.familia);
+    fill("marca", data.marca); // Populate Group (marca) select with data from t_familia_produtos
 
     // Fornecedor é input type="text" no HTML? Ou Select?
     // User image shows "Fornecedor" as text input visually (no arrow), but let's check HTML if we can.
@@ -1306,7 +1407,11 @@ function setupRenovarValidade() {
         return;
       }
 
-      if (!confirm(`Confirma renovar validade de TODOS os produtos ativos para ${novaData}?`)) {
+      const tipoRenovacao = document.getElementById("select-tipo-renovacao")?.value || "TODOS";
+
+      const tipoLabel = tipoRenovacao === "TODOS" ? "TODOS os produtos" : `${tipoRenovacao}`;
+
+      if (!confirm(`Confirma renovar validade de ${tipoLabel} ativos para ${novaData}?`)) {
         return;
       }
 
@@ -1320,7 +1425,7 @@ function setupRenovarValidade() {
           headers: {
             "Authorization": `Bearer ${token}`
           },
-          body: JSON.stringify({ nova_validade: novaData }),
+          body: JSON.stringify({ nova_validade: novaData, tipo: tipoRenovacao }),
         });
 
         toast(`Sucesso! ${data.linhas_afetadas} produtos atualizados.`);
@@ -1336,6 +1441,9 @@ function setupRenovarValidade() {
 }
 
 // Inicializa a lógica extra
+
 document.addEventListener("DOMContentLoaded", () => {
   setupRenovarValidade();
+  setupSearchModal();
 });
+

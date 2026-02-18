@@ -1,0 +1,357 @@
+# backend/services/pdf_cliente_layout.py
+"""
+Layout simplificado do PDF para o cliente (Solicitação de orçamento)
+Baseado no screenshot fornecido pelo usuário.
+"""
+
+from reportlab.lib.pagesizes import A4, landscape
+from reportlab.pdfgen import canvas
+from reportlab.lib.units import cm
+from reportlab.platypus import Table, TableStyle
+from reportlab.lib import colors
+from reportlab.lib.utils import ImageReader
+from datetime import datetime
+from pathlib import Path
+import io
+
+from models.pedido_pdf import PedidoPdf
+
+
+def _br_number(value, decimals=2, suffix=""):
+    """Formata número no padrão brasileiro."""
+    if value is None:
+        value = 0
+    try:
+        value = float(value)
+    except (TypeError, ValueError):
+        value = 0.0
+    
+    fmt = f"{{:,.{decimals}f}}"
+    s = fmt.format(value)
+    s = s.replace(",", "X").replace(".", ",").replace("X", ".")
+    return s + suffix
+
+
+def gerar_pdf_cliente_simplificado(pedido: PedidoPdf) -> bytes:
+    """
+    Gera PDF com layout simplificado para o cliente.
+    Título: "Solicitação de orçamento"
+    Formato: Retrato (A4)
+    Suporta múltiplas páginas para muitos produtos.
+    """
+    buffer = io.BytesIO()
+    pagesize = A4  # RETRATO (não mais landscape)
+    c = canvas.Canvas(buffer, pagesize=pagesize)
+    width, height = pagesize
+    
+    margin_x = 1.0 * cm  # Reduzido de 1.5cm para 1.0cm
+    margin_y = 1.0 * cm
+    
+    # ==================== FUNÇÃO AUXILIAR: DESENHAR CABEÇALHO ====================
+    def desenhar_cabecalho(y_start):
+        """Desenha cabeçalho da página e retorna y_cursor após cabeçalho"""
+        y = y_start
+        
+        # Logo
+        base_dir = Path(__file__).resolve().parents[2]
+        logo_path = base_dir / "frontend" / "public" / "tabela_preco" / "logo_cliente_supra.png"
+        
+        if logo_path.exists():
+            try:
+                img = ImageReader(str(logo_path))
+                logo_w = 3.0 * cm
+                iw, ih = img.getSize()
+                logo_h = logo_w * ih / iw
+                logo_x = width - margin_x - logo_w
+                logo_y = y - logo_h
+                c.drawImage(img, logo_x, logo_y, width=logo_w, height=logo_h)
+            except:
+                pass
+        
+        # Título
+        c.setFont("Helvetica-Bold", 16)
+        c.drawString(margin_x, y - 0.5*cm, "Solicitação de orçamento")
+        y -= 1.8*cm  # Mais espaço para não pegar na logo
+        
+        # Criar tabela com informações do pedido (3 linhas)
+        data_pedido_str = "---"
+        if pedido.data_pedido:
+            data_pedido_str = pedido.data_pedido.strftime("%d/%m/%Y %H:%M:%S")
+        
+        data_entrega_str = "a combinar"
+        if pedido.data_entrega_ou_retirada:
+            data_entrega_str = pedido.data_entrega_ou_retirada.strftime("%d/%m/%Y")
+        
+        info_data = [
+            ["Data do pedido:", data_pedido_str],
+            ["Cliente:", pedido.cliente or "---"],
+            ["Validade:", pedido.validade_tabela or "Não se aplica"],
+            ["Data de entrega:", data_entrega_str]
+        ]
+        
+        # Largura total padronizada: 19cm (mesma da tabela de produtos)
+        info_table = Table(info_data, colWidths=[3.5*cm, 15.5*cm])
+        info_table.setStyle(TableStyle([
+            # Labels (primeira coluna) - com cor de fundo
+            ('BACKGROUND', (0, 0), (0, -1), colors.Color(0.78, 0.70, 0.60)),
+            ('FONTNAME', (0, 0), (0, -1), 'Helvetica-Bold'),
+            ('FONTSIZE', (0, 0), (-1, -1), 9),
+            ('ALIGN', (0, 0), (0, -1), 'LEFT'),
+            
+            # Valores (segunda coluna)
+            ('BACKGROUND', (1, 0), (1, -1), colors.white),
+            ('FONTNAME', (1, 0), (1, -1), 'Helvetica'),
+            ('ALIGN', (1, 0), (1, -1), 'LEFT'),
+            
+            # Bordas e padding
+            ('GRID', (0, 0), (-1, -1), 0.5, colors.grey),
+            ('VALIGN', (0, 0), (-1, -1), 'MIDDLE'),
+            ('LEFTPADDING', (0, 0), (-1, -1), 5),
+            ('RIGHTPADDING', (0, 0), (-1, -1), 5),
+            ('TOPPADDING', (0, 0), (-1, -1), 4),
+            ('BOTTOMPADDING', (0, 0), (-1, -1), 4),
+        ]))
+        
+        info_width, info_height = info_table.wrap(width - 2*margin_x, height)
+        info_table.drawOn(c, margin_x, y - info_height)
+        y -= info_height + 0.5*cm
+        
+        return y
+    
+    # ==================== PREPARAR DADOS DA TABELA ====================
+    
+    # Determinar título da coluna de valor
+    if pedido.usar_valor_com_frete:
+        header_valor = "Valor c/ Frete"
+    else:
+        header_valor = "Valor s/ Frete"
+    
+    # Cabeçalho da tabela (com abreviações)
+    table_header = [
+        "#",
+        "Código",
+        "Produto",
+        "Embal.",
+        "Qtd",
+        header_valor,
+        "Cond. de\nPagamento",
+        "Markup\n%",
+        "VL. C\nMarkup"
+    ]
+    
+    # Imports necessários para Paragraph
+    from reportlab.lib.styles import getSampleStyleSheet
+    from reportlab.platypus import Paragraph
+    styles = getSampleStyleSheet()
+    style_normal = styles["Normal"]
+    style_normal.fontSize = 7
+    style_normal.leading = 8
+
+    # Preparar todas as linhas de produtos
+    all_rows = []
+    for idx, item in enumerate(pedido.itens, start=1):
+        # Escolher valor correto
+        if pedido.usar_valor_com_frete:
+            valor_unitario = item.valor_entrega
+        else:
+            valor_unitario = item.valor_retira
+        
+        # Markup - só mostrar se houver diferença real
+        markup_display = "-"
+        valor_markup_display = "-"
+        
+        # Verificar se há markup aplicado (valor final diferente do valor base)
+        if item.valor_final_markup and item.valor_final_markup > 0:
+            # Comparar com o valor que está sendo usado
+            if abs(item.valor_final_markup - valor_unitario) > 0.01:  # Diferença maior que 1 centavo
+                if item.markup and item.markup > 0:
+                    markup_display = f"{_br_number(item.markup, 2)}%"
+                valor_markup_display = f"R$ {_br_number(item.valor_final_markup, 2)}"
+        
+        # WRAPPING: Usar Paragraph para Produto e Condição Pagamento
+        p_produto = Paragraph(item.produto or "", style_normal)
+        p_condicao = Paragraph(item.condicao_pagamento or "", style_normal)
+
+        all_rows.append([
+            str(idx),
+            item.codigo or "",
+            p_produto,    # Paragraph
+            item.embalagem or "",
+            str(int(item.quantidade)) if item.quantidade else "0",
+            f"R$ {_br_number(valor_unitario, 2)}",
+            p_condicao,   # Paragraph
+            markup_display,
+            valor_markup_display
+        ])
+    
+    # ==================== PAGINAÇÃO ====================
+    
+    # Larguras das colunas (ajustadas para retrato com margens menores)
+    # Total disponível: ~19cm (21cm - 2cm de margens)
+    # Maior largura total (19cm) - ajustar outras colunas para caber a nova
+    # # (0.8cm), Cod(1.6), Prod(4.5), Emb(1.1), Qtd(0.9), Val(2.0), Cond(5.2), Mk(1.2), VMk(2.0) = 19.3 (Muito largo)
+    # Ajustando: #:0.8, Cod:1.5, Prod:4.2, Emb:1.1, Qtd:0.9, Val:1.9, Cond:4.8, Mk:1.1, VMk:1.9 = 18.2 (OK)
+    col_widths = [0.8*cm, 1.5*cm, 4.2*cm, 1.1*cm, 0.9*cm, 1.9*cm, 4.8*cm, 1.1*cm, 1.9*cm]
+    # Total: 19cm
+    # Produto: 5.0cm, Cond. Pagamento: 5.2cm (+0.7cm), VL. C Markup: 2.0cm
+    
+    # Altura aproximada de cada linha
+    row_height = 0.6*cm
+    header_height = 0.8*cm
+    
+    # Espaço disponível para tabela na primeira página
+    y_cursor = height - margin_y
+    y_after_header = desenhar_cabecalho(y_cursor)
+    space_first_page = y_after_header - margin_y - 4*cm  # Reservar espaço para totais
+    
+    # Espaço disponível em páginas subsequentes
+    space_other_pages = height - 2*margin_y - 1*cm  # Margem + pequeno espaço
+    
+    # Calcular quantas linhas cabem por página
+    rows_first_page = int((space_first_page - header_height) / row_height)
+    rows_other_pages = int((space_other_pages - header_height) / row_height)
+    
+    # Dividir linhas em páginas
+    page_rows = []
+    if len(all_rows) <= rows_first_page:
+        # Tudo cabe na primeira página
+        page_rows.append(all_rows)
+    else:
+        # Primeira página
+        page_rows.append(all_rows[:rows_first_page])
+        remaining = all_rows[rows_first_page:]
+        
+        # Páginas subsequentes
+        while remaining:
+            page_rows.append(remaining[:rows_other_pages])
+            remaining = remaining[rows_other_pages:]
+    
+    # ==================== DESENHAR PÁGINAS ====================
+    
+    for page_num, rows in enumerate(page_rows):
+        is_first_page = (page_num == 0)
+        is_last_page = (page_num == len(page_rows) - 1)
+        
+        if is_first_page:
+            y_cursor = y_after_header
+        else:
+            # Nova página
+            c.showPage()
+            y_cursor = height - margin_y - 1*cm
+        
+        # Criar tabela para esta página
+        table_data = [table_header] + rows
+        
+        table = Table(table_data, colWidths=col_widths)
+        table.setStyle(TableStyle([
+            # Cabeçalho
+            ('BACKGROUND', (0, 0), (-1, 0), colors.Color(0.78, 0.70, 0.60)),
+            ('TEXTCOLOR', (0, 0), (-1, 0), colors.black),
+            ('ALIGN', (0, 0), (-1, 0), 'CENTER'),
+            ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
+            ('FONTSIZE', (0, 0), (-1, 0), 8),
+            ('BOTTOMPADDING', (0, 0), (-1, 0), 6),
+            
+            # Corpo
+            ('FONTNAME', (0, 1), (-1, -1), 'Helvetica'),
+            ('FONTSIZE', (0, 1), (-1, -1), 7),
+            ('ALIGN', (3, 1), (3, -1), 'CENTER'),  # Qtd
+            ('ALIGN', (4, 1), (4, -1), 'RIGHT'),   # Valor
+            ('ALIGN', (6, 1), (6, -1), 'CENTER'),  # Markup %
+            ('ALIGN', (7, 1), (7, -1), 'RIGHT'),   # Valor Markup
+            
+            # Bordas
+            ('GRID', (0, 0), (-1, -1), 0.5, colors.grey),
+            ('VALIGN', (0, 0), (-1, -1), 'MIDDLE'),
+            ('LEFTPADDING', (0, 0), (-1, -1), 3),
+            ('RIGHTPADDING', (0, 0), (-1, -1), 3),
+            ('TOPPADDING', (0, 1), (-1, -1), 3),
+            ('BOTTOMPADDING', (0, 1), (-1, -1), 3),
+        ]))
+        
+        # Desenhar tabela
+        table_width, table_height = table.wrap(width - 2*margin_x, height)
+        table.drawOn(c, margin_x, y_cursor - table_height)
+        y_cursor -= table_height + 0.5*cm
+        
+        # ==================== TOTAIS E OBSERVAÇÕES (APENAS NA ÚLTIMA PÁGINA) ====================
+        
+        if is_last_page:
+            # Tabela de totais + Observações (largura total: 19cm)
+            totais_data = [
+                ["Total em Peso Bruto", f"{_br_number(pedido.total_peso_bruto, 0)} kg"],
+                ["Total em VL.", f"R$ {_br_number(pedido.total_valor, 2)}"]
+            ]
+            
+            # Totais: 6cm, Observações: 13cm (total = 19cm)
+            totais_table = Table(totais_data, colWidths=[3.5*cm, 2.5*cm])
+            totais_table.setStyle(TableStyle([
+                ('BACKGROUND', (0, 0), (0, -1), colors.Color(0.78, 0.70, 0.60)),
+                ('TEXTCOLOR', (0, 0), (0, -1), colors.black),
+                ('FONTNAME', (0, 0), (0, -1), 'Helvetica-Bold'),
+                ('FONTSIZE', (0, 0), (0, -1), 9),
+                ('ALIGN', (0, 0), (0, -1), 'LEFT'),
+                ('BACKGROUND', (1, 0), (1, -1), colors.white),
+                ('FONTNAME', (1, 0), (1, -1), 'Helvetica'),
+                ('FONTSIZE', (1, 0), (1, -1), 9),
+                ('ALIGN', (1, 0), (1, -1), 'RIGHT'),
+                ('GRID', (0, 0), (-1, -1), 0.5, colors.grey),
+                ('VALIGN', (0, 0), (-1, -1), 'MIDDLE'),
+                ('LEFTPADDING', (0, 0), (-1, -1), 6),
+                ('RIGHTPADDING', (0, 0), (-1, -1), 6),
+                ('TOPPADDING', (0, 0), (-1, -1), 5),
+                ('BOTTOMPADDING', (0, 0), (-1, -1), 5),
+            ]))
+            
+            totais_width, totais_height = totais_table.wrap(6*cm, height)
+            totais_y_base = y_cursor - totais_height
+            totais_table.drawOn(c, margin_x, totais_y_base)
+            
+            # Observações (lado direito) - largura: 13cm para totalizar 19cm
+            obs_x = margin_x + 6*cm  # Logo após os totais
+            obs_title_height = 0.5*cm
+            obs_box_width = 13*cm  # Largura calculada para totalizar 19cm
+            
+            # Desenhar título (alinhado com topo dos totais)
+            c.setFillColor(colors.Color(0.78, 0.70, 0.60))
+            c.rect(obs_x, y_cursor - obs_title_height, obs_box_width, obs_title_height, fill=1, stroke=0)
+            
+            c.setFillColor(colors.black)
+            c.setFont("Helvetica-Bold", 9)
+            c.drawString(obs_x + 0.2*cm, y_cursor - obs_title_height + 0.15*cm, "Observações do Cliente:")
+            
+            # Caixa de observações (logo abaixo do título, termina na mesma altura que os totais)
+            obs_box_y_top = y_cursor - obs_title_height
+            obs_box_height = totais_height - obs_title_height
+            
+            c.setStrokeColor(colors.grey)
+            c.setFillColor(colors.white)
+            c.rect(obs_x, totais_y_base, obs_box_width, obs_box_height, fill=1, stroke=1)
+            
+            # Texto das observações
+            if pedido.observacoes:
+                c.setFillColor(colors.black)
+                c.setFont("Helvetica", 8)
+                text_obj = c.beginText(obs_x + 0.2*cm, obs_box_y_top - 0.3*cm)
+                text_obj.setFont("Helvetica", 8)
+                
+                # Quebrar em linhas
+                obs_text = pedido.observacoes[:400]
+                words = obs_text.split()
+                line = ""
+                for word in words:
+                    if len(line + word) < 50:
+                        line += word + " "
+                    else:
+                        text_obj.textLine(line.strip())
+                        line = word + " "
+                if line:
+                    text_obj.textLine(line.strip())
+                
+                c.drawText(text_obj)
+    
+    # Finalizar
+    c.showPage()
+    c.save()
+    buffer.seek(0)
+    return buffer.read()

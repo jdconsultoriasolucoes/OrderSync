@@ -13,7 +13,16 @@
         .page-container {
             padding: 20px;
             margin-left: 250px;
+            /* Sidebar width */
+            max-width: 1200px;
+            /* Prevent infinite stretch */
+            /* margin-right: auto; -> Not needed with margin-left 250px usually, but let's see */
         }
+
+        /* Responsive tweak: on very large screens, maybe center content area? 
+           But sidebar is fixed left. Standard admin dashboard behavior is fluid. 
+           Let's just keep padding. */
+
 
         /* Sidebar space */
         .card {
@@ -91,8 +100,6 @@
         }
     </style>
 </head>
-<script src="js/config.js"></script>
-<script src="js/auth.js"></script>
 <script>
     if (window.Auth) {
         window.Auth.checkAuth();
@@ -111,10 +118,14 @@
         <ul>
             <li><a href="/">Home</a></li>
             <li><a href="/clientes/cliente.html">Cadastrar Cliente</a></li>
+            <li><a href="/gerenciar_tabelas/gerenciar_tabelas.html">Atualizar Catálogo</a></li>
             <li><a href="/pedido/pedido.html">Consultar Pedidos</a></li>
+            <li><a href="#">Exportar Relatórios</a></li>
             <li><a href="/tabela_preco/criacao_tabela_preco.html">Tabela Preço</a></li>
             <li><a href="/produto/produto.html">Produtos</a></li>
             <li><a href="/usuarios.html" class="active">Usuários</a></li>
+            <li><a href="/config_email/config_email.html">Configuração E-mail</a></li>
+            <li><a href="#" onclick="window.Auth.openChangePasswordModal()">Trocar Senha</a></li>
             <li><a href="#" onclick="window.Auth.logout()">Sair</a></li>
         </ul>
     </nav>
@@ -172,7 +183,8 @@
                     <div class="mb-3">
                         <label class="form-label">Senha Inicial <small class="text-muted">(Apenas na
                                 criação)</small></label>
-                        <input type="text" class="form-control" name="senha" id="input-senha" value="123">
+                        <input type="text" class="form-control" name="senha" id="input-senha" value="Mudar@123"
+                            required>
                     </div>
                     <div class="mb-3">
                         <label class="form-label">Função</label>
@@ -202,7 +214,8 @@
                     <input type="hidden" id="reset-user-id">
                     <div class="mb-3">
                         <label class="form-label">Nova Senha</label>
-                        <input type="text" class="form-control" id="nova-senha" required>
+                        <input type="text" class="form-control" id="reset-nova-senha" required>
+                        <div class="form-text">Mínimo 8 caracteres, Maiúscula, Minúscula, Número e Especial (@#$!)</div>
                     </div>
                     <button type="submit" class="btn btn-danger w-100">Confirmar Reset</button>
                 </form>
@@ -210,6 +223,9 @@
         </div>
     </div>
 
+    <script src="js/config.js"></script>
+    <script src="js/auth.js"></script>
+    <script src="js/sidebar_control.js"></script>
     <script src="js/usuarios.js"></script>
     <script>
         // Sidebar logic common to all pages

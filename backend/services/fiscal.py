@@ -23,9 +23,9 @@ def decide_st(
     motivos: List[str] = []
 
     # normaliza tudo para comparação
-    is_pet = _norm(tipo) == "pet"
+    is_pet = _norm(tipo) == "pet" or _norm(tipo) == "insumos"
     if is_pet:
-        motivos.append("tipo=PET")
+        motivos.append(f"tipo={tipo}")
 
     is_revenda = _norm(tipo_cliente) == "revenda"   # <<--- usar lower-case
     if is_revenda:
