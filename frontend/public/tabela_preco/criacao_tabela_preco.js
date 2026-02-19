@@ -1211,18 +1211,25 @@ function criarLinha(item, idx) {
 
 
   (() => {
+    // 0) Prioridade MÁXIMA: se já foi editado (ex.: no mobile), use o código salvo
+    if (item.__fator_codigo && Object.prototype.hasOwnProperty.call(mapaDescontos, item.__fator_codigo)) {
+      selPercent.value = item.__fator_codigo;
+      return;
+    }
+
     // 1) Se veio um label do back (ex.: "15 - 0"), priorize-o, mesmo se o percentual for 0
     const lbl = (item.__descricao_fator_label || '').trim();
     if (lbl) {
       const codeFromLbl = lbl.split(' - ')[0].trim(); // "15" em "15 - 0"
       if (codeFromLbl && Object.prototype.hasOwnProperty.call(mapaDescontos, codeFromLbl)) {
         selPercent.value = codeFromLbl;
+        return;
       }
     }
 
     // 2) Se não marcou ainda, tente pelo valor numérico do fator (aceitando 0)
     if (!selPercent.value && item.fator_comissao != null && !isNaN(item.fator_comissao)) {
-      const match = Object.entries(mapaDescontos).find(([, f]) => Number(f) === Number(item.fator_comissao));
+      const match = Object.entries(mapaDescontos).find(([, f]) => Math.abs(Number(f) - Number(item.fator_comissao)) < 0.0001);
       if (match) selPercent.value = match[0];
     }
 
@@ -1237,6 +1244,12 @@ function criarLinha(item, idx) {
       }
     }
   })();
+
+  // PERSIST INITIAL VALUE immediately (Sync State)
+  if (selPercent.value) {
+    item.__fator_codigo = selPercent.value;
+    item.fator_comissao = Number(mapaDescontos[selPercent.value] || 0);
+  }
 
   selPercent.addEventListener('change', () => {
     const code = selPercent.value || '';
@@ -1289,13 +1302,35 @@ function criarLinha(item, idx) {
   //selCond.appendChild(option(cod, cod));
   //});
 
-  const codCondLinha = String(item.plano_pagamento || '').split(' - ')[0].trim();
-  selCond.value = codCondLinha || '';
+  // INITIAL SELECTION LOGIC
+  // 0) Priority: Persisted Code (e.g. from Mobile Edit)
+  if (item.plano_pagamento_cod) {
+    selCond.value = item.plano_pagamento_cod;
+  }
+
+  // 1) Fallback: Text matching or code extraction
+  if (!selCond.value) {
+    const codCondLinha = String(item.plano_pagamento || '').split(' - ')[0].trim();
+    selCond.value = codCondLinha || '';
+  }
+
+  // PERSIST INITIAL VALUE immediately (Sync State)
+  if (selCond.value) {
+    item.plano_pagamento_cod = selCond.value;
+    // Also sync text description if missing
+    if (!item.plano_pagamento) {
+      item.plano_pagamento = selCond.options[selCond.selectedIndex]?.textContent || '';
+    }
+  }
 
   tdCondCod.appendChild(selCond);
 
   selCond.addEventListener('change', () => {
-    itens[idx].plano_pagamento = selCond.value || null;
+    itens[idx].plano_pagamento_cod = selCond.value || null; // Persist Code
+    // Also save text for legacy support
+    const opt = selCond.options[selCond.selectedIndex];
+    itens[idx].plano_pagamento = opt ? opt.textContent : (selCond.value || null);
+
     recalcLinha(tr);
 
     try {
@@ -1399,30 +1434,24 @@ function buildFiscalInputsFromRow(tr) {
   const idx = Number(tr.dataset.idx);
   const item = (itens || [])[idx] || {};
 
-  // DOM: fator por linha e condição (código)
-  const fatorPct = Number(tr.querySelector('td:nth-child(8) select')?.value || 0);
-  const fator = fatorPct / 100;
-  const codCond = tr.querySelector('td:nth-child(10) select')?.value || '';
-  const taxaCond = (window.mapaCondicoes && window.mapaCondicoes[codCond]) ?? 0;
-
-  // DOM: frete global e toggles
-  const freteKg = Number(document.getElementById('frete_kg')?.value || 0); // R$/kg
-  const codigo_cliente = (document.getElementById('codigo_cliente')?.value || '').trim() || null;
-  const ramoJuridico = (document.getElementById('ramo_juridico')?.value || '').trim() || null;
-  const forcarST = !!document.getElementById('iva_st_toggle')?.checked;
-
-  // Item básico
-  const produtoId = (tr.querySelector('td:nth-child(2)')?.textContent || '').trim();
-  const tipo = String(item?.tipo || item?.grupo || item?.departamento || '').trim();
-  const peso_bruto = Number(item?.peso_bruto || 0);
-  const peso_liq = Number(item?.peso_liquido ?? item?.peso ?? item?.peso_kg ?? item?.pesoLiquido ?? 0);
-  const peso_kg = (peso_bruto > 0) ? peso_bruto : peso_liq;
-
   // Preço base (espelha sua lógica da tela): valor + acrescimo(condição) - desconto(fator)
   const valor = Number(item?.valor || 0);
+
+  // Use persisted code if available, else element value
+  const itemFatorCod = item.__fator_codigo || tr.querySelector('td:nth-child(8) select')?.value;
+  const fatorVal = (window.mapaDescontos && itemFatorCod) ? Number(window.mapaDescontos[itemFatorCod]) : 0;
+
+  // Use persisted or element value
+  const itemCondCod = item.plano_pagamento_cod || tr.querySelector('td:nth-child(10) select')?.value;
+  const taxaVal = (window.mapaCondicoes && itemCondCod) ? Number(window.mapaCondicoes[itemCondCod]) : 0;
+
+  const fator = fatorVal || (item.fator_comissao || 0); // Fallback
+  const taxaCond = taxaVal || 0;
+
   const descontoValor = valor * Number(fator || 0);
   const liquido = Math.max(0, valor - descontoValor);
   const acrescimoCond = liquido * Number(taxaCond || 0);
+  const peso_kg = (peso_bruto > 0) ? peso_bruto : peso_liq;
 
   const precoBase = liquido + acrescimoCond;
 
@@ -2869,8 +2898,11 @@ function renderMobileCards() {
     const genFatorOptions = (selectedVal) => {
       let opts = `<option value="">—</option>`;
       if (window.mapaDescontos) {
+        // Priority: Explicit Code (item.__fator_codigo)
+        let targetCode = String(selectedVal || '');
+
         Object.entries(mapaDescontos).forEach(([cod, frac]) => {
-          const isSel = String(cod) === String(selectedVal || '');
+          const isSel = String(cod) === targetCode;
           opts += `<option value="${cod}" ${isSel ? 'selected' : ''}>${cod} - ${(Number(frac) * 100).toFixed(2)}</option>`;
         });
       }
@@ -2881,11 +2913,12 @@ function renderMobileCards() {
       let opts = `<option value="">—</option>`;
       const selHdr = document.getElementById('plano_pagamento');
       if (selHdr) {
+        // Priority: Explicit Code (item.plano_pagamento_cod)
+        let targetCode = String(selectedVal || '');
+
         Array.from(selHdr.options).forEach(o => {
           if (o.value) {
-            // Check if selected matches value or text-based logic
-            // Here we assume value matching
-            const isSel = String(o.value) === String(selectedVal || '');
+            let isSel = (String(o.value) === targetCode);
             opts += `<option value="${o.value}" ${isSel ? 'selected' : ''}>${o.textContent}</option>`;
           }
         });
@@ -2896,87 +2929,90 @@ function renderMobileCards() {
     // Card Content
     card.innerHTML = `
       <div class="mobile-card-item">
+        <!-- Header: Code/Desc (Left) vs Totals (Right) -->
         <div class="mobile-card-header clickable-header">
            <div class="d-flex justify-content-between align-items-start w-100">
-              <div style="flex:1">
-                  <span class="fw-bold text-primary">${item.codigo_tabela}</span>
-                  <div class="fw-bold">${item.descricao}</div>
-                  
-                  <!-- Prices Stacked -->
-                  <div class="d-flex flex-column mt-1" style="font-size:0.85rem; color:var(--muted); gap: 2px;">
-                      <span>S/ Frete: <strong>${fmtMoney(semFrete)}</strong></span>
-                      <span>C/ Frete: <strong>${fmtMoney(total)}</strong></span>
-                  </div>
+              <!-- Left: Code & Desc -->
+              <div style="flex: 1; padding-right: 8px;">
+                  <div class="fw-bold text-dark" style="font-size: 0.95rem;">${item.codigo_tabela} - ${item.descricao}</div>
+                  <div class="text-muted" style="font-size: 0.8rem;">${item.embalagem || ''}</div>
               </div>
-              <span class="chevron-header">▼</span>
+
+              <!-- Right: Totals Stacked -->
+              <div class="d-flex flex-column align-items-end" style="min-width: 100px;">
+                  <div style="font-size: 0.75rem; color: #666; margin-bottom: -2px;">Total c/ Frete</div>
+                  <div style="font-size: 1rem; font-weight: 700; color: #16a34a;">${fmtMoney(total)}</div>
+                  
+                  <div style="font-size: 0.75rem; color: #999; margin-top: 4px; margin-bottom: -2px;">Total s/ Frete</div>
+                  <div style="font-size: 0.9rem; font-weight: 600; color: #333;">${fmtMoney(semFrete)}</div>
+              </div>
+              
+              <!-- Chevron -->
+               <span class="chevron-header" style="margin-left: 8px; margin-top: 4px;">▼</span>
            </div>
         </div>
 
         <div class="header-content collapsed">
-         <!-- Row 1: Vlr Unit -->
-         <div class="card-body-row">
-            <div class="card-field">
-                <label>Vlr. Unit.</label>
-                <input type="text" value="${fmtMoney(item.valor)}" disabled>
+         <div style="padding-top: 12px;">
+            <!-- Row 1: Vlr Unit | Markup % -->
+            <div class="mobile-grid-2col" style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 12px;">
+                <div class="card-field">
+                    <label>Valor Unit.</label>
+                    <input type="text" value="${fmtMoney(item.valor)}" disabled style="background: #f8fafc;">
+                </div>
+                <div class="card-field">
+                    <label>Markup %</label>
+                    <input type="number" class="mobile-input-markup" value="${item.markup || 0}" step="0.01" ${markupDisabled ? 'disabled' : ''}>
+                </div>
             </div>
-         </div>
 
-         <!-- Row 2: Fator % (Select) -->
-         <div class="card-body-row">
-            <div class="card-field">
-                <label>Fator %</label>
-                ${markupDisabled
+            <!-- Row 2: Fator % | Condição -->
+            <div class="mobile-grid-2col" style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 12px;">
+                <div class="card-field">
+                    <label>Fator %</label>
+                    ${markupDisabled
         ? `<input type="text" value="${item.__fator_codigo || item.fator_comissao || ''}" disabled>`
         : `<select class="form-select mobile-fator-select">${genFatorOptions(item.__fator_codigo)}</select>`
       }
-            </div>
-         </div>
-
-         <!-- Row 3: Condição Pagto (Select) -->
-         <div class="card-body-row">
-            <div class="card-field" style="grid-column: span 2">
-                <label>Condição Pagto</label>
-                ${markupDisabled
+                </div>
+                <div class="card-field">
+                    <label>Condição (R$)</label> <!-- Label per user request, but functionality is select -->
+                    ${markupDisabled
         ? `<input type="text" value="${item.plano_pagamento || ''}" disabled style="background:#f9f9f9; color:#666">`
         : `<select class="form-select mobile-cond-select">${genCondOptions(item.plano_pagamento_cod || item.plano_pagamento)}</select>`
       }
+                </div>
             </div>
-        </div>
 
-         <!-- Row 4: Frete -->
-         <div class="card-body-row">
-            <div class="card-field">
-                <label>Frete</label>
-                <input type="text" value="${fmtMoney(freteVal)}" disabled>
+            <!-- Row 3: Frete (Full width) -->
+            <div class="card-field" style="margin-bottom: 16px;">
+                 <label>Frete (R$)</label>
+                 <input type="text" value="${fmtMoney(freteVal)}" disabled style="background: #f8fafc;">
             </div>
-         </div>
 
-         <!-- Row 5: Markup % -->
-         <div class="card-body-row">
-             <div class="card-field">
-                <label>Markup %</label>
-                <input type="number" class="mobile-input-markup" value="${item.markup || 0}" step="0.01" ${markupDisabled ? 'disabled' : ''}>
+            <!-- Row 4: Fiscal Details (Styled Block) -->
+            <div class="fiscal-block" style="background: #f8fafc; border-radius: 8px; padding: 12px; margin-bottom: 12px;">
+                 <div style="font-size: 0.85rem; font-weight: 600; color: #333; margin-bottom: 8px;">Detalhes Fiscais</div>
+                 <div class="d-flex justify-content-between text-center" style="font-size: 0.8rem;">
+                     <div>
+                        <div class="text-muted" style="font-size: 0.7rem;">IPI</div>
+                        <div class="fw-bold">${fmtMoney(item.ipi || 0)}</div>
+                     </div>
+                     <div>
+                        <div class="text-muted" style="font-size: 0.7rem;">ICMS ST</div>
+                        <div class="fw-bold">${fmtMoney(item._icmsProprio || 0)}</div> 
+                     </div>
+                     <div>
+                        <div class="text-muted" style="font-size: 0.7rem;">IVA_ST</div>
+                        <div class="fw-bold">${fmtMoney(item._stReter || 0)}</div>
+                     </div>
+                 </div>
             </div>
-         </div>
-         
-         <!-- Tax Grid -->
-         <div class="tax-grid" style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-top: 12px; padding-top: 8px; border-top: 1px dashed #eee; font-size: 0.8rem; color: #666;">
-             <div>
-                <span style="display:block; font-size:0.7rem; opacity:0.8">IPI</span>
-                <strong>${fmtMoney(item.ipi || 0)}</strong>
-             </div>
-             <div>
-                <span style="display:block; font-size:0.7rem; opacity:0.8">ICMS</span>
-                <strong>${fmtMoney(item._icmsProprio || 0)}</strong>
-             </div>
-             <div>
-                <span style="display:block; font-size:0.7rem; opacity:0.8">IVA_ST</span>
-                <strong>${fmtMoney(item._stReter || 0)}</strong>
-             </div>
-         </div>
 
-         <div class="card-actions">
-            <button class="btn-card-action btn-card-remove" ${markupDisabled ? 'disabled style="opacity:0.5"' : ''}>Remover</button>
+            <!-- Card Actions -->
+            <div class="card-actions" style="border-top: none; padding-top: 0;">
+                <button class="btn-card-action btn-card-remove" ${markupDisabled ? 'disabled style="opacity:0.5"' : ''} style="color: #ef4444; font-size: 0.9rem;">Remover item</button>
+            </div>
          </div>
       </div>
     </div>
@@ -3081,6 +3117,7 @@ toggleToolbarByMode = function () {
 };
 
 // === Header Collapse Logic (Robust) ===
+// === Header Collapse Logic (Simplified & Robust) ===
 (function setupHeaderCollapse() {
   const attach = () => {
     const btn = document.getElementById('btn-toggle-header');
@@ -3090,14 +3127,11 @@ toggleToolbarByMode = function () {
     const lblCli = document.getElementById('summary-cliente');
 
     if (btn && area) {
-      // Remove previous listeners (cloning) to avoid duplicates if re-run
-      const newBtn = btn.cloneNode(true);
-      btn.parentNode.replaceChild(newBtn, btn);
-
-      newBtn.addEventListener('click', (e) => {
+      // Use onclick to avoid multiple listeners
+      btn.onclick = (e) => {
         e.preventDefault();
         const isCollapsed = area.classList.toggle('collapsed');
-        newBtn.classList.toggle('rotated', isCollapsed);
+        btn.classList.toggle('rotated', isCollapsed);
 
         // Toggle Summary
         if (summary) {
@@ -3111,11 +3145,10 @@ toggleToolbarByMode = function () {
             requestAnimationFrame(() => summary.classList.add('visible'));
           } else {
             summary.classList.remove('visible');
-            setTimeout(() => summary.classList.add('hidden'), 3000);
+            setTimeout(() => summary.classList.add('hidden'), 300);
           }
         }
-      });
-      console.log("Header collapse attached successfully.");
+      };
     } else {
       // Retry if DOM not ready
       setTimeout(attach, 500);
