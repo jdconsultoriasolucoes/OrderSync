@@ -2861,56 +2861,40 @@ function renderMobileCards() {
 
     // Card Content
     card.innerHTML = `
-      <div class="card-header-row clickable-header">
-        <div style="flex:1">
-            <div class="card-title">${statusBadge}${desc}</div>
-            <div class="card-subtitle">${codigo} ${emb ? ' - ' + emb : ''}</div>
+      <div class="mobile-card-item">
+        <div class="mobile-card-header clickable-header">
+           <div class="d-flex justify-content-between align-items-start w-100">
+              <div style="flex:1">
+                  <span class="fw-bold text-primary">${item.codigo_tabela}</span>
+                  <div class="fw-bold">${item.descricao}</div>
+                  <!-- Prices next to Name -->
+                  <div class="d-flex gap-3 mt-1" style="font-size:0.85rem; color:var(--muted)">
+                      <span>S/ Frete: <strong>${fmtMoney(semFrete)}</strong></span>
+                      <span>C/ Frete: <strong>${fmtMoney(total)}</strong></span>
+                  </div>
+              </div>
+              <span class="chevron-header">▼</span>
+           </div>
         </div>
-        <div class="card-price-highlight">
-            ${fmtMoney(total)}
-        </div>
-        <div class="chevron-header" style="margin-left:8px">▼</div>
-      </div>
-      
-      <div class="header-content">
-        <!-- Row 1: Markup & Unit Value -->
-        <div class="card-body-row">
-            <div class="card-field">
-                <label>Markup %</label>
-                <input type="number" class="mobile-input-markup" value="${markupVal}" step="0.01" ${markupDisabled ? 'disabled' : ''}>
-            </div>
+
+        <div class="header-content collapsed">
+         <!-- Row 1: Vlr Unit -->
+         <div class="card-body-row">
             <div class="card-field">
                 <label>Vlr. Unit.</label>
-                <input type="text" value="${fmtMoney(valorUnit)}" disabled>
+                <input type="text" value="${fmtMoney(item.valor)}" disabled>
             </div>
-        </div>
+         </div>
 
-        <!-- Row 2: Fator & Frete -->
-        <div class="card-body-row">
-             <div class="card-field">
+         <!-- Row 2: Fator % -->
+         <div class="card-body-row">
+            <div class="card-field">
                 <label>Fator %</label>
-                <!-- Simplified: assuming read-only for now on mobile unless we add select -->
-                 <input type="text" value="${fmtMoney(fator)}" disabled> 
+                <input type="text" value="${item.fator_comissao || 0}" disabled>
             </div>
-             <div class="card-field">
-                <label>Frete (R$)</label>
-                <input type="text" value="${fmtMoney(freteVal)}" disabled>
-            </div>
-        </div>
+         </div>
 
-        <!-- Row 3: Totals -->
-        <div class="card-body-row">
-             <div class="card-field">
-                <label>Vlr s/ Frete</label>
-                <input type="text" value="${fmtMoney(semFrete)}" disabled>
-            </div>
-             <div class="card-field" style="font-weight:bold; color:var(--text)">
-                <label>Vlr c/ Frete</label>
-                <input type="text" value="${fmtMoney(total)}" disabled style="font-weight:bold">
-            </div>
-        </div>
-
-
+         <!-- Row 3: Condição Pagto -->
          <div class="card-body-row">
             <div class="card-field" style="grid-column: span 2">
                 <label>Condição Pagto</label>
@@ -2918,10 +2902,27 @@ function renderMobileCards() {
             </div>
         </div>
 
+         <!-- Row 4: Frete -->
+         <div class="card-body-row">
+            <div class="card-field">
+                <label>Frete</label>
+                <input type="text" value="${fmtMoney(freteVal)}" disabled>
+            </div>
+         </div>
+
+         <!-- Row 5: Markup % -->
+         <div class="card-body-row">
+             <div class="card-field">
+                <label>Markup %</label>
+                <input type="number" class="mobile-input-markup" value="${item.markup || 0}" step="0.01" ${markupDisabled ? 'disabled' : ''}>
+            </div>
+         </div>
+
          <div class="card-actions">
             <button class="btn-card-action btn-card-remove" ${markupDisabled ? 'disabled style="opacity:0.5"' : ''}>Remover</button>
          </div>
       </div>
+    </div>
     `;
 
     // Events
@@ -2990,6 +2991,55 @@ toggleToolbarByMode = function () {
   show('btn-mobile-dup', isView && hasId);
   show('btn-mobile-save', isEditLike);
 };
+
+// === Header Collapse Logic (Robust) ===
+(function setupHeaderCollapse() {
+  const attach = () => {
+    const btn = document.getElementById('btn-toggle-header');
+    const area = document.getElementById('header-collapsible-area');
+    const summary = document.getElementById('header-collapsed-summary');
+    const lblNome = document.getElementById('summary-nome');
+    const lblCli = document.getElementById('summary-cliente');
+
+    if (btn && area) {
+      // Remove previous listeners (cloning) to avoid duplicates if re-run
+      const newBtn = btn.cloneNode(true);
+      btn.parentNode.replaceChild(newBtn, btn);
+
+      newBtn.addEventListener('click', (e) => {
+        e.preventDefault();
+        const isCollapsed = area.classList.toggle('collapsed');
+        newBtn.classList.toggle('rotated', isCollapsed);
+
+        // Toggle Summary
+        if (summary) {
+          if (isCollapsed) {
+            const nome = document.getElementById('nome_tabela')?.value || 'Sem Nome';
+            const cli = document.getElementById('cliente_nome')?.value || 'Sem Cliente';
+            if (lblNome) lblNome.textContent = nome;
+            if (lblCli) lblCli.textContent = cli;
+
+            summary.classList.remove('hidden');
+            requestAnimationFrame(() => summary.classList.add('visible'));
+          } else {
+            summary.classList.remove('visible');
+            setTimeout(() => summary.classList.add('hidden'), 3000);
+          }
+        }
+      });
+      console.log("Header collapse attached successfully.");
+    } else {
+      // Retry if DOM not ready
+      setTimeout(attach, 500);
+    }
+  };
+
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', attach);
+  } else {
+    attach();
+  }
+})();
 
 // === Header Collapse Logic ===
 document.addEventListener('DOMContentLoaded', () => {
