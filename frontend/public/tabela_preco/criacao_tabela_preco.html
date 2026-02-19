@@ -60,6 +60,14 @@
     <section class="card pad" aria-labelledby="sec-topo">
       <div class="section-header-flex">
         <h2 id="sec-topo" class="section-title" style="margin: 0;">Dados principais</h2>
+
+        <!-- Collapsed Summary (Hidden by default) -->
+        <div id="header-collapsed-summary" class="header-summary hidden">
+          <span id="summary-nome" class="fw-bold"></span>
+          <span class="sep"> • </span>
+          <span id="summary-cliente" class="text-muted"></span>
+        </div>
+
         <div class="header-info-group">
           <div class="info-item">
             <span class="info-label">Validade:</span>
@@ -69,91 +77,96 @@
             <span class="info-label">Tempo:</span>
             <input id="dias_restantes" class="transparent-input" type="text" readonly tabindex="-1" />
           </div>
+          <button id="btn-toggle-header" class="btn-icon-header" title="Ocultar cabeçalho">
+            ▲
+          </button>
         </div>
       </div>
 
-      <div class="custom-grid" style="margin-top: 16px;">
+      <div id="header-collapsible-area" class="expanded">
+        <div class="custom-grid" style="margin-top: 16px;">
 
-        <!-- Row 1 Items -->
-        <div class="grid-item area-nome">
-          <label for="nome_tabela">Nome da Tabela</label>
-          <input id="nome_tabela" type="text" placeholder="Ex.: Tabela Promocional Set/25" />
-        </div>
+          <!-- Row 1 Items -->
+          <div class="grid-item area-nome">
+            <label for="nome_tabela">Nome da Tabela</label>
+            <input id="nome_tabela" type="text" placeholder="Ex.: Tabela Promocional Set/25" />
+          </div>
 
-        <div class="grid-item area-markup">
-          <div class="field">
-            <label for="markup_global">Markup Global %</label>
-            <div class="inline">
-              <input id="markup_global" class="input-mini" type="number" step="0.01" min="0" placeholder="0.00" />
-              <button class="btn btn-sm d-none" id="btn-aplicar-markup-todos">Aplicar a todos</button>
+          <div class="grid-item area-markup">
+            <div class="field">
+              <label for="markup_global">Markup Global %</label>
+              <div class="inline">
+                <input id="markup_global" class="input-mini" type="number" step="0.01" min="0" placeholder="0.00" />
+                <button class="btn btn-sm d-none" id="btn-aplicar-markup-todos">Aplicar a todos</button>
+              </div>
             </div>
           </div>
-        </div>
 
-        <div class="grid-item area-cliente">
-          <label for="cliente_nome">Cliente</label>
-          <input id="cliente_nome" type="text" autocomplete="off" placeholder="Digite o nome ou CNPJ..." />
-          <input id="codigo_cliente" type="hidden" />
-          <input id="ramo_juridico" type="hidden" />
-          <div id="cliente_suggestions" class="suggestions"></div>
+          <div class="grid-item area-cliente">
+            <label for="cliente_nome">Cliente</label>
+            <input id="cliente_nome" type="text" autocomplete="off" placeholder="Digite o nome ou CNPJ..." />
+            <input id="codigo_cliente" type="hidden" />
+            <input id="ramo_juridico" type="hidden" />
+            <div id="cliente_suggestions" class="suggestions"></div>
 
-          <div class="field mt-2">
-            <div class="inline">
-              <input id="iva_st_toggle" type="checkbox" disabled />
-              <span class="hint" style="font-size: 0.85rem; color: var(--text);">Aplicar IVA_ST</span>
+            <div class="field mt-2">
+              <div class="inline">
+                <input id="iva_st_toggle" type="checkbox" disabled />
+                <span class="hint" style="font-size: 0.85rem; color: var(--text);">Aplicar IVA_ST</span>
+              </div>
             </div>
           </div>
+
+          <!-- Row 2 Items -->
+          <!-- IVA starts aligned with Cliente -->
+
+
+
+
         </div>
 
-        <!-- Row 2 Items -->
-        <!-- IVA starts aligned with Cliente -->
 
+        <!-- Bottom (Condition / Discount) -->
+        <div class="grid-condition-discount">
 
-
-
-      </div>
-
-
-      <!-- Bottom (Condition / Discount) -->
-      <div class="grid-condition-discount">
-
-        <!-- Condição -->
-        <!-- Condição -->
-        <div class="grid-item">
-          <div class="field">
-            <label for="plano_pagamento">Condição de Pagamento</label>
-            <div class="d-flex gap-2 align-items-center">
-              <select id="plano_pagamento" class="form-select flex-grow-1"></select>
-              <span class="pill ms-2" style="white-space: nowrap;">Taxa: <strong id="pill-taxa">—</strong></span>
-              <button class="btn btn-sm d-none" id="btn-aplicar-condicao-todos" style="white-space: nowrap;">Aplicar a
-                todos</button>
-            </div>
-            <div class="hint" id="hint-condicao">Carregando...</div>
-          </div>
-        </div>
-
-        <!-- Desconto: Reordered -->
-        <div class="grid-item area-desconto">
-          <div class="field">
-            <label for="desconto_global">Desconto / Fator %</label>
-            <div class="d-flex gap-2 align-items-center">
-              <select id="desconto_global" class="grow form-select flex-grow-1"></select>
-              <span class="pill ms-2" style="white-space: nowrap;">Fator: <strong
-                  id="pill-fator">—</strong><span>%</span></span>
-              <button class="btn btn-sm d-none" id="btn-aplicar-todos" style="white-space: nowrap;">Aplicar a
-                todos</button>
+          <!-- Condição -->
+          <!-- Condição -->
+          <div class="grid-item area-condicao">
+            <div class="field">
+              <label for="plano_pagamento">Condição de Pagamento</label>
+              <div class="d-flex gap-2 align-items-center">
+                <select id="plano_pagamento" class="form-select flex-grow-1"></select>
+                <span class="pill ms-2" style="white-space: nowrap;">Taxa: <strong id="pill-taxa">—</strong></span>
+                <button class="btn btn-sm d-none" id="btn-aplicar-condicao-todos" style="white-space: nowrap;">Aplicar a
+                  todos</button>
+              </div>
+              <div class="hint" id="hint-condicao">Carregando...</div>
             </div>
           </div>
-        </div>
 
-        <!-- Frete: Moved Here -->
-        <div class="grid-item field-frete">
-          <div class="field">
-            <label for="frete_kg">Frete/KG</label>
-            <input id="frete_kg" class="input-mini" type="number" step="0" min="0" value="0" />
+          <!-- Desconto: Reordered -->
+          <div class="grid-item area-desconto">
+            <div class="field">
+              <label for="desconto_global">Desconto / Fator %</label>
+              <div class="d-flex gap-2 align-items-center">
+                <select id="desconto_global" class="grow form-select flex-grow-1"></select>
+                <span class="pill ms-2" style="white-space: nowrap;">Fator: <strong
+                    id="pill-fator">—</strong><span>%</span></span>
+                <button class="btn btn-sm d-none" id="btn-aplicar-todos" style="white-space: nowrap;">Aplicar a
+                  todos</button>
+              </div>
+            </div>
           </div>
-        </div>
 
+          <!-- Frete: Moved Here -->
+          <div class="grid-item field-frete">
+            <div class="field">
+              <label for="frete_kg">Frete/KG</label>
+              <input id="frete_kg" class="input-mini" type="number" step="0" min="0" value="0" />
+            </div>
+          </div>
+
+        </div>
       </div>
     </section>
 
