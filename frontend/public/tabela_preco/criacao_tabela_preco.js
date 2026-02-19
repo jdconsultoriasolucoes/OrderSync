@@ -1176,6 +1176,57 @@ async function carregarItens() {
   setMode('new');
 }
 
+// --- Shared Logic for Fator/Condição Determination ---
+function determineFatorCode(item) {
+  // 0) Priority: Persisted/Explicit Code
+  if (item.__fator_codigo && window.mapaDescontos && Object.prototype.hasOwnProperty.call(window.mapaDescontos, item.__fator_codigo)) {
+    return item.__fator_codigo;
+  }
+
+  // 1) Backend Label (e.g., "15 - 0")
+  const lbl = (item.__descricao_fator_label || '').trim();
+  if (lbl) {
+    const codeFromLbl = lbl.split(' - ')[0].trim();
+    if (codeFromLbl && window.mapaDescontos && Object.prototype.hasOwnProperty.call(window.mapaDescontos, codeFromLbl)) {
+      return codeFromLbl;
+    }
+  }
+
+  // 2) Numeric Match
+  if (item.fator_comissao != null && !isNaN(item.fator_comissao) && window.mapaDescontos) {
+    const match = Object.entries(window.mapaDescontos).find(([, f]) => Math.abs(Number(f) - Number(item.fator_comissao)) < 0.0001);
+    if (match) return match[0];
+  }
+
+  // 3) Inference from Discount/Value
+  if (Number(item.valor || 0) > 0 && window.mapaDescontos) {
+    const fatorInferido = Number(item.desconto || 0) / Number(item.valor || 1);
+    if (fatorInferido > 1e-6) {
+      const match = Object.entries(window.mapaDescontos).find(([, f]) => Math.abs(Number(f) - fatorInferido) < 1e-6);
+      if (match) return match[0];
+    }
+  }
+
+  return '';
+}
+
+function determineCondicaoCode(item) {
+  // 0) Priority: Persisted Code
+  if (item.plano_pagamento_cod) return item.plano_pagamento_cod;
+
+  // 1) Text matching or extraction
+  if (item.plano_pagamento) {
+    // Try extracting "001" from "001 - Vista"
+    const parts = String(item.plano_pagamento).split(' - ');
+    const potentialCode = parts[0].trim();
+
+    // Validation? We assume if it looks like a code, it is.
+    if (potentialCode) return potentialCode;
+  }
+
+  return '';
+}
+
 function criarLinha(item, idx) {
   const tr = document.createElement('tr');
   tr.dataset.idx = idx;
@@ -1209,41 +1260,8 @@ function criarLinha(item, idx) {
     selPercent.appendChild(option(`${cod} - ${(Number(frac) * 100).toFixed(2)}`, cod));
   });
 
-
-  (() => {
-    // 0) Prioridade MÁXIMA: se já foi editado (ex.: no mobile), use o código salvo
-    if (item.__fator_codigo && Object.prototype.hasOwnProperty.call(mapaDescontos, item.__fator_codigo)) {
-      selPercent.value = item.__fator_codigo;
-      return;
-    }
-
-    // 1) Se veio um label do back (ex.: "15 - 0"), priorize-o, mesmo se o percentual for 0
-    const lbl = (item.__descricao_fator_label || '').trim();
-    if (lbl) {
-      const codeFromLbl = lbl.split(' - ')[0].trim(); // "15" em "15 - 0"
-      if (codeFromLbl && Object.prototype.hasOwnProperty.call(mapaDescontos, codeFromLbl)) {
-        selPercent.value = codeFromLbl;
-        return;
-      }
-    }
-
-    // 2) Se não marcou ainda, tente pelo valor numérico do fator (aceitando 0)
-    if (!selPercent.value && item.fator_comissao != null && !isNaN(item.fator_comissao)) {
-      const match = Object.entries(mapaDescontos).find(([, f]) => Math.abs(Number(f) - Number(item.fator_comissao)) < 0.0001);
-      if (match) selPercent.value = match[0];
-    }
-
-    // 3) Último fallback: inferir por razão desconto/valor (aceitando 0)
-    if (!selPercent.value && Number(item.valor || 0) > 0) {
-      const fatorInferido = Number(item.desconto || 0) / Number(item.valor || 1);
-      if (fatorInferido > 1e-6) { // evita 0
-        const match = Object.entries(mapaDescontos).find(([, f]) =>
-          Math.abs(Number(f) - fatorInferido) < 1e-6
-        );
-        if (match) selPercent.value = match[0];
-      }
-    }
-  })();
+  // USE SHARED HELPER
+  selPercent.value = determineFatorCode(item);
 
   // PERSIST INITIAL VALUE immediately (Sync State)
   if (selPercent.value) {
@@ -1302,11 +1320,6 @@ function criarLinha(item, idx) {
   //selCond.appendChild(option(cod, cod));
   //});
 
-  // INITIAL SELECTION LOGIC
-  // 0) Priority: Persisted Code (e.g. from Mobile Edit)
-  if (item.plano_pagamento_cod) {
-    selCond.value = item.plano_pagamento_cod;
-  }
 
   // 1) Fallback: Text matching or code extraction
   if (!selCond.value) {
@@ -1433,6 +1446,12 @@ async function recalcularLinhaComFiscal(item, codigo_cliente, forcarST, frete_li
 function buildFiscalInputsFromRow(tr) {
   const idx = Number(tr.dataset.idx);
   const item = (itens || [])[idx] || {};
+
+  // Item básico
+  const produtoId = (tr.querySelector('td:nth-child(2)')?.textContent || '').trim();
+  const tipo = String(item?.tipo || item?.grupo || item?.departamento || '').trim();
+  const peso_bruto = Number(item?.peso_bruto || 0);
+  const peso_liq = Number(item?.peso_liquido ?? item?.peso ?? item?.peso_kg ?? item?.pesoLiquido ?? 0);
 
   // Preço base (espelha sua lógica da tela): valor + acrescimo(condição) - desconto(fator)
   const valor = Number(item?.valor || 0);
@@ -2898,8 +2917,8 @@ function renderMobileCards() {
     const genFatorOptions = (selectedVal) => {
       let opts = `<option value="">—</option>`;
       if (window.mapaDescontos) {
-        // Priority: Explicit Code (item.__fator_codigo)
-        let targetCode = String(selectedVal || '');
+        // FORCE SAME LOGIC
+        let targetCode = determineFatorCode(item);
 
         Object.entries(mapaDescontos).forEach(([cod, frac]) => {
           const isSel = String(cod) === targetCode;
@@ -2913,8 +2932,8 @@ function renderMobileCards() {
       let opts = `<option value="">—</option>`;
       const selHdr = document.getElementById('plano_pagamento');
       if (selHdr) {
-        // Priority: Explicit Code (item.plano_pagamento_cod)
-        let targetCode = String(selectedVal || '');
+        // FORCE SAME LOGIC
+        let targetCode = determineCondicaoCode(item);
 
         Array.from(selHdr.options).forEach(o => {
           if (o.value) {
