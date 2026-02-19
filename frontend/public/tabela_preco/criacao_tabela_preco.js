@@ -1534,7 +1534,12 @@ async function recalcLinha(tr) {
     const f = await previewFiscalLinha(built.payload);
     item.ipi = Number((f.ipi ?? 0).toFixed(2));
     item.iva_st = Number((f.base_st ?? 0).toFixed(2));
-    item.icms_st = Number((f.icms_proprio ?? 0).toFixed(2));
+
+    // Fix: Save correct fields for mobile display
+    item._icmsProprio = Number((f.icms_proprio ?? 0).toFixed(2));
+    item._stReter = Number((f.icms_st_reter ?? 0).toFixed(2));
+
+    item.icms_st = Number((f.icms_proprio ?? 0).toFixed(2)); // Legacy (keep for safety)
 
     if (tr.dataset.reqId !== myId) return;
 
@@ -2860,6 +2865,35 @@ function renderMobileCards() {
     const semFrete = item.total_sem_frete || 0;
 
     // Card Content
+    // Select Options Generators
+    const genFatorOptions = (selectedVal) => {
+      let opts = `<option value="">—</option>`;
+      if (window.mapaDescontos) {
+        Object.entries(mapaDescontos).forEach(([cod, frac]) => {
+          const isSel = String(cod) === String(selectedVal || '');
+          opts += `<option value="${cod}" ${isSel ? 'selected' : ''}>${cod} - ${(Number(frac) * 100).toFixed(2)}</option>`;
+        });
+      }
+      return opts;
+    };
+
+    const genCondOptions = (selectedVal) => {
+      let opts = `<option value="">—</option>`;
+      const selHdr = document.getElementById('plano_pagamento');
+      if (selHdr) {
+        Array.from(selHdr.options).forEach(o => {
+          if (o.value) {
+            // Check if selected matches value or text-based logic
+            // Here we assume value matching
+            const isSel = String(o.value) === String(selectedVal || '');
+            opts += `<option value="${o.value}" ${isSel ? 'selected' : ''}>${o.textContent}</option>`;
+          }
+        });
+      }
+      return opts;
+    };
+
+    // Card Content
     card.innerHTML = `
       <div class="mobile-card-item">
         <div class="mobile-card-header clickable-header">
@@ -2867,8 +2901,9 @@ function renderMobileCards() {
               <div style="flex:1">
                   <span class="fw-bold text-primary">${item.codigo_tabela}</span>
                   <div class="fw-bold">${item.descricao}</div>
-                  <!-- Prices next to Name -->
-                  <div class="d-flex gap-3 mt-1" style="font-size:0.85rem; color:var(--muted)">
+                  
+                  <!-- Prices Stacked -->
+                  <div class="d-flex flex-column mt-1" style="font-size:0.85rem; color:var(--muted); gap: 2px;">
                       <span>S/ Frete: <strong>${fmtMoney(semFrete)}</strong></span>
                       <span>C/ Frete: <strong>${fmtMoney(total)}</strong></span>
                   </div>
@@ -2886,19 +2921,25 @@ function renderMobileCards() {
             </div>
          </div>
 
-         <!-- Row 2: Fator % -->
+         <!-- Row 2: Fator % (Select) -->
          <div class="card-body-row">
             <div class="card-field">
                 <label>Fator %</label>
-                <input type="text" value="${item.fator_comissao || 0}" disabled>
+                ${markupDisabled
+        ? `<input type="text" value="${item.__fator_codigo || item.fator_comissao || ''}" disabled>`
+        : `<select class="form-select mobile-fator-select">${genFatorOptions(item.__fator_codigo)}</select>`
+      }
             </div>
          </div>
 
-         <!-- Row 3: Condição Pagto -->
+         <!-- Row 3: Condição Pagto (Select) -->
          <div class="card-body-row">
             <div class="card-field" style="grid-column: span 2">
                 <label>Condição Pagto</label>
-                <input type="text" value="${item.plano_pagamento || ''}" disabled style="background:#f9f9f9; color:#666">
+                ${markupDisabled
+        ? `<input type="text" value="${item.plano_pagamento || ''}" disabled style="background:#f9f9f9; color:#666">`
+        : `<select class="form-select mobile-cond-select">${genCondOptions(item.plano_pagamento_cod || item.plano_pagamento)}</select>`
+      }
             </div>
         </div>
 
@@ -2916,6 +2957,22 @@ function renderMobileCards() {
                 <label>Markup %</label>
                 <input type="number" class="mobile-input-markup" value="${item.markup || 0}" step="0.01" ${markupDisabled ? 'disabled' : ''}>
             </div>
+         </div>
+         
+         <!-- Tax Grid -->
+         <div class="tax-grid" style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-top: 12px; padding-top: 8px; border-top: 1px dashed #eee; font-size: 0.8rem; color: #666;">
+             <div>
+                <span style="display:block; font-size:0.7rem; opacity:0.8">IPI</span>
+                <strong>${fmtMoney(item.ipi || 0)}</strong>
+             </div>
+             <div>
+                <span style="display:block; font-size:0.7rem; opacity:0.8">ICMS</span>
+                <strong>${fmtMoney(item._icmsProprio || 0)}</strong>
+             </div>
+             <div>
+                <span style="display:block; font-size:0.7rem; opacity:0.8">IVA_ST</span>
+                <strong>${fmtMoney(item._stReter || 0)}</strong>
+             </div>
          </div>
 
          <div class="card-actions">
@@ -2963,6 +3020,37 @@ function renderMobileCards() {
         }
       });
       mkInput.addEventListener('click', (e) => e.stopPropagation());
+    }
+
+    // Event: Fator Change
+    const selFator = card.querySelector('.mobile-fator-select');
+    if (selFator) {
+      selFator.addEventListener('change', (e) => {
+        e.stopPropagation();
+        const code = e.target.value;
+        const frac = (window.mapaDescontos && window.mapaDescontos[code] != null) ? Number(window.mapaDescontos[code]) : 0;
+        item.fator_comissao = frac;
+        item.__fator_codigo = code;
+        item.__overridePercent = true;
+        // Trigger update
+        recalcTudo(); // This will re-render table and thus re-render mobile cards
+      });
+      selFator.addEventListener('click', (e) => e.stopPropagation());
+    }
+
+    // Event: Condição Change
+    const selCond = card.querySelector('.mobile-cond-select');
+    if (selCond) {
+      selCond.addEventListener('change', (e) => {
+        e.stopPropagation();
+        const val = e.target.value;
+        item.plano_pagamento_cod = val;
+        // Try to find text
+        const opt = e.target.options[e.target.selectedIndex];
+        item.plano_pagamento = opt ? opt.textContent : val;
+        recalcTudo();
+      });
+      selCond.addEventListener('click', (e) => e.stopPropagation());
     }
 
     container.appendChild(card);
