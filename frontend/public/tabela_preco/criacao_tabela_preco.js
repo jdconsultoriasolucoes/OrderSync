@@ -1443,7 +1443,7 @@ async function recalcularLinhaComFiscal(item, codigo_cliente, forcarST, frete_li
   return item;
 }
 
-function buildFiscalInputsFromRow(tr) {
+function buildFiscalInputsFromRow(tr, freteKg) {
   const idx = Number(tr.dataset.idx);
   const item = (itens || [])[idx] || {};
 
@@ -1573,7 +1573,7 @@ async function recalcLinha(tr) {
 
 
   try {
-    const built = buildFiscalInputsFromRow(tr);
+    const built = buildFiscalInputsFromRow(tr, freteKg);
 
     // usa exatamente o que JÁ calculamos nesta função
     built.payload.preco_unit = precoBase;   // já calculado acima
@@ -1773,7 +1773,7 @@ async function recalcTudo() {
         setTxt(12, freteValor);
 
         // Build Payload
-        const built = buildFiscalInputsFromRow(tr);
+        const built = buildFiscalInputsFromRow(tr, freteKg);
         built.payload.preco_unit = precoBase;
         built.payload.frete_linha = freteValor;
 
