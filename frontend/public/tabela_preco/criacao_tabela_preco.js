@@ -1179,7 +1179,7 @@ async function carregarItens() {
 // --- Shared Logic for Fator/Condição Determination ---
 function determineFatorCode(item) {
   // 0) Priority: Persisted/Explicit Code
-  if (item.__fator_codigo && window.mapaDescontos && Object.prototype.hasOwnProperty.call(window.mapaDescontos, item.__fator_codigo)) {
+  if (item.__fator_codigo && mapaDescontos && Object.prototype.hasOwnProperty.call(mapaDescontos, item.__fator_codigo)) {
     return item.__fator_codigo;
   }
 
@@ -1187,22 +1187,22 @@ function determineFatorCode(item) {
   const lbl = (item.__descricao_fator_label || '').trim();
   if (lbl) {
     const codeFromLbl = lbl.split(' - ')[0].trim();
-    if (codeFromLbl && window.mapaDescontos && Object.prototype.hasOwnProperty.call(window.mapaDescontos, codeFromLbl)) {
+    if (codeFromLbl && mapaDescontos && Object.prototype.hasOwnProperty.call(mapaDescontos, codeFromLbl)) {
       return codeFromLbl;
     }
   }
 
   // 2) Numeric Match
-  if (item.fator_comissao != null && !isNaN(item.fator_comissao) && window.mapaDescontos) {
-    const match = Object.entries(window.mapaDescontos).find(([, f]) => Math.abs(Number(f) - Number(item.fator_comissao)) < 0.0001);
+  if (item.fator_comissao != null && !isNaN(item.fator_comissao) && mapaDescontos) {
+    const match = Object.entries(mapaDescontos).find(([, f]) => Math.abs(Number(f) - Number(item.fator_comissao)) < 0.0001);
     if (match) return match[0];
   }
 
   // 3) Inference from Discount/Value
-  if (Number(item.valor || 0) > 0 && window.mapaDescontos) {
+  if (Number(item.valor || 0) > 0 && mapaDescontos) {
     const fatorInferido = Number(item.desconto || 0) / Number(item.valor || 1);
     if (fatorInferido > 1e-6) {
-      const match = Object.entries(window.mapaDescontos).find(([, f]) => Math.abs(Number(f) - fatorInferido) < 1e-6);
+      const match = Object.entries(mapaDescontos).find(([, f]) => Math.abs(Number(f) - fatorInferido) < 1e-6);
       if (match) return match[0];
     }
   }
@@ -2916,7 +2916,7 @@ function renderMobileCards() {
     // Select Options Generators
     const genFatorOptions = (selectedVal) => {
       let opts = `<option value="">—</option>`;
-      if (window.mapaDescontos) {
+      if (mapaDescontos) {
         // FORCE SAME LOGIC
         let targetCode = determineFatorCode(item);
 
