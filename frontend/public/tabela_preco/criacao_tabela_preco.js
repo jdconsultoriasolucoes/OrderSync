@@ -1443,35 +1443,34 @@ async function recalcularLinhaComFiscal(item, codigo_cliente, forcarST, frete_li
   return item;
 }
 
-function buildFiscalInputsFromRow(tr, ctx) {
-  const { freteKg, codigo_cliente, ramoJuridico, forcarST } = ctx || {};
+function buildFiscalInputsFromRow(tr) {
   const idx = Number(tr.dataset.idx);
   const item = (itens || [])[idx] || {};
+
+  // DOM: fator por linha e condição (código)
+  const fatorPct = Number(tr.querySelector('td:nth-child(8) select')?.value || 0);
+  const fator = fatorPct / 100;
+  const codCond = tr.querySelector('td:nth-child(10) select')?.value || '';
+  const taxaCond = (window.mapaCondicoes && window.mapaCondicoes[codCond]) ?? 0;
+
+  // DOM: frete global e toggles
+  const freteKg = Number(document.getElementById('frete_kg')?.value || 0); // R$/kg
+  const codigo_cliente = (document.getElementById('codigo_cliente')?.value || '').trim() || null;
+  const ramoJuridico = (document.getElementById('ramo_juridico')?.value || '').trim() || null;
+  const forcarST = !!document.getElementById('iva_st_toggle')?.checked;
 
   // Item básico
   const produtoId = (tr.querySelector('td:nth-child(2)')?.textContent || '').trim();
   const tipo = String(item?.tipo || item?.grupo || item?.departamento || '').trim();
   const peso_bruto = Number(item?.peso_bruto || 0);
   const peso_liq = Number(item?.peso_liquido ?? item?.peso ?? item?.peso_kg ?? item?.pesoLiquido ?? 0);
+  const peso_kg = (peso_bruto > 0) ? peso_bruto : peso_liq;
 
   // Preço base (espelha sua lógica da tela): valor + acrescimo(condição) - desconto(fator)
   const valor = Number(item?.valor || 0);
-
-  // Use persisted code if available, else element value
-  const itemFatorCod = item.__fator_codigo || tr.querySelector('td:nth-child(8) select')?.value;
-  const fatorVal = (window.mapaDescontos && itemFatorCod) ? Number(window.mapaDescontos[itemFatorCod]) : 0;
-
-  // Use persisted or element value
-  const itemCondCod = item.plano_pagamento_cod || tr.querySelector('td:nth-child(10) select')?.value;
-  const taxaVal = (window.mapaCondicoes && itemCondCod) ? Number(window.mapaCondicoes[itemCondCod]) : 0;
-
-  const fator = fatorVal || (item.fator_comissao || 0); // Fallback
-  const taxaCond = taxaVal || 0;
-
   const descontoValor = valor * Number(fator || 0);
   const liquido = Math.max(0, valor - descontoValor);
   const acrescimoCond = liquido * Number(taxaCond || 0);
-  const peso_kg = (peso_bruto > 0) ? peso_bruto : peso_liq;
 
   const precoBase = liquido + acrescimoCond;
 
@@ -1495,7 +1494,7 @@ function buildFiscalInputsFromRow(tr, ctx) {
     produto_id: produtoId,
     tipo, peso_kg, ramo_juridico: ramoJuridico, forcar_iva_st: forcarST,
     preco_unit: payload.preco_unit, frete_linha: payload.frete_linha,
-    fator_percent: fator, condicao_codigo: itemCondCod, taxa_condicao: taxaCond,
+    fator_percent: fatorPct, condicao_codigo: codCond, taxa_condicao: taxaCond,
     payload, precoBase, liquido
   };
 }
@@ -1551,12 +1550,6 @@ async function recalcLinha(tr) {
 
   const freteKg = Number(document.getElementById('frete_kg').value || 0);
 
-  // Contexto Fiscal
-  const codigo_cliente = (document.getElementById('codigo_cliente')?.value || '').trim() || null;
-  const ramoJuridico = (document.getElementById('ramo_juridico')?.value || '').trim() || null;
-  const forcarST = !!document.getElementById('iva_st_toggle')?.checked;
-  const ctx = { freteKg, codigo_cliente, ramoJuridico, forcarST };
-
   // Condição por linha → taxa
   const selCond = tr.querySelector('td:nth-child(10) select');
   let codCond = selCond ? selCond.value : '';
@@ -1580,7 +1573,7 @@ async function recalcLinha(tr) {
 
 
   try {
-    const built = buildFiscalInputsFromRow(tr, ctx);
+    const built = buildFiscalInputsFromRow(tr);
 
     // usa exatamente o que JÁ calculamos nesta função
     built.payload.preco_unit = precoBase;   // já calculado acima
@@ -1748,13 +1741,6 @@ async function recalcTudo() {
       const batchItems = [];
       const rowMap = []; // index -> { tr, item }
 
-      // Contexto Global para o Batch
-      const codigo_cliente = (document.getElementById('codigo_cliente')?.value || '').trim() || null;
-      const ramoJuridico = (document.getElementById('ramo_juridico')?.value || '').trim() || null;
-      const forcarST = !!document.getElementById('iva_st_toggle')?.checked;
-      const freteKgGlobal = Number(document.getElementById('frete_kg').value || 0);
-      const ctx = { freteKg: freteKgGlobal, codigo_cliente, ramoJuridico, forcarST };
-
       for (const tr of rows) {
         // Ignora linhas que já foram removidas do DOM (safety check)
         if (!tr.isConnected) continue;
@@ -1787,7 +1773,7 @@ async function recalcTudo() {
         setTxt(12, freteValor);
 
         // Build Payload
-        const built = buildFiscalInputsFromRow(tr, ctx);
+        const built = buildFiscalInputsFromRow(tr);
         built.payload.preco_unit = precoBase;
         built.payload.frete_linha = freteValor;
 
@@ -1801,7 +1787,9 @@ async function recalcTudo() {
       if (batchItems.length === 0) continue;
 
       // 2. Batch Request
-      // Variaveis ja capturadas acima (ctx)
+      const codigo_cliente = (document.getElementById('codigo_cliente')?.value || '').trim() || null;
+      const ramoJuridico = (document.getElementById('ramo_juridico')?.value || '').trim() || null;
+      const forcarST = !!document.getElementById('iva_st_toggle')?.checked;
 
       const batchPayload = {
         cliente_codigo: codigo_cliente,
