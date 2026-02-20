@@ -1261,6 +1261,8 @@ function criarLinha(item, idx) {
 
   tdPercent.appendChild(selPercent);
 
+  const tdDescAplic = document.createElement('td'); tdDescAplic.className = 'num'; tdDescAplic.textContent = '0,00';
+
   // Condição por linha (código) — NOVO
   const tdCondCod = document.createElement('td');
   const selCond = document.createElement('select');
@@ -1317,11 +1319,10 @@ function criarLinha(item, idx) {
   // Use existing item markup or fallback to client default
   const mVal = (item.markup != null) ? Number(item.markup) : currentClientMarkup;
   item.markup = mVal; // Sync item
-  inpMarkup.value = fmtMoney(mVal); // Format for display? Or raw? input type=number needs dot. 
+  inpMarkup.value = mVal.toFixed(2); // Format for display? Or raw? input type=number needs dot. 
   // Wait, local String uses comma? step 0.01. Input number usually requires dot.
   // fmtMoney uses comma.
   // Let's use clean input
-  inpMarkup.value = mVal.toFixed(2);
   inpMarkup.style.width = '70px';
   inpMarkup.addEventListener('change', () => {
     let v = parseFloat(inpMarkup.value.replace(',', '.')); // Fix potential comma issue
@@ -1342,7 +1343,7 @@ function criarLinha(item, idx) {
   tdSemFreteMarkup.textContent = '0,00';
 
   const tdFrete = document.createElement('td'); tdFrete.className = 'num'; tdFrete.textContent = '0,00';
-  const tdDescAplic = document.createElement('td'); tdDescAplic.className = 'num'; tdDescAplic.textContent = '0,00';
+
 
   // IPI e IVA_ST (%) — Inicializar com o valor salvo no item, se houver
   const tdIpiR$ = document.createElement('td'); tdIpiR$.className = 'num col-ipi'; tdIpiR$.textContent = fmtMoney(item.ipi || 0);
