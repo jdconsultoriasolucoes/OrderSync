@@ -194,13 +194,13 @@ function renderTabela() {
       <td>${item.codigo ?? ""}</td>
       <td>${item.nome ?? ""}</td>
       <td>${item.embalagem ?? ""}</td>
-      <td><input type="number" min="0" step="1" value="${item.quantidade || 0}" data-index="${i}" class="qtd" /></td>
-      <td class="celula-peso" data-peso-unit="${Number(item.peso ?? 0)}"></td>
-      <td>${fmtBRL.format(valorBase)}</td>
+      <td class="right"><input type="number" min="0" step="1" value="${item.quantidade || 0}" data-index="${i}" class="os-input qtd" style="width: 100%; max-width: 80px;" /></td>
+      <td class="celula-peso right" data-peso-unit="${Number(item.peso ?? 0)}"></td>
+      <td class="right">${fmtBRL.format(valorBase)}</td>
       <td>${item.condicao_pagamento ?? ""}</td>
-      <td class="col-markup text-center">${item.markup ? Number(item.markup).toLocaleString("pt-BR", { minimumFractionDigits: 2 }) + "%" : "-"}</td>
-      <td class="col-markup text-right">${item.markup > 0 ? fmtBRL.format(usarValorComFrete ? item.valor_com_frete_markup : item.valor_sem_frete_markup) : "-"}</td>
-      <td id="subtotal-${i}">${fmtBRL.format(subtotal)}</td>
+      <td class="col-markup right">${item.markup ? Number(item.markup).toLocaleString("pt-BR", { minimumFractionDigits: 2 }) + "%" : "-"}</td>
+      <td class="col-markup right">${item.markup > 0 ? fmtBRL.format(usarValorComFrete ? item.valor_com_frete_markup : item.valor_sem_frete_markup) : "-"}</td>
+      <td id="subtotal-${i}" class="right">${fmtBRL.format(subtotal)}</td>
     `;
 
     // Peso total inicial (peso unitário × quantidade inicial)

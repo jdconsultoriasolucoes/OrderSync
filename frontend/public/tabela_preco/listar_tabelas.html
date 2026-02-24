@@ -1,27 +1,23 @@
-<!DOCTYPE html>
+﻿<!DOCTYPE html>
 <html lang="pt-br">
 
 <head>
   <meta charset="UTF-8">
-  <title>Listar Tabelas de Preço</title>
+  <title>Tabelas de Preço — OrderSync</title>
 
-  <!-- Bootstrap igual à tela de cliente -->
-  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+  <!-- Design System -->
+  <link rel="stylesheet" href="../design-system.css">
 
-  <!-- CSS específico da página -->
+  <!-- Page CSS -->
   <link rel="stylesheet" href="listar_tabela.css">
 
-  <!-- Navbar SEMPRE por último, para garantir o padding-top do header fixo -->
-  <link rel="stylesheet" href="../navbar.css">
-
+  <!-- Fonts -->
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
 
   <script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js"></script>
-
   <script src="listar_tabelas.js" defer></script>
-
   <script src="../js/config.js"></script>
   <script src="../js/auth.js"></script>
   <script src="../js/sidebar_control.js"></script>
@@ -29,65 +25,75 @@
 
 <body>
 
-  <header>
-    <div class="navbar">
-      <button class="menu-btn" id="menu-button">&#9776;</button>
-      <img src="logo.png" alt="Logo" class="logo" />
-    </div>
+  <!-- ========== HEADER ========== -->
+  <header class="os-header">
+    <button class="os-menu-btn" id="menu-button" aria-label="Menu">&#9776;</button>
+    <img src="logo.png" alt="Logo" class="os-logo" />
+    <span class="os-header-title">Tabelas de Preço Cadastradas</span>
   </header>
 
-  <!-- MENU LATERAL -->
-  <nav class="sidebar" id="sidebar">
+  <!-- ========== SIDEBAR ========== -->
+  <nav class="os-sidebar" id="sidebar">
+    <div class="os-sidebar-section">Menu</div>
     <ul>
-      <li><a href="/index.html">Home</a></li>
-      <li><a href="/clientes/cliente.html">Cadastrar Cliente</a></li>
-      <li><a href="/gerenciar_tabelas/gerenciar_tabelas.html">Atualizar Catálogo</a></li>
-      <li><a href="/pedido/pedido.html">Consultar Pedidos</a></li>
-      <li><a href="#">Exportar Relatórios</a></li>
-      <li><a href="/tabela_preco/criacao_tabela_preco.html">Tabela Preço</a></li>
-      <li><a href="/config_email/config_email.html">Configuração E-mail</a></li>
+      <li><a href="../../index.html">Home</a></li>
+      <li><a href="../clientes/cliente.html">Clientes</a></li>
+      <li><a href="../gerenciar_tabelas/gerenciar_tabelas.html">Atualizar Catálogo</a></li>
+      <li><a href="../pedido/pedido.html">Consultar Pedidos</a></li>
+      <li><a href="../tabela_preco/criacao_tabela_preco.html" class="active">Tabela Preço</a></li>
+      <li><a href="../produto/produto.html">Produtos</a></li>
+    </ul>
+    <div class="os-sidebar-section">Sistema</div>
+    <ul>
+      <li><a href="../usuarios.html">Usuários</a></li>
+      <li><a href="../config_email/config_email.html">Configuração E-mail</a></li>
+      <li><a href="#" onclick="window.Auth.openChangePasswordModal()">Trocar Senha</a></li>
+      <li><a href="#" onclick="window.Auth.logout()">Sair</a></li>
     </ul>
   </nav>
-  <div id="overlay"></div>
+  <div class="os-sidebar-overlay" id="overlay"></div>
 
 
-  <main class="page-container">
-    <h1>Tabelas de Preço Cadastradas</h1>
 
-    <div class="toolbar">
-      <div class="search">
-        <input type="text" id="pesquisa" placeholder="Pesquisar tabela...">
+  <div class="os-page-container"
+    style="padding: var(--os-space-4); padding-top: calc(var(--os-header-height) + var(--os-space-4));">
+
+    <section class="os-card">
+      <div class="os-toolbar" style="margin-bottom: var(--os-space-4);">
+        <div class="search" style="flex: 1; max-width: 400px;">
+          <input type="text" id="pesquisa" class="os-input" placeholder="Pesquisar tabela...">
+        </div>
+        <div class="actions">
+          <button class="os-btn os-btn-secondary" onclick="voltar()">Voltar</button>
+        </div>
       </div>
-      <div class="actions">
-        <button onclick="voltar()">Voltar</button>
+
+      <div class="os-table-wrap">
+        <table class="os-table">
+          <thead>
+            <tr>
+              <th>Nome da Tabela</th>
+              <th>Cliente</th>
+              <th>Fornecedor</th>
+              <th>Ações</th>
+            </tr>
+          </thead>
+          <tbody id="lista-tabelas-body">
+            <!-- linhas serão inseridas aqui via JS -->
+          </tbody>
+        </table>
       </div>
-    </div>
 
-    <table class="table">
-      <thead>
-        <tr>
-          <th>Nome da Tabela</th>
-          <th>Cliente</th>
-          <th>Fornecedor</th>
-          <th>Ações</th>
-        </tr>
-      </thead>
-      <tbody id="lista-tabelas-body">
-        <!-- linhas serão inseridas aqui via JS -->
-      </tbody>
-    </table>
+      <!-- Controles de Paginação -->
+      <div id="pagination-controls" class="pagination-container"
+        style="display: flex; justify-content: center; align-items: center; gap: var(--os-space-2); margin-top: var(--os-space-4);">
+        <button id="btn-prev" class="os-btn os-btn-secondary" disabled>Anterior</button>
+        <span id="page-info" style="font-weight: 500;">Página 1</span>
+        <button id="btn-next" class="os-btn os-btn-secondary" disabled>Próxima</button>
+      </div>
+    </section>
 
-    <!-- Controles de Paginação -->
-    <div id="pagination-controls" class="pagination-container"
-      style="display: flex; justify-content: center; align-items: center; gap: 10px; margin-top: 20px;">
-      <button id="btn-prev" disabled>Anterior</button>
-      <span id="page-info">Página 1</span>
-      <button id="btn-next" disabled>Próxima</button>
-    </div>
-
-
-    </div>
-  </main>
+  </div>
   <div id="modal-confirmar-delete" style="display:none; position: fixed; top: 0; left: 0; 
   width: 100%; height: 100%; background-color: rgba(0,0,0,0.5); 
   align-items: center; justify-content: center; z-index: 999;">

@@ -113,20 +113,20 @@ async function carregarTabelas() {
       <td>${tabela.cliente || '-'}</td>
       <td>${tabela.fornecedor || '-'}</td>
       <td>
-        <div style="display: flex; gap: 8px;">
-          <button class="btn btn-editar" style="color:white; border:none; border-radius:4px; padding:6px 12px; cursor:pointer;" 
+        <div style="display: flex; gap: var(--os-space-2);">
+          <button class="os-btn os-btn-secondary os-btn-sm" 
             onclick="window.location.href='criacao_tabela_preco.html?id=${encodeURIComponent(tabela.id)}'">
             Editar
           </button>
           
-          <button class="btn btn-excluir" style="color:white; border:none; border-radius:4px; padding:6px 12px; cursor:pointer;" 
+          <button class="os-btn os-btn-danger os-btn-sm" 
             onclick="abrirModalDelecao(${tabela.id})">
             Excluir
           </button>
           
           <button
-            class="btn-enviar-link btn-secundario"
-            style="border:none; border-radius:4px; padding:6px 12px; cursor:pointer; display: none;"
+            class="os-btn os-btn-primary os-btn-sm btn-enviar-link"
+            style="display: none;"
             data-id="${tabela.id}"
             data-frete-kg="${tabela.frete_kg !== undefined && tabela.frete_kg !== null ? tabela.frete_kg : ''}"
           >

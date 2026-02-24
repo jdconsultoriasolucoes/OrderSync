@@ -2990,7 +2990,12 @@ function renderMobileCards() {
                 <div class="card-field">
                     <label>Fator %</label>
                     ${markupDisabled
-        ? `<input type="text" value="${item.__fator_codigo || item.fator_comissao || ''}" disabled>`
+        ? (() => {
+          const _cod = determineFatorCode(item) || item.__fator_codigo || '';
+          const _frac = (_cod && mapaDescontos[_cod] != null) ? mapaDescontos[_cod] : null;
+          const _label = _frac != null ? `${_cod} - ${(Number(_frac) * 100).toFixed(2)}` : (_cod || '');
+          return `<input type="text" value="${_label}" disabled>`;
+        })()
         : `<select class="form-select mobile-fator-select">${genFatorOptions(item.__fator_codigo)}</select>`
       }
                 </div>
@@ -3180,37 +3185,3 @@ toggleToolbarByMode = function () {
     attach();
   }
 })();
-
-// === Header Collapse Logic ===
-document.addEventListener('DOMContentLoaded', () => {
-  const btn = document.getElementById('btn-toggle-header');
-  const area = document.getElementById('header-collapsible-area');
-  const summary = document.getElementById('header-collapsed-summary');
-  const lblNome = document.getElementById('summary-nome');
-  const lblCli = document.getElementById('summary-cliente');
-
-  if (btn && area) {
-    btn.addEventListener('click', (e) => {
-      e.preventDefault();
-      const isCollapsed = area.classList.toggle('collapsed');
-      btn.classList.toggle('rotated', isCollapsed);
-
-      // Toggle Summary
-      if (summary) {
-        if (isCollapsed) {
-          const nome = document.getElementById('nome_tabela')?.value || 'Sem Nome';
-          const cli = document.getElementById('cliente_nome')?.value || 'Sem Cliente';
-          if (lblNome) lblNome.textContent = nome;
-          if (lblCli) lblCli.textContent = cli;
-
-          summary.classList.remove('hidden');
-          // Tiny delay to allow display:block to apply before opacity transition
-          requestAnimationFrame(() => summary.classList.add('visible'));
-        } else {
-          summary.classList.remove('visible');
-          setTimeout(() => summary.classList.add('hidden'), 300); // Wait for transition
-        }
-      }
-    });
-  }
-});

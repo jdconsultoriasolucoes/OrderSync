@@ -352,7 +352,7 @@ async function openResumo(id) {
         <div class="block">
           <b>Itens</b>
           <div class="itens">
-            ${p.itens.map(i => `
+            ${(p.itens || []).map(i => `
               <div class="item">
                 <div><b>${i.codigo}</b> - ${i.nome}</div>
                 <div>${i.quantidade} x ${fmtMoney(i.preco_unit)} = <b>${fmtMoney(i.subtotal)}</b></div>
@@ -711,8 +711,8 @@ document.addEventListener('DOMContentLoaded', async () => {
   const sidebar = document.getElementById('sidebar');
   const overlay = document.getElementById('overlay');
   if (menuButton && sidebar && overlay) {
-    const open = () => { sidebar.classList.add('active'); overlay.style.display = 'block'; };
-    const close = () => { sidebar.classList.remove('active'); overlay.style.display = 'none'; };
+    const open = () => { sidebar.classList.add('active'); overlay.classList.add('active'); };
+    const close = () => { sidebar.classList.remove('active'); overlay.classList.remove('active'); };
     menuButton.addEventListener('click', (e) => { e.stopPropagation(); sidebar.classList.contains('active') ? close() : open(); });
     overlay.addEventListener('click', close);
   }
