@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, Query
 from sqlalchemy.orm import Session
 from sqlalchemy import text
 from database import SessionLocal
@@ -24,21 +24,40 @@ class DashboardKPIs(BaseModel):
 
 @router.get("/kpis", response_model=DashboardKPIs)
 def get_kpis(
+    month: int = Query(None, description="Mês de referência (1-12)"),
+    year: int = Query(None, description="Ano de referência (ex: 2024)"),
     db: Session = Depends(get_db),
     current_user: UsuarioModel = Depends(get_current_user)
 ):
-    # 1. Faturamento do Mês e Ticket Médio
-    # Usando status que NÃO sejam CANCELADO
-    query_faturamento = text("""
+    import datetime
+    hoje = datetime.date.today()
+    
+    # Se ambos vierem vazios, assumimos o mês/ano atuais
+    if not month and not year:
+        month = hoje.month
+        year = hoje.year
+    # Se vier só o mês sem ano, assumimos ano atual
+    elif month and not year:
+        year = hoje.year
+
+    # 1. Faturamento e Ticket Médio
+    query_base_fat = """
         SELECT 
             COALESCE(SUM(total_pedido), 0) as faturado,
             COUNT(id_pedido) as qtd_pedidos
         FROM public.tb_pedidos
         WHERE status IN ('FATURADO', 'ENTREGUE')
-          AND EXTRACT(MONTH FROM created_at) = EXTRACT(MONTH FROM CURRENT_DATE)
-          AND EXTRACT(YEAR FROM created_at) = EXTRACT(YEAR FROM CURRENT_DATE)
-    """)
-    res_fat = db.execute(query_faturamento).mappings().first()
+    """
+    
+    params = {}
+    if year:
+        query_base_fat += " AND EXTRACT(YEAR FROM created_at) = :year "
+        params["year"] = year
+    if month:
+        query_base_fat += " AND EXTRACT(MONTH FROM created_at) = :month "
+        params["month"] = month
+        
+    res_fat = db.execute(text(query_base_fat), params).mappings().first()
     faturamento = float(res_fat["faturado"] or 0.0)
     qtd_pedidos_faturados = int(res_fat["qtd_pedidos"] or 0)
     
@@ -47,13 +66,18 @@ def get_kpis(
         ticket_medio = faturamento / qtd_pedidos_faturados
 
     # 2. Pedidos Pendentes
-    # Usando status = ABERTO ou qualquer outro que signifique pendente para o cliente
-    query_pendentes = text("""
+    query_base_pen = """
         SELECT COUNT(*) as qtd
         FROM public.tb_pedidos
         WHERE status NOT IN ('FATURADO', 'CANCELADO', 'DEVOLVIDO', 'ENTREGUE')
-    """)
-    res_pen = db.execute(query_pendentes).mappings().first()
+    """
+    
+    if year:
+        query_base_pen += " AND EXTRACT(YEAR FROM created_at) = :year "
+    if month:
+        query_base_pen += " AND EXTRACT(MONTH FROM created_at) = :month "
+        
+    res_pen = db.execute(text(query_base_pen), params).mappings().first()
     pedidos_pendentes = int(res_pen["qtd"] or 0)
 
     # 3. Contas a Pagar e Receber (Módulo Financeiro ainda não integrado, mock temporário ou 0)

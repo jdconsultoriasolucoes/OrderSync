@@ -1,6 +1,33 @@
 // dashboard.js
 
+let currentFilter = 'mes'; // 'mes' ou 'ano'
+
 document.addEventListener("DOMContentLoaded", () => {
+    const toggleCheckbox = document.getElementById("kpi-toggle-checkbox");
+
+    if (toggleCheckbox) {
+        toggleCheckbox.addEventListener("change", (e) => {
+            currentFilter = e.target.checked ? 'ano' : 'mes';
+
+            // Opcional: Atualizar classes text-active se quiser forçar via JS, 
+            // mas o CSS já cuida da cor com o seletor :checked ~ .option-mes
+            const optionMes = document.querySelector(".option-mes");
+            const optionAno = document.querySelector(".option-ano");
+
+            if (optionMes && optionAno) {
+                if (currentFilter === 'ano') {
+                    optionMes.classList.remove("active");
+                    optionAno.classList.add("active");
+                } else {
+                    optionAno.classList.remove("active");
+                    optionMes.classList.add("active");
+                }
+            }
+
+            carregarKPIs();
+        });
+    }
+
     carregarKPIs();
 });
 
@@ -12,7 +39,20 @@ async function carregarKPIs() {
 
         if (!token) return; // Auth.js fará o redirecionamento
 
-        const response = await fetch(`${apiBase}/kpis`, {
+        // Ler o filtro selecionado (Mês Atual ou Ano Atual)
+        let queryParams = "";
+        const hoje = new Date();
+        const ano = hoje.getFullYear();
+
+        if (currentFilter === 'mes') {
+            const mes = hoje.getMonth() + 1;
+            queryParams = `?month=${mes}&year=${ano}`;
+        } else if (currentFilter === 'ano') {
+            // Se for 'Ano Atual', passamos apenas o ano para o backend
+            queryParams = `?year=${ano}`;
+        }
+
+        const response = await fetch(`${apiBase}/kpis${queryParams}`, {
             method: "GET",
             headers: {
                 "Authorization": `Bearer ${token}`

@@ -19,10 +19,76 @@
         /* Page-specific layout */
         .os-main-home {
             margin-left: 0;
-            /* Updated from sidebar width */
             padding: var(--os-space-4);
             padding-top: calc(var(--os-header-height) + var(--os-space-3));
             min-height: 100vh;
+        }
+
+        /* CUSTOM TOGGLE SWITCH */
+        .os-kpi-toggle-container {
+            display: flex;
+            align-items: center;
+            background-color: var(--os-bg-secondary);
+            border-radius: 8px;
+            /* Retangular com cantos levemente arredondados */
+            padding: 4px;
+            position: relative;
+            width: 220px;
+            height: 40px;
+            box-shadow: inset 0 1px 3px rgba(0, 0, 0, 0.1);
+            user-select: none;
+            cursor: pointer;
+        }
+
+        .os-kpi-toggle-option {
+            flex: 1;
+            text-align: center;
+            font-size: 0.85rem;
+            font-weight: 600;
+            color: var(--os-text-secondary);
+            z-index: 2;
+            transition: color 0.3s ease;
+            line-height: 32px;
+        }
+
+        .os-kpi-toggle-slider {
+            position: absolute;
+            top: 4px;
+            left: 4px;
+            width: calc(50% - 4px);
+            height: 32px;
+            background-color: white;
+            border-radius: 6px;
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+            transition: transform 0.3s cubic-bezier(0.4, 0.0, 0.2, 1);
+            z-index: 1;
+        }
+
+        /* Checkbox hidden */
+        #kpi-toggle-checkbox {
+            display: none;
+        }
+
+        /* Initial State (Mês Atual is active) */
+        .option-mes {
+            color: var(--os-primary);
+        }
+
+        .option-ano {
+            color: var(--os-text-secondary);
+        }
+
+        /* Checked State (Ano Atual is active) */
+        #kpi-toggle-checkbox:checked~.os-kpi-toggle-slider {
+            transform: translateX(100%);
+        }
+
+        #kpi-toggle-checkbox:checked~.option-mes {
+            color: var(--os-text-secondary);
+        }
+
+        #kpi-toggle-checkbox:checked~.option-ano {
+            color: var(--os-primary);
         }
 
         /* Failsafe for all SVGs on this page */
@@ -206,8 +272,17 @@
     <main class="os-main-home">
 
         <!-- Greeting -->
-        <div class="os-page-header">
+        <div class="os-page-header"
+            style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 16px;">
             <h1 class="os-page-title">Painel</h1>
+            <div style="display: flex; gap: 8px; align-items: center; flex-wrap: wrap;">
+                <label class="os-kpi-toggle-container" for="kpi-toggle-checkbox">
+                    <input type="checkbox" id="kpi-toggle-checkbox">
+                    <div class="os-kpi-toggle-slider"></div>
+                    <div class="os-kpi-toggle-option option-mes active">Mês Atual</div>
+                    <div class="os-kpi-toggle-option option-ano">Ano Atual</div>
+                </label>
+            </div>
         </div>
 
         <!-- KPI Cards -->

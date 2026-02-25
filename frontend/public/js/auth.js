@@ -109,9 +109,9 @@ const Auth = {
             const resetTimer = () => {
                 clearTimeout(inactivityTimer);
                 inactivityTimer = setTimeout(() => {
-                    alert("Sessão expirada por inatividade (15min).");
+                    alert("Sessão expirada por inatividade externa (60min).");
                     Auth.logout();
-                }, 15 * 60 * 1000); // 15 mins
+                }, 60 * 60 * 1000); // 60 mins
             };
 
             window.addEventListener('mousemove', resetTimer);
