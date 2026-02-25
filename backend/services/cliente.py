@@ -369,6 +369,27 @@ def criar_cliente(cliente_data: dict) -> dict:
     try:
         novo_cliente = _nested_to_flat(cliente_data)
         
+        # Validacao de duplicidade (CNPJ e Codigo do Cliente)
+        from core.exceptions import BusinessRuleException
+        from sqlalchemy import or_
+        
+        condicoes = []
+        _codigo = novo_cliente.cadastro_codigo_da_empresa
+        _cnpj = novo_cliente.cadastro_cnpj
+        
+        if _codigo and str(_codigo).strip():
+            condicoes.append(ClienteModelV2.cadastro_codigo_da_empresa == _codigo)
+        if _cnpj and str(_cnpj).strip():
+            condicoes.append(ClienteModelV2.cadastro_cnpj == _cnpj)
+            
+        if condicoes:
+            existente = db.query(ClienteModelV2).filter(or_(*condicoes)).first()
+            if existente:
+                if existente.cadastro_codigo_da_empresa == _codigo:
+                    raise BusinessRuleException(f"Já existe um cliente cadastrado com o código {_codigo}")
+                if existente.cadastro_cnpj == _cnpj:
+                    raise BusinessRuleException(f"Já existe um cliente cadastrado com o CNPJ {_cnpj}")
+                    
         novo_cliente.data_criacao = datetime.now()
         db.add(novo_cliente)
         db.commit()
@@ -389,6 +410,31 @@ def atualizar_cliente(cliente_id: int, cliente_data: dict) -> dict:
         
         # Create a transient object with new data
         novos_dados = _nested_to_flat(cliente_data)
+        
+        # Validacao de duplicidade (CNPJ e Codigo do Cliente) no Update
+        from core.exceptions import BusinessRuleException
+        from sqlalchemy import or_
+        
+        condicoes = []
+        _codigo = novos_dados.cadastro_codigo_da_empresa
+        _cnpj = novos_dados.cadastro_cnpj
+        
+        if _codigo and str(_codigo).strip():
+            condicoes.append(ClienteModelV2.cadastro_codigo_da_empresa == _codigo)
+        if _cnpj and str(_cnpj).strip():
+            condicoes.append(ClienteModelV2.cadastro_cnpj == _cnpj)
+            
+        if condicoes:
+            existente = db.query(ClienteModelV2).filter(
+                ClienteModelV2.id != cliente_id,
+                or_(*condicoes)
+            ).first()
+            
+            if existente:
+                if existente.cadastro_codigo_da_empresa == _codigo:
+                    raise BusinessRuleException(f"Já existe outro cliente usando o código {_codigo}")
+                if existente.cadastro_cnpj == _cnpj:
+                    raise BusinessRuleException(f"Já existe outro cliente usando o CNPJ {_cnpj}")
         
         # Update attributes on the persistent object
         for col in ClienteModelV2.__table__.columns:

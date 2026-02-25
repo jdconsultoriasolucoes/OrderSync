@@ -703,7 +703,7 @@ async function confirmarPedido() {
     // Atualiza texto do modal para avisar do email/download
     const msgEmail = data.email_enviado === true
       ? "Uma cópia foi enviada para seu e-mail."
-      : "E-mail não cadastrado (ou não configurado).";
+      : "E-mail não cadastrado (ou não configurado). Solicite o cadastro junto ao nosso time.";
 
     const txtConfirm = document.querySelector('.confirm-text');
     if (txtConfirm) {
