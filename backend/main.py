@@ -11,7 +11,7 @@ from fastapi.staticfiles import StaticFiles
 from pathlib import Path  
 # Routers
 from routers.tabela_preco import router_meta, router as router_tabela
-from routers import pedido_preview, link_pedido, admin_config_email, cliente, listas, fiscal,pedidos,net_diag, produto, pedido_pdf, auth, usuario, fornecedor
+from routers import pedido_preview, link_pedido, admin_config_email, cliente, listas, fiscal,pedidos,net_diag, produto, pedido_pdf, auth, usuario, fornecedor, dashboard
 from database import SessionLocal
 
 from slowapi import _rate_limit_exceeded_handler
@@ -214,6 +214,7 @@ app.include_router(pedido_pdf.router)
 app.include_router(auth.router)
 app.include_router(usuario.router)
 app.include_router(fornecedor.router)
+app.include_router(dashboard.router)
 
 from routers import system_tables
 app.include_router(system_tables.router)

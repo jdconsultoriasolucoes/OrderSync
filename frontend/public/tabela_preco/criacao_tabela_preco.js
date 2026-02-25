@@ -2525,91 +2525,100 @@ document.addEventListener('DOMContentLoaded', () => {
 
   // handler único (sem aninhar addEventListener dentro de outro)
   (() => {
-    const btn = document.getElementById('btn-salvar');
-    if (!btn) return;
+    const btnsSalvar = [
+      document.getElementById('btn-salvar'),
+      document.getElementById('btn-mobile-save')
+    ].filter(Boolean);
 
-    btn.type = 'button';
+    if (btnsSalvar.length === 0) return;
+
     let saving = false;
 
-    btn.addEventListener('click', async (e) => {
-      e.preventDefault();
-      if (saving) return;
-      saving = true;
-      btn.disabled = true;
+    btnsSalvar.forEach(btn => {
+      btn.type = 'button';
+      btn.addEventListener('click', async (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        if (saving) return;
+        saving = true;
 
-      try {
-        const resp = await salvarTabela(); // agora retorna JSON
-        if (!resp) return;
-        const qtd = resp?.itens_inseridos ?? resp?.qtd_produtos ?? itens.length;
+        // Desabilita todos os botões de salvar
+        btnsSalvar.forEach(b => b.disabled = true);
 
-        await showOsModal({
-          title: 'ordersync-y7kg.onrender.com diz',
-          message: `Tabela salva! ${qtd} produtos incluídos.`,
-          type: 'alert'
-        });
+        try {
+          const resp = await salvarTabela(); // agora retorna JSON
+          if (!resp) return;
+          const qtd = resp?.itens_inseridos ?? resp?.qtd_produtos ?? itens.length;
 
-        // pegue o ID
-        const tabelaId = resp?.tabela_id || resp?.id_tabela || resp?.id || window.currentTabelaId;
-        if (!tabelaId) {
-          await showOsModal({ title: 'Aviso', message: "Tabela salva, mas o ID não veio no retorno do backend. Ajuste o /tabela_preco/salvar para devolver o id.", type: 'alert' });
-          return;
-        }
+          await showOsModal({
+            title: 'ordersync-y7kg.onrender.com diz',
+            message: `Tabela salva! ${qtd} produtos incluídos.`,
+            type: 'alert'
+          });
 
-        // Sucesso absoluto: limpa snapshot para não voltar sujeira se recarregar
-        clearFullSnapshot();
-
-        // pergunta de decisão
-        const querEnviar = await showOsModal({
-          title: 'ordersync-y7kg.onrender.com diz',
-          message: `Deseja mandar o link do orçamento?`,
-          type: 'confirm'
-        });
-
-        // CAPTURA ESTADO ANTES DO RESET
-        const freteKgParaModal = Number(document.getElementById('frete_kg')?.value || 0);
-
-        // RESET COMPLETO (VOLTAR A TELA ZERADA)
-        currentTabelaId = '';
-        sourceTabelaId = '';
-        window.currentTabelaId = '';
-        window.sourceTabelaId = '';
-
-        try { history.replaceState(null, '', location.pathname); } catch { }
-
-        // limpa cabeçalho + grade e volta pro modo original (inputs habilitados)
-        if (typeof limparFormularioCabecalho === 'function') limparFormularioCabecalho();
-        if (typeof limparGradeProdutos === 'function') limparGradeProdutos();
-
-        if (typeof setMode === 'function') setMode(MODE.NEW);
-        if (typeof setFormDisabled === 'function') setFormDisabled(false);
-        if (typeof toggleToolbarByMode === 'function') toggleToolbarByMode();
-        if (typeof refreshToolbarEnablement === 'function') refreshToolbarEnablement();
-
-        if (querEnviar) {
-          if (typeof window.__showGerarLinkModal === "function") {
-            window.__showGerarLinkModal({
-              tabelaId,
-              freteKg: freteKgParaModal, // Passa o frete capturado
-              pedidoClientePath: "/tabela_preco/pedido_cliente.html",
-            });
-          } else {
-            await showOsModal({ title: 'Erro', message: "Módulo de gerar link não carregado (../js/gerar_link_pedido.js).", type: 'alert' });
+          // pegue o ID
+          const tabelaId = resp?.tabela_id || resp?.id_tabela || resp?.id || window.currentTabelaId;
+          if (!tabelaId) {
+            await showOsModal({ title: 'Aviso', message: "Tabela salva, mas o ID não veio no retorno do backend. Ajuste o /tabela_preco/salvar para devolver o id.", type: 'alert' });
+            return;
           }
+
+          // Sucesso absoluto: limpa snapshot para não voltar sujeira se recarregar
+          clearFullSnapshot();
+
+          // pergunta de decisão
+          const querEnviar = await showOsModal({
+            title: 'ordersync-y7kg.onrender.com diz',
+            message: `Deseja mandar o link do orçamento?`,
+            type: 'confirm'
+          });
+
+          // CAPTURA ESTADO ANTES DO RESET
+          const freteKgParaModal = Number(document.getElementById('frete_kg')?.value || 0);
+
+          // RESET COMPLETO (VOLTAR A TELA ZERADA)
+          currentTabelaId = '';
+          sourceTabelaId = '';
+          window.currentTabelaId = '';
+          window.sourceTabelaId = '';
+
+          try { history.replaceState(null, '', location.pathname); } catch { }
+
+          // limpa cabeçalho + grade e volta pro modo original (inputs habilitados)
+          if (typeof limparFormularioCabecalho === 'function') limparFormularioCabecalho();
+          if (typeof limparGradeProdutos === 'function') limparGradeProdutos();
+
+          if (typeof setMode === 'function') setMode(MODE.NEW);
+          if (typeof setFormDisabled === 'function') setFormDisabled(false);
+          if (typeof toggleToolbarByMode === 'function') toggleToolbarByMode();
+          if (typeof refreshToolbarEnablement === 'function') refreshToolbarEnablement();
+
+          if (querEnviar) {
+            if (typeof window.__showGerarLinkModal === "function") {
+              window.__showGerarLinkModal({
+                tabelaId,
+                freteKg: freteKgParaModal, // Passa o frete capturado
+                pedidoClientePath: "/tabela_preco/pedido_cliente.html",
+              });
+            } else {
+              await showOsModal({ title: 'Erro', message: "Módulo de gerar link não carregado (../js/gerar_link_pedido.js).", type: 'alert' });
+            }
+          }
+
+          // Se NÃO quiser enviar, já está resetado.
+
+        } catch (err) {
+          // mostra 422 legível, se vier no formato FastAPI
+          const msg = (err && err.message) ? err.message : 'Erro ao salvar a tabela.';
+          await showOsModal({ title: 'Erro', message: msg, type: 'alert' });
+          console.error(err);
+        } finally {
+          saving = false;
+          btnsSalvar.forEach(b => b.disabled = false);
+          toggleToolbarByMode?.();
+          refreshToolbarEnablement?.();
         }
-
-        // Se NÃO quiser enviar, já está resetado.
-
-      } catch (err) {
-        // mostra 422 legível, se vier no formato FastAPI
-        const msg = (err && err.message) ? err.message : 'Erro ao salvar a tabela.';
-        await showOsModal({ title: 'Erro', message: msg, type: 'alert' });
-        console.error(err);
-      } finally {
-        saving = false;
-        btn.disabled = false;
-        toggleToolbarByMode?.();
-        refreshToolbarEnablement?.();
-      }
+      });
     });
   })();
 
