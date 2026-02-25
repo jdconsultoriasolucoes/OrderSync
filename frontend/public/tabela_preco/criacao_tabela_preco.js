@@ -2100,10 +2100,14 @@ function refreshToolbarEnablement() {
   const algumaMarcada = document.querySelectorAll('#tbody-itens .chk-linha:checked').length > 0;
   const cabecalhoOk = validarCabecalhoMinimo();
 
-  const btnSalvar = document.getElementById('btn-salvar');
+  const btnsSalvar = [
+    document.getElementById('btn-salvar'),
+    document.getElementById('btn-mobile-save')
+  ].filter(Boolean);
+
   const btnRemover = document.getElementById('btn-remover-selecionados');
 
-  if (btnSalvar) btnSalvar.disabled = !(temLinhas && cabecalhoOk);
+  btnsSalvar.forEach(btn => btn.disabled = !(temLinhas && cabecalhoOk));
   if (btnRemover) btnRemover.disabled = !algumaMarcada;
 }
 function limparFormularioCabecalho() {
@@ -2448,6 +2452,13 @@ document.addEventListener('DOMContentLoaded', () => {
   setMode(MODE.NEW);
   document.getElementById('btn-listar')?.addEventListener('click', () => { goToListarTabelas(); });
 
+  // Disparar validação do botão salvar ao digitar nos campos obrigatórios
+  ['nome_tabela', 'cliente_nome'].forEach(id => {
+    document.getElementById(id)?.addEventListener('input', () => {
+      if (typeof refreshToolbarEnablement === 'function') refreshToolbarEnablement();
+    });
+  });
+
   // Atalho ENTER para aplicar a todos
   document.getElementById('plano_pagamento')?.addEventListener('keydown', (e) => {
     if (e.key === 'Enter') {
@@ -2480,6 +2491,23 @@ document.addEventListener('DOMContentLoaded', () => {
     recalcTudo();
     refreshToolbarEnablement();
   });
+
+  // Limpar "0" ao focar e restaurar ao sair
+  const freteInput = document.getElementById('frete_kg');
+  if (freteInput) {
+    freteInput.addEventListener('focus', function () {
+      if (this.value === '0' || Number(this.value) === 0) {
+        this.value = '';
+      }
+    });
+    freteInput.addEventListener('blur', function () {
+      if (this.value.trim() === '') {
+        this.value = '0';
+        recalcTudo();
+        refreshToolbarEnablement();
+      }
+    });
+  }
 
   document.getElementById('tbody-itens')?.addEventListener('change', (e) => {
     if (e.target && e.target.classList.contains('chk-linha')) {
@@ -2938,6 +2966,15 @@ function renderMobileCards() {
   const container = document.getElementById('mobile-card-container');
   if (!container) return;
 
+  // Preservar estado de expansão (quais cards estão abertos) antes de os recriar
+  const expandedSet = new Set();
+  container.querySelectorAll('.mobile-card').forEach(card => {
+    const content = card.querySelector('.header-content');
+    if (content && content.classList.contains('expanded')) {
+      expandedSet.add(card.dataset.idx);
+    }
+  });
+
   // Sync toolbar totals
   const totalItens = (itens || []).length;
   const totalValor = itens.reduce((acc, it) => acc + (it._totalComercial || 0), 0);
@@ -3048,12 +3085,12 @@ function renderMobileCards() {
                   <div style="font-size: 0.9rem; font-weight: 600; color: #333;">${fmtMoney(semFrete)}</div>
               </div>
               
-              <!-- Chevron -->
+               <!-- Chevron -->
                <span class="chevron-header" style="margin-left: 8px; margin-top: 4px;">▼</span>
            </div>
         </div>
 
-        <div class="header-content collapsed">
+        <div class="header-content ${expandedSet.has(String(idx)) ? 'expanded' : 'collapsed'}">
          <div style="padding-top: 12px;">
             <!-- Row 1: Vlr Unit | Markup % -->
             <div class="mobile-grid-2col" style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 12px;">
@@ -3220,6 +3257,7 @@ toggleToolbarByMode = function () {
   show('btn-mobile-edit', isView && hasId);
   show('btn-mobile-dup', isView && hasId);
   show('btn-mobile-save', isEditLike);
+  show('btn-mobile-add', isEditLike);
 };
 
 // === Header Collapse Logic (Robust) ===
