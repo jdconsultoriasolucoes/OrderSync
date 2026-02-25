@@ -2375,7 +2375,7 @@ async function carregarItens() {
 
   } catch (err) {
     console.error("Falha ao carregar itens do backend:", err);
-    alert("Não foi possível carregar os itens da tabela. Verifique a conexão.");
+    showOsModal({ title: 'Aviso', message: "Não foi possível carregar os itens da tabela. Verifique a conexão.", type: 'alert' });
   }
 }
 
@@ -2458,6 +2458,65 @@ document.addEventListener('DOMContentLoaded', () => {
     snapshotSelecionadosParaPicker();
   });
 
+  // ===================================
+  // CUSTOM OS MODALS
+  // ===================================
+  function showOsModal(options) {
+    return new Promise((resolve) => {
+      const backdrop = document.createElement('div');
+      backdrop.className = 'os-modal-backdrop active';
+
+      const dialog = document.createElement('div');
+      dialog.className = 'os-modal-dialog';
+      dialog.style.maxWidth = '400px';
+
+      const header = document.createElement('div');
+      header.className = 'os-modal-header';
+      header.innerHTML = `<h3 class="os-modal-title">${options.title}</h3>
+                        <button class="os-modal-close">&times;</button>`;
+
+      const body = document.createElement('div');
+      body.className = 'os-modal-body';
+      body.innerHTML = `<p style="margin:0;">${options.message}</p>`;
+
+      const footer = document.createElement('div');
+      footer.className = 'os-modal-footer';
+
+      if (options.type === 'confirm') {
+        const btnCancel = document.createElement('button');
+        btnCancel.className = 'os-btn os-btn-secondary';
+        btnCancel.textContent = 'Cancelar';
+
+        const btnOk = document.createElement('button');
+        btnOk.className = 'os-btn os-btn-primary';
+        btnOk.textContent = 'OK';
+
+        footer.appendChild(btnCancel);
+        footer.appendChild(btnOk);
+
+        btnCancel.onclick = () => { document.body.removeChild(backdrop); resolve(false); };
+        btnOk.onclick = () => { document.body.removeChild(backdrop); resolve(true); };
+      } else {
+        const btnOk = document.createElement('button');
+        btnOk.className = 'os-btn os-btn-primary';
+        btnOk.textContent = 'OK';
+        footer.appendChild(btnOk);
+        btnOk.onclick = () => { document.body.removeChild(backdrop); resolve(true); };
+      }
+
+      header.querySelector('.os-modal-close').onclick = () => {
+        document.body.removeChild(backdrop);
+        resolve(options.type === 'confirm' ? false : true);
+      };
+
+      dialog.appendChild(header);
+      dialog.appendChild(body);
+      dialog.appendChild(footer);
+      backdrop.appendChild(dialog);
+      document.body.appendChild(backdrop);
+    });
+  }
+
   // handler único (sem aninhar addEventListener dentro de outro)
   (() => {
     const btn = document.getElementById('btn-salvar');
@@ -2476,13 +2535,17 @@ document.addEventListener('DOMContentLoaded', () => {
         const resp = await salvarTabela(); // agora retorna JSON
         if (!resp) return;
         const qtd = resp?.itens_inseridos ?? resp?.qtd_produtos ?? itens.length;
-        alert(`Tabela salva! ${qtd} produtos incluídos.`);
 
+        await showOsModal({
+          title: 'ordersync-y7kg.onrender.com diz',
+          message: `Tabela salva! ${qtd} produtos incluídos.`,
+          type: 'alert'
+        });
 
         // pegue o ID
         const tabelaId = resp?.tabela_id || resp?.id_tabela || resp?.id || window.currentTabelaId;
         if (!tabelaId) {
-          alert("Tabela salva, mas o ID não veio no retorno do backend. Ajuste o /tabela_preco/salvar para devolver o id.");
+          await showOsModal({ title: 'Aviso', message: "Tabela salva, mas o ID não veio no retorno do backend. Ajuste o /tabela_preco/salvar para devolver o id.", type: 'alert' });
           return;
         }
 
@@ -2490,7 +2553,11 @@ document.addEventListener('DOMContentLoaded', () => {
         clearFullSnapshot();
 
         // pergunta de decisão
-        const querEnviar = confirm("Deseja mandar o link do orçamento?");
+        const querEnviar = await showOsModal({
+          title: 'ordersync-y7kg.onrender.com diz',
+          message: `Deseja mandar o link do orçamento?`,
+          type: 'confirm'
+        });
 
         // CAPTURA ESTADO ANTES DO RESET
         const freteKgParaModal = Number(document.getElementById('frete_kg')?.value || 0);
@@ -2529,7 +2596,7 @@ document.addEventListener('DOMContentLoaded', () => {
       } catch (err) {
         // mostra 422 legível, se vier no formato FastAPI
         const msg = (err && err.message) ? err.message : 'Erro ao salvar a tabela.';
-        alert(msg);
+        await showOsModal({ title: 'Erro', message: msg, type: 'alert' });
         console.error(err);
       } finally {
         saving = false;
@@ -2690,7 +2757,7 @@ document.getElementById('btn-aplicar-markup-todos')?.addEventListener('click', (
   const val = parseFloat(raw);
 
   if (isNaN(val)) {
-    alert('Informe um valor de Markup válido.');
+    showOsModal({ title: 'Aviso', message: 'Informe um valor de Markup válido.', type: 'alert' });
     return;
   }
 

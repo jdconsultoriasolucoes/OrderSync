@@ -5,7 +5,7 @@ sys.path.append(os.path.dirname(os.path.abspath(__file__)))
 # --- imports extras para o middleware de erro ---
 import logging, traceback, uuid
 from fastapi import FastAPI, Request, HTTPException, APIRouter, Depends
-from fastapi.responses import JSONResponse, FileResponse, RedirectResponse
+from fastapi.responses import JSONResponse, FileResponse, RedirectResponse, Response
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 from pathlib import Path  
@@ -251,6 +251,13 @@ if os.path.exists(static_dir):
 
 # Also mount /static explicitly
 app.mount("/static", StaticFiles(directory=static_dir), name="static")
+
+@app.get("/design-system.css")
+def get_design_system_css():
+    css_path = os.path.join(static_dir, "design-system.css")
+    if os.path.exists(css_path):
+        return FileResponse(css_path)
+    return Response(status_code=404)
 
 @app.get("/")
 def root():
