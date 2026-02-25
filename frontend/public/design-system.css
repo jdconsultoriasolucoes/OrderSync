@@ -708,6 +708,12 @@ a:hover {
     color: var(--os-text);
 }
 
+.suggestions .suggest:hover,
+.suggestions .suggest.active {
+    background: #f1f5f9;
+    color: var(--os-primary);
+}
+
 .os-modal-body {
     padding: var(--os-space-3);
 }

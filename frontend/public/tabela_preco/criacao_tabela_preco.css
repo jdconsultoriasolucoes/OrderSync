@@ -576,6 +576,16 @@
   box-shadow: 0 2px 4px rgba(34, 197, 94, 0.3);
 }
 
+.visual-disabled {
+  opacity: 0.5 !important;
+  cursor: pointer !important;
+  /* Keep pointer so it feels interactive */
+}
+
+.visual-disabled:active {
+  transform: none !important;
+}
+
 .mobile-input-markup {
   width: 100%;
   padding: 10px;

@@ -2107,7 +2107,13 @@ function refreshToolbarEnablement() {
 
   const btnRemover = document.getElementById('btn-remover-selecionados');
 
-  btnsSalvar.forEach(btn => btn.disabled = !(temLinhas && cabecalhoOk));
+  // Usa classe visual em vez de disabled nativo: assim o clique ainda dispara
+  // e salvarTabela() pode mostrar os campos faltantes ao usuário.
+  const podeSalvar = temLinhas && cabecalhoOk;
+  btnsSalvar.forEach(btn => {
+    btn.disabled = false; // Garante que o clique sempre dispara
+    btn.classList.toggle('visual-disabled', !podeSalvar);
+  });
   if (btnRemover) btnRemover.disabled = !algumaMarcada;
 }
 function limparFormularioCabecalho() {

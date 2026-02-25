@@ -156,6 +156,22 @@ body.page-locked .documento *:not(#confirmModal):not(.modal-content):not(.btn-mo
   }
 }
 
+/* Garante largura mínima para a coluna QTD (5ª) e o input dentro dela */
+#tabelaProdutos th:nth-child(5),
+#tabelaProdutos td:nth-child(5) {
+  min-width: 72px;
+  width: 72px;
+}
+
+#tabelaProdutos td:nth-child(5) input {
+  width: 100% !important;
+  max-width: 100% !important;
+  min-width: 52px;
+  box-sizing: border-box;
+  padding: 4px 6px;
+  text-align: center;
+}
+
 /* Wrapper lado a lado (desktop) e empilhado (mobile) */
 .fechamento-grid {
   display: grid;
