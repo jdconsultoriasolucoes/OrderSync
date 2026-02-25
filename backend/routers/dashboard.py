@@ -34,7 +34,7 @@ def get_kpis(
             COALESCE(SUM(total_pedido), 0) as faturado,
             COUNT(id_pedido) as qtd_pedidos
         FROM public.tb_pedidos
-        WHERE status != 'CANCELADO'
+        WHERE status IN ('FATURADO', 'ENTREGUE')
           AND EXTRACT(MONTH FROM created_at) = EXTRACT(MONTH FROM CURRENT_DATE)
           AND EXTRACT(YEAR FROM created_at) = EXTRACT(YEAR FROM CURRENT_DATE)
     """)
@@ -51,8 +51,7 @@ def get_kpis(
     query_pendentes = text("""
         SELECT COUNT(*) as qtd
         FROM public.tb_pedidos
-        WHERE status = 'ABERTO' 
-           OR status = 'PENDENTE'
+        WHERE status NOT IN ('FATURADO', 'CANCELADO', 'DEVOLVIDO', 'ENTREGUE')
     """)
     res_pen = db.execute(query_pendentes).mappings().first()
     pedidos_pendentes = int(res_pen["qtd"] or 0)
