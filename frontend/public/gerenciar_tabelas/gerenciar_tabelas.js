@@ -78,14 +78,22 @@ const CONFIG = {
 function selectModule(mod) {
     currentModule = mod;
 
-    // Highlight sidebar
-    document.querySelectorAll('.mgmt-sidebar button').forEach(b => b.classList.remove('active'));
-    document.getElementById(`nav-${mod}`).classList.add('active');
+    // Highlight menu button via JS if it's called programmatically without a click event
+    document.querySelectorAll('.module-nav-btn').forEach(btn => {
+        btn.classList.remove('active');
+        if (btn.getAttribute('onclick')?.includes(mod)) {
+            btn.classList.add('active');
+        }
+    });
 
     // Set Header
-    const titles = { condicoes: 'Condições de Pagamento', descontos: 'Descontos', familias: 'Famílias de Produtos' };
-    document.getElementById('module-title').textContent = titles[mod];
-    document.getElementById('btn-novo').disabled = false;
+    const titles = { condicoes: 'Condições de Pagamento', descontos: 'Descontos', familias: 'Grupo de Produtos' };
+
+    const sectionTitle = document.getElementById('sectionTitle');
+    if (sectionTitle) sectionTitle.textContent = titles[mod];
+
+    const btnNovo = document.getElementById('btn-novo');
+    if (btnNovo) btnNovo.disabled = false;
 
     loadData();
 }
