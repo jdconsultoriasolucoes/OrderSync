@@ -4,7 +4,7 @@ sys.path.append(os.path.dirname(os.path.abspath(__file__)))
 
 # --- imports extras para o middleware de erro ---
 import logging, traceback, uuid
-from fastapi import FastAPI, Request, HTTPException,APIRouter
+from fastapi import FastAPI, Request, HTTPException, APIRouter, Depends
 from fastapi.responses import JSONResponse, FileResponse, RedirectResponse
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
