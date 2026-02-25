@@ -100,7 +100,7 @@ function selectModule(mod) {
 
 async function loadData() {
     const cfg = CONFIG[currentModule];
-    const container = document.getElementById('table-container');
+    const container = document.getElementById('grid');
     container.innerHTML = '<p>Carregando...</p>';
 
     try {
@@ -119,7 +119,7 @@ async function loadData() {
 
 function renderGrid(rows) {
     const cfg = CONFIG[currentModule];
-    const container = document.getElementById('table-container');
+    const container = document.getElementById('grid');
 
     if (!rows || rows.length === 0) {
         container.innerHTML = '<p>Nenhum registro encontrado.</p>';

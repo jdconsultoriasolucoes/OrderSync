@@ -13,7 +13,7 @@
 
 <body>
   <div class="os-page-container"
-    style="max-width: 1000px; margin: 40px auto; background: var(--os-bg-card); padding: var(--os-space-6); box-shadow: var(--os-shadow-lg); border-radius: var(--os-radius-lg); overflow: hidden;">
+    style="width: 95%; max-width: 1400px; margin: 40px auto; background: var(--os-bg-card); padding: var(--os-space-6); box-shadow: var(--os-shadow-lg); border-radius: var(--os-radius-lg); overflow: hidden;">
     <header
       style="display: flex; justify-content: space-between; align-items: flex-start; border-bottom: 1px solid var(--os-border); padding-bottom: var(--os-space-4); margin-bottom: var(--os-space-5); flex-direction: row-reverse;">
       <div class="logo-cliente" style="display: flex; justify-content: flex-end; align-items: flex-start;">
@@ -35,21 +35,22 @@
     </header>
 
     <main>
-      <div class="os-table-wrap" style="margin-bottom: var(--os-space-5); border-radius: 4px; box-shadow: none;">
-        <table id="tabelaProdutos" class="os-table" style="table-layout: fixed;">
+      <div class="os-table-wrap"
+        style="margin-bottom: var(--os-space-5); border-radius: 4px; box-shadow: none; overflow-x: auto; width: 100%;">
+        <table id="tabelaProdutos" class="os-table" style="min-width: 900px;">
           <thead>
             <tr>
-              <th style="width: 4%;">#</th>
-              <th style="width: 8%;">Código</th>
-              <th style="width: 25%;">Produto</th>
-              <th style="width: 7%;">Embal.</th>
-              <th class="right" style="width: 7%;">Qtd</th>
-              <th class="right" style="width: 6%;">Peso</th>
-              <th class="right" style="width: 9%;">Valor <span id="tituloValorFrete">c/ Frete</span></th>
-              <th style="width: 15%;">Condição de Pagamento</th>
-              <th class="col-markup right" style="width: 6%;">Markup %</th>
-              <th class="col-markup right" style="width: 9%;">Valor C Markup</th>
-              <th class="right" style="width: 9%;">Subtotal</th>
+              <th>#</th>
+              <th>Código</th>
+              <th>Produto</th>
+              <th>Embal.</th>
+              <th class="right">Qtd</th>
+              <th class="right">Peso</th>
+              <th class="right">Valor <span id="tituloValorFrete">c/ Frete</span></th>
+              <th>Condição de Pagamento</th>
+              <th class="col-markup right">Markup %</th>
+              <th class="col-markup right">Valor C Markup</th>
+              <th class="right">Subtotal</th>
             </tr>
           </thead>
           <tbody></tbody>

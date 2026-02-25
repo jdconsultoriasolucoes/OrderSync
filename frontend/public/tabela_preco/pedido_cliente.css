@@ -10,70 +10,16 @@ body {
 
 
 
-/* Coluna 1: # */
-table th:nth-child(1),
-table td:nth-child(1) {
-  width: 4%;
-}
-
-/* Coluna 2: Código */
-table th:nth-child(2),
-table td:nth-child(2) {
-  width: 8%;
-}
-
-/* Coluna 3: Produto (MAIOR) */
+/* Força a coluna "Produto" a ter espaço suficiente pra não quebrar nomes longos e empurrar colunas vizinhas */
 table th:nth-child(3),
 table td:nth-child(3) {
-  width: 25%;
+  min-width: 250px;
 }
 
-/* Coluna 4: Embal. */
-table th:nth-child(4),
-table td:nth-child(4) {
-  width: 7%;
-}
-
-/* Coluna 5: Qtd */
-table th:nth-child(5),
-table td:nth-child(5) {
-  width: 7%;
-}
-
-/* Coluna 6: Peso */
-table th:nth-child(6),
-table td:nth-child(6) {
-  width: 6%;
-}
-
-/* Coluna 7: Valor */
-table th:nth-child(7),
-table td:nth-child(7) {
-  width: 9%;
-}
-
-/* Coluna 8: Condição (GRANDE) */
+/* Força a coluna "Condição de Pagto" a ter espaço na mesma linha */
 table th:nth-child(8),
 table td:nth-child(8) {
-  width: 15%;
-}
-
-/* Coluna 9: Markup % */
-table th:nth-child(9),
-table td:nth-child(9) {
-  width: 6%;
-}
-
-/* Coluna 10: Valor C Markup */
-table th:nth-child(10),
-table td:nth-child(10) {
-  width: 9%;
-}
-
-/* Coluna 11: Subtotal */
-table th:nth-child(11),
-table td:nth-child(11) {
-  width: 9%;
+  min-width: 160px;
 }
 
 
@@ -237,6 +183,18 @@ body.page-locked .documento *:not(#confirmModal):not(.modal-content):not(.btn-mo
 
   .dados-header {
     text-align: center !important;
+  }
+
+  .dados-header p,
+  .dados-header .meta-link {
+    font-size: 16px !important;
+    color: var(--os-text) !important;
+  }
+
+  /* Faz a tabela respirar um pouco mais no celular */
+  .os-table th,
+  .os-table td {
+    font-size: 14px !important;
   }
 
   .logo-cliente {
