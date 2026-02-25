@@ -152,7 +152,7 @@
 
 #tabela-itens input[type="number"]:focus,
 #tabela-itens select:focus {
-  border-color: var(--accent-2);
+  border-color: var(--os-primary);
   box-shadow: 0 0 0 3px rgba(59, 130, 246, .15);
 }
 
@@ -445,7 +445,7 @@
 .card-price-highlight {
   font-size: 1.1rem;
   font-weight: 700;
-  color: var(--accent);
+  color: var(--os-primary);
   text-align: right;
 }
 
@@ -483,7 +483,7 @@
 .btn-card-action {
   background: none;
   border: none;
-  color: var(--accent-2);
+  color: var(--os-primary);
   font-weight: 600;
   font-size: 0.9rem;
   cursor: pointer;
@@ -557,7 +557,7 @@
 }
 
 .btn-primary-mobile {
-  background: var(--accent);
+  background: var(--os-success);
   color: white;
   border: none;
   padding: 10px 24px;
@@ -589,7 +589,7 @@
 }
 
 .mobile-input-markup:focus {
-  border-color: var(--accent-2);
+  border-color: var(--os-primary);
   background: #fff;
   outline: none;
 }
@@ -616,29 +616,23 @@
 
   .section-header-flex:has(#sec-topo) .header-info-group {
     width: 100%;
-    justify-content: space-between;
+    justify-content: flex-start;
+    flex-wrap: wrap;
     margin-top: 8px;
     background: #f8fafc;
     padding: 8px;
     border-radius: 8px;
     box-sizing: border-box;
-    /* Garante que padding não estoure */
-    gap: 4px;
-    /* Menor gap */
+    gap: 8px;
   }
 
-  /* Ajuste dos inputs transparentes no mobile para não estourar */
   .section-header-flex:has(#sec-topo) .header-info-group .info-item {
     font-size: 0.75rem;
-    flex: 1;
-    min-width: 0;
-    /* Permite encolher */
+    flex: none;
   }
 
-  .section-header-flex:has(#sec-topo) .header-info-group .transparent-input {
-    width: 100% !important;
-    /* Força caber no flex-item */
-    min-width: 50px;
+  .section-header-flex:has(#sec-topo) .header-info-group #btn-toggle-header {
+    margin-left: auto;
   }
 }
 

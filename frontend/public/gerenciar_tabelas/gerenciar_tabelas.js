@@ -145,8 +145,8 @@ function renderGrid(rows) {
         const pkVal = r[cfg.pk];
         html += `
             <td>
-                <button class="action-btn btn-edit" onclick="editItem('${pkVal}')">&#9998;</button>
-                <button class="action-btn btn-delete" onclick="deleteItem('${pkVal}')">&#128465;</button>
+                <button class="os-btn os-btn-secondary os-btn-sm" style="margin-right: 4px;" onclick="editItem('${pkVal}')">Editar</button>
+                <button class="os-btn os-btn-sm" style="background-color: var(--os-error-light); color: var(--os-error); border-color: #FECACA;" onclick="deleteItem('${pkVal}')">Excluir</button>
             </td>
         </tr>`;
     });

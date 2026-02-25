@@ -334,10 +334,11 @@
         <div class="modal-dialog">
             <h3 id="modal-title-condicoes">Nova Condição</h3>
             <form id="form-condicoes" onsubmit="saveCondicao(event)">
+                <input type="hidden" id="cond-id" />
                 <label>Prazo</label>
                 <input id="cond-prazo" type="text" placeholder="Ex: 28/42DDL" required />
                 <label>Descrição</label>
-                <input id="cond-descricao" type="text" placeholder="Descrição da condição">
+                <input id="cond-desc" type="text" placeholder="Descrição da condição">
                 <label>Custo (%)</label>
                 <input id="cond-custo" type="number" step="0.01" value="0" />
                 <div class="modal-footer">
@@ -353,6 +354,7 @@
         <div class="modal-dialog">
             <h3 id="modal-title-descontos">Novo Desconto</h3>
             <form id="form-descontos" onsubmit="saveDesconto(event)">
+                <input type="hidden" id="desc-id" />
                 <label>Fator Comissão (%)</label>
                 <input id="desc-fator" type="number" step="0.01" value="0" required />
                 <div class="modal-footer">
@@ -368,10 +370,11 @@
         <div class="modal-dialog">
             <h3 id="modal-title-familias">Novo Grupo de Produtos</h3>
             <form id="form-familias" onsubmit="saveFamilia(event)">
+                <input type="hidden" id="fam-id" />
                 <label>Tipo</label>
                 <input id="fam-tipo" type="text" placeholder="Ex: Revenda" required />
                 <label>Família</label>
-                <input id="fam-familia" type="text" placeholder="Ex: ARAME" required />
+                <input id="fam-nome" type="text" placeholder="Ex: ARAME" required />
                 <label>Grupo</label>
                 <input id="fam-marca" type="text" placeholder="Ex: GERDAU" required />
                 <div class="modal-footer">
