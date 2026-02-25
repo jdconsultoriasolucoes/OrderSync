@@ -1114,7 +1114,7 @@ async function carregarItens() {
       const inativos = itens.filter(i => i.status_atual && i.status_atual !== 'ATIVO');
       if (inativos.length > 0) {
         // setTimeout para não bloquear a renderização inicial
-        setTimeout(() => alert(`⚠️ ATENÇÃO: Existem ${inativos.length} produtos com status INATIVO nesta tabela.\nPor favor, remova-os.`), 500);
+        setTimeout(() => showOsModal({ title: 'Atenção', message: `⚠️ ATENÇÃO: Existem ${inativos.length} produtos com status INATIVO nesta tabela.<br>Por favor, remova-os.`, type: 'alert' }), 500);
       }
 
 
@@ -1814,7 +1814,7 @@ async function recalcTudo() {
       } catch (err) {
         console.error("Batch recalc failed:", err);
         // Feedback para o user não salvar dados incompletos
-        alert("Erro de conexão ao calcular impostos. Verifique sua internet e tente novamente.");
+        showOsModal({ title: 'Erro', message: "Erro de conexão ao calcular impostos. Verifique sua internet e tente novamente.", type: 'alert' });
       }
 
     } while (__recalcPending);
@@ -1831,7 +1831,7 @@ async function aplicarFatorGlobal() {
   const fator = mapaDescontos[code];
 
   if (fator == null || isNaN(fator)) {
-    alert('Escolha um desconto válido.');
+    showOsModal({ title: 'Aviso', message: 'Escolha um desconto válido.', type: 'alert' });
     return;
   }
 
@@ -1883,13 +1883,13 @@ function inferirFornecedorDaGrade() {
 
 async function salvarTabela() {
   if (__recalcRunning || __recalcPending) {
-    alert("Aguarde o término do cálculo de impostos para salvar.");
+    await showOsModal({ title: 'Aviso', message: 'Aguarde o término do cálculo de impostos para salvar.', type: 'alert' });
     return;
   }
 
   const linhas = document.querySelectorAll('#tbody-itens tr');
   if (linhas.length === 0) {
-    alert('Adicione pelo menos 1 produto à tabela antes de salvar.');
+    await showOsModal({ title: 'Aviso', message: 'Adicione pelo menos 1 produto à tabela antes de salvar.', type: 'alert' });
     // foca em algo útil da sua UI (ajuste se tiver um botão/field específico)
     document.querySelector('#busca_produto, #nome_tabela')?.focus();
     return;
@@ -1897,7 +1897,7 @@ async function salvarTabela() {
 
   const { ok } = RequiredValidator.check(RequiredValidator.REQUIRED_FIELDS, document);
   if (!ok) {
-    alert('Existem campos obrigatórios pendentes. Corrija os destaques em vermelho.');
+    await showOsModal({ title: 'Aviso', message: 'Existem campos obrigatórios pendentes. Corrija os destaques em vermelho.', type: 'alert' });
     return;
   }
 
@@ -2001,11 +2001,12 @@ async function salvarTabela() {
   // --- SAFETY CHECK FOR EMAIL ---
   // Se tem nome mas não tem código, o e-mail não vai funcionar.
   if (cliente && !codigo_cliente) {
-    const confirmMsg = "⚠️ ATENÇÃO:\n\n" +
-      "O cliente informado NÃO foi vinculado ao cadastro (está sem código).\n" +
-      "Isso significa que o sistema NÃO conseguirá enviar o e-mail de confirmação automaticamente.\n\n" +
+    const confirmMsg = "⚠️ ATENÇÃO:<br><br>" +
+      "O cliente informado NÃO foi vinculado ao cadastro (está sem código).<br>" +
+      "Isso significa que o sistema NÃO conseguirá enviar o e-mail de confirmação automaticamente.<br><br>" +
       "Deseja salvar mesmo assim?";
-    if (!confirm(confirmMsg)) {
+    const proceed = await showOsModal({ title: 'Confirmação', message: confirmMsg, type: 'confirm' });
+    if (!proceed) {
       // Usuário cancelou para corrigir
       document.getElementById('cliente_nome')?.focus();
       return;
@@ -2017,7 +2018,7 @@ async function salvarTabela() {
     return resp;
   } catch (e) {
     console.error(e);
-    alert(e.message || 'Erro ao salvar a tabela.');
+    await showOsModal({ title: 'Erro', message: e.message || 'Erro ao salvar a tabela.', type: 'alert' });
     return null;
   }
 }
@@ -2587,7 +2588,7 @@ document.addEventListener('DOMContentLoaded', () => {
               pedidoClientePath: "/tabela_preco/pedido_cliente.html",
             });
           } else {
-            alert("Módulo de gerar link não carregado (../js/gerar_link_pedido.js).");
+            await showOsModal({ title: 'Erro', message: "Módulo de gerar link não carregado (../js/gerar_link_pedido.js).", type: 'alert' });
           }
         }
 
