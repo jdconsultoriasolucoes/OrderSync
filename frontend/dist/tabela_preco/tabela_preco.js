@@ -82,6 +82,19 @@ document.addEventListener("DOMContentLoaded", () => {
     ?.addEventListener("click", enviarSelecionados);
   document.getElementById("btn-cancelar")
     ?.addEventListener("click", () => window.location.href = 'criacao_tabela_preco.html');
+
+  // Toggle do cabeçalho de filtros
+  const headerToggle = document.getElementById("header-toggle-filtros");
+  const conteudoFiltros = document.getElementById("conteudo-filtros");
+  const iconToggle = document.getElementById("icon-toggle-filtros");
+
+  if (headerToggle && conteudoFiltros && iconToggle) {
+    headerToggle.addEventListener("click", () => {
+      const isHidden = conteudoFiltros.style.display === "none";
+      conteudoFiltros.style.display = isHidden ? "block" : "none";
+      iconToggle.textContent = isHidden ? "▲" : "▼"; // Usando ▼ para aberto e ▲ para fechado, ou vice versa
+    });
+  }
 });
 
 // === Compat shim: envia seleção de volta ao PAI, sem quebrar legado ===

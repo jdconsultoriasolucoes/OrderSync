@@ -59,30 +59,39 @@
   <div class="os-page-container"
     style="padding: var(--os-space-4); padding-top: calc(var(--os-header-height) + var(--os-space-4));">
 
-    <!-- Filtros mínimos (somente Grupo) -->
+    <!-- Filtros e Busca -->
     <section class="os-card" style="margin-bottom: var(--os-space-4);">
-      <div id="toolbar-filtros" class="os-toolbar"
-        style="display: flex; gap: var(--os-space-3); flex-wrap: wrap; align-items: flex-end;">
-        <div class="os-form-group" style="margin-bottom: 0;">
-          <label class="os-label" for="grupo">Grupo:</label>
-          <select id="grupo" class="os-select"></select>
-        </div>
+      <div id="header-toggle-filtros"
+        style="display: flex; justify-content: space-between; align-items: center; cursor: pointer;">
+        <h2 class="os-section-title" style="margin: 0; border-bottom: none; padding-bottom: 0;">Filtros e Busca</h2>
+        <button class="os-btn-icon" id="icon-toggle-filtros" aria-label="Minimizar">▼</button>
+      </div>
 
-        <div class="os-form-group" style="margin-bottom: 0;">
-          <label class="os-label" for="filtro-fornecedor">Fornecedor:</label>
-          <select id="filtro-fornecedor" class="os-select"></select>
-        </div>
+      <div id="conteudo-filtros" style="margin-top: var(--os-space-3);">
+        <div id="toolbar-filtros" class="os-toolbar"
+          style="display: flex; gap: var(--os-space-3); flex-wrap: wrap; align-items: flex-end;">
+          <div class="os-form-group" style="margin-bottom: 0;">
+            <label class="os-label" for="grupo">Grupo:</label>
+            <select id="grupo" class="os-select"></select>
+          </div>
 
-        <div class="os-form-group" style="margin-bottom: 0; flex: 1; min-width: 250px;">
-          <label class="os-label" for="filtro-palavra">&nbsp;</label>
-          <input id="filtro-palavra" class="os-input" type="text" placeholder="Buscar por código, descrição...">
-        </div>
+          <div class="os-form-group" style="margin-bottom: 0;">
+            <label class="os-label" for="filtro-fornecedor">Fornecedor:</label>
+            <select id="filtro-fornecedor" class="os-select"></select>
+          </div>
 
-        <div class="actions" style="display: flex; gap: var(--os-space-2);">
-          <button id="btn-limpar" class="os-btn os-btn-secondary" type="button">Limpar</button>
-          <button class="os-btn os-btn-primary" id="btn-adicionar-selecionados">Adicionar selecionados</button>
-          <button class="os-btn os-btn-ghost" id="btn-cancelar">Cancelar</button>
+          <div class="os-form-group" style="margin-bottom: 0; flex: 1; min-width: 250px;">
+            <label class="os-label" for="filtro-palavra">&nbsp;</label>
+            <input id="filtro-palavra" class="os-input" type="text" placeholder="Buscar por código, descrição...">
+          </div>
         </div>
+      </div>
+
+      <div id="actions-filtros" class="actions"
+        style="display: flex; gap: var(--os-space-2); margin-top: var(--os-space-4); flex-wrap: wrap;">
+        <button class="os-btn os-btn-primary" id="btn-adicionar-selecionados">Adicionar selecionados</button>
+        <button id="btn-limpar" class="os-btn os-btn-secondary" type="button">Limpar</button>
+        <button class="os-btn os-btn-ghost" id="btn-cancelar">Cancelar</button>
       </div>
     </section>
 
