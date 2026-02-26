@@ -441,16 +441,19 @@ select {
    Mobile Overrides (Listar Tabelas Cards)
    ========================================= */
 @media (max-width: 768px) {
+
   /* Aumentar o input de pesquisa no mobile */
   .os-toolbar .search input {
-    font-size: 16px; /* Evita zoom automático no iOS e melhora a leitura */
+    font-size: 16px;
+    /* Evita zoom automático no iOS e melhora a leitura */
     padding: 12px 14px;
     border-radius: 8px;
     height: 44px;
   }
-  
+
   .os-toolbar .actions button {
-    height: 44px; /* Combinar com o input */
+    height: 44px;
+    /* Combinar com o input */
   }
 
   /* Esconde o cabeçalho padrão da tabela */
@@ -459,7 +462,8 @@ select {
   }
 
   /* A tabela vira display block para aceitar os cards */
-  .os-table, .os-table tbody {
+  .os-table,
+  .os-table tbody {
     display: block;
     width: 100%;
   }
@@ -473,7 +477,7 @@ select {
     border-radius: 8px;
     margin-bottom: 12px;
     padding: 16px;
-    box-shadow: 0 2px 4px rgba(0,0,0,0.02);
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.02);
     cursor: pointer;
     transition: box-shadow 0.2s, border-color 0.2s;
   }
@@ -500,7 +504,7 @@ select {
     td 3: Fornecedor (Oculto por padrão, visível quando expanded)
     td 4: Ações (Oculto por padrão, visível quando expanded)
   */
-  
+
   /* Nome da Tabela */
   .os-table tbody td:nth-child(1) {
     font-size: 16px;
@@ -519,7 +523,7 @@ select {
     margin-bottom: 12px;
     word-wrap: break-word;
   }
-  
+
   .os-table tbody td:nth-child(2)::before {
     content: "Cliente: ";
     font-weight: 500;
@@ -534,7 +538,7 @@ select {
     padding-top: 12px;
     border-top: 1px dashed var(--os-border, #e5e5e5);
   }
-  
+
   .os-table tbody td:nth-child(3)::before {
     content: "Fornecedor: ";
     font-weight: 500;
@@ -544,20 +548,23 @@ select {
   .os-table tbody td:nth-child(4) {
     display: none;
   }
-  
-  .os-table tbody td:nth-child(4) > div {
+
+  .os-table tbody td:nth-child(4)>div {
     display: flex;
-    flex-wrap: wrap; /* Pode ter vários botões, deixa quebrar se necessário */
+    flex-wrap: wrap;
+    /* Pode ter vários botões, deixa quebrar se necessário */
     gap: 8px;
-    justify-content: flex-end; /* Alinha os botões à direita no mobile */
+    justify-content: flex-end;
+    /* Alinha os botões à direita no mobile */
   }
 
   /* Botões maiores no mobile para melhor touch */
   .os-table tbody td:nth-child(4) button {
-    padding: 10px 16px; 
+    padding: 10px 16px;
     font-size: 14px;
-    flex: 1; /* Estica os botões para ocuparem o rodapé do card */
-    min-width: 45%; 
+    flex: 1;
+    /* Estica os botões para ocuparem o rodapé do card */
+    min-width: 45%;
   }
 
   /* --- MUNDO EXPANDIDO (.expanded) --- */
@@ -566,13 +573,39 @@ select {
     display: block;
     animation: fadeIn 0.3s ease;
   }
-  
+
   .os-table tbody tr.expanded {
-    background-color: #fafbfc; /* Um fundo levíssimo para indicar que está aberto */
+    background-color: #fafbfc;
+    /* Um fundo levíssimo para indicar que está aberto */
   }
-  
+
   @keyframes fadeIn {
-    from { opacity: 0; transform: translateY(-4px); }
-    to { opacity: 1; transform: translateY(0); }
+    from {
+      opacity: 0;
+      transform: translateY(-4px);
+    }
+
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
+
+  /* Paginação Mobile */
+  #pagination-controls {
+    flex-wrap: wrap;
+  }
+
+  #page-info {
+    order: -1;
+    width: 100%;
+    text-align: center;
+    margin-bottom: 8px;
+    white-space: nowrap;
+  }
+
+  #btn-prev,
+  #btn-next {
+    flex: 1;
   }
 }

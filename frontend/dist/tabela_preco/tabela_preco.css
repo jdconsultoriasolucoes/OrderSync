@@ -227,4 +227,57 @@
       transform: translateY(0);
     }
   }
+
+  /* Botões de Ação na Busca de Produtos */
+  #toolbar-filtros .actions {
+    display: grid !important;
+    /* Sobrescreve flex inline se houver */
+    grid-template-columns: 1fr 1fr;
+    gap: 8px;
+    margin-top: 16px;
+  }
+
+  #toolbar-filtros .actions button {
+    width: 100%;
+  }
+
+  /* O botão principal ocupa toda a largura */
+  #btn-adicionar-selecionados {
+    grid-column: span 2;
+  }
+
+  /* Paginação Mobile Buscar Produtos */
+  .paginacao {
+    flex-wrap: wrap;
+    justify-content: space-between !important;
+  }
+
+  .paginacao .os-label {
+    width: 100%;
+    justify-content: center;
+    margin-bottom: 16px !important;
+    order: -2;
+  }
+
+  #pagina-info {
+    width: 100%;
+    text-align: center;
+    margin-bottom: 12px;
+    order: -1;
+  }
+
+  #btn-prev,
+  #btn-next {
+    flex: 1;
+    min-width: 0;
+    /* Ajuda a não estourar botões longos em flex */
+  }
+
+  #btn-prev {
+    margin-right: 4px;
+  }
+
+  #btn-next {
+    margin-left: 4px;
+  }
 }
