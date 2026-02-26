@@ -1,0 +1,312 @@
+﻿<!DOCTYPE html>
+<html lang="pt-BR">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Usuários — OrderSync</title>
+
+    <!-- Design System -->
+    <link rel="stylesheet" href="design-system.css">
+
+    <!-- Bootstrap (needed for JS-generated classes like badge, btn-sm, etc.) -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+
+    <!-- Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+
+    <style>
+        /* Override Bootstrap where needed */
+        body {
+            background-color: var(--os-bg) !important;
+            font-family: var(--os-font) !important;
+            color: var(--os-text) !important;
+        }
+
+        .page-container {
+            padding: var(--os-space-4);
+            padding-top: calc(var(--os-header-height) + var(--os-space-3));
+            max-width: var(--os-max-content);
+            margin: 0 auto;
+            /* Centralize */
+        }
+
+        .card {
+            background: var(--os-bg-white);
+            border-radius: var(--os-radius-lg);
+            box-shadow: var(--os-shadow);
+            border: 1px solid var(--os-border);
+            padding: var(--os-space-3);
+        }
+
+        .header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: var(--os-space-2);
+        }
+
+        .title {
+            font-size: var(--os-text-2xl);
+            font-weight: 600;
+            color: var(--os-text);
+        }
+
+        .btn-primary {
+            background-color: var(--os-primary) !important;
+            border-color: var(--os-primary) !important;
+            border-radius: var(--os-radius);
+        }
+
+        .btn-primary:hover {
+            background-color: var(--os-primary-hover) !important;
+            border-color: var(--os-primary-hover) !important;
+        }
+
+        .table {
+            font-size: var(--os-text-sm);
+        }
+
+        .table thead th {
+            font-size: var(--os-text-xs);
+            text-transform: uppercase;
+            letter-spacing: 0.04em;
+            color: var(--os-text-secondary);
+            border-bottom: 1px solid var(--os-border);
+        }
+
+        .table td {
+            vertical-align: middle;
+            border-bottom: 1px solid var(--os-border);
+        }
+
+        /* Modals — styled via design system */
+        .custom-modal {
+            display: none;
+            position: fixed;
+            inset: 0;
+            background: rgba(0, 0, 0, 0.4);
+            align-items: center;
+            justify-content: center;
+            z-index: 1000;
+            animation: os-fade-in 0.15s ease;
+        }
+
+        .custom-modal.flex {
+            display: flex;
+        }
+
+        .custom-modal-dialog {
+            background: var(--os-bg-white);
+            padding: var(--os-space-3);
+            border-radius: var(--os-radius-lg);
+            box-shadow: var(--os-shadow-lg);
+            width: 100%;
+            max-width: 500px;
+            animation: os-slide-up 0.2s ease;
+        }
+
+        .custom-modal-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: var(--os-space-2);
+            padding-bottom: var(--os-space-2);
+            border-bottom: 1px solid var(--os-border);
+        }
+
+        .custom-modal-title {
+            font-size: var(--os-text-lg);
+            font-weight: 600;
+            color: var(--os-text);
+        }
+
+        .close-btn {
+            background: none;
+            border: none;
+            font-size: 1.25rem;
+            cursor: pointer;
+            color: var(--os-text-secondary);
+            padding: 4px;
+            border-radius: var(--os-radius);
+        }
+
+        .close-btn:hover {
+            background: var(--os-bg);
+            color: var(--os-text);
+        }
+
+        .form-control,
+        .form-select {
+            border-radius: var(--os-radius) !important;
+            border: 1px solid var(--os-border) !important;
+            font-family: var(--os-font) !important;
+        }
+
+        .form-control:focus,
+        .form-select:focus {
+            border-color: var(--os-primary) !important;
+            box-shadow: 0 0 0 3px var(--os-primary-ring) !important;
+        }
+
+        @media (max-width: 768px) {
+            .page-container {
+                margin-left: 0;
+                padding: var(--os-space-2);
+                padding-top: calc(var(--os-header-height) + var(--os-space-2));
+            }
+        }
+    </style>
+
+    <script src="js/config.js"></script>
+</head>
+
+<body>
+    <script src="js/auth.js"></script>
+    <script src="js/sidebar_control.js"></script>
+    <script>
+        if (window.Auth) { window.Auth.checkAuth(); }
+    </script>
+
+    <!-- ========== HEADER ========== -->
+    <header class="os-header">
+        <button class="os-menu-btn" id="menu-button" aria-label="Menu">&#9776;</button>
+        <img src="logo.png" alt="Logo" class="os-logo">
+        <span class="os-header-title">Gerenciar Usuários</span>
+    </header>
+
+    <!-- ========== SIDEBAR ========== -->
+    <nav class="os-sidebar" id="sidebar">
+        <div class="os-sidebar-section">Menu</div>
+        <ul>
+            <li><a href="../index.html">Home</a></li>
+            <li><a href="./clientes/cliente.html">Clientes</a></li>
+            <li><a href="./gerenciar_tabelas/gerenciar_tabelas.html">Atualizar Catálogo</a></li>
+            <li><a href="./pedido/pedido.html">Consultar Pedidos</a></li>
+            <li><a href="./tabela_preco/criacao_tabela_preco.html">Tabela Preço</a></li>
+            <li><a href="./produto/produto.html">Produtos</a></li>
+        </ul>
+        <div class="os-sidebar-section">Sistema</div>
+        <ul>
+            <li><a href="./usuarios.html" class="active">Usuários</a></li>
+            <li><a href="./config_email/config_email.html">Configuração E-mail</a></li>
+            <li><a href="#" onclick="window.Auth.openChangePasswordModal()">Trocar Senha</a></li>
+            <li><a href="#" onclick="window.Auth.logout()">Sair</a></li>
+        </ul>
+    </nav>
+    <div class="os-sidebar-overlay" id="overlay"></div>
+
+    <!-- ========== MAIN CONTENT ========== -->
+    <div class="page-container">
+        <div class="card">
+            <div class="header">
+                <button class="os-btn os-btn-primary" onclick="window.abrirModalNovoUsuario()">+ Novo Usuário</button>
+            </div>
+
+            <div id="loading" class="os-loading">Carregando...</div>
+            <div id="error-msg" class="os-alert os-alert-error" style="display:none"></div>
+
+            <div class="table-responsive">
+                <table class="table table-hover">
+                    <thead>
+                        <tr>
+                            <th>ID</th>
+                            <th>Nome</th>
+                            <th>Email</th>
+                            <th>Função</th>
+                            <th>Status</th>
+                            <th>Ações</th>
+                        </tr>
+                    </thead>
+                    <tbody id="tabela-usuarios">
+                        <!-- JS injections -->
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal Novo Usuário -->
+    <div id="modal-novo" class="custom-modal">
+        <div class="custom-modal-dialog">
+            <div class="custom-modal-header">
+                <div class="custom-modal-title">Novo Usuário</div>
+                <button class="close-btn"
+                    onclick="document.getElementById('modal-novo').style.display='none'">&times;</button>
+            </div>
+            <div class="custom-modal-body">
+                <form id="form-novo-usuario">
+                    <input type="hidden" name="user_id" id="user-id">
+                    <div class="mb-3">
+                        <label class="form-label">Nome</label>
+                        <input type="text" class="form-control" name="nome" id="input-nome" required>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Email</label>
+                        <input type="email" class="form-control" name="email" id="input-email" required>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Senha Inicial <small class="text-muted">(Apenas na
+                                criação)</small></label>
+                        <input type="text" class="form-control" name="senha" id="input-senha" value="Mudar@123"
+                            required>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Função</label>
+                        <select class="form-select" name="funcao" id="input-funcao">
+                            <option value="vendedor">Vendedor</option>
+                            <option value="gerente">Gerente</option>
+                            <option value="admin">Admin</option>
+                        </select>
+                    </div>
+                    <button type="submit" class="os-btn os-btn-primary" style="width: 100%;">Criar Usuário</button>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal Reset Senha -->
+    <div id="modal-reset" class="custom-modal">
+        <div class="custom-modal-dialog">
+            <div class="custom-modal-header">
+                <div class="custom-modal-title">Resetar Senha</div>
+                <button class="close-btn"
+                    onclick="document.getElementById('modal-reset').style.display='none'">&times;</button>
+            </div>
+            <div class="custom-modal-body">
+                <p>Defina a nova senha para o usuário <strong id="reset-user-email"></strong>:</p>
+                <form id="form-reset-senha">
+                    <input type="hidden" id="reset-user-id">
+                    <div class="mb-3">
+                        <label class="form-label">Nova Senha</label>
+                        <input type="text" class="form-control" id="reset-nova-senha" required>
+                        <div class="form-text">Mínimo 8 caracteres, Maiúscula, Minúscula, Número e Especial (@#$!)
+                        </div>
+                    </div>
+                    <button type="submit" class="os-btn os-btn-danger" style="width: 100%;">Confirmar Reset</button>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <script src="js/usuarios.js"></script>
+    <script>
+        const menuButton = document.getElementById("menu-button");
+        const sidebar = document.getElementById("sidebar");
+        const overlay = document.getElementById("overlay");
+        if (menuButton) {
+            menuButton.addEventListener("click", () => {
+                sidebar.classList.toggle("active");
+                overlay.classList.toggle("active");
+            });
+            overlay.addEventListener("click", () => {
+                sidebar.classList.remove("active");
+                overlay.classList.remove("active");
+            });
+        }
+    </script>
+</body>
+
+</html>

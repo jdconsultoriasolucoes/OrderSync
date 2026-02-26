@@ -1,58 +1,90 @@
-<!DOCTYPE html>
+﻿<!DOCTYPE html>
 <html lang="pt-BR">
 
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Cadastro do Produto</title>
+  <title>Produtos — OrderSync</title>
 
-  <!-- Bootstrap 5 -->
-  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
-
-  <!-- CSS Global e Navbar -->
-  <link rel="stylesheet" href="../navbar.css">
+  <!-- Design System -->
+  <link rel="stylesheet" href="../design-system.css" />
   <link rel="stylesheet" href="./produto.css" />
 
+  <!-- Fonts -->
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+
+  <script src="../js/config.js"></script>
+  <script src="../js/auth.js"></script>
+  <script src="../js/sidebar_control.js"></script>
+  <script>
+    if (window.Auth) { window.Auth.checkAuth(); }
+  </script>
 </head>
 
 <body>
 
-  <!-- Header (Faixa Superior) -->
-  <header>
-    <div class="navbar">
-      <button class="menu-btn" id="menu-button">&#9776;</button>
-      <img src="../logo.png" alt="Logo" class="logo" />
-    </div>
+  <!-- ========== HEADER ========== -->
+  <header class="os-header">
+    <button class="os-menu-btn" id="menu-button" aria-label="Menu">&#9776;</button>
+    <img src="../logo.png" alt="Logo" class="os-logo" />
+    <span class="os-header-title">Cadastro do Produto</span>
   </header>
 
-  <!-- Sidebar -->
-  <nav class="sidebar" id="sidebar">
+  <!-- ========== SIDEBAR ========== -->
+  <nav class="os-sidebar" id="sidebar">
+    <div class="os-sidebar-section">Menu</div>
     <ul>
-      <li><a href="/index.html">Home</a></li>
-      <li><a href="/clientes/cliente.html">Cadastrar Cliente</a></li>
-      <li><a href="#">Atualizar Catálogo</a></li>
-      <li><a href="/pedido/pedido.html">Consultar Pedidos</a></li>
-      <li><a href="#">Exportar Relatórios</a></li>
-      <li><a href="/tabela_preco/criacao_tabela_preco.html">Tabela Preço</a></li>
-      <li><a href="/config_email/config_email.html">Configuração E-mail</a></li>
+      <li><a href="../../index.html">Home</a></li>
+      <li><a href="../clientes/cliente.html">Clientes</a></li>
+      <li><a href="../gerenciar_tabelas/gerenciar_tabelas.html">Atualizar Catálogo</a></li>
+      <li><a href="../pedido/pedido.html">Consultar Pedidos</a></li>
+      <li><a href="../tabela_preco/criacao_tabela_preco.html">Tabela Preço</a></li>
+      <li><a href="../produto/produto.html" class="active">Produtos</a></li>
+    </ul>
+    <div class="os-sidebar-section">Sistema</div>
+    <ul>
+      <li><a href="../usuarios.html">Usuários</a></li>
+      <li><a href="../config_email/config_email.html">Configuração E-mail</a></li>
+      <li><a href="#" onclick="window.Auth.openChangePasswordModal()">Trocar Senha</a></li>
+      <li><a href="#" onclick="window.Auth.logout()">Sair</a></li>
     </ul>
   </nav>
-  <div id="overlay"></div>
+  <div class="os-sidebar-overlay" id="overlay"></div>
 
-  <!-- Main Content Wrapper -->
+  <!-- ========== MAIN ========== -->
   <div class="page-container">
     <div class="card" style="margin-top: 20px;">
       <div class="header">
-        <div class="title">CADASTRO DO PRODUTO</div>
         <div class="toolbar">
-          <button id="btn-novo" class="ghost">Novo</button>
-          <button id="btn-buscar" class="ghost">Pesquisar</button>
-          <button id="btn-importar" class="ghost">Importar PDF</button>
-          <button id="btn-editar" class="ghost">Editar</button>
-          <button id="btn-salvar" class="primary">Salvar</button>
+          <button id="btn-novo-produto" class="btn-primary">+ Novo</button>
+          <button id="btn-buscar" class="ghost">Buscar</button>
+
+          <!-- Importar PDF (Icon) -->
+          <button id="btn-importar" class="ghost" title="Importar Lista (PDF)">
+            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-file-pdf"
+              viewBox="0 0 16 16">
+              <path
+                d="M4 0a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h8a2 2 0 0 0 2-2V2a2 2 0 0 0-2-2H4zm0 1h8a1 1 0 0 1 1 1v12a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V2a1 1 0 0 1 1-1z" />
+              <path
+                d="M4.603 12.087a.81.81 0 0 1-.438-.42c-.195-.388-.13-.776.08-1.102.198-.307.526-.568.897-.787a7.68 7.68 0 0 1 1.482-.645 19.697 19.697 0 0 0 1.062-2.227 7.269 7.269 0 0 1-.43-1.295c-.086-.4-.119-.796-.046-1.136.075-.354.274-.672.65-.823.192-.077.4-.12.602-.077a.7.7 0 0 1 .477.365c.088.164.12.356.127.538.007.188-.012.396-.047.614-.084.51-.27 1.134-.52 1.794a10.954 10.954 0 0 0 .98 1.686 5.753 5.753 0 0 1 1.334.05c.364.066.734.195.96.465.12.144.193.32.2.518.007.192-.047.382-.138.563a1.04 1.04 0 0 1-.354.416.856.856 0 0 1-.51.138c-.331-.014-.654-.196-.933-.417a5.712 5.712 0 0 1-.911-.95 11.651 11.651 0 0 0-1.997.406 11.307 11.307 0 0 1-1.02 1.51c-.292.35-.609.656-.927.787a.793.793 0 0 1-.58.029zm1.379-1.901c-.166.076-.32.156-.459.238-.328.194-.541.383-.647.545-.094.148-.096.289-.019.386.105.133.251.142.439.066.212-.088.452-.296.646-.516.192-.216.369-.48.514-.716a4 4 0 0 1-.47-.003z" />
+            </svg>
+          </button>
+
+          <button id="btn-renovar-validade" class="ghost" style="color: #f39c12; border-color: #f39c12;">Renovar
+            Validade</button>
+
+          <!-- Botões de Ação do Formulário -->
+          <button id="btn-editar" class="btn-secondary" style="display: none;">Editar</button>
+          <button id="btn-excluir" class="btn-secondary"
+            style="background-color: #c0392b; color: #fff; display: none;">Excluir</button>
+          <button id="btn-voltar-view" class="btn-secondary"
+            style="background-color: #7f8c8d; color: #fff; display: none;">Voltar</button>
+
+          <button id="btn-salvar" class="primary" style="display: none;">Salvar</button>
+          <button id="btn-cancelar-edicao" class="btn-secondary"
+            style="background-color: #e74c3c; color: #fff; display: none;">Cancelar</button>
         </div>
       </div>
 
@@ -77,13 +109,17 @@
         </div>
       </div>
       <div class="row g-2">
-        <div class="col-3">
+        <div class="col-2">
           <label for="linha">Linha</label>
           <select id="linha"></select>
         </div>
-        <div class="col-5">
+        <div class="col-3">
           <label for="familia">Família</label>
           <select id="familia"></select>
+        </div>
+        <div class="col-3">
+          <label for="marca">Grupo</label>
+          <select id="marca"></select>
         </div>
         <div class="col-1">
           <label for="filhos">Filho</label>
@@ -99,19 +135,19 @@
       <div class="section-title">Unidade / Embalagem / Pesos</div>
       <div class="row g-2">
         <div class="col-2">
-          <label for="unidade">Unidade de Venda</label>
+          <label for="unidade">Unidade Venda</label>
           <input id="unidade" type="text" placeholder="CX/UN" />
         </div>
         <div class="col-2">
-          <label for="unidade_anterior">Unidade de Venda (anterior)</label>
+          <label for="unidade_anterior">Unidade Anterior</label>
           <input id="unidade_anterior" type="text" class="readonly" readonly />
         </div>
         <div class="col-2">
-          <label for="embalagem_venda">Embalagem de Venda</label>
+          <label for="embalagem_venda">Embalagem Venda</label>
           <input id="embalagem_venda" type="text" placeholder="CX/FD/UN" />
         </div>
         <div class="col-2">
-          <label for="unidade_embalagem">Unidades por Embalagem</label>
+          <label for="unidade_embalagem">Unds. Embalagem</label>
           <input id="unidade_embalagem" type="number" step="1" min="0" />
         </div>
         <div class="col-2">
@@ -135,17 +171,15 @@
           <label for="estoque_ideal">Estoque Ideal</label>
           <input id="estoque_ideal" type="number" step="1" min="0" />
         </div>
-        <div class="col-4">
-          <label for="codigo_ean">Código de Barra (EAN/GTIN)</label>
+        <div class="col-3">
+          <label for="codigo_ean">Cód. Barra (EAN/GTIN)</label>
           <input id="codigo_ean" type="text" />
         </div>
-        <div class="col-4">
-          <label for="codigo_embalagem">Código da Embalagem (GTIN Caixa)</label>
+        <div class="col-3">
+          <label for="codigo_embalagem">Cód. Embalagem</label>
           <input id="codigo_embalagem" type="text" />
         </div>
-      </div>
-      <div class="row g-2">
-        <div class="col-3">
+        <div class="col-2">
           <label for="ncm">NCM / SH</label>
           <input id="ncm" type="text" placeholder="NN.NN.NN.NN" />
         </div>
@@ -156,25 +190,26 @@
       <div class="row g-2">
         <div class="col-2"><label for="ipi">IPI (%)</label><input id="ipi" type="number" step="0.01" min="0" /></div>
         <div class="col-2"><label for="icms">ICMS (%)</label><input id="icms" type="number" step="0.01" min="0" /></div>
-        <div class="col-3"><label for="iva_st">Substituição Tributária (%)</label><input id="iva_st" type="number"
-            step="0.01" min="0" /></div>
+        <div class="col-3"><label for="iva_st">Subs. Tributária (%)</label><input id="iva_st" type="number" step="0.01"
+            min="0" /></div>
         <div class="col-2"><label for="cbs">CBS (%)</label><input id="cbs" type="number" step="0.01" min="0" /></div>
         <div class="col-2"><label for="ibs">IBS (%)</label><input id="ibs" type="number" step="0.01" min="0" /></div>
+        <div class="col-1"></div>
       </div>
 
       <!-- Preços — Tabela Atual -->
       <div class="section-title">Preços — Tabela Atual</div>
       <div class="row g-2">
         <div class="col-3">
-          <label for="preco">Valor Tabela Atual (R$)</label>
+          <label for="preco">Valor Tab. Atual (R$)</label>
           <input id="preco" type="number" step="0.01" min="0" />
         </div>
         <div class="col-3">
-          <label for="preco_tonelada">Preço por Tonelada (R$)</label>
+          <label for="preco_tonelada">Preço/Tonelada (R$)</label>
           <input id="preco_tonelada" type="number" step="0.01" min="0" />
         </div>
         <div class="col-3">
-          <label for="validade_tabela">Validade da Tabela Atual a partir de</label>
+          <label for="validade_tabela">Validade Atual (Início)</label>
           <input id="validade_tabela" type="date" />
         </div>
         <div class="col-3">
@@ -187,15 +222,15 @@
       <div class="section-title">Preços — Anteriores (somente leitura)</div>
       <div class="row g-2">
         <div class="col-3">
-          <label for="preco_anterior">Valor Tabela Anterior (R$)</label>
+          <label for="preco_anterior">Valor Tab. Anterior (R$)</label>
           <input id="preco_anterior" type="number" step="0.01" class="readonly" readonly />
         </div>
         <div class="col-3">
-          <label for="preco_tonelada_anterior">Preço por Tonelada (Anterior)</label>
+          <label for="preco_tonelada_anterior">Preço/Tonelada (Anterior)</label>
           <input id="preco_tonelada_anterior" type="number" step="0.01" class="readonly" readonly />
         </div>
         <div class="col-3">
-          <label for="validade_tabela_anterior">Validade da Tabela Anterior até</label>
+          <label for="validade_tabela_anterior">Validade Anterior até</label>
           <input id="validade_tabela_anterior" type="date" class="readonly" readonly />
         </div>
         <div class="col-3">
@@ -253,6 +288,13 @@
           <div class="col-6">
             <label for="import_validade">Validade da tabela</label>
             <input id="import_validade" type="date" />
+          </div>
+
+          <div class="col-12">
+            <label for="import_fornecedor">Fornecedor</label>
+            <select id="import_fornecedor">
+              <option value="">Carregando...</option>
+            </select>
           </div>
 
           <div class="col-12">
@@ -315,6 +357,37 @@
     </div>
   </div>
 
+  <!-- Modal Renovar Validade -->
+  <div id="modal-renovar-validade" class="custom-modal hidden">
+    <div class="custom-modal-dialog" style="max-width: 500px;">
+      <div class="custom-modal-header">
+        <div class="custom-modal-title">Renovar Validade (Todos Ativos)</div>
+      </div>
+      <div class="custom-modal-body">
+        <p style="margin-bottom: 12px;">Selecione os critérios para a renovação:</p>
+
+        <div class="form-group" style="margin-bottom: 15px;">
+          <label for="select-tipo-renovacao">Tipo de Produto:</label>
+          <select id="select-tipo-renovacao"
+            style="width: 100%; padding: 8px; border-radius: 4px; border: 1px solid #ccc;">
+            <option value="TODOS">Todos (Ativos)</option>
+            <option value="INSUMOS">Insumos</option>
+            <option value="PET">Pet</option>
+          </select>
+        </div>
+
+        <div class="form-group">
+          <label for="input-nova-validade">Nova Validade:</label>
+          <input type="date" id="input-nova-validade">
+        </div>
+      </div>
+      <div class="custom-modal-footer">
+        <button id="btn-fechar-renovacao" class="ghost">Cancelar</button>
+        <button id="btn-confirmar-renovacao" class="primary">Confirmar</button>
+      </div>
+    </div>
+  </div>
+
   <!-- Modal de pesquisa -->
   <div id="search-modal" class="custom-modal hidden">
     <div class="custom-modal-dialog">
@@ -324,7 +397,19 @@
       </div>
 
       <div class="custom-modal-body">
-        <input id="search-input" type="text" placeholder="Código ou descrição..." />
+
+        <div class="row g-2 mb-2">
+          <div class="col-4">
+            <select id="search-fornecedor"
+              style="width: 100%; padding: 8px; border-radius: 4px; border: 1px solid #ccc;">
+              <option value="">Todos Fornecedores</option>
+            </select>
+          </div>
+          <div class="col-8">
+            <input id="search-input" type="text" placeholder="Código ou descrição..." style="width: 100%;" />
+          </div>
+        </div>
+
         <div id="search-hint" class="hint">Digite para buscar • Enter: selecionar • Esc: fechar</div>
         <div id="search-results" class="results"></div>
       </div>
@@ -339,7 +424,6 @@
 
   <script src="./produto.js"></script>
 
-  <!-- Script do Menu/Sidebar -->
   <script>
     const menuButton = document.getElementById("menu-button");
     const sidebar = document.getElementById("sidebar");
@@ -348,11 +432,11 @@
     if (menuButton && sidebar && overlay) {
       menuButton.addEventListener("click", () => {
         sidebar.classList.toggle("active");
-        overlay.style.display = sidebar.classList.contains("active") ? "block" : "none";
+        overlay.classList.toggle("active");
       });
       overlay.addEventListener("click", () => {
         sidebar.classList.remove("active");
-        overlay.style.display = "none";
+        overlay.classList.remove("active");
       });
     }
   </script>

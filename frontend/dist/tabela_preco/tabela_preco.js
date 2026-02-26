@@ -1,4 +1,4 @@
-const API_BASE = "https://ordersync-backend-edjq.onrender.com";
+const API_BASE = window.API_BASE || "https://ordersync-backend-59d2.onrender.com"; // Restored & Safe
 
 let currentPage = 1;
 let pageSize = 25;
@@ -12,6 +12,9 @@ let preSelecionadosCodigos = new Set(); // para pré-marcar checkboxes (enviado 
 document.addEventListener("DOMContentLoaded", () => {
   const selGrupo = document.getElementById("grupo");
   const selFornecedor = document.getElementById("filtro-fornecedor");
+  // 🛡️ Force "Votorantim" default if available. 
+  // O usuário solicitou explicitamente "VOTORANTIM" e retirar o Todos.
+  if (selFornecedor) selFornecedor.value = "Votorantim";
   const btnFiltrar = document.getElementById("btn-filtrar");
   const btnLimpar = document.getElementById("btn-limpar");
   const ps = document.getElementById("page_size");
@@ -28,10 +31,7 @@ document.addEventListener("DOMContentLoaded", () => {
       preSelecionadosCodigos = new Set((arr || []).map(p => p.codigo_tabela || p.codigo));
     } catch { preSelecionadosCodigos = new Set(); }
   }
-  function sendBufferBackToParent(selecionados) {
-    const ctx = getCtxId();
-    sessionStorage.setItem(`TP_BUFFER:${ctx}`, JSON.stringify(selecionados || []));
-  }
+  // (sendBufferBackToParent original removida; usada versão shim abaixo)
 
 
   // Filtros
@@ -42,9 +42,14 @@ document.addEventListener("DOMContentLoaded", () => {
   btnFiltrar?.addEventListener("click", () => { currentPage = 1; carregarProdutos(); });
   btnLimpar?.addEventListener("click", () => {
     if (selGrupo) selGrupo.value = "";
-    if (selFornecedor) selFornecedor.value = "";
+    if (selFornecedor) {
+      // Tenta resetar para Votorantim explicitamente ou recarregar se necessário.
+      // Como a lista é estática do DB, basta selecionar.
+      selFornecedor.value = "Votorantim";
+      // Se não existir na lista (edge case), mantém valor atual ou vazio.
+    }
     if (inpPalavra) inpPalavra.value = "";   // limpa a palavra
-    fornecedoresMap.clear();                 // limpa cache de fornecedores
+    // fornecedoresMap.clear(); // não usa mais map local
     currentPage = 1;
     carregarProdutos();
   });
@@ -161,7 +166,8 @@ async function carregarGrupos() {
     selectGrupo.innerHTML = "<option value=''>Todos os grupos</option>";
 
     grupos.forEach(item => {
-      const grupo = item.grupo || item;
+      const grupo = item.grupo || "";
+      if (!grupo) return;
       const opt = document.createElement("option");
       opt.value = grupo;
       opt.textContent = grupo;
@@ -172,37 +178,60 @@ async function carregarGrupos() {
   }
 }
 
-function coletarFornecedores(lista) {
-  (lista || []).forEach(p => {
-    const show = p.fornecedor;
-    const key = norm(show);
-    if (show && key && !fornecedoresMap.has(key)) {
-      fornecedoresMap.set(key, show); // guarda o “bonitinho” pra exibir
-    }
-  });
-}
-
-function renderFornecedoresDropdown() {
+// Função para carregar fornecedores do banco
+async function carregarFornecedoresDb() {
   const sel = document.getElementById("filtro-fornecedor");
   if (!sel) return;
 
-  const selecionado = sel.value;
-  sel.innerHTML = "<option value=''>Todos</option>";
+  try {
+    const r = await fetch(`${API_BASE}/api/fornecedores`); // Rota ajustada
+    let lista = [];
+    if (r.ok) {
+      lista = await r.json();
+    } else {
+      console.warn("Falha ao carregar fornecedores do banco, status:", r.status);
+    }
 
-  // ordena alfabeticamente pelo valor exibido
-  const valores = Array.from(fornecedoresMap.values()).sort((a, b) =>
-    a.localeCompare(b, 'pt-BR', { sensitivity: 'base' })
-  );
+    sel.innerHTML = "";
 
-  for (const f of valores) {
-    const o = document.createElement("option");
-    o.value = f; o.textContent = f;
-    sel.appendChild(o);
+    // O backend retorna [{ id, nome_fornecedor }, ...] ou similar
+    // Vamos normalizar e ordenar
+    const fornecedores = lista
+      .map(f => f.nome_fornecedor || f.nome || "")
+      .filter(n => n.trim() !== "")
+      .sort((a, b) => a.localeCompare(b, 'pt-BR', { sensitivity: 'base' }));
+
+    // Remove duplicados se houver
+    const unique = [...new Set(fornecedores)];
+
+    // Popula o select
+    for (const f of unique) {
+      const o = document.createElement("option");
+      o.value = f;
+      o.textContent = f;
+      sel.appendChild(o);
+    }
+
+    // Default Votorantim logic
+    const opVotorantim = [...sel.options].find(o => o.value.toUpperCase() === "VOTORANTIM");
+    if (opVotorantim) {
+      sel.value = opVotorantim.value;
+    } else if (sel.options.length > 0) {
+      sel.value = sel.options[0].value;
+    }
+
+  } catch (e) {
+    console.error("Erro ao carregarFornecedoresDb:", e);
   }
+}
 
-  if ([...sel.options].some(o => o.value === selecionado)) {
-    sel.value = selecionado; // mantém a seleção do usuário
-  }
+// Stub para manter compatibilidade se algo chamar (mas não deve ser usado mais)
+function coletarFornecedores(lista) {
+  // no-op: agora carregamos do banco globalmente
+}
+
+function renderFornecedoresDropdown() {
+  // no-op: renderização é feita no carregarFornecedoresDb
 }
 
 function carregarProdutos(page = currentPage) {
@@ -269,11 +298,21 @@ function preencherTabela(produtos) {
       <td>${p.codigo_tabela}</td>
       <td>${p.descricao}</td>
       <td>${p.embalagem ?? ""}</td>
-      <td class="num">${(p.peso_liquido ?? 0).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</td>
-      <td class="num">${(p.valor ?? 0).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</td>
+      <td class="num">${(p.peso_liquido ?? 0).toLocaleString('pt-BR', { minimumFractionDigits: 0, maximumFractionDigits: 0 })}</td>
+      <td class="num">${(p.valor ?? 0).toLocaleString('pt-BR', { minimumFractionDigits: 0, maximumFractionDigits: 0 })}</td>
     `;
     // anexa o objeto completo na linha para facilitar coleta
     tr.dataset.produto = JSON.stringify(p);
+
+    // Toggle para mobile
+    tr.addEventListener("click", (e) => {
+      // Ignorar cliques diretos no checkbox (para não impedir marcação normal no desktop)
+      if (e.target.tagName.toLowerCase() === 'input') return;
+
+      // Expande/colapsa o card no mobile
+      tr.classList.toggle("expanded");
+    });
+
     tbody.appendChild(tr);
   });
 }
@@ -328,7 +367,67 @@ function gotoNextPage() {
 /* ========================
    Enviar selecionados ao PAI
 ======================== */
-function enviarSelecionados() {
+// ===================================
+// CUSTOM OS MODALS
+// ===================================
+function showOsModal(options) {
+  return new Promise((resolve) => {
+    const backdrop = document.createElement('div');
+    backdrop.className = 'os-modal-backdrop active';
+    backdrop.style.zIndex = '99999';
+
+    const dialog = document.createElement('div');
+    dialog.className = 'os-modal-dialog';
+    dialog.style.maxWidth = '400px';
+
+    const header = document.createElement('div');
+    header.className = 'os-modal-header';
+    header.innerHTML = `<h3 class="os-modal-title">${options.title}</h3>
+                        <button class="os-modal-close">&times;</button>`;
+
+    const body = document.createElement('div');
+    body.className = 'os-modal-body';
+    body.innerHTML = `<p style="margin:0;">${options.message}</p>`;
+
+    const footer = document.createElement('div');
+    footer.className = 'os-modal-footer';
+
+    if (options.type === 'confirm') {
+      const btnCancel = document.createElement('button');
+      btnCancel.className = 'os-btn os-btn-secondary';
+      btnCancel.textContent = 'Cancelar';
+
+      const btnOk = document.createElement('button');
+      btnOk.className = 'os-btn os-btn-primary';
+      btnOk.textContent = 'OK';
+
+      footer.appendChild(btnCancel);
+      footer.appendChild(btnOk);
+
+      btnCancel.onclick = () => { document.body.removeChild(backdrop); resolve(false); };
+      btnOk.onclick = () => { document.body.removeChild(backdrop); resolve(true); };
+    } else {
+      const btnOk = document.createElement('button');
+      btnOk.className = 'os-btn os-btn-primary';
+      btnOk.textContent = 'OK';
+      footer.appendChild(btnOk);
+      btnOk.onclick = () => { document.body.removeChild(backdrop); resolve(true); };
+    }
+
+    header.querySelector('.os-modal-close').onclick = () => {
+      document.body.removeChild(backdrop);
+      resolve(options.type === 'confirm' ? false : true);
+    };
+
+    dialog.appendChild(header);
+    dialog.appendChild(body);
+    dialog.appendChild(footer);
+    backdrop.appendChild(dialog);
+    document.body.appendChild(backdrop);
+  });
+}
+
+async function enviarSelecionados() {
   const selecionados = [];
   document.querySelectorAll("#tabela-produtos-body tr").forEach(tr => {
     const chk = tr.querySelector(".produto-checkbox");
@@ -351,7 +450,7 @@ function enviarSelecionados() {
   });
 
   if (selecionados.length === 0) {
-    alert("Selecione ao menos um produto.");
+    await showOsModal({ title: 'Aviso', message: 'Selecione ao menos um produto.', type: 'alert' });
     return;
   }
 
@@ -376,6 +475,7 @@ window.onload = async function () {
     try { carregarPreSelecionadosDaSessao(); } catch (e) { console.warn(e); }
   }
   // mantém o fluxo original
+  await carregarFornecedoresDb(); // ✅ Carrega filtro primeiro
   await carregarGrupos();
   await carregarProdutos();
 };

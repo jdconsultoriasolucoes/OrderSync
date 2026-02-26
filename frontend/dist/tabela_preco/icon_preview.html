@@ -1,0 +1,228 @@
+﻿<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Icon Options Preview</title>
+    <!-- Bootstrap Icons -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css">
+    <!-- Font Awesome -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+
+    <style>
+        body {
+            font-family: sans-serif;
+            padding: 20px;
+            background: #f8fafc;
+        }
+
+        h2 {
+            border-bottom: 2px solid #ddd;
+            padding-bottom: 10px;
+            margin-top: 30px;
+        }
+
+        .icon-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(100px, 1fr));
+            gap: 20px;
+        }
+
+        .icon-card {
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            text-align: center;
+            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+            transition: transform 0.2s;
+        }
+
+        .icon-card:hover {
+            transform: scale(1.05);
+            border: 2px solid #007bff;
+        }
+
+        .icon-card i,
+        .icon-card span {
+            font-size: 24px;
+            display: block;
+            margin-bottom: 10px;
+            color: #333;
+        }
+
+        .label {
+            font-size: 12px;
+            color: #666;
+        }
+
+        .btn-preview {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            border: none;
+            margin: 5px;
+            cursor: pointer;
+        }
+    </style>
+</head>
+
+<body>
+
+    <h1>Opções de Ícones</h1>
+    <p>Escolha o estilo que mais lhe agrada.</p>
+
+    <!-- 1. UNICODE (Atual) -->
+    <h2>1. Unicode (Atual - Texto Simples)</h2>
+    <p>Leve, não carrega arquivos externos, mas visual limitado.</p>
+    <div class="icon-grid">
+        <div class="icon-card"><span>✎</span>
+            <div class="label">Editar</div>
+        </div>
+        <div class="icon-card"><span>✕</span>
+            <div class="label">Fechar/Cancelar</div>
+        </div>
+        <div class="icon-card"><span>⧉</span>
+            <div class="label">Duplicar</div>
+        </div>
+        <div class="icon-card"><span>+</span>
+            <div class="label">Adicionar</div>
+        </div>
+        <div class="icon-card"><span>☰</span>
+            <div class="label">Menu/Listar</div>
+        </div>
+        <div class="icon-card"><span>▲</span>
+            <div class="label">Colapsar</div>
+        </div>
+        <div class="icon-card"><span>▲</span>
+            <div class="label">Colapsar</div>
+        </div>
+        <div class="icon-card"><span>▶</span>
+            <div class="label">Detalhes</div>
+        </div>
+        <div class="icon-card"><span>💾</span>
+            <div class="label">Salvar (Emoji)</div>
+        </div>
+    </div>
+
+    <!-- 2. BOOTSTRAP ICONS -->
+    <h2>2. Bootstrap Icons (Moderno & Clean)</h2>
+    <p>Visual padrão do Bootstrap. Muito usado.</p>
+    <div class="icon-grid">
+        <div class="icon-card"><i class="bi bi-floppy"></i>
+            <div class="label">floppy</div>
+        </div>
+        <div class="icon-card"><i class="bi bi-floppy-fill"></i>
+            <div class="label">floppy-fill</div>
+        </div>
+        <div class="icon-card"><i class="bi bi-pencil"></i>
+            <div class="label">pencil</div>
+        </div>
+        <div class="icon-card"><i class="bi bi-pencil-square"></i>
+            <div class="label">pencil-square</div>
+        </div>
+        <div class="icon-card"><i class="bi bi-x-lg"></i>
+            <div class="label">x-lg</div>
+        </div>
+        <div class="icon-card"><i class="bi bi-x-circle"></i>
+            <div class="label">x-circle</div>
+        </div>
+        <div class="icon-card"><i class="bi bi-files"></i>
+            <div class="label">files (duplicar)</div>
+        </div>
+        <div class="icon-card"><i class="bi bi-copy"></i>
+            <div class="label">copy</div>
+        </div>
+        <div class="icon-card"><i class="bi bi-plus-lg"></i>
+            <div class="label">plus-lg</div>
+        </div>
+        <div class="icon-card"><i class="bi bi-plus-circle-fill"></i>
+            <div class="label">plus-circle</div>
+        </div>
+        <div class="icon-card"><i class="bi bi-list"></i>
+            <div class="label">list</div>
+        </div>
+        <div class="icon-card"><i class="bi bi-chevron-up"></i>
+            <div class="label">chevron-up</div>
+        </div>
+    </div>
+
+    <!-- 3. FONT AWESOME -->
+    <h2>3. Font Awesome (Clássico & Robusto)</h2>
+    <p>Ícones mais "pesados" e detalhados.</p>
+    <div class="icon-grid">
+        <div class="icon-card"><i class="fa-solid fa-floppy-disk"></i>
+            <div class="label">floppy-disk</div>
+        </div>
+        <div class="icon-card"><i class="fa-regular fa-floppy-disk"></i>
+            <div class="label">floppy-disk (reg)</div>
+        </div>
+        <div class="icon-card"><i class="fa-solid fa-pen"></i>
+            <div class="label">pen</div>
+        </div>
+        <div class="icon-card"><i class="fa-solid fa-pen-to-square"></i>
+            <div class="label">pen-to-square</div>
+        </div>
+        <div class="icon-card"><i class="fa-solid fa-xmark"></i>
+            <div class="label">xmark</div>
+        </div>
+        <div class="icon-card"><i class="fa-solid fa-circle-xmark"></i>
+            <div class="label">circle-xmark</div>
+        </div>
+        <div class="icon-card"><i class="fa-regular fa-copy"></i>
+            <div class="label">copy</div>
+        </div>
+        <div class="icon-card"><i class="fa-solid fa-clone"></i>
+            <div class="label">clone</div>
+        </div>
+        <div class="icon-card"><i class="fa-solid fa-plus"></i>
+            <div class="label">plus</div>
+        </div>
+        <div class="icon-card"><i class="fa-solid fa-bars"></i>
+            <div class="label">bars</div>
+        </div>
+        <div class="icon-card"><i class="fa-solid fa-chevron-up"></i>
+            <div class="label">chevron-up</div>
+        </div>
+    </div>
+
+    <!-- 4. GOOGLE MATERIAL -->
+    <h2>4. Material Symbols (Google)</h2>
+    <link rel="stylesheet"
+        href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@24,400,0,0" />
+    <style>
+        .material-symbols-outlined {
+            font-size: 28px;
+        }
+    </style>
+    <div class="icon-grid">
+        <div class="icon-card"><span class="material-symbols-outlined">save</span>
+            <div class="label">save</div>
+        </div>
+        <div class="icon-card"><span class="material-symbols-outlined">edit</span>
+            <div class="label">edit</div>
+        </div>
+        <div class="icon-card"><span class="material-symbols-outlined">close</span>
+            <div class="label">close</div>
+        </div>
+        <div class="icon-card"><span class="material-symbols-outlined">content_copy</span>
+            <div class="label">content_copy</div>
+        </div>
+        <div class="icon-card"><span class="material-symbols-outlined">add</span>
+            <div class="label">add</div>
+        </div>
+        <div class="icon-card"><span class="material-symbols-outlined">menu</span>
+            <div class="label">menu</div>
+        </div>
+        <div class="icon-card"><span class="material-symbols-outlined">expand_less</span>
+            <div class="label">expand_less</div>
+        </div>
+    </div>
+
+</body>
+
+</html>
+

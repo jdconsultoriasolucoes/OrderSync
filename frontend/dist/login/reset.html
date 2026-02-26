@@ -1,0 +1,99 @@
+﻿<!DOCTYPE html>
+<html lang="pt-BR">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>OrderSync — Redefinir Senha</title>
+    <link rel="stylesheet" href="../design-system.css">
+    <link rel="stylesheet" href="login.css">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+</head>
+
+<body class="os-login-page">
+    <div class="os-login-card">
+        <img src="../logo.png" alt="OrderSync" class="os-login-logo" />
+        <h2>Nova Senha</h2>
+        <p class="os-login-subtitle">Crie uma nova senha segura para sua conta.</p>
+
+        <form id="reset-form" class="os-login-form">
+            <div class="os-form-group">
+                <label for="senha">Nova Senha</label>
+                <input type="password" id="senha" placeholder="••••••••" required minlength="8">
+            </div>
+            <div class="os-form-group">
+                <label for="confirmar">Confirmar Senha</label>
+                <input type="password" id="confirmar" placeholder="••••••••" required minlength="8">
+            </div>
+            <button type="submit" class="os-login-btn" id="btn-submit">Salvar Nova Senha</button>
+        </form>
+
+        <div id="msg-box" class="os-msg-box"></div>
+    </div>
+
+    <script src="../js/config.js"></script>
+    <script>
+        const API_URL = window.API_BASE || "http://127.0.0.1:8000";
+
+        // Pega token da URL
+        const urlParams = new URLSearchParams(window.location.search);
+        const token = urlParams.get('token');
+
+        if (!token) {
+            document.getElementById("reset-form").style.display = "none";
+            const msg = document.getElementById("msg-box");
+            msg.className = "os-msg-box error";
+            msg.innerText = "Link inválido ou expirado. Solicite uma nova redefinição.";
+            msg.style.display = "block";
+        }
+
+        document.getElementById("reset-form").addEventListener("submit", async (e) => {
+            e.preventDefault();
+            const senha = document.getElementById("senha").value;
+            const confirmar = document.getElementById("confirmar").value;
+            const btn = document.getElementById("btn-submit");
+            const msgBox = document.getElementById("msg-box");
+
+            if (senha !== confirmar) {
+                alert("As senhas não coincidem!");
+                return;
+            }
+
+            btn.disabled = true;
+            btn.innerText = "Salvando...";
+            msgBox.style.display = "none";
+
+            try {
+                const response = await fetch(`${API_URL}/token/reset-password`, {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({ token, senha_nova: senha })
+                });
+
+                if (response.ok) {
+                    msgBox.className = "os-msg-box success";
+                    msgBox.innerHTML = 'Senha alterada com sucesso! <br><a href="login.html">Ir para Login</a>';
+                    msgBox.style.display = "block";
+                    document.getElementById("reset-form").reset();
+                    document.getElementById("reset-form").style.display = "none";
+                } else {
+                    const data = await response.json();
+                    throw new Error(data.detail || "Erro ao redefinir senha.");
+                }
+
+            } catch (err) {
+                msgBox.className = "os-msg-box error";
+                msgBox.innerText = err.message;
+                msgBox.style.display = "block";
+            } finally {
+                btn.disabled = false;
+                btn.innerText = "Salvar Nova Senha";
+            }
+        });
+    </script>
+</body>
+
+</html>
+

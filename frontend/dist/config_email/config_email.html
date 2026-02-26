@@ -1,110 +1,399 @@
-<!doctype html>
+﻿<!DOCTYPE html>
 <html lang="pt-BR">
+
 <head>
   <meta charset="utf-8" />
-  <title>Configuração de E-mail · OrderSync</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Configuração de E-mail — OrderSync</title>
   <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate" />
-  <meta http-equiv="Pragma" content="no-cache" />
-  <meta http-equiv="Expires" content="0" />
-  <link rel="stylesheet" href="/static/config_email/config_email.css?v=tab-1" />
- <script>
-  window.API_BASE = "https://ordersync-backend-59d2.onrender.com";
-  window.CONFIG_EMAIL_BASE = window.API_BASE + "/admin/config_email";
-  window.NETDIAG_BASE = window.API_BASE + "/admin/netdiag";
 
-  // Use exatamente as rotas do OpenAPI
-  window.CONFIG_EMAIL_ENDPOINTS = {
-    mensagem:    window.CONFIG_EMAIL_BASE + "/mensagem",
-    smtp:        window.CONFIG_EMAIL_BASE + "/smtp",
-    testarEnvio: window.CONFIG_EMAIL_BASE + "/teste_envio"
-    // OBS: não existe /smtp/teste no seu back
-  };
+  <!-- Design System -->
+  <link rel="stylesheet" href="../design-system.css" />
+
+  <!-- Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
+
+  <style>
+    /* Page-specific overrides */
+    .page-container {
+      max-width: 900px;
+      margin: 0 auto;
+      padding: var(--os-space-4);
+      padding-top: calc(var(--os-header-height) + var(--os-space-3));
+
+    }
+
+    .card {
+      background: var(--os-bg-white);
+      border-radius: var(--os-radius-lg);
+      box-shadow: var(--os-shadow);
+      padding: var(--os-space-3);
+      border: 1px solid var(--os-border);
+    }
+
+    .card-title {
+      font-size: var(--os-text-lg);
+      font-weight: 600;
+      color: var(--os-text);
+      padding-bottom: var(--os-space-2);
+      border-bottom: 1px solid var(--os-border);
+      margin-bottom: var(--os-space-2);
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+      font-size: var(--os-text-sm);
+    }
+
+    /* Tabs — keeping existing class names for JS compatibility */
+    .tabs {
+      display: flex;
+      gap: 0;
+      border-bottom: 2px solid var(--os-border);
+      margin-bottom: var(--os-space-3);
+    }
+
+    .tab {
+      appearance: none;
+      background: transparent;
+      border: none;
+      padding: 12px 20px;
+      font-size: var(--os-text-sm);
+      font-weight: 500;
+      color: var(--os-text-secondary);
+      cursor: pointer;
+      border-bottom: 2px solid transparent;
+      margin-bottom: -2px;
+      white-space: nowrap;
+      transition: color 0.15s, border-color 0.15s;
+      font-family: var(--os-font);
+    }
+
+    .tab:hover {
+      color: var(--os-primary);
+    }
+
+    .tab.active {
+      color: var(--os-primary);
+      font-weight: 600;
+      border-bottom-color: var(--os-primary);
+    }
+
+    .tab-panel {
+      display: none;
+    }
+
+    .tab-panel.active {
+      display: block;
+    }
+
+    /* Form Fields */
+    .field {
+      margin-bottom: var(--os-space-2);
+    }
+
+    .field>label {
+      display: block;
+      font-weight: 600;
+      margin-bottom: 6px;
+      color: #374151;
+      font-size: var(--os-text-sm);
+    }
+
+    .field>small,
+    .help {
+      color: var(--os-text-muted);
+      font-size: var(--os-text-xs);
+    }
+
+    .help code {
+      background: var(--os-bg);
+      padding: 1px 4px;
+      border-radius: 4px;
+      font-size: var(--os-text-xs);
+    }
+
+    .field.checkbox {
+      display: flex;
+      align-items: center;
+      gap: var(--os-space-1);
+    }
+
+    .field.checkbox>label {
+      margin: 0;
+      font-weight: 500;
+    }
+
+    textarea {
+      resize: vertical;
+    }
+
+    .grid-2 {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: var(--os-space-2);
+    }
+
+    @media (max-width: 720px) {
+      .grid-2 {
+        grid-template-columns: 1fr;
+      }
+    }
+
+    /* Actions */
+    .actions {
+      display: flex;
+      gap: var(--os-space-1);
+      margin-top: var(--os-space-3);
+      padding-top: var(--os-space-2);
+      border-top: 1px solid var(--os-border);
+    }
+
+    /* Buttons — keep old class names for JS references */
+    .btn {
+      padding: 10px 16px;
+      border: 1px solid var(--os-border);
+      border-radius: var(--os-radius);
+      background: var(--os-bg-white);
+      cursor: pointer;
+      font-weight: 600;
+      font-size: var(--os-text-sm);
+      font-family: var(--os-font);
+      transition: all 0.15s;
+    }
+
+    .btn.primary {
+      background: var(--os-primary);
+      color: #fff;
+      border-color: var(--os-primary);
+    }
+
+    .btn.primary:hover {
+      background: var(--os-primary-hover);
+      border-color: var(--os-primary-hover);
+    }
+
+    .btn:hover:not(.primary) {
+      border-color: var(--os-primary);
+      color: var(--os-primary);
+    }
+
+    .btn:disabled {
+      opacity: .5;
+      cursor: not-allowed;
+    }
+
+    /* Inputs */
+    input[type="text"],
+    input[type="email"],
+    input[type="number"],
+    input[type="password"],
+    textarea {
+      width: 100%;
+      padding: 10px 12px;
+      border: 1px solid var(--os-border);
+      border-radius: var(--os-radius);
+      background: var(--os-bg-white);
+      outline: none;
+      font-family: var(--os-font);
+      font-size: var(--os-text-sm);
+      color: var(--os-text);
+      transition: border-color 0.15s, box-shadow 0.15s;
+    }
+
+    input:focus,
+    textarea:focus {
+      border-color: var(--os-primary);
+      box-shadow: 0 0 0 3px var(--os-primary-ring);
+    }
+
+    .envio-cliente-toggle {
+      padding: 10px 14px;
+      background: var(--os-primary-light);
+      border-radius: var(--os-radius);
+      border: 1px solid #93C5FD;
+      margin-bottom: var(--os-space-2);
+    }
+
+    @media (max-width: 768px) {
+      .page-container {
+        margin-left: 0;
+        padding: var(--os-space-2);
+        padding-top: calc(var(--os-header-height) + var(--os-space-2));
+      }
+    }
+  </style>
+
+  <script src="../js/config.js"></script>
+  <script src="../js/auth.js"></script>
+  <script src="../js/sidebar_control.js"></script>
+  <script>
+    if (window.Auth) { window.Auth.checkAuth(); }
   </script>
- <script defer src="/static/config_email/config_email.js?v=tab-6"></script>
+
+  <script>
+    window.API_BASE = window.API_BASE || "https://ordersync-backend-59d2.onrender.com";
+    window.CONFIG_EMAIL_BASE = window.API_BASE + "/admin/config_email";
+    window.NETDIAG_BASE = window.API_BASE + "/admin/netdiag";
+
+    window.CONFIG_EMAIL_ENDPOINTS = {
+      mensagem: window.CONFIG_EMAIL_BASE + "/mensagem",
+      smtp: window.CONFIG_EMAIL_BASE + "/smtp",
+      testarEnvio: window.CONFIG_EMAIL_BASE + "/teste_envio"
+    };
+  </script>
+  <script defer src="config_email.js?v=tab-6"></script>
 </head>
+
 <body>
-  <header class="topbar">
-    <div class="brand">
-      <img src="/static/logo.png" class="logo" alt="ORDERSYNC" />
-      <span>ORDERSYNC</span>
-    </div>
+  <!-- ========== HEADER ========== -->
+  <header class="os-header">
+    <button class="os-menu-btn" id="menu-button" aria-label="Menu">&#9776;</button>
+    <img src="../logo.png" alt="Logo" class="os-logo" />
+    <span class="os-header-title">Configuração de E-mail</span>
   </header>
 
-  <main class="container">
-    <h1>Configuração de E-mail</h1>
+  <!-- ========== SIDEBAR ========== -->
+  <nav class="os-sidebar" id="sidebar">
+    <div class="os-sidebar-section">Menu</div>
+    <ul>
+      <li><a href="../../index.html">Home</a></li>
+      <li><a href="../clientes/cliente.html">Clientes</a></li>
+      <li><a href="../gerenciar_tabelas/gerenciar_tabelas.html">Atualizar Catálogo</a></li>
+      <li><a href="../pedido/pedido.html">Consultar Pedidos</a></li>
+      <li><a href="../tabela_preco/criacao_tabela_preco.html">Tabela Preço</a></li>
+      <li><a href="../produto/produto.html">Produtos</a></li>
+    </ul>
+    <div class="os-sidebar-section">Sistema</div>
+    <ul>
+      <li><a href="../usuarios.html">Usuários</a></li>
+      <li><a href="../config_email/config_email.html" class="active">Configuração E-mail</a></li>
+      <li><a href="#" onclick="window.Auth.openChangePasswordModal()">Trocar Senha</a></li>
+      <li><a href="#" onclick="window.Auth.logout()">Sair</a></li>
+    </ul>
+  </nav>
+  <div class="os-sidebar-overlay" id="overlay"></div>
 
-    <nav class="tabs" role="tablist" aria-label="Configuração de e-mail">
-      <button class="tab active" data-tab="tab-mensagem" role="tab" aria-selected="true">Mensagem</button>
-      <button class="tab" data-tab="tab-smtp" role="tab" aria-selected="false">SMTP</button>
-    </nav>
+  <!-- ========== MAIN ========== -->
+  <div class="page-container">
+    <div class="card">
 
-    <!-- Guia: Mensagem -->
-    <section id="tab-mensagem" class="tab-panel active" role="tabpanel" aria-labelledby="Mensagem">
-      <form id="form-mensagem" class="form">
-        <div class="field">
-          <label>Destinatário interno <small>(separar por vírgula)</small></label>
-          <textarea id="destinatario_interno" rows="3" placeholder="ex.: pedidos@empresa.com, compras@empresa.com"></textarea>
-        </div>
+      <nav class="tabs" role="tablist" aria-label="Configuração de e-mail">
+        <button class="tab active" data-tab="tab-mensagem" role="tab" aria-selected="true">Mensagem (Interna)</button>
+        <button class="tab" data-tab="tab-mensagem-cliente" role="tab" aria-selected="false">Mensagem (Cliente)</button>
+        <button class="tab" data-tab="tab-smtp" role="tab" aria-selected="false">SMTP</button>
+      </nav>
 
-        <div class="field">
-          <label>Assunto padrão</label>
-          <input id="assunto_padrao" type="text" placeholder="Novo pedido {{pedido_id}}" />
-        </div>
+      <!-- Tab: Mensagem Interna -->
+      <section id="tab-mensagem" class="tab-panel active" role="tabpanel">
+        <form id="form-mensagem" class="form">
+          <div class="field">
+            <label>Destinatário interno <small>(separar por vírgula)</small></label>
+            <textarea id="destinatario_interno" rows="3"
+              placeholder="ex.: pedidos@empresa.com, compras@empresa.com"></textarea>
+          </div>
+          <div class="field">
+            <label>Assunto padrão</label>
+            <input id="assunto_padrao" type="text" placeholder="Novo pedido {{pedido_id}}" />
+          </div>
+          <div class="field">
+            <label>Corpo do e-mail <small>(HTML permitido)</small></label>
+            <textarea id="corpo_html" rows="8"
+              placeholder="<p>Olá {{cliente_nome}}, seu pedido {{pedido_id}} foi recebido...</p>"></textarea>
+            <p class="help">Placeholders: <code>{{pedido_id}}</code>, <code>{{cliente_nome}}</code>,
+              <code>{{total_pedido}}</code>, <code>{{link_pdf}}</code>
+            </p>
+          </div>
+          <div class="field checkbox" style="display:none"></div>
+          <div class="actions">
+            <button type="button" class="btn primary btnSalvarGeral">Salvar Tudo</button>
+            <button type="button" id="btnTestarEnvio" class="btn">Testar envio (Interno)</button>
+          </div>
+        </form>
+      </section>
+      </section>
 
-        <div class="field">
-          <label>Corpo do e-mail <small>(HTML permitido)</small></label>
-          <textarea id="corpo_html" rows="8" placeholder="<p>Olá {{cliente_nome}}, seu pedido {{pedido_id}} foi recebido...</p>"></textarea>
-          <p class="help">Placeholders: <code>{{pedido_id}}</code>, <code>{{cliente_nome}}</code>, <code>{{total_pedido}}</code>, <code>{{link_pdf}}</code></p>
-        </div>
-
-        <div class="field checkbox">
+      <!-- Tab: Mensagem Cliente -->
+      <section id="tab-mensagem-cliente" class="tab-panel" role="tabpanel">
+        <div class="field checkbox envio-cliente-toggle">
           <input id="enviar_para_cliente" type="checkbox" />
-          <label for="enviar_para_cliente">Enviar também para o cliente</label>
+          <label for="enviar_para_cliente" style="font-weight:600; color: var(--os-primary);">Habilitar envio de e-mail
+            para o cliente</label>
         </div>
+        <form id="form-mensagem-cliente" class="form">
+          <div class="field">
+            <label>Assunto (Cliente)</label>
+            <input id="assunto_cliente" type="text" placeholder="Confirmação do seu orçamento {{pedido_id}}" />
+          </div>
+          <div class="field">
+            <label>Corpo do e-mail (Cliente) <small>(HTML permitido)</small></label>
+            <textarea id="corpo_html_cliente" rows="8"
+              placeholder="<p>Olá {{cliente_nome}}, recebemos seu pedido {{pedido_id}}...</p>"></textarea>
+            <p class="help">Placeholders: <code>{{pedido_id}}</code>, <code>{{cliente_nome}}</code>,
+              <code>{{total_pedido}}</code>, <code>{{link_pdf}}</code>
+            </p>
+          </div>
+          <div class="actions">
+            <button type="button" class="btn primary btnSalvarGeral">Salvar Tudo</button>
+          </div>
+        </form>
+      </section>
 
-        <div class="actions">
-          <button type="button" id="btnSalvarMensagem" class="btn primary">Salvar</button>
-          <button type="button" id="btnTestarEnvio" class="btn">Testar envio</button>
-        </div>
-      </form>
-    </section>
+      <!-- Tab: SMTP -->
+      <section id="tab-smtp" class="tab-panel" role="tabpanel">
+        <form id="form-smtp" class="form">
+          <div class="grid-2">
+            <div class="field">
+              <label>Remetente (From)</label>
+              <input id="remetente_email" type="email"
+                placeholder="Pedidos <pedidos@empresa.com> ou pedidos@empresa.com" />
+            </div>
+            <div class="field">
+              <label>Servidor SMTP (host)</label>
+              <input id="smtp_host" type="text" placeholder="smtp.seudominio.com" />
+            </div>
+            <div class="field">
+              <label>Porta</label>
+              <input id="smtp_port" type="number" min="1" step="1" value="587" />
+            </div>
+            <div class="field">
+              <label>Usuário SMTP</label>
+              <input id="smtp_user" type="text" placeholder="pedidos@empresa.com" />
+            </div>
+            <div class="field">
+              <label>Senha SMTP</label>
+              <input id="smtp_senha" type="password" />
+            </div>
+            <div class="field checkbox">
+              <input id="usar_tls" type="checkbox" checked />
+              <label for="usar_tls">Usar TLS</label>
+            </div>
+          </div>
+          <div class="actions">
+            <button type="button" id="btnSalvarSMTP" class="btn primary">Salvar</button>
+            <button type="button" id="btnTestarSMTP" class="btn">Testar conexão</button>
+          </div>
+        </form>
+      </section>
+    </div>
+  </div>
 
-    <!-- Guia: SMTP -->
-    <section id="tab-smtp" class="tab-panel" role="tabpanel" aria-labelledby="SMTP">
-      <form id="form-smtp" class="form">
-        <div class="grid-2">
-          <div class="field">
-            <label>Remetente (From)</label>
-            <input id="remetente_email" type="email" placeholder="Pedidos &lt;pedidos@empresa.com&gt; ou pedidos@empresa.com" />
-          </div>
-          <div class="field">
-            <label>Servidor SMTP (host)</label>
-            <input id="smtp_host" type="text" placeholder="smtp.seudominio.com" />
-          </div>
-          <div class="field">
-            <label>Porta</label>
-            <input id="smtp_port" type="number" min="1" step="1" value="587" />
-          </div>
-          <div class="field">
-            <label>Usuário SMTP</label>
-            <input id="smtp_user" type="text" placeholder="pedidos@empresa.com" />
-          </div>
-          <div class="field">
-            <label>Senha SMTP</label>
-            <input id="smtp_senha" type="password" />
-          </div>
-          <div class="field checkbox">
-            <input id="usar_tls" type="checkbox" checked />
-            <label for="usar_tls">Usar TLS</label>
-          </div>
-        </div>
+  <script>
+    const menuButton = document.getElementById("menu-button");
+    const sidebar = document.getElementById("sidebar");
+    const overlay = document.getElementById("overlay");
 
-        <div class="actions">
-          <button type="button" id="btnSalvarSMTP" class="btn primary">Salvar</button>
-          <button type="button" id="btnTestarSMTP" class="btn">Testar conexão</button>
-        </div>
-      </form>
-    </section>
-  </main>
+    if (menuButton && sidebar && overlay) {
+      menuButton.addEventListener("click", () => {
+        sidebar.classList.toggle("active");
+        overlay.classList.toggle("active");
+      });
+      overlay.addEventListener("click", () => {
+        sidebar.classList.remove("active");
+        overlay.classList.remove("active");
+      });
+    }
+  </script>
 </body>
+
 </html>

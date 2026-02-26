@@ -1,0 +1,420 @@
+﻿<!DOCTYPE html>
+<html lang="pt-BR">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Gerenciar Tabelas — OrderSync</title>
+    <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate" />
+
+    <!-- Design System -->
+    <link rel="stylesheet" href="../design-system.css" />
+
+    <!-- Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
+
+    <style>
+        .page-container {
+            padding: var(--os-space-4);
+            padding-top: calc(var(--os-header-height) + var(--os-space-3));
+            max-width: var(--os-max-content);
+            margin: 0 auto;
+            /* Centralize */
+        }
+
+        .card {
+            background: var(--os-bg-white);
+            border-radius: var(--os-radius-lg);
+            box-shadow: var(--os-shadow);
+            border: 1px solid var(--os-border);
+            padding: var(--os-space-3);
+        }
+
+        .page-title {
+            font-size: var(--os-text-2xl);
+            font-weight: 600;
+            color: var(--os-text);
+            margin-bottom: var(--os-space-3);
+        }
+
+        /* Internal module navigation */
+        .module-nav {
+            display: flex;
+            gap: 0;
+            border-bottom: 2px solid var(--os-border);
+            margin-bottom: var(--os-space-3);
+        }
+
+        .module-nav-btn {
+            appearance: none;
+            background: transparent;
+            border: none;
+            padding: 12px 20px;
+            font-size: var(--os-text-sm);
+            font-weight: 500;
+            color: var(--os-text-secondary);
+            cursor: pointer;
+            border-bottom: 2px solid transparent;
+            margin-bottom: -2px;
+            transition: color 0.15s, border-color 0.15s;
+            font-family: var(--os-font);
+        }
+
+        .module-nav-btn:hover {
+            color: var(--os-primary);
+        }
+
+        .module-nav-btn.active {
+            color: var(--os-primary);
+            font-weight: 600;
+            border-bottom-color: var(--os-primary);
+        }
+
+        /* Table toolbar */
+        .toolbar {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: var(--os-space-2);
+        }
+
+        .module-section-title {
+            font-size: var(--os-text-lg);
+            font-weight: 600;
+            color: var(--os-text);
+        }
+
+        /* Data grid (dynamic table rendered by JS) */
+        #grid {
+            overflow-x: auto;
+        }
+
+        #grid table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: var(--os-text-sm);
+        }
+
+        #grid thead {
+            background-color: var(--os-bg);
+        }
+
+        #grid th {
+            padding: 12px 16px;
+            text-align: left;
+            font-weight: 600;
+            font-size: var(--os-text-xs);
+            text-transform: uppercase;
+            letter-spacing: 0.04em;
+            color: var(--os-text-secondary);
+            border-bottom: 1px solid var(--os-border);
+            white-space: nowrap;
+        }
+
+        #grid td {
+            padding: 12px 16px;
+            border-bottom: 1px solid var(--os-border);
+            color: var(--os-text);
+            vertical-align: middle;
+        }
+
+        #grid tbody tr:last-child td {
+            border-bottom: none;
+        }
+
+        #grid tbody tr:hover {
+            background-color: #F8FAFC;
+        }
+
+        #grid .btn {
+            margin-right: 4px;
+        }
+
+        /* Buttons in grid */
+        #grid .btn-sm {
+            padding: 4px 10px;
+            font-size: var(--os-text-xs);
+            border-radius: var(--os-radius);
+            border: 1px solid var(--os-border);
+            background: var(--os-bg-white);
+            cursor: pointer;
+            font-family: var(--os-font);
+        }
+
+        #grid .btn-primary {
+            background: var(--os-primary);
+            color: #fff;
+            border-color: var(--os-primary);
+        }
+
+        #grid .btn-danger {
+            background: var(--os-error-light);
+            color: var(--os-error);
+            border-color: #FECACA;
+        }
+
+        #grid .btn-danger:hover {
+            background: #FECACA;
+        }
+
+        /* Modals */
+        .custom-modal {
+            display: none;
+            position: fixed;
+            inset: 0;
+            background: rgba(0, 0, 0, 0.4);
+            align-items: center;
+            justify-content: center;
+            z-index: 1000;
+            animation: os-fade-in 0.15s ease;
+        }
+
+        .custom-modal.flex {
+            display: flex;
+        }
+
+        .modal-dialog {
+            background: var(--os-bg-white);
+            border-radius: var(--os-radius-lg);
+            box-shadow: var(--os-shadow-lg);
+            padding: var(--os-space-3);
+            width: 100%;
+            max-width: 500px;
+            animation: os-slide-up 0.2s ease;
+        }
+
+        .modal-dialog h3 {
+            font-size: var(--os-text-lg);
+            font-weight: 600;
+            color: var(--os-text);
+            margin: 0 0 var(--os-space-2);
+            padding-bottom: var(--os-space-2);
+            border-bottom: 1px solid var(--os-border);
+        }
+
+        .modal-dialog label {
+            display: block;
+            font-weight: 600;
+            margin-bottom: 6px;
+            color: #374151;
+            font-size: var(--os-text-sm);
+        }
+
+        .modal-dialog input,
+        .modal-dialog select {
+            width: 100%;
+            padding: 10px 12px;
+            border: 1px solid var(--os-border);
+            border-radius: var(--os-radius);
+            margin-bottom: var(--os-space-2);
+            font-family: var(--os-font);
+            font-size: var(--os-text-sm);
+            outline: none;
+        }
+
+        .modal-dialog input:focus,
+        .modal-dialog select:focus {
+            border-color: var(--os-primary);
+            box-shadow: 0 0 0 3px var(--os-primary-ring);
+        }
+
+        .modal-footer {
+            display: flex;
+            gap: var(--os-space-1);
+            justify-content: flex-end;
+            margin-top: var(--os-space-2);
+            padding-top: var(--os-space-2);
+            border-top: 1px solid var(--os-border);
+        }
+
+        .modal-footer .btn {
+            padding: 10px 16px;
+            border-radius: var(--os-radius);
+            border: 1px solid var(--os-border);
+            background: var(--os-bg-white);
+            cursor: pointer;
+            font-weight: 600;
+            font-size: var(--os-text-sm);
+            font-family: var(--os-font);
+        }
+
+        .modal-footer .btn-primary {
+            background: var(--os-primary);
+            color: #fff;
+            border-color: var(--os-primary);
+        }
+
+        .modal-footer .btn-primary:hover {
+            background: var(--os-primary-hover);
+        }
+
+        .loading-text,
+        #loading {
+            text-align: center;
+            padding: var(--os-space-4);
+            color: var(--os-text-secondary);
+            font-size: var(--os-text-sm);
+        }
+
+        @media (max-width: 768px) {
+            .page-container {
+                margin-left: 0;
+                padding: var(--os-space-2);
+                padding-top: calc(var(--os-header-height) + var(--os-space-2));
+            }
+
+            .module-nav {
+                overflow-x: auto;
+            }
+        }
+    </style>
+
+    <script src="../js/config.js"></script>
+    <script src="../js/auth.js"></script>
+    <script src="../js/sidebar_control.js"></script>
+    <script>
+        if (window.Auth) { window.Auth.checkAuth(); }
+    </script>
+</head>
+
+<body>
+    <!-- ========== HEADER ========== -->
+    <header class="os-header">
+        <button class="os-menu-btn" id="menu-button" aria-label="Menu">&#9776;</button>
+        <img src="../logo.png" alt="Logo" class="os-logo" />
+        <span class="os-header-title">Gerenciar Tabelas</span>
+    </header>
+
+    <!-- ========== SIDEBAR ========== -->
+    <nav class="os-sidebar" id="sidebar">
+        <div class="os-sidebar-section">Menu</div>
+        <ul>
+            <li><a href="../../index.html">Home</a></li>
+            <li><a href="../clientes/cliente.html">Clientes</a></li>
+            <li><a href="../gerenciar_tabelas/gerenciar_tabelas.html" class="active">Atualizar Catálogo</a></li>
+            <li><a href="../pedido/pedido.html">Consultar Pedidos</a></li>
+            <li><a href="../tabela_preco/criacao_tabela_preco.html">Tabela Preço</a></li>
+            <li><a href="../produto/produto.html">Produtos</a></li>
+        </ul>
+        <div class="os-sidebar-section">Sistema</div>
+        <ul>
+            <li><a href="../usuarios.html">Usuários</a></li>
+            <li><a href="../config_email/config_email.html">Configuração E-mail</a></li>
+            <li><a href="#" onclick="window.Auth.openChangePasswordModal()">Trocar Senha</a></li>
+            <li><a href="#" onclick="window.Auth.logout()">Sair</a></li>
+        </ul>
+    </nav>
+    <div class="os-sidebar-overlay" id="overlay"></div>
+
+    <!-- ========== MAIN ========== -->
+    <div class="page-container">
+        <div class="card">
+            <!-- Module Navigation -->
+            <nav class="module-nav">
+                <button class="module-nav-btn active" onclick="selectModule('condicoes')">Condições de
+                    Pagamento</button>
+                <button class="module-nav-btn" onclick="selectModule('descontos')">Descontos</button>
+                <button class="module-nav-btn" onclick="selectModule('familias')">Grupo de Produtos</button>
+            </nav>
+
+            <div class="toolbar">
+                <div class="module-section-title" id="sectionTitle">Condições de Pagamento</div>
+                <button class="os-btn os-btn-primary os-btn-sm" onclick="openModal()">+ Novo</button>
+            </div>
+
+            <div id="loading" style="display: none;">Carregando...</div>
+            <div id="grid"></div>
+        </div>
+    </div>
+
+    <!-- ===== Modal: Condições de Pagamento ===== -->
+    <div id="modal-condicoes" class="custom-modal">
+        <div class="modal-dialog">
+            <h3 id="modal-title-condicoes">Nova Condição</h3>
+            <form id="form-condicoes" onsubmit="saveCondicao(event)">
+                <input type="hidden" id="cond-id" />
+                <label>Prazo</label>
+                <input id="cond-prazo" type="text" placeholder="Ex: 28/42DDL" required />
+                <label>Descrição</label>
+                <input id="cond-desc" type="text" placeholder="Descrição da condição">
+                <label>Custo (%)</label>
+                <input id="cond-custo" type="number" step="0.01" value="0" />
+                <div class="modal-footer">
+                    <button type="button" class="btn" onclick="closeModals()">Cancelar</button>
+                    <button type="submit" class="btn btn-primary">Salvar</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- ===== Modal: Descontos ===== -->
+    <div id="modal-descontos" class="custom-modal">
+        <div class="modal-dialog">
+            <h3 id="modal-title-descontos">Novo Desconto</h3>
+            <form id="form-descontos" onsubmit="saveDesconto(event)">
+                <input type="hidden" id="desc-id" />
+                <label>Fator Comissão (%)</label>
+                <input id="desc-fator" type="number" step="0.01" value="0" required />
+                <div class="modal-footer">
+                    <button type="button" class="btn" onclick="closeModals()">Cancelar</button>
+                    <button type="submit" class="btn btn-primary">Salvar</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- ===== Modal: Famílias ===== -->
+    <div id="modal-familias" class="custom-modal">
+        <div class="modal-dialog">
+            <h3 id="modal-title-familias">Novo Grupo de Produtos</h3>
+            <form id="form-familias" onsubmit="saveFamilia(event)">
+                <input type="hidden" id="fam-id" />
+                <label>Tipo</label>
+                <input id="fam-tipo" type="text" placeholder="Ex: Revenda" required />
+                <label>Família</label>
+                <input id="fam-nome" type="text" placeholder="Ex: ARAME" required />
+                <label>Grupo</label>
+                <input id="fam-marca" type="text" placeholder="Ex: GERDAU" required />
+                <div class="modal-footer">
+                    <button type="button" class="btn" onclick="closeModals()">Cancelar</button>
+                    <button type="submit" class="btn btn-primary">Salvar</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <script src="gerenciar_tabelas.js"></script>
+
+    <script>
+        const menuButton = document.getElementById("menu-button");
+        const sidebar = document.getElementById("sidebar");
+        const overlay = document.getElementById("overlay");
+
+        if (menuButton && sidebar && overlay) {
+            menuButton.addEventListener("click", () => {
+                sidebar.classList.toggle("active");
+                overlay.classList.toggle("active");
+            });
+            overlay.addEventListener("click", () => {
+                sidebar.classList.remove("active");
+                overlay.classList.remove("active");
+            });
+        }
+
+        // Highlight active module nav button
+        const originalSelectModule = window.selectModule;
+        if (originalSelectModule) {
+            const navBtns = document.querySelectorAll('.module-nav-btn');
+            document.querySelectorAll('.module-nav-btn').forEach(btn => {
+                btn.addEventListener('click', function () {
+                    navBtns.forEach(b => b.classList.remove('active'));
+                    this.classList.add('active');
+                });
+            });
+        }
+    </script>
+</body>
+
+</html>

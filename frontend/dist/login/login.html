@@ -1,0 +1,92 @@
+﻿<!DOCTYPE html>
+<html lang="pt-BR">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>OrderSync — Login</title>
+    <link rel="stylesheet" href="../design-system.css">
+    <link rel="stylesheet" href="login.css">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+</head>
+
+<body class="os-login-page">
+    <div class="os-login-card">
+        <img src="../logo.png" alt="OrderSync" class="os-login-logo" />
+        <h2>Bem-vindo de volta</h2>
+        <p class="os-login-subtitle">Acesse sua conta OrderSync</p>
+
+        <div id="error-box" class="os-login-error"></div>
+
+        <form id="login-form" class="os-login-form">
+            <div class="os-form-group">
+                <label for="email">E-mail</label>
+                <input type="email" id="email" placeholder="seu@email.com" required>
+            </div>
+
+            <div class="os-form-group">
+                <label for="password">Senha</label>
+                <div class="os-password-wrap">
+                    <input type="password" id="password" name="password" required placeholder="••••••••">
+                    <span id="togglePassword" class="os-password-toggle">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none"
+                            stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"
+                            class="icon-closed">
+                            <path
+                                d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24">
+                            </path>
+                            <line x1="1" y1="1" x2="23" y2="23"></line>
+                        </svg>
+                        <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none"
+                            stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"
+                            class="icon-open" style="display: none;">
+                            <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path>
+                            <circle cx="12" cy="12" r="3"></circle>
+                        </svg>
+                    </span>
+                </div>
+                <div style="text-align: right; margin-top: 6px;">
+                    <a href="forgot.html"
+                        style="font-size: 0.85rem; color: var(--os-primary); text-decoration: none; font-weight: 500;">Esqueci
+                        minha senha</a>
+                </div>
+            </div>
+
+            <script>
+                const togglePassword = document.querySelector('#togglePassword');
+                const password = document.querySelector('#password');
+                const iconClosed = document.querySelector('.icon-closed');
+                const iconOpen = document.querySelector('.icon-open');
+
+                if (togglePassword && password) {
+                    togglePassword.addEventListener('click', function (e) {
+                        const type = password.getAttribute('type') === 'password' ? 'text' : 'password';
+                        password.setAttribute('type', type);
+                        if (type === 'password') {
+                            iconClosed.style.display = 'block';
+                            iconOpen.style.display = 'none';
+                        } else {
+                            iconClosed.style.display = 'none';
+                            iconOpen.style.display = 'block';
+                        }
+                    });
+                }
+            </script>
+
+            <button type="submit" class="os-login-btn" id="btn-submit">Entrar</button>
+        </form>
+
+        <div class="os-login-footer">
+            OrderSync v1.0
+        </div>
+    </div>
+
+    <script src="../js/config.js"></script>
+    <script src="../js/auth.js"></script>
+    <script src="login.js"></script>
+</body>
+
+</html>
+

@@ -4,7 +4,7 @@
 const url = new URL(window.location.href);
 
 // Modo interno (prévia via "Visualizar")
-const IS_MODO_INTERNO = new URLSearchParams(location.search).get("modo") === "interno" || location.hash.replace("#","") === "interno";;
+const IS_MODO_INTERNO = new URLSearchParams(location.search).get("modo") === "interno" || location.hash.replace("#", "") === "interno";;
 // preferir valores vindos do /p/{code} (definidos no HTML), senão cair no querystring
 let tabelaIdParam = (typeof window.currentTabelaId !== "undefined" && window.currentTabelaId !== null)
   ? String(window.currentTabelaId)
@@ -26,10 +26,10 @@ const comFreteFromCode = (typeof window.currentComFrete !== "undefined")
 const comFreteParam = comFreteFromCode ?? comFreteParamQS;
 
 // Dados opcionais vindos do link
-const razaoParam     = url.searchParams.get("razao_social");
+const razaoParam = url.searchParams.get("razao_social");
 const condPagtoParam = url.searchParams.get("cond_pagto");
 
-const API_BASE = (typeof window !== "undefined" && window.API_BASE) ? window.API_BASE : location.origin;
+const API_BASE = window.API_BASE || "https://ordersync-backend-59d2.onrender.com"; // Restored & Safe
 const API = (p) => {
   const base = (typeof window !== "undefined" && window.API_BASE ? window.API_BASE : location.origin) || "";
   // remove barra final do base e garante que p tem barra inicial
@@ -56,8 +56,8 @@ function normalizarEntregaISO(iso) {
   const [y, m, d] = iso.split("-").map(Number);
   const dt = new Date(y, m - 1, d);
   if (Number.isNaN(dt.getTime())) return null;
-  const hoje = new Date(); hoje.setHours(0,0,0,0);
-  dt.setHours(0,0,0,0);
+  const hoje = new Date(); hoje.setHours(0, 0, 0, 0);
+  dt.setHours(0, 0, 0, 0);
   // regra atual: aceitar passado também mostra "a combinar"? 
   // Se quiser bloquear passado, descomente abaixo:
   if (dt < hoje) return null;
@@ -95,11 +95,11 @@ function aplicarEntregaRetiradaHeader() {
 }
 
 // -------------------- Elementos --------------------
-const tbody         = document.querySelector("#tabelaProdutos tbody");
-const totalEl       = document.getElementById("totalGeral");
-const msgEl         = document.getElementById("mensagem");
-const btnConfirmar  = document.getElementById("btnConfirmar");
-const btnCancelar   = document.getElementById("btnCancelar");
+const tbody = document.querySelector("#tabelaProdutos tbody");
+const totalEl = document.getElementById("totalGeral");
+const msgEl = document.getElementById("mensagem");
+const btnConfirmar = document.getElementById("btnConfirmar");
+const btnCancelar = document.getElementById("btnCancelar");
 
 // Observação do cliente – contador de caracteres
 const taObs = document.getElementById('observacaoPedido');
@@ -107,10 +107,54 @@ const obsCounter = document.getElementById('obsCount');
 
 // -------------------- UI utils --------------------
 function setMensagem(texto, ok = false) {
-  if (!msgEl) return;
   msgEl.textContent = texto;
   msgEl.style.color = ok ? "green" : "red";
 }
+
+// --- Global Download Function for Stability ---
+window.baixarPdfManual = function () {
+  console.log("CLIQUE DOWNLOAD MANUAL");
+  console.log("lastPdfBase64 exists?", !!window.lastPdfBase64);
+  console.log("lastOrderId:", window.lastOrderId);
+
+  // 1. Tenta usar base64 em memória (mais garantido e imediato)
+  if (window.lastPdfBase64 && window.lastOrderId) {
+    try {
+      // Feedback visual
+      const btn = document.getElementById('btnBaixarManual');
+      if (btn) { btn.textContent = "Gerando PDF..."; btn.disabled = true; }
+
+      const link = document.createElement('a');
+      link.href = `data:application/pdf;base64,${window.lastPdfBase64}`;
+      link.download = `Orcamento_${window.lastOrderId}.pdf`;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+
+      // Reset botão
+      setTimeout(() => { if (btn) { btn.textContent = "Baixar PDF do Orçamento"; btn.disabled = false; } }, 1000);
+      return;
+    } catch (e) {
+      console.error("Erro download base64 manual:", e);
+      alert("Houve um erro ao gerar o arquivo. Tente recarregar a página.");
+    }
+  }
+
+  // 2. Fallback: Pega o code da URL
+  const pathParts = window.location.pathname.split('/').filter(Boolean);
+  const code = pathParts[pathParts.length - 1];
+
+  if (code && code.length > 3) {
+    console.log("Fallback CODE:", code);
+    window.open(API(`/link_pedido/pdf_cliente/${code}`), '_blank');
+  } else if (window.lastOrderId) {
+    // 3. Fallback: Se não tem code na URL (modo interno), usa ID
+    console.log("Fallback ID:", window.lastOrderId);
+    window.open(API(`/api/pedido/${window.lastOrderId}/pdf_cliente`), '_blank');
+  } else {
+    showOsModal({ title: 'Aviso', message: "Não foi possível identificar o link para download. Verifique seu e-mail para a cópia do orçamento.", type: 'alert' });
+  }
+};
 
 function atualizarObsCounter() {
   if (!taObs || !obsCounter) return;
@@ -120,34 +164,58 @@ function atualizarObsCounter() {
 
 function renderTabela() {
   if (!tbody) return;
+
+  // Otimização: Renderizar tudo em um fragmento
+  const fragment = document.createDocumentFragment();
   tbody.innerHTML = "";
+
   produtos.forEach((item, i) => {
-    const valorUnitario = usarValorComFrete ? item.valor_com_frete : item.valor_sem_frete;
-    const subtotal = valorUnitario * (Number(item.quantidade) || 0);
+    // Logica de preço unitário:
+    // Se tiver markup, o preço "unitario" p/ calculo do total/subtotal É o preço markup.
+    // Mas na tela, mostramos o unitário base original na coluna "Valor".
+    // Então aqui definimos "precoEfetivo" para contas e "valorBase" para display.
+
+    // Valor Base (Original)
+    const valorBase = usarValorComFrete ? item.valor_com_frete : item.valor_sem_frete;
+
+    // Valor c/ Markup (se existir > 0)
+    const valorMarkup = usarValorComFrete ? (item.valor_com_frete_markup || 0) : (item.valor_sem_frete_markup || 0);
+
+    // Preço efetivo (se markup > 0, usa ele. Se não, usa base)
+    // NOTE: Usuário pediu para ignorar Markup no cálculo do TOTAL. O total deve ser sobre o valor COM/SEM frete (Base).
+    // O Markup é apenas visual/informativo.
+    const precoCalculo = valorBase;
+
+    const subtotal = precoCalculo * (Number(item.quantidade) || 0);
 
     const tr = document.createElement("tr");
     tr.innerHTML = `
+      <td>${i + 1}</td>
       <td>${item.codigo ?? ""}</td>
       <td>${item.nome ?? ""}</td>
       <td>${item.embalagem ?? ""}</td>
-      <td><input type="number" min="0" step="1" value="${item.quantidade || 0}" data-index="${i}" class="qtd" /></td>
-      <td class="celula-peso" data-peso-unit="${Number(item.peso ?? 0)}"></td>
-      <td>${fmtBRL.format(valorUnitario)}</td>
+      <td class="right"><input type="number" min="0" step="1" value="${item.quantidade || 0}" data-index="${i}" class="os-input qtd" style="width: 100%; max-width: 80px;" /></td>
+      <td class="celula-peso right" data-peso-unit="${Number(item.peso ?? 0)}"></td>
+      <td class="right">${fmtBRL.format(valorBase)}</td>
       <td>${item.condicao_pagamento ?? ""}</td>
-      <td id="subtotal-${i}">${fmtBRL.format(subtotal)}</td>
+      <td class="col-markup right">${item.markup ? Number(item.markup).toLocaleString("pt-BR", { minimumFractionDigits: 2 }) + "%" : "-"}</td>
+      <td class="col-markup right">${item.markup > 0 ? fmtBRL.format(usarValorComFrete ? item.valor_com_frete_markup : item.valor_sem_frete_markup) : "-"}</td>
+      <td id="subtotal-${i}" class="right">${fmtBRL.format(subtotal)}</td>
     `;
-    tbody.appendChild(tr);
+
     // Peso total inicial (peso unitário × quantidade inicial)
     const pesoUnit = Number(item.peso ?? 0);
     const qtdInicial = Number(item.quantidade) || 0;
     const pesoCell = tr.querySelector('.celula-peso');
-      if (pesoCell) {
+    if (pesoCell) {
       const pesoTotal = pesoUnit * qtdInicial;
       pesoCell.textContent = formatIntBR(pesoTotal, { mode: "trunc" });
-      }
-    
-   
+    }
+
+    fragment.appendChild(tr);
   });
+
+  tbody.appendChild(fragment);
 
   // Listeners de quantidade
   tbody.querySelectorAll("input.qtd").forEach((input) => {
@@ -169,21 +237,29 @@ function onQtdChange(e) {
   e.target.value = quantidade;
   produtos[idx].quantidade = quantidade;
 
-  const valorUnitario = usarValorComFrete
+  // Recalculo dinâmico
+  const valorBase = usarValorComFrete
     ? produtos[idx].valor_com_frete
     : produtos[idx].valor_sem_frete;
 
-  const subtotal = quantidade * valorUnitario;
+  const valorMarkup = usarValorComFrete
+    ? (produtos[idx].valor_com_frete_markup || 0)
+    : (produtos[idx].valor_sem_frete_markup || 0);
+
+  // USER REQUEST: Cálculo deve ser sobre o valor da nota (Base), ignorando Markup no total
+  const precoCalculo = valorBase;
+
+  const subtotal = quantidade * precoCalculo;
   const cell = document.getElementById(`subtotal-${idx}`);
   if (cell) cell.textContent = fmtBRL.format(subtotal);
-  
+
   // Atualizar peso total da linha (peso unitário × nova quantidade)
- const tr = e.target.closest('tr');
- const pesoCell = tr?.querySelector('.celula-peso');
- if (pesoCell) {
-   const pesoUnit = Number(pesoCell.dataset.pesoUnit || produtos[idx].peso || 0);
-   const pesoTotal = pesoUnit * quantidade;
-   pesoCell.textContent = (Number.isFinite(pesoTotal) ? pesoTotal : 0).toLocaleString('pt-BR');
+  const tr = e.target.closest('tr');
+  const pesoCell = tr?.querySelector('.celula-peso');
+  if (pesoCell) {
+    const pesoUnit = Number(pesoCell.dataset.pesoUnit || produtos[idx].peso || 0);
+    const pesoTotal = pesoUnit * quantidade;
+    pesoCell.textContent = (Number.isFinite(pesoTotal) ? pesoTotal : 0).toLocaleString('pt-BR');
   }
 
   atualizarTotal();
@@ -192,8 +268,12 @@ function onQtdChange(e) {
 
 function atualizarTotal() {
   const total = produtos.reduce((acc, item) => {
-    const v = usarValorComFrete ? item.valor_com_frete : item.valor_sem_frete;
-    return acc + v * (Number(item.quantidade) || 0);
+    const vBase = usarValorComFrete ? item.valor_com_frete : item.valor_sem_frete;
+    const vMk = usarValorComFrete ? (item.valor_com_frete_markup || 0) : (item.valor_sem_frete_markup || 0);
+    // USER REQUEST: Total ignorando markup
+    const vCalc = vBase;
+
+    return acc + vCalc * (Number(item.quantidade) || 0);
   }, 0);
   if (totalEl) totalEl.textContent = fmtBRL.format(total);
   if (btnConfirmar) btnConfirmar.disabled = total <= 0;
@@ -229,10 +309,10 @@ function atualizarResumoFreteEPeso() {
   // escreve na tela
   const elPeso = document.getElementById('totalPesoPedido');
   const elFrete = document.getElementById('totalFretePedido');
-  
+
   if (elPeso) {
-  const pesoArredondado = Number.isFinite(pesoTotal) ? Math.round(pesoTotal) : 0;
-  elPeso.textContent = pesoArredondado.toLocaleString('pt-BR');
+    const pesoArredondado = Number.isFinite(pesoTotal) ? Math.round(pesoTotal) : 0;
+    elPeso.textContent = pesoArredondado.toLocaleString('pt-BR');
   }
   if (elFrete) elFrete.textContent = window.usarValorComFrete === true ? fmtBRL.format(freteTotal) : fmtBRL.format(0);
 }
@@ -258,16 +338,49 @@ async function carregarPedido() {
     const _qsNow = new URLSearchParams(location.search);
     const pathParts = location.pathname.split('/').filter(Boolean);
     const lastPart = pathParts[pathParts.length - 1];
-    
+
     let info = null;
-    
+
     if (pathParts[0] === 'p' && lastPart) {
       try {
         const r = await fetch(API(`/link_pedido/resolver?code=${encodeURIComponent(lastPart)}`), { cache: "no-store" });
         if (r.ok) {
-          info = await r.json(); 
+          info = await r.json();
           window.currentTabelaId = info.tabela_id ?? window.currentTabelaId;
           window.currentComFrete = info.com_frete ?? window.currentComFrete;
+          window.entregaISO = (typeof info.data_prevista === 'string' ? info.data_prevista : null);
+
+          // --- Lógica de Link Expirado ---
+          if (info.is_expired) {
+            window.linkExpirado = true; // flag global
+            setMensagem("Este link de pedido está com validade vencida, mas você pode confirmar normalmente.", false);
+            // if (btnConfirmar) btnConfirmar.disabled = true; // REMOVIDO: permitir confirmar mesmo vencido
+          }
+
+          // --- Lógica de Pedido Já Confirmado ---
+          if (info.link_status === 'CONFIRMADO') {
+            // Esconde botões
+            const actions = document.querySelector('.acoes');
+            if (actions) actions.style.display = 'none';
+
+            // Avisa o usuário
+            const msg = document.getElementById('mensagem');
+            if (msg) {
+              msg.textContent = "Este pedido já foi aceito e processado.";
+              msg.style.color = "blue";
+              msg.style.fontWeight = "bold";
+              msg.style.fontSize = "1.2rem";
+              msg.style.marginTop = "20px";
+            }
+
+            // Bloqueia inputs
+            lockPageAfterConfirm();
+            // (Opcional) Abrir modal de sucesso direto? O usuário pediu "notificação informando que já foi aceito".
+            // Vou deixar o texto na tela + bloqueio.
+          }
+
+          console.log('[resolver] ok', info);
+
           window.codigoClienteHidden = info.codigo_cliente || null;  // <— oculto
           const elCriado = document.getElementById("datadopedido");
           if (elCriado && info?.created_at) {
@@ -280,17 +393,17 @@ async function carregarPedido() {
             logoEl.onerror = () => { logoEl.style.display = "none"; };
           }
         }
-      } catch {}
+      } catch { }
     }
-  
-    tabelaIdParam = tabelaIdParam
-    || _qsNow.get("tabela_id")
-    || (typeof window.currentTabelaId !== "undefined" ? String(window.currentTabelaId) : null);
 
-    const _comFreteQS   = _qsNow.get("com_frete");
+    tabelaIdParam = tabelaIdParam
+      || _qsNow.get("tabela_id")
+      || (typeof window.currentTabelaId !== "undefined" ? String(window.currentTabelaId) : null);
+
+    const _comFreteQS = _qsNow.get("com_frete");
     const _comFreteCode = (typeof window.currentComFrete !== "undefined")
-    ? (window.currentComFrete ? "true" : "false")
-    : null;
+      ? (window.currentComFrete ? "true" : "false")
+      : null;
 
     // valor efetivo de com_frete (prioriza query; se não houver, usa o do resolver)
     const _comFreteEfetivo = (_comFreteQS ?? _comFreteCode);
@@ -310,13 +423,13 @@ async function carregarPedido() {
       console.debug("[preview] URL:", previewURL);
 
       const r1 = await fetch(API(`/pedido/preview?${qs.toString()}`));
-      
+
       if (!r1.ok) {
         let detail = "";
         try {
           const err = await r1.json();
           detail = err?.detail || JSON.stringify(err);
-        } catch (_) {}
+        } catch (_) { }
         throw new Error(`Erro ${r1.status} no preview${detail ? " — " + detail : ""}`);
       }
 
@@ -329,7 +442,7 @@ async function carregarPedido() {
       // Usar c/ ou s/ frete decidido no link
       usarValorComFrete = Boolean(dados.usar_valor_com_frete);
       setCampoTexto("tituloValorFrete", usarValorComFrete ? "c/ Frete" : "s/ Frete");
-      
+
       window.usarValorComFrete = usarValorComFrete;
       aplicarEntregaRetiradaHeader();
       // Itens
@@ -337,6 +450,9 @@ async function carregarPedido() {
         ...p,
         valor_com_frete: Number(p.valor_com_frete) || 0,
         valor_sem_frete: Number(p.valor_sem_frete) || 0,
+        valor_com_frete_markup: Number(p.valor_com_frete_markup) || 0,
+        valor_sem_frete_markup: Number(p.valor_sem_frete_markup) || 0,
+        markup: Number(p.markup) || 0,
         quantidade: Number(p.quantidade) || 0
       }));
       renderTabela();
@@ -350,17 +466,26 @@ async function carregarPedido() {
         if (r2.ok) {
           const v = await r2.json();
           setCampoTexto("validadeTabela", v.validade ?? v.validade_tabela ?? "---");
-          setCampoTexto("tempoRestante",  v.tempo_restante ?? "---");
+          setCampoTexto("tempoRestante", v.tempo_restante ?? "---");
           const rawVal = v.validade ?? v.validade_tabela ?? null;
           window.validadeGlobalISO = normalizarValidadeCampo(rawVal);
+
+          if (window.linkExpirado) {
+            // setCampoTexto("tempoRestante", "Validade vencida - valores sujeitos a alteração");
+            const el = document.getElementById("tempoRestante");
+            if (el) el.style.color = "#d9534f"; // vermelho aviso
+          } else {
+            setCampoTexto("tempoRestante", v.tempo_restante ?? "---");
+          }
+
           console.debug("[validade] raw:", rawVal, "ISO:", window.validadeGlobalISO);
         } else {
           setCampoTexto("validadeTabela", "---");
-          setCampoTexto("tempoRestante",  "---");
+          setCampoTexto("tempoRestante", "---");
         }
       } catch {
         setCampoTexto("validadeTabela", "---");
-        setCampoTexto("tempoRestante",  "---");
+        setCampoTexto("tempoRestante", "---");
       }
 
       return;
@@ -374,8 +499,8 @@ async function carregarPedido() {
 
       setCampoTexto("razaoSocialCliente", dados.razao_social ?? "---");
       setCampoTexto("condicaoPagamento", dados.condicao_pagamento ?? "---");
-      setCampoTexto("validadeTabela",   dados.validade ?? "---");
-      setCampoTexto("tempoRestante",    dados.tempo_restante ?? "---");
+      setCampoTexto("validadeTabela", dados.validade ?? "---");
+      setCampoTexto("tempoRestante", dados.tempo_restante ?? "---");
 
       usarValorComFrete = Boolean(dados.usar_valor_com_frete);
       setCampoTexto("tituloValorFrete", usarValorComFrete ? "c/ Frete" : "s/ Frete");
@@ -385,11 +510,11 @@ async function carregarPedido() {
 
       produtos = Array.isArray(dados.produtos)
         ? dados.produtos.map((p) => ({
-            ...p,
-            valor_com_frete: Number(p.valor_com_frete) || 0,
-            valor_sem_frete: Number(p.valor_sem_frete) || 0,
-            quantidade: Number(p.quantidade) || 0,
-          }))
+          ...p,
+          valor_com_frete: Number(p.valor_com_frete) || 0,
+          valor_sem_frete: Number(p.valor_sem_frete) || 0,
+          quantidade: Number(p.quantidade) || 0,
+        }))
         : [];
 
       renderTabela();
@@ -424,7 +549,7 @@ function lockPageAfterConfirm() {
   // Desabilita todos os elementos interativos da página (menos o botão do modal)
   document.body.classList.add('page-locked');
   document.querySelectorAll('input, textarea, select, button').forEach(el => {
-    if (el.id === 'btnFecharConfirm') return;
+    if (el.id === 'btnFecharConfirm' || el.id === 'btnBaixarManual') return;
     el.disabled = true;
   });
   // Também evita scroll enquanto o modal estiver aberto
@@ -433,7 +558,7 @@ function lockPageAfterConfirm() {
 
 function openConfirmModal(pedidoId) {
   const modal = document.getElementById('confirmModal');
-  const info  = document.getElementById('confirmPedidoInfo');
+  const info = document.getElementById('confirmPedidoInfo');
   if (!modal) return;
 
   info.textContent = pedidoId ? `Número do pedido: ${pedidoId}` : '';
@@ -452,7 +577,7 @@ function closeConfirmModal() {
   if (modal) modal.hidden = true;
 
   // 1) fecha a aba (se aberta via window.open)
-  try { window.close(); } catch {}
+  try { window.close(); } catch { }
 
   // 2) se não fechar, volta no histórico
   if (history.length > 1) {
@@ -465,7 +590,71 @@ function closeConfirmModal() {
 }
 
 // -------------------- Ações --------------------
+// -------------------- Ações --------------------
+// ===================================
+// CUSTOM OS MODALS
+// ===================================
+function showOsModal(options) {
+  return new Promise((resolve) => {
+    const backdrop = document.createElement('div');
+    backdrop.className = 'os-modal-backdrop active';
+    backdrop.style.zIndex = '99999';
+
+    const dialog = document.createElement('div');
+    dialog.className = 'os-modal-dialog';
+    dialog.style.maxWidth = '400px';
+
+    const header = document.createElement('div');
+    header.className = 'os-modal-header';
+    header.innerHTML = `<h3 class="os-modal-title">${options.title}</h3>
+                        <button class="os-modal-close">&times;</button>`;
+
+    const body = document.createElement('div');
+    body.className = 'os-modal-body';
+    body.innerHTML = `<p style="margin:0;">${options.message}</p>`;
+
+    const footer = document.createElement('div');
+    footer.className = 'os-modal-footer';
+
+    if (options.type === 'confirm') {
+      const btnCancel = document.createElement('button');
+      btnCancel.className = 'os-btn os-btn-secondary';
+      btnCancel.textContent = 'Cancelar';
+
+      const btnOk = document.createElement('button');
+      btnOk.className = 'os-btn os-btn-primary';
+      btnOk.textContent = 'OK';
+
+      footer.appendChild(btnCancel);
+      footer.appendChild(btnOk);
+
+      btnCancel.onclick = () => { document.body.removeChild(backdrop); resolve(false); };
+      btnOk.onclick = () => { document.body.removeChild(backdrop); resolve(true); };
+    } else {
+      const btnOk = document.createElement('button');
+      btnOk.className = 'os-btn os-btn-primary';
+      btnOk.textContent = 'OK';
+      footer.appendChild(btnOk);
+      btnOk.onclick = () => { document.body.removeChild(backdrop); resolve(true); };
+    }
+
+    header.querySelector('.os-modal-close').onclick = () => {
+      document.body.removeChild(backdrop);
+      resolve(options.type === 'confirm' ? false : true);
+    };
+
+    dialog.appendChild(header);
+    dialog.appendChild(body);
+    dialog.appendChild(footer);
+    backdrop.appendChild(dialog);
+    document.body.appendChild(backdrop);
+  });
+}
+
 async function confirmarPedido() {
+  let originCode = "";
+  let pedidoIdConfirmado = null; // Store ID when confirmed
+
   try {
     const itens = produtos;
     if (!Array.isArray(itens) || itens.length === 0) {
@@ -477,7 +666,14 @@ async function confirmarPedido() {
     setMensagem("Enviando pedido...", true);
 
     // token do link curto (/p/{code})
-    const originCode = location.pathname.split('/').pop() || null;
+    const pathParts = location.pathname.split('/').filter(Boolean);
+    originCode = pathParts.length > 0 ? pathParts[pathParts.length - 1] : null;
+
+    // DEBUG: Verificar se o código foi detectado
+    if (!originCode) {
+      showOsModal({ title: 'Aviso', message: "AVISO: Código do link não detectado (originCode is null). O download do PDF pode falhar.", type: 'alert' });
+    }
+    // console.log("OriginCode:", originCode);
 
     // razão social mostrada na tela
     const clienteRazao = (document.getElementById('razaoSocialCliente')?.textContent || '').trim() || null;
@@ -501,18 +697,34 @@ async function confirmarPedido() {
       body: JSON.stringify({
         origin_code: originCode,
         usar_valor_com_frete: !!usarValorComFrete,
-        produtos: itens.map(x => ({
-          codigo: x.codigo,
-          descricao: x.nome ?? null,       // 👈 manda o nome do produto
-          embalagem: x.embalagem ?? null,  // 👈 manda a embalagem
-          condicao_pagamento: x.condicao_pagamento ?? null,       // 👈 NOVO
-          tabela_comissao: x.tabela_comissao ?? null,
-          quantidade: Number(x.quantidade || 0),
-          preco_unit: x.preco_unit ?? x.valor_sem_frete ?? 0,
-          preco_unit_com_frete:
-            x.preco_unit_com_frete ?? x.valor_com_frete ?? x.preco_unit ?? 0,
-          peso_kg: x.peso ?? x.peso_kg ?? null
-        })),
+        produtos: itens.map(x => {
+          // Lógica para enviar o preço EFETIVO (com markup se houver)
+          // Backend espera 'preco_unit' (sem frete) e 'preco_unit_com_frete' (com frete)
+          // Se houver markup, enviamos o valor markup. Se não, o base.
+
+          const vBaseSem = x.valor_sem_frete || 0;
+          const vBaseCom = x.valor_com_frete || 0;
+          const vMkSem = x.valor_sem_frete_markup || 0;
+          const vMkCom = x.valor_com_frete_markup || 0;
+
+          // Se markup > 0, usa ele.
+          // USER REQUEST: Salvar o pedido com valor BASE, ignorando markup no valor final do pedido.
+          const pSem = vBaseSem;
+          const pCom = vBaseCom;
+
+          return {
+            codigo: x.codigo,
+            descricao: x.nome ?? null,
+            embalagem: x.embalagem ?? null,
+            condicao_pagamento: x.condicao_pagamento ?? null,
+            tabela_comissao: x.tabela_comissao ?? null,
+            quantidade: Number(x.quantidade || 0),
+            // Envia o EFETIVO para o backend registrar o valor correto do pedido
+            preco_unit: pSem,
+            preco_unit_com_frete: pCom,
+            peso_kg: x.peso ?? x.peso_kg ?? null
+          };
+        }),
         observacao,
         cliente: clienteRazao,
         validade_ate:
@@ -533,24 +745,65 @@ async function confirmarPedido() {
     }
 
     const data = await resp.json();
-   const pedidoIdConfirmado = data?.id ?? data?.pedido_id;
-   if (!pedidoIdConfirmado) throw new Error("Resposta sem id do pedido.");
+    const pedidoIdConfirmado = data?.id ?? data?.pedido_id;
 
     if (!pedidoIdConfirmado) {
       throw new Error("Resposta sem id do pedido.");
     }
 
+    // --- Lógica de Download do PDF (Híbrido) ---
+    if (data.pdf_base64) {
+      console.log("PDF Base64 recebido! Length:", data.pdf_base64.length);
+      // alert("DEBUG: PDF Base64 chegou do servidor!");
+
+      // Store base64 for manual download
+      window.lastPdfBase64 = data.pdf_base64;
+      window.lastOrderId = pedidoIdConfirmado;
+    } else {
+      console.warn("DEBUG: data.pdf_base64 veio vazio/nulo.");
+      // alert("DEBUG: data.pdf_base64 veio VAZIO.");
+    }
+
+    // Atualiza texto do modal para avisar do email/download
+    const msgEmail = data.email_enviado === true
+      ? "Uma cópia foi enviada para seu e-mail."
+      : "E-mail não cadastrado (ou não configurado). Solicite o cadastro junto ao nosso time.";
+
+    const txtConfirm = document.querySelector('.confirm-text');
+    if (txtConfirm) {
+      txtConfirm.innerHTML = `
+        Orçamento confirmado com sucesso!<br>
+        <span style="color: ${data.email_enviado ? 'inherit' : '#d9534f'}">${msgEmail}</span>
+        <br><br>
+        <button id="btnBaixarManual" class="btn-baixar-manual" style="background-color: #28a745; color: white; border: none; padding: 10px 20px; border-radius: 5px; cursor: pointer; font-size: 1rem; margin-top: 10px;">
+          <i class="fas fa-file-pdf"></i> Baixar PDF do Orçamento
+        </button>
+      `;
+      // Attach listener dynamically to avoid scope/CSP issues
+      setTimeout(() => {
+        const btn = document.getElementById('btnBaixarManual');
+        if (btn) {
+          btn.onclick = window.baixarPdfManual; // Using direct property to ensure binding
+          btn.disabled = false; // Force enable
+          btn.style.pointerEvents = 'auto'; // Force clickable
+          console.log("Evento onclick vinculado ao botão PDF");
+        } else {
+          console.error("Botão PDF não encontrado para vincular evento");
+        }
+      }, 50);
+    }
+
     openConfirmModal(pedidoIdConfirmado);
 
   } catch (err) {
-  console.error('[confirmarPedido] erro', err);
-  alert("Recebemos seu pedido e ele já está sendo processado. Em breve alguém da nossa equipe entrará em contato.");
-  setMensagem("Falha ao enviar o pedido.", false);
-  if (btnConfirmar) btnConfirmar.disabled = false;
- }
+    console.error('[confirmarPedido] erro', err);
+    await showOsModal({ title: 'Pedido Recebido', message: "Recebemos seu pedido e ele já está sendo processado. Em breve alguém da nossa equipe entrará em contato.", type: 'alert' });
+    setMensagem("Falha ao enviar o pedido.", false);
+    if (btnConfirmar) btnConfirmar.disabled = false;
+  }
 }
 
-  function assertShape(d) {
+function assertShape(d) {
   const must = [
     ["tabela", "object"],
     ["tabela.nome", "string"],
@@ -559,7 +812,7 @@ async function confirmarPedido() {
     ["cliente.nome", "string"],
     ["itens", "object"], // array
   ];
-  const get = (o, path) => path.split(".").reduce((a,k)=> (a && a[k]!==undefined ? a[k] : undefined), o);
+  const get = (o, path) => path.split(".").reduce((a, k) => (a && a[k] !== undefined ? a[k] : undefined), o);
   const errs = [];
   for (const [p, t] of must) {
     const v = get(d, p);
@@ -569,7 +822,7 @@ async function confirmarPedido() {
   if (Array.isArray(d.itens) === false) errs.push("itens não é array");
   if (errs.length) {
     console.error("[pedido] shape inválido:", errs, d);
-    alert("Formato de dados inesperado para a tela de pedido.");
+    showOsModal({ title: 'Erro de Dados', message: "Formato de dados inesperado para a tela de pedido.", type: 'alert' });
   }
 }
 
@@ -581,7 +834,7 @@ function cancelarPedido() {
     history.back();
   } else {
     window.location.href = "/";
- }
+  }
 }
 
 
@@ -589,34 +842,34 @@ function aplicarModoInterno() {
   if (!IS_MODO_INTERNO) return;
 
   // Esconde "Confirmar"
-  document.getElementById("btnConfirmar")?.style.setProperty("display","none");
+  document.getElementById("btnConfirmar")?.style.setProperty("display", "none");
 
   // "Cancelar" -> "Voltar" com override total de listeners
   const oldBtn = document.getElementById("btnCancelar");
-if (oldBtn) {
-  const newBtn = oldBtn.cloneNode(true);   // remove listeners antigos
-  newBtn.textContent = "Voltar";
-  newBtn.disabled = false;
+  if (oldBtn) {
+    const newBtn = oldBtn.cloneNode(true);   // remove listeners antigos
+    newBtn.textContent = "Voltar";
+    newBtn.disabled = false;
 
-  newBtn.onclick = (ev) => {
-    ev.preventDefault();
-    ev.stopPropagation();
+    newBtn.onclick = (ev) => {
+      ev.preventDefault();
+      ev.stopPropagation();
 
-    // fecha se foi aberto pelo botão Visualizar
-    try { window.close(); } catch {}
+      // fecha se foi aberto pelo botão Visualizar
+      try { window.close(); } catch { }
 
-    // se não fechar, tenta voltar
-    if (history.length > 1) {
-      history.back();
-      return;
-    }
+      // se não fechar, tenta voltar
+      if (history.length > 1) {
+        history.back();
+        return;
+      }
 
-    // fallback
-    window.location.replace("about:blank");
-  };
+      // fallback
+      window.location.replace("about:blank");
+    };
 
-  oldBtn.replaceWith(newBtn);
-}
+    oldBtn.replaceWith(newBtn);
+  }
 
   // "Validade:" -> "Proposta válida até:"
   const spanVal = document.getElementById("validadeTabela");
@@ -627,7 +880,7 @@ if (oldBtn) {
 }
 // -------------------- Bind de eventos e início --------------------
 if (btnConfirmar) btnConfirmar.addEventListener("click", confirmarPedido);
-if (btnCancelar)  btnCancelar.addEventListener("click", cancelarPedido);
+if (btnCancelar) btnCancelar.addEventListener("click", cancelarPedido);
 
 window.carregarPedido = carregarPedido;
 window.addEventListener("DOMContentLoaded", aplicarModoInterno);

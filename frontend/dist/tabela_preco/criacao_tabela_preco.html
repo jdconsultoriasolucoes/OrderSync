@@ -1,111 +1,173 @@
-<!DOCTYPE html>
+﻿<!DOCTYPE html>
 <html lang="pt-br">
+
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Criação de Tabela de Preço</title>
+  <title>Tabela de Preço — OrderSync</title>
 
-  <!-- Bootstrap igual à tela de cliente -->
+  <!-- Design System -->
+  <link rel="stylesheet" href="../design-system.css">
+
+  <!-- Bootstrap -->
   <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css">
+  <link rel="icon" href="../logo.png">
 
-  <!-- CSS específico da página -->
+  <!-- Page CSS -->
   <link rel="stylesheet" href="criacao_tabela_preco.css">
 
-  <!-- Navbar SEMPRE por último, para garantir o padding-top do header fixo -->
-  <link rel="stylesheet" href="../navbar.css">
-
+  <!-- Fonts -->
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+
+  <script src="../js/config.js"></script>
+  <script src="../js/auth.js"></script>
+  <script src="../js/sidebar_control.js"></script>
   <script src="criacao_tabela_preco.js" defer></script>
-
-
 </head>
 
 
 <body>
-   <header>
-      <div class="navbar">
-        <button class="menu-btn" id="menu-button">&#9776;</button>
-        <img src="../logo.png" alt="Logo" class="logo" />
-      </div>
-    </header>
+  <!-- ========== HEADER ========== -->
+  <header class="os-header">
+    <button class="os-menu-btn" id="menu-button" aria-label="Menu">&#9776;</button>
+    <img src="../logo.png" alt="Logo" class="os-logo" />
+    <span class="os-header-title">Criação de Tabela de Preço</span>
+  </header>
 
-    <nav class="sidebar" id="sidebar">
-      <ul>
-        <li><a href="/index.html">Home</a></li>
-        <li><a href="/clientes/cliente.html">Cadastrar Cliente</a></li>
-        <li><a href="#">Atualizar Catálogo</a></li>
-        <li><a href="/pedido/pedido.html">Consultar Pedidos</a></li>
-        <li><a href="#">Exportar Relatórios</a></li>
-        <li><a href="/tabela_preco/criacao_tabela_preco.html">Tabela Preço</a></li>
-        <li><a href="/config_email/config_email.html">Configuração E-mail</a></li>
-        </ul>
-    </nav>
-    <div id="overlay"></div>
+  <!-- ========== SIDEBAR ========== -->
+  <nav class="os-sidebar" id="sidebar">
+    <div class="os-sidebar-section">Menu</div>
+    <ul>
+      <li><a href="../../index.html">Home</a></li>
+      <li><a href="../clientes/cliente.html">Clientes</a></li>
+      <li><a href="../gerenciar_tabelas/gerenciar_tabelas.html">Atualizar Catálogo</a></li>
+      <li><a href="../pedido/pedido.html">Consultar Pedidos</a></li>
+      <li><a href="../tabela_preco/criacao_tabela_preco.html" class="active">Tabela Preço</a></li>
+      <li><a href="../produto/produto.html">Produtos</a></li>
+    </ul>
+    <div class="os-sidebar-section">Sistema</div>
+    <ul>
+      <li><a href="../usuarios.html">Usuários</a></li>
+      <li><a href="../config_email/config_email.html">Configuração E-mail</a></li>
+      <li><a href="#" onclick="window.Auth.openChangePasswordModal()">Trocar Senha</a></li>
+      <li><a href="#" onclick="window.Auth.logout()">Sair</a></li>
+    </ul>
+  </nav>
+  <div class="os-sidebar-overlay" id="overlay"></div>
 
-  <div class="page-container">
-    
+  <div class="os-page-container"
+    style="padding: var(--os-space-4); padding-top: calc(var(--os-header-height) + var(--os-space-2));">
+
     <!-- <h1>Criação de Tabela de Preço <span class="subtle">(etapa de conferência)</span></h1> -->
     <!-- TOPO: Cabeçalho e parâmetros globais -->
-     <h1> Criação de Tabela de Preço </h1>
 
-    <section class="card pad" aria-labelledby="sec-topo">
-      <h2 id="sec-topo" class="section-title">Dados principais</h2>
-      <div class="grid grid-4 grid-gap">
-        <div class="field">
-          <label for="nome_tabela">Nome da Tabela</label>
-          <input id="nome_tabela" type="text" placeholder="Ex.: Tabela Promocional Set/25" />
+    <section class="os-card" aria-labelledby="sec-topo">
+      <div class="section-header-flex">
+        <h2 id="sec-topo" class="os-section-title"
+          style="margin: 0; margin-top: 0; border-bottom: none; padding-bottom: 0;">Dados principais</h2>
+
+        <!-- Collapsed Summary (Hidden by default) -->
+        <div id="header-collapsed-summary" class="header-summary hidden">
+          <span id="summary-nome" class="fw-bold"></span>
+          <span class="sep"> • </span>
+          <span id="summary-cliente" class="text-muted"></span>
         </div>
-        <div class="field">
-          <label for="cliente_nome">Cliente</label>
-          <input id="cliente_nome" type="text" autocomplete="off" placeholder="Digite o nome ou CNPJ..." />
-          <input id="codigo_cliente" type="hidden" />
-          <input id="ramo_juridico" type="hidden" />
-          <!-- container do autocomplete (fica logo após o input) -->
-          <div id="cliente_suggestions" class="suggestions"></div>
-        </div>
-        <div class="field">
-          <label for="iva_st_toggle">IVA_ST</label>
-          <div class="inline">
-              <input id="iva_st_toggle" type="checkbox" disabled  />
-              <span class="hint">IVA_ST (Sim / Não) </span>
+
+        <div class="header-info-group">
+          <div class="info-item">
+            <span class="info-label">Validade:</span>
+            <input id="validade_tabela" class="os-input" type="text" readonly tabindex="-1"
+              style="border: none; background: transparent; width: auto; max-width: 120px; padding: 0;" />
           </div>
-        </div>
-        <div class="field row-2">
-            <label for="validade_tabela">Validade da Tabela</label>
-            <input id="validade_tabela" type="text" readonly />
-        </div>
-        <div class="field row-2">
-            <label for="dias_restantes">Tempo restante</label>
-            <input id="dias_restantes" type="text" readonly />
+          <div class="info-item">
+            <span class="info-label">Tempo:</span>
+            <input id="dias_restantes" class="os-input" type="text" readonly tabindex="-1"
+              style="border: none; background: transparent; width: auto; max-width: 120px; padding: 0;" />
+          </div>
+          <button id="btn-toggle-header" class="os-btn-icon" title="Ocultar cabeçalho">
+            ▲
+          </button>
         </div>
       </div>
 
-      <div class="grid grid-3 grid-gap">
-        <div class="field">
-          <label for="frete_kg">Frete por KG <span class="hint">(aplica-se por linha)</span></label>
-          <input id="frete_kg" type="number" step="0" min="0" value="0" />
-        </div>
-        <div class="field">
-          <label for="plano_pagamento">Condição de Pagamento</label>
-          <select id="plano_pagamento"></select>
-          <div class="hint" id="hint-condicao">Carregando condições…</div>
-        </div>
-        <div class="toolbar left-gap">
-         <button class="btn" id="btn-aplicar-condicao-todos">Aplicar condição a todos</button>
-         <span class="pill"><span>Taxa Condição:</span><strong id="pill-taxa">—</strong></span>
-        </div>
-        <div class="field">
-          <label for="desconto_global">Desconto / Fator de Comissão %</label>
-          <!--<div class="inline">-->
-            <select id="desconto_global" class="grow"></select>
-            <span class="pill"><span>Taxa do fator:</span><strong id="pill-fator">—</strong><span> %</span></span>
-          <!--</div>-->
-          <div class="hint">Selecione um desconto para <b>aplicar a todos</b> abaixo.</div>
-          <div class="toolbar left-gap">
-            <button class="btn" id="btn-aplicar-todos">Aplicar fator a todos</button>
+      <div id="header-collapsible-area" class="expanded">
+        <div class="custom-grid" style="margin-top: var(--os-space-2);">
+
+          <!-- Cliente (First, widest - left) -->
+          <div class="os-form-group area-cliente">
+            <label class="os-label" for="cliente_nome">Cliente</label>
+            <input id="cliente_nome" class="os-input" type="text" autocomplete="off"
+              placeholder="Digite o nome ou CNPJ..." />
+            <input id="codigo_cliente" type="hidden" />
+            <input id="ramo_juridico" type="hidden" />
+            <div id="cliente_suggestions" class="suggestions"></div>
+
+            <div class="os-checkbox-group" style="margin-top: var(--os-space-1);">
+              <input id="iva_st_toggle" type="checkbox" disabled />
+              <label for="iva_st_toggle" class="os-form-hint">Aplicar IVA_ST</label>
+            </div>
           </div>
+
+          <!-- Nome da Tabela (Second - right) -->
+          <div class="os-form-group area-nome">
+            <label class="os-label" for="nome_tabela">Nome da Tabela</label>
+            <input id="nome_tabela" class="os-input" type="text" placeholder="Ex.: Tabela Promocional Set/25" />
+          </div>
+
+          <!-- Markup (Third, auto width - far right) -->
+          <div class="os-form-group area-markup">
+            <div class="field">
+              <label class="os-label" for="markup_global">Markup Global %</label>
+              <div style="display: flex; gap: var(--os-space-1); align-items: center;">
+                <input id="markup_global" class="os-input" style="width: 140px;" type="number" step="0.01" min="0"
+                  placeholder="0.00" />
+                <button class="os-btn os-btn-secondary os-btn-sm d-none" id="btn-aplicar-markup-todos">Aplicar a
+                  todos</button>
+              </div>
+            </div>
+          </div>
+
+        </div>
+
+        <!-- Bottom (Condition / Discount) -->
+        <div class="grid-condition-discount"
+          style="border-top: 1px solid var(--os-border); padding-top: var(--os-space-3);">
+
+          <!-- Condição -->
+          <!-- Condição -->
+          <div class="os-form-group area-condicao">
+            <label class="os-label" for="plano_pagamento">Condição de Pagamento</label>
+            <div style="display: flex; gap: var(--os-space-1); align-items: center;">
+              <select id="plano_pagamento" class="os-select" style="flex: 1;"></select>
+              <span class="os-badge os-badge-default" style="white-space: nowrap;">Taxa: <strong id="pill-taxa"
+                  style="margin-left: 4px;">—</strong></span>
+              <button class="os-btn os-btn-secondary os-btn-sm d-none" id="btn-aplicar-condicao-todos"
+                style="white-space: nowrap;">Aplicar a todos</button>
+            </div>
+            <div class="os-form-hint" id="hint-condicao">Carregando...</div>
+          </div>
+
+          <!-- Desconto: Reordered -->
+          <div class="os-form-group area-desconto">
+            <label class="os-label" for="desconto_global">Desconto / Fator %</label>
+            <div style="display: flex; gap: var(--os-space-1); align-items: center;">
+              <select id="desconto_global" class="os-select" style="flex: 1;"></select>
+              <span class="os-badge os-badge-default" style="white-space: nowrap;">Fator: <strong id="pill-fator"
+                  style="margin-left: 4px;">—</strong><span>%</span></span>
+              <button class="os-btn os-btn-secondary os-btn-sm d-none" id="btn-aplicar-todos"
+                style="white-space: nowrap;">Aplicar a todos</button>
+            </div>
+          </div>
+
+          <!-- Frete: Moved Here -->
+          <div class="os-form-group field-frete">
+            <label class="os-label" for="frete_kg">Frete/KG</label>
+            <input id="frete_kg" class="os-input" style="width: 140px;" type="number" step="0" min="0" value="0" />
+          </div>
+
         </div>
       </div>
     </section>
@@ -113,61 +175,129 @@
     <div class="divider"></div>
 
     <!-- BASE: Tabela de itens selecionados -->
-    <section class="card pad" aria-labelledby="sec-itens">
-      <h2 id="sec-itens" class="section-title">Produtos selecionados</h2>
-      
-      <div class="toolbar" id="toolbar-acoes">
-        <button id="btn-listar" class="btn">Listar Tabelas</button>
-        <button id="btn-buscar" class="btn btn-primary">Buscar Produtos</button>
-        <button id="btn-editar" class="btn hidden">Editar</button>
-        <button id="btn-duplicar" class="btn hidden">Duplicar</button>
-        <button id="btn-remover-selecionados" class="btn btn-danger">Remover selecionados</button>
-        <button id="btn-salvar" class="btn btn-green">Salvar Tabela</button>
-        <button id="btn-cancelar" class="btn hidden">Cancelar</button>
+    <section class="os-card" style="margin-top: var(--os-space-3);" aria-labelledby="sec-itens">
+      <h2 id="sec-itens" class="os-section-title" style="margin-top: 0; border-bottom: none; padding-bottom: 0;">
+        Produtos selecionados</h2>
+
+      <div class="toolbar desktop-only" id="toolbar-acoes">
+        <button id="btn-listar" class="os-btn os-btn-secondary">Listar Tabelas</button>
+        <button id="btn-buscar" class="os-btn os-btn-primary">Buscar Produtos</button>
+        <button id="btn-editar" class="os-btn os-btn-secondary hidden">Editar</button>
+        <button id="btn-duplicar" class="os-btn os-btn-secondary hidden">Duplicar</button>
+        <button id="btn-remover-selecionados" class="os-btn os-btn-danger">Remover selecionados</button>
+        <button id="btn-salvar" class="os-btn os-btn-primary"
+          style="background-color: var(--os-success); border-color: var(--os-success);">Salvar Tabela</button>
+        <button id="btn-cancelar" class="os-btn os-btn-ghost hidden">Cancelar</button>
       </div>
 
-      <div class="table-wrap">
-        <table id="tabela-itens">
+      <div class="os-table-wrap desktop-only" style="max-height: 56vh;">
+        <table id="tabela-itens" class="os-table" style="margin-bottom: 0;">
           <thead>
             <tr>
               <th><input id="chk-all" type="checkbox" /></th>
               <th>Código</th>
-              <th>Descrição</th>
+              <!-- Toggle Produto: controla Embalagem(4), Grupo(5), Peso(6) -->
+              <th class="th-toggle-prod">
+                <label class="st-toggle-in-th" title="Mostrar/ocultar detalhes do produto">
+                  <input id="prod-toggle" type="checkbox" />
+                  <span class="st-title">Descrição</span>
+                  <span class="chevron">▶</span>
+                </label>
+              </th>
               <th>Embalagem</th>
               <th>Grupo / Depto.</th>
               <th class="right">Peso Líq.</th>
               <th class="right">Valor Unitário</th>
-              <th class="right">Fator Comissão/Desconto %</th>
+
+              <!-- Toggle Desconto: controla Desc. aplicado(9) -->
+              <th class="right th-toggle-desc">
+                <label class="st-toggle-in-th" title="Mostrar/ocultar valor do desconto">
+                  <input id="desc-toggle" type="checkbox" />
+                  <span class="st-title">Fator %</span>
+                  <span class="chevron">▶</span>
+                </label>
+              </th>
               <th class="right">Desc. aplicado (R$)</th>
-              <th>Cond. Pagto (cód)</th><!-- NOVO (editável por linha) -->
+
+              <!-- Toggle Condição: controla Cond. Pagto R$(11) -->
+              <th class="th-toggle-cond">
+                <label class="st-toggle-in-th" title="Mostrar/ocultar valor da condição">
+                  <input id="cond-toggle" type="checkbox" />
+                  <span class="st-title">Cond. Pagto</span>
+                  <span class="chevron">▶</span>
+                </label>
+              </th>
               <th class="right">Cond. Pagto (R$)</th>
               <th class="right">Frete (R$)</th>
-              <th class="right">IPI (R$)</th>          <!-- foi IPI (%) -->
+              <th class="right">IPI (R$)</th> <!-- foi IPI (%) -->
               <th class="th-st">
-              <label class="st-toggle-in-th" title="Mostrar/ocultar detalhes de ST">
-                <input id="st-toggle" type="checkbox" />
-                <span class="st-title">Base ST (R$)</span>
-                <span class="chevron">▶</span>
-              </label>
-              </th>      <!-- novo, no lugar do IVA_ST (%) -->
+                <label class="st-toggle-in-th" title="Mostrar/ocultar detalhes de ST">
+                  <input id="st-toggle" type="checkbox" />
+                  <span class="st-title">Base ST (R$)</span>
+                  <span class="chevron">▶</span>
+                </label>
+              </th> <!-- novo, no lugar do IVA_ST (%) -->
               <th class="right">ICMS próprio (R$)</th> <!-- novo -->
               <th class="right">ICMS ST cheio (R$)</th><!-- novo -->
               <th class="right">ICMS ST a reter (R$)</th><!-- novo -->
               <th class="right">Valor Final (R$)</th>
               <th class="right">Valor s/ Frete (R$)</th>
+              <th class="right th-markup">
+                <label class="st-toggle-in-th" title="Mostrar/ocultar colunas de Markup">
+                  <input id="markup-cols-toggle" type="checkbox" />
+                  <span class="st-title">Markup %</span>
+                  <span class="chevron">▶</span>
+                </label>
+              </th>
+              <th class="right col-mk-derived">Valor Final (Mk)</th>
+              <th class="right col-mk-derived">Valor s/ Frete (Mk)</th>
             </tr>
           </thead>
           <tbody id="tbody-itens"></tbody>
         </table>
       </div>
     </section>
+
+    <!-- Container: Mobile Cards (injected via JS) -->
+    <div id="mobile-card-container" class="mobile-only mobile-card-list">
+      <!-- Cards will be rendered here -->
+      <div class="empty-state-mobile">
+        <p>Nenhum produto selecionado.</p>
+        <button id="btn-mobile-add-initial" class="btn btn-primary btn-sm">Adicionar Produtos</button>
+      </div>
+    </div>
+
+    <!-- Mobile Sticky Bottom Toolbar -->
+    <div class="mobile-toolbar mobile-only">
+      <div class="mobile-toolbar-content">
+        <div class="mobile-toolbar-info">
+          <span id="mobile-total-itens">0 itens</span>
+          <span id="mobile-total-valor">R$ 0,00</span>
+        </div>
+        <div class="mobile-toolbar-actions">
+          <button id="btn-mobile-list" class="btn-icon-mobile" title="Listar Tabelas"
+            style="margin-right:auto">☰</button>
+
+          <!-- Actions Grouped -->
+          <button id="btn-mobile-add" class="btn-icon-mobile hidden" title="Adicionar Produto"><i
+              class="bi bi-plus-circle"></i></button>
+          <button id="btn-mobile-edit" class="btn-icon-mobile hidden" title="Editar"><i
+              class="bi bi-pencil"></i></button>
+          <button id="btn-mobile-dup" class="btn-icon-mobile hidden" title="Duplicar">⧉</button>
+          <button id="btn-mobile-save" class="btn-primary-mobile"><i class="bi bi-floppy"></i> Salvar</button>
+
+          <!-- Cancel Moved to End -->
+          <button id="btn-mobile-cancel" class="btn-icon-mobile hidden" title="Cancelar">✕</button>
+        </div>
+      </div>
+    </div>
   </div>
   <!-- Lógica totalmente externa -->
   <script type="module">
-      import { showGerarLinkModal } from "../js/gerar_link_pedido.js";
-      window.__showGerarLinkModal = showGerarLinkModal;
-   </script> 
-  
+    import { showGerarLinkModal } from "../js/gerar_link_pedido.js";
+    window.__showGerarLinkModal = showGerarLinkModal;
+  </script>
+
   <script>
     const menuButton = document.getElementById("menu-button");
     const sidebar = document.getElementById("sidebar");
@@ -175,15 +305,16 @@
 
     menuButton.addEventListener("click", () => {
       sidebar.classList.toggle("active");
-      overlay.style.display = sidebar.classList.contains("active") ? "block" : "none";
+      overlay.classList.toggle("active");
     });
 
     overlay.addEventListener("click", () => {
       sidebar.classList.remove("active");
-      overlay.style.display = "none";
+      overlay.classList.remove("active");
     });
   </script>
 
-    
+
 </body>
+
 </html>

@@ -1,17 +1,17 @@
 // ==================== produto.js ====================
 
 // === Config ===
-const API_BASE = "https://ordersync-backend-edjq.onrender.com";
+const API_BASE = window.API_BASE || "https://ordersync-backend-59d2.onrender.com"; // Restored & Safe
 window.API_BASE = API_BASE;
 
 // candidatos de rotas (ordem de preferência)
 const CANDIDATES = [
-  `${API_BASE}/api/produtos`,
-  `${API_BASE}/api/produto`,
-  `${API_BASE}/api/produtos_v2`,
+  `${API_BASE}/api/produto`,        // Preferido (singular)
+  `${API_BASE}/api/produtos`,       // Fallback
   `${API_BASE}/api/produto_v2`,
-  `${API_BASE}/produtos`,
+  `${API_BASE}/api/produtos_v2`,
   `${API_BASE}/produto`,
+  `${API_BASE}/produtos`,
 ];
 
 const ENDPOINTS_AUX = {
@@ -22,6 +22,8 @@ const ENDPOINTS_AUX = {
 
 let PROD_ENDPOINT = null;
 let CURRENT_ID = null;
+let LAST_DATA = null;
+let CURRENT_MODE = "IDLE"; // IDLE, VIEW, EDIT, NEW
 
 // === Helpers básicos ===
 const $ = (id) => document.getElementById(id);
@@ -180,6 +182,19 @@ async function produtosPATCH(id, body) {
   throw new Error("Não foi possível atualizar o produto.");
 }
 
+async function produtosDELETE(id) {
+  const base = await resolveProdutosEndpoint();
+  for (const p of [`${base}/${id}`, `${base}/${encodeURIComponent(id)}`]) {
+    try {
+      return await fetchJSON(p, { method: "DELETE" });
+    } catch (e) {
+      if (e.status === 404) continue;
+      throw e;
+    }
+  }
+  throw new Error("Não foi possível excluir o produto.");
+}
+
 // ---------- leitura / preenchimento formulário ----------
 function getValue(id) {
   const el = $(id);
@@ -218,6 +233,7 @@ function readForm() {
 
     tipo: getValue("linha") || null, // Mapped to 'linha' UI input
     familia: getValue("familia") || null,
+    marca: getValue("marca") || null,
     filhos: getInt("filhos"),
 
     unidade: getValue("unidade") || null,
@@ -254,11 +270,11 @@ function readForm() {
   });
 
   const imposto = {
-    ipi: getNumber("ipi"),
-    icms: getNumber("icms"),
-    iva_st: getNumber("iva_st"),
-    cbs: getNumber("cbs"),
-    ibs: getNumber("ibs"),
+    ipi: getNumber("ipi") ? getNumber("ipi") / 100 : null,
+    icms: getNumber("icms") ? getNumber("icms") / 100 : null,
+    iva_st: getNumber("iva_st") ? getNumber("iva_st") / 100 : null,
+    cbs: getNumber("cbs") ? getNumber("cbs") / 100 : null,
+    ibs: getNumber("ibs") ? getNumber("ibs") / 100 : null,
   };
   Object.keys(imposto).forEach((k) => {
     if (imposto[k] === undefined) delete imposto[k];
@@ -271,7 +287,10 @@ function readForm() {
 
 function fillForm(p) {
   if (!p) return;
-  setFormState(false); // Carregou dados -> Readonly por padrão
+  // Store for cancel
+  LAST_DATA = JSON.parse(JSON.stringify(p));
+
+  setMode("VIEW");
 
   const set = (id, v) => {
     const el = $(id);
@@ -292,6 +311,7 @@ function fillForm(p) {
 
   set("linha", p.tipo); // Map backend 'tipo' to frontend 'linha' input
   set("familia", p.familia);
+  set("marca", p.marca);
   set("filhos", p.filhos);
 
   set("unidade", p.unidade);
@@ -331,11 +351,12 @@ function fillForm(p) {
   }
 
   const imp = p.imposto || {};
-  set("ipi", imp.ipi);
-  set("icms", imp.icms);
-  set("iva_st", imp.iva_st);
-  set("cbs", imp.cbs);
-  set("ibs", imp.ibs);
+  const n100 = (v) => v != null ? (v * 100).toFixed(2) : "";
+  set("ipi", n100(imp.ipi));
+  set("icms", n100(imp.icms));
+  set("iva_st", n100(imp.iva_st));
+  set("cbs", n100(imp.cbs));
+  set("ibs", n100(imp.ibs));
 
   // Recalcula visualização
   // setTimeout para garantir que os valores entraram no DOM se houver async
@@ -359,6 +380,7 @@ function clearForm() {
   if ($("reajuste")) $("reajuste").textContent = "—";
   if ($("vigencia")) $("vigencia").textContent = "—";
   CURRENT_ID = null;
+  setMode("IDLE");
 }
 
 // ---------- cálculo/aux ----------
@@ -386,6 +408,7 @@ function parseDateBrToISO(input) {
   return `${y}-${M}-${d}`;
 }
 
+
 // ---------- busca / modal ----------
 function renderSearchResults(items) {
   const box = $("search-results");
@@ -402,6 +425,7 @@ function renderSearchResults(items) {
     <tr data-id="${p.id}">
       <td>${p.codigo_supra || ""}</td>
       <td>${p.nome_produto || ""}</td>
+      <td>${p.fornecedor || ""}</td>
       <td>${p.preco != null ? p.preco.toFixed(2) : ""}</td>
       <td>${p.unidade || ""}</td>
       <td>${p.status_produto || ""}</td>
@@ -416,6 +440,7 @@ function renderSearchResults(items) {
         <tr>
           <th>Código</th>
           <th>Descrição</th>
+          <th>Fornecedor</th>
           <th>Preço</th>
           <th>Unid.</th>
           <th>Status</th>
@@ -445,18 +470,31 @@ function renderSearchResults(items) {
 
 const doSearch = debounce(async () => {
   const inp = $("search-input");
+  const selForn = $("search-fornecedor");
   const box = $("search-results");
   if (!inp || !box) return;
 
   const q = inp.value.trim();
-  if (!q) {
-    box.innerHTML = `<div class="empty">Digite parte do código ou descrição…</div>`;
+  const forn = selForn ? selForn.value : "";
+
+  // Se vazio, limpa
+  if (!q && !forn) {
+    box.innerHTML = `<div class="empty">Digite algo ou selecione fornecedor...</div>`;
     return;
   }
 
   try {
     const base = await resolveProdutosEndpoint();
-    const url = `${base}?q=${encodeURIComponent(q)}&limit=50&offset=0`;
+    // Monta Query String
+    const params = new URLSearchParams();
+    if (q) params.append("q", q);
+    if (forn) params.append("fornecedor", forn);
+    // Fix: Clear status filter to search ALL products (including Inactive)
+    params.append("status", "");
+    params.append("limit", "50");
+    params.append("offset", "0");
+
+    const url = `${base}?${params.toString()}`;
     const data = await fetchJSON(url);
     renderSearchResults(data);
   } catch (e) {
@@ -464,6 +502,62 @@ const doSearch = debounce(async () => {
     box.innerHTML = `<div class="empty">Erro ao buscar produtos.</div>`;
   }
 }, 400);
+
+async function loadSearchFornecedores() {
+  const el = $("search-fornecedor");
+  if (!el) return;
+  // Se já tiver opções (além do default), não recarrega
+  if (el.options.length > 1) return;
+
+  try {
+    const url = `${API_BASE}/api/fornecedores`;
+    // ou use endpoint de opções do produto se preferir, 
+    // mas vamos tentar usar o mesmo loadFornecedores se possivel, ou fetch direto.
+    // O backend tem GET /api/produto/opcoes ? Tem GET /api/fornecedores
+    // Vamos usar /api/fornecedores que já vimos em loadFornecedores
+
+    // Pequena duplicacao para garantir contexto isolado do modal de busca
+    const data = await fetchJSON(url);
+    // data deve ser lista de { nome_fornecedor, ... }
+
+    el.innerHTML = '<option value="">Todos Fornecedores</option>' +
+      data.map(f => `<option value="${f.nome_fornecedor}">${f.nome_fornecedor}</option>`).join("");
+
+  } catch (e) {
+    console.error("Erro ao carregar fornecedores search:", e);
+  }
+}
+
+// Hook para abrir modal e carregar fornecedores
+function setupSearchModal() {
+  const btn = $("btn-buscar");
+  const modal = $("search-modal");
+  const close = $("search-close");
+  const cancel = $("search-cancel");
+  const inp = $("search-input");
+  const selForn = $("search-fornecedor");
+
+  if (btn && modal) {
+    btn.addEventListener("click", () => {
+      modal.classList.remove("hidden");
+      if (modal.showModal) modal.showModal(); // se for dialog
+      loadSearchFornecedores();
+      if (inp) inp.focus();
+    });
+  }
+
+  const hide = () => {
+    if (modal.close) modal.close();
+    else modal.classList.add("hidden");
+  };
+
+  if (close) close.addEventListener("click", hide);
+  if (cancel) cancel.addEventListener("click", hide);
+
+  if (inp) inp.addEventListener("input", doSearch);
+  if (selForn) selForn.addEventListener("change", doSearch);
+}
+
 
 // ---------- Cálculo de Preço Final (Promoção) ----------
 function calculateFinalPrice() {
@@ -707,6 +801,26 @@ async function uploadListaPdf(file) {
   }
 }
 
+// ---------- Carregar Fornecedores ----------
+async function loadFornecedores() {
+  const el = $("import_fornecedor");
+  if (!el) return;
+  try {
+    const url = `${API_BASE}/api/fornecedores`;
+    const data = await fetchJSON(url);
+
+    // Sort logic just in case backend didn't
+    // data.sort((a,b) => a.nome_fornecedor.localeCompare(b.nome_fornecedor));
+
+    el.innerHTML = '<option value="">Selecione...</option>' +
+      data.map(f => `<option value="${f.nome_fornecedor}">${f.nome_fornecedor}</option>`).join("");
+  } catch (e) {
+    console.error("Erro ao carregar fornecedores:", e);
+    // Don't break UI, just leave empty or show error option
+    el.innerHTML = '<option value="">Erro ao carregar</option>';
+  }
+}
+
 // ---------- Importar PDF (INS/PET + validade) ----------
 function setupImportarPdf() {
   const btnImportar = $("btn-importar");
@@ -735,13 +849,17 @@ function setupImportarPdf() {
     return parseDateBrToISO(s);
   };
 
-  const doImport = async ({ tipo, validadeISO, file }) => {
+  const doImport = async ({ tipo, validadeISO, file, fornecedor }) => {
     if (!tipo) {
       alert("Tipo inválido. Use INSUMOS ou PET.");
       return;
     }
     if (!validadeISO) {
       alert("Data de validade inválida. Use dd/mm/aaaa ou selecione no calendário.");
+      return;
+    }
+    if (!fornecedor) {
+      alert("Selecione o fornecedor.");
       return;
     }
     if (!file) {
@@ -765,6 +883,7 @@ function setupImportarPdf() {
       const formData = new FormData();
       formData.append("tipo_lista", tipo);
       formData.append("validade_tabela", validadeISO); // yyyy-mm-dd
+      formData.append("fornecedor", fornecedor);
       formData.append("file", file);
 
       const resp = await fetch(url, { method: "POST", body: formData });
@@ -784,7 +903,7 @@ function setupImportarPdf() {
         return;
       }
 
-      const { total_linhas_pdf, lista, fornecedor, sync } = data;
+      const { total_linhas_pdf, lista, fornecedor: fornecedorResult, sync } = data;
 
       // Compatibilidade com API nova (sync) e antiga (inseridos/atualizados na raiz)
       let inseridos = data.inseridos ?? 0;
@@ -804,7 +923,7 @@ function setupImportarPdf() {
 
       // opção de baixar o relatório em PDF
       const listaFinal = lista || tipo;
-      const fornecedorFinal = fornecedor || "";
+      const fornecedorFinal = fornecedorResult || "";
 
       if (listaFinal && fornecedorFinal) {
         const relatorioUrl = `${importBase}/relatorio-lista?fornecedor=${encodeURIComponent(
@@ -846,6 +965,7 @@ function setupImportarPdf() {
       // modalTipo.value = "";
       // modalValidade.value = "";
       // modalArquivo.value = "";
+      loadFornecedores();
       openModal();
     });
 
@@ -863,8 +983,9 @@ function setupImportarPdf() {
         const tipo = normalizeTipo(modalTipo.value);
         const validadeISO = normalizeValidISO(modalValidade.value);
         const file = modalArquivo.files?.[0];
+        const fornecedor = $("import_fornecedor")?.value;
 
-        const ok = await doImport({ tipo, validadeISO, file });
+        const ok = await doImport({ tipo, validadeISO, file, fornecedor });
         if (ok) {
           // opcional: fecha e reseta se deu certo
           modalArquivo.value = "";
@@ -948,6 +1069,7 @@ async function loadOptions() {
     // Mas se é select, só seleciona. Se for input com datalist...
     // O html é select.
     fill("familia", data.familia);
+    fill("marca", data.marca); // Populate Group (marca) select with data from t_familia_produtos
 
     // Fornecedor é input type="text" no HTML? Ou Select?
     // User image shows "Fornecedor" as text input visually (no arrow), but let's check HTML if we can.
@@ -974,6 +1096,73 @@ function setFormState(enabled) {
   if (btnSalvar) btnSalvar.disabled = !enabled;
 }
 
+// ---------- Controle de Modo (IDLE, VIEW, NEW, EDIT) ----------
+function setMode(mode) {
+  CURRENT_MODE = mode;
+  const isEditing = (mode === "EDIT" || mode === "NEW");
+
+  // 1. Trava/Destrava inputs
+  setFormState(isEditing);
+
+  // 2. Visibilidade de Botões
+  const show = (id) => { const el = $(id); if (el) el.style.display = ""; };
+  const hide = (id) => { const el = $(id); if (el) el.style.display = "none"; };
+
+  const btnBuscar = "btn-buscar";
+  const btnImportar = "btn-importar";
+  const btnRenovar = "btn-renovar-validade";
+  const btnNovo = "btn-novo-produto";
+
+  // Botões de ação
+  const btnEditar = "btn-editar";
+  const btnExcluir = "btn-excluir";
+  const btnVoltarView = "btn-voltar-view";
+  const btnSalvar = "btn-salvar";
+  const btnCancelarEdicao = "btn-cancelar-edicao";
+
+  if (mode === "IDLE") {
+    // Tela inicial limpa
+    show(btnNovo); // Reordered logically in display if flexbox, but here just visibility
+    show(btnBuscar);
+    show(btnImportar);
+    show(btnRenovar);
+
+    hide(btnEditar);
+    hide(btnExcluir);
+    hide(btnVoltarView);
+    hide(btnSalvar);
+    hide(btnCancelarEdicao);
+
+  } else if (mode === "VIEW") {
+    // Produto carregado -> Oculta ações de topo
+    hide(btnNovo);
+    hide(btnBuscar);
+    hide(btnImportar);
+    hide(btnRenovar);
+
+    // Mostra ações de visão
+    show(btnEditar);
+    show(btnExcluir);
+    show(btnVoltarView);
+
+    hide(btnSalvar);
+    hide(btnCancelarEdicao);
+
+  } else if (mode === "NEW" || mode === "EDIT") {
+    // Editando ou Criando
+    hide(btnNovo);
+    hide(btnBuscar);
+    hide(btnImportar);
+    hide(btnRenovar);
+    hide(btnEditar);
+    hide(btnExcluir);
+    hide(btnVoltarView);
+
+    show(btnSalvar);
+    show(btnCancelarEdicao);
+  }
+}
+
 // ---------- Init ----------
 document.addEventListener("DOMContentLoaded", async () => {
   try {
@@ -983,10 +1172,63 @@ document.addEventListener("DOMContentLoaded", async () => {
     console.warn("[produto] não foi possível resolver endpoint ainda:", e);
   }
 
-  $("btn-novo")?.addEventListener("click", () => {
+  // Hook buttons
+  $("btn-novo-produto")?.addEventListener("click", () => {
     clearForm();
-    setFormState(true); // Novo = Habilitado
-    toast("Novo produto em edição.");
+    // clearForm seta IDLE, mas aqui queremos NEW
+    // override
+    setMode("NEW");
+    toast("Novo produto.");
+  });
+
+  // Edit logic
+  $("btn-editar")?.addEventListener("click", () => {
+    if (!CURRENT_ID) {
+      toast("Nenhum produto selecionado.");
+      return;
+    }
+    setMode("EDIT");
+    toast("Modo de edição.");
+  });
+
+  // Excluir
+  $("btn-excluir")?.addEventListener("click", async () => {
+    if (!CURRENT_ID) {
+      toast("Nenhum produto selecionado.");
+      return;
+    }
+    if (!confirm("Tem certeza que deseja excluir este produto?")) return;
+
+    try {
+      await produtosDELETE(CURRENT_ID);
+      toast("Produto excluído com sucesso.");
+      clearForm(); // reset to IDLE
+    } catch (e) {
+      console.error(e);
+      toast("Erro ao excluir: " + (e.message || "Erro desconhecido"), "error");
+    }
+  });
+
+  // Cancelar da Visão (Voltar para Home/Limpo)
+  $("btn-voltar-view")?.addEventListener("click", () => {
+    clearForm();
+    toast("Limpo.");
+  });
+
+  // Cancelar da Edição
+  $("btn-cancelar-edicao")?.addEventListener("click", () => {
+    if (CURRENT_MODE === "NEW") {
+      clearForm(); // volta pra IDLE
+    } else {
+      // EDIT
+      // restaura dados
+      if (LAST_DATA) {
+        fillForm(LAST_DATA); // volta pra VIEW
+      } else {
+        // Fallback
+        setMode("VIEW");
+      }
+    }
   });
 
   $("btn-salvar")?.addEventListener("click", async () => {
@@ -1013,12 +1255,11 @@ document.addEventListener("DOMContentLoaded", async () => {
       if (alvoId) {
         const res = await produtosPATCH(alvoId, { produto, imposto });
         fillForm(res);
-        setFormState(false); // Volta para readonly após salvar
+        setMode("VIEW"); // Volta para readonly após salvar
         toast("Produto atualizado.");
       } else {
         const res = await produtosPOST({ produto, imposto });
-        fillForm(res);
-        setFormState(false); // Volta para readonly após salvar
+        fillForm(res); // fillForm chama setMode("VIEW")
         toast("Produto criado.");
       }
     } catch (e) {
@@ -1027,13 +1268,9 @@ document.addEventListener("DOMContentLoaded", async () => {
     }
   });
 
-  $("btn-editar")?.addEventListener("click", () => {
-    setFormState(true); // Habilita edição
-    toast("Edição habilitada.");
-  });
-
-  // Inicializa inputs desabilitados (exceto Search/Novo que tem suas regras)
-  setFormState(false);
+  // Remove old listeners passed by copy paste or prev setup if any
+  // Init default state
+  setMode("IDLE");
 
   $("btn-buscar")?.addEventListener("click", () => {
     const modal = $("search-modal");
@@ -1135,3 +1372,78 @@ function handleSuccessModal(stats, relatorioUrl) {
     });
   }
 }
+
+// ------------------------------------------------------------------
+// LÓGICA DE RENOVAR VALIDADE (GLOBAL)
+// ------------------------------------------------------------------
+function setupRenovarValidade() {
+  const btnRenovar = document.getElementById("btn-renovar-validade");
+  const modalRenovar = document.getElementById("modal-renovar-validade");
+  const btnConfirmar = document.getElementById("btn-confirmar-renovacao");
+  const btnFechar = document.getElementById("btn-fechar-renovacao");
+  const inputNovaValidade = document.getElementById("input-nova-validade");
+
+  if (!btnRenovar || !modalRenovar) return;
+
+  // Abrir manual
+  // Abrir manual
+  btnRenovar.addEventListener("click", () => {
+    modalRenovar.classList.remove("hidden");
+    inputNovaValidade.value = "";
+  });
+
+  // Fechar
+  const close = () => {
+    modalRenovar.classList.add("hidden");
+  };
+  if (btnFechar) btnFechar.addEventListener("click", close);
+
+  // Confirmar
+  if (btnConfirmar) {
+    btnConfirmar.addEventListener("click", async () => {
+      const novaData = inputNovaValidade.value;
+      if (!novaData) {
+        toast("Selecione uma data!");
+        return;
+      }
+
+      const tipoRenovacao = document.getElementById("select-tipo-renovacao")?.value || "TODOS";
+
+      const tipoLabel = tipoRenovacao === "TODOS" ? "TODOS os produtos" : `${tipoRenovacao}`;
+
+      if (!confirm(`Confirma renovar validade de ${tipoLabel} ativos para ${novaData}?`)) {
+        return;
+      }
+
+      try {
+        const base = await resolveProdutosEndpoint();
+        const url = `${base}/renovar_validade_global`;
+        const token = localStorage.getItem("ordersync_token");
+
+        const data = await fetchJSON(url, {
+          method: "POST",
+          headers: {
+            "Authorization": `Bearer ${token}`
+          },
+          body: JSON.stringify({ nova_validade: novaData, tipo: tipoRenovacao }),
+        });
+
+        toast(`Sucesso! ${data.linhas_afetadas} produtos atualizados.`);
+        close();
+        if (typeof clearForm === 'function') clearForm();
+
+      } catch (e) {
+        console.error(e);
+        toast("Erro: " + e.message);
+      }
+    });
+  }
+}
+
+// Inicializa a lógica extra
+
+document.addEventListener("DOMContentLoaded", () => {
+  setupRenovarValidade();
+  setupSearchModal();
+});
+

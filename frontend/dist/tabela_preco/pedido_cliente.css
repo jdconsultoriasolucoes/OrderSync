@@ -3,102 +3,26 @@
 body {
   margin: 0;
   padding: 0;
-  background-color: #f0f2f5;
-  font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+  background-color: var(--os-bg);
+  font-family: var(--os-font-family);
   position: relative;
 }
 
-.documento {
-  max-width: 1000px;
-  margin: 40px auto;
-  background: #fff;
-  padding: 40px;
-  box-shadow: 0 0 15px rgba(0, 0, 0, 0.1);
-  border-radius: 8px;
-  position: relative;
-  overflow: hidden;
+
+
+/* Força a coluna "Produto" a ter espaço suficiente pra não quebrar nomes longos e empurrar colunas vizinhas */
+table th:nth-child(3),
+table td:nth-child(3) {
+  min-width: 250px;
 }
 
-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: flex-start;
-  border-bottom: 2px solid #ccc;
-  padding-bottom: 20px;
-  margin-bottom: 30px;
-  flex-direction: row-reverse;
+/* Força a coluna "Condição de Pagto" a ter espaço na mesma linha */
+table th:nth-child(8),
+table td:nth-child(8) {
+  min-width: 160px;
 }
 
-.dados-header {
-  text-align: left;
-}
 
-.logo-cliente {
-  display: flex;
-  justify-content: flex-end;
-  align-items: flex-start;
-}
-
-.logo-cliente img {
-  height: 60px;
-}
-
-.dados-header h1 {
-  margin: 0 0 10px;
-  font-size: 24px;
-  color: #333;
-}
-
-.dados-header p {
-  margin: 4px 0;
-  font-size: 14px;
-  color: #444;
-}
-
-table {
-  width: 100%;
-  border-collapse: collapse;
-  margin-bottom: 30px;
-}
-
-table thead {
-  background: #eaeaea;
-}
-
-table th,
-table td {
-  padding: 10px;
-  border: 1px solid #ccc;
-  text-align: left;
-  font-size: 14px;
-}
-
-input[type="number"] {
-  width: 70px;
-  padding: 6px;
-  font-size: 14px;
-  border: 1px solid #aaa;
-  border-radius: 4px;
-}
-
-.acoes {
-  text-align: center;
-}
-
-.acoes button {
-  background-color: #4CAF50;
-  border: none;
-  color: white;
-  padding: 10px 30px;
-  font-size: 14px;
-  margin: 0 10px;
-  border-radius: 5px;
-  cursor: pointer;
-}
-
-.acoes button#btnCancelar {
-  background-color: #f44336;
-}
 
 #mensagem {
   text-align: center;
@@ -120,166 +44,136 @@ input[type="number"] {
 }
 
 /* Resumo do pedido */
-.resumo-pedido { margin-top: 16px; }
-.resumo-pedido .resumo-grid {
-  display: flex;
-  gap: 24px;
-  flex-wrap: wrap;
-}
 
-/* Observações do pedido */
-.observacoes-pedido { margin-top: 16px; }
-.observacoes-label { display: block; margin-bottom: 8px; }
-.observacoes-textarea {
-  width: 100%;
-  min-height: 96px;
-  padding: 8px 10px;
-  border: 1px solid #d6d6d6;
-  border-radius: 8px;
-  resize: vertical;
-  font: inherit;
-}
-.observacoes-counter {
-  text-align: right;
-  font-size: 0.9rem;
-  opacity: 0.7;
-  margin-top: 4px;
-}
 
 /* ===== Modal de confirmação ===== */
-.modal[hidden] { display: none !important; }
-.modal {
-  position: fixed; inset: 0; z-index: 9999;
-  display: grid; place-items: center;
+
+
+body.modal-open {
+  overflow: hidden;
 }
-.modal-backdrop {
-  position: absolute; inset: 0;
-  background: rgba(0,0,0,0.55);
-  backdrop-filter: blur(2px);
-}
-.modal-content {
-  position: relative;
-  max-width: 680px; width: calc(100% - 32px);
-  background: #101012; color: #fff;
-  border-radius: 14px; padding: 24px;
-  box-shadow: 0 10px 40px rgba(0,0,0,0.35);
-}
-.modal-content h2 { margin: 0 0 8px; font-size: 1.5rem; }
-.modal-content .confirm-text, .modal-content .confirm-info {
-  margin: 0 0 12px; color: #b9c0cf;
-}
-.btn-modal {
-  display: inline-block;
-  padding: 10px 16px; border-radius: 10px;
-  border: 1px solid #2d2f39; background: #1a1c24;
-  cursor: pointer; font: inherit; color: #fff;
-}
-body.modal-open { overflow: hidden; }
 
 /* Estado travado após confirmação (evita interação/estilo visual) */
-body.page-locked .documento { filter: grayscale(0.2); }
+body.page-locked .documento {
+  filter: grayscale(0.2);
+}
+
 body.page-locked .documento *:not(#confirmModal):not(.modal-content):not(.btn-modal) {
   cursor: not-allowed !important;
 }
 
-.hidden { display: none !important; }
+/* Exceção: botão de download do PDF deve permanecer clicável */
+#btnBaixarManual {
+  cursor: pointer !important;
+  pointer-events: auto !important;
+}
 
-/* esconde a coluna 5 (Peso) da tabela */
-#tabelaProdutos th:nth-child(5),
-#tabelaProdutos td:nth-child(5),
-/* esconde a coluna 8 (Subtotal) da tabela */
-#tabelaProdutos th:nth-child(8),
-#tabelaProdutos td:nth-child(8) {
+.hidden {
   display: none !important;
 }
 
-#btnFecharConfirm{
-  appearance:none; -webkit-appearance:none;
-  background:#2b2b2b;
-  color:#fff;
-  border:0;
-  border-radius:8px;
-  padding:10px 14px;
-  font-weight:600;
-  cursor:pointer;
-  box-shadow:0 2px 6px rgba(0,0,0,.18);
+/* FORÇA A EXIBIÇÃO DA COLUNA 5 (Quantidade) e 10 (Valor Markup) */
+#tabelaProdutos th:nth-child(5),
+#tabelaProdutos td:nth-child(5),
+#tabelaProdutos th:nth-child(10),
+#tabelaProdutos td:nth-child(10) {
+  display: table-cell !important;
 }
-#btnFecharConfirm:hover{ filter:brightness(.95); }
-#btnFecharConfirm:focus{ outline:2px solid rgba(255,255,255,.25); outline-offset:2px; }
+
+/* esconde a coluna 6 (Peso) da tabela - ajustado para +1 coluna (#) */
+#tabelaProdutos th:nth-child(6),
+#tabelaProdutos td:nth-child(6),
+/* esconde a coluna 11 (Subtotal) da tabela - ajustado para +1 coluna (#) */
+#tabelaProdutos th:nth-child(11),
+#tabelaProdutos td:nth-child(11) {
+  display: none !important;
+}
+
+
 
 /* largura máxima do bloco de totais (opcional) */
-.fechamento-card{ max-width: 420px; }
+.fechamento-card {
+  max-width: 420px;
+}
 
 /* cada linha: rótulo à esquerda, valor à direita em coluna fixa */
-.fech-row{
+.fech-row {
   display: grid;
-  grid-template-columns: 1fr 140px;  /* ajuste a largura dos valores se quiser */
+  grid-template-columns: 1fr 140px;
+  /* ajuste a largura dos valores se quiser */
   align-items: center;
   padding: 8px 0;
   border-bottom: 1px solid #eee;
 }
-.fech-row:last-child{ border-bottom: 0; }
+
+.fech-row:last-child {
+  border-bottom: 0;
+}
 
 /* rótulos e valores no MESMO tamanho */
-.fech-label{
+.fech-label {
   font-size: 16px;
   font-weight: 600;
-  color: #475569;              /* cinza 600 */
+  color: #475569;
+  /* cinza 600 */
 }
-.fech-value{
+
+.fech-value {
   text-align: right;
-  font-size: 16px;             /* igual ao rótulo */
-  font-weight: 600;            /* sem negrito exagerado */
+  font-size: 16px;
+  /* igual ao rótulo */
+  font-weight: 600;
+  /* sem negrito exagerado */
   letter-spacing: 0;
-  font-variant-numeric: tabular-nums;  /* dígitos com largura fixa */
-  color: #0f172a;              /* quase preto */
+  font-variant-numeric: tabular-nums;
+  /* dígitos com largura fixa */
+  color: #0f172a;
+  /* quase preto */
 }
 
 /* neutraliza <strong> dentro do valor para não “engrossar” */
-.fech-value strong{ font-weight: 600; }
-.fech-value span{ line-height: 1; }
+.fech-value strong {
+  font-weight: 600;
+}
+
+.fech-value span {
+  line-height: 1;
+}
 
 /* unidade do peso (opcional, se usar <span class="unit"> kg</span>) */
-.fech-value .unit{ color:#64748b; margin-left:4px; }
+.fech-value .unit {
+  color: #64748b;
+  margin-left: 4px;
+}
 
 /* Observações clean (mantém seu HTML/IDs) */
-.obs-title{
-  margin: 0 0 6px 0;
-  padding: 0;
-  background: transparent;
-  border: 0;
-  color: #334155;              /* cinza 700 */
-  font-weight: 700;
-}
-.obs-body{ padding: 0; }
-.obs-card textarea{
-  width: 100%;
-  min-height: 120px;
-  resize: vertical;
-  border: 1px solid #e5e7eb;
-  border-radius: 8px;
-  padding: 10px 12px;
-  background: #fff;            /* sem linhas */
-  outline: none;
-}
-.obs-card textarea:focus{
-  border-color:#c7d2fe;
-  box-shadow:0 0 0 3px rgba(99,102,241,.15);
-}
-.obs-count{
-  text-align: right;
-  font-size: 12px;
-  color: #64748b;
-  margin-top: 6px;
-}
+
 
 /* Responsivo */
-@media (max-width: 700px){
-  .fech-row{ grid-template-columns: 1fr 120px;}
+@media (max-width: 700px) {
+  .fech-row {
+    grid-template-columns: 1fr 120px;
   }
+}
+
+/* Garante largura mínima para a coluna QTD (5ª) e o input dentro dela */
+#tabelaProdutos th:nth-child(5),
+#tabelaProdutos td:nth-child(5) {
+  min-width: 72px;
+  width: 72px;
+}
+
+#tabelaProdutos td:nth-child(5) input {
+  width: 100% !important;
+  max-width: 100% !important;
+  min-width: 52px;
+  box-sizing: border-box;
+  padding: 4px 6px;
+  text-align: center;
+}
 
 /* Wrapper lado a lado (desktop) e empilhado (mobile) */
-.fechamento-grid{
+.fechamento-grid {
   display: grid;
   grid-template-columns: minmax(260px, 360px) 1fr;
   gap: 24px;
@@ -287,6 +181,39 @@ body.page-locked .documento *:not(#confirmModal):not(.modal-content):not(.btn-mo
   margin: 20px 0 10px;
 }
 
-@media (max-width: 700px){
-  .fechamento-grid{ grid-template-columns: 1fr; }
-}  
+@media (max-width: 700px) {
+  .os-page-container {
+    padding: var(--os-space-3) !important;
+    margin: 10px !important;
+  }
+
+  .fechamento-grid {
+    grid-template-columns: 1fr !important;
+  }
+
+  header {
+    flex-direction: column !important;
+    align-items: center !important;
+    text-align: center !important;
+  }
+
+  .dados-header {
+    text-align: center !important;
+  }
+
+  .dados-header p,
+  .dados-header .meta-link {
+    font-size: 16px !important;
+    color: var(--os-text) !important;
+  }
+
+  /* Faz a tabela respirar um pouco mais no celular */
+  .os-table th,
+  .os-table td {
+    font-size: 14px !important;
+  }
+
+  .logo-cliente {
+    margin-bottom: var(--os-space-3);
+  }
+}

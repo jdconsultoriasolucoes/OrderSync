@@ -1,117 +1,169 @@
-<!DOCTYPE html>
+﻿<!DOCTYPE html>
 <html lang="pt-BR">
+
 <head>
   <meta charset="UTF-8">
   <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
   <meta http-equiv="Pragma" content="no-cache">
   <meta http-equiv="Expires" content="0">
   <title>Confirmação de Pedido</title>
-  <link rel="stylesheet" href="/static/tabela_preco/pedido_cliente.css?v=20251013h">
+  <link rel="stylesheet" href="/design-system.css">
+  <link rel="stylesheet" href="/static/tabela_preco/pedido_cliente.css?v=20260210-qtd-fix">
 </head>
+
 <body>
-  <div class="documento">
-    <header>
-      <div class="logo-cliente">
+  <div class="os-page-container"
+    style="width: 95%; max-width: 1400px; margin: 40px auto; background: var(--os-bg-card); padding: var(--os-space-6); box-shadow: var(--os-shadow-lg); border-radius: var(--os-radius-lg); overflow: hidden;">
+    <header
+      style="display: flex; justify-content: space-between; align-items: flex-start; border-bottom: 1px solid var(--os-border); padding-bottom: var(--os-space-4); margin-bottom: var(--os-space-5); flex-direction: row-reverse;">
+      <div class="logo-cliente" style="display: flex; justify-content: flex-end; align-items: flex-start;">
         <img src="/static/tabela_preco/logo_cliente_supra.png" alt="Logo do Cliente">
       </div>
-      <div class="dados-header">
-        <h1>Solicitação de orçamento</h1>
-        <div class="meta-link" style="font-size:12px;color:#666;margin-top:4px;">
+      <div class="dados-header" style="text-align: left;">
+        <h1 style="margin: 0 0 10px; font-size: 24px; color: var(--os-text); font-weight: 700;">Solicitação de orçamento
+        </h1>
+        <div class="meta-link" style="font-weight: 600; font-size: 14px; margin-top: 4px; color: var(--os-text-muted);">
           Data do pedido: <span id="datadopedido">—</span>
         </div>
-        <p><strong>Cliente:</strong> <span id="razaoSocialCliente">---</span></p>
-        <p><strong>Validade:</strong> <span id="validadeTabela">---</span> (<span id="tempoRestante">---</span>)</p>
-        <p><strong id="labelEntregaRetirada">Data:</strong> <span id="dataEntregaValor">a combinar</span></p> 
+        <p style="margin: 4px 0; font-size: 14px; color: var(--os-text-secondary);"><strong>Cliente:</strong> <span
+            id="razaoSocialCliente">---</span></p>
+        <p style="margin: 4px 0; font-size: 14px; color: var(--os-text-secondary);"><strong>Validade:</strong> <span
+            id="validadeTabela">---</span> (<span id="tempoRestante">---</span>)</p>
+        <p style="margin: 4px 0; font-size: 14px; color: var(--os-text-secondary);"><strong
+            id="labelEntregaRetirada">Data:</strong> <span id="dataEntregaValor">a combinar</span></p>
       </div>
     </header>
 
     <main>
-      <table id="tabelaProdutos">
-        <thead>
-          <tr>
-            <th>Código</th>
-            <th>Produto</th>
-            <th>Embal.</th>
-            <th>Qtd</th>
-            <th>Peso</th> <!-- Retirado por pedido do Edson, o campo continua sendo calculado, para retornar ele necessario retirar do CSS regra de ocultar -->
-            <th>Valor <span id="tituloValorFrete">c/ Frete</span></th>
-            <th>Condição de Pagamento</th>
-            <th>Subtotal</th> <!-- Retirado por pedido do Edson, o campo continua sendo calculado, para retornar ele necessario retirar do CSS regra de ocultar -->
-          </tr>
-        </thead>
-        <tbody></tbody>
-      </table>
-      <section class="fechamento-grid">
+      <div class="os-table-wrap"
+        style="margin-bottom: var(--os-space-5); border-radius: 4px; box-shadow: none; overflow-x: auto; width: 100%;">
+        <table id="tabelaProdutos" class="os-table" style="min-width: 900px;">
+          <thead>
+            <tr>
+              <th>#</th>
+              <th>Código</th>
+              <th>Produto</th>
+              <th>Embal.</th>
+              <th class="right">Qtd</th>
+              <th class="right">Peso</th>
+              <th class="right">Valor <span id="tituloValorFrete">c/ Frete</span></th>
+              <th>Condição de Pagamento</th>
+              <th class="col-markup right">Markup %</th>
+              <th class="col-markup right">Valor C Markup</th>
+              <th class="right">Subtotal</th>
+            </tr>
+          </thead>
+          <tbody></tbody>
+        </table>
+      </div>
+      <section class="fechamento-grid"
+        style="display: grid; grid-template-columns: minmax(260px, 360px) 1fr; gap: var(--os-space-4); align-items: start; margin: 20px 0 10px;">
         <!-- CAIXA ESQUERDA: Totais -->
-        <div class="fechamento-card">
-          <div class="fech-row">
-            <div class="fech-label">Total em Peso Bruto</div>
-            <div class="fech-value"><span id="totalPesoPedido">0</span><span class="unit"> kg</span></div>
+        <div class="fechamento-card" style="max-width: 420px;">
+          <div class="fech-row"
+            style="display: grid; grid-template-columns: 1fr 140px; align-items: center; padding: 8px 0; border-bottom: 1px solid var(--os-border);">
+            <div class="fech-label" style="font-size: 16px; font-weight: 600; color: var(--os-text-secondary);">Total em
+              Peso Bruto</div>
+            <div class="fech-value"
+              style="text-align: right; font-size: 16px; font-weight: 600; font-variant-numeric: tabular-nums; color: var(--os-text);">
+              <span id="totalPesoPedido">0</span><span class="unit"
+                style="color: var(--os-text-muted); margin-left: 4px;"> kg</span>
+            </div>
           </div>
-          <div class="fech-row">
-            <div class="fech-label">Total em Valor</div>
-            <div class="fech-value"><span id="totalGeral">0,00</span></div>
+          <div class="fech-row"
+            style="display: grid; grid-template-columns: 1fr 140px; align-items: center; padding: 8px 0;">
+            <div class="fech-label" style="font-size: 16px; font-weight: 600; color: var(--os-text-secondary);">Total em
+              Valor</div>
+            <div class="fech-value"
+              style="text-align: right; font-size: 16px; font-weight: 600; font-variant-numeric: tabular-nums; color: var(--os-text);">
+              <span id="totalGeral">0,00</span>
+            </div>
           </div>
         </div>
 
         <!-- CAIXA DIREITA: Observações do Cliente -->
         <div class="obs-card">
-          <div class="obs-title">Observações do Cliente:</div>
+          <div class="obs-title" style="margin: 0 0 6px; font-weight: 700; color: var(--os-text-secondary);">Observações
+            do Cliente:</div>
           <div class="obs-body">
-            <textarea id="observacaoPedido" maxlength="100" placeholder="Digite aqui..."></textarea>
-            <div class="obs-count"><span id="obsCount">0</span>/100</div>
+            <textarea id="observacaoPedido" class="os-textarea" maxlength="100" placeholder="Digite aqui..."
+              style="min-height: 96px; resize: vertical;"></textarea>
+            <div class="obs-count"
+              style="text-align: right; font-size: 12px; color: var(--os-text-muted); margin-top: 6px;"><span
+                id="obsCount">0</span>/100</div>
           </div>
         </div>
       </section>
-      <div class="acoes">
-        <button id="btnConfirmar">Confirmar Pedido</button>
-        <button id="btnCancelar">Cancelar</button>
+      <div class="acoes" style="text-align: center; margin-top: var(--os-space-4);">
+        <button id="btnConfirmar" class="os-btn os-btn-primary"
+          style="padding: 10px 30px; font-size: 14px; margin: 0 10px;">Confirmar Pedido</button>
+        <button id="btnCancelar" class="os-btn os-btn-danger"
+          style="padding: 10px 30px; font-size: 14px; margin: 0 10px;">Cancelar</button>
       </div>
-     
+
       <div class="marca-dagua">
         <img src="/static/tabela_preco/logo.png" alt="Marca d'água OrderSync">
-       </div>
+      </div>
       <p id="mensagem"></p>
     </main>
   </div>
 
   <!-- defina sua API (ajuste para prod) -->
-<script>
-  window.API_BASE = "https://ordersync-backend-59d2.onrender.com";
-</script>
-<script src="/static/tabela_preco/pedido_cliente.js?v=tab-5"></script>
-<!-- resolve o /p/{code} e expõe os globais -->
-<script>
-  window.addEventListener('DOMContentLoaded', () => {
-    const API = (p) => `${(window.API_BASE || location.origin).replace(/\/$/,'')}${p}`;
-    const code = location.pathname.split('/').pop();
+  <script>
+    window.API_BASE = ""; // Auto-detect origin
+  </script>
+  <script src="/static/tabela_preco/pedido_cliente.js?v=final-fix"></script>
+  <!-- resolve o /p/{code} e expõe os globais -->
+  <script>
+    window.addEventListener('DOMContentLoaded', () => {
+      const API = (p) => `${(window.API_BASE || location.origin).replace(/\/$/, '')}${p}`;
+      const code = location.pathname.split('/').pop();
 
-   fetch(API(`/link_pedido/resolver?code=${encodeURIComponent(code)}`), { cache:'no-store' })
-      .then(r => { if (!r.ok) throw new Error('resolver '+r.status); return r.json(); })
-      .then(d => {
-        window.currentTabelaId  = d.tabela_id;
-        window.currentComFrete  = d.com_frete;
-        window.entregaISO       = (typeof d.data_prevista === 'string' ? d.data_prevista : null); // << NOVO
-        console.log('[resolver] ok', d);
+      fetch(API(`/link_pedido/resolver?code=${encodeURIComponent(code)}`), { cache: 'no-store' })
+        .then(r => { if (!r.ok) throw new Error('resolver ' + r.status); return r.json(); })
+        .then(d => {
+          window.currentTabelaId = d.tabela_id;
+          window.currentComFrete = d.com_frete;
+          window.entregaISO = (typeof d.data_prevista === 'string' ? d.data_prevista : null); // << NOVO
+          console.log('[resolver] ok', d);
 
-        if (typeof window.carregarPedido === 'function') {
-          window.carregarPedido();
-        } else {
-          setTimeout(() => window.carregarPedido && window.carregarPedido(), 0);
-        }
-      })
-      .catch(err => console.error('[resolver] fail', err));
-  });
-</script>
+          if (d.is_expired) {
+            document.body.innerHTML = `
+                <div style="display: flex; flex-direction: column; align-items: center; justify-content: center; height: 100vh; font-family: sans-serif; text-align: center; background-color: #f9f9f9;">
+                    <h1 style="color: #d9534f; margin-bottom: 1rem;">Link Expirado</h1>
+                    <p style="color: #333; font-size: 1.1rem; max-width: 500px; line-height: 1.5;">
+                        Este link de orçamento não é mais válido.<br>
+                        Por favor, entre em contato com a empresa para solicitar um novo link.
+                    </p>
+                </div>
+            `;
+            return;
+          }
+
+          if (typeof window.carregarPedido === 'function') {
+            window.carregarPedido();
+          } else {
+            setTimeout(() => window.carregarPedido && window.carregarPedido(), 0);
+          }
+        })
+        .catch(err => console.error('[resolver] fail', err));
+    });
+  </script>
 
   <div id="confirmModal" class="modal" hidden>
-  <div class="modal-backdrop"></div>
-  <div class="modal-content" role="dialog" aria-modal="true" aria-labelledby="confirmTitle">
-    <h2 id="confirmTitle">Pedido confirmado ✅</h2>
-    <p class="confirm-text">Recebemos seu pedido e ele já está sendo processado.</p>
-    <p id="confirmPedidoInfo" class="confirm-info"></p>
-    <button id="btnFecharConfirm" type="button" onclick="closeConfirmModal()">Fechar</button>
+    <div class="modal-backdrop"></div>
+    <div class="modal-content" role="dialog" aria-modal="true" aria-labelledby="confirmTitle">
+      <h2 id="confirmTitle" style="color: var(--os-text); font-weight: 700; border-bottom: none;">Orçamento confirmado ✅
+      </h2>
+      <p class="confirm-text" style="color: var(--os-text-secondary); margin-bottom: 20px;">Recebemos seu pedido e ele
+        já está sendo processado.</p>
+      <p id="confirmPedidoInfo" class="confirm-info" style="color: var(--os-text-secondary);"></p>
+      <div style="text-align: right;">
+        <button id="btnFecharConfirm" class="os-btn os-btn-primary" type="button"
+          onclick="closeConfirmModal()">Fechar</button>
+      </div>
+    </div>
   </div>
-</div>
 </body>
+
 </html>
