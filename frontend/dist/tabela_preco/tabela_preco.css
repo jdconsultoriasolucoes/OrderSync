@@ -230,9 +230,8 @@
 
   /* Botões de Ação na Busca de Produtos */
   #actions-filtros {
-    display: flex !important;
-    /* Sobrescreve flex inline row */
-    flex-direction: column;
+    display: grid !important;
+    grid-template-columns: 1fr 1fr;
     gap: 12px;
     margin-top: 16px;
   }
@@ -240,6 +239,10 @@
   #actions-filtros button {
     width: 100%;
     margin: 0;
+  }
+
+  #btn-adicionar-selecionados {
+    grid-column: span 2;
   }
 
   /* Paginação Mobile Buscar Produtos */
