@@ -358,7 +358,7 @@
     /* Force flex for card list */
   }
 
-  .page-container {
+  .os-page-container {
     padding-bottom: 120px !important;
     /* Space for sticky footer */
   }
