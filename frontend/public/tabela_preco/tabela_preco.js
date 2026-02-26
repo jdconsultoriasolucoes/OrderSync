@@ -298,11 +298,21 @@ function preencherTabela(produtos) {
       <td>${p.codigo_tabela}</td>
       <td>${p.descricao}</td>
       <td>${p.embalagem ?? ""}</td>
-      <td class="num">${(p.peso_liquido ?? 0).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</td>
-      <td class="num">${(p.valor ?? 0).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</td>
+      <td class="num">${(p.peso_liquido ?? 0).toLocaleString('pt-BR', { minimumFractionDigits: 0, maximumFractionDigits: 0 })}</td>
+      <td class="num">${(p.valor ?? 0).toLocaleString('pt-BR', { minimumFractionDigits: 0, maximumFractionDigits: 0 })}</td>
     `;
     // anexa o objeto completo na linha para facilitar coleta
     tr.dataset.produto = JSON.stringify(p);
+
+    // Toggle para mobile
+    tr.addEventListener("click", (e) => {
+      // Ignorar cliques diretos no checkbox (para não impedir marcação normal no desktop)
+      if (e.target.tagName.toLowerCase() === 'input') return;
+
+      // Expande/colapsa o card no mobile
+      tr.classList.toggle("expanded");
+    });
+
     tbody.appendChild(tr);
   });
 }

@@ -196,10 +196,20 @@ async function carregarTabelas() {
       </td>
       `;
 
-      tr.addEventListener("click", () => {
-        document.querySelectorAll("#lista-tabelas-body tr")
-          .forEach(row => row.classList.remove("selected"));
-        tr.classList.add("selected");
+      tr.addEventListener("click", (e) => {
+        // Ignora o clique se for diretamente no botão
+        if (e.target.closest('button')) return;
+
+        // Adiciona/remove a seleção (Desktop/Mobile)
+        document.querySelectorAll("#lista-tabelas-body tr").forEach(row => {
+          if (row !== tr) {
+            row.classList.remove("selected");
+            row.classList.remove("expanded");
+          }
+        });
+
+        tr.classList.toggle("selected");
+        tr.classList.toggle("expanded");
         tabelaSelecionadaId = tabela.id;
       });
 

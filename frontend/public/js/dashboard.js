@@ -13,14 +13,17 @@ document.addEventListener("DOMContentLoaded", () => {
             // mas o CSS já cuida da cor com o seletor :checked ~ .option-mes
             const optionMes = document.querySelector(".option-mes");
             const optionAno = document.querySelector(".option-ano");
+            const lblFaturamento = document.querySelector("#kpi-faturamento").previousElementSibling;
 
             if (optionMes && optionAno) {
                 if (currentFilter === 'ano') {
                     optionMes.classList.remove("active");
                     optionAno.classList.add("active");
+                    if (lblFaturamento) lblFaturamento.textContent = "Faturamento do ano";
                 } else {
                     optionAno.classList.remove("active");
                     optionMes.classList.add("active");
+                    if (lblFaturamento) lblFaturamento.textContent = "Faturamento do mês";
                 }
             }
 
