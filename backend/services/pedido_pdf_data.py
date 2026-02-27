@@ -112,15 +112,38 @@ def carregar_pedido_pdf(db, pedido_id: int) -> PedidoPdf:
 
         qtd = float(r["item_quantidade"] or 0)
         
-        # Pesos unitários
-        p_liq = float(r["item_peso_liquido_cad"] or 0)
-        p_bru = float(r["item_peso_bruto_cad"] or 0)
+        # Pesos unitários suportando strings Sujas ("5,00 kg", "2.0")
+        def _parse_peso(val):
+            if not val:
+                return 0.0
+            try:
+                txt = str(val).replace(',', '.').strip()
+                import re
+                num_only = re.sub(r'[^\d\.]', '', txt)
+                return float(num_only) if num_only else 0.0
+            except Exception:
+                return 0.0
+
+        p_liq = _parse_peso(r["item_peso_liquido_cad"])
+        p_bru = _parse_peso(r["item_peso_bruto_cad"])
         
         # Fallback se peso bruto for 0, usa liquido
         if p_bru <= 0: p_bru = p_liq
 
         sum_peso_liq += p_liq * qtd
         sum_peso_bru += p_bru * qtd
+
+        # Preços (fallback se houver erro ao converter pra float de texto sujo)
+        def _safe_float(val):
+            if val is None:
+                return 0.0
+            try:
+                import re
+                val_limpo = str(val).replace(',', '.')
+                val_limpo = re.sub(r'[^\d\.]', '', val_limpo)
+                return float(val_limpo) if val_limpo else 0.0
+            except Exception:
+                return 0.0
 
         itens.append(PedidoPdfItem(
             codigo=str(r["item_codigo"] or ""),
@@ -129,11 +152,11 @@ def carregar_pedido_pdf(db, pedido_id: int) -> PedidoPdf:
             quantidade=qtd,
             condicao_pagamento=r.get("item_condicao_pagamento"),
             tabela_comissao=r.get("item_tabela_comissao"),
-            valor_retira=float(r["item_preco_retira"] or 0),
-            valor_entrega=float(r["item_preco_entrega"] or 0),
-            markup=float(r["item_markup"] or 0),
-            valor_final_markup=float(r["item_valor_final_markup"] or 0),
-            valor_s_frete_markup=float(r["item_valor_s_frete_markup"] or 0),
+            valor_retira=_safe_float(r["item_preco_retira"]),
+            valor_entrega=_safe_float(r["item_preco_entrega"]),
+            markup=_safe_float(r["item_markup"]),
+            valor_final_markup=_safe_float(r["item_valor_final_markup"]),
+            valor_s_frete_markup=_safe_float(r["item_valor_s_frete_markup"]),
             fornecedor=r.get("item_fornecedor") or "",
         ))
 

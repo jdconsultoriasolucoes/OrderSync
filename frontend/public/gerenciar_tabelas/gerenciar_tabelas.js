@@ -1,5 +1,5 @@
 
-const API_BASE = window.API_BASE || "https://ordersync-backend-59d2.onrender.com";
+const API_BASE = window.API_BASE || "https://ordersync-backend-edjq.onrender.com";
 
 let currentModule = null; // 'condicoes', 'descontos', 'familias'
 let currentItem = null;   // Item sendo editado (null se novo)
@@ -299,4 +299,5 @@ window.editItem = function (pk) {
     openModal(pk);
 };
 window.deleteItem = deleteItem;
+
 

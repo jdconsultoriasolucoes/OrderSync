@@ -1,10 +1,10 @@
-Ôªø<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="pt-BR">
 
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>OrderSync ‚Äî Redefinir Senha</title>
+    <title>OrderSync ó Redefinir Senha</title>
     <link rel="stylesheet" href="../design-system.css">
     <link rel="stylesheet" href="login.css">
     <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -21,11 +21,11 @@
         <form id="reset-form" class="os-login-form">
             <div class="os-form-group">
                 <label for="senha">Nova Senha</label>
-                <input type="password" id="senha" placeholder="‚Ä¢‚Ä¢‚Ä¢‚Ä¢‚Ä¢‚Ä¢‚Ä¢‚Ä¢" required minlength="8">
+                <input type="password" id="senha" placeholder="ïïïïïïïï" required minlength="8">
             </div>
             <div class="os-form-group">
                 <label for="confirmar">Confirmar Senha</label>
-                <input type="password" id="confirmar" placeholder="‚Ä¢‚Ä¢‚Ä¢‚Ä¢‚Ä¢‚Ä¢‚Ä¢‚Ä¢" required minlength="8">
+                <input type="password" id="confirmar" placeholder="ïïïïïïïï" required minlength="8">
             </div>
             <button type="submit" class="os-login-btn" id="btn-submit">Salvar Nova Senha</button>
         </form>
@@ -45,7 +45,7 @@
             document.getElementById("reset-form").style.display = "none";
             const msg = document.getElementById("msg-box");
             msg.className = "os-msg-box error";
-            msg.innerText = "Link inv√°lido ou expirado. Solicite uma nova redefini√ß√£o.";
+            msg.innerText = "Link inv·lido ou expirado. Solicite uma nova redefiniÁ„o.";
             msg.style.display = "block";
         }
 
@@ -57,7 +57,7 @@
             const msgBox = document.getElementById("msg-box");
 
             if (senha !== confirmar) {
-                alert("As senhas n√£o coincidem!");
+                alert("As senhas n„o coincidem!");
                 return;
             }
 
@@ -96,4 +96,5 @@
 </body>
 
 </html>
+
 

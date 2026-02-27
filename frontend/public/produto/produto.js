@@ -1,7 +1,7 @@
 // ==================== produto.js ====================
 
 // === Config ===
-const API_BASE = window.API_BASE || "https://ordersync-backend-59d2.onrender.com"; // Restored & Safe
+const API_BASE = window.API_BASE || "https://ordersync-backend-edjq.onrender.com"; // Restored & Safe
 window.API_BASE = API_BASE;
 
 // candidatos de rotas (ordem de preferência)
@@ -1446,4 +1446,5 @@ document.addEventListener("DOMContentLoaded", () => {
   setupRenovarValidade();
   setupSearchModal();
 });
+
 

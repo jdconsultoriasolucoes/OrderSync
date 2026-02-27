@@ -272,3 +272,4 @@ document.addEventListener("DOMContentLoaded", () => {
 
     setTimeout(checkForcedReset, 1000); // Check shortly after load
 });
+

@@ -91,3 +91,4 @@ async function carregarKPIs() {
         console.error("Erro ao buscar KPIs do Dashboard:", error);
     }
 }
+

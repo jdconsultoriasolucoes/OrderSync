@@ -1,10 +1,10 @@
-Ôªø<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="pt-BR">
 
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Configura√ß√£o de E-mail ‚Äî OrderSync</title>
+  <title>ConfiguraÁ„o de E-mail ó OrderSync</title>
   <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate" />
 
   <!-- Design System -->
@@ -45,7 +45,7 @@
       font-size: var(--os-text-sm);
     }
 
-    /* Tabs ‚Äî keeping existing class names for JS compatibility */
+    /* Tabs ó keeping existing class names for JS compatibility */
     .tabs {
       display: flex;
       gap: 0;
@@ -149,7 +149,7 @@
       border-top: 1px solid var(--os-border);
     }
 
-    /* Buttons ‚Äî keep old class names for JS references */
+    /* Buttons ó keep old class names for JS references */
     .btn {
       padding: 10px 16px;
       border: 1px solid var(--os-border);
@@ -232,7 +232,7 @@
   </script>
 
   <script>
-    window.API_BASE = window.API_BASE || "https://ordersync-backend-59d2.onrender.com";
+    window.API_BASE = window.API_BASE || "https://ordersync-backend-edjq.onrender.com";
     window.CONFIG_EMAIL_BASE = window.API_BASE + "/admin/config_email";
     window.NETDIAG_BASE = window.API_BASE + "/admin/netdiag";
 
@@ -250,7 +250,7 @@
   <header class="os-header">
     <button class="os-menu-btn" id="menu-button" aria-label="Menu">&#9776;</button>
     <img src="../logo.png" alt="Logo" class="os-logo" />
-    <span class="os-header-title">Configura√ß√£o de E-mail</span>
+    <span class="os-header-title">ConfiguraÁ„o de E-mail</span>
   </header>
 
   <!-- ========== SIDEBAR ========== -->
@@ -259,15 +259,15 @@
     <ul>
       <li><a href="../../index.html">Home</a></li>
       <li><a href="../clientes/cliente.html">Clientes</a></li>
-      <li><a href="../gerenciar_tabelas/gerenciar_tabelas.html">Atualizar Cat√°logo</a></li>
+      <li><a href="../gerenciar_tabelas/gerenciar_tabelas.html">Atualizar Cat·logo</a></li>
       <li><a href="../pedido/pedido.html">Consultar Pedidos</a></li>
-      <li><a href="../tabela_preco/criacao_tabela_preco.html">Tabela Pre√ßo</a></li>
+      <li><a href="../tabela_preco/criacao_tabela_preco.html">Tabela PreÁo</a></li>
       <li><a href="../produto/produto.html">Produtos</a></li>
     </ul>
     <div class="os-sidebar-section">Sistema</div>
     <ul>
-      <li><a href="../usuarios.html">Usu√°rios</a></li>
-      <li><a href="../config_email/config_email.html" class="active">Configura√ß√£o E-mail</a></li>
+      <li><a href="../usuarios.html">Usu·rios</a></li>
+      <li><a href="../config_email/config_email.html" class="active">ConfiguraÁ„o E-mail</a></li>
       <li><a href="#" onclick="window.Auth.openChangePasswordModal()">Trocar Senha</a></li>
       <li><a href="#" onclick="window.Auth.logout()">Sair</a></li>
     </ul>
@@ -278,7 +278,7 @@
   <div class="page-container">
     <div class="card">
 
-      <nav class="tabs" role="tablist" aria-label="Configura√ß√£o de e-mail">
+      <nav class="tabs" role="tablist" aria-label="ConfiguraÁ„o de e-mail">
         <button class="tab active" data-tab="tab-mensagem" role="tab" aria-selected="true">Mensagem (Interna)</button>
         <button class="tab" data-tab="tab-mensagem-cliente" role="tab" aria-selected="false">Mensagem (Cliente)</button>
         <button class="tab" data-tab="tab-smtp" role="tab" aria-selected="false">SMTP</button>
@@ -288,18 +288,18 @@
       <section id="tab-mensagem" class="tab-panel active" role="tabpanel">
         <form id="form-mensagem" class="form">
           <div class="field">
-            <label>Destinat√°rio interno <small>(separar por v√≠rgula)</small></label>
+            <label>Destinat·rio interno <small>(separar por vÌrgula)</small></label>
             <textarea id="destinatario_interno" rows="3"
               placeholder="ex.: pedidos@empresa.com, compras@empresa.com"></textarea>
           </div>
           <div class="field">
-            <label>Assunto padr√£o</label>
+            <label>Assunto padr„o</label>
             <input id="assunto_padrao" type="text" placeholder="Novo pedido {{pedido_id}}" />
           </div>
           <div class="field">
             <label>Corpo do e-mail <small>(HTML permitido)</small></label>
             <textarea id="corpo_html" rows="8"
-              placeholder="<p>Ol√° {{cliente_nome}}, seu pedido {{pedido_id}} foi recebido...</p>"></textarea>
+              placeholder="<p>Ol· {{cliente_nome}}, seu pedido {{pedido_id}} foi recebido...</p>"></textarea>
             <p class="help">Placeholders: <code>{{pedido_id}}</code>, <code>{{cliente_nome}}</code>,
               <code>{{total_pedido}}</code>, <code>{{link_pdf}}</code>
             </p>
@@ -323,12 +323,12 @@
         <form id="form-mensagem-cliente" class="form">
           <div class="field">
             <label>Assunto (Cliente)</label>
-            <input id="assunto_cliente" type="text" placeholder="Confirma√ß√£o do seu or√ßamento {{pedido_id}}" />
+            <input id="assunto_cliente" type="text" placeholder="ConfirmaÁ„o do seu orÁamento {{pedido_id}}" />
           </div>
           <div class="field">
             <label>Corpo do e-mail (Cliente) <small>(HTML permitido)</small></label>
             <textarea id="corpo_html_cliente" rows="8"
-              placeholder="<p>Ol√° {{cliente_nome}}, recebemos seu pedido {{pedido_id}}...</p>"></textarea>
+              placeholder="<p>Ol· {{cliente_nome}}, recebemos seu pedido {{pedido_id}}...</p>"></textarea>
             <p class="help">Placeholders: <code>{{pedido_id}}</code>, <code>{{cliente_nome}}</code>,
               <code>{{total_pedido}}</code>, <code>{{link_pdf}}</code>
             </p>
@@ -357,7 +357,7 @@
               <input id="smtp_port" type="number" min="1" step="1" value="587" />
             </div>
             <div class="field">
-              <label>Usu√°rio SMTP</label>
+              <label>Usu·rio SMTP</label>
               <input id="smtp_user" type="text" placeholder="pedidos@empresa.com" />
             </div>
             <div class="field">
@@ -371,7 +371,7 @@
           </div>
           <div class="actions">
             <button type="button" id="btnSalvarSMTP" class="btn primary">Salvar</button>
-            <button type="button" id="btnTestarSMTP" class="btn">Testar conex√£o</button>
+            <button type="button" id="btnTestarSMTP" class="btn">Testar conex„o</button>
           </div>
         </form>
       </section>

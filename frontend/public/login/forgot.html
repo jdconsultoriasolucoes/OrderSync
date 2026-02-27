@@ -1,10 +1,10 @@
-Ôªø<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="pt-BR">
 
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>OrderSync ‚Äî Recuperar Senha</title>
+    <title>OrderSync ó Recuperar Senha</title>
     <link rel="stylesheet" href="../design-system.css">
     <link rel="stylesheet" href="login.css">
     <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -16,7 +16,7 @@
     <div class="os-login-card">
         <img src="../logo.png" alt="OrderSync" class="os-login-logo" />
         <h2>Recuperar Senha</h2>
-        <p class="os-login-subtitle">Informe seu e-mail para receber o link de redefini√ß√£o.</p>
+        <p class="os-login-subtitle">Informe seu e-mail para receber o link de redefiniÁ„o.</p>
 
         <form id="forgot-form" class="os-login-form">
             <div class="os-form-group">
@@ -28,7 +28,7 @@
 
         <div id="msg-box" class="os-msg-box"></div>
 
-        <a href="login.html" class="os-back-link">‚Üê Voltar para Login</a>
+        <a href="login.html" class="os-back-link">? Voltar para Login</a>
     </div>
 
     <script src="../js/config.js"></script>
@@ -54,10 +54,10 @@
 
                 if (response.ok) {
                     msgBox.className = "os-msg-box success";
-                    msgBox.innerText = "Se o e-mail estiver cadastrado, voc√™ receber√° um link em instantes.";
+                    msgBox.innerText = "Se o e-mail estiver cadastrado, vocÍ receber· um link em instantes.";
                     msgBox.style.display = "block";
                 } else {
-                    throw new Error("Erro ao processar solicita√ß√£o.");
+                    throw new Error("Erro ao processar solicitaÁ„o.");
                 }
 
             } catch (err) {
@@ -74,4 +74,5 @@
 </body>
 
 </html>
+
 

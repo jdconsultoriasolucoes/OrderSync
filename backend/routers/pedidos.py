@@ -259,12 +259,9 @@ def resumo_pedido(id_pedido: int, db: Session = Depends(get_db)):
     head_dict["itens"] = itens
     
     # Extract native PDF weight flow dynamically to keep single source of truth
-    try:
-        from services.pedido_pdf_data import carregar_pedido_pdf
-        pdf_data = carregar_pedido_pdf(db, id_pedido)
-        head_dict["peso_liquido_calculado"] = pdf_data.total_peso_liquido
-    except Exception as e:
-        head_dict["peso_liquido_calculado"] = 0.0
+    from services.pedido_pdf_data import carregar_pedido_pdf
+    pdf_data = carregar_pedido_pdf(db, id_pedido)
+    head_dict["peso_liquido_calculado"] = pdf_data.total_peso_liquido
 
     return PedidoResumo(**head_dict)
 

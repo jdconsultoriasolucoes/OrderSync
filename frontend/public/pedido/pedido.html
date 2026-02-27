@@ -1,11 +1,11 @@
-Ôªø<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="pt-BR">
 
 <head>
   <meta charset="utf-8" />
   <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Pedidos ‚Äî OrderSync</title>
+  <title>Pedidos ó OrderSync</title>
 
   <!-- Design System -->
   <link rel="stylesheet" href="../design-system.css" />
@@ -41,15 +41,15 @@
     <ul>
       <li><a href="../../index.html">Home</a></li>
       <li><a href="../clientes/cliente.html">Clientes</a></li>
-      <li><a href="../gerenciar_tabelas/gerenciar_tabelas.html">Atualizar Cat√°logo</a></li>
+      <li><a href="../gerenciar_tabelas/gerenciar_tabelas.html">Atualizar Cat·logo</a></li>
       <li><a href="../pedido/pedido.html" class="active">Consultar Pedidos</a></li>
-      <li><a href="../tabela_preco/criacao_tabela_preco.html">Tabela Pre√ßo</a></li>
+      <li><a href="../tabela_preco/criacao_tabela_preco.html">Tabela PreÁo</a></li>
       <li><a href="../produto/produto.html">Produtos</a></li>
     </ul>
     <div class="os-sidebar-section">Sistema</div>
     <ul>
-      <li><a href="../usuarios.html">Usu√°rios</a></li>
-      <li><a href="../config_email/config_email.html">Configura√ß√£o E-mail</a></li>
+      <li><a href="../usuarios.html">Usu·rios</a></li>
+      <li><a href="../config_email/config_email.html">ConfiguraÁ„o E-mail</a></li>
       <li><a href="#" onclick="window.Auth.openChangePasswordModal()">Trocar Senha</a></li>
       <li><a href="#" onclick="window.Auth.logout()">Sair</a></li>
     </ul>
@@ -63,11 +63,11 @@
       <div
         style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 1rem; flex-wrap: wrap; gap: 1rem;">
         <div class="d-flex gap-2 flex-wrap">
-          <button id="btnToggleFilters" class="os-btn os-btn-secondary os-btn-sm" title="Mostrar/Ocultar Filtros">‚öôÔ∏è
+          <button id="btnToggleFilters" class="os-btn os-btn-secondary os-btn-sm" title="Mostrar/Ocultar Filtros">??
             Filtros</button>
-          <button id="btnExport" class="os-btn os-btn-secondary os-btn-sm" title="Exportar para Excel/CSV">üì•
+          <button id="btnExport" class="os-btn os-btn-secondary os-btn-sm" title="Exportar para Excel/CSV">??
             Exportar</button>
-          <button id="btnRefresh" class="os-btn os-btn-secondary os-btn-sm" title="Atualizar Lista">‚Üª Atualizar</button>
+          <button id="btnRefresh" class="os-btn os-btn-secondary os-btn-sm" title="Atualizar Lista">? Atualizar</button>
           <button id="btnLimpar" class="os-btn os-btn-ghost os-btn-sm" title="Limpar Filtros">Limpar</button>
         </div>
       </div>
@@ -76,7 +76,7 @@
       <div id="filtersArea" class="filters-collapsible">
         <div class="custom-grid">
           <div>
-            <label>Data In√≠cio:</label>
+            <label>Data InÌcio:</label>
             <input type="date" id="fFrom">
           </div>
           <div>
@@ -84,14 +84,14 @@
             <input type="date" id="fTo">
           </div>
           <div>
-            <label for="fPeriodoRapido">Per√≠odo:</label>
+            <label for="fPeriodoRapido">PerÌodo:</label>
             <select id="fPeriodoRapido">
               <option value="custom">Personalizado</option>
-              <option value="7">√öltimos 7 dias</option>
-              <option value="15">√öltimos 15 dias</option>
-              <option value="30" selected>√öltimos 30 dias</option>
-              <option value="60">√öltimos 60 dias</option>
-              <option value="90">√öltimos 90 dias</option>
+              <option value="7">⁄ltimos 7 dias</option>
+              <option value="15">⁄ltimos 15 dias</option>
+              <option value="30" selected>⁄ltimos 30 dias</option>
+              <option value="60">⁄ltimos 60 dias</option>
+              <option value="90">⁄ltimos 90 dias</option>
             </select>
           </div>
           <div>
@@ -104,7 +104,7 @@
           </div>
           <div>
             <label>Cliente:</label>
-            <input type="text" id="fCliente" placeholder="Nome ou c√≥digo">
+            <input type="text" id="fCliente" placeholder="Nome ou cÛdigo">
           </div>
           <div>
             <label>Fornecedor:</label>
@@ -127,15 +127,15 @@
             <th data-sort="tabela_preco_nome" class="sortable">Tabela</th>
             <th data-sort="fornecedor" class="sortable">Fornecedor</th>
             <th class="tar">Link</th>
-            <th class="tar">A√ß√µes</th>
+            <th class="tar">AÁıes</th>
           </tr>
         </thead>
         <tbody id="tblBody"></tbody>
       </table>
       <div class="pagination">
-        <button id="prevPage">‚óÄ</button>
+        <button id="prevPage">?</button>
         <span id="pageInfo">1</span>
-        <button id="nextPage">‚ñ∂</button>
+        <button id="nextPage">?</button>
       </div>
     </div>
   </div>
@@ -144,7 +144,7 @@
   <aside id="drawer" class="drawer hidden">
     <div class="drawer-head">
       <h2>Resumo do Pedido</h2>
-      <button id="btnCloseDrawer">‚úï</button>
+      <button id="btnCloseDrawer">?</button>
     </div>
     <div id="drawerContent" class="drawer-content"></div>
     <div id="drawerActions" class="drawer-actions"></div>
@@ -161,7 +161,7 @@
           btnToggleFilters.textContent = 'Ocultar Filtros';
         } else {
           filtersArea.style.display = 'none';
-          btnToggleFilters.textContent = '‚öôÔ∏è Mostrar Filtros';
+          btnToggleFilters.textContent = '?? Mostrar Filtros';
         }
       });
     }

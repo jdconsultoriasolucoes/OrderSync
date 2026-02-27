@@ -1,10 +1,10 @@
-ï»¿<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="pt-BR">
 
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Gerenciar Tabelas â€” OrderSync</title>
+    <title>Gerenciar Tabelas — OrderSync</title>
     <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate" />
 
     <!-- Design System -->
@@ -293,15 +293,15 @@
         <ul>
             <li><a href="../../index.html">Home</a></li>
             <li><a href="../clientes/cliente.html">Clientes</a></li>
-            <li><a href="../gerenciar_tabelas/gerenciar_tabelas.html" class="active">Atualizar CatÃ¡logo</a></li>
+            <li><a href="../gerenciar_tabelas/gerenciar_tabelas.html" class="active">Atualizar Catálogo</a></li>
             <li><a href="../pedido/pedido.html">Consultar Pedidos</a></li>
-            <li><a href="../tabela_preco/criacao_tabela_preco.html">Tabela PreÃ§o</a></li>
+            <li><a href="../tabela_preco/criacao_tabela_preco.html">Tabela Preço</a></li>
             <li><a href="../produto/produto.html">Produtos</a></li>
         </ul>
         <div class="os-sidebar-section">Sistema</div>
         <ul>
-            <li><a href="../usuarios.html">UsuÃ¡rios</a></li>
-            <li><a href="../config_email/config_email.html">ConfiguraÃ§Ã£o E-mail</a></li>
+            <li><a href="../usuarios.html">Usuários</a></li>
+            <li><a href="../config_email/config_email.html">Configuração E-mail</a></li>
             <li><a href="#" onclick="window.Auth.openChangePasswordModal()">Trocar Senha</a></li>
             <li><a href="#" onclick="window.Auth.logout()">Sair</a></li>
         </ul>
@@ -313,14 +313,14 @@
         <div class="card">
             <!-- Module Navigation -->
             <nav class="module-nav">
-                <button class="module-nav-btn active" onclick="selectModule('condicoes')">CondiÃ§Ãµes de
+                <button class="module-nav-btn active" onclick="selectModule('condicoes')">Condições de
                     Pagamento</button>
                 <button class="module-nav-btn" onclick="selectModule('descontos')">Descontos</button>
                 <button class="module-nav-btn" onclick="selectModule('familias')">Grupo de Produtos</button>
             </nav>
 
             <div class="toolbar">
-                <div class="module-section-title" id="sectionTitle">CondiÃ§Ãµes de Pagamento</div>
+                <div class="module-section-title" id="sectionTitle">Condições de Pagamento</div>
                 <button class="os-btn os-btn-primary os-btn-sm" onclick="openModal()">+ Novo</button>
             </div>
 
@@ -329,16 +329,16 @@
         </div>
     </div>
 
-    <!-- ===== Modal: CondiÃ§Ãµes de Pagamento ===== -->
+    <!-- ===== Modal: Condições de Pagamento ===== -->
     <div id="modal-condicoes" class="custom-modal">
         <div class="modal-dialog">
-            <h3 id="modal-title-condicoes">Nova CondiÃ§Ã£o</h3>
+            <h3 id="modal-title-condicoes">Nova Condição</h3>
             <form id="form-condicoes" onsubmit="saveCondicao(event)">
                 <input type="hidden" id="cond-id" />
                 <label>Prazo</label>
                 <input id="cond-prazo" type="text" placeholder="Ex: 28/42DDL" required />
-                <label>DescriÃ§Ã£o</label>
-                <input id="cond-desc" type="text" placeholder="DescriÃ§Ã£o da condiÃ§Ã£o">
+                <label>Descrição</label>
+                <input id="cond-desc" type="text" placeholder="Descrição da condição">
                 <label>Custo (%)</label>
                 <input id="cond-custo" type="number" step="0.01" value="0" />
                 <div class="modal-footer">
@@ -355,7 +355,7 @@
             <h3 id="modal-title-descontos">Novo Desconto</h3>
             <form id="form-descontos" onsubmit="saveDesconto(event)">
                 <input type="hidden" id="desc-id" />
-                <label>Fator ComissÃ£o (%)</label>
+                <label>Fator Comissão (%)</label>
                 <input id="desc-fator" type="number" step="0.01" value="0" required />
                 <div class="modal-footer">
                     <button type="button" class="btn" onclick="closeModals()">Cancelar</button>
@@ -365,7 +365,7 @@
         </div>
     </div>
 
-    <!-- ===== Modal: FamÃ­lias ===== -->
+    <!-- ===== Modal: Famílias ===== -->
     <div id="modal-familias" class="custom-modal">
         <div class="modal-dialog">
             <h3 id="modal-title-familias">Novo Grupo de Produtos</h3>
@@ -373,7 +373,7 @@
                 <input type="hidden" id="fam-id" />
                 <label>Tipo</label>
                 <input id="fam-tipo" type="text" placeholder="Ex: Revenda" required />
-                <label>FamÃ­lia</label>
+                <label>Família</label>
                 <input id="fam-nome" type="text" placeholder="Ex: ARAME" required />
                 <label>Grupo</label>
                 <input id="fam-marca" type="text" placeholder="Ex: GERDAU" required />

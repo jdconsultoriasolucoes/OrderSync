@@ -1,10 +1,10 @@
-ï»¿<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="pt-br">
 
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Tabela de PreÃ§o â€” OrderSync</title>
+  <title>Tabela de Preço — OrderSync</title>
 
   <!-- Design System -->
   <link rel="stylesheet" href="../design-system.css">
@@ -34,7 +34,7 @@
   <header class="os-header">
     <button class="os-menu-btn" id="menu-button" aria-label="Menu">&#9776;</button>
     <img src="../logo.png" alt="Logo" class="os-logo" />
-    <span class="os-header-title">CriaÃ§Ã£o de Tabela de PreÃ§o</span>
+    <span class="os-header-title">Criação de Tabela de Preço</span>
   </header>
 
   <!-- ========== SIDEBAR ========== -->
@@ -43,15 +43,15 @@
     <ul>
       <li><a href="../../index.html">Home</a></li>
       <li><a href="../clientes/cliente.html">Clientes</a></li>
-      <li><a href="../gerenciar_tabelas/gerenciar_tabelas.html">Atualizar CatÃ¡logo</a></li>
+      <li><a href="../gerenciar_tabelas/gerenciar_tabelas.html">Atualizar Catálogo</a></li>
       <li><a href="../pedido/pedido.html">Consultar Pedidos</a></li>
-      <li><a href="../tabela_preco/criacao_tabela_preco.html" class="active">Tabela PreÃ§o</a></li>
+      <li><a href="../tabela_preco/criacao_tabela_preco.html" class="active">Tabela Preço</a></li>
       <li><a href="../produto/produto.html">Produtos</a></li>
     </ul>
     <div class="os-sidebar-section">Sistema</div>
     <ul>
-      <li><a href="../usuarios.html">UsuÃ¡rios</a></li>
-      <li><a href="../config_email/config_email.html">ConfiguraÃ§Ã£o E-mail</a></li>
+      <li><a href="../usuarios.html">Usuários</a></li>
+      <li><a href="../config_email/config_email.html">Configuração E-mail</a></li>
       <li><a href="#" onclick="window.Auth.openChangePasswordModal()">Trocar Senha</a></li>
       <li><a href="#" onclick="window.Auth.logout()">Sair</a></li>
     </ul>
@@ -61,8 +61,8 @@
   <div class="os-page-container"
     style="padding: var(--os-space-4); padding-top: calc(var(--os-header-height) + var(--os-space-2));">
 
-    <!-- <h1>CriaÃ§Ã£o de Tabela de PreÃ§o <span class="subtle">(etapa de conferÃªncia)</span></h1> -->
-    <!-- TOPO: CabeÃ§alho e parÃ¢metros globais -->
+    <!-- <h1>Criação de Tabela de Preço <span class="subtle">(etapa de conferência)</span></h1> -->
+    <!-- TOPO: Cabeçalho e parâmetros globais -->
 
     <section class="os-card" aria-labelledby="sec-topo">
       <div class="section-header-flex">
@@ -72,7 +72,7 @@
         <!-- Collapsed Summary (Hidden by default) -->
         <div id="header-collapsed-summary" class="header-summary hidden">
           <span id="summary-nome" class="fw-bold"></span>
-          <span class="sep"> â€¢ </span>
+          <span class="sep"> • </span>
           <span id="summary-cliente" class="text-muted"></span>
         </div>
 
@@ -87,8 +87,8 @@
             <input id="dias_restantes" class="os-input" type="text" readonly tabindex="-1"
               style="border: none; background: transparent; width: auto; max-width: 120px; padding: 0;" />
           </div>
-          <button id="btn-toggle-header" class="os-btn-icon" title="Ocultar cabeÃ§alho">
-            â–²
+          <button id="btn-toggle-header" class="os-btn-icon" title="Ocultar cabeçalho">
+            ?
           </button>
         </div>
       </div>
@@ -136,14 +136,14 @@
         <div class="grid-condition-discount"
           style="border-top: 1px solid var(--os-border); padding-top: var(--os-space-3);">
 
-          <!-- CondiÃ§Ã£o -->
-          <!-- CondiÃ§Ã£o -->
+          <!-- Condição -->
+          <!-- Condição -->
           <div class="os-form-group area-condicao">
-            <label class="os-label" for="plano_pagamento">CondiÃ§Ã£o de Pagamento</label>
+            <label class="os-label" for="plano_pagamento">Condição de Pagamento</label>
             <div style="display: flex; gap: var(--os-space-1); align-items: center;">
               <select id="plano_pagamento" class="os-select" style="flex: 1;"></select>
               <span class="os-badge os-badge-default" style="white-space: nowrap;">Taxa: <strong id="pill-taxa"
-                  style="margin-left: 4px;">â€”</strong></span>
+                  style="margin-left: 4px;">—</strong></span>
               <button class="os-btn os-btn-secondary os-btn-sm d-none" id="btn-aplicar-condicao-todos"
                 style="white-space: nowrap;">Aplicar a todos</button>
             </div>
@@ -156,7 +156,7 @@
             <div style="display: flex; gap: var(--os-space-1); align-items: center;">
               <select id="desconto_global" class="os-select" style="flex: 1;"></select>
               <span class="os-badge os-badge-default" style="white-space: nowrap;">Fator: <strong id="pill-fator"
-                  style="margin-left: 4px;">â€”</strong><span>%</span></span>
+                  style="margin-left: 4px;">—</strong><span>%</span></span>
               <button class="os-btn os-btn-secondary os-btn-sm d-none" id="btn-aplicar-todos"
                 style="white-space: nowrap;">Aplicar a todos</button>
             </div>
@@ -195,36 +195,36 @@
           <thead>
             <tr>
               <th><input id="chk-all" type="checkbox" /></th>
-              <th>CÃ³digo</th>
+              <th>Código</th>
               <!-- Toggle Produto: controla Embalagem(4), Grupo(5), Peso(6) -->
               <th class="th-toggle-prod">
                 <label class="st-toggle-in-th" title="Mostrar/ocultar detalhes do produto">
                   <input id="prod-toggle" type="checkbox" />
-                  <span class="st-title">DescriÃ§Ã£o</span>
-                  <span class="chevron">â–¶</span>
+                  <span class="st-title">Descrição</span>
+                  <span class="chevron">?</span>
                 </label>
               </th>
               <th>Embalagem</th>
               <th>Grupo / Depto.</th>
-              <th class="right">Peso LÃ­q.</th>
-              <th class="right">Valor UnitÃ¡rio</th>
+              <th class="right">Peso Líq.</th>
+              <th class="right">Valor Unitário</th>
 
               <!-- Toggle Desconto: controla Desc. aplicado(9) -->
               <th class="right th-toggle-desc">
                 <label class="st-toggle-in-th" title="Mostrar/ocultar valor do desconto">
                   <input id="desc-toggle" type="checkbox" />
                   <span class="st-title">Fator %</span>
-                  <span class="chevron">â–¶</span>
+                  <span class="chevron">?</span>
                 </label>
               </th>
               <th class="right">Desc. aplicado (R$)</th>
 
-              <!-- Toggle CondiÃ§Ã£o: controla Cond. Pagto R$(11) -->
+              <!-- Toggle Condição: controla Cond. Pagto R$(11) -->
               <th class="th-toggle-cond">
-                <label class="st-toggle-in-th" title="Mostrar/ocultar valor da condiÃ§Ã£o">
+                <label class="st-toggle-in-th" title="Mostrar/ocultar valor da condição">
                   <input id="cond-toggle" type="checkbox" />
                   <span class="st-title">Cond. Pagto</span>
-                  <span class="chevron">â–¶</span>
+                  <span class="chevron">?</span>
                 </label>
               </th>
               <th class="right">Cond. Pagto (R$)</th>
@@ -234,10 +234,10 @@
                 <label class="st-toggle-in-th" title="Mostrar/ocultar detalhes de ST">
                   <input id="st-toggle" type="checkbox" />
                   <span class="st-title">Base ST (R$)</span>
-                  <span class="chevron">â–¶</span>
+                  <span class="chevron">?</span>
                 </label>
               </th> <!-- novo, no lugar do IVA_ST (%) -->
-              <th class="right">ICMS prÃ³prio (R$)</th> <!-- novo -->
+              <th class="right">ICMS próprio (R$)</th> <!-- novo -->
               <th class="right">ICMS ST cheio (R$)</th><!-- novo -->
               <th class="right">ICMS ST a reter (R$)</th><!-- novo -->
               <th class="right">Valor Final (R$)</th>
@@ -246,7 +246,7 @@
                 <label class="st-toggle-in-th" title="Mostrar/ocultar colunas de Markup">
                   <input id="markup-cols-toggle" type="checkbox" />
                   <span class="st-title">Markup %</span>
-                  <span class="chevron">â–¶</span>
+                  <span class="chevron">?</span>
                 </label>
               </th>
               <th class="right col-mk-derived">Valor Final (Mk)</th>
@@ -276,23 +276,23 @@
         </div>
         <div class="mobile-toolbar-actions">
           <button id="btn-mobile-list" class="btn-icon-mobile" title="Listar Tabelas"
-            style="margin-right:auto">â˜°</button>
+            style="margin-right:auto">?</button>
 
           <!-- Actions Grouped -->
           <button id="btn-mobile-add" class="btn-icon-mobile hidden" title="Adicionar Produto"><i
               class="bi bi-plus-circle"></i></button>
           <button id="btn-mobile-edit" class="btn-icon-mobile hidden" title="Editar"><i
               class="bi bi-pencil"></i></button>
-          <button id="btn-mobile-dup" class="btn-icon-mobile hidden" title="Duplicar">â§‰</button>
+          <button id="btn-mobile-dup" class="btn-icon-mobile hidden" title="Duplicar">?</button>
           <button id="btn-mobile-save" class="btn-primary-mobile"><i class="bi bi-floppy"></i> Salvar</button>
 
           <!-- Cancel Moved to End -->
-          <button id="btn-mobile-cancel" class="btn-icon-mobile hidden" title="Cancelar">âœ•</button>
+          <button id="btn-mobile-cancel" class="btn-icon-mobile hidden" title="Cancelar">?</button>
         </div>
       </div>
     </div>
   </div>
-  <!-- LÃ³gica totalmente externa -->
+  <!-- Lógica totalmente externa -->
   <script type="module">
     import { showGerarLinkModal } from "../js/gerar_link_pedido.js";
     window.__showGerarLinkModal = showGerarLinkModal;
