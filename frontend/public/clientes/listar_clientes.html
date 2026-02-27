@@ -18,6 +18,70 @@
     <script src="../js/config.js"></script>
     <script src="../js/auth.js"></script>
     <script src="../js/sidebar_control.js"></script>
+    <style>
+        /* Estilos Responsivos para Mobile (Cards) */
+        @media (max-width: 768px) {
+            .os-table-wrap {
+                background: transparent;
+                box-shadow: none;
+                padding: 0;
+            }
+
+            .os-table,
+            .os-table tbody,
+            .os-table tr,
+            .os-table td {
+                display: block;
+                width: 100%;
+            }
+
+            .os-table thead {
+                display: none;
+            }
+
+            .os-table tr {
+                margin-bottom: 1rem;
+                background: var(--os-bg-card, #ffffff);
+                border: 1px solid var(--os-border, #e5e7eb);
+                border-radius: var(--os-radius-md, 8px);
+                padding: 1rem;
+                box-shadow: var(--os-shadow-sm, 0 1px 2px 0 rgba(0, 0, 0, 0.05));
+            }
+
+            .os-table td {
+                display: flex;
+                justify-content: space-between;
+                align-items: center;
+                text-align: right;
+                padding: 0.5rem 0;
+                border-bottom: 1px solid var(--os-border-light, #f3f4f6);
+            }
+
+            .os-table td:last-child {
+                border-bottom: none;
+                padding-bottom: 0;
+                margin-top: 0.5rem;
+                justify-content: center;
+            }
+
+            .os-table td::before {
+                content: attr(data-label);
+                font-weight: 600;
+                color: var(--os-text-secondary, #4b5563);
+                text-align: left;
+                margin-right: 1rem;
+            }
+
+            .os-table td:last-child::before {
+                display: none;
+            }
+
+            .os-table td:last-child .os-btn {
+                width: 100%;
+                display: block;
+            }
+        }
+    </style>
 </head>
 
 <body>
@@ -143,16 +207,17 @@
                 btn.addEventListener("click", () => selecionarCliente(cliente));
 
                 tr.innerHTML = `
-          <td>${cliente.cadastrocliente?.id || ''}</td>
-          <td>${cliente.cadastrocliente?.nome_cliente || ''}</td>
-          <td>${cliente.cadastrocliente?.cpf || ''}</td>
-          <td>${cliente.cadastrocliente?.cnpj || ''}</td>
-          <td>${cliente.responsavel_compras?.email_resposavel || ''}</td>
-          <td>${cliente.endereco_entrega?.estado_EnderecoEntrega || ''}</td>
-          <td><span class="os-badge ${cliente.cadastrocliente?.ativo ? 'os-badge-success' : 'os-badge-error'}">${cliente.cadastrocliente?.ativo ? 'Sim' : 'Não'}</span></td>
+          <td data-label="ID">${cliente.cadastrocliente?.id || ''}</td>
+          <td data-label="Nome">${cliente.cadastrocliente?.nome_cliente || ''}</td>
+          <td data-label="CPF">${cliente.cadastrocliente?.cpf || ''}</td>
+          <td data-label="CNPJ">${cliente.cadastrocliente?.cnpj || ''}</td>
+          <td data-label="Email">${cliente.responsavel_compras?.email_resposavel || ''}</td>
+          <td data-label="Estado">${cliente.endereco_entrega?.estado_EnderecoEntrega || ''}</td>
+          <td data-label="Ativo"><span class="os-badge ${cliente.cadastrocliente?.ativo ? 'os-badge-success' : 'os-badge-error'}">${cliente.cadastrocliente?.ativo ? 'Sim' : 'Não'}</span></td>
         `;
 
                 const tdBtn = document.createElement("td");
+                tdBtn.dataset.label = "Ação";
                 tdBtn.appendChild(btn);
                 tr.appendChild(tdBtn);
                 tbody.appendChild(tr);
