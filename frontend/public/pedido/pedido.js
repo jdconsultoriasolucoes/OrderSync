@@ -339,15 +339,22 @@ async function openResumo(id) {
           <div><b>Data:</b> ${fmtDate(p.created_at)}</div>
         </div>
         <div class="kv">
+          <div style="grid-column: 1 / -1;"><b>Nome Fantasia:</b> ${p.nome_fantasia ?? "-"}</div>
+        </div>
+        <div class="kv">
           <div><b>Modalidade:</b> ${modalidade}</div>
           <div><b>Tabela:</b> ${p.tabela_preco_nome ?? "-"}</div>
+        </div>
+        <div class="kv">
+          <div><b>Peso Líquido Total:</b> ${(p.peso_total_kg || 0).toFixed(3)} kg</div>
+          <div><b>Nº Carga:</b> ---</div>
         </div>
         <div class="kv">
           <div><b>Fornecedor:</b> ${p.fornecedor ?? "-"}</div>
           <div><b>Total:</b> ${fmtMoney(p.total_pedido)}</div>
         </div>
         <div class="kv">
-          <div><b>Contato:</b> ${p.contato_nome ?? "-"} • ${p.contato_email ?? "-"}</div>
+          <div style="grid-column: 1 / -1;"><b>Contato:</b> ${p.contato_nome ?? "-"} • ${p.contato_email ?? "-"}</div>
         </div>
         <div class="block">
           <b>Itens</b>

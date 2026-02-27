@@ -35,6 +35,7 @@ class CadastroCliente(BaseModel):
     ramo_de_atividade: Optional[str]
     atividade_principal: Optional[str]
     cadastro_markup: Optional[float] = 0.0
+    periodo_de_compra: Optional[str] = None
 
 #    @field_validator("cpf")
 #    def cpf_valido(cls, v):

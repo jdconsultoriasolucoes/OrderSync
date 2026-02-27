@@ -48,8 +48,14 @@ SELECT
   a.contato_nome,
   a.contato_email,
   a.contato_fone,
-  a.contato_fone,
-  a.tabela_preco_nome            AS tabela_preco_nome,
+  COALESCE(a.tabela_preco_nome, b.nome_tabela) AS tabela_preco_nome,
+  COALESCE(
+    CASE
+      WHEN c.cadastro_nome_fantasia IS NULL OR c.cadastro_nome_fantasia IN ('nan', '') THEN 'Sem Nome Fantasia'
+      ELSE c.cadastro_nome_fantasia
+    END,
+    'Sem Nome Fantasia'
+  ) AS nome_fantasia,
   a.fornecedor,
   a.validade_ate,
   a.validade_dias,
@@ -67,6 +73,8 @@ SELECT
   a.link_status,
   a.created_at
 FROM public.tb_pedidos a
+LEFT JOIN public.tb_tabela_preco b ON a.tabela_preco_id = b.id_tabela
+LEFT JOIN public.t_cadastro_cliente_v2 c ON c.cadastro_codigo_da_empresa::text = a.codigo_cliente
 WHERE a.id_pedido = :id_pedido
 """)
 

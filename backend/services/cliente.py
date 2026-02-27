@@ -39,6 +39,7 @@ def _flat_to_nested(model: ClienteModelV2) -> dict:
             "ramo_de_atividade": model.cadastro_ramo_de_atividade,
             "atividade_principal": model.cadastro_atividade_principal,
             "cadastro_markup": model.cadastro_markup,
+            "periodo_de_compra": model.cadastro_periodo_de_compra,
         },
         "responsavel_compras": {
             "nome_responsavel": model.compras_nome_responsavel,
@@ -215,6 +216,7 @@ def _nested_to_flat(data: dict) -> ClienteModelV2:
     model.cadastro_indicacao_cliente = c.get("indicacao_cliente")
     model.cadastro_ramo_de_atividade = c.get("ramo_de_atividade")
     model.cadastro_atividade_principal = c.get("atividade_principal")
+    model.cadastro_periodo_de_compra = c.get("periodo_de_compra")
 
     # 2. Responsavel Compras
     model.compras_nome_responsavel = rc.get("nome_responsavel")
