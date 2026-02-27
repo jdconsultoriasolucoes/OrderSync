@@ -3,50 +3,53 @@
 
 <head>
   <meta charset="UTF-8" />
-  <title>Lista de Clientes</title>
+  <title>Lista de Clientes — OrderSync</title>
+
+  <!-- Design System -->
+  <link rel="stylesheet" href="../design-system.css">
+
+  <!-- Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+
   <script src="https://unpkg.com/axios/dist/axios.min.js"></script>
   <script src="../js/config.js"></script>
-  <style>
-    #filtro {
-      width: 300px;
-      padding: 8px;
-      margin-bottom: 10px;
-    }
-
-    table {
-      width: 100%;
-      border-collapse: collapse;
-    }
-
-    th,
-    td {
-      padding: 6px;
-      border: 1px solid #ccc;
-      text-align: left;
-    }
-  </style>
 </head>
 
-<body>
-  <h3>Clientes Cadastrados</h3>
+<body style="background: var(--os-bg); padding: var(--os-space-4);">
+  <div class="os-page-container" style="max-width: 900px; margin: 0 auto; ">
+    <section class="os-card">
+      <div class="os-card-header">
+        <h3 class="os-card-title">Clientes Cadastrados</h3>
+      </div>
 
-  <input type="text" id="filtro" placeholder="Pesquisar por nome, CPF, CNPJ, email, estado ou ID...">
+      <div class="os-toolbar" style="margin-bottom: var(--os-space-4);">
+        <div class="search" style="flex: 1;">
+          <input type="text" id="filtro" class="os-input"
+            placeholder="Pesquisar por nome, CPF, CNPJ, email, estado ou ID...">
+        </div>
+      </div>
 
-  <table id="tabela-clientes">
-    <thead>
-      <tr>
-        <th>ID</th>
-        <th>Nome</th>
-        <th>CPF</th>
-        <th>CNPJ</th>
-        <th>Email</th>
-        <th>Estado</th>
-        <th>Ativo</th>
-        <th>Ação</th>
-      </tr>
-    </thead>
-    <tbody></tbody>
-  </table>
+      <div class="os-table-wrap">
+        <table id="tabela-clientes" class="os-table">
+          <thead>
+            <tr>
+              <th>ID</th>
+              <th>Nome</th>
+              <th>CPF</th>
+              <th>CNPJ</th>
+              <th>Email</th>
+              <th>Estado</th>
+              <th>Ativo</th>
+              <th>Ação</th>
+            </tr>
+          </thead>
+          <tbody></tbody>
+        </table>
+      </div>
+    </section>
+  </div>
 
   <script>
     let clientes = [];
@@ -76,6 +79,7 @@
 
         const btn = document.createElement("button");
         btn.textContent = "Selecionar";
+        btn.className = "os-btn os-btn-primary os-btn-sm";
         btn.addEventListener("click", () => selecionarCliente(cliente));
 
         tr.innerHTML = `
@@ -85,7 +89,7 @@
           <td>${cliente.cadastrocliente?.cnpj || ''}</td>
           <td>${cliente.responsavel_compras?.email_resposavel || ''}</td>
           <td>${cliente.endereco_entrega?.estado_EnderecoEntrega || ''}</td>
-          <td>${cliente.cadastrocliente?.ativo ? 'Sim' : 'Não'}</td>
+          <td><span class="os-badge ${cliente.cadastrocliente?.ativo ? 'os-badge-success' : 'os-badge-error'}">${cliente.cadastrocliente?.ativo ? 'Sim' : 'Não'}</span></td>
         `;
 
         const tdBtn = document.createElement("td");
@@ -144,4 +148,3 @@
 </body>
 
 </html>
-
