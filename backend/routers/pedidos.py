@@ -256,31 +256,15 @@ def resumo_pedido(id_pedido: int, db: Session = Depends(get_db)):
             head_dict[k] = to_iso_or_none(head_dict[k])
 
     itens = db.execute(ITENS_JSON_SQL, {"id_pedido": id_pedido}).scalar() or []
-    
-    # Python-based robust parsing of Peso Liquido to match PDF logic exactly
-    import re
-    prod_data = db.execute(text("SELECT codigo_supra, MAX(peso) as peso FROM t_cadastro_produto_v2 GROUP BY codigo_supra")).mappings().all()
-    peso_map = {p["codigo_supra"]: p["peso"] for p in prod_data}
-    
-    sum_peso_liq = 0.0
-    for it in itens:
-        cod = it.get("codigo")
-        qtd = float(it.get("quantidade") or 0)
-        
-        raw_peso = peso_map.get(cod) or "0"
-        
-        # Helper extraction logic (mirroring PDF logic)
-        try:
-            rw = str(raw_peso).replace(',', '.').strip()
-            num_str = re.sub(r'[^\d\.]', '', rw)
-            p_liq = float(num_str) if num_str else 0.0
-        except Exception:
-            p_liq = 0.0
-            
-        sum_peso_liq += (p_liq * qtd)
-
     head_dict["itens"] = itens
-    head_dict["peso_liquido_calculado"] = sum_peso_liq
+    
+    # Extract native PDF weight flow dynamically to keep single source of truth
+    try:
+        from services.pedido_pdf_data import carregar_pedido_pdf
+        pdf_data = carregar_pedido_pdf(db, id_pedido)
+        head_dict["peso_liquido_calculado"] = pdf_data.total_peso_liquido
+    except Exception as e:
+        head_dict["peso_liquido_calculado"] = 0.0
 
     return PedidoResumo(**head_dict)
 
