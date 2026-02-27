@@ -46,15 +46,34 @@
                 border-radius: var(--os-radius-md, 8px);
                 padding: 1rem;
                 box-shadow: var(--os-shadow-sm, 0 1px 2px 0 rgba(0, 0, 0, 0.05));
+                cursor: pointer;
+                /* Feedback de clique */
+                transition: box-shadow 0.2s;
+            }
+
+            .os-table tr:hover {
+                box-shadow: var(--os-shadow-md, 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06));
             }
 
             .os-table td {
-                display: flex;
+                display: none;
+                /* Esconde todas by default */
                 justify-content: space-between;
                 align-items: center;
                 text-align: right;
                 padding: 0.5rem 0;
                 border-bottom: 1px solid var(--os-border-light, #f3f4f6);
+            }
+
+            /* Sempre mostra a primeira (ID) e a segunda (Nome) */
+            .os-table td:nth-child(1),
+            .os-table td:nth-child(2) {
+                display: flex;
+            }
+
+            /* Quando a linha estiver expandida, mostra tudo */
+            .os-table tr.expanded td {
+                display: flex;
             }
 
             .os-table td:last-child {
@@ -79,6 +98,19 @@
             .os-table td:last-child .os-btn {
                 width: 100%;
                 display: block;
+            }
+
+            /* Chevron icon para indicar expansão */
+            .mobile-chevron {
+                display: inline-block;
+                transition: transform 0.3s ease;
+                font-size: 0.8rem;
+                color: var(--os-text-muted, #9ca3af);
+                margin-left: 0.5rem;
+            }
+
+            .os-table tr.expanded .mobile-chevron {
+                transform: rotate(180deg);
             }
         }
     </style>
@@ -201,6 +233,14 @@
             paginaAtualClientes.forEach(cliente => {
                 const tr = document.createElement("tr");
 
+                // Toggle expansão no mobile
+                tr.addEventListener("click", function (e) {
+                    // Evita expandir/retrair se clicar diretamente no botão "Selecionar"
+                    if (e.target.tagName !== "BUTTON") {
+                        this.classList.toggle("expanded");
+                    }
+                });
+
                 const btn = document.createElement("button");
                 btn.textContent = "Selecionar";
                 btn.className = "os-btn os-btn-primary os-btn-sm";
@@ -208,7 +248,7 @@
 
                 tr.innerHTML = `
           <td data-label="ID">${cliente.cadastrocliente?.id || ''}</td>
-          <td data-label="Nome">${cliente.cadastrocliente?.nome_cliente || ''}</td>
+          <td data-label="Nome">${cliente.cadastrocliente?.nome_cliente || ''} <span class="mobile-chevron">▼</span></td>
           <td data-label="CPF">${cliente.cadastrocliente?.cpf || ''}</td>
           <td data-label="CNPJ">${cliente.cadastrocliente?.cnpj || ''}</td>
           <td data-label="Email">${cliente.responsavel_compras?.email_resposavel || ''}</td>
