@@ -61,6 +61,16 @@ SELECT
   a.validade_dias,
   a.usar_valor_com_frete,
   a.peso_total_kg,
+  (
+      SELECT COALESCE(SUM(i.quantidade * COALESCE(prod.peso, 0)), 0)
+      FROM tb_pedidos_itens i
+      LEFT JOIN (
+          SELECT codigo_supra, MAX(peso) as peso 
+          FROM t_cadastro_produto_v2 
+          GROUP BY codigo_supra
+      ) prod ON prod.codigo_supra = i.codigo
+      WHERE i.id_pedido = a.id_pedido
+  ) AS peso_liquido_calculado,
   a.frete_total,
   a.total_pedido,
   a.observacoes,
@@ -96,6 +106,7 @@ SELECT COALESCE(
 FROM public.tb_pedidos_itens c
 JOIN public.tb_pedidos a ON a.id_pedido = c.id_pedido
 WHERE c.id_pedido = :id_pedido
+  AND c.quantidade > 0
 """)
 
 STATUS_SQL = text("""

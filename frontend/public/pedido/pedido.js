@@ -346,7 +346,7 @@ async function openResumo(id) {
           <div><b>Tabela:</b> ${p.tabela_preco_nome ?? "-"}</div>
         </div>
         <div class="kv">
-          <div><b>Peso Líquido Total:</b> ${(p.peso_total_kg || 0).toFixed(3)} kg</div>
+          <div><b>Peso Líquido Total:</b> ${(p.peso_liquido_calculado || 0).toFixed(3)} kg</div>
           <div><b>Nº Carga:</b> ---</div>
         </div>
         <div class="kv">
