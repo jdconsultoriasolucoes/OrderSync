@@ -711,8 +711,40 @@
         }
 
         function listarClientes() {
-          window.open("modal_clientes.html", "popup", "width=1000,height=600");
+          window.location.href = "listar_clientes.html";
         }
+
+        // On load event: Check if we returned from the list view with a selected client
+        document.addEventListener('DOMContentLoaded', () => {
+          const selectedClientId = localStorage.getItem('Ordersync_ClienteSelecionadoIdListar');
+          if (selectedClientId) {
+            // Limpa o item para que não carregue infinitamente se recarregar a página
+            localStorage.removeItem('Ordersync_ClienteSelecionadoIdListar');
+
+            // Busca o cliente pelo ID e preenche o formulário
+            const api = window.API_BASE || "http://127.0.0.1:8000";
+            const token = window.Auth ? window.Auth.getToken() : localStorage.getItem('ordersync_token');
+            if (token) {
+              axios.get(`${api}/cliente/${selectedClientId}`, {
+                headers: { 'Authorization': `Bearer ${token}` }
+              })
+                .then(res => {
+                  if (res.data) {
+                    // A interface original usava preencherFormulario(cliente), 
+                    // aqui estamos num contexto standalone, vamos chamar a função (assumindo que existe nas outras centenas de linhas):
+                    if (typeof preencherFormularioCliente === "function") {
+                      preencherFormularioCliente(res.data);
+                    } else if (typeof window.preencherFormulario === "function") {
+                      window.preencherFormulario(res.data);
+                    } else {
+                      console.warn("Função de preenchimento não encontrada, dados obtidos:", res.data);
+                    }
+                  }
+                })
+                .catch(err => console.error("Erro ao carregar cliente selecionado:", err));
+            }
+          }
+        });
 
         function obterDadosFormulario() {
           return {
