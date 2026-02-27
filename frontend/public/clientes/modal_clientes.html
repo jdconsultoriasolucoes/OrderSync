@@ -48,11 +48,22 @@
           <tbody></tbody>
         </table>
       </div>
+
+      <!-- Controles de Paginação -->
+      <div id="pagination-controls" class="pagination-container"
+        style="display: flex; justify-content: center; align-items: center; gap: var(--os-space-2); margin-top: var(--os-space-4);">
+        <button id="btn-prev" class="os-btn os-btn-secondary" onclick="prevPage()" disabled>Anterior</button>
+        <span id="page-info" style="font-weight: 500;">Página 1</span>
+        <button id="btn-next" class="os-btn os-btn-secondary" onclick="nextPage()" disabled>Próxima</button>
+      </div>
     </section>
   </div>
 
   <script>
     let clientes = [];
+    let filtrados = [];
+    let currentPage = 1;
+    const itemsPerPage = 20;
 
     // Carrega os clientes do backend
     const token = localStorage.getItem('ordersync_token');
@@ -63,18 +74,23 @@
     })
       .then(res => {
         clientes = res.data;
-        renderizarTabela(clientes);
+        filtrados = [...clientes];
+        renderizarTabela();
       })
       .catch(error => {
         alert(`Erro ao buscar clientes: ${error.message || error}`);
         console.error(error);
       });
 
-    function renderizarTabela(lista) {
+    function renderizarTabela() {
       const tbody = document.querySelector("#tabela-clientes tbody");
       tbody.innerHTML = "";
 
-      lista.forEach(cliente => {
+      const startIndex = (currentPage - 1) * itemsPerPage;
+      const endIndex = startIndex + itemsPerPage;
+      const paginaAtualClientes = filtrados.slice(startIndex, endIndex);
+
+      paginaAtualClientes.forEach(cliente => {
         const tr = document.createElement("tr");
 
         const btn = document.createElement("button");
@@ -97,6 +113,35 @@
         tr.appendChild(tdBtn);
         tbody.appendChild(tr);
       });
+
+      atualizarBotoesPaginacao();
+    }
+
+    function atualizarBotoesPaginacao() {
+      const btnPrev = document.getElementById("btn-prev");
+      const btnNext = document.getElementById("btn-next");
+      const pageInfo = document.getElementById("page-info");
+
+      const totalPages = Math.ceil(filtrados.length / itemsPerPage) || 1;
+
+      pageInfo.textContent = `Página ${currentPage} de ${totalPages}`;
+      btnPrev.disabled = currentPage === 1;
+      btnNext.disabled = currentPage === totalPages;
+    }
+
+    function nextPage() {
+      const totalPages = Math.ceil(filtrados.length / itemsPerPage);
+      if (currentPage < totalPages) {
+        currentPage++;
+        renderizarTabela();
+      }
+    }
+
+    function prevPage() {
+      if (currentPage > 1) {
+        currentPage--;
+        renderizarTabela();
+      }
     }
 
     function selecionarCliente(cliente) {
@@ -118,7 +163,7 @@
       const termo = this.value.toLowerCase().trim();
       const ehNumero = /^[0-9]/.test(termo);
 
-      const filtrados = clientes.filter(c => {
+      filtrados = clientes.filter(c => {
         const id = String(c.cadastrocliente?.id || '');
         const codigo = String(c.cadastrocliente?.codigo_da_empresa || '').toLowerCase(); // Novo
         const nome = c.cadastrocliente?.nome_cliente?.toLowerCase() || '';
@@ -142,7 +187,8 @@
         );
       });
 
-      renderizarTabela(filtrados);
+      currentPage = 1; // Reseta a página após aplicar o filtro
+      renderizarTabela();
     });
   </script>
 </body>
