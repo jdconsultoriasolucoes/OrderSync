@@ -346,7 +346,7 @@ async function openResumo(id) {
           <div><b>Tabela:</b> ${p.tabela_preco_nome ?? "-"}</div>
         </div>
         <div class="kv">
-          <div><b>Peso Líquido Total:</b> ${(p.peso_liquido_calculado || 0).toFixed(3)} kg</div>
+          <div><b>Peso Líquido Total:</b> ${parseFloat((p.peso_liquido_calculado || 0).toFixed(3))} kg</div>
           <div><b>Nº Carga:</b> ---</div>
         </div>
         <div class="kv">
@@ -363,6 +363,7 @@ async function openResumo(id) {
               <div class="item">
                 <div><b>${i.codigo}</b> - ${i.nome}</div>
                 <div>${i.quantidade} x ${fmtMoney(i.preco_unit)} = <b>${fmtMoney(i.subtotal)}</b></div>
+                ${(i.peso_liquido_unit > 0) ? `<div style="color:#888;font-size:0.82em;">${i.quantidade} x ${parseFloat(Number(i.peso_liquido_unit).toFixed(3))} kg = <b>${parseFloat(Number(i.peso_liquido_total).toFixed(3))} kg</b></div>` : ''}
               </div>
             `).join("")}
           </div>

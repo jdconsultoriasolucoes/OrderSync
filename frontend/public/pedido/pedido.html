@@ -63,12 +63,13 @@
       <div
         style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 1rem; flex-wrap: wrap; gap: 1rem;">
         <div class="d-flex gap-2 flex-wrap">
-          <button id="btnToggleFilters" class="os-btn os-btn-secondary os-btn-sm" title="Mostrar/Ocultar Filtros">??
-            Filtros</button>
-          <button id="btnExport" class="os-btn os-btn-secondary os-btn-sm" title="Exportar para Excel/CSV">??
+          <button id="btnToggleFilters" class="os-btn os-btn-secondary os-btn-sm"
+            title="Mostrar/Ocultar Filtros">&#x1F50D; Filtros</button>
+          <button id="btnExport" class="os-btn os-btn-secondary os-btn-sm" title="Exportar para Excel/CSV">&#x1F4CA;
             Exportar</button>
-          <button id="btnRefresh" class="os-btn os-btn-secondary os-btn-sm" title="Atualizar Lista">? Atualizar</button>
-          <button id="btnLimpar" class="os-btn os-btn-ghost os-btn-sm" title="Limpar Filtros">Limpar</button>
+          <button id="btnRefresh" class="os-btn os-btn-secondary os-btn-sm" title="Atualizar Lista">&#x1F504;
+            Atualizar</button>
+          <button id="btnLimpar" class="os-btn os-btn-ghost os-btn-sm" title="Limpar Filtros">&#x2716; Limpar</button>
         </div>
       </div>
 
@@ -133,9 +134,9 @@
         <tbody id="tblBody"></tbody>
       </table>
       <div class="pagination">
-        <button id="prevPage">?</button>
+        <button id="prevPage">&#x276E;</button>
         <span id="pageInfo">1</span>
-        <button id="nextPage">?</button>
+        <button id="nextPage">&#x276F;</button>
       </div>
     </div>
   </div>
@@ -144,7 +145,7 @@
   <aside id="drawer" class="drawer hidden">
     <div class="drawer-head">
       <h2>Resumo do Pedido</h2>
-      <button id="btnCloseDrawer">?</button>
+      <button id="btnCloseDrawer">&#x2715;</button>
     </div>
     <div id="drawerContent" class="drawer-content"></div>
     <div id="drawerActions" class="drawer-actions"></div>
@@ -158,10 +159,10 @@
       btnToggleFilters.addEventListener('click', () => {
         if (filtersArea.style.display === 'none') {
           filtersArea.style.display = 'block';
-          btnToggleFilters.textContent = 'Ocultar Filtros';
+          btnToggleFilters.innerHTML = '&#x1F50D; Ocultar Filtros';
         } else {
           filtersArea.style.display = 'none';
-          btnToggleFilters.textContent = '?? Mostrar Filtros';
+          btnToggleFilters.innerHTML = '&#x1F50D; Mostrar Filtros';
         }
       });
     }

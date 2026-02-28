@@ -158,6 +158,8 @@ def carregar_pedido_pdf(db, pedido_id: int) -> PedidoPdf:
             valor_final_markup=_safe_float(r["item_valor_final_markup"]),
             valor_s_frete_markup=_safe_float(r["item_valor_s_frete_markup"]),
             fornecedor=r.get("item_fornecedor") or "",
+            peso_liquido_unit=p_liq,
+            peso_liquido_total=round(p_liq * qtd, 3),
         ))
 
     # Tenta usar codigo do pedido, se não for "Não cadastrado"

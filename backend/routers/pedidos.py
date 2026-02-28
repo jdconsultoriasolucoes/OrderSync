@@ -48,6 +48,8 @@ class PedidoItemResumo(BaseModel):
     quantidade: float
     preco_unit: float
     subtotal: float
+    peso_liquido_unit: Optional[float] = 0.0
+    peso_liquido_total: Optional[float] = 0.0
 
 class PedidoResumo(BaseModel):
     id_pedido: int
