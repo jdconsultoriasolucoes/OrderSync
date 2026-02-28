@@ -4,7 +4,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Produtos — OrderSync</title>
+  <title>Produtos Â— OrderSync</title>
 
   <!-- Design System -->
   <link rel="stylesheet" href="../design-system.css" />
@@ -38,15 +38,15 @@
     <ul>
       <li><a href="../../index.html">Home</a></li>
       <li><a href="../clientes/cliente.html">Clientes</a></li>
-      <li><a href="../gerenciar_tabelas/gerenciar_tabelas.html">Atualizar Catálogo</a></li>
+      <li><a href="../gerenciar_tabelas/gerenciar_tabelas.html">Atualizar CatÃ¡logo</a></li>
       <li><a href="../pedido/pedido.html">Consultar Pedidos</a></li>
-      <li><a href="../tabela_preco/criacao_tabela_preco.html">Tabela Preço</a></li>
+      <li><a href="../tabela_preco/criacao_tabela_preco.html">Tabela PreÃ§o</a></li>
       <li><a href="../produto/produto.html" class="active">Produtos</a></li>
     </ul>
     <div class="os-sidebar-section">Sistema</div>
     <ul>
-      <li><a href="../usuarios.html">Usuários</a></li>
-      <li><a href="../config_email/config_email.html">Configuração E-mail</a></li>
+      <li><a href="../usuarios.html">UsuÃ¡rios</a></li>
+      <li><a href="../config_email/config_email.html">ConfiguraÃ§Ã£o E-mail</a></li>
       <li><a href="#" onclick="window.Auth.openChangePasswordModal()">Trocar Senha</a></li>
       <li><a href="#" onclick="window.Auth.logout()">Sair</a></li>
     </ul>
@@ -75,7 +75,7 @@
           <button id="btn-renovar-validade" class="ghost" style="color: #f39c12; border-color: #f39c12;">Renovar
             Validade</button>
 
-          <!-- Botões de Ação do Formulário -->
+          <!-- BotÃµes de AÃ§Ã£o do FormulÃ¡rio -->
           <button id="btn-editar" class="btn-secondary" style="display: none;">Editar</button>
           <button id="btn-excluir" class="btn-secondary"
             style="background-color: #c0392b; color: #fff; display: none;">Excluir</button>
@@ -88,15 +88,15 @@
         </div>
       </div>
 
-      <!-- Identificação -->
-      <div class="section-title">Identificação</div>
+      <!-- IdentificaÃ§Ã£o -->
+      <div class="section-title">IdentificaÃ§Ã£o</div>
       <div class="row g-2">
         <div class="col-2">
-          <label for="codigo_supra">Código</label>
+          <label for="codigo_supra">CÃ³digo</label>
           <input id="codigo_supra" type="text" placeholder="Ex.: 667E12" />
         </div>
         <div class="col-6">
-          <label for="nome_produto">Descrição</label>
+          <label for="nome_produto">DescriÃ§Ã£o</label>
           <input id="nome_produto" type="text" placeholder="Nome do produto" />
         </div>
         <div class="col-2">
@@ -114,7 +114,7 @@
           <select id="linha"></select>
         </div>
         <div class="col-3">
-          <label for="familia">Família</label>
+          <label for="familia">FamÃ­lia</label>
           <select id="familia"></select>
         </div>
         <div class="col-3">
@@ -151,7 +151,7 @@
           <input id="unidade_embalagem" type="number" step="1" min="0" />
         </div>
         <div class="col-2">
-          <label for="peso">Peso Líquido</label>
+          <label for="peso">Peso LÃ­quido</label>
           <input id="peso" type="number" step="0.001" />
         </div>
         <div class="col-2">
@@ -160,11 +160,11 @@
         </div>
       </div>
 
-      <!-- Estoque / Códigos -->
-      <div class="section-title">Estoque / Códigos</div>
+      <!-- Estoque / CÃ³digos -->
+      <div class="section-title">Estoque / CÃ³digos</div>
       <div class="row g-2">
         <div class="col-2">
-          <label for="estoque_disponivel">Estoque Físico</label>
+          <label for="estoque_disponivel">Estoque FÃ­sico</label>
           <input id="estoque_disponivel" type="number" step="1" min="0" />
         </div>
         <div class="col-2">
@@ -172,11 +172,11 @@
           <input id="estoque_ideal" type="number" step="1" min="0" />
         </div>
         <div class="col-3">
-          <label for="codigo_ean">Cód. Barra (EAN/GTIN)</label>
+          <label for="codigo_ean">CÃ³d. Barra (EAN/GTIN)</label>
           <input id="codigo_ean" type="text" />
         </div>
         <div class="col-3">
-          <label for="codigo_embalagem">Cód. Embalagem</label>
+          <label for="codigo_embalagem">CÃ³d. Embalagem</label>
           <input id="codigo_embalagem" type="text" />
         </div>
         <div class="col-2">
@@ -190,47 +190,47 @@
       <div class="row g-2">
         <div class="col-2"><label for="ipi">IPI (%)</label><input id="ipi" type="number" step="0.01" min="0" /></div>
         <div class="col-2"><label for="icms">ICMS (%)</label><input id="icms" type="number" step="0.01" min="0" /></div>
-        <div class="col-3"><label for="iva_st">Subs. Tributária (%)</label><input id="iva_st" type="number" step="0.01"
+        <div class="col-3"><label for="iva_st">Subs. TributÃ¡ria (%)</label><input id="iva_st" type="number" step="0.01"
             min="0" /></div>
         <div class="col-2"><label for="cbs">CBS (%)</label><input id="cbs" type="number" step="0.01" min="0" /></div>
         <div class="col-2"><label for="ibs">IBS (%)</label><input id="ibs" type="number" step="0.01" min="0" /></div>
         <div class="col-1"></div>
       </div>
 
-      <!-- Preços — Tabela Atual -->
-      <div class="section-title">Preços — Tabela Atual</div>
+      <!-- PreÃ§os Â— Tabela Atual -->
+      <div class="section-title">PreÃ§os Â— Tabela Atual</div>
       <div class="row g-2">
         <div class="col-3">
           <label for="preco">Valor Tab. Atual (R$)</label>
           <input id="preco" type="number" step="0.01" min="0" />
         </div>
         <div class="col-3">
-          <label for="preco_tonelada">Preço/Tonelada (R$)</label>
+          <label for="preco_tonelada">PreÃ§o/Tonelada (R$)</label>
           <input id="preco_tonelada" type="number" step="0.01" min="0" />
         </div>
         <div class="col-3">
-          <label for="validade_tabela">Validade Atual (Início)</label>
+          <label for="validade_tabela">Validade Atual (InÃ­cio)</label>
           <input id="validade_tabela" type="date" />
         </div>
         <div class="col-3">
-          <label for="preco_final">Preço Final (Ton.)</label>
+          <label for="preco_final">PreÃ§o Final (Ton.)</label>
           <input id="preco_final" type="number" step="0.01" class="readonly" readonly />
         </div>
       </div>
 
-      <!-- Preços — Anteriores (somente leitura) -->
-      <div class="section-title">Preços — Anteriores (somente leitura)</div>
+      <!-- PreÃ§os Â— Anteriores (somente leitura) -->
+      <div class="section-title">PreÃ§os Â— Anteriores (somente leitura)</div>
       <div class="row g-2">
         <div class="col-3">
           <label for="preco_anterior">Valor Tab. Anterior (R$)</label>
           <input id="preco_anterior" type="number" step="0.01" class="readonly" readonly />
         </div>
         <div class="col-3">
-          <label for="preco_tonelada_anterior">Preço/Tonelada (Anterior)</label>
+          <label for="preco_tonelada_anterior">PreÃ§o/Tonelada (Anterior)</label>
           <input id="preco_tonelada_anterior" type="number" step="0.01" class="readonly" readonly />
         </div>
         <div class="col-3">
-          <label for="validade_tabela_anterior">Validade Anterior até</label>
+          <label for="validade_tabela_anterior">Validade Anterior atÃ©</label>
           <input id="validade_tabela_anterior" type="date" class="readonly" readonly />
         </div>
         <div class="col-3">
@@ -247,18 +247,18 @@
           <input id="desconto_valor_tonelada" type="number" step="0.01" min="0" />
         </div>
         <div class="col-3">
-          <label for="data_desconto_inicio">Período — Início</label>
+          <label for="data_desconto_inicio">PerÃ­odo Â— InÃ­cio</label>
           <input id="data_desconto_inicio" type="date" />
         </div>
         <div class="col-3">
-          <label for="data_desconto_fim">Período — Fim</label>
+          <label for="data_desconto_fim">PerÃ­odo Â— Fim</label>
           <input id="data_desconto_fim" type="date" />
         </div>
         <div class="col-3">
           <label>Indicadores</label>
           <div class="indicators">
-            <span>Reajuste %: <span id="reajuste" class="pill">—</span></span>
-            <span class="right">Vigência ativa: <span id="vigencia" class="pill">—</span></span>
+            <span>Reajuste %: <span id="reajuste" class="pill">Â—</span></span>
+            <span class="right">VigÃªncia ativa: <span id="vigencia" class="pill">Â—</span></span>
           </div>
         </div>
       </div>
@@ -266,11 +266,11 @@
     </div>
   </div>
 
-  <!-- Modal de importação de lista de preços -->
+  <!-- Modal de importaÃ§Ã£o de lista de preÃ§os -->
   <div id="import-modal" class="custom-modal hidden">
     <div class="custom-modal-dialog">
       <div class="custom-modal-header">
-        <div class="custom-modal-title">Comparar lista de preços (PDF)</div>
+        <div class="custom-modal-title">Comparar lista de preÃ§os (PDF)</div>
         <button id="import-close" class="icon-btn" title="Fechar">?</button>
       </div>
 
@@ -314,17 +314,17 @@
     </div>
   </div>
 
-  <!-- Modal de SUCESSO da importação (NOVA) -->
+  <!-- Modal de SUCESSO da importaÃ§Ã£o (NOVA) -->
   <div id="import-success-modal" class="custom-modal hidden">
     <div class="custom-modal-dialog" style="max-width: 500px;">
       <div class="custom-modal-header" style="background: #d1fae5; color: #065f46;">
-        <div class="custom-modal-title">Ingestão Concluída!</div>
+        <div class="custom-modal-title">IngestÃ£o ConcluÃ­da!</div>
         <button id="import-success-close" class="icon-btn">?</button>
       </div>
       <div class="custom-modal-body">
         <div style="text-align: center; margin: 16px 0;">
           <div style="font-size: 48px;">?</div>
-          <h3 style="margin-top: 8px; color: #333;">Importação realizada com sucesso</h3>
+          <h3 style="margin-top: 8px; color: #333;">ImportaÃ§Ã£o realizada com sucesso</h3>
           <p style="color: #666;">Os dados foram processados e sincronizados.</p>
         </div>
 
@@ -339,7 +339,7 @@
             <strong id="resumo-inseridos">0</strong>
           </div>
           <div style="display: flex; justify-content: space-between; color: #2563eb;">
-            <span>Preços atualizados:</span>
+            <span>PreÃ§os atualizados:</span>
             <strong id="resumo-atualizados">0</strong>
           </div>
           <div style="display: flex; justify-content: space-between; color: #dc2626;">
@@ -351,7 +351,7 @@
       <div class="custom-modal-footer" style="justify-content: space-between;">
         <button id="import-success-cancel" class="ghost">Fechar</button>
         <button id="import-success-download" class="primary" style="background-color: #059669;">
-          ?? Baixar Relatório PDF
+          ?? Baixar RelatÃ³rio PDF
         </button>
       </div>
     </div>
@@ -364,7 +364,7 @@
         <div class="custom-modal-title">Renovar Validade (Todos Ativos)</div>
       </div>
       <div class="custom-modal-body">
-        <p style="margin-bottom: 12px;">Selecione os critérios para a renovação:</p>
+        <p style="margin-bottom: 12px;">Selecione os critÃ©rios para a renovaÃ§Ã£o:</p>
 
         <div class="form-group" style="margin-bottom: 15px;">
           <label for="select-tipo-renovacao">Tipo de Produto:</label>
@@ -406,11 +406,11 @@
             </select>
           </div>
           <div class="col-8">
-            <input id="search-input" type="text" placeholder="Código ou descrição..." style="width: 100%;" />
+            <input id="search-input" type="text" placeholder="CÃ³digo ou descriÃ§Ã£o..." style="width: 100%;" />
           </div>
         </div>
 
-        <div id="search-hint" class="hint">Digite para buscar • Enter: selecionar • Esc: fechar</div>
+        <div id="search-hint" class="hint">Digite para buscar Â• Enter: selecionar Â• Esc: fechar</div>
         <div id="search-results" class="results"></div>
       </div>
 

@@ -53,6 +53,7 @@ class PedidoResumo(BaseModel):
     id_pedido: int
     codigo_cliente: Optional[str] = None
     cliente: str
+    nome_fantasia: Optional[str] = None
     contato_nome: Optional[str] = None
     contato_email: Optional[str] = None
     contato_fone: Optional[str] = None
@@ -64,6 +65,7 @@ class PedidoResumo(BaseModel):
     peso_total_kg: float
     frete_total: float
     total_pedido: float
+    peso_liquido_calculado: Optional[float] = None
     observacoes: Optional[str] = None
     status: str
     confirmado_em: Optional[datetime] = None

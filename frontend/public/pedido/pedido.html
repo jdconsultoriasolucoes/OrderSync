@@ -5,7 +5,7 @@
   <meta charset="utf-8" />
   <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Pedidos — OrderSync</title>
+  <title>Pedidos Â— OrderSync</title>
 
   <!-- Design System -->
   <link rel="stylesheet" href="../design-system.css" />
@@ -41,15 +41,15 @@
     <ul>
       <li><a href="../../index.html">Home</a></li>
       <li><a href="../clientes/cliente.html">Clientes</a></li>
-      <li><a href="../gerenciar_tabelas/gerenciar_tabelas.html">Atualizar Catálogo</a></li>
+      <li><a href="../gerenciar_tabelas/gerenciar_tabelas.html">Atualizar CatÃ¡logo</a></li>
       <li><a href="../pedido/pedido.html" class="active">Consultar Pedidos</a></li>
-      <li><a href="../tabela_preco/criacao_tabela_preco.html">Tabela Preço</a></li>
+      <li><a href="../tabela_preco/criacao_tabela_preco.html">Tabela PreÃ§o</a></li>
       <li><a href="../produto/produto.html">Produtos</a></li>
     </ul>
     <div class="os-sidebar-section">Sistema</div>
     <ul>
-      <li><a href="../usuarios.html">Usuários</a></li>
-      <li><a href="../config_email/config_email.html">Configuração E-mail</a></li>
+      <li><a href="../usuarios.html">UsuÃ¡rios</a></li>
+      <li><a href="../config_email/config_email.html">ConfiguraÃ§Ã£o E-mail</a></li>
       <li><a href="#" onclick="window.Auth.openChangePasswordModal()">Trocar Senha</a></li>
       <li><a href="#" onclick="window.Auth.logout()">Sair</a></li>
     </ul>
@@ -76,7 +76,7 @@
       <div id="filtersArea" class="filters-collapsible">
         <div class="custom-grid">
           <div>
-            <label>Data Início:</label>
+            <label>Data InÃ­cio:</label>
             <input type="date" id="fFrom">
           </div>
           <div>
@@ -84,14 +84,14 @@
             <input type="date" id="fTo">
           </div>
           <div>
-            <label for="fPeriodoRapido">Período:</label>
+            <label for="fPeriodoRapido">PerÃ­odo:</label>
             <select id="fPeriodoRapido">
               <option value="custom">Personalizado</option>
-              <option value="7">Últimos 7 dias</option>
-              <option value="15">Últimos 15 dias</option>
-              <option value="30" selected>Últimos 30 dias</option>
-              <option value="60">Últimos 60 dias</option>
-              <option value="90">Últimos 90 dias</option>
+              <option value="7">Ãšltimos 7 dias</option>
+              <option value="15">Ãšltimos 15 dias</option>
+              <option value="30" selected>Ãšltimos 30 dias</option>
+              <option value="60">Ãšltimos 60 dias</option>
+              <option value="90">Ãšltimos 90 dias</option>
             </select>
           </div>
           <div>
@@ -104,7 +104,7 @@
           </div>
           <div>
             <label>Cliente:</label>
-            <input type="text" id="fCliente" placeholder="Nome ou código">
+            <input type="text" id="fCliente" placeholder="Nome ou cÃ³digo">
           </div>
           <div>
             <label>Fornecedor:</label>
@@ -127,7 +127,7 @@
             <th data-sort="tabela_preco_nome" class="sortable">Tabela</th>
             <th data-sort="fornecedor" class="sortable">Fornecedor</th>
             <th class="tar">Link</th>
-            <th class="tar">Ações</th>
+            <th class="tar">AÃ§Ãµes</th>
           </tr>
         </thead>
         <tbody id="tblBody"></tbody>

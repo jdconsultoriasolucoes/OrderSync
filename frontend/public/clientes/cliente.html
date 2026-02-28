@@ -4,7 +4,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Clientes ó OrderSync</title>
+  <title>Clientes ¬ó OrderSync</title>
 
   <!-- Bootstrap (needed for d-flex, gap utilities used in buttons) -->
   <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
@@ -46,15 +46,15 @@
     <ul>
       <li><a href="../../index.html">Home</a></li>
       <li><a href="../clientes/cliente.html" class="active">Clientes</a></li>
-      <li><a href="../gerenciar_tabelas/gerenciar_tabelas.html">Atualizar Cat·logo</a></li>
+      <li><a href="../gerenciar_tabelas/gerenciar_tabelas.html">Atualizar Cat√°logo</a></li>
       <li><a href="../pedido/pedido.html">Consultar Pedidos</a></li>
-      <li><a href="../tabela_preco/criacao_tabela_preco.html">Tabela PreÁo</a></li>
+      <li><a href="../tabela_preco/criacao_tabela_preco.html">Tabela Pre√ßo</a></li>
       <li><a href="../produto/produto.html">Produtos</a></li>
     </ul>
     <div class="os-sidebar-section">Sistema</div>
     <ul>
-      <li><a href="../usuarios.html">Usu·rios</a></li>
-      <li><a href="../config_email/config_email.html">ConfiguraÁ„o E-mail</a></li>
+      <li><a href="../usuarios.html">Usu√°rios</a></li>
+      <li><a href="../config_email/config_email.html">Configura√ß√£o E-mail</a></li>
       <li><a href="#" onclick="window.Auth.openChangePasswordModal()">Trocar Senha</a></li>
       <li><a href="#" onclick="window.Auth.logout()">Sair</a></li>
     </ul>
@@ -85,11 +85,11 @@
 
       <div class="tabs">
         <button class="tab active" onclick="openTab(event, 'cadastro')">Cadastro de Clientes</button>
-        <button class="tab" onclick="openTab(event, 'faturamento')">EndereÁo de Faturamento</button>
-        <button class="tab" onclick="openTab(event, 'entrega')">EndereÁo de Entrega</button>
-        <button class="tab" onclick="openTab(event, 'cobranca')">EndereÁo de CobranÁa</button>
+        <button class="tab" onclick="openTab(event, 'faturamento')">Endere√ßo de Faturamento</button>
+        <button class="tab" onclick="openTab(event, 'entrega')">Endere√ßo de Entrega</button>
+        <button class="tab" onclick="openTab(event, 'cobranca')">Endere√ßo de Cobran√ßa</button>
         <button class="tab" onclick="openTab(event, 'compras')">Compras</button>
-        <button class="tab" onclick="openTab(event, 'elaboracao')">ElaboraÁ„o do Cadastro</button>
+        <button class="tab" onclick="openTab(event, 'elaboracao')">Elabora√ß√£o do Cadastro</button>
       </div>
       <form id="formCliente">
         <input type="hidden" id="id" name="id" />
@@ -98,7 +98,7 @@
           <h2 class="subtitulo">Cliente</h2>
           <div class="form-grid-2col">
             <div>
-              <label for="codigo_da_empresa">CÛdigo da Empresa:</label>
+              <label for="codigo_da_empresa">C√≥digo da Empresa:</label>
               <input type="text" id="codigo_da_empresa" name="codigo_da_empresa" />
             </div>
 
@@ -128,7 +128,7 @@
             </div>
 
             <div>
-              <label for="inscricao_estadual">InscriÁ„o Estadual:</label>
+              <label for="inscricao_estadual">Inscri√ß√£o Estadual:</label>
               <input type="text" id="inscricao_estadual" name="inscricao_estadual" />
             </div>
 
@@ -163,19 +163,19 @@
               </select>
             </div>
             <div>
-              <label for="limite_credito">Limite de CrÈdito:</label>
+              <label for="limite_credito">Limite de Cr√©dito:</label>
               <input type="number" step="0.01" id="limite_credito" name="limite_credito" />
             </div>
 
             <div>
-              <label for="situacao">SituaÁ„o:</label>
+              <label for="situacao">Situa√ß√£o:</label>
               <select id="situacao" name="situacao">
                 <option value="">Selecione</option>
               </select>
             </div>
 
             <div>
-              <label for="indicacao_cliente">IndicaÁ„o do Cliente:</label>
+              <label for="indicacao_cliente">Indica√ß√£o do Cliente:</label>
               <input type="text" id="indicacao_cliente" name="indicacao_cliente" />
             </div>
             <div>
@@ -196,13 +196,13 @@
               <input type="number" step="0.01" id="cadastro_markup" name="cadastro_markup" placeholder="0.00" />
             </div>
             <div>
-              <label for="periodo_de_compra">PerÌodo de Compra:</label>
+              <label for="periodo_de_compra">Per√≠odo de Compra:</label>
               <input type="text" id="periodo_de_compra" name="periodo_de_compra" placeholder="Ex: A cada 15 dias" />
             </div>
           </div>
 
-          <!-- Respons·vel por Compras -->
-          <h2 class="subtitulo">Respons·vel por Compras</h2>
+          <!-- Respons√°vel por Compras -->
+          <h2 class="subtitulo">Respons√°vel por Compras</h2>
           <div class="form-grid-2col">
             <div>
               <label for="nome_responsavel">Nome:</label>
@@ -221,7 +221,7 @@
               <input type="date" id="data_nascimento_resposavel" name="data_nascimento_resposavel" />
             </div>
             <div>
-              <label for="observacoes_responsavel">ObservaÁıes:</label>
+              <label for="observacoes_responsavel">Observa√ß√µes:</label>
               <input type="text" id="observacoes_responsavel" name="observacoes_responsavel" />
             </div>
             <div>
@@ -231,16 +231,16 @@
           </div>
         </div>
 
-        <!-- EndereÁo de Faturamento -->
+        <!-- Endere√ßo de Faturamento -->
         <div class="tab-content" id="faturamento" style="display: none;">
-          <h2 class="subtitulo">EndereÁo de Faturamento</h2>
+          <h2 class="subtitulo">Endere√ßo de Faturamento</h2>
           <div class="form-grid-2col">
             <div>
               <label for="cep_faturamento">CEP:</label>
               <input type="text" id="cep_faturamento" name="cep_faturamento" onblur="buscarCep(event, 'faturamento')" />
             </div>
             <div>
-              <label for="endereco_faturamento">EndereÁo:</label>
+              <label for="endereco_faturamento">Endere√ßo:</label>
               <input type="text" id="endereco_faturamento" name="endereco_faturamento" />
             </div>
             <div>
@@ -248,11 +248,11 @@
               <input type="text" id="bairro_faturamento" name="bairro_faturamento" />
             </div>
             <div>
-              <label for="localizacao_faturamento">LocalizaÁ„o:</label>
+              <label for="localizacao_faturamento">Localiza√ß√£o:</label>
               <input type="text" id="localizacao_faturamento" name="localizacao_faturamento" />
             </div>
             <div>
-              <label for="municipio_faturamento">MunicÌpio:</label>
+              <label for="municipio_faturamento">Munic√≠pio:</label>
               <input type="text" id="municipio_faturamento" name="municipio_faturamento" />
             </div>
             <div>
@@ -284,15 +284,15 @@
               <input type="date" id="data_nascimento_RepresentanteLegal" name="data_nascimento_RepresentanteLegal" />
             </div>
             <div>
-              <label for="observacoes_RepresentanteLegal">ObservaÁıes:</label>
+              <label for="observacoes_RepresentanteLegal">Observa√ß√µes:</label>
               <input type="text" id="observacoes_RepresentanteLegal" name="observacoes_RepresentanteLegal" />
             </div>
           </div>
         </div>
 
-        <!-- EndereÁo de Entrega -->
+        <!-- Endere√ßo de Entrega -->
         <div class="tab-content" id="entrega" style="display: none;">
-          <h2 class="subtitulo">EndereÁo de Entrega</h2>
+          <h2 class="subtitulo">Endere√ßo de Entrega</h2>
           <div class="form-grid-2col">
             <div>
               <label for="cep_EnderecoEntrega">CEP:</label>
@@ -300,7 +300,7 @@
                 onblur="buscarCep(event, 'entrega')" />
             </div>
             <div>
-              <label for="endereco_EnderecoEntrega">EndereÁo:</label>
+              <label for="endereco_EnderecoEntrega">Endere√ßo:</label>
               <input type="text" id="endereco_EnderecoEntrega" name="endereco_EnderecoEntrega" />
             </div>
             <div>
@@ -308,11 +308,11 @@
               <input type="text" id="bairro_EnderecoEntrega" name="bairro_EnderecoEntrega" />
             </div>
             <div>
-              <label for="localizacao_EnderecoEntrega">LocalizaÁ„o:</label>
+              <label for="localizacao_EnderecoEntrega">Localiza√ß√£o:</label>
               <input type="text" id="localizacao_EnderecoEntrega" name="localizacao_EnderecoEntrega" />
             </div>
             <div>
-              <label for="municipio_EnderecoEntrega">MunicÌpio:</label>
+              <label for="municipio_EnderecoEntrega">Munic√≠pio:</label>
               <input type="text" id="municipio_EnderecoEntrega" name="municipio_EnderecoEntrega" />
             </div>
             <div>
@@ -326,17 +326,17 @@
               </select>
             </div>
             <div>
-              <label for="rota_de_aproximacao_EnderecoEntrega">Rota de AproximaÁ„o:</label>
+              <label for="rota_de_aproximacao_EnderecoEntrega">Rota de Aproxima√ß√£o:</label>
               <input type="text" id="rota_de_aproximacao_EnderecoEntrega" name="rota_de_aproximacao_EnderecoEntrega" />
             </div>
             <div>
-              <label for="observacao_motorista_EnderecoEntrega">ObservaÁ„o para o Motorista:</label>
+              <label for="observacao_motorista_EnderecoEntrega">Observa√ß√£o para o Motorista:</label>
               <input type="text" id="observacao_motorista_EnderecoEntrega"
                 name="observacao_motorista_EnderecoEntrega" />
             </div>
           </div>
 
-          <h2 class="subtitulo">Respons·vel pelo Recebimento</h2>
+          <h2 class="subtitulo">Respons√°vel pelo Recebimento</h2>
           <div class="form-grid-2col">
             <div>
               <label for="nome_ResponsavelRecebimento">Nome:</label>
@@ -356,15 +356,15 @@
                 name="data_nascimento_ResponsavelRecebimento" />
             </div>
             <div>
-              <label for="observacoes_ResponsavelRecebimento">ObservaÁıes:</label>
+              <label for="observacoes_ResponsavelRecebimento">Observa√ß√µes:</label>
               <input type="text" id="observacoes_ResponsavelRecebimento" name="observacoes_ResponsavelRecebimento" />
             </div>
           </div>
         </div>
 
-        <!-- Aba 4 - EndereÁo de CobranÁa -->
+        <!-- Aba 4 - Endere√ßo de Cobran√ßa -->
         <div class="tab-content" id="cobranca" style="display: none;">
-          <h2 class="subtitulo">EndereÁo de CobranÁa</h2>
+          <h2 class="subtitulo">Endere√ßo de Cobran√ßa</h2>
           <div class="form-grid-2col">
             <div>
               <label for="cep_EnderecoCobranca">CEP:</label>
@@ -372,7 +372,7 @@
                 onblur="buscarCep(event, 'cobranca')" />
             </div>
             <div>
-              <label for="endereco_EnderecoCobranca">EndereÁo:</label>
+              <label for="endereco_EnderecoCobranca">Endere√ßo:</label>
               <input type="text" id="endereco_EnderecoCobranca" name="endereco_EnderecoCobranca" />
             </div>
             <div>
@@ -380,11 +380,11 @@
               <input type="text" id="bairro_EnderecoCobranca" name="bairro_EnderecoCobranca" />
             </div>
             <div>
-              <label for="localizacao_EnderecoCobranca">LocalizaÁ„o:</label>
+              <label for="localizacao_EnderecoCobranca">Localiza√ß√£o:</label>
               <input type="text" id="localizacao_EnderecoCobranca" name="localizacao_EnderecoCobranca" />
             </div>
             <div>
-              <label for="municipio_EnderecoCobranca">MunicÌpio:</label>
+              <label for="municipio_EnderecoCobranca">Munic√≠pio:</label>
               <input type="text" id="municipio_EnderecoCobranca" name="municipio_EnderecoCobranca" />
             </div>
             <div>
@@ -393,7 +393,7 @@
             </div>
           </div>
 
-          <h2 class="subtitulo">Respons·vel pela CobranÁa</h2>
+          <h2 class="subtitulo">Respons√°vel pela Cobran√ßa</h2>
           <div class="form-grid-2col">
             <div>
               <label for="nome_ResponsavelCobranca">Nome:</label>
@@ -412,22 +412,22 @@
               <input type="date" id="data_nascimento_ResponsavelCobranca" name="data_nascimento_ResponsavelCobranca" />
             </div>
             <div>
-              <label for="observacoes_ResponsavelCobranca">ObservaÁıes:</label>
+              <label for="observacoes_ResponsavelCobranca">Observa√ß√µes:</label>
               <input type="text" id="observacoes_ResponsavelCobranca" name="observacoes_ResponsavelCobranca" />
             </div>
           </div>
         </div>
 
-        <!-- Aba 6 - ElaboraÁ„o do Cadastro -->
+        <!-- Aba 6 - Elabora√ß√£o do Cadastro -->
         <div class="tab-content" id="elaboracao" style="display: none;">
-          <h2 class="subtitulo">Dados da ElaboraÁ„o do Cadastro</h2>
+          <h2 class="subtitulo">Dados da Elabora√ß√£o do Cadastro</h2>
           <div class="form-grid-2col">
-            <div><label for="classificacao_ElaboracaoCadastro">ClassificaÁ„o:</label><input type="text"
+            <div><label for="classificacao_ElaboracaoCadastro">Classifica√ß√£o:</label><input type="text"
                 id="classificacao_ElaboracaoCadastro" name="classificacao_ElaboracaoCadastro" /></div>
-            <div><label for="tipo_venda_prazo_ou_vista_ElaboracaoCadastro">Tipo de Venda (a prazo / ‡
+            <div><label for="tipo_venda_prazo_ou_vista_ElaboracaoCadastro">Tipo de Venda (a prazo / √†
                 vista):</label><input type="text" id="tipo_venda_prazo_ou_vista_ElaboracaoCadastro"
                 name="tipo_venda_prazo_ou_vista_ElaboracaoCadastro" /></div>
-            <div><label for="limite_credito_ElaboracaoCadastro">Limite de CrÈdito (Complementar):</label><input
+            <div><label for="limite_credito_ElaboracaoCadastro">Limite de Cr√©dito (Complementar):</label><input
                 type="number" step="0.01" id="limite_credito_ElaboracaoCadastro"
                 name="limite_credito_ElaboracaoCadastro" />
             </div>
@@ -435,15 +435,15 @@
                 id="data_vencimento_ElaboracaoCadastro" name="data_vencimento_ElaboracaoCadastro" /></div>
           </div>
 
-          <h2 class="subtitulo">Grupo EconÙmico Amarrado ao Cliente</h2>
+          <h2 class="subtitulo">Grupo Econ√¥mico Amarrado ao Cliente</h2>
           <div class="form-grid-2col">
-            <div><label for="codigo_ElaboracaoCadastro">CÛdigo:</label><input type="text" id="codigo_ElaboracaoCadastro"
+            <div><label for="codigo_ElaboracaoCadastro">C√≥digo:</label><input type="text" id="codigo_ElaboracaoCadastro"
                 name="codigo_ElaboracaoCadastro" /></div>
             <div><label for="nome_empresarial_ElaboracaoCadastro">Nome Empresarial:</label><input type="text"
                 id="nome_empresarial_ElaboracaoCadastro" name="nome_empresarial_ElaboracaoCadastro" /></div>
           </div>
 
-          <h2 class="subtitulo">ReferÍncias Comerciais</h2>
+          <h2 class="subtitulo">Refer√™ncias Comerciais</h2>
           <div class="form-grid-2col">
             <div><label for="empresa_ElaboracaoCadastro">Empresa:</label><input type="text"
                 id="empresa_ElaboracaoCadastro" name="empresa_ElaboracaoCadastro" /></div>
@@ -455,23 +455,23 @@
                 id="contato_ElaboracaoCadastro" name="contato_ElaboracaoCadastro" /></div>
           </div>
 
-          <h2 class="subtitulo">ReferÍncias Banc·rias</h2>
+          <h2 class="subtitulo">Refer√™ncias Banc√°rias</h2>
           <div class="form-grid-2col">
             <div><label for="banco_ElaboracaoCadastro">Banco:</label><input type="text" id="banco_ElaboracaoCadastro"
                 name="banco_ElaboracaoCadastro" /></div>
-            <div><label for="agencia_ElaboracaoCadastro">AgÍncia:</label><input type="text"
+            <div><label for="agencia_ElaboracaoCadastro">Ag√™ncia:</label><input type="text"
                 id="agencia_ElaboracaoCadastro" name="agencia_ElaboracaoCadastro" /></div>
             <div><label for="conta_corrente_ElaboracaoCadastro">Conta Corrente:</label><input type="text"
                 id="conta_corrente_ElaboracaoCadastro" name="conta_corrente_ElaboracaoCadastro" /></div>
           </div>
 
-          <h2 class="subtitulo">Bens ImÛveis</h2>
+          <h2 class="subtitulo">Bens Im√≥veis</h2>
           <div class="form-grid-2col">
-            <div><label for="imovel_ElaboracaoCadastro">ImÛvel:</label><input type="text" id="imovel_ElaboracaoCadastro"
+            <div><label for="imovel_ElaboracaoCadastro">Im√≥vel:</label><input type="text" id="imovel_ElaboracaoCadastro"
                 name="imovel_ElaboracaoCadastro" /></div>
-            <div><label for="localizacao_ElaboracaoCadastro">LocalizaÁ„o:</label><input type="text"
+            <div><label for="localizacao_ElaboracaoCadastro">Localiza√ß√£o:</label><input type="text"
                 id="localizacao_ElaboracaoCadastro" name="localizacao_ElaboracaoCadastro" /></div>
-            <div><label for="area_ElaboracaoCadastro">¡rea:</label><input type="text" id="area_ElaboracaoCadastro"
+            <div><label for="area_ElaboracaoCadastro">√Årea:</label><input type="text" id="area_ElaboracaoCadastro"
                 name="area_ElaboracaoCadastro" /></div>
             <div><label for="valor_ElaboracaoCadastro">Valor:</label><input type="number" step="0.01"
                 id="valor_ElaboracaoCadastro" name="valor_ElaboracaoCadastro" /></div>
@@ -479,7 +479,7 @@
                 id="hipotecado_ElaboracaoCadastro" name="hipotecado_ElaboracaoCadastro" /></div>
           </div>
 
-          <h2 class="subtitulo">Bens MÛveis</h2>
+          <h2 class="subtitulo">Bens M√≥veis</h2>
           <div class="form-grid-2col">
             <div><label for="marca_ElaboracaoCadastro">Marca:</label><input type="text" id="marca_ElaboracaoCadastro"
                 name="marca_ElaboracaoCadastro" /></div>
@@ -491,11 +491,11 @@
 
           <h2 class="subtitulo">Plantel de Animais</h2>
           <div class="form-grid-2col">
-            <div><label for="especie_ElaboracaoCadastro">EspÈcie:</label><input type="text"
+            <div><label for="especie_ElaboracaoCadastro">Esp√©cie:</label><input type="text"
                 id="especie_ElaboracaoCadastro" name="especie_ElaboracaoCadastro" /></div>
-            <div><label for="numero_de_animais_ElaboracaoCadastro">N˙mero de Animais:</label><input type="number"
+            <div><label for="numero_de_animais_ElaboracaoCadastro">N√∫mero de Animais:</label><input type="number"
                 id="numero_de_animais_ElaboracaoCadastro" name="numero_de_animais_ElaboracaoCadastro" /></div>
-            <div><label for="consumo_diario_ElaboracaoCadastro">Consumo Di·rio (kg):</label><input type="number"
+            <div><label for="consumo_diario_ElaboracaoCadastro">Consumo Di√°rio (kg):</label><input type="number"
                 step="0.01" id="consumo_diario_ElaboracaoCadastro" name="consumo_diario_ElaboracaoCadastro" /></div>
             <div><label for="consumo_mensal_ElaboracaoCadastro">Consumo Mensal (kg):</label><input type="number"
                 step="0.01" id="consumo_mensal_ElaboracaoCadastro" name="consumo_mensal_ElaboracaoCadastro" /></div>
@@ -503,23 +503,23 @@
 
           <h2 class="subtitulo">Supervisores</h2>
           <div class="form-grid-2col">
-            <div><label for="codigo_insumo_ElaboracaoCadastro">CÛdigo do Insumo:</label><input type="text"
+            <div><label for="codigo_insumo_ElaboracaoCadastro">C√≥digo do Insumo:</label><input type="text"
                 id="codigo_insumo_ElaboracaoCadastro" name="codigo_insumo_ElaboracaoCadastro" /></div>
             <div><label for="nome_insumos_ElaboracaoCadastro">Nome do Insumo:</label><input type="text"
                 id="nome_insumos_ElaboracaoCadastro" name="nome_insumos_ElaboracaoCadastro" /></div>
-            <div><label for="codigo_pet_ElaboracaoCadastro">CÛdigo Pet:</label><input type="text"
+            <div><label for="codigo_pet_ElaboracaoCadastro">C√≥digo Pet:</label><input type="text"
                 id="codigo_pet_ElaboracaoCadastro" name="codigo_pet_ElaboracaoCadastro" /></div>
             <div><label for="nome_pet_ElaboracaoCadastro">Nome Pet:</label><input type="text"
                 id="nome_pet_ElaboracaoCadastro" name="nome_pet_ElaboracaoCadastro" /></div>
           </div>
 
-          <h2 class="subtitulo">Comiss„o Dispet</h2>
+          <h2 class="subtitulo">Comiss√£o Dispet</h2>
           <div class="form-grid-2col">
             <div><label for="insumos_ElaboracaoCadastro">Insumos:</label><input type="text"
                 id="insumos_ElaboracaoCadastro" name="insumos_ElaboracaoCadastro" /></div>
             <div><label for="pet_ElaboracaoCadastro">Pet:</label><input type="text" id="pet_ElaboracaoCadastro"
                 name="pet_ElaboracaoCadastro" /></div>
-            <div><label for="observacoes_ElaboracaoCadastro">ObservaÁıes:</label><input type="text"
+            <div><label for="observacoes_ElaboracaoCadastro">Observa√ß√µes:</label><input type="text"
                 id="observacoes_ElaboracaoCadastro" name="observacoes_ElaboracaoCadastro" /></div>
           </div>
         </div>
@@ -527,13 +527,13 @@
 
 
 
-      <!-- Botıes -->
-      <!-- Botıes movidos para o topo -->
+      <!-- Bot√µes -->
+      <!-- Bot√µes movidos para o topo -->
       <!-- <div class="mt-4 d-flex gap-2"> ... </div> -->
 
 
       <script>
-        // M·scaras
+        // M√°scaras
         const cpfEl = document.getElementById('cpf');
         if (cpfEl) IMask(cpfEl, { mask: '000.000.000-00' });
 
@@ -628,7 +628,7 @@
           const token = window.Auth ? window.Auth.getToken() : localStorage.getItem('ordersync_token');
 
           if (!token) {
-            alert("Sess„o expirada. FaÁa login novamente.");
+            alert("Sess√£o expirada. Fa√ßa login novamente.");
             window.Auth.logout();
             return;
           }
@@ -652,7 +652,7 @@
             .catch(erro => {
               console.error("Erro ao salvar:", erro);
               if (erro.response && erro.response.status === 401) {
-                alert("Sess„o inv·lida ou expirada. Redirecionando para login.");
+                alert("Sess√£o inv√°lida ou expirada. Redirecionando para login.");
                 window.Auth.logout();
               } else {
                 alert("Erro ao salvar cliente: " + (erro.response?.data?.detail || erro.message));
@@ -673,7 +673,7 @@
           const token = window.Auth ? window.Auth.getToken() : localStorage.getItem('ordersync_token');
 
           if (!token) {
-            alert("Sess„o expirada. FaÁa login novamente.");
+            alert("Sess√£o expirada. Fa√ßa login novamente.");
             return;
           }
 
@@ -683,7 +683,7 @@
           })
 
             .then(() => {
-              alert("Cliente excluÌdo com sucesso!");
+              alert("Cliente exclu√≠do com sucesso!");
               voltarEstadoInicial();
             })
             .catch(erro => {
@@ -694,12 +694,12 @@
 
         function editarCliente() {
           setViewState('EDITING');
-          // Habilita ediÁ„o se necess·rio, ou apenas foca no primeiro campo
+          // Habilita edi√ß√£o se necess√°rio, ou apenas foca no primeiro campo
           document.getElementById("nome_cliente").focus();
         }
 
         function cancelarEdicao() {
-          if (confirm("Deseja cancelar a ediÁ„o? Os dados n„o salvos ser„o perdidos.")) {
+          if (confirm("Deseja cancelar a edi√ß√£o? Os dados n√£o salvos ser√£o perdidos.")) {
             const id = document.getElementById("id").value;
             if (id) {
               // If we were editing an existing client, revert to Selected state
@@ -722,10 +722,10 @@
         document.addEventListener('DOMContentLoaded', () => {
           const selectedClientId = localStorage.getItem('Ordersync_ClienteSelecionadoIdListar');
           if (selectedClientId) {
-            // Limpa o item para que n„o carregue infinitamente se recarregar a p·gina
+            // Limpa o item para que n√£o carregue infinitamente se recarregar a p√°gina
             localStorage.removeItem('Ordersync_ClienteSelecionadoIdListar');
 
-            // Busca o cliente pelo ID e preenche o formul·rio
+            // Busca o cliente pelo ID e preenche o formul√°rio
             const api = window.API_BASE || "http://127.0.0.1:8000";
             const token = window.Auth ? window.Auth.getToken() : localStorage.getItem('ordersync_token');
             if (token) {
@@ -735,13 +735,13 @@
                 .then(res => {
                   if (res.data) {
                     // A interface original usava preencherFormulario(cliente), 
-                    // aqui estamos num contexto standalone, vamos chamar a funÁ„o (assumindo que existe nas outras centenas de linhas):
+                    // aqui estamos num contexto standalone, vamos chamar a fun√ß√£o (assumindo que existe nas outras centenas de linhas):
                     if (typeof preencherFormularioCliente === "function") {
                       preencherFormularioCliente(res.data);
                     } else if (typeof window.preencherFormulario === "function") {
                       window.preencherFormulario(res.data);
                     } else {
-                      console.warn("FunÁ„o de preenchimento n„o encontrada, dados obtidos:", res.data);
+                      console.warn("Fun√ß√£o de preenchimento n√£o encontrada, dados obtidos:", res.data);
                     }
                   }
                 })
@@ -905,7 +905,7 @@
         function preencherFormularioCliente(cliente) {
           const dados = cliente || {};
 
-          // Helper para evitar erros se o elemento n„o existir
+          // Helper para evitar erros se o elemento n√£o existir
           const setVal = (id, val) => {
             const el = document.getElementById(id);
             if (el) el.value = val;
@@ -1135,7 +1135,7 @@
 
           } catch (error) {
             console.error("Erro ao buscar CEP:", error);
-            alert("Erro ao buscar CEP. Verifique se est· correto.");
+            alert("Erro ao buscar CEP. Verifique se est√° correto.");
           } finally {
             event.target.style.cursor = 'default';
           }
@@ -1164,8 +1164,8 @@
               const select = document.getElementById(id);
               if (!select) return;
 
-              // Normaliza para comparaÁ„o (ex: remove acentos ou uppercase se necess·rio, mas aqui vamos tentar direto)
-              // Verifica se j· existe a opÁ„o
+              // Normaliza para compara√ß√£o (ex: remove acentos ou uppercase se necess√°rio, mas aqui vamos tentar direto)
+              // Verifica se j√° existe a op√ß√£o
               let exists = false;
               for (let i = 0; i < select.options.length; i++) {
                 if (select.options[i].value === value || select.options[i].text === value) {
@@ -1175,7 +1175,7 @@
                 }
               }
 
-              // Se n„o existe, cria uma nova opÁ„o tempor·ria
+              // Se n√£o existe, cria uma nova op√ß√£o tempor√°ria
               if (!exists && value) {
                 const option = document.createElement("option");
                 option.value = value;
@@ -1185,31 +1185,31 @@
               }
             };
 
-            setVal('nome_cliente', data.razao_social); // Raz„o Social
+            setVal('nome_cliente', data.razao_social); // Raz√£o Social
 
-            // Limpeza: Muitas vezes (principalmente MEI) a Raz„o Social vem com o CNPJ no inÌcio (ex: "12.345.678 NOME DA PESSOA").
+            // Limpeza: Muitas vezes (principalmente MEI) a Raz√£o Social vem com o CNPJ no in√≠cio (ex: "12.345.678 NOME DA PESSOA").
             // Vamos remover isso se existir para ficar mais limpo.
             let nomeLimpo = data.razao_social;
             const cnpjRootFormatado = data.cnpj.substring(0, 8).replace(/^(\d{2})(\d{3})(\d{3}).*/, "$1.$2.$3");
             if (nomeLimpo.startsWith(cnpjRootFormatado)) {
               nomeLimpo = nomeLimpo.substring(cnpjRootFormatado.length).trim();
               // Remove hifens ou caracteres soltos que possam ter sobrado
-              nomeLimpo = nomeLimpo.replace(/^[-ñ]\s*/, "");
+              nomeLimpo = nomeLimpo.replace(/^[-¬ñ]\s*/, "");
             }
             setVal('nome_cliente', nomeLimpo);
 
             setVal('nome_fantasia', data.nome_fantasia || nomeLimpo);
 
-            // Mapeamentos EspecÌficos
+            // Mapeamentos Espec√≠ficos
 
-            // 1. SituaÁ„o: BrasilAPI retorna "ATIVA", "BAIXADA", etc.
+            // 1. Situa√ß√£o: BrasilAPI retorna "ATIVA", "BAIXADA", etc.
             // Tenta mapear "ATIVA" -> "Ativo" se o select esperar isso, ou usa o valor direto.
             let situacao = data.descricao_situacao_cadastral;
-            if (situacao === "ATIVA") situacao = "Ativo"; // Tentativa de normalizaÁ„o comum
+            if (situacao === "ATIVA") situacao = "Ativo"; // Tentativa de normaliza√ß√£o comum
             setSelect('situacao', situacao);
 
             // 2. Atividade Principal e Ramo de Atividade
-            // A API retorna `cnae_fiscal_descricao_principal`. Vamos preencher ambos os campos com isso por padr„o.
+            // A API retorna `cnae_fiscal_descricao_principal`. Vamos preencher ambos os campos com isso por padr√£o.
             const atividade = data.cnae_fiscal_descricao_principal;
             setSelect('atividade_principal', atividade);
             setSelect('ramo_de_atividade', atividade);
@@ -1225,8 +1225,8 @@
             setVal('email_resposavel', data.email);
             // setVal('telefone', data.ddd_telefone_1); // If we had a generic phone field
 
-            // Nota sobre InscriÁ„o Estadual:
-            // A API p˙blica de CNPJ (Receita Federal) N√O retorna InscriÁ„o Estadual (dado estadual).
+            // Nota sobre Inscri√ß√£o Estadual:
+            // A API p√∫blica de CNPJ (Receita Federal) N√ÉO retorna Inscri√ß√£o Estadual (dado estadual).
             // Portanto, esse campo deve ser preenchido manualmente ou via API paga (Sintegra).
 
           } catch (error) {
@@ -1259,7 +1259,7 @@
       </script>
 
       <script>
-        // FunÁ„o genÈrica para preencher selects
+        // Fun√ß√£o gen√©rica para preencher selects
         function preencherSelect(endpoint, idElemento) {
           const api = window.API_BASE || "http://127.0.0.1:8000";
           fetch(`${api}/listas/${endpoint}`)
@@ -1280,7 +1280,7 @@
             });
         }
 
-        // Chamada ao carregar a p·gina
+        // Chamada ao carregar a p√°gina
         window.onload = () => {
           preencherSelect("situacao", "situacao");
           preencherSelect("tipos_cliente", "tipo_cliente");

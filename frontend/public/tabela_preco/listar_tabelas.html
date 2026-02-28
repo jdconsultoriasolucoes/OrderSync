@@ -4,7 +4,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Tabelas de Preço — OrderSync</title>
+  <title>Tabelas de PreÃ§o Â— OrderSync</title>
 
   <!-- Design System -->
   <link rel="stylesheet" href="../design-system.css">
@@ -30,7 +30,7 @@
   <header class="os-header">
     <button class="os-menu-btn" id="menu-button" aria-label="Menu">&#9776;</button>
     <img src="logo.png" alt="Logo" class="os-logo" />
-    <span class="os-header-title">Tabelas de Preço Cadastradas</span>
+    <span class="os-header-title">Tabelas de PreÃ§o Cadastradas</span>
   </header>
 
   <!-- ========== SIDEBAR ========== -->
@@ -39,15 +39,15 @@
     <ul>
       <li><a href="../../index.html">Home</a></li>
       <li><a href="../clientes/cliente.html">Clientes</a></li>
-      <li><a href="../gerenciar_tabelas/gerenciar_tabelas.html">Atualizar Catálogo</a></li>
+      <li><a href="../gerenciar_tabelas/gerenciar_tabelas.html">Atualizar CatÃ¡logo</a></li>
       <li><a href="../pedido/pedido.html">Consultar Pedidos</a></li>
-      <li><a href="../tabela_preco/criacao_tabela_preco.html" class="active">Tabela Preço</a></li>
+      <li><a href="../tabela_preco/criacao_tabela_preco.html" class="active">Tabela PreÃ§o</a></li>
       <li><a href="../produto/produto.html">Produtos</a></li>
     </ul>
     <div class="os-sidebar-section">Sistema</div>
     <ul>
-      <li><a href="../usuarios.html">Usuários</a></li>
-      <li><a href="../config_email/config_email.html">Configuração E-mail</a></li>
+      <li><a href="../usuarios.html">UsuÃ¡rios</a></li>
+      <li><a href="../config_email/config_email.html">ConfiguraÃ§Ã£o E-mail</a></li>
       <li><a href="#" onclick="window.Auth.openChangePasswordModal()">Trocar Senha</a></li>
       <li><a href="#" onclick="window.Auth.logout()">Sair</a></li>
     </ul>
@@ -76,21 +76,21 @@
               <th>Nome da Tabela</th>
               <th>Cliente</th>
               <th>Fornecedor</th>
-              <th>Ações</th>
+              <th>AÃ§Ãµes</th>
             </tr>
           </thead>
           <tbody id="lista-tabelas-body">
-            <!-- linhas serão inseridas aqui via JS -->
+            <!-- linhas serÃ£o inseridas aqui via JS -->
           </tbody>
         </table>
       </div>
 
-      <!-- Controles de Paginação -->
+      <!-- Controles de PaginaÃ§Ã£o -->
       <div id="pagination-controls" class="pagination-container"
         style="display: flex; justify-content: center; align-items: center; gap: var(--os-space-2); margin-top: var(--os-space-4);">
         <button id="btn-prev" class="os-btn os-btn-secondary" disabled>Anterior</button>
-        <span id="page-info" style="font-weight: 500;">Página 1</span>
-        <button id="btn-next" class="os-btn os-btn-secondary" disabled>Próxima</button>
+        <span id="page-info" style="font-weight: 500;">PÃ¡gina 1</span>
+        <button id="btn-next" class="os-btn os-btn-secondary" disabled>PrÃ³xima</button>
       </div>
     </section>
 
@@ -102,7 +102,7 @@
     <div style="background-color: white; padding: 20px; border-radius: 6px; text-align: center;">
       <p>Tem certeza que deseja deletar esta tabela?</p>
       <button onclick="confirmarDelecao(true)">Sim</button>
-      <button onclick="confirmarDelecao(false)">Não</button>
+      <button onclick="confirmarDelecao(false)">NÃ£o</button>
     </div>
   </div>
 

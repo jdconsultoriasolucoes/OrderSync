@@ -7,7 +7,7 @@
   <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
   <meta http-equiv="Pragma" content="no-cache">
   <meta http-equiv="Expires" content="0">
-  <title>ConfirmaÁ„o de Pedido</title>
+  <title>Confirma√ß√£o de Pedido</title>
   <link rel="stylesheet" href="/design-system.css">
   <link rel="stylesheet" href="/static/tabela_preco/pedido_cliente.css?v=20260210-qtd-fix">
 </head>
@@ -21,10 +21,10 @@
         <img src="/static/tabela_preco/logo_cliente_supra.png" alt="Logo do Cliente">
       </div>
       <div class="dados-header" style="text-align: left;">
-        <h1 style="margin: 0 0 10px; font-size: 24px; color: var(--os-text); font-weight: 700;">SolicitaÁ„o de orÁamento
+        <h1 style="margin: 0 0 10px; font-size: 24px; color: var(--os-text); font-weight: 700;">Solicita√ß√£o de or√ßamento
         </h1>
         <div class="meta-link" style="font-weight: 600; font-size: 14px; margin-top: 4px; color: var(--os-text-muted);">
-          Data do pedido: <span id="datadopedido">ó</span>
+          Data do pedido: <span id="datadopedido">¬ó</span>
         </div>
         <p style="margin: 4px 0; font-size: 14px; color: var(--os-text-secondary);"><strong>Cliente:</strong> <span
             id="razaoSocialCliente">---</span></p>
@@ -42,13 +42,13 @@
           <thead>
             <tr>
               <th>#</th>
-              <th>CÛdigo</th>
+              <th>C√≥digo</th>
               <th>Produto</th>
               <th>Embal.</th>
               <th class="right">Qtd</th>
               <th class="right">Peso</th>
               <th class="right">Valor <span id="tituloValorFrete">c/ Frete</span></th>
-              <th>CondiÁ„o de Pagamento</th>
+              <th>Condi√ß√£o de Pagamento</th>
               <th class="col-markup right">Markup %</th>
               <th class="col-markup right">Valor C Markup</th>
               <th class="right">Subtotal</th>
@@ -82,9 +82,9 @@
           </div>
         </div>
 
-        <!-- CAIXA DIREITA: ObservaÁıes do Cliente -->
+        <!-- CAIXA DIREITA: Observa√ß√µes do Cliente -->
         <div class="obs-card">
-          <div class="obs-title" style="margin: 0 0 6px; font-weight: 700; color: var(--os-text-secondary);">ObservaÁıes
+          <div class="obs-title" style="margin: 0 0 6px; font-weight: 700; color: var(--os-text-secondary);">Observa√ß√µes
             do Cliente:</div>
           <div class="obs-body">
             <textarea id="observacaoPedido" class="os-textarea" maxlength="100" placeholder="Digite aqui..."
@@ -103,7 +103,7 @@
       </div>
 
       <div class="marca-dagua">
-        <img src="/static/tabela_preco/logo.png" alt="Marca d'·gua OrderSync">
+        <img src="/static/tabela_preco/logo.png" alt="Marca d'√°gua OrderSync">
       </div>
       <p id="mensagem"></p>
     </main>
@@ -114,7 +114,7 @@
     window.API_BASE = ""; // Auto-detect origin
   </script>
   <script src="/static/tabela_preco/pedido_cliente.js?v=final-fix"></script>
-  <!-- resolve o /p/{code} e expıe os globais -->
+  <!-- resolve o /p/{code} e exp√µe os globais -->
   <script>
     window.addEventListener('DOMContentLoaded', () => {
       const API = (p) => `${(window.API_BASE || location.origin).replace(/\/$/, '')}${p}`;
@@ -133,7 +133,7 @@
                 <div style="display: flex; flex-direction: column; align-items: center; justify-content: center; height: 100vh; font-family: sans-serif; text-align: center; background-color: #f9f9f9;">
                     <h1 style="color: #d9534f; margin-bottom: 1rem;">Link Expirado</h1>
                     <p style="color: #333; font-size: 1.1rem; max-width: 500px; line-height: 1.5;">
-                        Este link de orÁamento n„o È mais v·lido.<br>
+                        Este link de or√ßamento n√£o √© mais v√°lido.<br>
                         Por favor, entre em contato com a empresa para solicitar um novo link.
                     </p>
                 </div>
@@ -154,10 +154,10 @@
   <div id="confirmModal" class="modal" hidden>
     <div class="modal-backdrop"></div>
     <div class="modal-content" role="dialog" aria-modal="true" aria-labelledby="confirmTitle">
-      <h2 id="confirmTitle" style="color: var(--os-text); font-weight: 700; border-bottom: none;">OrÁamento confirmado ?
+      <h2 id="confirmTitle" style="color: var(--os-text); font-weight: 700; border-bottom: none;">Or√ßamento confirmado ?
       </h2>
       <p class="confirm-text" style="color: var(--os-text-secondary); margin-bottom: 20px;">Recebemos seu pedido e ele
-        j· est· sendo processado.</p>
+        j√° est√° sendo processado.</p>
       <p id="confirmPedidoInfo" class="confirm-info" style="color: var(--os-text-secondary);"></p>
       <div style="text-align: right;">
         <button id="btnFecharConfirm" class="os-btn os-btn-primary" type="button"

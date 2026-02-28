@@ -4,7 +4,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Usuários — OrderSync</title>
+    <title>UsuÃ¡rios Â— OrderSync</title>
 
     <!-- Design System -->
     <link rel="stylesheet" href="design-system.css">
@@ -82,7 +82,7 @@
             border-bottom: 1px solid var(--os-border);
         }
 
-        /* Modals — styled via design system */
+        /* Modals Â— styled via design system */
         .custom-modal {
             display: none;
             position: fixed;
@@ -174,7 +174,7 @@
     <header class="os-header">
         <button class="os-menu-btn" id="menu-button" aria-label="Menu">&#9776;</button>
         <img src="logo.png" alt="Logo" class="os-logo">
-        <span class="os-header-title">Gerenciar Usuários</span>
+        <span class="os-header-title">Gerenciar UsuÃ¡rios</span>
     </header>
 
     <!-- ========== SIDEBAR ========== -->
@@ -183,15 +183,15 @@
         <ul>
             <li><a href="../index.html">Home</a></li>
             <li><a href="./clientes/cliente.html">Clientes</a></li>
-            <li><a href="./gerenciar_tabelas/gerenciar_tabelas.html">Atualizar Catálogo</a></li>
+            <li><a href="./gerenciar_tabelas/gerenciar_tabelas.html">Atualizar CatÃ¡logo</a></li>
             <li><a href="./pedido/pedido.html">Consultar Pedidos</a></li>
-            <li><a href="./tabela_preco/criacao_tabela_preco.html">Tabela Preço</a></li>
+            <li><a href="./tabela_preco/criacao_tabela_preco.html">Tabela PreÃ§o</a></li>
             <li><a href="./produto/produto.html">Produtos</a></li>
         </ul>
         <div class="os-sidebar-section">Sistema</div>
         <ul>
-            <li><a href="./usuarios.html" class="active">Usuários</a></li>
-            <li><a href="./config_email/config_email.html">Configuração E-mail</a></li>
+            <li><a href="./usuarios.html" class="active">UsuÃ¡rios</a></li>
+            <li><a href="./config_email/config_email.html">ConfiguraÃ§Ã£o E-mail</a></li>
             <li><a href="#" onclick="window.Auth.openChangePasswordModal()">Trocar Senha</a></li>
             <li><a href="#" onclick="window.Auth.logout()">Sair</a></li>
         </ul>
@@ -202,7 +202,7 @@
     <div class="page-container">
         <div class="card">
             <div class="header">
-                <button class="os-btn os-btn-primary" onclick="window.abrirModalNovoUsuario()">+ Novo Usuário</button>
+                <button class="os-btn os-btn-primary" onclick="window.abrirModalNovoUsuario()">+ Novo UsuÃ¡rio</button>
             </div>
 
             <div id="loading" class="os-loading">Carregando...</div>
@@ -215,9 +215,9 @@
                             <th>ID</th>
                             <th>Nome</th>
                             <th>Email</th>
-                            <th>Função</th>
+                            <th>FunÃ§Ã£o</th>
                             <th>Status</th>
-                            <th>Ações</th>
+                            <th>AÃ§Ãµes</th>
                         </tr>
                     </thead>
                     <tbody id="tabela-usuarios">
@@ -228,11 +228,11 @@
         </div>
     </div>
 
-    <!-- Modal Novo Usuário -->
+    <!-- Modal Novo UsuÃ¡rio -->
     <div id="modal-novo" class="custom-modal">
         <div class="custom-modal-dialog">
             <div class="custom-modal-header">
-                <div class="custom-modal-title">Novo Usuário</div>
+                <div class="custom-modal-title">Novo UsuÃ¡rio</div>
                 <button class="close-btn"
                     onclick="document.getElementById('modal-novo').style.display='none'">&times;</button>
             </div>
@@ -249,19 +249,19 @@
                     </div>
                     <div class="mb-3">
                         <label class="form-label">Senha Inicial <small class="text-muted">(Apenas na
-                                criação)</small></label>
+                                criaÃ§Ã£o)</small></label>
                         <input type="text" class="form-control" name="senha" id="input-senha" value="Mudar@123"
                             required>
                     </div>
                     <div class="mb-3">
-                        <label class="form-label">Função</label>
+                        <label class="form-label">FunÃ§Ã£o</label>
                         <select class="form-select" name="funcao" id="input-funcao">
                             <option value="vendedor">Vendedor</option>
                             <option value="gerente">Gerente</option>
                             <option value="admin">Admin</option>
                         </select>
                     </div>
-                    <button type="submit" class="os-btn os-btn-primary" style="width: 100%;">Criar Usuário</button>
+                    <button type="submit" class="os-btn os-btn-primary" style="width: 100%;">Criar UsuÃ¡rio</button>
                 </form>
             </div>
         </div>
@@ -276,13 +276,13 @@
                     onclick="document.getElementById('modal-reset').style.display='none'">&times;</button>
             </div>
             <div class="custom-modal-body">
-                <p>Defina a nova senha para o usuário <strong id="reset-user-email"></strong>:</p>
+                <p>Defina a nova senha para o usuÃ¡rio <strong id="reset-user-email"></strong>:</p>
                 <form id="form-reset-senha">
                     <input type="hidden" id="reset-user-id">
                     <div class="mb-3">
                         <label class="form-label">Nova Senha</label>
                         <input type="text" class="form-control" id="reset-nova-senha" required>
-                        <div class="form-text">Mínimo 8 caracteres, Maiúscula, Minúscula, Número e Especial (@#$!)
+                        <div class="form-text">MÃ­nimo 8 caracteres, MaiÃºscula, MinÃºscula, NÃºmero e Especial (@#$!)
                         </div>
                     </div>
                     <button type="submit" class="os-btn os-btn-danger" style="width: 100%;">Confirmar Reset</button>
