@@ -1,100 +1,39 @@
-/* ====== Tema base (claro) ====== */
-:root {
-  --bg: #f8fafc;
-  /* slate-50 */
-  --card: #ffffff;
-  /* white */
-  --muted: #475569;
-  /* slate-600 */
-  --text: #0f172a;
-  /* slate-900 */
-  --accent: #22c55e;
-  /* green-500 */
-  --accent-2: #3b82f6;
-  /* blue-500 */
-  --danger: #ef4444;
-  /* red-500 */
-  --border: #e5e7eb;
-  /* gray-200 */
-}
+/* ============================================================
+   OrderSync — Criação de Tabela de Preço CSS
+   Uses design-system.css tokens throughout
+   ============================================================ */
 
-/* ====== Reset mínimo ====== */
-* {
-  box-sizing: border-box;
-}
-
-html,
-body {
-  height: 100%;
-}
-
-body {
-  margin: 0;
-  font-family: system-ui, -apple-system, Segoe UI, Roboto, Ubuntu, Cantarell, Noto Sans, Helvetica, Arial, "Apple Color Emoji", "Segoe UI Emoji";
-  background: var(--bg);
-  color: var(--text);
-  font-size: 14px;
-  zoom: 100%;
-}
-
-
-/* ====== Layout ====== */
-
-
-.card {
-  background: var(--card);
-  border: 1px solid var(--border);
-  border-radius: 16px;
-  box-shadow: 0 6px 18px rgba(0, 0, 0, .06);
-}
-
-.card.pad {
-  padding: 16px;
-}
-
-.section-title {
-  margin: 0 0 10px;
-  font-size: 1rem;
-  font-weight: 700;
-}
-
-.divider {
-  height: 1px;
-  background: var(--border);
-  margin: 12px 0;
-}
-
-/* ====== Grid ====== */
-.grid {
-  display: grid;
-}
-
-.grid-gap {
-  gap: 12px;
-}
-
-.grid-4 {
-  grid-template-columns: repeat(4, minmax(0, 1fr));
-}
-
-.grid-3 {
-  grid-template-columns: repeat(3, minmax(0, 1fr));
-}
-
-@media (max-width: 980px) {
-
-  .grid-4,
-  .grid-3 {
-    grid-template-columns: 1fr;
-  }
-}
-
-/* ====== Custom Grid Layout 12 Cols ====== */
+/* Page Specific Overrides & Layouts */
+/* Custom Grid Desktop */
 .custom-grid {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--os-space-3);
+  margin-top: var(--os-space-2);
+}
+
+.area-cliente {
+  flex: 2;
+  min-width: 250px;
+}
+
+.area-nome {
+  flex: 1;
+  min-width: 200px;
+}
+
+.area-markup {
+  flex: 0 0 auto;
+  min-width: 150px;
+}
+
+.grid-condition-discount {
   display: grid;
-  grid-template-columns: repeat(12, 1fr);
-  gap: 16px;
-  align-items: start;
+  grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+  gap: var(--os-space-3);
+  margin-top: var(--os-space-3);
+  padding-top: var(--os-space-3);
+  border-top: 1px solid var(--os-border);
 }
 
 /* ====== Header Info Group ====== */
@@ -108,7 +47,6 @@ body {
 .header-info-group {
   display: flex;
   gap: 24px;
-  /* Generous gap between the two info items */
   align-items: center;
 }
 
@@ -117,7 +55,7 @@ body {
   align-items: center;
   gap: 8px;
   font-size: 0.85rem;
-  color: var(--muted);
+  color: var(--os-text-secondary);
 }
 
 .info-label {
@@ -125,261 +63,42 @@ body {
   white-space: nowrap;
 }
 
-.transparent-input {
+.btn-icon-header {
+  background: none;
   border: none;
-  background: transparent;
-  width: 150px;
-  color: var(--text);
-  font-weight: 600;
-  padding: 0;
-  margin: 0;
-  cursor: default;
+  font-size: 1.2rem;
+  color: var(--os-text-muted);
+  cursor: pointer;
+  padding: 4px;
+  line-height: 1;
+  transition: transform 0.3s ease;
 }
 
-.transparent-input:focus {
-  outline: none;
-}
-
-/* Row 1 placement */
-.area-cliente {
-  /* Swapped to Left */
-  grid-column: 1 / span 4;
-  grid-row: 1;
-}
-
-.area-nome {
-  /* Swapped to Right */
-  grid-column: 5 / span 4;
-  grid-row: 1;
-}
-
-.area-markup {
-  grid-column: 9 / span 4;
-  grid-row: 1;
-}
-
-/* Row 2 (Back to under Client) */
-.area-iva {
-  grid-column: 1 / span 4;
-  grid-row: 2;
-  display: flex;
-  align-items: center;
-  height: 40px;
-  /* Pull up closer to the client input */
-  margin-top: -32px;
-  padding-left: 2px;
-  padding-top: 0;
-}
-
-/* Bottom Frete Container */
-/* Bottom Frete Container Removed */
-
-.input-mini {
-  width: 180px !important;
-  /* 15 chars approx */
-  padding: 8px 10px;
-  border-radius: 6px;
-  border: 1px solid var(--border);
-  background: #fff;
-}
-
-/* Bottom Grid (Condition / Discount / Frete) */
-.grid-condition-discount {
-  display: grid;
-  /* 
-     1fr 1fr auto strategy:
-     - Condição (1fr)
-     - Desconto (1fr)
-     - Frete (Auto - sized to content ~80px)
-  */
-  grid-template-columns: 1fr 1fr auto;
-  gap: 16px;
-  margin-top: 24px;
-}
-
-@media (max-width: 1024px) {
-  .custom-grid {
-    grid-template-columns: 1fr 1fr;
-    gap: 12px;
-  }
-
-  .area-nome,
-  .area-cliente,
-  .area-frete,
-  .area-iva,
-  .area-markup {
-    grid-column: span 2;
-    grid-row: auto;
-  }
-
-  .area-validade,
-  .area-tempo {
-    grid-column: span 1;
-    grid-row: auto;
-  }
-
-  /* On mobile/tablet, let them stack or take full width */
-  .grid-condition-discount {
-    grid-template-columns: 1fr;
-  }
-}
-
-/* "Table-like" clean design for the bottom groups */
-.field-group-box {
-  background: #fff;
-  /* White match */
-  border: 1px solid var(--border);
-  border-radius: 8px;
-  /* Slightly sharper than 12 */
-  padding: 16px;
-  display: flex;
-  flex-direction: column;
-  justify-content: space-between;
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
-  /* Subtle shadow like table */
-}
-
-/* Matching inputs to table inputs */
-.custom-grid input[type="text"],
-.custom-grid input[type="number"],
-.field-group-box select {
-  padding: 8px 12px;
-  font-size: 0.9rem;
-  border-radius: 6px;
-  /* Table often has 6px or 4px */
-  border: 1px solid var(--border);
-  background: #fff;
-  width: 100%;
-  transition: all 0.2s;
-}
-
-.custom-grid input:focus,
-.field-group-box select:focus {
-  border-color: var(--accent-2);
-  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
-}
-
-.btn-sm {
-  padding: 6px 12px;
-  font-size: 0.8rem;
-  border-radius: 6px;
-}
-
-
-/* ====== Campos ====== */
-.field label {
-  font-size: .82rem;
-  color: var(--muted);
-  display: block;
-  margin-bottom: 6px;
-}
-
-.field input[type="text"],
-.field input[type="date"],
-.field input[type="number"],
-.field select {
-  width: 100%;
-  padding: 10px 12px;
-  border-radius: 10px;
-  background: #ffffff;
-  border: 1px solid var(--border);
-  color: var(--text);
-  outline: none;
-  transition: border-color .15s ease, box-shadow .15s ease;
-}
-
-.field input:focus,
-.field select:focus {
-  border-color: var(--accent-2);
-  box-shadow: 0 0 0 3px rgba(59, 130, 246, .15);
-}
-
-.inline {
-  display: flex;
-  gap: 8px;
-  align-items: center;
-}
-
-.grow {
-  flex: 1 1 auto;
+.header-summary {
+  font-size: 0.95rem;
+  color: var(--os-text);
+  max-width: 60%;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 
 
-.hint {
-  font-size: .78rem;
-  color: var(--muted);
-}
 
-.subtle {
-  color: var(--muted);
-  font-size: .8rem;
-}
-
-.right {
-  text-align: right;
-}
-
-/* ====== Toolbar / Botões ====== */
+/* ====== Toolbar ====== */
 .toolbar {
   display: flex;
   gap: 8px;
   flex-wrap: wrap;
   align-items: center;
   justify-content: flex-end;
+  margin-bottom: var(--os-space-3);
 }
 
-/* Force left alignment when requested */
 .toolbar.left-gap {
   justify-content: flex-start;
   margin-top: 6px;
-}
-
-.btn {
-  appearance: none;
-  border: 1px solid var(--border);
-  background: #fff;
-  color: var(--text);
-  padding: 10px 14px;
-  border-radius: 10px;
-  cursor: pointer;
-  font-weight: 600;
-  transition: border-color .15s ease, box-shadow .15s ease, transform .02s ease;
-}
-
-.btn:hover {
-  border-color: var(--accent-2);
-  box-shadow: 0 1px 0 rgba(59, 130, 246, .2);
-}
-
-.btn:active {
-  transform: translateY(1px);
-}
-
-.btn-primary {
-  background: linear-gradient(180deg, rgba(59, 130, 246, .12), rgba(59, 130, 246, .06));
-  border-color: rgba(59, 130, 246, .4);
-}
-
-.btn-green {
-  background: linear-gradient(180deg, rgba(34, 197, 94, .12), rgba(34, 197, 94, .06));
-  border-color: rgba(34, 197, 94, .4);
-}
-
-.btn-danger {
-  background: linear-gradient(180deg, rgba(239, 68, 68, .12), rgba(239, 68, 68, .06));
-  border-color: rgba(239, 68, 68, .4);
-}
-
-.pill {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  padding: 6px 10px;
-  border-radius: 9999px;
-  background: #f1f5f9;
-  border: 1px solid var(--border);
-  font-size: .8rem;
 }
 
 /* ====== Tabela ====== */
@@ -433,7 +152,7 @@ body {
 
 #tabela-itens input[type="number"]:focus,
 #tabela-itens select:focus {
-  border-color: var(--accent-2);
+  border-color: var(--os-primary);
   box-shadow: 0 0 0 3px rgba(59, 130, 246, .15);
 }
 
@@ -612,4 +331,440 @@ body {
   border-radius: 4px;
   margin-right: 6px;
   vertical-align: text-bottom;
+}
+
+/* ====== Mobile Restore ====== */
+/* ====== Responsive Utilities ====== */
+.mobile-only {
+  display: none !important;
+}
+
+@media (max-width: 980px) {
+  .desktop-only {
+    display: none !important;
+  }
+
+  .mobile-only {
+    display: block !important;
+  }
+
+  .mobile-only.mobile-toolbar {
+    display: flex !important;
+    /* Force flex for toolbar */
+  }
+
+  .mobile-only.mobile-card-list {
+    display: flex !important;
+    /* Force flex for card list */
+  }
+
+  .os-page-container {
+    padding-bottom: 120px !important;
+    /* Space for sticky footer */
+  }
+}
+
+/* ====== Collapsible Header ====== */
+.clickable-header {
+  cursor: pointer;
+  padding: 8px 0;
+  user-select: none;
+}
+
+.header-controls {
+  display: flex;
+  align-items: center;
+}
+
+.chevron-header {
+  transition: transform 0.3s ease;
+  font-size: 1.2rem;
+  color: var(--muted);
+}
+
+.header-content {
+  overflow: hidden;
+  transition: all 0.3s ease-out;
+  max-height: 0;
+  opacity: 0;
+}
+
+.header-content.expanded {
+  max-height: 1000px;
+  /* Arbitrary large height */
+  opacity: 1;
+  padding-bottom: 8px;
+}
+
+/* Rotate chevron when expanded */
+.section-header-flex:has(+ .header-content.expanded) .chevron-header {
+  transform: rotate(180deg);
+}
+
+
+/* ====== Mobile Card List ====== */
+.mobile-card-list {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  margin-top: 16px;
+}
+
+.mobile-card {
+  background: #fff;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 16px;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+  transition: transform 0.2s;
+}
+
+.mobile-card:active {
+  transform: scale(0.98);
+}
+
+.card-header-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  margin-bottom: 12px;
+}
+
+.card-title {
+  font-weight: 600;
+  font-size: 1rem;
+  color: var(--text);
+  margin-bottom: 4px;
+}
+
+.card-subtitle {
+  font-size: 0.85rem;
+  color: var(--muted);
+}
+
+.card-price-highlight {
+  font-size: 1.1rem;
+  font-weight: 700;
+  color: var(--os-primary);
+  text-align: right;
+}
+
+.card-body-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+  margin-bottom: 12px;
+}
+
+.card-field label {
+  font-size: 0.75rem;
+  color: var(--muted);
+  display: block;
+  margin-bottom: 4px;
+}
+
+.card-field input,
+.card-field select {
+  width: 100%;
+  padding: 8px;
+  border-radius: 8px;
+  border: 1px solid var(--border);
+}
+
+.card-actions {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  border-top: 1px dashed var(--border);
+  padding-top: 12px;
+  margin-top: 8px;
+}
+
+.btn-card-action {
+  background: none;
+  border: none;
+  color: var(--os-primary);
+  font-weight: 600;
+  font-size: 0.9rem;
+  cursor: pointer;
+}
+
+.btn-card-remove {
+  color: var(--danger);
+}
+
+
+/* ====== Mobile Sticky Toolbar ====== */
+.mobile-toolbar {
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  background: white;
+  border-top: 1px solid var(--border);
+  box-shadow: 0 -4px 12px rgba(0, 0, 0, 0.08);
+  padding: 12px 16px;
+  z-index: 100;
+}
+
+.mobile-toolbar-content {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  max-width: 1200px;
+  margin: 0 auto;
+}
+
+.mobile-toolbar-info {
+  display: flex;
+  flex-direction: column;
+}
+
+#mobile-total-itens {
+  font-size: 0.8rem;
+  color: var(--muted);
+}
+
+#mobile-total-valor {
+  font-size: 1rem;
+  font-weight: 700;
+  color: var(--text);
+}
+
+.mobile-toolbar-actions {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+
+.btn-icon-mobile {
+  background: transparent;
+  border: none;
+  font-size: 1.4rem;
+  width: 44px;
+  height: 44px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  color: var(--muted);
+  transition: all 0.2s;
+}
+
+.btn-icon-mobile:active {
+  background: rgba(0, 0, 0, 0.05);
+  transform: scale(0.95);
+}
+
+.btn-primary-mobile {
+  background: var(--os-success);
+  color: white;
+  border: none;
+  padding: 10px 24px;
+  border-radius: 24px;
+  font-weight: 600;
+  font-size: 1rem;
+  box-shadow: 0 4px 10px rgba(34, 197, 94, 0.3);
+  transition: all 0.2s;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.btn-primary-mobile:active {
+  transform: translateY(1px);
+  box-shadow: 0 2px 4px rgba(34, 197, 94, 0.3);
+}
+
+.visual-disabled {
+  opacity: 0.5 !important;
+  cursor: pointer !important;
+  /* Keep pointer so it feels interactive */
+}
+
+.visual-disabled:active {
+  transform: none !important;
+}
+
+.mobile-input-markup {
+  width: 100%;
+  padding: 10px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  text-align: right;
+  font-weight: 600;
+  font-size: 1rem;
+  color: var(--text);
+  background: #f8fafc;
+}
+
+.mobile-input-markup:focus {
+  border-color: var(--os-primary);
+  background: #fff;
+  outline: none;
+}
+
+/* ====== Alignment Fixes (User Request) ====== */
+
+/* 1. Produtos Selecionados Central (Mobile) */
+@media (max-width: 980px) {
+
+  /* Alvo específico: Produtos */
+  #sec-itens.section-title {
+    text-align: center;
+    width: 100%;
+    margin-bottom: 24px;
+    font-size: 1.3rem;
+  }
+
+  /* Arrumar o cabeçalho "Dados principais" para não quebrar com a seta */
+  .section-header-flex:has(#sec-topo) {
+    flex-wrap: wrap;
+    position: relative;
+    /* Para posicionamento absoluto se necessário */
+  }
+
+  .section-header-flex:has(#sec-topo) .header-info-group {
+    width: 100%;
+    justify-content: flex-start;
+    flex-wrap: wrap;
+    margin-top: 8px;
+    background: #f8fafc;
+    padding: 8px;
+    border-radius: 8px;
+    box-sizing: border-box;
+    gap: 8px;
+  }
+
+  .section-header-flex:has(#sec-topo) .header-info-group .info-item {
+    font-size: 0.75rem;
+    flex: none;
+  }
+
+  .section-header-flex:has(#sec-topo) .header-info-group #btn-toggle-header {
+    margin-left: auto;
+  }
+}
+
+/* 2. Empty State Central (Nenhum produto / Adicionar) */
+.empty-state-mobile {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 40px 16px;
+  /* Mais padding */
+  text-align: center;
+  color: var(--muted);
+  /* background: #fff; já tem no css anterior? se não, bom garantir */
+}
+
+/* 3. Footer Items Left & Actions Right */
+.mobile-toolbar-content {
+  justify-content: space-between !important;
+  /* Garante separação total */
+  width: 100%;
+}
+
+.mobile-toolbar-info {
+  align-items: flex-start !important;
+  /* Alinha texto à esquerda */
+  text-align: left !important;
+  margin-right: auto;
+  /* Empurra o resto para a direita */
+}
+
+.mobile-toolbar-actions {
+  margin-left: auto;
+  /* Garante que fique na direita */
+}
+
+/* ====== Header Collapse Button ====== */
+.btn-icon-header {
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  font-size: 0.9rem;
+  /* Subtle size */
+  color: var(--muted);
+  transition: transform 0.3s ease;
+  padding: 4px;
+  margin-left: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+}
+
+.btn-icon-header:hover {
+  background-color: rgba(0, 0, 0, 0.05);
+  color: var(--text);
+}
+
+/* Collapsible Content */
+#header-collapsible-area {
+  overflow: hidden;
+  transition: all 0.3s ease-out;
+  max-height: 2000px;
+  /* Arbitrary large height */
+  opacity: 1;
+}
+
+#header-collapsible-area.collapsed {
+  max-height: 0;
+  opacity: 0;
+  margin-top: 0 !important;
+  /* Kill margin */
+  pointer-events: none;
+}
+
+/* Button Rotation */
+.btn-icon-header.rotated {
+  transform: rotate(180deg);
+}
+
+/* ====== Mobile Reordering (Markup to Bottom) ====== */
+@media (max-width: 980px) {
+  #header-collapsible-area.expanded {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+  }
+
+  /* Flatten the grids */
+  .custom-grid,
+  .grid-condition-discount {
+    display: contents !important;
+  }
+
+  /* Define Order */
+  /* 1. Nome */
+  .area-nome {
+    order: 1;
+  }
+
+  /* 2. Cliente */
+  .area-cliente {
+    order: 2;
+  }
+
+  /* 3. Condição */
+  .area-condicao {
+    order: 3;
+  }
+
+  /* 4. Desconto */
+  .area-desconto {
+    order: 4;
+  }
+
+  /* 5. Frete */
+  .field-frete {
+    order: 5;
+  }
+
+  /* 6. Markup (Moved to bottom) */
+  .area-markup {
+    order: 6;
+  }
 }

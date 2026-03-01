@@ -4,110 +4,38 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>OrderSync - Redefinir Senha</title>
-    <link rel="stylesheet" href="../../styles.css">
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600&display=swap" rel="stylesheet">
-    <style>
-        body {
-            background-color: #f4f4f9;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            height: 100vh;
-            font-family: 'Inter', sans-serif;
-            margin: 0;
-        }
-
-        .login-card {
-            background: white;
-            padding: 2.5rem;
-            border-radius: 12px;
-            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
-            width: 100%;
-            max-width: 400px;
-            text-align: center;
-        }
-
-        .form-group {
-            margin-bottom: 1.5rem;
-            text-align: left;
-        }
-
-        .form-group label {
-            display: block;
-            margin-bottom: 0.5rem;
-            font-weight: 600;
-            color: #374151;
-        }
-
-        .form-group input {
-            width: 100%;
-            padding: 0.75rem;
-            border: 1px solid #d1d5db;
-            border-radius: 6px;
-            outline: none;
-            box-sizing: border-box;
-        }
-
-        .btn-login {
-            width: 100%;
-            padding: 0.75rem;
-            background-color: #2563eb;
-            color: white;
-            border: none;
-            border-radius: 6px;
-            font-weight: 600;
-            cursor: pointer;
-        }
-
-        .btn-login:hover {
-            background-color: #1d4ed8;
-        }
-
-        .message-box {
-            margin-top: 1rem;
-            padding: 10px;
-            border-radius: 6px;
-            font-size: 0.9rem;
-            display: none;
-        }
-
-        .success {
-            background-color: #dcfce7;
-            color: #166534;
-            border: 1px solid #bbf7d0;
-        }
-
-        .error {
-            background-color: #fef2f2;
-            color: #991b1b;
-            border: 1px solid #fecaca;
-        }
-    </style>
+    <title>OrderSync  Redefinir Senha</title>
+    <link rel="stylesheet" href="../design-system.css">
+    <link rel="stylesheet" href="login.css">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
 </head>
 
-<body>
-    <div class="login-card">
+<body class="os-login-page">
+    <div class="os-login-card">
+        <img src="../logo.png" alt="OrderSync" class="os-login-logo" />
         <h2>Nova Senha</h2>
-        <p style="color: #666; margin-bottom: 2rem;">Crie uma nova senha segura para sua conta.</p>
+        <p class="os-login-subtitle">Crie uma nova senha segura para sua conta.</p>
 
-        <form id="reset-form">
-            <div class="form-group">
+        <form id="reset-form" class="os-login-form">
+            <div class="os-form-group">
                 <label for="senha">Nova Senha</label>
-                <input type="password" id="senha" placeholder="••••••••" required minlength="8">
+                <input type="password" id="senha" placeholder="" required minlength="8">
             </div>
-            <div class="form-group">
+            <div class="os-form-group">
                 <label for="confirmar">Confirmar Senha</label>
-                <input type="password" id="confirmar" placeholder="••••••••" required minlength="8">
+                <input type="password" id="confirmar" placeholder="" required minlength="8">
             </div>
-            <button type="submit" class="btn-login" id="btn-submit">Salvar Nova Senha</button>
+            <button type="submit" class="os-login-btn" id="btn-submit">Salvar Nova Senha</button>
         </form>
 
-        <div id="msg-box" class="message-box"></div>
+        <div id="msg-box" class="os-msg-box"></div>
     </div>
 
+    <script src="../js/config.js"></script>
     <script>
-        const API_URL = "http://127.0.0.1:8000";
+        const API_URL = window.API_BASE || "http://127.0.0.1:8000";
 
         // Pega token da URL
         const urlParams = new URLSearchParams(window.location.search);
@@ -116,7 +44,7 @@
         if (!token) {
             document.getElementById("reset-form").style.display = "none";
             const msg = document.getElementById("msg-box");
-            msg.className = "message-box error";
+            msg.className = "os-msg-box error";
             msg.innerText = "Link inválido ou expirado. Solicite uma nova redefinição.";
             msg.style.display = "block";
         }
@@ -145,7 +73,7 @@
                 });
 
                 if (response.ok) {
-                    msgBox.className = "message-box success";
+                    msgBox.className = "os-msg-box success";
                     msgBox.innerHTML = 'Senha alterada com sucesso! <br><a href="login.html">Ir para Login</a>';
                     msgBox.style.display = "block";
                     document.getElementById("reset-form").reset();
@@ -156,7 +84,7 @@
                 }
 
             } catch (err) {
-                msgBox.className = "message-box error";
+                msgBox.className = "os-msg-box error";
                 msgBox.innerText = err.message;
                 msgBox.style.display = "block";
             } finally {
@@ -168,3 +96,5 @@
 </body>
 
 </html>
+
+

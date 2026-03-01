@@ -173,3 +173,4 @@ window.abrirModalReset = (id, email) => {
     document.getElementById("reset-nova-senha").value = "";
     document.getElementById("modal-reset").style.display = "flex";
 };
+

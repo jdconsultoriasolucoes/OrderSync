@@ -7,7 +7,7 @@ from zoneinfo import ZoneInfo
 TZ = ZoneInfo("America/Sao_Paulo")
 
 def _fim_do_dia(d):  # date → datetime no fim do dia
-    return datetime.combine(d, time(23, 59, 59, 999999))
+    return datetime.combine(d, time(23, 59, 59, 999999, tzinfo=TZ))
 
 def calcular_expires_at_global(db):
     v = db.execute(text("""

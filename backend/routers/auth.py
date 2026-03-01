@@ -1,6 +1,6 @@
 
 from datetime import timedelta
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, status, Request
 from fastapi.security import OAuth2PasswordRequestForm
 from sqlalchemy.orm import Session
 
@@ -9,6 +9,7 @@ from models.usuario import UsuarioModel
 from core.security import verify_password, create_access_token, ACCESS_TOKEN_EXPIRE_MINUTES
 from core.deps import get_current_user
 from schemas.usuario import Token
+from core.rate_limit import limiter
 
 router = APIRouter(prefix="/token", tags=["auth"])
 
@@ -20,7 +21,8 @@ def get_db():
         db.close()
 
 @router.post("", response_model=Token)
-def login_for_access_token(form_data: OAuth2PasswordRequestForm = Depends(), db: Session = Depends(get_db)):
+@limiter.limit("5/minute")
+def login_for_access_token(request: Request, form_data: OAuth2PasswordRequestForm = Depends(), db: Session = Depends(get_db)):
     # Authenticate User
     # Authenticate User (Case Insensitive)
     user = db.query(UsuarioModel).filter(UsuarioModel.email == form_data.username).first()

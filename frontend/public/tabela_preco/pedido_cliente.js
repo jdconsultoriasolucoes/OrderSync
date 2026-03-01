@@ -29,7 +29,7 @@ const comFreteParam = comFreteFromCode ?? comFreteParamQS;
 const razaoParam = url.searchParams.get("razao_social");
 const condPagtoParam = url.searchParams.get("cond_pagto");
 
-const API_BASE = window.API_BASE || "https://ordersync-backend-59d2.onrender.com"; // Restored & Safe
+const API_BASE = window.API_BASE || "https://ordersync-backend-edjq.onrender.com"; // Restored & Safe
 const API = (p) => {
   const base = (typeof window !== "undefined" && window.API_BASE ? window.API_BASE : location.origin) || "";
   // remove barra final do base e garante que p tem barra inicial
@@ -152,7 +152,7 @@ window.baixarPdfManual = function () {
     console.log("Fallback ID:", window.lastOrderId);
     window.open(API(`/api/pedido/${window.lastOrderId}/pdf_cliente`), '_blank');
   } else {
-    alert("Não foi possível identificar o link para download. Verifique seu e-mail para a cópia do orçamento.");
+    showOsModal({ title: 'Aviso', message: "Não foi possível identificar o link para download. Verifique seu e-mail para a cópia do orçamento.", type: 'alert' });
   }
 };
 
@@ -194,13 +194,13 @@ function renderTabela() {
       <td>${item.codigo ?? ""}</td>
       <td>${item.nome ?? ""}</td>
       <td>${item.embalagem ?? ""}</td>
-      <td><input type="number" min="0" step="1" value="${item.quantidade || 0}" data-index="${i}" class="qtd" /></td>
-      <td class="celula-peso" data-peso-unit="${Number(item.peso ?? 0)}"></td>
-      <td>${fmtBRL.format(valorBase)}</td>
+      <td class="right"><input type="number" min="0" step="1" value="${item.quantidade || 0}" data-index="${i}" class="os-input qtd" style="width: 100%; max-width: 80px;" /></td>
+      <td class="celula-peso right" data-peso-unit="${Number(item.peso ?? 0)}"></td>
+      <td class="right">${fmtBRL.format(valorBase)}</td>
       <td>${item.condicao_pagamento ?? ""}</td>
-      <td class="col-markup text-center">${item.markup ? Number(item.markup).toLocaleString("pt-BR", { minimumFractionDigits: 2 }) + "%" : "-"}</td>
-      <td class="col-markup text-right">${item.markup > 0 ? fmtBRL.format(usarValorComFrete ? item.valor_com_frete_markup : item.valor_sem_frete_markup) : "-"}</td>
-      <td id="subtotal-${i}">${fmtBRL.format(subtotal)}</td>
+      <td class="col-markup right">${item.markup ? Number(item.markup).toLocaleString("pt-BR", { minimumFractionDigits: 2 }) + "%" : "-"}</td>
+      <td class="col-markup right">${item.markup > 0 ? fmtBRL.format(usarValorComFrete ? item.valor_com_frete_markup : item.valor_sem_frete_markup) : "-"}</td>
+      <td id="subtotal-${i}" class="right">${fmtBRL.format(subtotal)}</td>
     `;
 
     // Peso total inicial (peso unitário × quantidade inicial)
@@ -590,7 +590,71 @@ function closeConfirmModal() {
 }
 
 // -------------------- Ações --------------------
+// -------------------- Ações --------------------
+// ===================================
+// CUSTOM OS MODALS
+// ===================================
+function showOsModal(options) {
+  return new Promise((resolve) => {
+    const backdrop = document.createElement('div');
+    backdrop.className = 'os-modal-backdrop active';
+    backdrop.style.zIndex = '99999';
+
+    const dialog = document.createElement('div');
+    dialog.className = 'os-modal-dialog';
+    dialog.style.maxWidth = '400px';
+
+    const header = document.createElement('div');
+    header.className = 'os-modal-header';
+    header.innerHTML = `<h3 class="os-modal-title">${options.title}</h3>
+                        <button class="os-modal-close">&times;</button>`;
+
+    const body = document.createElement('div');
+    body.className = 'os-modal-body';
+    body.innerHTML = `<p style="margin:0;">${options.message}</p>`;
+
+    const footer = document.createElement('div');
+    footer.className = 'os-modal-footer';
+
+    if (options.type === 'confirm') {
+      const btnCancel = document.createElement('button');
+      btnCancel.className = 'os-btn os-btn-secondary';
+      btnCancel.textContent = 'Cancelar';
+
+      const btnOk = document.createElement('button');
+      btnOk.className = 'os-btn os-btn-primary';
+      btnOk.textContent = 'OK';
+
+      footer.appendChild(btnCancel);
+      footer.appendChild(btnOk);
+
+      btnCancel.onclick = () => { document.body.removeChild(backdrop); resolve(false); };
+      btnOk.onclick = () => { document.body.removeChild(backdrop); resolve(true); };
+    } else {
+      const btnOk = document.createElement('button');
+      btnOk.className = 'os-btn os-btn-primary';
+      btnOk.textContent = 'OK';
+      footer.appendChild(btnOk);
+      btnOk.onclick = () => { document.body.removeChild(backdrop); resolve(true); };
+    }
+
+    header.querySelector('.os-modal-close').onclick = () => {
+      document.body.removeChild(backdrop);
+      resolve(options.type === 'confirm' ? false : true);
+    };
+
+    dialog.appendChild(header);
+    dialog.appendChild(body);
+    dialog.appendChild(footer);
+    backdrop.appendChild(dialog);
+    document.body.appendChild(backdrop);
+  });
+}
+
 async function confirmarPedido() {
+  let originCode = "";
+  let pedidoIdConfirmado = null; // Store ID when confirmed
+
   try {
     const itens = produtos;
     if (!Array.isArray(itens) || itens.length === 0) {
@@ -603,11 +667,11 @@ async function confirmarPedido() {
 
     // token do link curto (/p/{code})
     const pathParts = location.pathname.split('/').filter(Boolean);
-    const originCode = pathParts.length > 0 ? pathParts[pathParts.length - 1] : null;
+    originCode = pathParts.length > 0 ? pathParts[pathParts.length - 1] : null;
 
     // DEBUG: Verificar se o código foi detectado
     if (!originCode) {
-      alert("AVISO: Código do link não detectado (originCode is null). O download do PDF pode falhar.");
+      showOsModal({ title: 'Aviso', message: "AVISO: Código do link não detectado (originCode is null). O download do PDF pode falhar.", type: 'alert' });
     }
     // console.log("OriginCode:", originCode);
 
@@ -703,7 +767,7 @@ async function confirmarPedido() {
     // Atualiza texto do modal para avisar do email/download
     const msgEmail = data.email_enviado === true
       ? "Uma cópia foi enviada para seu e-mail."
-      : "E-mail não cadastrado (ou não configurado).";
+      : "E-mail não cadastrado (ou não configurado). Solicite o cadastro junto ao nosso time.";
 
     const txtConfirm = document.querySelector('.confirm-text');
     if (txtConfirm) {
@@ -733,7 +797,7 @@ async function confirmarPedido() {
 
   } catch (err) {
     console.error('[confirmarPedido] erro', err);
-    alert("Recebemos seu pedido e ele já está sendo processado. Em breve alguém da nossa equipe entrará em contato.");
+    await showOsModal({ title: 'Pedido Recebido', message: "Recebemos seu pedido e ele já está sendo processado. Em breve alguém da nossa equipe entrará em contato.", type: 'alert' });
     setMensagem("Falha ao enviar o pedido.", false);
     if (btnConfirmar) btnConfirmar.disabled = false;
   }
@@ -758,7 +822,7 @@ function assertShape(d) {
   if (Array.isArray(d.itens) === false) errs.push("itens não é array");
   if (errs.length) {
     console.error("[pedido] shape inválido:", errs, d);
-    alert("Formato de dados inesperado para a tela de pedido.");
+    showOsModal({ title: 'Erro de Dados', message: "Formato de dados inesperado para a tela de pedido.", type: 'alert' });
   }
 }
 
@@ -830,3 +894,4 @@ window.addEventListener('DOMContentLoaded', () => {
   const btnFecharConfirm = document.getElementById('btnFecharConfirm');
   if (btnFecharConfirm) btnFecharConfirm.addEventListener('click', closeConfirmModal);
 });
+

@@ -1,4 +1,4 @@
-const API_BASE = window.API_BASE || "https://ordersync-backend-59d2.onrender.com"; // Restored & Safe
+const API_BASE = window.API_BASE || "https://ordersync-backend-edjq.onrender.com"; // Restored & Safe
 
 let currentPage = 1;
 let pageSize = 25;
@@ -82,6 +82,19 @@ document.addEventListener("DOMContentLoaded", () => {
     ?.addEventListener("click", enviarSelecionados);
   document.getElementById("btn-cancelar")
     ?.addEventListener("click", () => window.location.href = 'criacao_tabela_preco.html');
+
+  // Toggle do cabeçalho de filtros
+  const headerToggle = document.getElementById("header-toggle-filtros");
+  const conteudoFiltros = document.getElementById("conteudo-filtros");
+  const iconToggle = document.getElementById("icon-toggle-filtros");
+
+  if (headerToggle && conteudoFiltros && iconToggle) {
+    headerToggle.addEventListener("click", () => {
+      const isHidden = conteudoFiltros.style.display === "none";
+      conteudoFiltros.style.display = isHidden ? "block" : "none";
+      iconToggle.textContent = isHidden ? "▲" : "▼"; // Usando ▼ para aberto e ▲ para fechado, ou vice versa
+    });
+  }
 });
 
 // === Compat shim: envia seleção de volta ao PAI, sem quebrar legado ===
@@ -298,11 +311,21 @@ function preencherTabela(produtos) {
       <td>${p.codigo_tabela}</td>
       <td>${p.descricao}</td>
       <td>${p.embalagem ?? ""}</td>
-      <td class="num">${(p.peso_liquido ?? 0).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</td>
-      <td class="num">${(p.valor ?? 0).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</td>
+      <td class="num">${(p.peso_liquido ?? 0).toLocaleString('pt-BR', { minimumFractionDigits: 0, maximumFractionDigits: 0 })}</td>
+      <td class="num">${(p.valor ?? 0).toLocaleString('pt-BR', { minimumFractionDigits: 0, maximumFractionDigits: 0 })}</td>
     `;
     // anexa o objeto completo na linha para facilitar coleta
     tr.dataset.produto = JSON.stringify(p);
+
+    // Toggle para mobile
+    tr.addEventListener("click", (e) => {
+      // Ignorar cliques diretos no checkbox (para não impedir marcação normal no desktop)
+      if (e.target.tagName.toLowerCase() === 'input') return;
+
+      // Expande/colapsa o card no mobile
+      tr.classList.toggle("expanded");
+    });
+
     tbody.appendChild(tr);
   });
 }
@@ -357,7 +380,67 @@ function gotoNextPage() {
 /* ========================
    Enviar selecionados ao PAI
 ======================== */
-function enviarSelecionados() {
+// ===================================
+// CUSTOM OS MODALS
+// ===================================
+function showOsModal(options) {
+  return new Promise((resolve) => {
+    const backdrop = document.createElement('div');
+    backdrop.className = 'os-modal-backdrop active';
+    backdrop.style.zIndex = '99999';
+
+    const dialog = document.createElement('div');
+    dialog.className = 'os-modal-dialog';
+    dialog.style.maxWidth = '400px';
+
+    const header = document.createElement('div');
+    header.className = 'os-modal-header';
+    header.innerHTML = `<h3 class="os-modal-title">${options.title}</h3>
+                        <button class="os-modal-close">&times;</button>`;
+
+    const body = document.createElement('div');
+    body.className = 'os-modal-body';
+    body.innerHTML = `<p style="margin:0;">${options.message}</p>`;
+
+    const footer = document.createElement('div');
+    footer.className = 'os-modal-footer';
+
+    if (options.type === 'confirm') {
+      const btnCancel = document.createElement('button');
+      btnCancel.className = 'os-btn os-btn-secondary';
+      btnCancel.textContent = 'Cancelar';
+
+      const btnOk = document.createElement('button');
+      btnOk.className = 'os-btn os-btn-primary';
+      btnOk.textContent = 'OK';
+
+      footer.appendChild(btnCancel);
+      footer.appendChild(btnOk);
+
+      btnCancel.onclick = () => { document.body.removeChild(backdrop); resolve(false); };
+      btnOk.onclick = () => { document.body.removeChild(backdrop); resolve(true); };
+    } else {
+      const btnOk = document.createElement('button');
+      btnOk.className = 'os-btn os-btn-primary';
+      btnOk.textContent = 'OK';
+      footer.appendChild(btnOk);
+      btnOk.onclick = () => { document.body.removeChild(backdrop); resolve(true); };
+    }
+
+    header.querySelector('.os-modal-close').onclick = () => {
+      document.body.removeChild(backdrop);
+      resolve(options.type === 'confirm' ? false : true);
+    };
+
+    dialog.appendChild(header);
+    dialog.appendChild(body);
+    dialog.appendChild(footer);
+    backdrop.appendChild(dialog);
+    document.body.appendChild(backdrop);
+  });
+}
+
+async function enviarSelecionados() {
   const selecionados = [];
   document.querySelectorAll("#tabela-produtos-body tr").forEach(tr => {
     const chk = tr.querySelector(".produto-checkbox");
@@ -380,7 +463,7 @@ function enviarSelecionados() {
   });
 
   if (selecionados.length === 0) {
-    alert("Selecione ao menos um produto.");
+    await showOsModal({ title: 'Aviso', message: 'Selecione ao menos um produto.', type: 'alert' });
     return;
   }
 

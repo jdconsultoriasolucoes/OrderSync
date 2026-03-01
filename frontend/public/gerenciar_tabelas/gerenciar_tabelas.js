@@ -1,5 +1,5 @@
 
-const API_BASE = window.API_BASE || "https://ordersync-backend-59d2.onrender.com";
+const API_BASE = window.API_BASE || "https://ordersync-backend-edjq.onrender.com";
 
 let currentModule = null; // 'condicoes', 'descontos', 'familias'
 let currentItem = null;   // Item sendo editado (null se novo)
@@ -78,21 +78,29 @@ const CONFIG = {
 function selectModule(mod) {
     currentModule = mod;
 
-    // Highlight sidebar
-    document.querySelectorAll('.mgmt-sidebar button').forEach(b => b.classList.remove('active'));
-    document.getElementById(`nav-${mod}`).classList.add('active');
+    // Highlight menu button via JS if it's called programmatically without a click event
+    document.querySelectorAll('.module-nav-btn').forEach(btn => {
+        btn.classList.remove('active');
+        if (btn.getAttribute('onclick')?.includes(mod)) {
+            btn.classList.add('active');
+        }
+    });
 
     // Set Header
-    const titles = { condicoes: 'Condições de Pagamento', descontos: 'Descontos', familias: 'Famílias de Produtos' };
-    document.getElementById('module-title').textContent = titles[mod];
-    document.getElementById('btn-novo').disabled = false;
+    const titles = { condicoes: 'Condições de Pagamento', descontos: 'Descontos', familias: 'Grupo de Produtos' };
+
+    const sectionTitle = document.getElementById('sectionTitle');
+    if (sectionTitle) sectionTitle.textContent = titles[mod];
+
+    const btnNovo = document.getElementById('btn-novo');
+    if (btnNovo) btnNovo.disabled = false;
 
     loadData();
 }
 
 async function loadData() {
     const cfg = CONFIG[currentModule];
-    const container = document.getElementById('table-container');
+    const container = document.getElementById('grid');
     container.innerHTML = '<p>Carregando...</p>';
 
     try {
@@ -111,7 +119,7 @@ async function loadData() {
 
 function renderGrid(rows) {
     const cfg = CONFIG[currentModule];
-    const container = document.getElementById('table-container');
+    const container = document.getElementById('grid');
 
     if (!rows || rows.length === 0) {
         container.innerHTML = '<p>Nenhum registro encontrado.</p>';
@@ -137,8 +145,8 @@ function renderGrid(rows) {
         const pkVal = r[cfg.pk];
         html += `
             <td>
-                <button class="action-btn btn-edit" onclick="editItem('${pkVal}')">&#9998;</button>
-                <button class="action-btn btn-delete" onclick="deleteItem('${pkVal}')">&#128465;</button>
+                <button class="os-btn os-btn-secondary os-btn-sm" style="margin-right: 4px;" onclick="editItem('${pkVal}')">Editar</button>
+                <button class="os-btn os-btn-sm" style="background-color: var(--os-error-light); color: var(--os-error); border-color: #FECACA;" onclick="deleteItem('${pkVal}')">Excluir</button>
             </td>
         </tr>`;
     });
@@ -291,4 +299,5 @@ window.editItem = function (pk) {
     openModal(pk);
 };
 window.deleteItem = deleteItem;
+
 

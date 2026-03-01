@@ -9,7 +9,14 @@ load_dotenv()
 DATABASE_URL = os.environ["DATABASE_URL"]  # Render já fornece essa variável no ambiente
 
 # opcional: pool_pre_ping=True evita “server closed the connection unexpectedly”
-engine = create_engine(DATABASE_URL, pool_pre_ping=True)
+# Aumentado o pool para aguentar rajadas em ambiente SaaS
+engine = create_engine(
+    DATABASE_URL, 
+    pool_size=20, 
+    max_overflow=50, 
+    pool_pre_ping=True, 
+    pool_timeout=30
+)
 
 @event.listens_for(Engine, "connect")
 def _set_timezone(dbapi_connection, connection_record):

@@ -1,5 +1,5 @@
 from typing import Optional, List
-from fastapi import APIRouter, Query, HTTPException
+from fastapi import APIRouter, Query, HTTPException, BackgroundTasks
 from pydantic import BaseModel
 from sqlalchemy import text
 from database import SessionLocal
@@ -135,16 +135,51 @@ async def pedido_preview(
 
 
 
+from fastapi import Request
+from models.idempotency import IdempotencyKeyModel
+
+from core.rate_limit import limiter
+
 @router.post("/{tabela_id}/confirmar")
-def confirmar_pedido(tabela_id: int, body: ConfirmarPedidoRequest):
+@limiter.limit("5/minute")
+def confirmar_pedido(
+    tabela_id: int, 
+    body: ConfirmarPedidoRequest, 
+    background_tasks: BackgroundTasks,
+    request: Request
+):
+    idempotency_key = request.headers.get("x-idempotency-key")
+    
     with SessionLocal() as db:
         try:
-            result = criar_pedido_confirmado(db, tabela_id, body)
+            # 1. Verifica Idempotência
+            if idempotency_key:
+                existente = db.query(IdempotencyKeyModel).filter(IdempotencyKeyModel.chave == idempotency_key).first()
+                if existente:
+                    # Retorna sucesso simulado com o ID já processado
+                    return {
+                        "id": existente.id_pedido,
+                        "status": "CRIADO",
+                        "email_enviado": False, # ou buscar o real se necessário
+                        "pdf_base64": None,
+                        "idempotency_cached": True
+                    }
+
+            # 2. Cria o pedido
+            result = criar_pedido_confirmado(db, tabela_id, body, background_tasks)
+            novo_id = result.get("id")
+
+            # 3. Salva a chave de Idempotência
+            if idempotency_key and novo_id:
+                nova_chave = IdempotencyKeyModel(
+                    chave=idempotency_key,
+                    id_pedido=novo_id
+                )
+                db.add(nova_chave)
+
             db.commit()
             return result
-        except ValueError as ve:
-             db.rollback()
-             raise HTTPException(status_code=400, detail=str(ve))
         except Exception as e:
-             logger.exception(f"Erro confirmar_pedido: {e}")
-             raise HTTPException(status_code=500, detail="Erro interno ao confirmar pedido")
+             db.rollback()
+             # Raise it again so our global exception_handler in main.py wraps it inside the JSON structure
+             raise e

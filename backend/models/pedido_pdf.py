@@ -16,6 +16,8 @@ class PedidoPdfItem(BaseModel):
     valor_final_markup: Optional[float] = 0.0
     valor_s_frete_markup: Optional[float] = 0.0
     fornecedor: Optional[str] = None
+    peso_liquido_unit: Optional[float] = 0.0   # peso líquido unitário (kg)
+    peso_liquido_total: Optional[float] = 0.0  # peso líquido × quantidade
 
 
 class PedidoPdf(BaseModel):

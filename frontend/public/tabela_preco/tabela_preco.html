@@ -3,22 +3,22 @@
 
 <head>
   <meta charset="UTF-8">
-  <title>Inserir Produtos</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Inserir Produtos  OrderSync</title>
 
-  <!-- Bootstrap igual à tela de cliente -->
+  <!-- Design System -->
+  <link rel="stylesheet" href="../design-system.css">
+
+  <!-- Bootstrap -->
   <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
 
-  <!-- CSS específico da página -->
+  <!-- Page CSS -->
   <link rel="stylesheet" href="tabela_preco.css">
 
-  <!-- Navbar SEMPRE por último, para garantir o padding-top do header fixo -->
-  <link rel="stylesheet" href="../navbar.css">
-
+  <!-- Fonts -->
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600&display=swap" rel="stylesheet">
-
-
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
 
   <script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js"></script>
   <script src="../js/config.js"></script>
@@ -28,86 +28,111 @@
 
 <body>
 
-  <header>
-    <div class="navbar">
-      <button class="menu-btn" id="menu-button">&#9776;</button>
-      <img src="../logo.png" alt="Logo" class="logo" />
-    </div>
+  <!-- ========== HEADER ========== -->
+  <header class="os-header">
+    <button class="os-menu-btn" id="menu-button" aria-label="Menu">&#9776;</button>
+    <img src="../logo.png" alt="Logo" class="os-logo" />
+    <span class="os-header-title">Inserir Produtos</span>
   </header>
 
-  <nav class="sidebar" id="sidebar">
+  <!-- ========== SIDEBAR ========== -->
+  <nav class="os-sidebar" id="sidebar">
+    <div class="os-sidebar-section">Menu</div>
     <ul>
-      <li><a href="/index.html">Home</a></li>
-      <li><a href="/clientes/cliente.html">Cadastrar Cliente</a></li>
-      <li><a href="/gerenciar_tabelas/gerenciar_tabelas.html">Atualizar Catálogo</a></li>
-      <li><a href="/pedido/pedido.html">Consultar Pedidos</a></li>
-      <li><a href="#">Exportar Relatórios</a></li>
-      <li><a href="/tabela_preco/criacao_tabela_preco.html">Tabela Preço</a></li>
-      <li><a href="/config_email/config_email.html">Configuração E-mail</a></li>
+      <li><a href="../../index.html">Home</a></li>
+      <li><a href="../clientes/cliente.html">Clientes</a></li>
+      <li><a href="../gerenciar_tabelas/gerenciar_tabelas.html">Atualizar Catálogo</a></li>
+      <li><a href="../pedido/pedido.html">Consultar Pedidos</a></li>
+      <li><a href="../tabela_preco/criacao_tabela_preco.html" class="active">Tabela Preço</a></li>
+      <li><a href="../produto/produto.html">Produtos</a></li>
+    </ul>
+    <div class="os-sidebar-section">Sistema</div>
+    <ul>
+      <li><a href="../usuarios.html">Usuários</a></li>
+      <li><a href="../config_email/config_email.html">Configuração E-mail</a></li>
+      <li><a href="#" onclick="window.Auth.openChangePasswordModal()">Trocar Senha</a></li>
+      <li><a href="#" onclick="window.Auth.logout()">Sair</a></li>
     </ul>
   </nav>
-  <div id="overlay"></div>
+  <div class="os-sidebar-overlay" id="overlay"></div>
 
-  <main class="page-container">
-    <h1>Inserir Produtos</h1>
+  <div class="os-page-container"
+    style="padding: var(--os-space-4); padding-top: calc(var(--os-header-height) + var(--os-space-4));">
 
-    <!-- Filtros mínimos (somente Grupo) -->
-    <div id="toolbar-filtros" class="toolbar">
-      <div class="field">
-        <label for="grupo">Grupo:</label>
-        <select id="grupo"></select>
+    <!-- Filtros e Busca -->
+    <section class="os-card" style="margin-bottom: var(--os-space-4);">
+      <div id="header-toggle-filtros"
+        style="display: flex; justify-content: space-between; align-items: center; cursor: pointer;">
+        <h2 class="os-section-title" style="margin: 0; border-bottom: none; padding-bottom: 0;">Filtros e Busca</h2>
+        <button class="os-btn-icon" id="icon-toggle-filtros" aria-label="Minimizar">?</button>
       </div>
 
-      <div class="field">
-        <label for="filtro-fornecedor">Fornecedor:</label>
-        <select id="filtro-fornecedor"></select>
+      <div id="conteudo-filtros" style="margin-top: var(--os-space-3);">
+        <div id="toolbar-filtros" class="os-toolbar"
+          style="display: flex; gap: var(--os-space-3); flex-wrap: wrap; align-items: flex-end;">
+          <div class="os-form-group" style="margin-bottom: 0;">
+            <label class="os-label" for="grupo">Grupo:</label>
+            <select id="grupo" class="os-select"></select>
+          </div>
+
+          <div class="os-form-group" style="margin-bottom: 0;">
+            <label class="os-label" for="filtro-fornecedor">Fornecedor:</label>
+            <select id="filtro-fornecedor" class="os-select"></select>
+          </div>
+
+          <div class="os-form-group" style="margin-bottom: 0; flex: 1; min-width: 250px;">
+            <label class="os-label" for="filtro-palavra">&nbsp;</label>
+            <input id="filtro-palavra" class="os-input" type="text" placeholder="Buscar por código, descrição...">
+          </div>
+        </div>
       </div>
 
-      <div class="field grow">
-        <label for="filtro-palavra">&nbsp;</label>
-        <input id="filtro-palavra" type="text" placeholder="Buscar por código, descrição...">
+      <div id="actions-filtros" class="actions"
+        style="display: flex; gap: var(--os-space-2); margin-top: var(--os-space-4); flex-wrap: wrap;">
+        <button class="os-btn os-btn-primary" id="btn-adicionar-selecionados">Adicionar selecionados</button>
+        <button id="btn-limpar" class="os-btn os-btn-secondary" type="button">Limpar</button>
+        <button class="os-btn os-btn-ghost" id="btn-cancelar">Cancelar</button>
+      </div>
+    </section>
+
+    <section class="os-card">
+      <div class="os-table-wrap">
+        <h2 class="os-section-title" style="margin-left: var(--os-space-3); margin-top: var(--os-space-2);">Produtos
+          Disponíveis</h2>
+        <table id="tabela_produtos" class="os-table">
+          <thead>
+            <tr>
+              <th class="center" style="width:72px">Sel.</th>
+              <th style="min-width:110px">Código</th>
+              <th style="min-width:320px">Descrição</th>
+              <th style="min-width:120px">Embalagem</th>
+              <th class="right" style="min-width:120px">Peso Líquido</th>
+              <th class="right" style="min-width:110px">Valor</th>
+            </tr>
+          </thead>
+          <tbody id="tabela-produtos-body"></tbody>
+        </table>
       </div>
 
-      <div class="actions">
-        <button id="btn-limpar" class="btn btn-secundario" type="button">Limpar</button>
-        <button class="btn btn-primario" id="btn-adicionar-selecionados">Adicionar selecionados</button>
-        <button class="btn btn-neutro" id="btn-cancelar">Cancelar</button>
+      <!-- Paginação -->
+      <div class="paginacao"
+        style="display:flex; gap:12px; align-items:center; margin-top:var(--os-space-4); justify-content: center; padding-bottom: var(--os-space-2);">
+        <label class="os-label" style="display: flex; align-items: center; gap: 8px; margin-bottom: 0;">Itens por
+          página:
+          <select id="page_size" class="os-select" style="width: auto;">
+            <option>10</option>
+            <option selected>20</option>
+            <option>30</option>
+            <option>60</option>
+          </select>
+        </label>
+        <button type="button" class="os-btn os-btn-secondary" id="btn-prev" onclick="gotoPrevPage()">? Anterior</button>
+        <span id="pagina-info" style="font-weight: 500;"></span>
+        <button type="button" class="os-btn os-btn-secondary" id="btn-next" onclick="gotoNextPage()">Próxima ?</button>
       </div>
-    </div>
+    </section>
 
-    <div class="table-wrap">
-      <h2 class="subtitulo">Produtos Disponíveis</h2>
-      <table id="tabela_produtos" class="data-table">
-        <thead>
-          <tr>
-            <th class="center" style="width:72px">Selecionar</th>
-            <th style="min-width:110px">Código</th>
-            <th style="min-width:320px">Descrição</th>
-            <th style="min-width:120px">Embalagem</th>
-            <th class="num" style="min-width:120px">Peso Líquido</th>
-            <th class="num" style="min-width:110px">Valor</th>
-          </tr>
-        </thead>
-        <tbody id="tabela-produtos-body"></tbody>
-      </table>
-    </div>
-
-    <!-- Paginação -->
-    <div class="paginacao" style="display:flex; gap:12px; align-items:center; margin-top:10px;">
-      <label>Itens por página:
-        <select id="page_size">
-          <option>10</option>
-          <option selected>20</option>
-          <option>30</option>
-          <option>60</option>
-        </select>
-      </label>
-      <button type="button" class="btn" id="btn-prev" onclick="gotoPrevPage()">◀ Anterior</button>
-      <span id="pagina-info"></span>
-      <button type="button" class="btn" id="btn-next" onclick="gotoNextPage()">Próxima ▶</button>
-    </div>
-
-  </main>
+  </div>
 
   <script src="tabela_preco.js"></script>
   <script>
@@ -117,11 +142,11 @@
 
     menuButton.addEventListener("click", () => {
       sidebar.classList.toggle("active");
-      overlay.style.display = sidebar.classList.contains("active") ? "block" : "none";
+      overlay.classList.toggle("active");
     });
     overlay.addEventListener("click", () => {
       sidebar.classList.remove("active");
-      overlay.style.display = "none";
+      overlay.classList.remove("active");
     });
   </script>
 </body>

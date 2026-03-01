@@ -1,5 +1,4 @@
-# backend/routers/pedidos.py
-from fastapi import APIRouter, Depends, HTTPException, Query
+from fastapi import APIRouter, Depends, HTTPException, Query, BackgroundTasks, Request
 from pydantic import BaseModel, Field
 from typing import List, Optional
 from datetime import datetime, timedelta,date
@@ -49,11 +48,14 @@ class PedidoItemResumo(BaseModel):
     quantidade: float
     preco_unit: float
     subtotal: float
+    peso_liquido_unit: Optional[float] = 0.0
+    peso_liquido_total: Optional[float] = 0.0
 
 class PedidoResumo(BaseModel):
     id_pedido: int
     codigo_cliente: Optional[str] = None
     cliente: str
+    nome_fantasia: Optional[str] = None
     contato_nome: Optional[str] = None
     contato_email: Optional[str] = None
     contato_fone: Optional[str] = None
@@ -65,6 +67,7 @@ class PedidoResumo(BaseModel):
     peso_total_kg: float
     frete_total: float
     total_pedido: float
+    peso_liquido_calculado: Optional[float] = None
     observacoes: Optional[str] = None
     status: str
     confirmado_em: Optional[datetime] = None
@@ -258,6 +261,11 @@ def resumo_pedido(id_pedido: int, db: Session = Depends(get_db)):
 
     itens = db.execute(ITENS_JSON_SQL, {"id_pedido": id_pedido}).scalar() or []
     head_dict["itens"] = itens
+    
+    # Extract native PDF weight flow dynamically to keep single source of truth
+    from services.pedido_pdf_data import carregar_pedido_pdf
+    pdf_data = carregar_pedido_pdf(db, id_pedido)
+    head_dict["peso_liquido_calculado"] = pdf_data.total_peso_liquido
 
     return PedidoResumo(**head_dict)
 
@@ -269,7 +277,8 @@ def listar_status(db: Session = Depends(get_db)):
 
 @router.post("/{id_pedido}/status")
 def mudar_status(id_pedido: int, body: StatusChangeBody, db: Session = Depends(get_db)):
-    cur = db.execute(text("SELECT status FROM public.tb_pedidos WHERE id_pedido=:id"), {"id": id_pedido}).first()
+    # LOCK PESSIMISTA: Evita race condition se 2 pessoas alterarem status do mesmo pedido c/ milissegundos d diferença
+    cur = db.execute(text("SELECT status FROM public.tb_pedidos WHERE id_pedido=:id FOR UPDATE"), {"id": id_pedido}).first()
     if not cur:
         raise HTTPException(status_code=404, detail="Pedido não encontrado")
     de_status = cur[0]
@@ -309,7 +318,8 @@ def cancelar_pedido(id_pedido: int, db: Session = Depends(get_db), user_id: Opti
     """
     Cancela o pedido e registra no histórico (se possível).
     """
-    pedido = db.query(PedidoModel).filter(PedidoModel.id == id_pedido).first()
+    # LOCK PESSIMISTA via ORM: .with_for_update() garante exclusão mutua para cancelar
+    pedido = db.query(PedidoModel).filter(PedidoModel.id == id_pedido).with_for_update().first()
     if not pedido:
         raise HTTPException(status_code=404, detail="Pedido não encontrado")
 
@@ -337,27 +347,32 @@ def cancelar_pedido(id_pedido: int, db: Session = Depends(get_db), user_id: Opti
     db.commit()
     return {"message": "Pedido cancelado com sucesso", "status": "CANCELADO"}
 
+from core.rate_limit import limiter
+from models.background_task import BackgroundTaskModel
+
 @router.post("/{id_pedido}/reenviar_email")
-def reenviar_email_pedido(id_pedido: int, db: Session = Depends(get_db)):
+@limiter.limit("5/minute")
+def reenviar_email_pedido(
+    id_pedido: int, 
+    request: Request,
+    db: Session = Depends(get_db)
+):
     """
-    Reenvia o e-mail de confirmação para o cliente (se configurado) e internos.
+    Reenvia o e-mail de confirmação para o cliente em thread paralela via Worker Persistente.
     """
     pedido = db.query(PedidoModel).filter(PedidoModel.id == id_pedido).first()
     if not pedido:
         raise HTTPException(status_code=404, detail="Pedido não encontrado")
     
-    # Gera PDF em memória para anexar
-    from services.pdf_service import gerar_pdf_pedido_bytes
-    pdf_bytes = None
-    try:
-        pdf_bytes = gerar_pdf_pedido_bytes(db, pedido.id)
-    except Exception as e:
-        print(f"Erro ao gerar PDF para reenvio: {e}")
+    # Em vez do antigo BackgroundTasks que travava CPU, mandamos pro db queue
+    nova_tarefa = BackgroundTaskModel(
+        tipo_tarefa="ENVIO_EMAIL_CONFIRMACAO",
+        referencia_id=id_pedido,
+        status="PENDENTE",
+        tentativas=0
+    )
+    db.add(nova_tarefa)
+    db.commit()
 
-    # Envia
-    try:
-        enviar_email_notificacao(db, pedido, link_pdf=None, pdf_bytes=pdf_bytes)
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Erro ao enviar e-mail: {str(e)}")
+    return {"message": "E-mail agendado para reenvio com sucesso (via fila)."}
 
-    return {"message": "E-mail reenviado com sucesso."}

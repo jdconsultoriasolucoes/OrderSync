@@ -1,6 +1,6 @@
 // === Config ===
 // Config is now imported via config.js
-const API_BASE = window.API_BASE || "https://ordersync-backend-59d2.onrender.com"; // Restored & Safe
+const API_BASE = window.API_BASE || "https://ordersync-backend-edjq.onrender.com"; // Restored & Safe
 // window.API_BASE already set by config.js
 const ENDPOINT_VALIDADE = `${API_BASE}/tabela_preco/meta/validade_global`;
 
@@ -16,6 +16,65 @@ window.currentClientMarkup = 0; // Expose globally for snapshot
 let ivaStAtivo = !!document.getElementById('iva_st_toggle')?.checked;
 let __recalcRunning = false;
 let __recalcPending = false;
+
+// ===================================
+// CUSTOM OS MODALS
+// ===================================
+function showOsModal(options) {
+  return new Promise((resolve) => {
+    const backdrop = document.createElement('div');
+    backdrop.className = 'os-modal-backdrop active';
+
+    const dialog = document.createElement('div');
+    dialog.className = 'os-modal-dialog';
+    dialog.style.maxWidth = '400px';
+
+    const header = document.createElement('div');
+    header.className = 'os-modal-header';
+    header.innerHTML = `<h3 class="os-modal-title">${options.title}</h3>
+                      <button class="os-modal-close">&times;</button>`;
+
+    const body = document.createElement('div');
+    body.className = 'os-modal-body';
+    body.innerHTML = `<p style="margin:0;">${options.message}</p>`;
+
+    const footer = document.createElement('div');
+    footer.className = 'os-modal-footer';
+
+    if (options.type === 'confirm') {
+      const btnCancel = document.createElement('button');
+      btnCancel.className = 'os-btn os-btn-secondary';
+      btnCancel.textContent = 'Cancelar';
+
+      const btnOk = document.createElement('button');
+      btnOk.className = 'os-btn os-btn-primary';
+      btnOk.textContent = 'OK';
+
+      footer.appendChild(btnCancel);
+      footer.appendChild(btnOk);
+
+      btnCancel.onclick = () => { document.body.removeChild(backdrop); resolve(false); };
+      btnOk.onclick = () => { document.body.removeChild(backdrop); resolve(true); };
+    } else {
+      const btnOk = document.createElement('button');
+      btnOk.className = 'os-btn os-btn-primary';
+      btnOk.textContent = 'OK';
+      footer.appendChild(btnOk);
+      btnOk.onclick = () => { document.body.removeChild(backdrop); resolve(true); };
+    }
+
+    header.querySelector('.os-modal-close').onclick = () => {
+      document.body.removeChild(backdrop);
+      resolve(options.type === 'confirm' ? false : true);
+    };
+
+    dialog.appendChild(header);
+    dialog.appendChild(body);
+    dialog.appendChild(footer);
+    backdrop.appendChild(dialog);
+    document.body.appendChild(backdrop);
+  });
+}
 
 // ✅ Se a página for recarregada (F5), zera o buffer legado
 const __IS_RELOAD = (() => {
@@ -1114,7 +1173,7 @@ async function carregarItens() {
       const inativos = itens.filter(i => i.status_atual && i.status_atual !== 'ATIVO');
       if (inativos.length > 0) {
         // setTimeout para não bloquear a renderização inicial
-        setTimeout(() => alert(`⚠️ ATENÇÃO: Existem ${inativos.length} produtos com status INATIVO nesta tabela.\nPor favor, remova-os.`), 500);
+        setTimeout(() => showOsModal({ title: 'Atenção', message: `⚠️ ATENÇÃO: Existem ${inativos.length} produtos com status INATIVO nesta tabela.<br>Por favor, remova-os.`, type: 'alert' }), 500);
       }
 
 
@@ -1176,6 +1235,57 @@ async function carregarItens() {
   setMode('new');
 }
 
+// --- Shared Logic for Fator/Condição Determination ---
+function determineFatorCode(item) {
+  // 0) Priority: Persisted/Explicit Code
+  if (item.__fator_codigo && mapaDescontos && Object.prototype.hasOwnProperty.call(mapaDescontos, item.__fator_codigo)) {
+    return item.__fator_codigo;
+  }
+
+  // 1) Backend Label (e.g., "15 - 0")
+  const lbl = (item.__descricao_fator_label || '').trim();
+  if (lbl) {
+    const codeFromLbl = lbl.split(' - ')[0].trim();
+    if (codeFromLbl && mapaDescontos && Object.prototype.hasOwnProperty.call(mapaDescontos, codeFromLbl)) {
+      return codeFromLbl;
+    }
+  }
+
+  // 2) Numeric Match
+  if (item.fator_comissao != null && !isNaN(item.fator_comissao) && mapaDescontos) {
+    const match = Object.entries(mapaDescontos).find(([, f]) => Math.abs(Number(f) - Number(item.fator_comissao)) < 0.0001);
+    if (match) return match[0];
+  }
+
+  // 3) Inference from Discount/Value
+  if (Number(item.valor || 0) > 0 && mapaDescontos) {
+    const fatorInferido = Number(item.desconto || 0) / Number(item.valor || 1);
+    if (fatorInferido > 1e-6) {
+      const match = Object.entries(mapaDescontos).find(([, f]) => Math.abs(Number(f) - fatorInferido) < 1e-6);
+      if (match) return match[0];
+    }
+  }
+
+  return '';
+}
+
+function determineCondicaoCode(item) {
+  // 0) Priority: Persisted Code
+  if (item.plano_pagamento_cod) return item.plano_pagamento_cod;
+
+  // 1) Text matching or extraction
+  if (item.plano_pagamento) {
+    // Try extracting "001" from "001 - Vista"
+    const parts = String(item.plano_pagamento).split(' - ');
+    const potentialCode = parts[0].trim();
+
+    // Validation? We assume if it looks like a code, it is.
+    if (potentialCode) return potentialCode;
+  }
+
+  return '';
+}
+
 function criarLinha(item, idx) {
   const tr = document.createElement('tr');
   tr.dataset.idx = idx;
@@ -1209,34 +1319,14 @@ function criarLinha(item, idx) {
     selPercent.appendChild(option(`${cod} - ${(Number(frac) * 100).toFixed(2)}`, cod));
   });
 
+  // USE SHARED HELPER
+  selPercent.value = determineFatorCode(item);
 
-  (() => {
-    // 1) Se veio um label do back (ex.: "15 - 0"), priorize-o, mesmo se o percentual for 0
-    const lbl = (item.__descricao_fator_label || '').trim();
-    if (lbl) {
-      const codeFromLbl = lbl.split(' - ')[0].trim(); // "15" em "15 - 0"
-      if (codeFromLbl && Object.prototype.hasOwnProperty.call(mapaDescontos, codeFromLbl)) {
-        selPercent.value = codeFromLbl;
-      }
-    }
-
-    // 2) Se não marcou ainda, tente pelo valor numérico do fator (aceitando 0)
-    if (!selPercent.value && item.fator_comissao != null && !isNaN(item.fator_comissao)) {
-      const match = Object.entries(mapaDescontos).find(([, f]) => Number(f) === Number(item.fator_comissao));
-      if (match) selPercent.value = match[0];
-    }
-
-    // 3) Último fallback: inferir por razão desconto/valor (aceitando 0)
-    if (!selPercent.value && Number(item.valor || 0) > 0) {
-      const fatorInferido = Number(item.desconto || 0) / Number(item.valor || 1);
-      if (fatorInferido > 1e-6) { // evita 0
-        const match = Object.entries(mapaDescontos).find(([, f]) =>
-          Math.abs(Number(f) - fatorInferido) < 1e-6
-        );
-        if (match) selPercent.value = match[0];
-      }
-    }
-  })();
+  // PERSIST INITIAL VALUE immediately (Sync State)
+  if (selPercent.value) {
+    item.__fator_codigo = selPercent.value;
+    item.fator_comissao = Number(mapaDescontos[selPercent.value] || 0);
+  }
 
   selPercent.addEventListener('change', () => {
     const code = selPercent.value || '';
@@ -1289,13 +1379,30 @@ function criarLinha(item, idx) {
   //selCond.appendChild(option(cod, cod));
   //});
 
-  const codCondLinha = String(item.plano_pagamento || '').split(' - ')[0].trim();
-  selCond.value = codCondLinha || '';
+
+  // 1) Fallback: Text matching or code extraction
+  if (!selCond.value) {
+    const codCondLinha = String(item.plano_pagamento || '').split(' - ')[0].trim();
+    selCond.value = codCondLinha || '';
+  }
+
+  // PERSIST INITIAL VALUE immediately (Sync State)
+  if (selCond.value) {
+    item.plano_pagamento_cod = selCond.value;
+    // Also sync text description if missing
+    if (!item.plano_pagamento) {
+      item.plano_pagamento = selCond.options[selCond.selectedIndex]?.textContent || '';
+    }
+  }
 
   tdCondCod.appendChild(selCond);
 
   selCond.addEventListener('change', () => {
-    itens[idx].plano_pagamento = selCond.value || null;
+    itens[idx].plano_pagamento_cod = selCond.value || null; // Persist Code
+    // Also save text for legacy support
+    const opt = selCond.options[selCond.selectedIndex];
+    itens[idx].plano_pagamento = opt ? opt.textContent : (selCond.value || null);
+
     recalcLinha(tr);
 
     try {
@@ -1478,6 +1585,8 @@ function renderTabela() {
       atualizarPillTaxa?.();
     }
   } catch { }
+  // Mobile Render Hook
+  if (typeof renderMobileCards === 'function') renderMobileCards();
 }
 
 async function recalcLinha(tr) {
@@ -1532,7 +1641,12 @@ async function recalcLinha(tr) {
     const f = await previewFiscalLinha(built.payload);
     item.ipi = Number((f.ipi ?? 0).toFixed(2));
     item.iva_st = Number((f.base_st ?? 0).toFixed(2));
-    item.icms_st = Number((f.icms_proprio ?? 0).toFixed(2));
+
+    // Fix: Save correct fields for mobile display
+    item._icmsProprio = Number((f.icms_proprio ?? 0).toFixed(2));
+    item._stReter = Number((f.icms_st_reter ?? 0).toFixed(2));
+
+    item.icms_st = Number((f.icms_proprio ?? 0).toFixed(2)); // Legacy (keep for safety)
 
     if (tr.dataset.reqId !== myId) return;
 
@@ -1759,13 +1873,14 @@ async function recalcTudo() {
       } catch (err) {
         console.error("Batch recalc failed:", err);
         // Feedback para o user não salvar dados incompletos
-        alert("Erro de conexão ao calcular impostos. Verifique sua internet e tente novamente.");
+        showOsModal({ title: 'Erro', message: "Erro de conexão ao calcular impostos. Verifique sua internet e tente novamente.", type: 'alert' });
       }
 
     } while (__recalcPending);
   } finally {
     __recalcRunning = false;
     document.body.style.cursor = 'default';
+    if (typeof renderMobileCards === 'function') renderMobileCards();
   }
 }
 
@@ -1775,7 +1890,7 @@ async function aplicarFatorGlobal() {
   const fator = mapaDescontos[code];
 
   if (fator == null || isNaN(fator)) {
-    alert('Escolha um desconto válido.');
+    showOsModal({ title: 'Aviso', message: 'Escolha um desconto válido.', type: 'alert' });
     return;
   }
 
@@ -1827,13 +1942,13 @@ function inferirFornecedorDaGrade() {
 
 async function salvarTabela() {
   if (__recalcRunning || __recalcPending) {
-    alert("Aguarde o término do cálculo de impostos para salvar.");
+    await showOsModal({ title: 'Aviso', message: 'Aguarde o término do cálculo de impostos para salvar.', type: 'alert' });
     return;
   }
 
   const linhas = document.querySelectorAll('#tbody-itens tr');
   if (linhas.length === 0) {
-    alert('Adicione pelo menos 1 produto à tabela antes de salvar.');
+    await showOsModal({ title: 'Aviso', message: 'Adicione pelo menos 1 produto à tabela antes de salvar.', type: 'alert' });
     // foca em algo útil da sua UI (ajuste se tiver um botão/field específico)
     document.querySelector('#busca_produto, #nome_tabela')?.focus();
     return;
@@ -1841,7 +1956,7 @@ async function salvarTabela() {
 
   const { ok } = RequiredValidator.check(RequiredValidator.REQUIRED_FIELDS, document);
   if (!ok) {
-    alert('Existem campos obrigatórios pendentes. Corrija os destaques em vermelho.');
+    await showOsModal({ title: 'Aviso', message: 'Existem campos obrigatórios pendentes. Corrija os destaques em vermelho.', type: 'alert' });
     return;
   }
 
@@ -1945,11 +2060,12 @@ async function salvarTabela() {
   // --- SAFETY CHECK FOR EMAIL ---
   // Se tem nome mas não tem código, o e-mail não vai funcionar.
   if (cliente && !codigo_cliente) {
-    const confirmMsg = "⚠️ ATENÇÃO:\n\n" +
-      "O cliente informado NÃO foi vinculado ao cadastro (está sem código).\n" +
-      "Isso significa que o sistema NÃO conseguirá enviar o e-mail de confirmação automaticamente.\n\n" +
+    const confirmMsg = "⚠️ ATENÇÃO:<br><br>" +
+      "O cliente informado NÃO foi vinculado ao cadastro (está sem código).<br>" +
+      "Isso significa que o sistema NÃO conseguirá enviar o e-mail de confirmação automaticamente.<br><br>" +
       "Deseja salvar mesmo assim?";
-    if (!confirm(confirmMsg)) {
+    const proceed = await showOsModal({ title: 'Confirmação', message: confirmMsg, type: 'confirm' });
+    if (!proceed) {
       // Usuário cancelou para corrigir
       document.getElementById('cliente_nome')?.focus();
       return;
@@ -1961,7 +2077,7 @@ async function salvarTabela() {
     return resp;
   } catch (e) {
     console.error(e);
-    alert(e.message || 'Erro ao salvar a tabela.');
+    await showOsModal({ title: 'Erro', message: e.message || 'Erro ao salvar a tabela.', type: 'alert' });
     return null;
   }
 }
@@ -1984,10 +2100,20 @@ function refreshToolbarEnablement() {
   const algumaMarcada = document.querySelectorAll('#tbody-itens .chk-linha:checked').length > 0;
   const cabecalhoOk = validarCabecalhoMinimo();
 
-  const btnSalvar = document.getElementById('btn-salvar');
+  const btnsSalvar = [
+    document.getElementById('btn-salvar'),
+    document.getElementById('btn-mobile-save')
+  ].filter(Boolean);
+
   const btnRemover = document.getElementById('btn-remover-selecionados');
 
-  if (btnSalvar) btnSalvar.disabled = !(temLinhas && cabecalhoOk);
+  // Usa classe visual em vez de disabled nativo: assim o clique ainda dispara
+  // e salvarTabela() pode mostrar os campos faltantes ao usuário.
+  const podeSalvar = temLinhas && cabecalhoOk;
+  btnsSalvar.forEach(btn => {
+    btn.disabled = false; // Garante que o clique sempre dispara
+    btn.classList.toggle('visual-disabled', !podeSalvar);
+  });
   if (btnRemover) btnRemover.disabled = !algumaMarcada;
 }
 function limparFormularioCabecalho() {
@@ -2319,15 +2445,25 @@ async function carregarItens() {
 
   } catch (err) {
     console.error("Falha ao carregar itens do backend:", err);
-    alert("Não foi possível carregar os itens da tabela. Verifique a conexão.");
+    showOsModal({ title: 'Aviso', message: "Não foi possível carregar os itens da tabela. Verifique a conexão.", type: 'alert' });
   }
 }
 
 // === Bootstrap ===
 document.addEventListener('DOMContentLoaded', () => {
+  // Config Mobile
+  if (typeof setupMobileToolbar === 'function') setupMobileToolbar();
+
   // Eventos globais
   setMode(MODE.NEW);
   document.getElementById('btn-listar')?.addEventListener('click', () => { goToListarTabelas(); });
+
+  // Disparar validação do botão salvar ao digitar nos campos obrigatórios
+  ['nome_tabela', 'cliente_nome'].forEach(id => {
+    document.getElementById(id)?.addEventListener('input', () => {
+      if (typeof refreshToolbarEnablement === 'function') refreshToolbarEnablement();
+    });
+  });
 
   // Atalho ENTER para aplicar a todos
   document.getElementById('plano_pagamento')?.addEventListener('keydown', (e) => {
@@ -2361,6 +2497,23 @@ document.addEventListener('DOMContentLoaded', () => {
     recalcTudo();
     refreshToolbarEnablement();
   });
+
+  // Limpar "0" ao focar e restaurar ao sair
+  const freteInput = document.getElementById('frete_kg');
+  if (freteInput) {
+    freteInput.addEventListener('focus', function () {
+      if (this.value === '0' || Number(this.value) === 0) {
+        this.value = '';
+      }
+    });
+    freteInput.addEventListener('blur', function () {
+      if (this.value.trim() === '') {
+        this.value = '0';
+        recalcTudo();
+        refreshToolbarEnablement();
+      }
+    });
+  }
 
   document.getElementById('tbody-itens')?.addEventListener('change', (e) => {
     if (e.target && e.target.classList.contains('chk-linha')) {
@@ -2399,85 +2552,107 @@ document.addEventListener('DOMContentLoaded', () => {
     snapshotSelecionadosParaPicker();
   });
 
+  // ===================================
+  // CUSTOM OS MODALS
+  // ===================================
+
+
   // handler único (sem aninhar addEventListener dentro de outro)
   (() => {
-    const btn = document.getElementById('btn-salvar');
-    if (!btn) return;
+    const btnsSalvar = [
+      document.getElementById('btn-salvar'),
+      document.getElementById('btn-mobile-save')
+    ].filter(Boolean);
 
-    btn.type = 'button';
+    if (btnsSalvar.length === 0) return;
+
     let saving = false;
 
-    btn.addEventListener('click', async (e) => {
-      e.preventDefault();
-      if (saving) return;
-      saving = true;
-      btn.disabled = true;
+    btnsSalvar.forEach(btn => {
+      btn.type = 'button';
+      btn.addEventListener('click', async (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        if (saving) return;
+        saving = true;
 
-      try {
-        const resp = await salvarTabela(); // agora retorna JSON
-        if (!resp) return;
-        const qtd = resp?.itens_inseridos ?? resp?.qtd_produtos ?? itens.length;
-        alert(`Tabela salva! ${qtd} produtos incluídos.`);
+        // Desabilita todos os botões de salvar
+        btnsSalvar.forEach(b => b.disabled = true);
 
+        try {
+          const resp = await salvarTabela(); // agora retorna JSON
+          if (!resp) return;
+          const qtd = resp?.itens_inseridos ?? resp?.qtd_produtos ?? itens.length;
 
-        // pegue o ID
-        const tabelaId = resp?.tabela_id || resp?.id_tabela || resp?.id || window.currentTabelaId;
-        if (!tabelaId) {
-          alert("Tabela salva, mas o ID não veio no retorno do backend. Ajuste o /tabela_preco/salvar para devolver o id.");
-          return;
-        }
+          await showOsModal({
+            title: 'ordersync-y7kg.onrender.com diz',
+            message: `Tabela salva! ${qtd} produtos incluídos.`,
+            type: 'alert'
+          });
 
-        // Sucesso absoluto: limpa snapshot para não voltar sujeira se recarregar
-        clearFullSnapshot();
-
-        // pergunta de decisão
-        const querEnviar = confirm("Deseja mandar o link do orçamento?");
-
-        // CAPTURA ESTADO ANTES DO RESET
-        const freteKgParaModal = Number(document.getElementById('frete_kg')?.value || 0);
-
-        // RESET COMPLETO (VOLTAR A TELA ZERADA)
-        currentTabelaId = '';
-        sourceTabelaId = '';
-        window.currentTabelaId = '';
-        window.sourceTabelaId = '';
-
-        try { history.replaceState(null, '', location.pathname); } catch { }
-
-        // limpa cabeçalho + grade e volta pro modo original (inputs habilitados)
-        if (typeof limparFormularioCabecalho === 'function') limparFormularioCabecalho();
-        if (typeof limparGradeProdutos === 'function') limparGradeProdutos();
-
-        if (typeof setMode === 'function') setMode(MODE.NEW);
-        if (typeof setFormDisabled === 'function') setFormDisabled(false);
-        if (typeof toggleToolbarByMode === 'function') toggleToolbarByMode();
-        if (typeof refreshToolbarEnablement === 'function') refreshToolbarEnablement();
-
-        if (querEnviar) {
-          if (typeof window.__showGerarLinkModal === "function") {
-            window.__showGerarLinkModal({
-              tabelaId,
-              freteKg: freteKgParaModal, // Passa o frete capturado
-              pedidoClientePath: "/tabela_preco/pedido_cliente.html",
-            });
-          } else {
-            alert("Módulo de gerar link não carregado (../js/gerar_link_pedido.js).");
+          // pegue o ID
+          const tabelaId = resp?.tabela_id || resp?.id_tabela || resp?.id || window.currentTabelaId;
+          if (!tabelaId) {
+            await showOsModal({ title: 'Aviso', message: "Tabela salva, mas o ID não veio no retorno do backend. Ajuste o /tabela_preco/salvar para devolver o id.", type: 'alert' });
+            return;
           }
+
+          // Sucesso absoluto: limpa snapshot para não voltar sujeira se recarregar
+          clearFullSnapshot();
+
+          // pergunta de decisão
+          const querEnviar = await showOsModal({
+            title: 'ordersync-y7kg.onrender.com diz',
+            message: `Deseja mandar o link do orçamento?`,
+            type: 'confirm'
+          });
+
+          // CAPTURA ESTADO ANTES DO RESET
+          const freteKgParaModal = Number(document.getElementById('frete_kg')?.value || 0);
+
+          // RESET COMPLETO (VOLTAR A TELA ZERADA)
+          currentTabelaId = '';
+          sourceTabelaId = '';
+          window.currentTabelaId = '';
+          window.sourceTabelaId = '';
+
+          try { history.replaceState(null, '', location.pathname); } catch { }
+
+          // limpa cabeçalho + grade e volta pro modo original (inputs habilitados)
+          if (typeof limparFormularioCabecalho === 'function') limparFormularioCabecalho();
+          if (typeof limparGradeProdutos === 'function') limparGradeProdutos();
+
+          if (typeof setMode === 'function') setMode(MODE.NEW);
+          if (typeof setFormDisabled === 'function') setFormDisabled(false);
+          if (typeof toggleToolbarByMode === 'function') toggleToolbarByMode();
+          if (typeof refreshToolbarEnablement === 'function') refreshToolbarEnablement();
+
+          if (querEnviar) {
+            if (typeof window.__showGerarLinkModal === "function") {
+              window.__showGerarLinkModal({
+                tabelaId,
+                freteKg: freteKgParaModal, // Passa o frete capturado
+                pedidoClientePath: "/tabela_preco/pedido_cliente.html",
+              });
+            } else {
+              await showOsModal({ title: 'Erro', message: "Módulo de gerar link não carregado (../js/gerar_link_pedido.js).", type: 'alert' });
+            }
+          }
+
+          // Se NÃO quiser enviar, já está resetado.
+
+        } catch (err) {
+          // mostra 422 legível, se vier no formato FastAPI
+          const msg = (err && err.message) ? err.message : 'Erro ao salvar a tabela.';
+          await showOsModal({ title: 'Erro', message: msg, type: 'alert' });
+          console.error(err);
+        } finally {
+          saving = false;
+          btnsSalvar.forEach(b => b.disabled = false);
+          toggleToolbarByMode?.();
+          refreshToolbarEnablement?.();
         }
-
-        // Se NÃO quiser enviar, já está resetado.
-
-      } catch (err) {
-        // mostra 422 legível, se vier no formato FastAPI
-        const msg = (err && err.message) ? err.message : 'Erro ao salvar a tabela.';
-        alert(msg);
-        console.error(err);
-      } finally {
-        saving = false;
-        btn.disabled = false;
-        toggleToolbarByMode?.();
-        refreshToolbarEnablement?.();
-      }
+      });
     });
   })();
 
@@ -2631,7 +2806,7 @@ document.getElementById('btn-aplicar-markup-todos')?.addEventListener('click', (
   const val = parseFloat(raw);
 
   if (isNaN(val)) {
-    alert('Informe um valor de Markup válido.');
+    showOsModal({ title: 'Aviso', message: 'Informe um valor de Markup válido.', type: 'alert' });
     return;
   }
 
@@ -2746,8 +2921,394 @@ function handleFieldChange(e) {
   if (el.classList.contains('field-error')) {
     el.classList.remove('field-error');
     const msg = el.nextElementSibling;
-    if (msg && msg.classList.contains('field-error-msg')) {
-      msg.remove();
-    }
   }
 }
+
+// =========================================
+// MOBILE LOGIC RESTORATION
+// =========================================
+
+function toggleHeader() {
+  const content = document.getElementById('header-content');
+  const header = document.getElementById('toggle-header');
+  if (!content) return;
+  content.classList.toggle('expanded');
+}
+
+function setupMobileToolbar() {
+  // Bind Toolbar Buttons
+  document.getElementById('btn-mobile-list')?.addEventListener('click', () => goToListarTabelas());
+
+  document.getElementById('btn-mobile-cancel')?.addEventListener('click', (e) => {
+    onCancelar(e);
+    // Force mobile refresh
+    setTimeout(renderMobileCards, 50);
+  });
+
+  document.getElementById('btn-mobile-edit')?.addEventListener('click', () => {
+    onEditar();
+    setTimeout(renderMobileCards, 50);
+  });
+
+  document.getElementById('btn-mobile-dup')?.addEventListener('click', () => {
+    onDuplicar();
+    setTimeout(renderMobileCards, 50);
+  });
+
+  document.getElementById('btn-mobile-save')?.addEventListener('click', () => salvarTabela());
+
+  // Add/Initial Add - Focus on search or open modal if needed
+  const focusSearch = () => {
+    // Scroll to top or search
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+    const btn = document.getElementById('btn-buscar');
+    if (btn && !btn.classList.contains('hidden')) btn.click();
+  };
+  document.getElementById('btn-mobile-add')?.addEventListener('click', focusSearch);
+  document.getElementById('btn-mobile-add-initial')?.addEventListener('click', focusSearch);
+}
+
+function renderMobileCards() {
+  const container = document.getElementById('mobile-card-container');
+  if (!container) return;
+
+  // Preservar estado de expansão (quais cards estão abertos) antes de os recriar
+  const expandedSet = new Set();
+  container.querySelectorAll('.mobile-card').forEach(card => {
+    const content = card.querySelector('.header-content');
+    if (content && content.classList.contains('expanded')) {
+      expandedSet.add(card.dataset.idx);
+    }
+  });
+
+  // Sync toolbar totals
+  const totalItens = (itens || []).length;
+  const totalValor = itens.reduce((acc, it) => acc + (it._totalComercial || 0), 0);
+
+  const elItens = document.getElementById('mobile-total-itens');
+  if (elItens) elItens.textContent = `${totalItens} item(s)`;
+
+  const elValor = document.getElementById('mobile-total-valor');
+  if (elValor) elValor.textContent = fmtMoney(totalValor);
+
+  // If empty
+  if (itens.length === 0) {
+    container.innerHTML = `
+        <div class="empty-state-mobile">
+          <p>Nenhum produto selecionado.</p>
+          <button id="btn-mobile-add-initial-2" class="btn btn-primary btn-sm">Adicionar Produtos</button>
+        </div>`;
+    document.getElementById('btn-mobile-add-initial-2')?.addEventListener('click', () => {
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+      const btn = document.getElementById('btn-buscar');
+      if (btn) btn.click();
+    });
+    return;
+  }
+
+  // Check if editing is allowed
+  const isEditable = (currentMode === MODE.NEW || currentMode === MODE.EDIT || currentMode === MODE.DUP);
+  const markupDisabled = !isEditable;
+
+  // Render List
+  container.innerHTML = '';
+  itens.forEach((item, idx) => {
+    const card = document.createElement('div');
+    card.className = 'mobile-card';
+    card.dataset.idx = idx;
+
+    // Basic Data
+    const desc = item.descricao || 'Produto sem nome';
+    const codigo = item.codigo_tabela || '';
+    const emb = item.embalagem || '';
+    const total = item._totalComercial || 0; // Valor Final (R$)
+    const isInactive = item.status_atual === 'INATIVO';
+    const statusBadge = isInactive ? '<span class="badge-inactive">INATIVO</span>' : '';
+
+    // Calculation Fields
+    const valorUnit = item.valor || 0;
+    const fator = item._fatorApplied || 0; // Need to ensure this is saved/avail
+    // Fallback if _fatorApplied not set: assume from global/item logic
+    // Actually, let's use what we have. 
+    // Markup
+    const markupVal = item.markup || 0;
+
+    // Frete
+    const freteVal = item._freteValor || 0;
+    const semFrete = item.total_sem_frete || 0;
+
+    // Card Content
+    // Select Options Generators
+    const genFatorOptions = (selectedVal) => {
+      let opts = `<option value="">—</option>`;
+      if (mapaDescontos) {
+        // FORCE SAME LOGIC
+        let targetCode = determineFatorCode(item);
+
+        Object.entries(mapaDescontos).forEach(([cod, frac]) => {
+          const isSel = String(cod) === targetCode;
+          opts += `<option value="${cod}" ${isSel ? 'selected' : ''}>${cod} - ${(Number(frac) * 100).toFixed(2)}</option>`;
+        });
+      }
+      return opts;
+    };
+
+    const genCondOptions = (selectedVal) => {
+      let opts = `<option value="">—</option>`;
+      const selHdr = document.getElementById('plano_pagamento');
+      if (selHdr) {
+        // FORCE SAME LOGIC
+        let targetCode = determineCondicaoCode(item);
+
+        Array.from(selHdr.options).forEach(o => {
+          if (o.value) {
+            let isSel = (String(o.value) === targetCode);
+            opts += `<option value="${o.value}" ${isSel ? 'selected' : ''}>${o.textContent}</option>`;
+          }
+        });
+      }
+      return opts;
+    };
+
+    // Card Content
+    card.innerHTML = `
+      <div class="mobile-card-item">
+        <!-- Header: Code/Desc (Left) vs Totals (Right) -->
+        <div class="mobile-card-header clickable-header">
+           <div class="d-flex justify-content-between align-items-start w-100">
+              <!-- Left: Code & Desc -->
+              <div style="flex: 1; padding-right: 8px;">
+                  <div class="fw-bold text-dark" style="font-size: 0.95rem;">${item.codigo_tabela} - ${item.descricao}</div>
+                  <div class="text-muted" style="font-size: 0.8rem;">${item.embalagem || ''}</div>
+              </div>
+
+              <!-- Right: Totals Stacked -->
+              <div class="d-flex flex-column align-items-end" style="min-width: 100px;">
+                  <div style="font-size: 0.75rem; color: #666; margin-bottom: -2px;">Total c/ Frete</div>
+                  <div style="font-size: 1rem; font-weight: 700; color: #16a34a;">${fmtMoney(total)}</div>
+                  
+                  <div style="font-size: 0.75rem; color: #999; margin-top: 4px; margin-bottom: -2px;">Total s/ Frete</div>
+                  <div style="font-size: 0.9rem; font-weight: 600; color: #333;">${fmtMoney(semFrete)}</div>
+              </div>
+              
+               <!-- Chevron -->
+               <span class="chevron-header" style="margin-left: 8px; margin-top: 4px;">▼</span>
+           </div>
+        </div>
+
+        <div class="header-content ${expandedSet.has(String(idx)) ? 'expanded' : 'collapsed'}">
+         <div style="padding-top: 12px;">
+            <!-- Row 1: Vlr Unit | Markup % -->
+            <div class="mobile-grid-2col" style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 12px;">
+                <div class="card-field">
+                    <label>Valor Unit.</label>
+                    <input type="text" value="${fmtMoney(item.valor)}" disabled style="background: #f8fafc;">
+                </div>
+                <div class="card-field">
+                    <label>Markup %</label>
+                    <input type="number" class="mobile-input-markup" value="${item.markup || 0}" step="0.01" ${markupDisabled ? 'disabled' : ''}>
+                </div>
+            </div>
+
+            <!-- Row 2: Fator % | Condição -->
+            <div class="mobile-grid-2col" style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 12px;">
+                <div class="card-field">
+                    <label>Fator %</label>
+                    ${markupDisabled
+        ? (() => {
+          const _cod = determineFatorCode(item) || item.__fator_codigo || '';
+          const _frac = (_cod && mapaDescontos[_cod] != null) ? mapaDescontos[_cod] : null;
+          const _label = _frac != null ? `${_cod} - ${(Number(_frac) * 100).toFixed(2)}` : (_cod || '');
+          return `<input type="text" value="${_label}" disabled>`;
+        })()
+        : `<select class="form-select mobile-fator-select">${genFatorOptions(item.__fator_codigo)}</select>`
+      }
+                </div>
+                <div class="card-field">
+                    <label>Condição (R$)</label> <!-- Label per user request, but functionality is select -->
+                    ${markupDisabled
+        ? `<input type="text" value="${item.plano_pagamento || ''}" disabled style="background:#f9f9f9; color:#666">`
+        : `<select class="form-select mobile-cond-select">${genCondOptions(item.plano_pagamento_cod || item.plano_pagamento)}</select>`
+      }
+                </div>
+            </div>
+
+            <!-- Row 3: Frete (Full width) -->
+            <div class="card-field" style="margin-bottom: 16px;">
+                 <label>Frete (R$)</label>
+                 <input type="text" value="${fmtMoney(freteVal)}" disabled style="background: #f8fafc;">
+            </div>
+
+            <!-- Row 4: Fiscal Details (Styled Block) -->
+            <div class="fiscal-block" style="background: #f8fafc; border-radius: 8px; padding: 12px; margin-bottom: 12px;">
+                 <div style="font-size: 0.85rem; font-weight: 600; color: #333; margin-bottom: 8px;">Detalhes Fiscais</div>
+                 <div class="d-flex justify-content-between text-center" style="font-size: 0.8rem;">
+                     <div>
+                        <div class="text-muted" style="font-size: 0.7rem;">IPI</div>
+                        <div class="fw-bold">${fmtMoney(item.ipi || 0)}</div>
+                     </div>
+                     <div>
+                        <div class="text-muted" style="font-size: 0.7rem;">ICMS ST</div>
+                        <div class="fw-bold">${fmtMoney(item._icmsProprio || 0)}</div> 
+                     </div>
+                     <div>
+                        <div class="text-muted" style="font-size: 0.7rem;">IVA_ST</div>
+                        <div class="fw-bold">${fmtMoney(item._stReter || 0)}</div>
+                     </div>
+                 </div>
+            </div>
+
+            <!-- Card Actions -->
+            <div class="card-actions" style="border-top: none; padding-top: 0;">
+                <button class="btn-card-action btn-card-remove" ${markupDisabled ? 'disabled style="opacity:0.5"' : ''} style="color: #ef4444; font-size: 0.9rem;">Remover item</button>
+            </div>
+         </div>
+      </div>
+    </div>
+    `;
+
+    // Events
+
+    // Toggle Expand
+    const header = card.querySelector('.clickable-header');
+    header.addEventListener('click', () => {
+      const content = card.querySelector('.header-content');
+      content.classList.toggle('expanded');
+      // Rotate chevron
+      const chev = header.querySelector('.chevron-header');
+      if (chev) chev.style.transform = content.classList.contains('expanded') ? 'rotate(180deg)' : 'rotate(0deg)';
+    });
+
+    // Remove
+    const btnRem = card.querySelector('.btn-card-remove');
+    if (!markupDisabled) {
+      btnRem.addEventListener('click', (e) => {
+        e.stopPropagation();
+        itens.splice(idx, 1);
+        renderTabela();
+        snapshotSelecionadosParaPicker();
+        refreshToolbarEnablement();
+      });
+    }
+
+    // Markup Change
+    const mkInput = card.querySelector('.mobile-input-markup');
+    if (!markupDisabled) {
+      mkInput.addEventListener('change', (e) => {
+        e.stopPropagation();
+        const val = parseFloat(e.target.value);
+        if (!isNaN(val)) {
+          item.markup = val;
+          // Force global recalc to update all fields
+          renderTabela();
+          recalcTudo();
+        }
+      });
+      mkInput.addEventListener('click', (e) => e.stopPropagation());
+    }
+
+    // Event: Fator Change
+    const selFator = card.querySelector('.mobile-fator-select');
+    if (selFator) {
+      selFator.addEventListener('change', (e) => {
+        e.stopPropagation();
+        const code = e.target.value;
+        const frac = (window.mapaDescontos && window.mapaDescontos[code] != null) ? Number(window.mapaDescontos[code]) : 0;
+        item.fator_comissao = frac;
+        item.__fator_codigo = code;
+        item.__overridePercent = true;
+        // Trigger update
+        recalcTudo(); // This will re-render table and thus re-render mobile cards
+      });
+      selFator.addEventListener('click', (e) => e.stopPropagation());
+    }
+
+    // Event: Condição Change
+    const selCond = card.querySelector('.mobile-cond-select');
+    if (selCond) {
+      selCond.addEventListener('change', (e) => {
+        e.stopPropagation();
+        const val = e.target.value;
+        item.plano_pagamento_cod = val;
+        // Try to find text
+        const opt = e.target.options[e.target.selectedIndex];
+        item.plano_pagamento = opt ? opt.textContent : val;
+        recalcTudo();
+      });
+      selCond.addEventListener('click', (e) => e.stopPropagation());
+    }
+
+    container.appendChild(card);
+  });
+}
+
+// Hook into toggleToolbarByMode to sync mobile buttons
+const _originalToggleToolbar = toggleToolbarByMode;
+toggleToolbarByMode = function () {
+  if (typeof _originalToggleToolbar === 'function') _originalToggleToolbar();
+
+  // Mobile logic mirror
+  const show = (id, visible) => {
+    const el = document.getElementById(id);
+    if (el) el.classList.toggle('hidden', !visible);
+  };
+
+  const hasId = !!currentTabelaId;
+  const isView = currentMode === MODE.VIEW;
+  const isEditLike = currentMode === MODE.EDIT || currentMode === MODE.DUP || currentMode === MODE.NEW;
+  const isEditOrDup = currentMode === MODE.EDIT || currentMode === MODE.DUP;
+
+  show('btn-mobile-list', currentMode === MODE.NEW);
+  show('btn-mobile-cancel', isEditOrDup || (isView && hasId));
+  show('btn-mobile-edit', isView && hasId);
+  show('btn-mobile-dup', isView && hasId);
+  show('btn-mobile-save', isEditLike);
+  show('btn-mobile-add', isEditLike);
+};
+
+// === Header Collapse Logic (Robust) ===
+// === Header Collapse Logic (Simplified & Robust) ===
+(function setupHeaderCollapse() {
+  const attach = () => {
+    const btn = document.getElementById('btn-toggle-header');
+    const area = document.getElementById('header-collapsible-area');
+    const summary = document.getElementById('header-collapsed-summary');
+    const lblNome = document.getElementById('summary-nome');
+    const lblCli = document.getElementById('summary-cliente');
+
+    if (btn && area) {
+      // Use onclick to avoid multiple listeners
+      btn.onclick = (e) => {
+        e.preventDefault();
+        const isCollapsed = area.classList.toggle('collapsed');
+        btn.classList.toggle('rotated', isCollapsed);
+
+        // Toggle Summary
+        if (summary) {
+          if (isCollapsed) {
+            const nome = document.getElementById('nome_tabela')?.value || 'Sem Nome';
+            const cli = document.getElementById('cliente_nome')?.value || 'Sem Cliente';
+            if (lblNome) lblNome.textContent = nome;
+            if (lblCli) lblCli.textContent = cli;
+
+            summary.classList.remove('hidden');
+            requestAnimationFrame(() => summary.classList.add('visible'));
+          } else {
+            summary.classList.remove('visible');
+            setTimeout(() => summary.classList.add('hidden'), 300);
+          }
+        }
+      };
+    } else {
+      // Retry if DOM not ready
+      setTimeout(attach, 500);
+    }
+  };
+
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', attach);
+  } else {
+    attach();
+  }
+})();
+

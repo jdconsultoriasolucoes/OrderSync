@@ -11,17 +11,19 @@ from services.pdf_service import gerar_pdf_pedido
 from services.email_service import enviar_email_notificacao
 from services.pedido_pdf_data import carregar_pedido_pdf
 from schemas.pedido_confirmacao import ConfirmarPedidoRequest
+from fastapi import BackgroundTasks
+from core.exceptions import BusinessRuleException, ValidationException
 
 # Config Logger
 logger = logging.getLogger("pedido_confirmacao_service")
 TZ = ZoneInfo("America/Sao_Paulo")
 
-def criar_pedido_confirmado(db: Session, tabela_id: int, body: ConfirmarPedidoRequest) -> Dict[str, Any]:
+def criar_pedido_confirmado(db: Session, tabela_id: int, body: ConfirmarPedidoRequest, background_tasks: BackgroundTasks) -> Dict[str, Any]:
     print(f"DEBUG: ConfirmarPedido - OriginCode: '{body.origin_code}' | Cliente: '{body.cliente}'")
     
     # 1) validação básica
     if not body.produtos:
-        raise ValueError("Nenhum item informado")
+        raise BusinessRuleException("Nenhum item informado no pedido")
 
     # ---  buscar fornecedor e nome da tabela de preço ---
     res_tabela = db.execute(text("""
@@ -76,7 +78,7 @@ def criar_pedido_confirmado(db: Session, tabela_id: int, body: ConfirmarPedidoRe
 
         if not link_row:
             # Caller handles 404 mapping if needed, or we raise proper exception
-            raise ValueError("Link não encontrado")
+            raise ValidationException("Link compartilhado não encontrado ou expirado", code="LINK_001")
 
         exp = link_row.get("expires_at")
         if exp is not None:
@@ -87,7 +89,7 @@ def criar_pedido_confirmado(db: Session, tabela_id: int, body: ConfirmarPedidoRe
                 pass # Apenas aviso visual no front
 
         if int(link_row["tabela_id"]) != int(tabela_id):
-            raise ValueError("Link e tabela não conferem")
+            raise BusinessRuleException("O Link fornecido não pertence a esta tabela de preço", code="LINK_002")
 
         # força o com_frete do link
         body.usar_valor_com_frete = bool(link_row["com_frete"])
@@ -170,7 +172,7 @@ def criar_pedido_confirmado(db: Session, tabela_id: int, body: ConfirmarPedidoRe
             :validade_ate, :validade_dias, :data_retirada,
             :usar_valor_com_frete, CAST(:itens AS jsonb),
             :peso_total_kg, :frete_total, :total_sem_frete, :total_com_frete, :total_pedido,
-            :observacoes, 'EM SEPARAÇÃO', :confirmado_em,
+            :observacoes, 'ORÇAMENTO', :confirmado_em,
             :link_token, :link_url, :link_enviado_em, :link_expira_em, 'ABERTO',
             :link_primeiro_acesso_em, :link_ultimo_acesso_em, :link_qtd_acessos,
             :fornecedor,         
@@ -271,7 +273,7 @@ def criar_pedido_confirmado(db: Session, tabela_id: int, body: ConfirmarPedidoRe
         cliente_email=client_email_addr
     )
 
-    # 8) E-mail best-effort (com PDF)
+    # 8) E-mail best-effort via Fila Persistente no Banco de Dados
     EMAIL_MODE = os.getenv("ORDERSYNC_EMAIL_MODE", "best-effort").lower()
     if EMAIL_MODE == "off":
         # Apenas marca o pedido como "link desabilitado" e segue a vida
@@ -284,53 +286,27 @@ def criar_pedido_confirmado(db: Session, tabela_id: int, body: ConfirmarPedidoRe
         db.commit()
     else:
         try:
-            # Tenta gerar o PDF do pedido (com todos os detalhes)
-            pdf_bytes_vendedor = None
-            pdf_bytes_cliente = None
-            try:
-                # 1) carrega os dados do pedido no formato PedidoPdf
-                pedido_pdf = carregar_pedido_pdf(db, new_id)
-
-                # 2) gera o arquivo com layout do VENDEDOR (completo, para email)
-                pdf_bytes_vendedor = gerar_pdf_pedido(pedido_pdf, sem_validade=False)
-                
-                # 3) gera o arquivo com layout do CLIENTE (simplificado, para download)
-                pdf_bytes_cliente = gerar_pdf_pedido(pedido_pdf, sem_validade=True)
-                
-            except Exception as e_pdf:
-                logging.exception("Falha ao gerar PDF (ignorada): %s", e_pdf)
-                pdf_bytes_vendedor = None
-                pdf_bytes_cliente = None
-
-            # Dispara o e-mail usando as configs da tela de Config Email
-            enviar_email_notificacao(
-                db=db,
-                pedido=pedido_email,
-                link_pdf=None,      # se um dia gerar link público, preenche aqui
-                pdf_bytes=pdf_bytes_vendedor,  # Email Interno usa PDF do vendedor
-                pdf_bytes_cliente=pdf_bytes_cliente # Email Cliente usa PDF cliente
+            # Em vez de bloquear o request ou usar fila em memória, 
+            # delegamos para a nossa tabela worker fazer tudo (Gerar PDF e SMTP)
+            from models.background_task import BackgroundTaskModel
+            
+            nova_tarefa = BackgroundTaskModel(
+                tipo_tarefa="ENVIO_EMAIL_CONFIRMACAO",
+                referencia_id=new_id,
+                status="PENDENTE",
+                tentativas=0
             )
-
-            # Se chegou até aqui sem exception, marca como ENVIADO
-            db.execute(text("""
-                UPDATE public.tb_pedidos
-                   SET link_enviado_em = :agora,
-                       link_status     = 'ENVIADO',
-                       atualizado_em   = :agora
-                 WHERE id_pedido = :id
-            """), {"agora": agora, "id": new_id})
+            db.add(nova_tarefa)
             db.commit()
-        except Exception as e:
-            logging.exception("Falha ao enviar email (ignorada): %s", e)
-            # limpa a transação antes de tentar o UPDATE
-            db.rollback()
-            db.execute(text("""
-                UPDATE public.tb_pedidos
-                   SET link_status   = 'FALHA_ENVIO',
-                       atualizado_em = :agora
-                 WHERE id_pedido = :id
-            """), {"agora": agora, "id": new_id})
-            db.commit()
+            
+            # Para retornar b64 inicial ao front, a gnt ainda pode chamar async se o cliente_pdf for nulo,
+            # porém como a tarefa do worker q vai gerar, o front pode não receber o base64 AQUI
+            # se ele exigir imediato teremos q gerar síncrono. Mas pra resolver Gargalo de CPU,
+            # DEVE vir do worker. Por hora retornamos sem base64 e front que baixe se quiser da rota.
+            pdf_bytes_cliente = None 
+            
+        except Exception as queue_err:
+            logging.exception("Falha ao colocar pedido %s na fila de email: %s", new_id, queue_err)
 
     # 9) resposta — com flag de email e PDF Base64
     email_enviado_cliente = False

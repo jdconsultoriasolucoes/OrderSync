@@ -4,17 +4,59 @@ sys.path.append(os.path.dirname(os.path.abspath(__file__)))
 
 # --- imports extras para o middleware de erro ---
 import logging, traceback, uuid
-from fastapi import FastAPI, Request, HTTPException,APIRouter
-from fastapi.responses import JSONResponse, FileResponse, RedirectResponse
+from fastapi import FastAPI, Request, HTTPException, APIRouter, Depends
+from fastapi.responses import JSONResponse, FileResponse, RedirectResponse, Response
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 from pathlib import Path  
 # Routers
 from routers.tabela_preco import router_meta, router as router_tabela
-from routers import pedido_preview, link_pedido, admin_config_email, cliente, listas, fiscal,pedidos,net_diag, produto, pedido_pdf, auth, usuario, fornecedor
+from routers import pedido_preview, link_pedido, admin_config_email, cliente, listas, fiscal,pedidos,net_diag, produto, pedido_pdf, auth, usuario, fornecedor, dashboard
 from database import SessionLocal
-# ---- logging base (simples) ----
-logging.basicConfig(level=logging.INFO)
+
+from slowapi import _rate_limit_exceeded_handler
+from slowapi.errors import RateLimitExceeded
+from core.rate_limit import limiter
+from core.exceptions import OrderSyncException
+
+# ---- logging base (estruturado em JSON p/ APM) ----
+import logging.config
+
+logging.config.dictConfig({
+    "version": 1,
+    "disable_existing_loggers": False,
+    "formatters": {
+        "json": {
+            "()": "pythonjsonlogger.jsonlogger.JsonFormatter",
+            "format": "%(asctime)s %(levelname)s %(name)s %(message)s %(error_id)s %(trace_id)s",
+            "datefmt": "%Y-%m-%dT%H:%M:%SZ"
+        },
+    },
+    "handlers": {
+        "console": {
+            "class": "logging.StreamHandler",
+            "formatter": "json",
+            "stream": "ext://sys.stdout"
+        },
+    },
+    "loggers": {
+        "ordersync.errors": {
+            "handlers": ["console"],
+            "level": "INFO",
+            "propagate": False
+        },
+        "ordersync.worker": {
+            "handlers": ["console"],
+            "level": "INFO",
+            "propagate": False
+        }
+    },
+    "root": {
+        "level": "INFO",
+        "handlers": ["console"]
+    }
+})
+
 logger = logging.getLogger("ordersync.errors")
 
 class NoCacheStaticFiles(StaticFiles):
@@ -28,6 +70,9 @@ class NoCacheStaticFiles(StaticFiles):
 
 app = FastAPI()
 
+app.state.limiter = limiter
+app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
+
 # --- STARTUP: Garantir usuario Admin ---
 @app.on_event("startup")
 def startup_ensure_admin():
@@ -36,6 +81,8 @@ def startup_ensure_admin():
     from core.security import get_password_hash
     # --- FIX CRITICO: Criar tabelas antes de consultar ---
     from database import Base, engine
+    from models.idempotency import IdempotencyKeyModel
+    from models.background_task import BackgroundTaskModel
     Base.metadata.create_all(bind=engine)
 
     # --- MIGRAÇOES DE SCHEMA (Colunas novas) ---
@@ -44,6 +91,9 @@ def startup_ensure_admin():
     
     db = SessionLocal()
     try:
+        from core.worker import start_background_worker
+        start_background_worker()
+        
         email = "admin@ordersync.com"
         # Reset force
         user = db.query(UsuarioModel).filter(UsuarioModel.email == email).first()
@@ -140,6 +190,13 @@ async def add_debug_header(request: Request, call_next):
     resp.headers["x-cors-debug"] = "main.py-cors-v2"
     return resp
 
+@app.exception_handler(OrderSyncException)
+async def ordersync_exception_handler(request: Request, exc: OrderSyncException):
+    logger.warning("OrderSyncException %s: %s\n%s", exc.trace_id, exc.message, traceback.format_exc())
+    resp = JSONResponse(exc.to_dict(), status_code=exc.status_code)
+    resp.headers["x-error-id"] = exc.trace_id
+    return _apply_cors_headers(resp, request.headers.get("origin"))
+
 # ---- Routers ----
 app.include_router(router_meta)                # /tabela_preco/meta/*
 app.include_router(router_tabela)              # /tabela_preco/*
@@ -157,6 +214,7 @@ app.include_router(pedido_pdf.router)
 app.include_router(auth.router)
 app.include_router(usuario.router)
 app.include_router(fornecedor.router)
+app.include_router(dashboard.router)
 
 from routers import system_tables
 app.include_router(system_tables.router)
@@ -195,6 +253,13 @@ if os.path.exists(static_dir):
 # Also mount /static explicitly
 app.mount("/static", StaticFiles(directory=static_dir), name="static")
 
+@app.get("/design-system.css")
+def get_design_system_css():
+    css_path = os.path.join(static_dir, "design-system.css")
+    if os.path.exists(css_path):
+        return FileResponse(css_path)
+    return Response(status_code=404)
+
 @app.get("/")
 def root():
     # Attempt to find index.html in frontend root (parent of public)
@@ -204,6 +269,19 @@ def root():
     if os.path.exists(index_path):
         return FileResponse(index_path)
     return {"mensagem": "API do OrderSync está rodando (Frontend não encontrado)"}
+
+@app.get("/api/health")
+def healthcheck(db: SessionLocal = Depends(lambda: SessionLocal())):
+    try:
+        from sqlalchemy import text
+        # Verifica 1 registro leve para atestar conectividade
+        db.execute(text("SELECT 1")).scalar()
+        return {"status": "ok", "db": "connected"}
+    except Exception as e:
+        logger.error(f"Healthcheck failed: {e}")
+        return JSONResponse(status_code=503, content={"status": "error", "db": "disconnected"})
+    finally:
+         db.close()
 
 @app.get("/admin/config-email")
 def config_email_page():

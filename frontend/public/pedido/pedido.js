@@ -1,5 +1,5 @@
 // base do backend FastAPI publicado no Render
-const API_BASE = window.API_BASE || "https://ordersync-backend-59d2.onrender.com"; // Restored & Safe
+const API_BASE = window.API_BASE || "https://ordersync-backend-edjq.onrender.com"; // Restored & Safe
 
 const API = {
   list: `${API_BASE}/api/pedidos`,
@@ -339,23 +339,31 @@ async function openResumo(id) {
           <div><b>Data:</b> ${fmtDate(p.created_at)}</div>
         </div>
         <div class="kv">
+          <div style="grid-column: 1 / -1;"><b>Nome Fantasia:</b> ${p.nome_fantasia ?? "-"}</div>
+        </div>
+        <div class="kv">
           <div><b>Modalidade:</b> ${modalidade}</div>
           <div><b>Tabela:</b> ${p.tabela_preco_nome ?? "-"}</div>
+        </div>
+        <div class="kv">
+          <div><b>Peso Líquido Total:</b> ${parseFloat((p.peso_liquido_calculado || 0).toFixed(3))} kg</div>
+          <div><b>Nº Carga:</b> ---</div>
         </div>
         <div class="kv">
           <div><b>Fornecedor:</b> ${p.fornecedor ?? "-"}</div>
           <div><b>Total:</b> ${fmtMoney(p.total_pedido)}</div>
         </div>
         <div class="kv">
-          <div><b>Contato:</b> ${p.contato_nome ?? "-"} • ${p.contato_email ?? "-"}</div>
+          <div style="grid-column: 1 / -1;"><b>Contato:</b> ${p.contato_nome ?? "-"} • ${p.contato_email ?? "-"}</div>
         </div>
         <div class="block">
           <b>Itens</b>
           <div class="itens">
-            ${p.itens.map(i => `
+            ${(p.itens || []).map(i => `
               <div class="item">
                 <div><b>${i.codigo}</b> - ${i.nome}</div>
                 <div>${i.quantidade} x ${fmtMoney(i.preco_unit)} = <b>${fmtMoney(i.subtotal)}</b></div>
+                ${(i.peso_liquido_unit > 0) ? `<div style="color:#888;font-size:0.82em;">${i.quantidade} x ${parseFloat(Number(i.peso_liquido_unit).toFixed(3))} kg = <b>${parseFloat(Number(i.peso_liquido_total).toFixed(3))} kg</b></div>` : ''}
               </div>
             `).join("")}
           </div>
@@ -711,8 +719,8 @@ document.addEventListener('DOMContentLoaded', async () => {
   const sidebar = document.getElementById('sidebar');
   const overlay = document.getElementById('overlay');
   if (menuButton && sidebar && overlay) {
-    const open = () => { sidebar.classList.add('active'); overlay.style.display = 'block'; };
-    const close = () => { sidebar.classList.remove('active'); overlay.style.display = 'none'; };
+    const open = () => { sidebar.classList.add('active'); overlay.classList.add('active'); };
+    const close = () => { sidebar.classList.remove('active'); overlay.classList.remove('active'); };
     menuButton.addEventListener('click', (e) => { e.stopPropagation(); sidebar.classList.contains('active') ? close() : open(); });
     overlay.addEventListener('click', close);
   }
@@ -733,3 +741,4 @@ document.addEventListener('DOMContentLoaded', async () => {
     loadList(1);
   }
 });
+

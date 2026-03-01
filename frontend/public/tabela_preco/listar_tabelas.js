@@ -1,6 +1,66 @@
-const API_BASE = window.API_BASE || "https://ordersync-backend-59d2.onrender.com"; // Restored & Safe
+const API_BASE = window.API_BASE || "https://ordersync-backend-edjq.onrender.com"; // Restored & Safe
 window.API_BASE = window.API_BASE || API_BASE;
 let tabelaSelecionadaId = null;
+
+// ===================================
+// CUSTOM OS MODALS
+// ===================================
+function showOsModal(options) {
+  return new Promise((resolve) => {
+    const backdrop = document.createElement('div');
+    backdrop.className = 'os-modal-backdrop active';
+    backdrop.style.zIndex = '99999';
+
+    const dialog = document.createElement('div');
+    dialog.className = 'os-modal-dialog';
+    dialog.style.maxWidth = '400px';
+
+    const header = document.createElement('div');
+    header.className = 'os-modal-header';
+    header.innerHTML = `<h3 class="os-modal-title">${options.title}</h3>
+                        <button class="os-modal-close">&times;</button>`;
+
+    const body = document.createElement('div');
+    body.className = 'os-modal-body';
+    body.innerHTML = `<p style="margin:0;">${options.message}</p>`;
+
+    const footer = document.createElement('div');
+    footer.className = 'os-modal-footer';
+
+    if (options.type === 'confirm') {
+      const btnCancel = document.createElement('button');
+      btnCancel.className = 'os-btn os-btn-secondary';
+      btnCancel.textContent = 'Cancelar';
+
+      const btnOk = document.createElement('button');
+      btnOk.className = 'os-btn os-btn-primary';
+      btnOk.textContent = 'OK';
+
+      footer.appendChild(btnCancel);
+      footer.appendChild(btnOk);
+
+      btnCancel.onclick = () => { document.body.removeChild(backdrop); resolve(false); };
+      btnOk.onclick = () => { document.body.removeChild(backdrop); resolve(true); };
+    } else {
+      const btnOk = document.createElement('button');
+      btnOk.className = 'os-btn os-btn-primary';
+      btnOk.textContent = 'OK';
+      footer.appendChild(btnOk);
+      btnOk.onclick = () => { document.body.removeChild(backdrop); resolve(true); };
+    }
+
+    header.querySelector('.os-modal-close').onclick = () => {
+      document.body.removeChild(backdrop);
+      resolve(options.type === 'confirm' ? false : true);
+    };
+
+    dialog.appendChild(header);
+    dialog.appendChild(body);
+    dialog.appendChild(footer);
+    backdrop.appendChild(dialog);
+    document.body.appendChild(backdrop);
+  });
+}
 
 // Paginação e Busca
 let currentPage = 1;
@@ -113,20 +173,20 @@ async function carregarTabelas() {
       <td>${tabela.cliente || '-'}</td>
       <td>${tabela.fornecedor || '-'}</td>
       <td>
-        <div style="display: flex; gap: 8px;">
-          <button class="btn btn-editar" style="color:white; border:none; border-radius:4px; padding:6px 12px; cursor:pointer;" 
+        <div style="display: flex; gap: var(--os-space-2);">
+          <button class="os-btn os-btn-secondary os-btn-sm" 
             onclick="window.location.href='criacao_tabela_preco.html?id=${encodeURIComponent(tabela.id)}'">
             Editar
           </button>
           
-          <button class="btn btn-excluir" style="color:white; border:none; border-radius:4px; padding:6px 12px; cursor:pointer;" 
+          <button class="os-btn os-btn-danger os-btn-sm" 
             onclick="abrirModalDelecao(${tabela.id})">
             Excluir
           </button>
           
           <button
-            class="btn-enviar-link btn-secundario"
-            style="border:none; border-radius:4px; padding:6px 12px; cursor:pointer; display: none;"
+            class="os-btn os-btn-primary os-btn-sm btn-enviar-link"
+            style="display: none;"
             data-id="${tabela.id}"
             data-frete-kg="${tabela.frete_kg !== undefined && tabela.frete_kg !== null ? tabela.frete_kg : ''}"
           >
@@ -136,10 +196,20 @@ async function carregarTabelas() {
       </td>
       `;
 
-      tr.addEventListener("click", () => {
-        document.querySelectorAll("#lista-tabelas-body tr")
-          .forEach(row => row.classList.remove("selected"));
-        tr.classList.add("selected");
+      tr.addEventListener("click", (e) => {
+        // Ignora o clique se for diretamente no botão
+        if (e.target.closest('button')) return;
+
+        // Adiciona/remove a seleção (Desktop/Mobile)
+        document.querySelectorAll("#lista-tabelas-body tr").forEach(row => {
+          if (row !== tr) {
+            row.classList.remove("selected");
+            row.classList.remove("expanded");
+          }
+        });
+
+        tr.classList.toggle("selected");
+        tr.classList.toggle("expanded");
         tabelaSelecionadaId = tabela.id;
       });
 
@@ -155,9 +225,9 @@ function formatarData(data) {
   return d.toLocaleDateString("pt-BR");
 }
 
-function selecionarTabela() {
+async function selecionarTabela() {
   if (!tabelaSelecionadaId) {
-    alert("Selecione uma tabela para continuar.");
+    await showOsModal({ title: 'Aviso', message: 'Selecione uma tabela para continuar.', type: 'alert' });
     return;
   }
   window.location.href = `criacao_tabela_preco.html?id=${tabelaSelecionadaId}`;
@@ -174,15 +244,15 @@ function confirmarDelecao(confirmado) {
   fetch(`${API_BASE}/tabela_preco/${tabelaSelecionadaId}`, {
     method: "DELETE"
   })
-    .then(response => {
+    .then(async response => {
       if (!response.ok) throw new Error("Erro ao deletar.");
-      alert("Tabela desativada com sucesso!");
+      await showOsModal({ title: 'Sucesso', message: "Tabela desativada com sucesso!", type: 'alert' });
       carregarTabelas();
       tabelaSelecionadaId = null;
     })
-    .catch(err => {
+    .catch(async err => {
       console.error("Erro ao deletar tabela:", err);
-      alert("Erro ao deletar tabela.");
+      await showOsModal({ title: 'Erro', message: "Erro ao deletar tabela.", type: 'alert' });
     });
 }
 
@@ -202,7 +272,7 @@ window.confirmarDelecao = confirmarDelecao;
 window.abrirModalDelecao = abrirModalDelecao;
 
 // Listener for "Enviar" buttons (delegated)
-document.addEventListener("click", (e) => {
+document.addEventListener("click", async (e) => {
   const btn = e.target.closest(".btn-enviar-link");
   if (!btn) return;
 
@@ -213,7 +283,10 @@ document.addEventListener("click", (e) => {
     freteKg = Number(String(freteStr).replace(",", "."));
   }
 
-  if (!tabelaId) return alert("ID da tabela não encontrado.");
+  if (!tabelaId) {
+    await showOsModal({ title: 'Erro', message: "ID da tabela não encontrado.", type: 'alert' });
+    return;
+  }
 
   if (window.__showGerarLinkModal) {
     window.__showGerarLinkModal({
@@ -231,7 +304,12 @@ function setupUpdatePrices() {
   if (!btn) return;
 
   btn.addEventListener("click", async () => {
-    if (!confirm("Isso irá atualizar os preços base de TODAS as tabelas ativas com base no cadastro de produtos atual (PDF). Deseja continuar?")) {
+    const proceed = await showOsModal({
+      title: 'Atualização Massiva',
+      message: "Isso irá atualizar os preços base de TODAS as tabelas ativas com base no cadastro de produtos atual (PDF). Deseja continuar?",
+      type: 'confirm'
+    });
+    if (!proceed) {
       return;
     }
 
@@ -254,12 +332,12 @@ function setupUpdatePrices() {
       }
 
       const result = await response.json();
-      alert(`Sucesso! \n${result.tabelas_afetadas} tabelas analisadas.\n${result.linhas_atualizadas} produtos atualizados.`);
+      await showOsModal({ title: 'Sucesso', message: `Sucesso! <br>${result.tabelas_afetadas} tabelas analisadas.<br>${result.linhas_atualizadas} produtos atualizados.`, type: 'alert' });
       carregarTabelas(); // Recarrega a lista para refletir datas de edição
 
     } catch (error) {
       console.error("Erro no update massivo:", error);
-      alert("Falha ao atualizar preços: " + error.message);
+      await showOsModal({ title: 'Erro', message: "Falha ao atualizar preços: " + error.message, type: 'alert' });
     } finally {
       btn.textContent = originalText;
       btn.disabled = false;

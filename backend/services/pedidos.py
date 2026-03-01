@@ -48,8 +48,14 @@ SELECT
   a.contato_nome,
   a.contato_email,
   a.contato_fone,
-  a.contato_fone,
-  a.tabela_preco_nome            AS tabela_preco_nome,
+  COALESCE(a.tabela_preco_nome, b.nome_tabela) AS tabela_preco_nome,
+  COALESCE(
+    CASE
+      WHEN c.cadastro_nome_fantasia IS NULL OR c.cadastro_nome_fantasia IN ('nan', '') THEN 'Sem Nome Fantasia'
+      ELSE c.cadastro_nome_fantasia
+    END,
+    'Sem Nome Fantasia'
+  ) AS nome_fantasia,
   a.fornecedor,
   a.validade_ate,
   a.validade_dias,
@@ -67,6 +73,8 @@ SELECT
   a.link_status,
   a.created_at
 FROM public.tb_pedidos a
+LEFT JOIN public.tb_tabela_preco b ON a.tabela_preco_id = b.id_tabela
+LEFT JOIN public.t_cadastro_cliente_v2 c ON c.cadastro_codigo_da_empresa::text = a.codigo_cliente
 WHERE a.id_pedido = :id_pedido
 """)
 
@@ -74,12 +82,14 @@ ITENS_JSON_SQL = text("""
 SELECT COALESCE(
   jsonb_agg(
     jsonb_build_object(
-      'codigo',      c.codigo,
-      'nome',        c.nome,
-      'embalagem',   c.embalagem,
-      'quantidade',  c.quantidade,
-      'preco_unit',  CASE WHEN a.usar_valor_com_frete THEN c.preco_unit_frt ELSE c.preco_unit END,
-      'subtotal',    CASE WHEN a.usar_valor_com_frete THEN c.subtotal_com_f ELSE c.subtotal_sem_f END
+      'codigo',             c.codigo,
+      'nome',               c.nome,
+      'embalagem',          c.embalagem,
+      'quantidade',         c.quantidade,
+      'preco_unit',         CASE WHEN a.usar_valor_com_frete THEN c.preco_unit_frt ELSE c.preco_unit END,
+      'subtotal',           CASE WHEN a.usar_valor_com_frete THEN c.subtotal_com_f ELSE c.subtotal_sem_f END,
+      'peso_liquido_unit',  COALESCE(prod.peso, 0),
+      'peso_liquido_total', ROUND(COALESCE(prod.peso, 0) * c.quantidade, 3)
     )
     ORDER BY c.id_item
   ),
@@ -87,8 +97,15 @@ SELECT COALESCE(
 ) AS itens
 FROM public.tb_pedidos_itens c
 JOIN public.tb_pedidos a ON a.id_pedido = c.id_pedido
+LEFT JOIN (
+  SELECT codigo_supra, MAX(peso) as peso
+  FROM public.t_cadastro_produto_v2
+  GROUP BY codigo_supra
+) prod ON prod.codigo_supra = c.codigo
 WHERE c.id_pedido = :id_pedido
+  AND c.quantidade > 0
 """)
+
 
 STATUS_SQL = text("""
 SELECT codigo, rotulo, cor_hex, ordem, ativo

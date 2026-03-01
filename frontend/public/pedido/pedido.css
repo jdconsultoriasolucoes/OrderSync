@@ -43,73 +43,48 @@ header {
   color: #111827;
 }
 
-.filters {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 1rem;
-  align-items: flex-end;
+/* Nova Grid de Filtros */
+.filters-collapsible {
+  display: block;
+  /* Managed by JS if collapsed */
+  transition: all 0.3s ease;
 }
 
-.filters label {
-  display: flex;
-  flex-direction: column;
+.custom-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: 1rem;
+  align-items: end;
+}
+
+.custom-grid label {
+  display: block;
   font-size: 0.85rem;
   font-weight: 500;
   color: #4b5563;
+  margin-bottom: 4px;
 }
 
-.filters input,
-.filters select {
-  margin-top: 4px;
+.custom-grid input,
+.custom-grid select {
+  width: 100%;
   padding: 6px 10px;
   border: 1px solid #d1d5db;
   border-radius: 6px;
   font-size: 0.9rem;
+  box-sizing: border-box;
 }
 
-.filters .filtro-bloco {
+.d-flex {
   display: flex;
-  flex-direction: column;
 }
 
-/* Layout 2.0: Datas (Col 1) | Filtros/Botões (Col 2) */
-.filters-container {
-  display: flex;
-  gap: 1.5rem;
-  align-items: flex-end;
-}
-
-.col-dates {
-  display: flex;
-  flex-direction: column;
+.gap-2 {
   gap: 0.5rem;
 }
 
-.col-dates input[type="date"] {
-  margin-top: 0;
-}
-
-.col-controls {
-  display: flex;
-  flex-direction: column;
-  justify-content: space-between;
-  gap: 1rem;
-  flex: 1;
-}
-
-.row-filters {
-  display: flex;
+.flex-wrap {
   flex-wrap: wrap;
-  gap: 1rem;
-  align-items: flex-end;
-}
-
-.row-buttons {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 0.5rem;
-  align-items: flex-start;
-  /* Alinhado ao topo da linha, que é a base da coluna */
 }
 
 .btn {
@@ -440,4 +415,11 @@ header {
   display: flex;
   gap: 0.5rem;
   justify-content: flex-end;
+}
+
+/* Responsividade do Drawer */
+@media (max-width: 768px) {
+  .drawer {
+    width: 100vw;
+  }
 }

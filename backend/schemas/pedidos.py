@@ -39,11 +39,13 @@ class PedidoResumo(BaseModel):
     contato_email: Optional[str] = None
     contato_fone: Optional[str] = None
     tabela_preco_nome: Optional[str] = None
+    nome_fantasia: Optional[str] = None
     fornecedor: Optional[str] = None
     validade_ate: Optional[str] = None
     validade_dias: Optional[int] = None
     usar_valor_com_frete: bool
     peso_total_kg: float
+    peso_liquido_calculado: Optional[float] = 0.0
     frete_total: float
     total_pedido: float
     observacoes: Optional[str] = None
