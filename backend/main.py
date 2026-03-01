@@ -257,7 +257,7 @@ app.mount("/static", StaticFiles(directory=static_dir), name="static")
 def get_design_system_css():
     css_path = os.path.join(static_dir, "design-system.css")
     if os.path.exists(css_path):
-        return FileResponse(css_path)
+        return FileResponse(css_path, media_type="text/css; charset=utf-8")
     return Response(status_code=404)
 
 @app.get("/")
@@ -267,7 +267,7 @@ def root():
     # so .../frontend/index.html is one level up
     index_path = os.path.abspath(os.path.join(static_dir, "..", "index.html"))
     if os.path.exists(index_path):
-        return FileResponse(index_path)
+        return FileResponse(index_path, media_type="text/html; charset=utf-8")
     return {"mensagem": "API do OrderSync está rodando (Frontend não encontrado)"}
 
 @app.get("/api/health")
