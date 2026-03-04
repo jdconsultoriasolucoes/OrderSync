@@ -185,7 +185,8 @@ body.page-locked .documento *:not(#confirmModal):not(.modal-content):not(.btn-mo
     width: 100% !important;
     max-width: 100% !important;
     margin: 0 !important;
-    padding: 16px 12px !important;
+    padding: 12px 8px !important;
+    /* Reduzido o padding para 'desaproximar' a tela */
     border-radius: 0 !important;
     box-sizing: border-box !important;
     box-shadow: none !important;
@@ -194,7 +195,8 @@ body.page-locked .documento *:not(#confirmModal):not(.modal-content):not(.btn-mo
   .fechamento-grid {
     grid-template-columns: 1fr !important;
     margin: 10px 0 !important;
-    gap: 16px !important;
+    gap: 12px !important;
+    /* Mais apertado */
   }
 
   .fechamento-card {
@@ -205,8 +207,8 @@ body.page-locked .documento *:not(#confirmModal):not(.modal-content):not(.btn-mo
     flex-direction: row-reverse !important;
     align-items: flex-start !important;
     text-align: left !important;
-    padding-bottom: 12px !important;
-    margin-bottom: 12px !important;
+    padding-bottom: 8px !important;
+    margin-bottom: 8px !important;
   }
 
   .dados-header {
@@ -217,22 +219,26 @@ body.page-locked .documento *:not(#confirmModal):not(.modal-content):not(.btn-mo
   .dados-header p,
   .dados-header h1,
   .dados-header .meta-link {
-    font-size: 14px !important;
+    font-size: 12px !important;
+    /* Reduzido de 14px */
     color: var(--os-text) !important;
     width: 100% !important;
     word-wrap: break-word !important;
+    margin-bottom: 2px !important;
   }
 
   .dados-header h1 {
-    font-size: 18px !important;
-    margin-bottom: 8px !important;
+    font-size: 15px !important;
+    /* Reduzido de 18px */
+    margin-bottom: 4px !important;
   }
 
   /* Faz a tabela respirar um pouco mais no celular */
   .os-table th,
   .os-table td {
-    font-size: 13px !important;
-    padding: 8px 4px !important;
+    font-size: 11px !important;
+    /* Reduzido da tabela para evitar 'zoom' */
+    padding: 6px 3px !important;
   }
 
   /* Sobrepõe estilo inline de justify-content: flex-end */
@@ -247,9 +253,10 @@ body.page-locked .documento *:not(#confirmModal):not(.modal-content):not(.btn-mo
   /* Garante que o logo não seja esmagado (squished) horizontalmente */
   .logo-cliente img {
     width: 100% !important;
-    max-width: 180px !important;
+    max-width: 110px !important;
+    /* Redução drástica do Logo */
     height: auto !important;
-    max-height: 100px !important;
+    max-height: 60px !important;
     object-fit: contain !important;
     flex-shrink: 0 !important;
     /* DONT SQUISH ME */
@@ -258,28 +265,41 @@ body.page-locked .documento *:not(#confirmModal):not(.modal-content):not(.btn-mo
   /* Scroll suave em dispositivos iOS para a tabela que transborda */
   .os-table-wrap {
     width: 100vw !important;
-    margin-left: -12px !important;
+    margin-left: -8px !important;
     /* Compensa o padding do container para scroll total */
-    padding-left: 12px !important;
-    padding-right: 12px !important;
+    padding-left: 8px !important;
+    padding-right: 8px !important;
     box-sizing: border-box !important;
     -webkit-overflow-scrolling: touch;
-    margin-bottom: 20px !important;
+    margin-bottom: 16px !important;
+  }
+
+  .fech-row {
+    grid-template-columns: 1fr 100px !important;
+    /* Espaço mais otimizado na linha de totais */
+  }
+
+  .fech-label,
+  .fech-value {
+    font-size: 13px !important;
+    /* Redução de 16px para 13px */
   }
 
   /* Botões de ação empilhados usando flex column */
   .acoes {
     display: flex !important;
     flex-direction: column !important;
-    gap: 12px !important;
-    padding: 0 10px !important;
+    gap: 10px !important;
+    /* Mais justo */
+    padding: 0 8px !important;
   }
 
   .acoes button {
     width: 100% !important;
     margin: 0 !important;
-    padding: 14px 20px !important;
+    padding: 12px 16px !important;
+    /* Mais baixo */
     /* Button hit target larger on mobile */
-    font-size: 16px !important;
+    font-size: 14px !important;
   }
 }

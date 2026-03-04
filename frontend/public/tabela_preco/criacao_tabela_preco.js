@@ -1923,28 +1923,36 @@ async function recalcTudo() {
 async function aplicarFatorGlobal() {
   const selGlobal = document.getElementById('desconto_global');
   const code = selGlobal?.value || '';
-  const fator = mapaDescontos[code];
+  const fator = (window.mapaDescontos && window.mapaDescontos[code] != null) ? window.mapaDescontos[code] : undefined;
 
   if (fator == null || isNaN(fator)) {
     showOsModal({ title: 'Aviso', message: 'Escolha um desconto válido.', type: 'alert' });
     return;
   }
 
-  // Aplica em cada linha e sincroniza o select da linha
+  let txt = '';
+  if (selGlobal && selGlobal.selectedIndex >= 0) {
+    txt = selGlobal.options[selGlobal.selectedIndex].textContent;
+  }
+
+  // Aplica em cada linha sem storm de eventos
   document.querySelectorAll('#tbody-itens tr').forEach(tr => {
-    const sel = tr.querySelector('td:nth-child(8) select'); // coluna unificada
-    if (!sel) return;
+    const sel = tr.querySelector('td:nth-child(8) select');
+    const idx = Number(tr.dataset.idx);
+    if (!sel || isNaN(idx) || !itens[idx]) return;
+
     sel.value = code;
-    // 🔑 dispara o mesmo fluxo do usuário (atualiza itens[idx] e recalcula)
-    console.log(`Aplicando Fator Global: ${code} na linha com select`, sel);
-    sel.dispatchEvent(new Event('change', { bubbles: true }));
+    itens[idx].fator_comissao = Number(fator);
+    itens[idx].__fator_codigo = code;
+    itens[idx].__descricao_fator_label = txt;
+    itens[idx].__overridePercent = true;
   });
+
   await Promise.resolve(recalcTudo()).catch(() => { });
-  const hdr = document.getElementById('desconto_global');
-  if (hdr) { hdr.dataset.userEdited = ''; } // destrava
+
+  if (selGlobal) selGlobal.dataset.userEdited = '';
   atualizarPillDesconto();
   snapshotSelecionadosParaPicker?.();
-
 }
 
 // Mantém o picker em dia com o que está na grade do PAI
@@ -2848,20 +2856,31 @@ document.addEventListener('DOMContentLoaded', () => {
 
 
 document.getElementById('btn-aplicar-condicao-todos')?.addEventListener('click', () => {
-  const cod = document.getElementById('plano_pagamento')?.value || '';
+  const selHdr = document.getElementById('plano_pagamento');
+  const cod = selHdr?.value || '';
+  let txt = '';
+  if (selHdr && selHdr.selectedIndex >= 0) {
+    txt = selHdr.options[selHdr.selectedIndex].textContent;
+  }
   document.querySelectorAll('#tbody-itens tr').forEach(tr => {
     const sel = tr.querySelector('td:nth-child(10) select');
-    if (!sel) return;
+    const idx = Number(tr.dataset.idx);
+    if (!sel || isNaN(idx)) return;
     sel.value = cod;
-    // 🔑 garante persistência em itens[idx] + recálculo
-    console.log(`Aplicando Condição Global: ${cod} na linha com select`, sel);
-    sel.dispatchEvent(new Event('change', { bubbles: true }));
+
+    // Update internal item array instead of dispatching a massive change event storm
+    if (itens[idx]) {
+      itens[idx].plano_pagamento_cod = cod || null;
+      itens[idx].plano_pagamento = cod ? txt : null;
+    }
   });
+
+  // Single batch calculation call instead of N individual row calculations
   setTimeout(() => {
     Promise.resolve(recalcTudo()).catch(() => { });
   }, 0);
-  const hdr = document.getElementById('plano_pagamento');
-  if (hdr) hdr.dataset.userEdited = '';
+
+  if (selHdr) selHdr.dataset.userEdited = '';
   snapshotSelecionadosParaPicker?.();
 });
 
@@ -2890,12 +2909,16 @@ document.getElementById('btn-aplicar-markup-todos')?.addEventListener('click', (
 
   document.querySelectorAll('#tbody-itens tr').forEach(tr => {
     const inp = tr.querySelector('.field-markup');
-    if (inp) {
-      // Set value and trigger change to calc
+    const idx = Number(tr.dataset.idx);
+    if (inp && !isNaN(idx) && itens[idx]) {
       inp.value = val.toFixed(2);
-      inp.dispatchEvent(new Event('change', { bubbles: true }));
+      itens[idx].markup = val;
     }
   });
+
+  setTimeout(() => {
+    Promise.resolve(recalcTudo()).catch(() => { });
+  }, 0);
 
 
 
@@ -3045,15 +3068,6 @@ function renderMobileCards() {
   const container = document.getElementById('mobile-card-container');
   if (!container) return;
 
-  // Preservar estado de expansão (quais cards estão abertos) antes de os recriar
-  const expandedSet = new Set();
-  container.querySelectorAll('.mobile-card').forEach(card => {
-    const content = card.querySelector('.header-content');
-    if (content && content.classList.contains('expanded')) {
-      expandedSet.add(card.dataset.idx);
-    }
-  });
-
   // Sync toolbar totals
   const totalItens = (itens || []).length;
   const totalValor = itens.reduce((acc, it) => acc + (it._totalComercial || 0), 0);
@@ -3082,6 +3096,66 @@ function renderMobileCards() {
   // Check if editing is allowed
   const isEditable = (currentMode === MODE.NEW || currentMode === MODE.EDIT || currentMode === MODE.DUP);
   const markupDisabled = !isEditable;
+
+  // --- NON-DESTRUCTIVE UPDATE LOGIC ---
+  const existingCards = container.querySelectorAll('.mobile-card');
+  if (existingCards.length > 0 && existingCards.length === itens.length) {
+    itens.forEach((item, idx) => {
+      const card = container.querySelector(`.mobile-card[data-idx="${idx}"]`);
+      if (!card) return;
+
+      const freteVal = item._freteValor || 0;
+      const semFrete = item.total_sem_frete || 0;
+      const total = item._totalComercial || 0;
+
+      const elTotal = card.querySelector('.mob-card-total');
+      if (elTotal) elTotal.textContent = fmtMoney(total);
+
+      const elSFrete = card.querySelector('.mob-card-sfrete');
+      if (elSFrete) elSFrete.textContent = fmtMoney(semFrete);
+
+      const elFreteInput = card.querySelector('.mob-card-frete-val');
+      if (elFreteInput) elFreteInput.value = fmtMoney(freteVal);
+
+      const elIPI = card.querySelector('.mob-card-ipi');
+      if (elIPI) elIPI.textContent = fmtMoney(item.ipi || 0);
+
+      const elICMS = card.querySelector('.mob-card-icms');
+      if (elICMS) elICMS.textContent = fmtMoney(item._icmsProprio || 0);
+
+      const elIVA = card.querySelector('.mob-card-iva');
+      if (elIVA) elIVA.textContent = fmtMoney(item._stReter || 0);
+
+      if (!markupDisabled) {
+        const selFator = card.querySelector('.mobile-fator-select');
+        if (selFator) {
+          const code = determineFatorCode(item) || item.__fator_codigo || '';
+          if (code && selFator.value !== code) selFator.value = code;
+        }
+        const selCond = card.querySelector('.mobile-cond-select');
+        if (selCond) {
+          const code = determineCondicaoCode(item) || item.plano_pagamento_cod || '';
+          if (code && selCond.value !== code) selCond.value = code;
+        }
+        const inpMark = card.querySelector('.mobile-input-markup');
+        if (inpMark) {
+          const mark = item.markup || 0;
+          if (parseFloat(inpMark.value) !== mark) inpMark.value = mark.toFixed(2);
+        }
+      }
+    });
+    return;
+  }
+  // --- END NON-DESTRUCTIVE UPDATE LOGIC ---
+
+  // Preservar estado de expansão (quais cards estão abertos) antes de os recriar
+  const expandedSet = new Set();
+  existingCards.forEach(card => {
+    const content = card.querySelector('.header-content');
+    if (content && content.classList.contains('expanded')) {
+      expandedSet.add(card.dataset.idx);
+    }
+  });
 
   // Render List
   container.innerHTML = '';
@@ -3158,10 +3232,10 @@ function renderMobileCards() {
               <!-- Right: Totals Stacked -->
               <div class="d-flex flex-column align-items-end" style="min-width: 100px;">
                   <div style="font-size: 0.75rem; color: #666; margin-bottom: -2px;">Total c/ Frete</div>
-                  <div style="font-size: 1rem; font-weight: 700; color: #16a34a;">${fmtMoney(total)}</div>
+                  <div class="mob-card-total" style="font-size: 1rem; font-weight: 700; color: #16a34a;">${fmtMoney(total)}</div>
                   
                   <div style="font-size: 0.75rem; color: #999; margin-top: 4px; margin-bottom: -2px;">Total s/ Frete</div>
-                  <div style="font-size: 0.9rem; font-weight: 600; color: #333;">${fmtMoney(semFrete)}</div>
+                  <div class="mob-card-sfrete" style="font-size: 0.9rem; font-weight: 600; color: #333;">${fmtMoney(semFrete)}</div>
               </div>
               
                <!-- Chevron -->
@@ -3209,7 +3283,7 @@ function renderMobileCards() {
             <!-- Row 3: Frete (Full width) -->
             <div class="card-field" style="margin-bottom: 16px;">
                  <label>Frete (R$)</label>
-                 <input type="text" value="${fmtMoney(freteVal)}" disabled style="background: #f8fafc;">
+                 <input type="text" class="mob-card-frete-val" value="${fmtMoney(freteVal)}" disabled style="background: #f8fafc;">
             </div>
 
             <!-- Row 4: Fiscal Details (Styled Block) -->
@@ -3218,15 +3292,15 @@ function renderMobileCards() {
                  <div class="d-flex justify-content-between text-center" style="font-size: 0.8rem;">
                      <div>
                         <div class="text-muted" style="font-size: 0.7rem;">IPI</div>
-                        <div class="fw-bold">${fmtMoney(item.ipi || 0)}</div>
+                        <div class="fw-bold mob-card-ipi">${fmtMoney(item.ipi || 0)}</div>
                      </div>
                      <div>
                         <div class="text-muted" style="font-size: 0.7rem;">ICMS ST</div>
-                        <div class="fw-bold">${fmtMoney(item._icmsProprio || 0)}</div> 
+                        <div class="fw-bold mob-card-icms">${fmtMoney(item._icmsProprio || 0)}</div> 
                      </div>
                      <div>
                         <div class="text-muted" style="font-size: 0.7rem;">IVA_ST</div>
-                        <div class="fw-bold">${fmtMoney(item._stReter || 0)}</div>
+                        <div class="fw-bold mob-card-iva">${fmtMoney(item._stReter || 0)}</div>
                      </div>
                  </div>
             </div>
