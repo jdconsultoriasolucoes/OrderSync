@@ -1913,7 +1913,10 @@ async function recalcTudo() {
   } finally {
     __recalcRunning = false;
     document.body.style.cursor = 'default';
-    if (typeof renderMobileCards === 'function') renderMobileCards();
+    if (typeof renderMobileCards === 'function') {
+      // Delay prevents mobile browsers from freezing when destroying a select during its change event
+      setTimeout(renderMobileCards, 250);
+    }
   }
 }
 
@@ -2557,6 +2560,14 @@ document.addEventListener('DOMContentLoaded', () => {
     document.getElementById('btn-aplicar-condicao-todos')?.click();
     refreshToolbarEnablement(); saveHeaderSnapshot();
   });
+  document.getElementById('plano_pagamento')?.addEventListener('change', (e) => {
+    e.currentTarget.dataset.userEdited = '1';
+    atualizarPillTaxa();
+    document.getElementById('btn-aplicar-condicao-todos')?.click();
+    if (typeof refreshToolbarEnablement === 'function') refreshToolbarEnablement();
+    if (typeof saveHeaderSnapshot === 'function') saveHeaderSnapshot();
+  });
+
   document.getElementById('frete_kg')?.addEventListener('input', () => {
     recalcTudo();
     refreshToolbarEnablement();
@@ -3018,8 +3029,6 @@ function setupMobileToolbar() {
     onDuplicar();
     setTimeout(renderMobileCards, 50);
   });
-
-  document.getElementById('btn-mobile-save')?.addEventListener('click', () => salvarTabela());
 
   // Add/Initial Add - Focus on search or open modal if needed
   const focusSearch = () => {

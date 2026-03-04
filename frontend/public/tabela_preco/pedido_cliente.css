@@ -72,14 +72,6 @@ body.page-locked .documento *:not(#confirmModal):not(.modal-content):not(.btn-mo
   display: none !important;
 }
 
-/* FORÇA A EXIBIÇÃO DA COLUNA 5 (Quantidade) e 10 (Valor Markup) */
-#tabelaProdutos th:nth-child(5),
-#tabelaProdutos td:nth-child(5),
-#tabelaProdutos th:nth-child(10),
-#tabelaProdutos td:nth-child(10) {
-  display: table-cell !important;
-}
-
 /* esconde a coluna 6 (Peso) da tabela - ajustado para +1 coluna (#) */
 #tabelaProdutos th:nth-child(6),
 #tabelaProdutos td:nth-child(6),
@@ -88,8 +80,6 @@ body.page-locked .documento *:not(#confirmModal):not(.modal-content):not(.btn-mo
 #tabelaProdutos td:nth-child(11) {
   display: none !important;
 }
-
-
 
 /* largura máxima do bloco de totais (opcional) */
 .fechamento-card {
@@ -212,30 +202,30 @@ body.page-locked .documento *:not(#confirmModal):not(.modal-content):not(.btn-mo
   }
 
   header {
-    flex-direction: column !important;
-    align-items: center !important;
-    text-align: center !important;
-    padding-bottom: 20px !important;
-    margin-bottom: 20px !important;
+    flex-direction: row-reverse !important;
+    align-items: flex-start !important;
+    text-align: left !important;
+    padding-bottom: 12px !important;
+    margin-bottom: 12px !important;
   }
 
   .dados-header {
-    text-align: center !important;
-    width: 100% !important;
+    text-align: left !important;
+    width: 65% !important;
   }
 
   .dados-header p,
   .dados-header h1,
   .dados-header .meta-link {
-    font-size: 15px !important;
+    font-size: 14px !important;
     color: var(--os-text) !important;
     width: 100% !important;
     word-wrap: break-word !important;
   }
 
   .dados-header h1 {
-    font-size: 20px !important;
-    margin-bottom: 12px !important;
+    font-size: 18px !important;
+    margin-bottom: 8px !important;
   }
 
   /* Faz a tabela respirar um pouco mais no celular */
@@ -247,11 +237,11 @@ body.page-locked .documento *:not(#confirmModal):not(.modal-content):not(.btn-mo
 
   /* Sobrepõe estilo inline de justify-content: flex-end */
   .logo-cliente {
-    margin-bottom: 20px !important;
-    width: 100% !important;
+    margin-bottom: 0 !important;
+    width: 35% !important;
     display: flex !important;
-    justify-content: center !important;
-    align-items: center !important;
+    justify-content: flex-end !important;
+    align-items: flex-start !important;
   }
 
   /* Garante que o logo não seja esmagado (squished) horizontalmente */
