@@ -215,5 +215,43 @@ body.page-locked .documento *:not(#confirmModal):not(.modal-content):not(.btn-mo
 
   .logo-cliente {
     margin-bottom: var(--os-space-3);
+    width: 100%;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+  }
+
+  /* Garante que o logo do cliente nunca estoure o layout no mobile (iOS/Android) */
+  .logo-cliente img {
+    max-width: 100%;
+    /* Para nunca vazar na lateral */
+    width: auto;
+    /* Deixa fluir baseado na largura */
+    height: auto;
+    /* Deixa fluir baseado na altura */
+    max-height: 80px;
+    /* Trava a altura máxima! */
+    object-fit: contain;
+    /* Garante que a imagem caiba e não estique feio */
+    flex-shrink: 1;
+    /* iPhone às vezes não diminui sem isso */
+  }
+
+  /* Scroll suave em dispositivos iOS para a tabela que transborda */
+  .os-table-wrap {
+    -webkit-overflow-scrolling: touch;
+    margin-bottom: 20px !important;
+  }
+
+  /* Botões de ação podem precisar empilhar ou quebrar em telas muito finas */
+  .acoes {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+  }
+
+  .acoes button {
+    width: 100%;
+    margin: 0 !important;
   }
 }

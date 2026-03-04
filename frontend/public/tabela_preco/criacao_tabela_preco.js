@@ -1502,14 +1502,22 @@ async function recalcularLinhaComFiscal(item, codigo_cliente, forcarST, frete_li
   return item;
 }
 
-function buildFiscalInputsFromRow(tr) {
-  const idx = Number(tr.dataset.idx);
-  const item = (itens || [])[idx] || {};
+function buildFiscalInputsFromRow(tr, fallbackItem = null, idx = -1) {
+  const item = fallbackItem || (itens || [])[idx] || (tr ? (itens || [])[Number(tr.dataset.idx)] : {}) || {};
 
   // DOM: fator por linha e condição (código)
-  const fatorPct = Number(tr.querySelector('td:nth-child(8) select')?.value || 0);
+  let fatorPct = 0;
+  let codCond = '';
+  if (tr) {
+    fatorPct = Number(tr.querySelector('td:nth-child(8) select')?.value || 0);
+    codCond = tr.querySelector('td:nth-child(10) select')?.value || '';
+  } else {
+    // Mobile writes to item.__fator_codigo and item.plano_pagamento_cod
+    const cPct = item.__fator_codigo || '';
+    fatorPct = (window.mapaDescontos && window.mapaDescontos[cPct] != null) ? Number(window.mapaDescontos[cPct]) * 100 : 0;
+    codCond = item.plano_pagamento_cod || (item.plano_pagamento ? String(item.plano_pagamento).split(' - ')[0].trim() : '');
+  }
   const fator = fatorPct / 100;
-  const codCond = tr.querySelector('td:nth-child(10) select')?.value || '';
   const taxaCond = (window.mapaCondicoes && window.mapaCondicoes[codCond]) ?? 0;
 
   // DOM: frete global e toggles
@@ -1519,7 +1527,7 @@ function buildFiscalInputsFromRow(tr) {
   const forcarST = !!document.getElementById('iva_st_toggle')?.checked;
 
   // Item básico
-  const produtoId = (tr.querySelector('td:nth-child(2)')?.textContent || '').trim();
+  const produtoId = tr ? (tr.querySelector('td:nth-child(2)')?.textContent || '').trim() : (item.codigo || item.codigo_tabela || '').trim();
   const tipo = String(item?.tipo || item?.grupo || item?.departamento || '').trim();
   const peso_bruto = Number(item?.peso_bruto || 0);
   const peso_liq = Number(item?.peso_liquido ?? item?.peso ?? item?.peso_kg ?? item?.pesoLiquido ?? 0);
@@ -1725,15 +1733,20 @@ async function previewFiscalBatch(payload) {
   return r.json();
 }
 
-function applyFiscalToRow(tr, f) {
-  const idx = Number(tr.dataset.idx);
-  const item = itens[idx]; if (!item) return;
+function applyFiscalToRow(tr, f, fallbackItem = null) {
+  const item = fallbackItem || (tr ? itens[Number(tr.dataset.idx)] : null);
+  if (!item) return;
 
   item.ipi = Number((f.ipi ?? 0).toFixed(2));
   item.iva_st = Number((f.base_st ?? 0).toFixed(2));
   item.icms_st = Number((f.icms_proprio ?? 0).toFixed(2));
 
+  // Fix: Save correct fields for mobile display
+  item._icmsProprio = Number((f.icms_proprio ?? 0).toFixed(2));
+  item._stReter = Number((f.icms_st_reter ?? 0).toFixed(2));
+
   const setCell = (sel, val) => {
+    if (!tr) return;
     const el = tr.querySelector(sel);
     if (el) el.textContent = fmtMoney(val);
   };
@@ -1752,8 +1765,10 @@ function applyFiscalToRow(tr, f) {
   const freteValor = item._freteValor || 0; // Salvo no passo comercial
   const totalSemFrete = totalComercial - Number(freteValor || 0);
 
-  const tdSemFrete = tr.querySelector('.col-total-sem-frete');
-  if (tdSemFrete) tdSemFrete.textContent = fmtMoney(totalSemFrete);
+  if (tr) {
+    const tdSemFrete = tr.querySelector('.col-total-sem-frete');
+    if (tdSemFrete) tdSemFrete.textContent = fmtMoney(totalSemFrete);
+  }
 
   // --- CÁLCULO DAS COLUNAS DE MARKUP ---
   const mkPct = Number(item.markup || 0);
@@ -1765,18 +1780,22 @@ function applyFiscalToRow(tr, f) {
   item.valor_final_markup = valFinMk;
   item.valor_s_frete_markup = valSemMk;
 
-  const tdsMk = tr.querySelectorAll('.col-mk-derived');
-  if (tdsMk.length === 2) {
-    tdsMk[0].textContent = fmtMoney(valFinMk);
-    tdsMk[1].textContent = fmtMoney(valSemMk);
+  if (tr) {
+    const tdsMk = tr.querySelectorAll('.col-mk-derived');
+    if (tdsMk.length === 2) {
+      tdsMk[0].textContent = fmtMoney(valFinMk);
+      tdsMk[1].textContent = fmtMoney(valSemMk);
+    }
+    setCell('.col-total', totalComercial);
   }
 
-  setCell('.col-total', totalComercial);
   item._totalComercial = Number(totalComercial || 0);
   item.total_sem_frete = Math.max(0, item._totalComercial - freteValor);
 
-  const td = tr.querySelector('.col-total-sem-frete');
-  if (td) td.textContent = fmtMoney(item.total_sem_frete || 0);
+  if (tr) {
+    const td = tr.querySelector('.col-total-sem-frete');
+    if (td) td.textContent = fmtMoney(item.total_sem_frete || 0);
+  }
 
   // Sync missing fields
   item.valor_liquido = f.total_linha; // Compatibilidade
@@ -1794,45 +1813,62 @@ async function recalcTudo() {
   try {
     do {
       __recalcPending = false;
-      const rows = Array.from(document.querySelectorAll('#tbody-itens tr'));
+      const desktopRows = Array.from(document.querySelectorAll('#tbody-itens tr'));
 
       // 1. Coletar payloads (Commercial Calc)
       const batchItems = [];
-      const rowMap = []; // index -> { tr, item }
+      const rowMap = []; // { tr, item }
 
-      for (const tr of rows) {
-        // Ignora linhas que já foram removidas do DOM (safety check)
-        if (!tr.isConnected) continue;
+      for (let idx = 0; idx < itens.length; idx++) {
+        const item = itens[idx];
+        if (!item) continue;
 
-        const idx = Number(tr.dataset.idx);
-        const item = itens[idx]; if (!item) continue;
+        let tr = null;
+        if (desktopRows.length > 0) {
+          tr = desktopRows.find(r => Number(r.dataset.idx) === idx);
+          if (tr && !tr.isConnected) continue;
+        }
 
-        // --- Lógica Comercial (Copied/Adapted from recalcLinha) ---
-        const selPct = tr.querySelector('td:nth-child(8) select');
-        let codePct = selPct ? (selPct.value || '') : '';
+        // --- Lógica Comercial (Adapted to fallback to the item object for mobile) ---
+        let codePct = '';
+        if (tr) {
+          const selPct = tr.querySelector('td:nth-child(8) select');
+          if (selPct) codePct = selPct.value || '';
+        }
         if (!codePct && item.__fator_codigo) codePct = item.__fator_codigo;
-        let fator = (mapaDescontos[codePct] != null) ? Number(mapaDescontos[codePct]) : 0;
+
+        let fator = (window.mapaDescontos && window.mapaDescontos[codePct] != null) ? Number(window.mapaDescontos[codePct]) : 0;
         if (fator === 0 && item.fator_comissao) fator = Number(item.fator_comissao);
 
-        const freteKg = Number(document.getElementById('frete_kg').value || 0);
-        const selCond = tr.querySelector('td:nth-child(10) select');
-        let codCond = selCond ? selCond.value : '';
+        const freteKg = Number(document.getElementById('frete_kg')?.value || 0);
+
+        let codCond = '';
+        if (tr) {
+          const selCond = tr.querySelector('td:nth-child(10) select');
+          if (selCond) codCond = selCond.value;
+        }
         if (!codCond && item.plano_pagamento) {
           codCond = String(item.plano_pagamento).split(' - ')[0].trim();
         }
-        const taxaCond = mapaCondicoes[codCond] ?? 0;
+        if (!codCond && item.plano_pagamento_cod) {
+          codCond = item.plano_pagamento_cod;
+        }
+
+        const taxaCond = window.mapaCondicoes ? (window.mapaCondicoes[codCond] ?? 0) : 0;
 
         const { acrescimoCond, freteValor, descontoValor, precoBase } =
           calcularLinha(item, fator, taxaCond, freteKg);
 
         // Atualiza DOM Comercial
-        const setTxt = (nth, v) => { const cel = tr.querySelector(`td:nth-child(${nth})`); if (cel) cel.textContent = fmtMoney(v); };
-        setTxt(9, descontoValor);
-        setTxt(11, acrescimoCond);
-        setTxt(12, freteValor);
+        if (tr) {
+          const setTxt = (nth, v) => { const cel = tr.querySelector(`td:nth-child(${nth})`); if (cel) cel.textContent = fmtMoney(v); };
+          setTxt(9, descontoValor);
+          setTxt(11, acrescimoCond);
+          setTxt(12, freteValor);
+        }
 
         // Build Payload
-        const built = buildFiscalInputsFromRow(tr);
+        const built = buildFiscalInputsFromRow(tr, item, idx);
         built.payload.preco_unit = precoBase;
         built.payload.frete_linha = freteValor;
 
@@ -1840,7 +1876,7 @@ async function recalcTudo() {
         item._freteValor = Number(freteValor || 0);
 
         batchItems.push(built.payload);
-        rowMap.push(tr);
+        rowMap.push({ tr: tr, item: item });
       }
 
       if (batchItems.length === 0) continue;
@@ -1863,11 +1899,8 @@ async function recalcTudo() {
 
         // 3. Apply Results
         results.forEach((res, i) => {
-          const tr = rowMap[i];
-          // Só aplica se a linha ainda estiver conectada ao DOM (evita erro em deleção rápida)
-          if (tr && tr.isConnected) {
-            applyFiscalToRow(tr, res);
-          }
+          const mapData = rowMap[i];
+          applyFiscalToRow(mapData.tr, res, mapData.item);
         });
 
       } catch (err) {

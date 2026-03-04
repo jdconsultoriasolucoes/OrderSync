@@ -254,7 +254,8 @@ def enviar_email_notificacao(
 
         except Exception as e:
             print(f"Erro ao enviar email cliente: {e}")
-            raise e # Relança para o caller saber que falhou pelo menos um envio importante
+            # Não relança a exceção para evitar que o worker faça retry e reenvie 
+            # 3 vezes o e-mail interno para a equipe de vendas.
 
 
 def enviar_email_recuperacao_senha(db: Session, email_destino: str, link_reset: str) -> None:
