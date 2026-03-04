@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+﻿<!DOCTYPE html>
 <html lang="pt-BR">
 
 <head>
@@ -197,8 +197,8 @@
         <div class="col-1"></div>
       </div>
 
-      <!-- Preços  Tabela Atual -->
-      <div class="section-title">Preços  Tabela Atual</div>
+      <!-- Preços - Tabela Atual -->
+      <div class="section-title">Preços - Tabela Atual</div>
       <div class="row g-2">
         <div class="col-3">
           <label for="preco">Valor Tab. Atual (R$)</label>
@@ -218,8 +218,8 @@
         </div>
       </div>
 
-      <!-- Preços  Anteriores (somente leitura) -->
-      <div class="section-title">Preços  Anteriores (somente leitura)</div>
+      <!-- Preços - Anteriores (somente leitura) -->
+      <div class="section-title">Preços - Anteriores (somente leitura)</div>
       <div class="row g-2">
         <div class="col-3">
           <label for="preco_anterior">Valor Tab. Anterior (R$)</label>
@@ -247,18 +247,18 @@
           <input id="desconto_valor_tonelada" type="number" step="0.01" min="0" />
         </div>
         <div class="col-3">
-          <label for="data_desconto_inicio">Período  Início</label>
+          <label for="data_desconto_inicio">Período - Início</label>
           <input id="data_desconto_inicio" type="date" />
         </div>
         <div class="col-3">
-          <label for="data_desconto_fim">Período  Fim</label>
+          <label for="data_desconto_fim">Período - Fim</label>
           <input id="data_desconto_fim" type="date" />
         </div>
         <div class="col-3">
           <label>Indicadores</label>
           <div class="indicators">
-            <span>Reajuste %: <span id="reajuste" class="pill"></span></span>
-            <span class="right">Vigência ativa: <span id="vigencia" class="pill"></span></span>
+            <span>Reajuste %: <span id="reajuste" class="pill">-</span></span>
+            <span class="right">Vigência ativa: <span id="vigencia" class="pill">-</span></span>
           </div>
         </div>
       </div>
@@ -323,7 +323,11 @@
       </div>
       <div class="custom-modal-body">
         <div style="text-align: center; margin: 16px 0;">
-          <div style="font-size: 48px;"><svg xmlns="http://www.w3.org/2000/svg" width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="#10b981" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6L9 17l-5-5"/></svg></div>
+          <div style="font-size: 48px;"><svg xmlns="http://www.w3.org/2000/svg" width="48" height="48"
+              viewBox="0 0 24 24" fill="none" stroke="#10b981" stroke-width="2" stroke-linecap="round"
+              stroke-linejoin="round">
+              <path d="M20 6L9 17l-5-5" />
+            </svg></div>
           <h3 style="margin-top: 8px; color: #333;">Importação realizada com sucesso</h3>
           <p style="color: #666;">Os dados foram processados e sincronizados.</p>
         </div>
@@ -351,7 +355,15 @@
       <div class="custom-modal-footer" style="justify-content: space-between;">
         <button id="import-success-cancel" class="ghost">Fechar</button>
         <button id="import-success-download" class="primary" style="background-color: #059669;">
-          <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align: middle; margin-right: 4px;"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="16" y1="13" x2="8" y2="13"></line><line x1="16" y1="17" x2="8" y2="17"></line><polyline points="10 9 9 9 8 9"></polyline></svg> Baixar Relatório PDF
+          <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none"
+            stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"
+            style="vertical-align: middle; margin-right: 4px;">
+            <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
+            <polyline points="14 2 14 8 20 8"></polyline>
+            <line x1="16" y1="13" x2="8" y2="13"></line>
+            <line x1="16" y1="17" x2="8" y2="17"></line>
+            <polyline points="10 9 9 9 8 9"></polyline>
+          </svg> Baixar Relatório PDF
         </button>
       </div>
     </div>

@@ -65,6 +65,27 @@ class NoCacheStaticFiles(StaticFiles):
         resp.headers["Cache-Control"] = "no-store"  # browser não guarda nada
         resp.headers["Pragma"] = "no-cache"
         resp.headers["Expires"] = "0"
+        
+        # Enforce UTF-8 for text files (important for Prod on Render)
+        content_type = resp.headers.get("content-type", "")
+        if "text/html" in content_type and "charset" not in content_type.lower():
+            resp.headers["content-type"] = "text/html; charset=utf-8"
+        elif content_type.startswith("text/") and "charset" not in content_type.lower():
+            resp.headers["content-type"] = f"{content_type}; charset=utf-8"
+            
+        return resp
+
+class Utf8StaticFiles(StaticFiles):
+    async def get_response(self, path, scope):
+        resp = await super().get_response(path, scope)
+        
+        # Enforce UTF-8 for text files
+        content_type = resp.headers.get("content-type", "")
+        if "text/html" in content_type and "charset" not in content_type.lower():
+            resp.headers["content-type"] = "text/html; charset=utf-8"
+        elif content_type.startswith("text/") and "charset" not in content_type.lower():
+            resp.headers["content-type"] = f"{content_type}; charset=utf-8"
+            
         return resp
 
 
@@ -248,10 +269,10 @@ if os.path.exists(static_dir):
         full_path = os.path.join(static_dir, item)
         if os.path.isdir(full_path):
             # Mount /js, /css, /clientes, /produto, etc.
-            app.mount(f"/{item}", StaticFiles(directory=full_path), name=item)
+            app.mount(f"/{item}", Utf8StaticFiles(directory=full_path), name=item)
 
 # Also mount /static explicitly
-app.mount("/static", StaticFiles(directory=static_dir), name="static")
+app.mount("/static", Utf8StaticFiles(directory=static_dir), name="static")
 
 @app.get("/design-system.css")
 def get_design_system_css():
