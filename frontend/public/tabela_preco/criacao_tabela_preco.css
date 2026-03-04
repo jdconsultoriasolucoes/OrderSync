@@ -471,6 +471,16 @@
   border: 1px solid var(--border);
 }
 
+/* Give selects extra room on the right so the dropdown arrow never covers the text */
+.mobile-cond-select,
+.mobile-fator-select {
+  padding-right: 32px;
+  text-overflow: ellipsis;
+  overflow: hidden;
+  white-space: nowrap;
+}
+
+
 .card-actions {
   display: flex;
   justify-content: space-between;
