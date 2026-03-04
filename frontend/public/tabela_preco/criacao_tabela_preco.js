@@ -1954,9 +1954,32 @@ async function salvarTabela() {
     return;
   }
 
-  const { ok } = RequiredValidator.check(RequiredValidator.REQUIRED_FIELDS, document);
+  // On mobile the desktop row selects don't exist — only validate header fields
+  const isMobile = window.innerWidth <= 768;
+  const fieldsToCheck = isMobile
+    ? { '#nome_tabela': 'Informe o nome da tabela.', '#cliente_nome': 'Informe/selecione o cliente.' }
+    : RequiredValidator.REQUIRED_FIELDS;
+
+  const { ok, missing } = RequiredValidator.check(fieldsToCheck, document);
   if (!ok) {
-    await showOsModal({ title: 'Aviso', message: 'Existem campos obrigatórios pendentes. Corrija os destaques em vermelho.', type: 'alert' });
+    // If a header field failed and the header is collapsed, expand it first so the user can see
+    const headerArea = document.getElementById('header-collapsible-area');
+    const headerHasInvalid = missing.some(m => ['#nome_tabela', '#cliente_nome'].some(s => m.el === document.querySelector(s)));
+    if (headerHasInvalid && headerArea?.classList.contains('collapsed')) {
+      headerArea.classList.remove('collapsed');
+      const btn = document.getElementById('btn-toggle-header');
+      if (btn) btn.classList.remove('rotated');
+    }
+    // Build a helpful list of missing field names
+    const fieldNames = missing.map(m => {
+      if (m.selector.includes('nome_tabela')) return '• Nome da tabela';
+      if (m.selector.includes('cliente_nome')) return '• Cliente';
+      if (m.selector.includes('nth-child(8)')) return '• Classificação/Fator (algum item)';
+      if (m.selector.includes('nth-child(10)')) return '• Condição de pagamento (algum item)';
+      return '• Campo obrigatório';
+    }).join('<br>');
+    await showOsModal({ title: 'Aviso', message: `Preencha os campos obrigatórios:<br><br>${fieldNames}`, type: 'alert' });
+    setTimeout(() => missing[0]?.el?.scrollIntoView?.({ behavior: 'smooth', block: 'center' }), 200);
     return;
   }
 
@@ -1971,18 +1994,26 @@ async function salvarTabela() {
       const item = itens[idx];
 
       const selPct = tr.querySelector('td:nth-child(8) select');
-      const codePct = selPct ? selPct.value : '';
-      const fator = (mapaDescontos[codePct] != null) ? Number(mapaDescontos[codePct]) : 0;
+      // On mobile, selects don't exist in the table — fall back to saved values in itens[]
+      const codePct = selPct ? selPct.value : (item.__fator_codigo || '');
+      const fator = (mapaDescontos[codePct] != null) ? Number(mapaDescontos[codePct]) : Number(item.fator_comissao || 0);
 
       const selCond = tr.querySelector('td:nth-child(10) select');
-      const codCond = selCond ? (selCond.value || '') : '';
-      const condLabel = (selCond?.options[selCond.selectedIndex]?.textContent || '').trim();
+      // On mobile, fall back to plano_pagamento_cod saved by mobile card event handler
+      const codCond = selCond ? (selCond.value || '') : (item.plano_pagamento_cod || String(item.plano_pagamento || '').split(' - ')[0].trim());
+      const condLabel = selCond
+        ? (selCond.options[selCond.selectedIndex]?.textContent || '').trim()
+        : (item.plano_pagamento || codCond || '');
 
       const taxaCond = mapaCondicoes[codCond] || 0;
       const { acrescimoCond, freteValor, descontoValor } =
         calcularLinha(item, fator, taxaCond, frete_kg /* ivaStAtivo é ignorado aqui */);
 
-      const fatorLabel = selPct ? (selPct.options[selPct.selectedIndex]?.textContent || '').trim() : '';
+      // On mobile, build fatorLabel from the saved code
+      const fatorLabel = selPct
+        ? (selPct.options[selPct.selectedIndex]?.textContent || '').trim()
+        : (codePct ? `${codePct} - ${((Number(mapaDescontos[codePct] || 0)) * 100).toFixed(2)}` : (item.__descricao_fator_label || ''));
+
 
       let planoToSave = condLabel || '';
       if (codCond) {
