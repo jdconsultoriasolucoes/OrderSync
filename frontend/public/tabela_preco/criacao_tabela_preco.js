@@ -3281,6 +3281,14 @@ function renderMobileCards() {
         item.fator_comissao = frac;
         item.__fator_codigo = code;
         item.__overridePercent = true;
+
+        // Sync back to hidden desktop row
+        const desktopTr = document.querySelector(`#tbody-itens tr[data-idx="${idx}"]`);
+        if (desktopTr) {
+          const selPct = desktopTr.querySelector('td:nth-child(8) select');
+          if (selPct) selPct.value = code;
+        }
+
         // Trigger update
         recalcTudo(); // This will re-render table and thus re-render mobile cards
       });
@@ -3297,6 +3305,14 @@ function renderMobileCards() {
         // Try to find text
         const opt = e.target.options[e.target.selectedIndex];
         item.plano_pagamento = opt ? opt.textContent : val;
+
+        // Sync back to hidden desktop row
+        const desktopTr = document.querySelector(`#tbody-itens tr[data-idx="${idx}"]`);
+        if (desktopTr) {
+          const selTrCond = desktopTr.querySelector('td:nth-child(10) select');
+          if (selTrCond) selTrCond.value = val;
+        }
+
         recalcTudo();
       });
       selCond.addEventListener('click', (e) => e.stopPropagation());

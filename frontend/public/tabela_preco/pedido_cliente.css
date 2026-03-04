@@ -182,76 +182,114 @@ body.page-locked .documento *:not(#confirmModal):not(.modal-content):not(.btn-mo
 }
 
 @media (max-width: 700px) {
+
+  /* Impede qualquer risco de barra horizontal no eixo da janela */
+  body,
+  html {
+    overflow-x: hidden !important;
+    width: 100vw !important;
+  }
+
+  /* O container principal fica full-width no celular para aproveitar todo o espaço */
   .os-page-container {
-    padding: var(--os-space-3) !important;
-    margin: 10px !important;
+    width: 100% !important;
+    max-width: 100% !important;
+    margin: 0 !important;
+    padding: 16px 12px !important;
+    border-radius: 0 !important;
+    box-sizing: border-box !important;
+    box-shadow: none !important;
   }
 
   .fechamento-grid {
     grid-template-columns: 1fr !important;
+    margin: 10px 0 !important;
+    gap: 16px !important;
+  }
+
+  .fechamento-card {
+    max-width: 100% !important;
   }
 
   header {
     flex-direction: column !important;
     align-items: center !important;
     text-align: center !important;
+    padding-bottom: 20px !important;
+    margin-bottom: 20px !important;
   }
 
   .dados-header {
     text-align: center !important;
+    width: 100% !important;
   }
 
   .dados-header p,
+  .dados-header h1,
   .dados-header .meta-link {
-    font-size: 16px !important;
+    font-size: 15px !important;
     color: var(--os-text) !important;
+    width: 100% !important;
+    word-wrap: break-word !important;
+  }
+
+  .dados-header h1 {
+    font-size: 20px !important;
+    margin-bottom: 12px !important;
   }
 
   /* Faz a tabela respirar um pouco mais no celular */
   .os-table th,
   .os-table td {
-    font-size: 14px !important;
+    font-size: 13px !important;
+    padding: 8px 4px !important;
   }
 
+  /* Sobrepõe estilo inline de justify-content: flex-end */
   .logo-cliente {
-    margin-bottom: var(--os-space-3);
-    width: 100%;
-    display: flex;
-    justify-content: center;
-    align-items: center;
+    margin-bottom: 20px !important;
+    width: 100% !important;
+    display: flex !important;
+    justify-content: center !important;
+    align-items: center !important;
   }
 
-  /* Garante que o logo do cliente nunca estoure o layout no mobile (iOS/Android) */
+  /* Garante que o logo não seja esmagado (squished) horizontalmente */
   .logo-cliente img {
-    max-width: 100%;
-    /* Para nunca vazar na lateral */
-    width: auto;
-    /* Deixa fluir baseado na largura */
-    height: auto;
-    /* Deixa fluir baseado na altura */
-    max-height: 80px;
-    /* Trava a altura máxima! */
-    object-fit: contain;
-    /* Garante que a imagem caiba e não estique feio */
-    flex-shrink: 1;
-    /* iPhone às vezes não diminui sem isso */
+    width: 100% !important;
+    max-width: 180px !important;
+    height: auto !important;
+    max-height: 100px !important;
+    object-fit: contain !important;
+    flex-shrink: 0 !important;
+    /* DONT SQUISH ME */
   }
 
   /* Scroll suave em dispositivos iOS para a tabela que transborda */
   .os-table-wrap {
+    width: 100vw !important;
+    margin-left: -12px !important;
+    /* Compensa o padding do container para scroll total */
+    padding-left: 12px !important;
+    padding-right: 12px !important;
+    box-sizing: border-box !important;
     -webkit-overflow-scrolling: touch;
     margin-bottom: 20px !important;
   }
 
-  /* Botões de ação podem precisar empilhar ou quebrar em telas muito finas */
+  /* Botões de ação empilhados usando flex column */
   .acoes {
-    display: flex;
-    flex-direction: column;
-    gap: 12px;
+    display: flex !important;
+    flex-direction: column !important;
+    gap: 12px !important;
+    padding: 0 10px !important;
   }
 
   .acoes button {
-    width: 100%;
+    width: 100% !important;
     margin: 0 !important;
+    padding: 14px 20px !important;
+    /* Button hit target larger on mobile */
+    font-size: 16px !important;
   }
 }
