@@ -185,8 +185,8 @@ body.page-locked .documento *:not(#confirmModal):not(.modal-content):not(.btn-mo
     width: 100% !important;
     max-width: 100% !important;
     margin: 0 !important;
-    padding: 12px 8px !important;
-    /* Reduzido o padding para 'desaproximar' a tela */
+    padding: 10px 6px !important;
+    /* Reduzido ainda mais o padding para 'desaproximar' a tela */
     border-radius: 0 !important;
     box-sizing: border-box !important;
     box-shadow: none !important;
@@ -194,8 +194,8 @@ body.page-locked .documento *:not(#confirmModal):not(.modal-content):not(.btn-mo
 
   .fechamento-grid {
     grid-template-columns: 1fr !important;
-    margin: 10px 0 !important;
-    gap: 12px !important;
+    margin: 8px 0 !important;
+    gap: 10px !important;
     /* Mais apertado */
   }
 
@@ -207,8 +207,8 @@ body.page-locked .documento *:not(#confirmModal):not(.modal-content):not(.btn-mo
     flex-direction: row-reverse !important;
     align-items: flex-start !important;
     text-align: left !important;
-    padding-bottom: 8px !important;
-    margin-bottom: 8px !important;
+    padding-bottom: 6px !important;
+    margin-bottom: 6px !important;
   }
 
   .dados-header {
@@ -219,26 +219,45 @@ body.page-locked .documento *:not(#confirmModal):not(.modal-content):not(.btn-mo
   .dados-header p,
   .dados-header h1,
   .dados-header .meta-link {
-    font-size: 12px !important;
-    /* Reduzido de 14px */
+    font-size: 11px !important;
+    /* Reduzido de 12px */
     color: var(--os-text) !important;
     width: 100% !important;
     word-wrap: break-word !important;
     margin-bottom: 2px !important;
+    line-height: 1.2 !important;
   }
 
   .dados-header h1 {
-    font-size: 15px !important;
-    /* Reduzido de 18px */
+    font-size: 14px !important;
+    /* Reduzido de 15px */
     margin-bottom: 4px !important;
   }
 
-  /* Faz a tabela respirar um pouco mais no celular */
-  .os-table th,
-  .os-table td {
-    font-size: 11px !important;
+  /* Faz a tabela respirar um pouco mais no celular, forçando quebra em titulos longos */
+  .os-table th {
+    font-size: 10px !important;
     /* Reduzido da tabela para evitar 'zoom' */
     padding: 6px 3px !important;
+    white-space: normal !important;
+    /* Permite quebrar a linha dos titulos das colunas */
+    word-break: break-word !important;
+    line-height: 1.1 !important;
+  }
+
+  .os-table td {
+    font-size: 10px !important;
+    /* Reduzido da tabela para evitar 'zoom' */
+    padding: 6px 3px !important;
+    word-break: break-word !important;
+  }
+
+  /* Quebra a linha do nome dos produtos considerando ~20 caracteres (aprox 120-140px nesta fonte) */
+  #tabelaProdutos td:nth-child(2) {
+    max-width: 130px !important;
+    min-width: 100px !important;
+    white-space: normal !important;
+    word-wrap: break-word !important;
   }
 
   /* Sobrepõe estilo inline de justify-content: flex-end */
@@ -253,10 +272,10 @@ body.page-locked .documento *:not(#confirmModal):not(.modal-content):not(.btn-mo
   /* Garante que o logo não seja esmagado (squished) horizontalmente */
   .logo-cliente img {
     width: 100% !important;
-    max-width: 110px !important;
+    max-width: 90px !important;
     /* Redução drástica do Logo */
     height: auto !important;
-    max-height: 60px !important;
+    max-height: 50px !important;
     object-fit: contain !important;
     flex-shrink: 0 !important;
     /* DONT SQUISH ME */
@@ -265,17 +284,17 @@ body.page-locked .documento *:not(#confirmModal):not(.modal-content):not(.btn-mo
   /* Scroll suave em dispositivos iOS para a tabela que transborda */
   .os-table-wrap {
     width: 100vw !important;
-    margin-left: -8px !important;
+    margin-left: -6px !important;
     /* Compensa o padding do container para scroll total */
-    padding-left: 8px !important;
-    padding-right: 8px !important;
+    padding-left: 6px !important;
+    padding-right: 6px !important;
     box-sizing: border-box !important;
     -webkit-overflow-scrolling: touch;
     margin-bottom: 16px !important;
   }
 
   .fech-row {
-    grid-template-columns: 1fr 100px !important;
+    grid-template-columns: 1fr 90px !important;
     /* Espaço mais otimizado na linha de totais */
   }
 
