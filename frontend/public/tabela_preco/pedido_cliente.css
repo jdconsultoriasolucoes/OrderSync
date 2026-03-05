@@ -40,7 +40,20 @@ table td:nth-child(4) {
 /* Força a coluna "Condição de Pagto" a ter espaço na mesma linha no Desktop */
 table th:nth-child(8),
 table td:nth-child(8) {
-  min-width: 160px;
+  min-width: 120px;
+}
+
+/* Tightens Valor c/Frete (7), Condição (8), Markup % (9), Valor C/Markup (10) */
+#tabelaProdutos th:nth-child(7),
+#tabelaProdutos td:nth-child(7),
+#tabelaProdutos th:nth-child(8),
+#tabelaProdutos td:nth-child(8),
+#tabelaProdutos th:nth-child(9),
+#tabelaProdutos td:nth-child(9),
+#tabelaProdutos th:nth-child(10),
+#tabelaProdutos td:nth-child(10) {
+  padding-left: 6px;
+  padding-right: 6px;
 }
 
 /* Centraliza os títulos e células da tabela de produtos */
@@ -83,6 +96,40 @@ table td:nth-child(8) {
 
 body.modal-open {
   overflow: hidden;
+}
+
+/* Modal de confirmação — centralizado na tela */
+.modal {
+  display: none;
+  position: fixed;
+  inset: 0;
+  z-index: 9000;
+  align-items: center;
+  justify-content: center;
+}
+
+/* Quando não está "hidden", exibe como flex para centralizar */
+.modal:not([hidden]) {
+  display: flex;
+}
+
+.modal-backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.5);
+  z-index: 0;
+}
+
+.modal-content {
+  position: relative;
+  z-index: 1;
+  background: #fff;
+  border-radius: 12px;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.22);
+  padding: 32px 28px 24px;
+  width: 92%;
+  max-width: 480px;
+  animation: os-slide-up 0.22s ease;
 }
 
 /* Estado travado após confirmação (evita interação/estilo visual) */
