@@ -10,38 +10,47 @@ body {
 
 
 
-/* Tabela com layout fixo para forçar a quebra de linha */
+/* =========================================
+   ESTILOS DE LARGURA E QUEBRA DA TABELA
+   ========================================= */
+
+/* Remove table-layout fixed que quebrava colunas pequenas */
 #tabelaProdutos {
-  table-layout: fixed;
   width: 100%;
 }
 
-/* Otimiza espaços entre Código, Produto e Embalagem no Desktop */
+/* Coluna 2: Código - Evita esmagamento */
 #tabelaProdutos th:nth-child(2),
 #tabelaProdutos td:nth-child(2) {
-  width: 70px;
+  min-width: 60px;
+  max-width: 100px;
   white-space: normal;
   word-break: break-all;
   padding-right: 8px;
 }
 
+/* Coluna 3: Produto - Quebra de linha permitida no texto longo */
 #tabelaProdutos th:nth-child(3),
 #tabelaProdutos td:nth-child(3) {
-  width: 200px;
-  /* força largura exata para quebra */
+  width: auto;
+  min-width: 160px;
+  max-width: 250px;
   padding-left: 8px;
   padding-right: 8px;
   text-align: left;
   white-space: normal !important;
   word-wrap: break-word;
-  word-break: break-word;
-  /* essencial para table-layout fixed */
+  /* Suporte legado */
+  overflow-wrap: break-word;
+  /* Padrão moderno */
 }
 
+/* Coluna 4: Embalagem - Mantém compacta */
 #tabelaProdutos th:nth-child(4),
 #tabelaProdutos td:nth-child(4) {
-  width: 60px;
-  white-space: normal !important;
+  width: 1%;
+  min-width: 50px;
+  white-space: nowrap !important;
   text-align: center;
   padding-left: 8px;
 }
