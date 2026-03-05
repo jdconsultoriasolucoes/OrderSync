@@ -8,6 +8,9 @@ const ENDPOINT_VALIDADE = `${API_BASE}/tabela_preco/meta/validade_global`;
 const MODE = { NEW: 'new', VIEW: 'view', EDIT: 'edit', DUP: 'duplicate' };
 let mapaCondicoes = {}; // { codigo: taxa }
 let mapaDescontos = {}; // { codigo: fator }
+// Expostos globalmente para que o código mobile possa referenciar via window.mapa*
+window.mapaCondicoes = mapaCondicoes;
+window.mapaDescontos = mapaDescontos;
 let itens = []; // itens carregados
 let currentMode = 'new';       // 'new' | 'view' | 'edit' | 'duplicate'
 let currentTabelaId = null;
@@ -999,6 +1002,8 @@ async function carregarCondicoes() {
   const r = await fetch(`${API_BASE}/tabela_preco/condicoes_pagamento`);
   const data = await r.json();
   data.forEach(c => { mapaCondicoes[c.codigo] = Number(c.taxa_condicao) || 0; sel.appendChild(option(`${c.codigo} - ${c.descricao}`, c.codigo)); });
+  // Re-sync window alias (garante que o mobile siga os mesmos dados)
+  window.mapaCondicoes = mapaCondicoes;
   document.getElementById('hint-condicao').textContent = 'Pronto.';
   atualizarPillTaxa();
 }
@@ -1006,7 +1011,8 @@ async function carregarCondicoes() {
 async function carregarDescontos() {
   const r = await fetch(`${API_BASE}/tabela_preco/descontos`);
   const data = await r.json();
-  mapaDescontos = {}; // reset
+  // Limpa o objeto em-place para não quebrar o alias window.mapaDescontos
+  Object.keys(mapaDescontos).forEach(k => delete mapaDescontos[k]);
   const sel = document.getElementById('desconto_global');
   sel.innerHTML = '';
   sel.appendChild(option('Selecione…', ''));
@@ -1016,6 +1022,8 @@ async function carregarDescontos() {
     mapaDescontos[d.codigo] = frac;
     sel.appendChild(option(`${d.codigo} - ${(frac * 100).toFixed(2)}`, d.codigo));
   });
+  // Re-sync window alias
+  window.mapaDescontos = mapaDescontos;
   atualizarPillDesconto();
 }
 

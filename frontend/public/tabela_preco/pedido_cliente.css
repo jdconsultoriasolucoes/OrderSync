@@ -43,9 +43,15 @@ table td:nth-child(8) {
   min-width: 160px;
 }
 
-/* Centraliza os títulos da tabela de produtos */
-#tabelaProdutos th {
+/* Centraliza os títulos e células da tabela de produtos */
+#tabelaProdutos th,
+#tabelaProdutos td {
   text-align: center;
+}
+
+/* Exceção: coluna de Produto (descrição) fica alinhada à esquerda */
+#tabelaProdutos td:nth-child(3) {
+  text-align: left;
 }
 
 

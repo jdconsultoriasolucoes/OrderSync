@@ -194,7 +194,7 @@ function renderTabela() {
       <td>${item.codigo ?? ""}</td>
       <td>${item.nome ?? ""}</td>
       <td>${item.embalagem ?? ""}</td>
-      <td class="right"><input type="number" min="0" step="1" value="${item.quantidade || 0}" data-index="${i}" class="os-input qtd" style="width: 100%; max-width: 80px;" /></td>
+      <td class="right"><input type="number" min="0" max="999" step="1" value="${item.quantidade || 0}" data-index="${i}" class="os-input qtd" style="width: 100%; max-width: 60px;" oninput="if(this.value.length>3) this.value=this.value.slice(0,3); if(Number(this.value)<0) this.value=0;" /></td>
       <td class="celula-peso right" data-peso-unit="${Number(item.peso ?? 0)}"></td>
       <td class="right">${fmtBRL.format(valorBase)}</td>
       <td>${item.condicao_pagamento ?? ""}</td>
