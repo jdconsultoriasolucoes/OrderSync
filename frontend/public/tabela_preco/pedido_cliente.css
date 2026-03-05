@@ -29,20 +29,17 @@ body {
   padding-right: 8px;
 }
 
-/* Coluna 3: Produto - Quebra de linha permitida no texto longo */
+/* Coluna 3: Produto - Quebra de linha permitida no texto longo e absorve o espaço vazio */
 #tabelaProdutos th:nth-child(3),
 #tabelaProdutos td:nth-child(3) {
   width: auto;
+  /* Absorve o espaço excedente da tabela */
   min-width: 160px;
-  max-width: 250px;
   padding-left: 8px;
   padding-right: 8px;
   text-align: left;
   white-space: normal !important;
-  word-wrap: break-word;
-  /* Suporte legado */
   overflow-wrap: break-word;
-  /* Padrão moderno */
 }
 
 /* Coluna 4: Embalagem - Mantém compacta */
@@ -55,11 +52,7 @@ body {
   padding-left: 8px;
 }
 
-/* Força a coluna "Condição de Pagto" a ter espaço na mesma linha no Desktop */
-table th:nth-child(8),
-table td:nth-child(8) {
-  min-width: 120px;
-}
+
 
 
 
@@ -70,37 +63,28 @@ table td:nth-child(8) {
   text-align: center;
 }
 
-/* Permite quebra de linha nos cabeçalhos e células de colunas mais largas */
+/* Permite quebra de linha APENAS nos cabeçalhos das colunas finais */
 #tabelaProdutos th:nth-child(7),
-#tabelaProdutos td:nth-child(7),
-/* Valor c/Frete */
 #tabelaProdutos th:nth-child(8),
-#tabelaProdutos td:nth-child(8),
-/* Condição Pagto */
 #tabelaProdutos th:nth-child(9),
-#tabelaProdutos td:nth-child(9),
-/* Markup % */
-#tabelaProdutos th:nth-child(10),
-#tabelaProdutos td:nth-child(10)
-
-/* Valor c/Markup */
-  {
+#tabelaProdutos th:nth-child(10) {
   white-space: normal !important;
-  /* override design-system nowrap */
-  word-break: break-word;
   word-wrap: break-word;
-  min-width: 60px;
   padding-left: 4px;
   padding-right: 4px;
 }
 
-/* Tightens cell padding for Valor (7), Condição (8), Markup % (9), Valor C/Markup (10) */
+/* Força o conteúdo das colunas finais a abraçar o texto (tira o excesso de espaço vazio) */
 #tabelaProdutos td:nth-child(7),
 #tabelaProdutos td:nth-child(8),
 #tabelaProdutos td:nth-child(9),
 #tabelaProdutos td:nth-child(10) {
-  padding-left: 4px;
-  padding-right: 4px;
+  width: 1%;
+  /* Mínima largura possível baseada no conteúdo */
+  white-space: nowrap !important;
+  /* Texto numa linha só */
+  padding-left: 6px;
+  padding-right: 6px;
 }
 
 
