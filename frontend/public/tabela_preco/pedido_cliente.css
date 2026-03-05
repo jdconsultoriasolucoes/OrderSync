@@ -19,13 +19,12 @@ body {
   width: 100%;
 }
 
-/* Coluna 2: Código - Evita esmagamento */
+/* Coluna 2: Código - Evita esmagamento e proíbe quebra de linha */
 #tabelaProdutos th:nth-child(2),
 #tabelaProdutos td:nth-child(2) {
   min-width: 60px;
-  max-width: 100px;
-  white-space: normal;
-  word-break: break-all;
+  white-space: nowrap !important;
+  /* Nunca quebra a linha do código */
   padding-right: 8px;
 }
 
@@ -370,14 +369,13 @@ body.page-locked .documento *:not(#confirmModal):not(.modal-content):not(.btn-mo
     word-break: break-word !important;
   }
 
-  /* Deixa o Código o mais colado possível no mobile */
+  /* Deixa o Código o mais colado possível no mobile, mas SEM quebrar a linha */
   #tabelaProdutos th:nth-child(2),
   #tabelaProdutos td:nth-child(2) {
     width: 1% !important;
-    min-width: 50px !important;
-    max-width: 80px !important;
-    white-space: normal !important;
-    padding-right: 2px !important;
+    min-width: 60px !important;
+    white-space: nowrap !important;
+    padding-right: 4px !important;
   }
 
   /* Deixa a coluna de produto fluir e absorver o espaço */
