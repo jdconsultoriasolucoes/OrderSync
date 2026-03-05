@@ -103,7 +103,7 @@ function ensureModalInjected() {
   document.head.appendChild(styleTag);
 
   // fechar
-  wrap.querySelector(".glp-close").addEventListener("click", hideModal);
+  wrap.querySelector(".os-modal-close").addEventListener("click", hideModal);
   wrap.addEventListener("click", (e) => {
     if (e.target.id === "modalGerarLinkPedido") hideModal();
   });
