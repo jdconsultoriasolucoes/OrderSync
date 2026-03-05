@@ -65,11 +65,20 @@ body {
 
 /* Permite quebra de linha APENAS nos cabeçalhos das colunas finais */
 #tabelaProdutos th:nth-child(7),
-#tabelaProdutos th:nth-child(8),
+#tabelaProdutos th:nth-child(8) {
+  white-space: normal !important;
+  word-break: break-word !important;
+  padding-left: 4px;
+  padding-right: 4px;
+}
+
+/* Protege as colunas de Markup (9 e 10) de quebrarem a palavra "MARKUP" no meio */
 #tabelaProdutos th:nth-child(9),
 #tabelaProdutos th:nth-child(10) {
   white-space: normal !important;
-  word-wrap: break-word;
+  word-break: normal !important;
+  /* Normal: não rasga palavras no meio */
+  word-wrap: normal !important;
   padding-left: 4px;
   padding-right: 4px;
 }
@@ -345,6 +354,13 @@ body.page-locked .documento *:not(#confirmModal):not(.modal-content):not(.btn-mo
     word-break: break-word !important;
     line-height: 1.1 !important;
     text-align: center !important;
+  }
+
+  /* Protege a palavra MARKUP no mobile para não partir no meio */
+  #tabelaProdutos th:nth-child(9),
+  #tabelaProdutos th:nth-child(10) {
+    word-break: normal !important;
+    word-wrap: normal !important;
   }
 
   .os-table td {
