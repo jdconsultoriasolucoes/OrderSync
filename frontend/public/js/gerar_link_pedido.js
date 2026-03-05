@@ -2,14 +2,14 @@ function ensureModalInjected() {
   if (document.getElementById("modalGerarLinkPedido")) return;
 
   const html = `
-  <div id="modalGerarLinkPedido" class="glp-backdrop" style="display:none;">
-    <div class="glp-modal">
-      <div class="glp-header">
-        <h3>Gerar Link do Pedido</h3>
-        <button class="glp-close" aria-label="Fechar">&times;</button>
+  <div id="modalGerarLinkPedido" class="os-modal-backdrop" style="display:none; z-index:9999;">
+    <div class="os-modal-dialog" style="max-width: 500px; margin: auto;">
+      <div class="os-modal-header">
+        <h3 class="os-modal-title">Gerar Link do Pedido</h3>
+        <button class="os-modal-close" aria-label="Fechar">&times;</button>
       </div>
 
-      <div class="glp-body">
+      <div class="os-modal-body" style="padding: 20px;">
 
         <!-- ===== Toolbar: Segmented (com/sem frete) + Chip de Data ===== -->
         <div class="glp-toolbar">
@@ -35,13 +35,13 @@ function ensureModalInjected() {
 
         <!-- ===== Link Gerado + Ações ===== -->
         <div class="glp-linkbox">
-          <label>Link gerado</label>
-          <input type="text" id="glpLinkInput" readonly>
+          <label class="os-label">Link gerado</label>
+          <input type="text" id="glpLinkInput" class="os-input" readonly style="margin-bottom: 16px;">
           <div class="glp-actions">
-            <button id="glpPriceList" style="background:#6c757d;">Lista de Preço</button>
-            <button id="glpCopy">Copiar link</button>
-            <button id="glpOpen">Visualizar</button>
-            <button id="glpWhats">WhatsApp</button>
+            <button id="glpPriceList" class="os-btn" style="background:var(--os-text-secondary); color:white; border-color:var(--os-text-secondary);">Lista de Preço</button>
+            <button id="glpCopy" class="os-btn os-btn-primary" style="background:var(--os-success); border-color:var(--os-success);">Copiar link</button>
+            <button id="glpOpen" class="os-btn os-btn-primary">Visualizar</button>
+            <button id="glpWhats" class="os-btn os-btn-primary" style="background:#25D366; border-color:#25D366;">WhatsApp</button>
           </div>
           <p id="glpHint" class="glp-hint"></p>
         </div>
@@ -51,14 +51,6 @@ function ensureModalInjected() {
   </div>`;
 
   const css = `
-  .glp-backdrop{position:fixed;inset:0;background:rgba(0,0,0,.6);display:flex;align-items:center;justify-content:center;z-index:9999;backdrop-filter:blur(3px);}
-  .glp-modal{width:min(500px,90vw);background:#fff;border-radius:16px;box-shadow:0 12px 32px rgba(0,0,0,.2);overflow:hidden;font-family:system-ui,Segoe UI,Arial,sans-serif;margin:auto;}
-  .glp-header{display:flex;justify-content:space-between;align-items:center;padding:16px 20px;border-bottom:1px solid #eef2f6}
-  .glp-header h3{margin:0;font-size:18px;font-weight:600;color:#1e293b}
-  .glp-close{background:none;border:none;font-size:24px;color:#64748b;cursor:pointer;line-height:1;transition:color 0.2s}
-  .glp-close:hover{color:#0f172a}
-  .glp-body{padding:20px}
-
   /* ===== Toolbar moderna ===== */
   .glp-toolbar{
     display:flex;align-items:center;justify-content:space-between;
@@ -84,16 +76,8 @@ function ensureModalInjected() {
   .glp-help{font-size:12px;color:#64748b;display:block;margin-bottom:16px;line-height:1.4}
 
   /* Linkbox e ações */
-  .glp-linkbox label{display:block;font-size:13px;font-weight:500;color:#475569;margin-bottom:6px}
-  #glpLinkInput{width:100%;padding:10px 14px;border:1px solid #cbd5e1;border-radius:8px;font-size:14px;color:#0f172a;background:#f8fafc;box-sizing:border-box}
-  
-  .glp-actions{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:16px}
-  .glp-actions button{border:none;color:#fff;padding:12px 14px;border-radius:8px;cursor:pointer;font-size:14px;font-weight:600;display:flex;align-items:center;justify-content:center;gap:6px;transition:filter 0.2s;box-shadow:0 2px 4px rgba(0,0,0,0.05)}
-  .glp-actions button:hover{filter:brightness(0.92)}
-  #glpPriceList{background:#64748b}
-  #glpCopy{background:#10b981}
-  #glpOpen{background:#3b82f6}
-  #glpWhats{background:#22c55e}
+  .glp-actions{display:grid;grid-template-columns:1fr 1fr;gap:10px;}
+  .glp-actions button{justify-content:center;}
   
   .glp-hint{font-size:13px;color:#64748b;margin-top:12px;min-height:1.2em;text-align:center}
   
@@ -105,7 +89,6 @@ function ensureModalInjected() {
 
   /* Responsivo */
   @media (max-width:520px){
-    .glp-modal{margin:auto 16px;width:calc(100% - 32px);}
     .glp-actions{gap:8px;grid-template-columns:1fr;}
     .glp-segment{flex-direction:row;}
   }
@@ -128,7 +111,10 @@ function ensureModalInjected() {
 
 function hideModal() {
   const el = document.getElementById("modalGerarLinkPedido");
-  if (el) el.style.display = "none";
+  if (el) {
+    el.style.display = "none";
+    el.classList.remove("active");
+  }
 }
 
 function showModal() {
@@ -139,6 +125,8 @@ function showModal() {
     const dt = el.querySelector("#glpDate");
     if (dt) dt.value = ""; // limpa a data a cada abertura
     el.style.display = "flex";
+    // standard system class
+    el.classList.add("active");
   }
 }
 
@@ -420,16 +408,16 @@ function showPdfOptions(onSelect, temFrete = true) {
   const styleDisabled = 'opacity: 0.5; cursor: not-allowed; pointer-events: none; background: #eee; color: #999;';
 
   const html = `
-  <div id="modalPdfOptions" class="glp-backdrop" style="z-index: 10000;">
-    <div class="glp-modal" style="width: 320px; text-align: center;">
-      <div class="glp-header" style="justify-content: center; padding: 12px;">
-        <h3 style="font-size: 16px;">Opções de Lista de Preço</h3>
+  <div id="modalPdfOptions" class="os-modal-backdrop active" style="z-index: 10000; align-items: center; justify-content: center; display: flex;">
+    <div class="os-modal-dialog" style="max-width: 380px; text-align: center; margin: auto;">
+      <div class="os-modal-header" style="justify-content: center; padding: 16px;">
+        <h3 class="os-modal-title" style="font-size: 16px; margin: 0;">Opções de Lista de Preço</h3>
       </div>
-      <div class="glp-body" style="display: flex; flex-direction: column; gap: 8px; padding: 16px;">
-        <button class="glp-option" data-mode="com" style="${!temFrete ? styleDisabled : ''}">Com Frete</button>
-        <button class="glp-option" data-mode="sem">Sem Frete</button>
-        <button class="glp-option" data-mode="ambos" style="${!temFrete ? styleDisabled : ''}">Ambos (Padrão)</button>
-        <button class="glp-option" data-mode="cancel" style="border: 1px solid transparent; background: transparent; color: #888; font-size: 13px;">Cancelar</button>
+      <div class="os-modal-body" style="display: flex; flex-direction: column; gap: 10px; padding: 20px;">
+        <button class="os-btn glp-option ${temFrete ? 'os-btn-primary' : 'os-btn-secondary'}" data-mode="com" style="${!temFrete ? styleDisabled : ''}">Com Frete</button>
+        <button class="os-btn glp-option ${!temFrete ? 'os-btn-primary' : 'os-btn-secondary'}" data-mode="sem">Sem Frete</button>
+        <button class="os-btn glp-option os-btn-secondary" data-mode="ambos" style="${!temFrete ? styleDisabled : ''}">Ambos (Padrão)</button>
+        <button class="os-btn os-btn-text glp-option" data-mode="cancel" style="color: var(--os-text-muted); padding-top: 10px; margin-top: 4px;">Cancelar</button>
       </div>
     </div>
   </div>`;
