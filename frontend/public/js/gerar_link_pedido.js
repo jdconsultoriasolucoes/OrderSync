@@ -51,55 +51,51 @@ function ensureModalInjected() {
   </div>`;
 
   const css = `
-  .glp-backdrop{position:fixed;inset:0;background:rgba(0,0,0,.45);display:flex;align-items:center;justify-content:center;z-index:9999;}
-  .glp-modal{width:min(560px,95vw);background:#fff;border-radius:12px;box-shadow:0 10px 30px rgba(0,0,0,.25);overflow:hidden;font-family:system-ui,Segoe UI,Arial,sans-serif}
-  .glp-header{display:flex;justify-content:space-between;align-items:center;padding:14px 16px;border-bottom:1px solid #e5e5e5}
-  .glp-header h3{margin:0;font-size:18px}
-  .glp-close{background:none;border:none;font-size:22px;cursor:pointer;line-height:1}
-  .glp-body{padding:16px}
+  .glp-backdrop{position:fixed;inset:0;background:rgba(0,0,0,.6);display:flex;align-items:center;justify-content:center;z-index:9999;backdrop-filter:blur(3px);}
+  .glp-modal{width:min(500px,90vw);background:#fff;border-radius:16px;box-shadow:0 12px 32px rgba(0,0,0,.2);overflow:hidden;font-family:system-ui,Segoe UI,Arial,sans-serif;margin:auto;}
+  .glp-header{display:flex;justify-content:space-between;align-items:center;padding:16px 20px;border-bottom:1px solid #eef2f6}
+  .glp-header h3{margin:0;font-size:18px;font-weight:600;color:#1e293b}
+  .glp-close{background:none;border:none;font-size:24px;color:#64748b;cursor:pointer;line-height:1;transition:color 0.2s}
+  .glp-close:hover{color:#0f172a}
+  .glp-body{padding:20px}
 
   /* ===== Toolbar moderna ===== */
   .glp-toolbar{
     display:flex;align-items:center;justify-content:space-between;
-    gap:12px;flex-wrap:wrap;margin:6px 0 10px;
+    gap:12px;flex-wrap:wrap;margin:6px 0 16px;
   }
 
   /* Segmented control (pílulas) */
   .glp-segment{
-    display:inline-flex;border:1px solid #d0d7de;border-radius:10px;overflow:hidden;background:#fff;
+    display:inline-flex;border:1px solid #e2e8f0;border-radius:8px;overflow:hidden;background:#f8fafc;width:100%;
   }
-  /* IMPORTANTE: sobrescreve o estilo genérico de .glp-option */
-  .glp-option{ /* estilo legado, mantido para outras telas se usarem */
-    flex:1;min-width:180px;border:1px solid #ddd;border-radius:8px;padding:12px 14px;cursor:pointer;background:#f7f7f7;
-  }
-  .glp-option:hover{background:#f0f0f0}
-  .glp-option.is-active{background:#eef2ff;border-color:#c7d2fe;box-shadow:inset 0 0 0 2px #c7d2fe}
-
-  /* Botões do segmented nesta toolbar */
-  .glp-seg{flex:0 0 auto;min-width:auto;border:0;border-radius:0;background:#fff;padding:8px 14px;font-weight:600;color:#344054;cursor:pointer}
-  .glp-seg + .glp-seg{border-left:1px solid #d0d7de}
-  .glp-seg.is-active{background:#eef4ff;color:#1f4bd8}
+  .glp-seg{flex:1;border:0;background:transparent;padding:10px;font-weight:500;font-size:14px;color:#64748b;cursor:pointer;transition:all 0.2s}
+  .glp-seg + .glp-seg{border-left:1px solid #e2e8f0}
+  .glp-seg.is-active{background:#fff;color:#0f172a;box-shadow:0 1px 3px rgba(0,0,0,0.1);font-weight:600}
 
   /* Chip de data */
   .glp-datechip{
-    display:flex;align-items:center;gap:8px;background:#f8fafc;border:1px solid #e5e7eb;border-radius:999px;padding:6px 10px;
+    display:flex;align-items:center;gap:8px;background:#f8fafc;border:1px solid #e2e8f0;border-radius:8px;padding:8px 12px;width:100%;justify-content:space-between;
   }
-  .glp-datechip label{margin:0;font-size:12px;color:#475569;white-space:nowrap}
-  .glp-datechip input[type="date"]{width:150px;border:0;background:transparent;padding:2px 4px;font-size:13px}
+  .glp-datechip label{margin:0;font-size:13px;font-weight:500;color:#475569;}
+  .glp-datechip input[type="date"]{border:0;background:transparent;font-size:14px;color:#0f172a;outline:none;}
 
   /* Texto de ajuda menor */
-  .glp-help{font-size:11px;color:#666;display:block;margin:-2px 0 10px}
+  .glp-help{font-size:12px;color:#64748b;display:block;margin-bottom:16px;line-height:1.4}
 
-  /* Linkbox e ações (mantidos) */
-  .glp-linkbox label{display:block;font-size:12px;color:#666;margin:6px 0}
-  #glpLinkInput{width:100%;padding:10px;border:1px solid #ccc;border-radius:8px;font-size:14px}
-  .glp-actions{display:flex;gap:10px;margin-top:10px}
-  .glp-actions button{border:none;background:#4a63e7;color:#fff;padding:10px 14px;border-radius:8px;cursor:pointer}
-  .glp-actions button:hover{filter:brightness(.95)}
-  #glpCopy{background:#4CAF50}
-  #glpOpen{background:#1f73f1}
-  #glpWhats{background:#25D366}
-  .glp-hint{font-size:12px;color:#555;margin-top:8px;min-height:1.2em}
+  /* Linkbox e ações */
+  .glp-linkbox label{display:block;font-size:13px;font-weight:500;color:#475569;margin-bottom:6px}
+  #glpLinkInput{width:100%;padding:10px 14px;border:1px solid #cbd5e1;border-radius:8px;font-size:14px;color:#0f172a;background:#f8fafc;box-sizing:border-box}
+  
+  .glp-actions{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:16px}
+  .glp-actions button{border:none;color:#fff;padding:12px 14px;border-radius:8px;cursor:pointer;font-size:14px;font-weight:600;display:flex;align-items:center;justify-content:center;gap:6px;transition:filter 0.2s;box-shadow:0 2px 4px rgba(0,0,0,0.05)}
+  .glp-actions button:hover{filter:brightness(0.92)}
+  #glpPriceList{background:#64748b}
+  #glpCopy{background:#10b981}
+  #glpOpen{background:#3b82f6}
+  #glpWhats{background:#22c55e}
+  
+  .glp-hint{font-size:13px;color:#64748b;margin-top:12px;min-height:1.2em;text-align:center}
   
   .glp-option.glp-disabled,
   .glp-seg.glp-disabled{
@@ -109,8 +105,9 @@ function ensureModalInjected() {
 
   /* Responsivo */
   @media (max-width:520px){
-    .glp-toolbar{flex-direction:column;align-items:stretch}
-    .glp-datechip{align-self:flex-end}
+    .glp-modal{margin:auto 16px;width:calc(100% - 32px);}
+    .glp-actions{gap:8px;grid-template-columns:1fr;}
+    .glp-segment{flex-direction:row;}
   }
   `;
 

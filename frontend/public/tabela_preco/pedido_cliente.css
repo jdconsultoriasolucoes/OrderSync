@@ -10,16 +10,42 @@ body {
 
 
 
-/* Força a coluna "Produto" a ter espaço suficiente pra não quebrar nomes longos e empurrar colunas vizinhas */
-table th:nth-child(3),
-table td:nth-child(3) {
-  min-width: 250px;
+/* Otimiza espaços entre Código, Produto e Embalagem no Desktop */
+table th:nth-child(2),
+table td:nth-child(2) {
+  width: 1%;
+  white-space: nowrap;
+  padding-right: 8px;
+  /* aproxima do Produto */
 }
 
-/* Força a coluna "Condição de Pagto" a ter espaço na mesma linha */
+table th:nth-child(3),
+table td:nth-child(3) {
+  width: auto;
+  min-width: 200px;
+  /* reduzido de 250px */
+  padding-left: 8px;
+  padding-right: 8px;
+}
+
+table th:nth-child(4),
+table td:nth-child(4) {
+  width: 1%;
+  white-space: nowrap !important;
+  text-align: center;
+  padding-left: 8px;
+  /* aproxima do Produto */
+}
+
+/* Força a coluna "Condição de Pagto" a ter espaço na mesma linha no Desktop */
 table th:nth-child(8),
 table td:nth-child(8) {
   min-width: 160px;
+}
+
+/* Centraliza os títulos da tabela de produtos */
+#tabelaProdutos th {
+  text-align: center;
 }
 
 
@@ -231,7 +257,7 @@ body.page-locked .documento *:not(#confirmModal):not(.modal-content):not(.btn-mo
   .dados-header h1 {
     font-size: 14px !important;
     /* Reduzido de 15px */
-    margin-bottom: 4px !important;
+    margin-bottom: 16px !important;
   }
 
   /* Faz a tabela respirar um pouco mais no celular, forçando quebra em titulos longos */
@@ -243,6 +269,7 @@ body.page-locked .documento *:not(#confirmModal):not(.modal-content):not(.btn-mo
     /* Permite quebrar a linha dos titulos das colunas */
     word-break: break-word !important;
     line-height: 1.1 !important;
+    text-align: center !important;
   }
 
   .os-table td {
@@ -252,12 +279,39 @@ body.page-locked .documento *:not(#confirmModal):not(.modal-content):not(.btn-mo
     word-break: break-word !important;
   }
 
-  /* Quebra a linha do nome dos produtos considerando ~20 caracteres (aprox 120-140px nesta fonte) */
+  /* Deixa o Código o mais colado possível no mobile */
+  #tabelaProdutos th:nth-child(2),
   #tabelaProdutos td:nth-child(2) {
-    max-width: 130px !important;
-    min-width: 100px !important;
+    width: 1% !important;
+    max-width: 10ch !important;
+    white-space: nowrap !important;
+    padding-right: 2px !important;
+  }
+
+  /* Quebra a linha do nome dos produtos considerando ~20 caracteres (aprox 120-140px nesta fonte) */
+  #tabelaProdutos th:nth-child(3),
+  #tabelaProdutos td:nth-child(3) {
+    max-width: 18ch !important;
+    min-width: 80px !important;
+    white-space: normal !important;
+    word-break: break-word !important;
+    padding-left: 2px !important;
+    padding-right: 2px !important;
+  }
+
+  /* Quebra para a condição de pagamento no mobile */
+  #tabelaProdutos th:nth-child(8),
+  #tabelaProdutos td:nth-child(8) {
+    max-width: 80px !important;
+    min-width: unset !important;
     white-space: normal !important;
     word-wrap: break-word !important;
+  }
+
+  /* Evitar quebra de linha na coluna Embal. */
+  #tabelaProdutos th:nth-child(4),
+  #tabelaProdutos td:nth-child(4) {
+    white-space: nowrap !important;
   }
 
   /* Sobrepõe estilo inline de justify-content: flex-end */
