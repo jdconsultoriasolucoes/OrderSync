@@ -441,7 +441,10 @@ async function carregarPedido() {
 
       // Usar c/ ou s/ frete decidido no link
       usarValorComFrete = Boolean(dados.usar_valor_com_frete);
-      setCampoTexto("tituloValorFrete", usarValorComFrete ? "c/ Frete" : "s/ Frete");
+      const tituloValorFrete = document.getElementById("tituloValorFrete");
+      if (tituloValorFrete) {
+        tituloValorFrete.innerHTML = usarValorComFrete ? "c/<br>Frete" : "s/<br>Frete";
+      }
 
       window.usarValorComFrete = usarValorComFrete;
       aplicarEntregaRetiradaHeader();
@@ -503,7 +506,10 @@ async function carregarPedido() {
       setCampoTexto("tempoRestante", dados.tempo_restante ?? "---");
 
       usarValorComFrete = Boolean(dados.usar_valor_com_frete);
-      setCampoTexto("tituloValorFrete", usarValorComFrete ? "c/ Frete" : "s/ Frete");
+      const tituloValorFrete = document.getElementById("tituloValorFrete");
+      if (tituloValorFrete) {
+        tituloValorFrete.innerHTML = usarValorComFrete ? "c/<br>Frete" : "s/<br>Frete";
+      }
 
       window.usarValorComFrete = usarValorComFrete;
       aplicarEntregaRetiradaHeader();

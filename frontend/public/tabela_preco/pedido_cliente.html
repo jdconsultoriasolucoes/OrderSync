@@ -9,7 +9,7 @@
   <meta http-equiv="Expires" content="0">
   <title>Confirmação de Pedido</title>
   <link rel="stylesheet" href="/design-system.css">
-  <link rel="stylesheet" href="/static/tabela_preco/pedido_cliente.css?v=20260305-layout-fix-v3">
+  <link rel="stylesheet" href="/static/tabela_preco/pedido_cliente.css?v=20260305-layout-fix-v4">
 </head>
 
 <body>
@@ -38,7 +38,7 @@
     <main>
       <div class="os-table-wrap"
         style="margin-bottom: var(--os-space-5); border-radius: 4px; box-shadow: none; overflow-x: auto; width: 100%;">
-        <table id="tabelaProdutos" class="os-table" style="min-width: 900px;">
+        <table id="tabelaProdutos" class="os-table" style="width: 100%;">
           <thead>
             <tr>
               <th>#</th>
@@ -113,7 +113,7 @@
   <script>
     window.API_BASE = ""; // Auto-detect origin
   </script>
-  <script src="/static/tabela_preco/pedido_cliente.js?v=final-fix"></script>
+  <script type="module" src="/static/tabela_preco/pedido_cliente.js?v=20260305-js-fix-v1"></script>
   <!-- resolve o /p/{code} e expõe os globais -->
   <script>
     window.addEventListener('DOMContentLoaded', () => {
