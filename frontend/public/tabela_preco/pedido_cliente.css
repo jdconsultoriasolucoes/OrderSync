@@ -43,18 +43,8 @@ table td:nth-child(8) {
   min-width: 120px;
 }
 
-/* Tightens Valor c/Frete (7), Condição (8), Markup % (9), Valor C/Markup (10) */
-#tabelaProdutos th:nth-child(7),
-#tabelaProdutos td:nth-child(7),
-#tabelaProdutos th:nth-child(8),
-#tabelaProdutos td:nth-child(8),
-#tabelaProdutos th:nth-child(9),
-#tabelaProdutos td:nth-child(9),
-#tabelaProdutos th:nth-child(10),
-#tabelaProdutos td:nth-child(10) {
-  padding-left: 6px;
-  padding-right: 6px;
-}
+
+
 
 /* Centraliza os títulos e células da tabela de produtos */
 #tabelaProdutos th,
@@ -62,9 +52,39 @@ table td:nth-child(8) {
   text-align: center;
 }
 
-/* Exceção: coluna de Produto (descrição) fica alinhada à esquerda */
+/* Permite quebra de linha nos cabeçalhos de colunas mais largas */
+#tabelaProdutos th:nth-child(7),
+#tabelaProdutos th:nth-child(8),
+#tabelaProdutos th:nth-child(9),
+#tabelaProdutos th:nth-child(10) {
+  white-space: normal !important;
+  /* override design-system nowrap */
+  word-break: break-word;
+  min-width: 60px;
+  padding-left: 4px;
+  padding-right: 4px;
+}
+
+/* Tightens cell padding for Valor (7), Condição (8), Markup % (9), Valor C/Markup (10) */
+#tabelaProdutos td:nth-child(7),
+#tabelaProdutos td:nth-child(8),
+#tabelaProdutos td:nth-child(9),
+#tabelaProdutos td:nth-child(10) {
+  padding-left: 4px;
+  padding-right: 4px;
+}
+
+/* Produto (coluna 3): alinhado à esquerda e com quebra de linha no nome */
+#tabelaProdutos th:nth-child(3) {
+  text-align: left;
+}
+
 #tabelaProdutos td:nth-child(3) {
   text-align: left;
+  max-width: 200px;
+  white-space: normal;
+  word-break: break-word;
+  overflow-wrap: anywhere;
 }
 
 

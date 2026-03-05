@@ -165,7 +165,9 @@
           <!-- Frete: Moved Here -->
           <div class="os-form-group field-frete">
             <label class="os-label" for="frete_kg">Frete/KG</label>
-            <input id="frete_kg" class="os-input" style="width: 140px;" type="number" step="0.01" min="0" value="0" />
+            <input id="frete_kg" class="os-input" style="width: 140px;" type="text" inputmode="decimal"
+              pattern="[0-9]+([.,][0-9]*)?" placeholder="0.00" value="0"
+              oninput="this.value = this.value.replace(',', '.')" />
           </div>
 
         </div>

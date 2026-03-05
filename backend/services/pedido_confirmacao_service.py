@@ -273,8 +273,10 @@ def criar_pedido_confirmado(db: Session, tabela_id: int, body: ConfirmarPedidoRe
         cliente_email=client_email_addr
     )
 
-    # 8) E-mail best-effort via Fila Persistente no Banco de Dados
+    email_agendado = False  # será True se a tarefa foi enfileirada com sucesso
+    pdf_bytes_cliente = None
     EMAIL_MODE = os.getenv("ORDERSYNC_EMAIL_MODE", "best-effort").lower()
+    
     if EMAIL_MODE == "off":
         # Apenas marca o pedido como "link desabilitado" e segue a vida
         db.execute(text("""
@@ -299,25 +301,18 @@ def criar_pedido_confirmado(db: Session, tabela_id: int, body: ConfirmarPedidoRe
             db.add(nova_tarefa)
             db.commit()
             
-            # Para retornar b64 inicial ao front, a gnt ainda pode chamar async se o cliente_pdf for nulo,
-            # porém como a tarefa do worker q vai gerar, o front pode não receber o base64 AQUI
-            # se ele exigir imediato teremos q gerar síncrono. Mas pra resolver Gargalo de CPU,
-            # DEVE vir do worker. Por hora retornamos sem base64 e front que baixe se quiser da rota.
-            pdf_bytes_cliente = None 
+            # Sinaliza que o e-mail foi agendado com sucesso
+            # O worker irá enviá-lo em segundo plano
+            email_agendado = True
             
         except Exception as queue_err:
             logging.exception("Falha ao colocar pedido %s na fila de email: %s", new_id, queue_err)
 
     # 9) resposta — com flag de email e PDF Base64
-    email_enviado_cliente = False
-    if EMAIL_MODE != "off":
-        # Verificamos se o status foi gravado como 'ENVIADO'
-        try:
-            rs = db.execute(text("SELECT link_status FROM tb_pedidos WHERE id_pedido = :id"), {"id": new_id}).scalar()
-            if rs == 'ENVIADO':
-                email_enviado_cliente = True
-        except Exception:
-            pass
+    # Usamos email_agendado (tarefa enfileirada) pois o e-mail é enviado de forma assíncrona
+    # pelo worker. Na hora desta resposta, link_status ainda é 'ABERTO', então checar
+    # link_status == 'ENVIADO' sempre retornaria False.
+    email_enviado_cliente = email_agendado
     
     # Encode PDF to Base64 for immediate frontend download
     # USA O PDF DO CLIENTE (não do vendedor)
