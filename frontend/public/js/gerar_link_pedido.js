@@ -417,7 +417,7 @@ function showPdfOptions(onSelect, temFrete = true) {
         <button class="os-btn glp-option ${temFrete ? 'os-btn-primary' : 'os-btn-secondary'}" data-mode="com" style="${!temFrete ? styleDisabled : ''}">Com Frete</button>
         <button class="os-btn glp-option ${!temFrete ? 'os-btn-primary' : 'os-btn-secondary'}" data-mode="sem">Sem Frete</button>
         <button class="os-btn glp-option os-btn-secondary" data-mode="ambos" style="${!temFrete ? styleDisabled : ''}">Ambos (Padrão)</button>
-        <button class="os-btn os-btn-text glp-option" data-mode="cancel" style="color: var(--os-text-muted); padding-top: 10px; margin-top: 4px;">Cancelar</button>
+        <button class="os-btn os-btn-text glp-option" data-mode="cancel" style="color: var(--os-error, #d9534f); padding-top: 10px; margin-top: 4px;">Cancelar</button>
       </div>
     </div>
   </div>`;
