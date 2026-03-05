@@ -358,29 +358,31 @@ body.page-locked .documento *:not(#confirmModal):not(.modal-content):not(.btn-mo
   #tabelaProdutos th:nth-child(2),
   #tabelaProdutos td:nth-child(2) {
     width: 1% !important;
-    max-width: 10ch !important;
-    white-space: nowrap !important;
+    min-width: 50px !important;
+    max-width: 80px !important;
+    white-space: normal !important;
     padding-right: 2px !important;
   }
 
-  /* Quebra a linha do nome dos produtos considerando ~20 caracteres (aprox 120-140px nesta fonte) */
+  /* Deixa a coluna de produto fluir e absorver o espaço */
   #tabelaProdutos th:nth-child(3),
   #tabelaProdutos td:nth-child(3) {
-    max-width: 18ch !important;
-    min-width: 80px !important;
+    width: auto !important;
+    min-width: 120px !important;
     white-space: normal !important;
     word-break: break-word !important;
     padding-left: 2px !important;
     padding-right: 2px !important;
   }
 
-  /* Quebra para a condição de pagamento no mobile */
+  /* Remove max-width/min-width fixos e agressivos da Condição de pagamento no mobile */
   #tabelaProdutos th:nth-child(8),
   #tabelaProdutos td:nth-child(8) {
-    max-width: 80px !important;
-    min-width: unset !important;
     white-space: normal !important;
     word-wrap: break-word !important;
+    width: 1% !important;
+    min-width: 110px !important;
+    /* Limite seguro para mobile */
   }
 
   /* Evitar quebra de linha na coluna Embal. */
