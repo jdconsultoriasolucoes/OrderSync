@@ -10,31 +10,40 @@ body {
 
 
 
-/* Otimiza espaços entre Código, Produto e Embalagem no Desktop */
-table th:nth-child(2),
-table td:nth-child(2) {
-  width: 1%;
-  white-space: nowrap;
-  padding-right: 8px;
-  /* aproxima do Produto */
+/* Tabela com layout fixo para forçar a quebra de linha */
+#tabelaProdutos {
+  table-layout: fixed;
+  width: 100%;
 }
 
-table th:nth-child(3),
-table td:nth-child(3) {
-  width: auto;
-  min-width: 200px;
-  /* reduzido de 250px */
+/* Otimiza espaços entre Código, Produto e Embalagem no Desktop */
+#tabelaProdutos th:nth-child(2),
+#tabelaProdutos td:nth-child(2) {
+  width: 70px;
+  white-space: normal;
+  word-break: break-all;
+  padding-right: 8px;
+}
+
+#tabelaProdutos th:nth-child(3),
+#tabelaProdutos td:nth-child(3) {
+  width: 200px;
+  /* força largura exata para quebra */
   padding-left: 8px;
   padding-right: 8px;
+  text-align: left;
+  white-space: normal !important;
+  word-wrap: break-word;
+  word-break: break-word;
+  /* essencial para table-layout fixed */
 }
 
-table th:nth-child(4),
-table td:nth-child(4) {
-  width: 1%;
-  white-space: nowrap !important;
+#tabelaProdutos th:nth-child(4),
+#tabelaProdutos td:nth-child(4) {
+  width: 60px;
+  white-space: normal !important;
   text-align: center;
   padding-left: 8px;
-  /* aproxima do Produto */
 }
 
 /* Força a coluna "Condição de Pagto" a ter espaço na mesma linha no Desktop */
@@ -52,14 +61,25 @@ table td:nth-child(8) {
   text-align: center;
 }
 
-/* Permite quebra de linha nos cabeçalhos de colunas mais largas */
+/* Permite quebra de linha nos cabeçalhos e células de colunas mais largas */
 #tabelaProdutos th:nth-child(7),
+#tabelaProdutos td:nth-child(7),
+/* Valor c/Frete */
 #tabelaProdutos th:nth-child(8),
+#tabelaProdutos td:nth-child(8),
+/* Condição Pagto */
 #tabelaProdutos th:nth-child(9),
-#tabelaProdutos th:nth-child(10) {
+#tabelaProdutos td:nth-child(9),
+/* Markup % */
+#tabelaProdutos th:nth-child(10),
+#tabelaProdutos td:nth-child(10)
+
+/* Valor c/Markup */
+  {
   white-space: normal !important;
   /* override design-system nowrap */
   word-break: break-word;
+  word-wrap: break-word;
   min-width: 60px;
   padding-left: 4px;
   padding-right: 4px;
@@ -74,18 +94,7 @@ table td:nth-child(8) {
   padding-right: 4px;
 }
 
-/* Produto (coluna 3): alinhado à esquerda e com quebra de linha no nome */
-#tabelaProdutos th:nth-child(3) {
-  text-align: left;
-}
 
-#tabelaProdutos td:nth-child(3) {
-  text-align: left;
-  max-width: 200px;
-  white-space: normal;
-  word-break: break-word;
-  overflow-wrap: anywhere;
-}
 
 
 
