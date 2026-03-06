@@ -34,6 +34,9 @@ class PedidoListItem(BaseModel):
     link_url: Optional[str] = None
     link_status: Optional[str] = None
     link_enviado: bool
+    peso_total: Optional[float] = 0.0
+    municipio: Optional[str] = None
+    rota_principal: Optional[str] = None
 
 class ListagemResponse(BaseModel):
     data: List[PedidoListItem]
@@ -202,8 +205,12 @@ def listar_pedidos(
           a.fornecedor                              AS fornecedor,
           a.link_url,
           a.link_status,
-          (a.link_enviado_em IS NOT NULL)           AS link_enviado
+          (a.link_enviado_em IS NOT NULL)           AS link_enviado,
+          COALESCE(a.peso_total_kg, 0)              AS peso_total,
+          c.cadastro_municipio                      AS municipio,
+          c.cadastro_rota_principal                 AS rota_principal
         FROM public.tb_pedidos a
+        LEFT JOIN public.t_cadastro_cliente_v2 c ON c.cadastro_codigo_da_empresa::text = a.codigo_cliente
         WHERE {where_clause}
         ORDER BY a.created_at DESC, a.id_pedido DESC
         LIMIT :limit OFFSET :offset
@@ -237,6 +244,9 @@ def listar_pedidos(
             link_url           = r["link_url"],
             link_status        = r["link_status"],
             link_enviado       = r["link_enviado"],
+            peso_total         = float(r["peso_total"] or 0),
+            municipio          = r.get("municipio"),
+            rota_principal     = r.get("rota_principal")
         )
         for r in rows_raw
     ]

@@ -237,8 +237,12 @@ app.include_router(usuario.router)
 app.include_router(fornecedor.router)
 app.include_router(dashboard.router)
 
-from routers import system_tables
+from routers import system_tables, transporte, relatorios
 app.include_router(system_tables.router)
+
+# ---- Novos Módulos de Relatórios/Logística ----
+app.include_router(transporte.router)
+app.include_router(relatorios.router)
 
 # ---- Static (se precisar servir arquivos públicos do front) ----
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))

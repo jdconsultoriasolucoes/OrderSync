@@ -15,9 +15,13 @@ SELECT
   a.fornecedor                              AS fornecedor,
   a.link_url,
   a.link_status,
-  (a.link_enviado_em IS NOT NULL)           AS link_enviado
+  (a.link_enviado_em IS NOT NULL)           AS link_enviado,
+  COALESCE(a.peso_total_kg, 0)              AS peso_total,
+  c.cadastro_municipio                      AS municipio,
+  c.cadastro_rota_principal                 AS rota_principal
 FROM public.tb_pedidos a
 JOIN public.tb_tabela_preco b ON a.tabela_preco_id = b.id_tabela
+LEFT JOIN public.t_cadastro_cliente_v2 c ON c.cadastro_codigo_da_empresa::text = a.codigo_cliente
 WHERE a.created_at >= :from
   AND a.created_at <  :to
   AND (:status_list::text[] IS NULL OR a.status = ANY(:status_list))

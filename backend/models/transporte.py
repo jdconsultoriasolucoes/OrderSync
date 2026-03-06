@@ -1,0 +1,15 @@
+from sqlalchemy import Column, Integer, String, DateTime
+from datetime import datetime
+from database import Base
+
+class TransporteModel(Base):
+    __tablename__ = "tb_transporte"
+
+    id = Column(Integer, primary_key=True, index=True)
+    transportadora = Column(String, nullable=False)
+    motorista = Column(String, nullable=False)
+    veiculo_placa = Column(String, nullable=False)
+    
+    data_criacao = Column(DateTime, default=datetime.utcnow)
+    data_update = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    data_desativacao = Column(DateTime, nullable=True)
