@@ -59,4 +59,18 @@ def run_migrations():
                 db.rollback()
                 logger.error(f"Falha ao adicionar coluna em t_cadastro_cliente_v2: {e}")
 
+        # 4. tb_cargas: nome_carga
+        try:
+            db.execute(text("SELECT nome_carga FROM tb_cargas LIMIT 1"))
+        except Exception:
+            db.rollback()
+            logger.info("Adicionando coluna nome_carga em tb_cargas...")
+            try:
+                db.execute(text("ALTER TABLE tb_cargas ADD COLUMN nome_carga VARCHAR"))
+                db.commit()
+                logger.info("Coluna nome_carga adicionada com sucesso.")
+            except Exception as e:
+                db.rollback()
+                logger.error(f"Falha ao adicionar coluna em tb_cargas: {e}")
+
     logger.info("Migrações concluídas.")

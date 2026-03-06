@@ -19,13 +19,15 @@ router = APIRouter(
 
 @router.post("/cargas", response_model=CargaResponse, status_code=status.HTTP_201_CREATED)
 def create_carga(carga: CargaCreate, db: Session = Depends(get_db)):
-    # Verifica se já existe carga com este número
-    db_carga = db.query(CargaModel).filter(CargaModel.numero_carga == carga.numero_carga).first()
-    if db_carga:
-        raise HTTPException(status_code=400, detail="Número de carga já existe")
+    # Verifica se já existe carga com este número (se não estiver em branco)
+    if carga.numero_carga:
+        db_carga = db.query(CargaModel).filter(CargaModel.numero_carga == carga.numero_carga).first()
+        if db_carga:
+            raise HTTPException(status_code=400, detail="Número de carga já existe")
 
     # Criação do Cabeçalho
     new_carga = CargaModel(
+        nome_carga=carga.nome_carga,
         numero_carga=carga.numero_carga,
         id_transporte=carga.id_transporte,
         data_carregamento=carga.data_carregamento
@@ -135,7 +137,7 @@ def get_resumo_produtos_carga(carga_id: int, db: Session = Depends(get_db)):
             MAX(i.embalagem) AS embalagem,
             SUM(i.quantidade) AS qtd_total,
             MAX(prod.unidade_medida) AS unidade,
-            SUM(i.quantidade * COALESCE(prod.peso, 0)) AS peso_liquido_total
+            CAST(SUM(i.quantidade * COALESCE(prod.peso, 0)) AS FLOAT) AS peso_liquido_total
         FROM tb_cargas_pedidos cp
         JOIN tb_pedidos p ON cp.numero_pedido = p.id_pedido::text
         JOIN tb_pedidos_itens i ON p.id_pedido = i.id_pedido
@@ -173,7 +175,7 @@ def get_carga_pedidos_detalhes(carga_id: int, db: Session = Depends(get_db)):
             cp.ordem_carregamento,
             p.cliente AS cliente_nome,
             p.status,
-            COALESCE(p.peso_total_kg, 0) AS peso_total,
+            CAST(COALESCE(p.peso_total_kg, 0) AS FLOAT) AS peso_total,
             c.cadastro_municipio AS municipio,
             c.cadastro_rota_principal AS rota_principal
         FROM tb_cargas_pedidos cp

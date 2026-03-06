@@ -7,7 +7,8 @@ class CargaModel(Base):
     __tablename__ = "tb_cargas"
 
     id = Column(Integer, primary_key=True, index=True)
-    numero_carga = Column(String, unique=True, index=True, nullable=False)
+    nome_carga = Column(String, nullable=True) # Ex: Carga Nordeste, Viagem Especial
+    numero_carga = Column(String, unique=True, index=True, nullable=True)
     id_transporte = Column(Integer, ForeignKey("tb_transporte.id"), nullable=True) # Ligação com transporte (Motorista/Veículo)
     data_carregamento = Column(DateTime, nullable=True)
     data_criacao = Column(DateTime, default=datetime.utcnow)

@@ -167,8 +167,10 @@ def listar_pedidos(
     }
 
     if status_list:
-        filtros_sql.append("a.status = ANY(:status_list)")
-        params["status_list"] = status_list
+        placeholders = ", ".join([f":st_{i}" for i in range(len(status_list))])
+        filtros_sql.append(f"a.status IN ({placeholders})")
+        for i, status_val in enumerate(status_list):
+            params[f"st_{i}"] = status_val
 
     if tabela_nome:
         filtros_sql.append("a.tabela_preco_nome ILIKE :tabela_nome")

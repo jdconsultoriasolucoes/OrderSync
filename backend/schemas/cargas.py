@@ -24,7 +24,8 @@ class CargaPedidoResponse(CargaPedidoBase):
 # -------------- Carga (Cabeçalho) --------------
 
 class CargaBase(BaseModel):
-    numero_carga: str
+    nome_carga: Optional[str] = None
+    numero_carga: Optional[str] = None
     id_transporte: Optional[int] = None
     data_carregamento: Optional[datetime] = None
 
@@ -32,6 +33,7 @@ class CargaCreate(CargaBase):
     pedidos: Optional[List[CargaPedidoCreate]] = []
 
 class CargaUpdate(BaseModel):
+    nome_carga: Optional[str] = None
     numero_carga: Optional[str] = None
     id_transporte: Optional[int] = None
     data_carregamento: Optional[datetime] = None

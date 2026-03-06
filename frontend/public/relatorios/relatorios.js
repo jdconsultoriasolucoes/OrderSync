@@ -109,32 +109,63 @@ async function renderFormacaoCargas() {
     btnNovoRef.textContent = "+ Nova Carga";
     btnNovoRef.style.display = 'inline-block';
 
-    btnNovoRef.addEventListener('click', async () => {
-        const numCarga = prompt("Digite um código ou descrição para a Nova Carga:");
-        if (!numCarga) return;
+    btnNovoRef.addEventListener('click', () => {
+        const modalNovaCarga = document.getElementById('modal-nova-carga');
+        modalNovaCarga.classList.add('active');
 
-        const nwResp = await fetch(`${API_BASE}/api/relatorios/cargas`, {
-            method: "POST",
-            headers: {
-                "Content-Type": "application/json",
-                "Authorization": `Bearer ${window.Auth ? window.Auth.getToken() : ''}`
-            },
-            body: JSON.stringify({ numero_carga: numCarga })
+        const inNum = document.getElementById('input-nova-carga-numero');
+        const inNome = document.getElementById('input-nova-carga-nome');
+
+        inNum.value = '';
+        inNome.value = '';
+
+        const closeNovaCarga = () => {
+            modalNovaCarga.classList.remove('active');
+        };
+
+        document.getElementById('modal-nova-carga-close').onclick = closeNovaCarga;
+        document.getElementById('btn-cancelar-nova-carga').onclick = closeNovaCarga;
+
+        const btnSalvar = document.getElementById('btn-salvar-nova-carga');
+        // Prevenir duplicação de listener
+        const newBtnSalvar = btnSalvar.cloneNode(true);
+        btnSalvar.parentNode.replaceChild(newBtnSalvar, btnSalvar);
+
+        newBtnSalvar.addEventListener('click', async () => {
+            const numCarga = inNum.value.trim();
+            const nomeCarga = inNome.value.trim();
+
+            if (!numCarga) {
+                alert("O número da Carga é obrigatório.");
+                return;
+            }
+
+            const nwResp = await fetch(`${API_BASE}/api/relatorios/cargas`, {
+                method: "POST",
+                headers: {
+                    "Content-Type": "application/json",
+                    "Authorization": `Bearer ${window.Auth ? window.Auth.getToken() : ''}`
+                },
+                body: JSON.stringify({ numero_carga: numCarga, nome_carga: nomeCarga })
+            });
+
+            if (nwResp.ok) {
+                closeNovaCarga();
+                renderFormacaoCargas();
+            } else {
+                const err = await nwResp.json();
+                alert("Erro: " + (err.detail || "Falha ao criar carga"));
+            }
         });
-
-        if (nwResp.ok) {
-            renderFormacaoCargas();
-        } else {
-            const err = await nwResp.json();
-            alert("Erro: " + (err.detail || "Falha ao criar carga"));
-        }
     });
 
     thead.innerHTML = `
         <tr>
-            <th>Nº / Nome da Carga</th>
+            <th>Nº Carga</th>
+            <th>Nome / Descrição</th>
             <th>Data Cadastro</th>
-            <th>Veículo/Motorista</th>
+            <th>Veículo</th>
+            <th>Motorista</th>
             <th>Qtd Pedidos</th>
             <th>Ações</th>
         </tr>
@@ -160,14 +191,18 @@ async function renderFormacaoCargas() {
         cargas.forEach(c => {
             const dispData = c.data_criacao ? new Date(c.data_criacao).toLocaleDateString('pt-BR') : "-";
             const trans = transportes.find(t => t.id === c.id_transporte);
-            const dispTrans = trans ? `${trans.motorista} - ${trans.veiculo_placa}` : "Pendente";
             const totalPed = c.pedidos ? c.pedidos.length : 0;
+
+            const dispVeiculo = trans ? trans.veiculo_placa : "-";
+            const dispMotorista = trans ? trans.motorista : "Pendente";
 
             html += `
                 <tr>
                     <td><strong>${c.numero_carga}</strong></td>
+                    <td>${c.nome_carga || '-'}</td>
                     <td>${dispData}</td>
-                    <td>${dispTrans}</td>
+                    <td>${dispVeiculo}</td>
+                    <td>${dispMotorista}</td>
                     <td>${totalPed}</td>
                     <td>
                        <button class="os-btn os-btn-sm os-btn-secondary btn-gerenciar-carga" data-id="${c.id}" data-nome="${c.numero_carga}">Gerenciar Pedidos</button>
