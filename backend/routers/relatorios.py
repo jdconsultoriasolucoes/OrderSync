@@ -10,7 +10,7 @@ from models.transporte import TransporteModel
 from schemas.cargas import CargaCreate, CargaUpdate, CargaResponse, CargaPedidoCreate
 
 router = APIRouter(
-    prefix="/relatorios",
+    prefix="/api/relatorios",
     tags=["Relatorios e Cargas"],
     responses={404: {"description": "Not found"}},
 )
@@ -147,6 +147,40 @@ def get_resumo_produtos_carga(carga_id: int, db: Session = Depends(get_db)):
         WHERE cp.id_carga = :carga_id AND i.quantidade > 0
         GROUP BY i.codigo, i.nome
         ORDER BY i.nome ASC
+    """)
+    
+    rows = db.execute(sql, {"carga_id": carga_id}).mappings().all()
+    
+    return [dict(r) for r in rows]
+
+@router.get("/cargas/{carga_id}/pedidos-detalhes")
+def get_carga_pedidos_detalhes(carga_id: int, db: Session = Depends(get_db)):
+    """
+    Retorna a lista detalhada de pedidos vinculados a uma Carga, 
+    buscando dados da tabela de pedidos e clientes para exibição.
+    """
+    from sqlalchemy import text
+    
+    # Valida carga existe
+    db_carga = db.query(CargaModel).filter(CargaModel.id == carga_id).first()
+    if not db_carga:
+        raise HTTPException(status_code=404, detail="Carga não encontrada")
+
+    sql = text("""
+        SELECT 
+            cp.id AS id_carga_pedido,
+            cp.numero_pedido,
+            cp.ordem_carregamento,
+            p.cliente AS cliente_nome,
+            p.status,
+            COALESCE(p.peso_total_kg, 0) AS peso_total,
+            c.cadastro_municipio AS municipio,
+            c.cadastro_rota_principal AS rota_principal
+        FROM tb_cargas_pedidos cp
+        JOIN tb_pedidos p ON cp.numero_pedido = p.id_pedido::text
+        LEFT JOIN t_cadastro_cliente_v2 c ON c.cadastro_codigo_da_empresa::text = p.codigo_cliente
+        WHERE cp.id_carga = :carga_id
+        ORDER BY cp.ordem_carregamento ASC NULLS LAST, cp.id ASC
     """)
     
     rows = db.execute(sql, {"carga_id": carga_id}).mappings().all()

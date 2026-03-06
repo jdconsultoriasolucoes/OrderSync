@@ -3,6 +3,8 @@
  * Gerencia a lógica da visualização de 2 colunas do Módulo "Exportar Relatórios"
  */
 
+const API_BASE = window.API_BASE || window.location.origin;
+
 const relatoriosDict = {
     "formacao": {
         title: "Manutenção de Pedidos / Formação de Cargas",
@@ -88,66 +90,88 @@ async function renderRelatorioView(relKey) {
 }
 
 // -----------------------------------------------------
-// RELATÓRIO 1: FORMAÇÃO DE CARGAS
+// RELATÓRIO 1: FORMAÇÃO DE CARGAS E GERENCIAMENTO
 // -----------------------------------------------------
+
+let cargaEmGerenciamento = null;
+
 async function renderFormacaoCargas() {
-    // Exibe/Esconde botões específicos
-    btnNovo.textContent = "+ Gerar Carga";
+    // Garante controle de exibição
+    document.getElementById('painel-gerenciar-carga').style.display = 'none';
+    document.getElementById('painel-listagem').style.display = 'block';
+
+    // Remove listener antigo do clone para evitar bugs
+    const oldBtn = document.getElementById("btn-novo");
+    const newBtn = oldBtn.cloneNode(true);
+    oldBtn.parentNode.replaceChild(newBtn, oldBtn);
+
+    const btnNovoRef = document.getElementById("btn-novo");
+    btnNovoRef.textContent = "+ Nova Carga";
+    btnNovoRef.style.display = 'inline-block';
+
+    btnNovoRef.addEventListener('click', async () => {
+        const numCarga = prompt("Digite um código ou descrição para a Nova Carga:");
+        if (!numCarga) return;
+
+        const nwResp = await fetch(`${API_BASE}/api/relatorios/cargas`, {
+            method: "POST",
+            headers: {
+                "Content-Type": "application/json",
+                "Authorization": `Bearer ${window.Auth ? window.Auth.getToken() : ''}`
+            },
+            body: JSON.stringify({ numero_carga: numCarga })
+        });
+
+        if (nwResp.ok) {
+            renderFormacaoCargas();
+        } else {
+            const err = await nwResp.json();
+            alert("Erro: " + (err.detail || "Falha ao criar carga"));
+        }
+    });
 
     thead.innerHTML = `
         <tr>
-            <th>Nº Carga</th>
-            <th>Nº Pedido</th>
-            <th>Cliente</th>
-            <th>Status Pedido</th>
-            <th>Município/Rota</th>
-            <th>Peso Líq.</th>
+            <th>Nº / Nome da Carga</th>
+            <th>Data Cadastro</th>
+            <th>Veículo/Motorista</th>
+            <th>Qtd Pedidos</th>
             <th>Ações</th>
         </tr>
     `;
 
     try {
-        // Busca os pedidos confirmados e faturados 
-        const response = await fetch('/api/pedidos?status=CONFIRMADO,FATURADO&pageSize=100', {
-            headers: {
-                "Authorization": `Bearer ${window.Auth ? window.Auth.getToken() : ''}`
-            }
-        });
+        const [cargasResp, transResp] = await Promise.all([
+            fetch(`${API_BASE}/api/relatorios/cargas`, { headers: { "Authorization": `Bearer ${window.Auth ? window.Auth.getToken() : ''}` } }),
+            fetch(`${API_BASE}/api/transporte`, { headers: { "Authorization": `Bearer ${window.Auth ? window.Auth.getToken() : ''}` } })
+        ]);
 
-        if (!response.ok) throw new Error("Falha ao buscar pedidos");
+        if (!cargasResp.ok) throw new Error("Falha ao buscar cargas");
 
-        const json = await response.json();
-        const pedidos = json.data || [];
+        const cargas = await cargasResp.json();
+        const transportes = await transResp.json();
 
-        if (pedidos.length === 0) {
+        if (cargas.length === 0) {
             emptyStateEl.style.display = "block";
             return;
         }
 
         let html = "";
-        pedidos.forEach(p => {
-            const isFaturado = p.status_codigo === "FATURADO";
-            const badge = isFaturado
-                ? `<span style="color: green; font-weight: 500;">Faturado</span>`
-                : `<span class="badge-alert">⚠ Pedido não faturado</span>`;
-
-            const destino = p.municipio
-                ? `${p.municipio} - ${p.rota_principal || 'S/ Rota'}`
-                : "A Combinar / Retirada";
-
-            const peso = p.peso_total ? p.peso_total.toFixed(2).replace('.', ',') : "0,00";
+        cargas.forEach(c => {
+            const dispData = c.data_criacao ? new Date(c.data_criacao).toLocaleDateString('pt-BR') : "-";
+            const trans = transportes.find(t => t.id === c.id_transporte);
+            const dispTrans = trans ? `${trans.motorista} - ${trans.veiculo_placa}` : "Pendente";
+            const totalPed = c.pedidos ? c.pedidos.length : 0;
 
             html += `
                 <tr>
-                    <!-- Assumindo placeholder livre para Carga -->
-                    <td><input type="text" class="os-input input-carga" data-pedido="${p.numero_pedido}" style="width: 110px; padding: 4px;" placeholder="Em aberto"></td>
-                    <td><strong>${p.numero_pedido}</strong></td>
-                    <td>${p.cliente_nome}</td>
-                    <td>${badge}</td>
-                    <td>${destino}</td>
-                    <td>${peso} kg</td>
+                    <td><strong>${c.numero_carga}</strong></td>
+                    <td>${dispData}</td>
+                    <td>${dispTrans}</td>
+                    <td>${totalPed}</td>
                     <td>
-                       <button class="os-btn os-btn-sm os-btn-primary btn-save-carga" data-pedido="${p.numero_pedido}">Vincular</button>
+                       <button class="os-btn os-btn-sm os-btn-secondary btn-gerenciar-carga" data-id="${c.id}" data-nome="${c.numero_carga}">Gerenciar Pedidos</button>
+                       <button class="os-btn os-btn-sm os-btn-danger btn-excluir-carga" data-id="${c.id}" style="color:red; border-color:red; margin-left:5px;">Excluir</button>
                     </td>
                 </tr>
             `;
@@ -155,91 +179,261 @@ async function renderFormacaoCargas() {
 
         tbody.innerHTML = html;
 
-        // Listener para botão salvar carga
-        document.querySelectorAll('.btn-save-carga').forEach(btn => {
+        document.querySelectorAll('.btn-gerenciar-carga').forEach(btn => {
+            btn.addEventListener('click', (e) => {
+                const id = e.target.dataset.id;
+                const nome = e.target.dataset.nome;
+                abrirGerenciadorDeCarga(id, nome);
+            });
+        });
+
+        document.querySelectorAll('.btn-excluir-carga').forEach(btn => {
             btn.addEventListener('click', async (e) => {
-                const numPedido = e.target.dataset.pedido;
-                const inputCarga = document.querySelector(`.input-carga[data-pedido="${numPedido}"]`);
-                const numCarga = inputCarga.value.trim();
-
-                if (!numCarga) {
-                    alert("Digite um número ou código para a carga.");
-                    return;
+                if (confirm("Excluir definitivamente esta Carga do mapa de expedição?")) {
+                    const id = e.target.dataset.id;
+                    await fetch(`${API_BASE}/api/relatorios/cargas/${id}`, {
+                        method: "DELETE",
+                        headers: { "Authorization": `Bearer ${window.Auth ? window.Auth.getToken() : ''}` }
+                    });
+                    renderFormacaoCargas();
                 }
-
-                await salvarVinculoCarga(numCarga, numPedido, btn);
             });
         });
 
     } catch (e) {
         console.error(e);
-        emptyStateEl.textContent = "Erro ao carregar os pedidos. Verifique sua conexão.";
+        emptyStateEl.textContent = "Erro ao carregar as cargas. Verifique sua conexão.";
         emptyStateEl.style.display = "block";
     }
 }
 
-// Helper: Tenta vincular o pedido à carga no backend
-async function salvarVinculoCarga(numCarga, numPedido, btnRef) {
-    btnRef.textContent = "...";
-    btnRef.disabled = true;
+// -----------------------------------------------------
+// FUNÇÕES DE SUB-TELA "Gerenciar Carga"
+// -----------------------------------------------------
+
+async function abrirGerenciadorDeCarga(idCarga, numCarga) {
+    cargaEmGerenciamento = idCarga;
+    document.getElementById('painel-listagem').style.display = 'none';
+    document.getElementById('painel-gerenciar-carga').style.display = 'block';
+    document.getElementById('titulo-carga-ativa').textContent = "Gerenciando Carga: " + numCarga;
+
+    document.getElementById('btn-voltar-listagem').onclick = () => renderFormacaoCargas();
+    document.getElementById('btn-buscar-pedidos').onclick = () => abrirModalBuscaPedidos();
+
+    await carregarPedidosDaCargaAtiva();
+}
+
+async function carregarPedidosDaCargaAtiva() {
+    const tbodyPedidos = document.getElementById('tbody-pedidos-carga');
+    const emptyPedidos = document.getElementById('empty-carga-pedidos');
+    tbodyPedidos.innerHTML = '<tr><td colspan="7" style="text-align:center;">Carregando...</td></tr>';
 
     try {
-        // Passo 1: Verifica/Cria a Carga (cabeçalho)
-        let idCarga = await garantirCabecalhoCarga(numCarga);
-        if (!idCarga) throw new Error("Carga Inválida");
-
-        // Passo 2: Insere o Pedido na tb_cargas_pedidos 
-        const linkResp = await fetch(`/relatorios/cargas/${idCarga}/pedidos`, {
-            method: "POST",
-            headers: {
-                "Content-Type": "application/json",
-                "Authorization": `Bearer ${window.Auth ? window.Auth.getToken() : ''}`
-            },
-            body: JSON.stringify({
-                numero_pedido: numPedido.toString(),
-                ordem_carregamento: 0
-            })
+        const resp = await fetch(`${API_BASE}/api/relatorios/cargas/${cargaEmGerenciamento}/pedidos-detalhes`, {
+            headers: { "Authorization": `Bearer ${window.Auth ? window.Auth.getToken() : ''}` }
         });
+        const ped = await resp.json();
 
-        if (!linkResp.ok) {
-            const err = await linkResp.json();
-            throw new Error(err.detail || "Erro ao vincular pedido na carga");
+        if (ped.length === 0) {
+            tbodyPedidos.innerHTML = '';
+            emptyPedidos.style.display = 'block';
+            return;
         }
 
-        btnRef.textContent = "Salvo!";
-        btnRef.classList.replace("os-btn-primary", "os-btn-secondary");
+        emptyPedidos.style.display = 'none';
+        let h = "";
+        ped.forEach(p => {
+            const peso = p.peso_total ? p.peso_total.toFixed(2).replace('.', ',') : "0,00";
+            h += `
+                <tr>
+                    <td><strong>${p.numero_pedido}</strong></td>
+                    <td>${p.cliente_nome || '-'}</td>
+                    <td>${p.status}</td>
+                    <td>${p.municipio || '-'}</td>
+                    <td>${p.rota_principal || '-'}</td>
+                    <td>${peso}</td>
+                    <td><button class="os-btn os-btn-sm btn-remover-pedido-carga" data-id="${p.id_carga_pedido}" style="color:red; border:1px solid red; background:transparent;">Remover</button></td>
+                </tr>
+            `;
+        });
+        tbodyPedidos.innerHTML = h;
+
+        document.querySelectorAll('.btn-remover-pedido-carga').forEach(btn => {
+            btn.addEventListener('click', async (e) => {
+                const linkId = e.target.dataset.id;
+                await fetch(`${API_BASE}/api/relatorios/cargas/pedidos/${linkId}`, {
+                    method: 'DELETE',
+                    headers: { "Authorization": `Bearer ${window.Auth ? window.Auth.getToken() : ''}` }
+                });
+                carregarPedidosDaCargaAtiva();
+            });
+        });
     } catch (e) {
-        alert(e.message);
-        btnRef.textContent = "Tentar Novamente";
-        btnRef.disabled = false;
+        console.error(e);
+        tbodyPedidos.innerHTML = '';
+        emptyPedidos.textContent = "Erro de conexão ao carregar os pedidos.";
+        emptyPedidos.style.display = 'block';
     }
 }
 
-// Garante que o cabeçalho "Carga X" exista. Se não existir, ele cria. (Upsert)
-async function garantirCabecalhoCarga(numCarga) {
-    // Tenta buscar se existe 
-    const cResp = await fetch(`/relatorios/cargas`, {
-        headers: { "Authorization": `Bearer ${window.Auth ? window.Auth.getToken() : ''}` }
-    });
-    const cargas = await cResp.json();
-    const existe = cargas.find(c => c.numero_carga === numCarga);
-    if (existe) return existe.id;
+// -----------------------------------------------------
+// FUNÇÕES DE BUSCA LIVRE DE PEDIDOS NO MODAL
+// -----------------------------------------------------
 
-    // Se não existe, posta uma nova
-    const nwResp = await fetch(`/relatorios/cargas`, {
-        method: "POST",
-        headers: {
-            "Content-Type": "application/json",
-            "Authorization": `Bearer ${window.Auth ? window.Auth.getToken() : ''}`
-        },
-        body: JSON.stringify({ numero_carga: numCarga })
-    });
+function abrirModalBuscaPedidos() {
+    const modal = document.getElementById('modal-buscar-pedido');
+    modal.classList.add('active');
 
-    if (nwResp.ok) {
-        const js = await nwResp.json();
-        return js.id;
+    const inputBusca = document.getElementById('input-busca-pedido-livre');
+    const tbodyRes = document.getElementById('tbody-resultado-busca');
+    const btnVincular = document.getElementById('btn-vincular-selecionados');
+    const chkSelectAll = document.getElementById('chk-select-all-pedidos');
+
+    document.getElementById('modal-buscar-close').onclick = () => {
+        modal.classList.remove('active');
+        carregarPedidosDaCargaAtiva(); // atualiza a grid atrás ao fechar
     }
-    return null;
+
+    // Função interna para carregar os pedidos ativos
+    async function fetchPedidosAbertos() {
+        tbodyRes.innerHTML = '<tr><td colspan="7" style="text-align: center; padding: 20px;">Carregando pedidos ativos...</td></tr>';
+        inputBusca.value = '';
+        if (chkSelectAll) chkSelectAll.checked = false;
+
+        try {
+            // Buscamos um número grande de pedidos pendentes para filtro rápido no frontend
+            const url = `${API_BASE}/api/pedidos?status=CONFIRMADO,FATURADO&pageSize=300`;
+            const resp = await fetch(url, { headers: { "Authorization": `Bearer ${window.Auth ? window.Auth.getToken() : ''}` } });
+            const json = await resp.json();
+            const resultados = json.data || [];
+
+            if (resultados.length === 0) {
+                tbodyRes.innerHTML = '<tr><td colspan="7" style="text-align: center;">Nenhum pedido compatível encontrado (Nenhum Confirmado ou Faturado localizável).</td></tr>';
+                return;
+            }
+
+            let html = "";
+            resultados.forEach(p => {
+                const destMuni = p.municipio || '-';
+                const destRota = p.rota_principal || '-';
+                const peso = p.peso_total ? p.peso_total.toFixed(2).replace('.', ',') : "0,00";
+
+                const isFaturado = p.status_codigo === "FATURADO";
+                const badge = isFaturado
+                    ? `<span style="color: green; font-weight: 500;">Faturado</span>`
+                    : `<span class="badge-alert">⚠ Confirmado</span>`;
+
+                // Adiciona data attributes para facilitar a busca de texto
+                const termoBusca = `${p.numero_pedido} ${p.cliente_nome} ${destMuni} ${destRota}`.toLowerCase();
+
+                html += `
+                    <tr class="row-pedido-busca" data-termo="${termoBusca}">
+                        <td style="text-align: center;">
+                             <input type="checkbox" class="chk-pedido-item" value="${p.numero_pedido}" />
+                        </td>
+                        <td><strong>${p.numero_pedido}</strong></td>
+                        <td>${p.cliente_nome}</td>
+                        <td>${destMuni}</td>
+                        <td>${destRota}</td>
+                        <td>${badge}</td>
+                        <td>${peso} kg</td>
+                    </tr>
+                `;
+            });
+            tbodyRes.innerHTML = html;
+        } catch (e) {
+            tbodyRes.innerHTML = '<tr><td colspan="7" style="text-align: center; color: red;">Erro ao buscar pedidos do servidor.</td></tr>';
+        }
+    }
+
+    // Aciona a busca inicial
+    fetchPedidosAbertos();
+
+    // Filtro Local Rápido
+    inputBusca.oninput = (e) => {
+        const val = e.target.value.toLowerCase();
+        const rows = document.querySelectorAll('.row-pedido-busca');
+        rows.forEach(r => {
+            if (r.dataset.termo.includes(val)) {
+                r.style.display = 'table-row';
+            } else {
+                r.style.display = 'none';
+            }
+        });
+    };
+
+    // Lógica do Checkbox "Selecionar Todos" (Apenas nos visíveis)
+    if (chkSelectAll) {
+        chkSelectAll.onchange = (e) => {
+            const isChecked = e.target.checked;
+            const rows = document.querySelectorAll('.row-pedido-busca');
+            rows.forEach(r => {
+                if (r.style.display !== 'none') {
+                    const chk = r.querySelector('.chk-pedido-item');
+                    if (chk) chk.checked = isChecked;
+                }
+            });
+        };
+    }
+
+    // Botão de Vincular Selecionados
+    // Remoção do listener antigo caso o modal seja reaberto e recriado
+    if (btnVincular) {
+        const newBtnVincular = btnVincular.cloneNode(true);
+        btnVincular.parentNode.replaceChild(newBtnVincular, btnVincular);
+
+        newBtnVincular.addEventListener('click', async () => {
+            const checkedBoxes = document.querySelectorAll('.chk-pedido-item:checked');
+            if (checkedBoxes.length === 0) {
+                alert("Selecione pelo menos um pedido!");
+                return;
+            }
+
+            newBtnVincular.textContent = "Vinculando...";
+            newBtnVincular.disabled = true;
+
+            let concluidos = 0;
+            let erros = 0;
+
+            // Itera sobre todos os selecionados e envia as requisições
+            const chamadas = Array.from(checkedBoxes).map(async (chk) => {
+                const numPed = chk.value;
+                try {
+                    const linkResp = await fetch(`${API_BASE}/api/relatorios/cargas/${cargaEmGerenciamento}/pedidos`, {
+                        method: "POST",
+                        headers: {
+                            "Content-Type": "application/json",
+                            "Authorization": `Bearer ${window.Auth ? window.Auth.getToken() : ''}`
+                        },
+                        body: JSON.stringify({
+                            numero_pedido: numPed.toString(),
+                            ordem_carregamento: 0
+                        })
+                    });
+
+                    if (!linkResp.ok) throw new Error("Erro");
+
+                    // Remove visualmente a linha se o vinculo foi feito com sucesso
+                    chk.closest('tr').remove();
+                    concluidos++;
+                } catch (err) {
+                    erros++;
+                }
+            });
+
+            await Promise.all(chamadas);
+
+            newBtnVincular.textContent = "Vincular Selecionados";
+            newBtnVincular.disabled = false;
+
+            if (erros > 0) {
+                alert(`${concluidos} adicionados. Houve falha ao adicionar ${erros} pedidos (talvez já vinculados).`);
+            }
+
+            // Atualiza a grid por trás, mas mantém modal aberto pra próximas buscas
+            carregarPedidosDaCargaAtiva();
+        });
+    }
 }
 
 // -----------------------------------------------------
@@ -261,8 +455,8 @@ async function renderRomaneio() {
 
     try {
         const [cargasResp, transResp] = await Promise.all([
-            fetch('/relatorios/cargas', { headers: { "Authorization": `Bearer ${window.Auth ? window.Auth.getToken() : ''}` } }),
-            fetch('/transporte', { headers: { "Authorization": `Bearer ${window.Auth ? window.Auth.getToken() : ''}` } })
+            fetch(`${API_BASE}/api/relatorios/cargas`, { headers: { "Authorization": `Bearer ${window.Auth ? window.Auth.getToken() : ''}` } }),
+            fetch(`${API_BASE}/api/transporte`, { headers: { "Authorization": `Bearer ${window.Auth ? window.Auth.getToken() : ''}` } })
         ]);
 
         if (!cargasResp.ok || !transResp.ok) throw new Error("Erro ao buscar dados do Romaneio");
@@ -324,7 +518,7 @@ async function renderRomaneio() {
 
                 btn.textContent = "...";
                 try {
-                    const resp = await fetch(`/relatorios/cargas/${idCarga}`, {
+                    const resp = await fetch(`${API_BASE}/api/relatorios/cargas/${idCarga}`, {
                         method: "PUT",
                         headers: {
                             "Content-Type": "application/json",
@@ -357,7 +551,7 @@ async function renderRomaneio() {
 async function renderResumoProdutos() {
     try {
         // Carrega as cargas para o dropdown (Filtro)
-        const cResp = await fetch('/relatorios/cargas', { headers: { "Authorization": `Bearer ${window.Auth ? window.Auth.getToken() : ''}` } });
+        const cResp = await fetch(`${API_BASE}/api/relatorios/cargas`, { headers: { "Authorization": `Bearer ${window.Auth ? window.Auth.getToken() : ''}` } });
         if (!cResp.ok) throw new Error("Erro");
         const cargas = await cResp.json();
 
@@ -406,7 +600,7 @@ async function renderResumoProdutos() {
             tbody.innerHTML = "";
 
             try {
-                const rResp = await fetch(`/relatorios/cargas/${idCarga}/resumo-produtos`, {
+                const rResp = await fetch(`${API_BASE}/api/relatorios/cargas/${idCarga}/resumo-produtos`, {
                     headers: { "Authorization": `Bearer ${window.Auth ? window.Auth.getToken() : ''}` }
                 });
                 if (!rResp.ok) throw new Error("Falha ao buscar resumo de produtos");
@@ -453,7 +647,7 @@ async function renderResumoProdutos() {
 // -----------------------------------------------------
 async function renderRelatorioCompleto() {
     try {
-        const cResp = await fetch('/relatorios/cargas', { headers: { "Authorization": `Bearer ${window.Auth ? window.Auth.getToken() : ''}` } });
+        const cResp = await fetch(`${API_BASE}/api/relatorios/cargas`, { headers: { "Authorization": `Bearer ${window.Auth ? window.Auth.getToken() : ''}` } });
         if (!cResp.ok) throw new Error("Erro");
         const cargas = await cResp.json();
 
@@ -495,8 +689,8 @@ async function renderRelatorioCompleto() {
                 const cargaObj = cargas.find(c => c.id == idCarga);
 
                 const [rResp, tResp] = await Promise.all([
-                    fetch(`/relatorios/cargas/${idCarga}/resumo-produtos`, { headers: { "Authorization": `Bearer ${window.Auth ? window.Auth.getToken() : ''}` } }),
-                    cargaObj.id_transporte ? fetch(`/transporte/${cargaObj.id_transporte}`, { headers: { "Authorization": `Bearer ${window.Auth ? window.Auth.getToken() : ''}` } }) : Promise.resolve({ ok: true, json: () => null })
+                    fetch(`${API_BASE}/api/relatorios/cargas/${idCarga}/resumo-produtos`, { headers: { "Authorization": `Bearer ${window.Auth ? window.Auth.getToken() : ''}` } }),
+                    cargaObj.id_transporte ? fetch(`${API_BASE}/api/transporte/${cargaObj.id_transporte}`, { headers: { "Authorization": `Bearer ${window.Auth ? window.Auth.getToken() : ''}` } }) : Promise.resolve({ ok: true, json: () => null })
                 ]);
 
                 const prods = rResp.ok ? await rResp.json() : [];

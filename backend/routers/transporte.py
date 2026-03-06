@@ -7,12 +7,12 @@ from schemas.transporte import TransporteCreate, TransporteUpdate, TransporteRes
 from datetime import datetime
 
 router = APIRouter(
-    prefix="/transporte",
+    prefix="/api/transporte",
     tags=["Transporte"],
     responses={404: {"description": "Not found"}},
 )
 
-@router.post("/", response_model=TransporteResponse, status_code=status.HTTP_201_CREATED)
+@router.post("", response_model=TransporteResponse, status_code=status.HTTP_201_CREATED)
 def create_transporte(transporte: TransporteCreate, db: Session = Depends(get_db)):
     db_transporte = TransporteModel(**transporte.model_dump())
     db.add(db_transporte)
@@ -20,7 +20,7 @@ def create_transporte(transporte: TransporteCreate, db: Session = Depends(get_db
     db.refresh(db_transporte)
     return db_transporte
 
-@router.get("/", response_model=List[TransporteResponse])
+@router.get("", response_model=List[TransporteResponse])
 def read_transportes(skip: int = 0, limit: int = 100, db: Session = Depends(get_db)):
     transportes = db.query(TransporteModel).filter(TransporteModel.data_desativacao == None).offset(skip).limit(limit).all()
     return transportes

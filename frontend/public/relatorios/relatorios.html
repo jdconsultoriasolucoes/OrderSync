@@ -131,46 +131,98 @@
             <!-- Coluna 2: Área Principal (Workarea) do Relatório -->
             <section class="relatorios-content">
 
-                <!-- Header Comum do Relatório Ativo -->
-                <div class="relatorio-header">
-                    <div>
-                        <h2 id="relatorio-titulo-view">Manutenção de Pedidos</h2>
-                        <span class="relatorio-desc-view" id="relatorio-desc-view">Organizar os pedidos para formação de
-                            cargas e planejamento de rota de entrega.</span>
+                <!-- PAINEL 1: Listagem Default dos Relatórios (Cargas, Romaneios, etc) -->
+                <div id="painel-listagem" style="display: block;">
+                    <!-- Header Comum do Relatório Ativo -->
+                    <div class="relatorio-header">
+                        <div>
+                            <h2 id="relatorio-titulo-view">Manutenção de Pedidos</h2>
+                            <span class="relatorio-desc-view" id="relatorio-desc-view">Organizar os pedidos para
+                                formação de
+                                cargas e planejamento de rota de entrega.</span>
+                        </div>
+
+                        <div class="relatorio-actions">
+                            <div class="os-input-icon">
+                                <input type="text" id="relatorio-pesquisa" class="os-input" placeholder="Pesquisar...">
+                            </div>
+                            <button class="os-btn os-btn-secondary" id="btn-export-pdf">
+                                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                                    stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                    <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+                                    <polyline points="7 10 12 15 17 10"></polyline>
+                                    <line x1="12" y1="15" x2="12" y2="3"></line>
+                                </svg>
+                                Exportar PDF
+                            </button>
+                            <button class="os-btn os-btn-primary" id="btn-novo">+ Novo</button>
+                        </div>
                     </div>
 
-                    <div class="relatorio-actions">
-                        <div class="os-input-icon">
-                            <input type="text" id="relatorio-pesquisa" class="os-input" placeholder="Pesquisar...">
+                    <!-- Tabela Dinâmica do Relatório -->
+                    <div class="os-table-wrap">
+                        <table class="os-table" id="relatorio-tabela">
+                            <thead id="tabela-head">
+                                <!-- Injetado via JS -->
+                            </thead>
+                            <tbody id="tabela-body">
+                                <!-- Injetado via JS -->
+                            </tbody>
+                        </table>
+
+                        <div id="loading" class="os-loading" style="display: none; padding: 40px;">Carregando dados...
                         </div>
-                        <button class="os-btn os-btn-secondary" id="btn-export-pdf">
-                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor"
-                                stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                                <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
-                                <polyline points="7 10 12 15 17 10"></polyline>
-                                <line x1="12" y1="15" x2="12" y2="3"></line>
-                            </svg>
-                            Exportar PDF
-                        </button>
-                        <button class="os-btn os-btn-primary" id="btn-novo">+ Novo</button>
+                        <div id="empty-state" class="os-empty-state"
+                            style="display: none; padding: 40px; text-align: center; color: var(--os-text-muted);">
+                            Nenhum registro encontrado.
+                        </div>
                     </div>
                 </div>
 
-                <!-- Tabela Dinâmica do Relatório -->
-                <div class="os-table-wrap">
-                    <table class="os-table" id="relatorio-tabela">
-                        <thead id="tabela-head">
-                            <!-- Injetado via JS -->
-                        </thead>
-                        <tbody id="tabela-body">
-                            <!-- Injetado via JS -->
-                        </tbody>
-                    </table>
+                <!-- PAINEL 2: Gerenciador Interno da Carga -->
+                <div id="painel-gerenciar-carga" style="display: none;">
+                    <div class="relatorio-header"
+                        style="border-bottom: 1px solid var(--os-border); padding-bottom: 15px; margin-bottom: 20px;">
+                        <div>
+                            <button class="os-btn os-btn-secondary os-btn-sm" id="btn-voltar-listagem"
+                                style="margin-bottom: 10px;">&larr; Voltar para as Cargas</button>
+                            <h2 id="titulo-carga-ativa">Carregando Carga...</h2>
+                            <span class="relatorio-desc-view">Adicione ou remova pedidos específicos formatando esta
+                                viagem.</span>
+                        </div>
+                        <div class="relatorio-actions">
+                            <button class="os-btn os-btn-primary" id="btn-buscar-pedidos">
+                                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                                    stroke-width="2" style="margin-right: 5px;">
+                                    <circle cx="11" cy="11" r="8"></circle>
+                                    <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
+                                </svg>
+                                Buscar Pedidos para Adicionar
+                            </button>
+                        </div>
+                    </div>
 
-                    <div id="loading" class="os-loading" style="display: none; padding: 40px;">Carregando dados...</div>
-                    <div id="empty-state" class="os-empty-state"
-                        style="display: none; padding: 40px; text-align: center; color: var(--os-text-muted);">
-                        Nenhum registro encontrado.
+                    <h3 style="margin-bottom: 15px; font-size: 16px;">Pedidos na Carga Atual</h3>
+                    <div class="os-table-wrap">
+                        <table class="os-table">
+                            <thead>
+                                <tr>
+                                    <th>Nº Pedido</th>
+                                    <th>Cliente</th>
+                                    <th>Status</th>
+                                    <th>Município</th>
+                                    <th>Rota</th>
+                                    <th>Peso Kg</th>
+                                    <th>Ações</th>
+                                </tr>
+                            </thead>
+                            <tbody id="tbody-pedidos-carga">
+                                <!-- Preenchido dinamicamente com pedidos já associados -->
+                            </tbody>
+                        </table>
+                        <div id="empty-carga-pedidos" class="os-empty-state"
+                            style="display: none; padding: 30px; text-align: center;">Ainda não há pedidos adicionados
+                            nesta carga.</div>
                     </div>
                 </div>
             </section>
@@ -190,6 +242,52 @@
             <div class="os-modal-footer" id="modal-operacao-footer">
                 <button class="os-btn os-btn-secondary" id="modal-btn-cancelar">Cancelar</button>
                 <button class="os-btn os-btn-primary" id="modal-btn-salvar">Salvar</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal Adicionar Pedido -->
+    <div id="modal-buscar-pedido" class="os-modal">
+        <div class="os-modal-content" style="max-width: 900px; width: 95%;">
+            <div class="os-modal-header">
+                <h3 class="os-modal-title">Adicionar Pedidos à Carga</h3>
+                <button class="os-modal-close" id="modal-buscar-close">&times;</button>
+            </div>
+            <div class="os-modal-body" style="padding-bottom: 0;">
+                <div class="os-form-group"
+                    style="display: flex; gap: 10px; align-items: flex-end; margin-bottom: 20px;">
+                    <div style="flex:1">
+                        <label>Filtro Rápido (Cliente/Código):</label>
+                        <input type="text" id="input-busca-pedido-livre" class="os-input"
+                            placeholder="Digite para filtrar a lista abaixo..." autocomplete="off">
+                    </div>
+                </div>
+
+                <div class="os-table-wrap" style="max-height: 400px; overflow-y: auto;">
+                    <table class="os-table">
+                        <thead>
+                            <tr>
+                                <th style="width: 40px; text-align: center;"><input type="checkbox"
+                                        id="chk-select-all-pedidos" /></th>
+                                <th>Nº Pedido</th>
+                                <th>Cliente</th>
+                                <th>Município</th>
+                                <th>Rota</th>
+                                <th>Status</th>
+                                <th>Peso Líq.</th>
+                            </tr>
+                        </thead>
+                        <tbody id="tbody-resultado-busca">
+                            <tr>
+                                <td colspan="7" style="text-align: center; padding: 20px;">Carregando pedidos ativos...
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+            <div class="os-modal-footer">
+                <button class="os-btn os-btn-primary" id="btn-vincular-selecionados">Vincular Selecionados</button>
             </div>
         </div>
     </div>
