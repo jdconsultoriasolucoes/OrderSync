@@ -35,8 +35,8 @@ const tbody = document.getElementById("tabela-body");
 const loadingEl = document.getElementById("loading");
 const emptyStateEl = document.getElementById("empty-state");
 
-// Botões
-const btnNovo = document.getElementById("btn-novo");
+// Botões (Sendo dinâmicos, buscaremos via document quando necessário ou atualizaremos a ref)
+let btnNovo = document.getElementById("btn-novo");
 const btnExport = document.getElementById("btn-export-pdf");
 const inputSearch = document.getElementById("relatorio-pesquisa");
 
@@ -106,6 +106,7 @@ async function renderFormacaoCargas() {
     oldBtn.parentNode.replaceChild(newBtn, oldBtn);
 
     const btnNovoRef = document.getElementById("btn-novo");
+    btnNovo = btnNovoRef; // Atualiza referência global
     btnNovoRef.textContent = "+ Nova Carga";
     btnNovoRef.style.display = 'inline-block';
 
@@ -475,7 +476,9 @@ function abrirModalBuscaPedidos() {
 // RELATÓRIO 2: ROMANEIO
 // -----------------------------------------------------
 async function renderRomaneio() {
+    btnNovo = document.getElementById("btn-novo");
     btnNovo.textContent = "+ Criar Romaneio";
+    btnNovo.style.display = 'inline-block';
 
     thead.innerHTML = `
         <tr>
@@ -584,6 +587,8 @@ async function renderRomaneio() {
 // RELATÓRIO 3: RESUMO DE PRODUTOS
 // -----------------------------------------------------
 async function renderResumoProdutos() {
+    btnNovo = document.getElementById("btn-novo");
+    btnNovo.style.display = 'none';
     try {
         // Carrega as cargas para o dropdown (Filtro)
         const cResp = await fetch(`${API_BASE}/api/relatorios/cargas`, { headers: { "Authorization": `Bearer ${window.Auth ? window.Auth.getToken() : ''}` } });
@@ -681,6 +686,8 @@ async function renderResumoProdutos() {
 // RELATÓRIO 4: RELATÓRIO COMPLETO
 // -----------------------------------------------------
 async function renderRelatorioCompleto() {
+    btnNovo = document.getElementById("btn-novo");
+    btnNovo.style.display = 'none';
     try {
         const cResp = await fetch(`${API_BASE}/api/relatorios/cargas`, { headers: { "Authorization": `Bearer ${window.Auth ? window.Auth.getToken() : ''}` } });
         if (!cResp.ok) throw new Error("Erro");
