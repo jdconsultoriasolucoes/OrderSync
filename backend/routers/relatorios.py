@@ -176,8 +176,8 @@ def get_carga_pedidos_detalhes(carga_id: int, db: Session = Depends(get_db)):
             p.cliente AS cliente_nome,
             p.status,
             CAST(COALESCE(p.peso_total_kg, 0) AS FLOAT) AS peso_total,
-            c.cadastro_municipio AS municipio,
-            c.cadastro_rota_principal AS rota_principal
+            c.entrega_municipio AS municipio,
+            c.entrega_rota_principal AS rota_principal
         FROM tb_cargas_pedidos cp
         JOIN tb_pedidos p ON cp.numero_pedido = p.id_pedido::text
         LEFT JOIN t_cadastro_cliente_v2 c ON c.cadastro_codigo_da_empresa::text = p.codigo_cliente

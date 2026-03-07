@@ -209,8 +209,8 @@ def listar_pedidos(
           a.link_status,
           (a.link_enviado_em IS NOT NULL)           AS link_enviado,
           COALESCE(a.peso_total_kg, 0)              AS peso_total,
-          c.cadastro_municipio                      AS municipio,
-          c.cadastro_rota_principal                 AS rota_principal
+          c.entrega_municipio                       AS municipio,
+          c.entrega_rota_principal                 AS rota_principal
         FROM public.tb_pedidos a
         LEFT JOIN public.t_cadastro_cliente_v2 c ON c.cadastro_codigo_da_empresa::text = a.codigo_cliente
         WHERE {where_clause}
