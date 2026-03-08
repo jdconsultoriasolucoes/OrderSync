@@ -87,11 +87,11 @@ def gerar_pdf_formacao_carga(db, carga_id: int) -> bytes:
 
     # 2. Fetch Orders linked to this load
     sql_pedidos = text("""
-        SELECT 
             cp.ordem_carregamento,
             p.id_pedido,
+            p.codigo_cliente,
             p.cliente,
-            p.nome_fantasia,
+            c.cadastro_nome_fantasia as nome_fantasia,
             CASE WHEN p.usar_valor_com_frete THEN 'C/ FRETE' ELSE 'S/ FRETE' END as modalidade,
             c.entrega_municipio as cidade,
             c.entrega_rota_principal as rota_geral,
@@ -128,7 +128,7 @@ def gerar_pdf_formacao_carga(db, carga_id: int) -> bytes:
             str(carga.get('numero_carga') or ""),
             str(p.id_pedido),
             _br_number(p.peso_total_kg, 2),
-            str(p.id_pedido), # Using ID as code if no specific code
+            str(p.codigo_cliente or p.id_pedido),
             str(p.cliente or "")[:20],
             str(p.nome_fantasia or "")[:15],
             str(p.cidade or "")[:15],
@@ -178,8 +178,9 @@ def gerar_pdf_romaneio(db, carga_id: int) -> bytes:
         SELECT 
             cp.ordem_carregamento,
             p.id_pedido,
+            p.codigo_cliente,
             p.cliente,
-            p.nome_fantasia,
+            c.cadastro_nome_fantasia as nome_fantasia,
             c.entrega_municipio as cidade,
             p.peso_total_kg,
             cp.observacoes as obs_carga
@@ -216,7 +217,7 @@ def gerar_pdf_romaneio(db, carga_id: int) -> bytes:
     data = [["CÓDIGO", "CLIENTE", "N. FANTASIA", "MUNICÍPIO", "ORDEM CARREG.", "PESO LÍQUIDO", "OBSERVAÇÃO PEDIDO"]]
     for p in pedidos:
         data.append([
-            str(p.id_pedido),
+            str(p.codigo_cliente or p.id_pedido),
             str(p.cliente or "")[:35],
             str(p.nome_fantasia or "")[:20],
             str(p.cidade or "")[:20],
@@ -288,13 +289,14 @@ def gerar_pdf_resumo_produtos(db, carga_id: int) -> bytes:
 
 def _desenhar_resumo_logic(c, db, carga, produtos, width, height, y_start=None):
     if y_start is None:
-        y = _draw_header(c, width, height, "Resumo de Produtos por Carga")
-        # Header Info: Filial, CARGA Nº, DATA
+        y = _draw_header(c, width, height, "(4) RESUMO DE PRODUTOS")
+        # Header Info as per drawing 4: Filial | CARGA Nº | DATA
         c.setFont("Helvetica-Bold", 10)
+        c.setFillColor(colors.black)
         c.drawString(0.7*cm, y, f"Filial: SUPRA LOG")
         c.drawString(7.0*cm, y, f"CARGA Nº: {carga.get('numero_carga') or ''}")
         c.drawRightString(width - 0.7*cm, y, f"DATA: {datetime.now().strftime('%d/%m/%Y')}")
-        y -= 1.0*cm
+        y -= 0.8*cm
     else:
         y = y_start
 
@@ -351,8 +353,9 @@ def gerar_pdf_relatorio_completo(db, carga_id: int) -> bytes:
         SELECT 
             cp.ordem_carregamento,
             p.id_pedido,
+            p.codigo_cliente,
             p.cliente,
-            p.nome_fantasia,
+            c.cadastro_nome_fantasia as nome_fantasia,
             c.entrega_municipio as cidade,
             p.peso_total_kg,
             cp.observacoes as obs_carga
@@ -430,7 +433,7 @@ def _desenhar_romaneio_logic(c, carga, pedidos, width, height):
     data = [["CÓDIGO", "CLIENTE", "N. FANTASIA", "MUNICÍPIO", "ORDEM CARREG.", "PESO LÍQUIDO", "OBSERVAÇÃO PEDIDO"]]
     for p in pedidos:
         data.append([
-            str(p.id_pedido),
+            str(p.codigo_cliente or p.id_pedido),
             str(p.cliente or "")[:35],
             str(p.nome_fantasia or "")[:20],
             str(p.cidade or "")[:20],
