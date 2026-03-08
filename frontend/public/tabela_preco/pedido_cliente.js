@@ -885,7 +885,26 @@ function aplicarModoInterno() {
   }
 }
 // -------------------- Bind de eventos e início --------------------
-if (btnConfirmar) btnConfirmar.addEventListener("click", confirmarPedido);
+if (btnConfirmar) {
+  btnConfirmar.addEventListener("click", () => {
+    // Validação de Data Retirada
+    const dataRetStr = document.getElementById('dataEntregaValor')?.textContent;
+    if (dataRetStr && dataRetStr !== 'a combinar') {
+      const parts = dataRetStr.split('/');
+      if (parts.length === 3) {
+        const [d, m, y] = parts;
+        const dataRet = new Date(parseInt(y), parseInt(m) - 1, parseInt(d));
+        const hoje = new Date();
+        hoje.setHours(0, 0, 0, 0);
+        if (dataRet < hoje) {
+          alert("⚠️ A data de retirada deste orçamento já passou. Por favor, solicite a atualização do link antes de confirmar.");
+          return;
+        }
+      }
+    }
+    confirmarPedido();
+  });
+}
 if (btnCancelar) btnCancelar.addEventListener("click", cancelarPedido);
 
 window.carregarPedido = carregarPedido;

@@ -298,7 +298,7 @@ async function carregarPedidosDaCargaAtiva() {
             h += `
                 <tr>
                     <td><strong>${p.numero_pedido}</strong></td>
-                    <td style="max-width: 250px; white-space: normal; line-height: 1.2; overflow: hidden; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical;">${p.cliente_nome || '-'}</td>
+                    <td style="white-space: normal; line-height: 1.2; overflow: hidden; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical;">${p.cliente_nome || '-'}</td>
                     <td>${p.fornecedor || '-'}</td>
                     <td>${p.modalidade || '-'}</td>
                     <td>${p.status}</td>
@@ -335,12 +335,24 @@ async function carregarPedidosDaCargaAtiva() {
         emptyPedidos.style.display = 'block';
     }
 }
-
 // -----------------------------------------------------
 // FUNÇÕES DE BUSCA LIVRE DE PEDIDOS NO MODAL
 // -----------------------------------------------------
 
 function abrirModalBuscaPedidos() {
+    // Validação de Data Retirada antes de abrir modal
+    const dataRetiradaStr = document.getElementById('dataEntregaValor')?.textContent;
+    if (dataRetiradaStr && dataRetiradaStr !== 'a combinar') {
+        const [d, m, y] = dataRetiradaStr.split('/');
+        const dataRetirada = new Date(parseInt(y), parseInt(m) - 1, parseInt(d));
+        const hoje = new Date();
+        hoje.setHours(0, 0, 0, 0);
+        if (dataRetirada < hoje) {
+            alert("⚠️ A data de retirada deste orçamento já passou. Não é possível adicionar pedidos a esta carga.");
+            return;
+        }
+    }
+
     const modal = document.getElementById('modal-buscar-pedido');
     modal.classList.add('active');
 
@@ -587,6 +599,7 @@ async function renderRomaneio() {
                     <td><em>Agrupado</em></td>
                     <td>
                         <button class="os-btn os-btn-sm os-btn-primary btn-save-romaneio" data-carga="${c.id}">Salvar Motorista</button>
+                        <button class="os-btn os-btn-sm os-btn-danger btn-excluir-carga" data-id="${c.id}" style="margin-left: 4px;">Excluir</button>
                     </td>
                 </tr>
             `;
@@ -598,7 +611,20 @@ async function renderRomaneio() {
         cargas.forEach(c => {
             if (c.id_transporte) {
                 const sel = document.querySelector(`.sel-transporte[data-carga="${c.id}"]`);
-                if (sel) sel.value = c.id_transporte;
+                if (sel) {
+                    sel.value = c.id_transporte;
+                    // Trigger capacity check
+                    const trans = transportes.find(t => String(t.id) === String(c.id_transporte));
+                    if (trans && trans.capacidade_kg && c.peso_total_kg > trans.capacidade_kg) {
+                        const cellPeso = sel.closest('tr').querySelector('td:nth-child(6)');
+                        if (cellPeso) {
+                            cellPeso.innerHTML = `<span style="color:var(--os-error); font-weight:700;" title="Capacidade: ${trans.capacidade_kg}kg">${(c.peso_total_kg).toLocaleString('pt-BR')} kg ⚠️</span>`;
+                        }
+                    } else if (c.peso_total_kg) {
+                        const cellPeso = sel.closest('tr').querySelector('td:nth-child(6)');
+                        if (cellPeso) cellPeso.textContent = (c.peso_total_kg).toLocaleString('pt-BR') + ' kg';
+                    }
+                }
             }
         });
 
@@ -665,6 +691,7 @@ async function renderResumoProdutos() {
                 <select class="os-input" id="sel-resumo-carga" style="max-width: 300px; display:inline-block;">
                     ${optCargas}
                 </select>
+                <button class="os-btn os-btn-sm os-btn-danger btn-excluir-carga" id="btn-excluir-resumo" style="margin-left: 10px; display:none;">Excluir Carga</button>
             </td></tr>
             <tr>
                 <th style="width: 40px; text-align: center;"><input type="checkbox" id="chk-all-prods"></th>
@@ -684,10 +711,16 @@ async function renderResumoProdutos() {
         const sel = document.getElementById("sel-resumo-carga");
         sel.addEventListener("change", async (e) => {
             const idCarga = e.target.value;
+            const btnExcluir = document.getElementById('btn-excluir-resumo');
             if (!idCarga) {
                 tbody.innerHTML = "";
                 emptyStateEl.style.display = "block";
+                if (btnExcluir) btnExcluir.style.display = 'none';
                 return;
+            }
+            if (btnExcluir) {
+                btnExcluir.style.display = 'inline-block';
+                btnExcluir.dataset.id = idCarga;
             }
 
             loadingEl.style.display = "block";
@@ -770,6 +803,7 @@ async function renderRelatorioCompleto() {
                 <select class="os-input" id="sel-completo-carga" style="max-width: 300px; display:inline-block;">
                     ${optCargas}
                 </select>
+                <button class="os-btn os-btn-sm os-btn-danger btn-excluir-carga" id="btn-excluir-completo" style="margin-left: 10px; display:none;">Excluir Carga</button>
             </td></tr>
         `;
 
@@ -779,10 +813,16 @@ async function renderRelatorioCompleto() {
         const sel = document.getElementById("sel-completo-carga");
         sel.addEventListener("change", async (e) => {
             const idCarga = e.target.value;
+            const btnExcluir = document.getElementById('btn-excluir-completo');
             if (!idCarga) {
                 tbody.innerHTML = "";
                 emptyStateEl.style.display = "block";
+                if (btnExcluir) btnExcluir.style.display = 'none';
                 return;
+            }
+            if (btnExcluir) {
+                btnExcluir.style.display = 'inline-block';
+                btnExcluir.dataset.id = idCarga;
             }
 
             loadingEl.style.display = "block";

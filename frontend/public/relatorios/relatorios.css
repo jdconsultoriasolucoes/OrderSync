@@ -14,7 +14,8 @@
     display: grid;
     grid-template-columns: 260px 1fr;
     gap: var(--os-space-4);
-    max-width: var(--os-max-content);
+    max-width: 95%;
+    width: 1600px;
     margin: 0 auto;
     align-items: start;
 }

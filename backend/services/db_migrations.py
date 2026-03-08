@@ -68,9 +68,49 @@ def run_migrations():
             try:
                 db.execute(text("ALTER TABLE tb_cargas ADD COLUMN nome_carga VARCHAR"))
                 db.commit()
-                logger.info("Coluna nome_carga adicionada com sucesso.")
             except Exception as e:
                 db.rollback()
                 logger.error(f"Falha ao adicionar coluna em tb_cargas: {e}")
+
+        # 5. tb_pedidos: data_retirada, tabela_preco_nome, fornecedor
+        for col, col_type in [("data_retirada", "DATE"), ("tabela_preco_nome", "VARCHAR"), ("fornecedor", "VARCHAR")]:
+            try:
+                db.execute(text(f"SELECT {col} FROM tb_pedidos LIMIT 1"))
+            except Exception:
+                db.rollback()
+                logger.info(f"Adicionando coluna {col} em tb_pedidos...")
+                try:
+                    db.execute(text(f"ALTER TABLE tb_pedidos ADD COLUMN {col} {col_type}"))
+                    db.commit()
+                except Exception as e:
+                    db.rollback()
+                    logger.error(f"Falha ao adicionar {col} em tb_pedidos: {e}")
+
+        # 6. tb_pedidos_itens: preco_unit_frt, subtotal_com_f, subtotal_sem_f, peso_kg
+        for col, col_type in [("preco_unit_frt", "NUMERIC"), ("subtotal_com_f", "NUMERIC"), ("subtotal_sem_f", "NUMERIC"), ("peso_kg", "NUMERIC")]:
+            try:
+                db.execute(text(f"SELECT {col} FROM tb_pedidos_itens LIMIT 1"))
+            except Exception:
+                db.rollback()
+                logger.info(f"Adicionando coluna {col} em tb_pedidos_itens...")
+                try:
+                    db.execute(text(f"ALTER TABLE tb_pedidos_itens ADD COLUMN {col} {col_type}"))
+                    db.commit()
+                except Exception as e:
+                    db.rollback()
+                    logger.error(f"Falha ao adicionar {col} em tb_pedidos_itens: {e}")
+
+        # 7. tb_transporte: capacidade_kg
+        try:
+            db.execute(text("SELECT capacidade_kg FROM tb_transporte LIMIT 1"))
+        except Exception:
+            db.rollback()
+            logger.info("Adicionando coluna capacidade_kg em tb_transporte...")
+            try:
+                db.execute(text("ALTER TABLE tb_transporte ADD COLUMN capacidade_kg INTEGER"))
+                db.commit()
+            except Exception as e:
+                db.rollback()
+                logger.error(f"Falha ao adicionar capacidade_kg em tb_transporte: {e}")
 
     logger.info("Migrações concluídas.")

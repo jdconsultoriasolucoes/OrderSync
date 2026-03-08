@@ -72,6 +72,32 @@ const CONFIG = {
             document.getElementById('fam-nome').value = '';
             document.getElementById('fam-marca').value = '';
         }
+    },
+    transporte: {
+        apiPath: '/api/transporte',
+        pk: 'id',
+        cols: [
+            { key: 'id', label: 'ID' },
+            { key: 'transportadora', label: 'Empresa' },
+            { key: 'motorista', label: 'Motorista' },
+            { key: 'veiculo_placa', label: 'Placa' },
+            { key: 'capacidade_kg', label: 'Capacidade', fmt: v => v ? (v).toLocaleString('pt-BR') + ' kg' : '-' }
+        ],
+        modalId: 'modal-transporte',
+        fillForm: (item) => {
+            document.getElementById('trans-id').value = item.id;
+            document.getElementById('trans-empresa').value = item.transportadora;
+            document.getElementById('trans-motorista').value = item.motorista;
+            document.getElementById('trans-placa').value = item.veiculo_placa;
+            document.getElementById('trans-capacidade').value = item.capacidade_kg || '';
+        },
+        clearForm: () => {
+            document.getElementById('trans-id').value = '';
+            document.getElementById('trans-empresa').value = '';
+            document.getElementById('trans-motorista').value = '';
+            document.getElementById('trans-placa').value = '';
+            document.getElementById('trans-capacidade').value = '';
+        }
     }
 };
 
@@ -87,7 +113,12 @@ function selectModule(mod) {
     });
 
     // Set Header
-    const titles = { condicoes: 'Condições de Pagamento', descontos: 'Descontos', familias: 'Grupo de Produtos' };
+    const titles = {
+        condicoes: 'Condições de Pagamento',
+        descontos: 'Descontos',
+        familias: 'Grupo de Produtos',
+        transporte: 'Transporte / Logística'
+    };
 
     const sectionTitle = document.getElementById('sectionTitle');
     if (sectionTitle) sectionTitle.textContent = titles[mod];
@@ -272,6 +303,25 @@ async function saveFamilia(e) {
 
     const isUpdate = !!currentItem;
 
+    await saveGeneric(payload, isUpdate, id);
+}
+
+async function saveTransporte(e) {
+    e.preventDefault();
+    const id = document.getElementById('trans-id').value;
+    const empresa = document.getElementById('trans-empresa').value;
+    const motorista = document.getElementById('trans-motorista').value;
+    const placa = document.getElementById('trans-placa').value;
+    const cap = document.getElementById('trans-capacidade').value;
+
+    const payload = {
+        transportadora: empresa,
+        motorista: motorista,
+        veiculo_placa: placa,
+        capacidade_kg: cap ? parseInt(cap) : null
+    };
+
+    const isUpdate = !!currentItem;
     await saveGeneric(payload, isUpdate, id);
 }
 

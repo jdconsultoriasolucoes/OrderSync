@@ -41,32 +41,7 @@ def criar_pedido_confirmado(db: Session, tabela_id: int, body: ConfirmarPedidoRe
 
     # ... (rest of logic) ...
 
-    # 5) Insert pedido
-    insert_sql = text("""
-        INSERT INTO tb_pedidos (
-            codigo_cliente, cliente, tabela_preco_id, tabela_preco_nome,
-            validade_ate, validade_dias, data_retirada,
-            usar_valor_com_frete, itens,
-            peso_total_kg, frete_total, total_sem_frete, total_com_frete, total_pedido,
-            observacoes, status, confirmado_em,
-            link_token, link_url, link_enviado_em, link_expira_em, link_status,
-            link_primeiro_acesso_em, link_ultimo_acesso_em, link_qtd_acessos,
-            fornecedor,          
-            criado_em, atualizado_em, created_at
-        )
-        VALUES (
-            :codigo_cliente, :cliente, :tabela_preco_id, :tabela_preco_nome,
-            :validade_ate, :validade_dias, :data_retirada,
-            :usar_valor_com_frete, CAST(:itens AS jsonb),
-            :peso_total_kg, :frete_total, :total_sem_frete, :total_com_frete, :total_pedido,
-            :observacoes, 'CONFIRMADO', :confirmado_em,
-            :link_token, :link_url, :link_enviado_em, :link_expira_em, 'ABERTO',
-            :link_primeiro_acesso_em, :link_ultimo_acesso_em, :link_qtd_acessos,
-            :fornecedor,         
-            :agora, :agora, :pedido_created_at
-        )
-        RETURNING id_pedido
-    """)
+    # 2) Get Link info
     link_row = None
     if body.origin_code:
         link_row = db.execute(text("""
@@ -77,7 +52,6 @@ def criar_pedido_confirmado(db: Session, tabela_id: int, body: ConfirmarPedidoRe
         """), {"c": body.origin_code}).mappings().first()
 
         if not link_row:
-            # Caller handles 404 mapping if needed, or we raise proper exception
             raise ValidationException("Link compartilhado não encontrado ou expirado", code="LINK_001")
 
         exp = link_row.get("expires_at")
@@ -86,7 +60,7 @@ def criar_pedido_confirmado(db: Session, tabela_id: int, body: ConfirmarPedidoRe
                 exp = exp.replace(tzinfo=TZ)
             agora_sp = datetime.now(TZ)
             if agora_sp > exp:
-                pass # Apenas aviso visual no front
+                pass 
 
         if int(link_row["tabela_id"]) != int(tabela_id):
             raise BusinessRuleException("O Link fornecido não pertence a esta tabela de preço", code="LINK_002")
@@ -126,29 +100,25 @@ def criar_pedido_confirmado(db: Session, tabela_id: int, body: ConfirmarPedidoRe
     validade_dias = body.validade_dias
     data_retirada = _parse_date(body.data_retirada) or (link_row["data_prevista"] if link_row else None)
 
+    # 4.1) Validação de Data Retirada
+    if data_retirada:
+        hoje = datetime.now(TZ).date()
+        if data_retirada < hoje:
+            raise BusinessRuleException("A Data de Retirada não pode ser no passado (Data informada: " + data_retirada.strftime("%d/%m/%Y") + ")")
+
     codigo_cliente = (body.codigo_cliente or "").strip() or None
-    
-    # 🛡️ FALLBACK: Se o front não mandou o código (comum em links públicos),
-    # usamos o que está gravado no link (que é confiável).
     if not codigo_cliente and link_row:
         c_link = link_row.get("codigo_cliente")
         if c_link and c_link.strip() and c_link != "Não cadastrado":
             codigo_cliente = c_link.strip()
 
-    # 🛡️ FALLBACK 2: Se ainda não temos código (ou é "Não cadastrado"),
-    # tentamos pegar direto da tabela de preço original
     if not codigo_cliente or codigo_cliente == "Não cadastrado":
         try:
              row_tab = db.execute(text("SELECT codigo_cliente FROM tb_tabela_preco WHERE id_tabela = :tid"), {"tid": tabela_id}).mappings().first()
              if row_tab and row_tab["codigo_cliente"]:
                  codigo_cliente = str(row_tab["codigo_cliente"]).strip()
         except Exception as e:
-             print(f"DEBUG: Erro ao buscar codigo na tabela: {e}")
-
-    if link_row:
-        link_url = link_row.get("link_url")
-    else:
-        link_url = None
+             logger.error(f"Erro ao buscar codigo na tabela: {e}")
 
     observacao = (body.observacao or "").strip() or None
     agora = datetime.now(TZ)
@@ -157,7 +127,7 @@ def criar_pedido_confirmado(db: Session, tabela_id: int, body: ConfirmarPedidoRe
     # 5) Insert pedido
     insert_sql = text("""
         INSERT INTO tb_pedidos (
-            codigo_cliente, cliente, tabela_preco_id,
+            codigo_cliente, cliente, tabela_preco_id, tabela_preco_nome,
             validade_ate, validade_dias, data_retirada,
             usar_valor_com_frete, itens,
             peso_total_kg, frete_total, total_sem_frete, total_com_frete, total_pedido,
@@ -168,7 +138,7 @@ def criar_pedido_confirmado(db: Session, tabela_id: int, body: ConfirmarPedidoRe
             criado_em, atualizado_em, created_at
         )
         VALUES (
-            :codigo_cliente, :cliente, :tabela_preco_id,
+            :codigo_cliente, :cliente, :tabela_preco_id, :tabela_preco_nome,
             :validade_ate, :validade_dias, :data_retirada,
             :usar_valor_com_frete, CAST(:itens AS jsonb),
             :peso_total_kg, :frete_total, :total_sem_frete, :total_com_frete, :total_pedido,
@@ -207,7 +177,7 @@ def criar_pedido_confirmado(db: Session, tabela_id: int, body: ConfirmarPedidoRe
         "link_qtd_acessos": link_row.get("uses") if link_row else None,
         "fornecedor": fornecedor,
         "agora": agora,
-        "pedido_created_at": (link_row.get("created_at") if link_row else None),
+        "pedido_created_at": (pedido_created_at),
     }
 
     new_id = db.execute(insert_sql, params).scalar()

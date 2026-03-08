@@ -6,6 +6,7 @@ class TransporteBase(BaseModel):
     transportadora: str
     motorista: str
     veiculo_placa: str
+    capacidade_kg: Optional[int] = None
 
 class TransporteCreate(TransporteBase):
     pass
@@ -14,6 +15,7 @@ class TransporteUpdate(BaseModel):
     transportadora: Optional[str] = None
     motorista: Optional[str] = None
     veiculo_placa: Optional[str] = None
+    capacidade_kg: Optional[int] = None
     data_desativacao: Optional[datetime] = None
 
 class TransporteResponse(TransporteBase):

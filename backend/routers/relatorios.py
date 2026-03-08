@@ -95,6 +95,14 @@ def add_pedido_to_carga(carga_id: int, pedido: CargaPedidoCreate, db: Session = 
     if not db_carga:
         raise HTTPException(status_code=404, detail="Carga não encontrada")
     
+    # Prevenção de duplicidade
+    existente = db.query(CargaPedidoModel).filter(
+        CargaPedidoModel.id_carga == carga_id,
+        CargaPedidoModel.numero_pedido == pedido.numero_pedido
+    ).first()
+    if existente:
+        raise HTTPException(status_code=400, detail=f"O pedido {pedido.numero_pedido} já está nesta carga.")
+
     db_item = CargaPedidoModel(
         id_carga=carga_id,
         numero_pedido=pedido.numero_pedido,
@@ -142,7 +150,7 @@ def get_resumo_produtos_carga(carga_id: int, db: Session = Depends(get_db)):
         JOIN tb_pedidos p ON cp.numero_pedido = p.id_pedido::text
         JOIN tb_pedidos_itens i ON p.id_pedido = i.id_pedido
         LEFT JOIN (
-            SELECT codigo_supra, MAX(peso) as peso, MAX(unidade_sigla) as unidade_medida
+            SELECT codigo_supra, MAX(CAST(peso AS FLOAT)) as peso, MAX(unidade) as unidade_medida
             FROM t_cadastro_produto_v2
             GROUP BY codigo_supra
         ) prod ON prod.codigo_supra = i.codigo

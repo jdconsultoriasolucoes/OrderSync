@@ -94,8 +94,8 @@ def gerar_pdf_formacao_carga(db, carga_id: int) -> bytes:
             p.cliente,
             p.fornecedor,
             CASE WHEN p.usar_valor_com_frete THEN 'C/ FRETE' ELSE 'S/ FRETE' END as modalidade,
-            c.cadastro_municipio as cidade,
-            c.cadastro_uf as uf,
+            c.entrega_municipio as cidade,
+            c.entrega_estado as uf,
             (SELECT SUM(quantidade) FROM tb_pedidos_itens WHERE id_pedido = p.id_pedido) as total_itens,
             p.peso_total_kg,
             p.total_pedido as valor_total
@@ -175,8 +175,8 @@ def gerar_pdf_romaneio(db, carga_id: int) -> bytes:
             cp.ordem_carregamento,
             p.id_pedido,
             p.cliente,
-            c.cadastro_municipio as cidade,
-            c.cadastro_bairro as bairro,
+            c.entrega_municipio as cidade,
+            c.entrega_bairro as bairro,
             p.peso_total_kg,
             p.total_pedido as valor_total
         FROM tb_cargas_pedidos cp
@@ -334,8 +334,8 @@ def _desenhar_romaneio_logic(c, db, carga_id, width, height):
             cp.ordem_carregamento,
             p.id_pedido,
             p.cliente,
-            c.cadastro_municipio as cidade,
-            c.cadastro_bairro as bairro,
+            c.entrega_municipio as cidade,
+            c.entrega_bairro as bairro,
             p.peso_total_kg,
             p.total_pedido as valor_total
         FROM tb_cargas_pedidos cp
