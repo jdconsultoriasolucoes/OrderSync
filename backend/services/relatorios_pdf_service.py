@@ -80,7 +80,7 @@ def _draw_header(c, width, height, title, subtitle=""):
 # ----------------------------------------------------------------------------
 
 def gerar_pdf_formacao_carga(db, carga_id: int) -> bytes:
-    # 1. Fetch Carga info (Removed transport info for this report as requested)
+    # 1. Fetch Carga info
     sql_carga = text("SELECT * FROM tb_cargas WHERE id = :cid")
     carga = db.execute(sql_carga, {"cid": carga_id}).mappings().first()
     if not carga: return None
@@ -90,13 +90,12 @@ def gerar_pdf_formacao_carga(db, carga_id: int) -> bytes:
         SELECT 
             cp.ordem_carregamento,
             p.id_pedido,
-            p.status,
             p.cliente,
-            p.fornecedor,
+            p.nome_fantasia,
             CASE WHEN p.usar_valor_com_frete THEN 'C/ FRETE' ELSE 'S/ FRETE' END as modalidade,
             c.entrega_municipio as cidade,
-            c.entrega_estado as uf,
-            (SELECT SUM(quantidade) FROM tb_pedidos_itens WHERE id_pedido = p.id_pedido) as total_itens,
+            c.entrega_rota_principal as rota_geral,
+            c.entrega_rota_aproximacao as rota_aprox,
             p.peso_total_kg,
             p.total_pedido as valor_total
         FROM tb_cargas_pedidos cp
@@ -116,29 +115,34 @@ def gerar_pdf_formacao_carga(db, carga_id: int) -> bytes:
     subtitle = f"Carga: {carga.get('numero_carga') or ''} - {carga.get('nome_carga') or ''}"
     y = _draw_header(c, width, height, "Manutenção de Pedidos / Formação de Carga", subtitle)
 
+    # Extra Header - Campo p/ Digitar
+    c.setFont("Helvetica", 10)
+    c.drawString(width - 5.5*cm, height - 1.5*cm, "Campo p/ Digitar Nº Carga: ________________")
+
     # Table Data
-    data = [["Ordem", "Pedido", "Status", "Cliente", "Fornecedor", "Frete", "Cidade/UF", "Itens", "Peso (kg)", "Valor Total"]]
+    # Columns: Nº CARGA | Nº PEDIDO | PESO LIQUIDO | CÓDIGO | CLIENTE | N. FANTASIA | MUNICÍPIO | ROTA GERAL | ROTA DE APROXIMAÇÃO
+    data = [["Nº CARGA", "Nº PEDIDO", "PESO LIQ.", "CÓDIGO", "CLIENTE", "N. FANTASIA", "MUNICÍPIO", "ROTA GERAL", "ROTA APROX."]]
+    
     for p in pedidos:
         data.append([
-            str(p.ordem_carregamento or ""),
+            str(carga.get('numero_carga') or ""),
             str(p.id_pedido),
-            str(p.status or ""),
-            str(p.cliente or "")[:25],
-            str(p.fornecedor or "")[:15],
-            str(p.modalidade),
-            f"{p.cidade or ''}/{p.uf or ''}",
-            str(int(p.total_itens or 0)),
             _br_number(p.peso_total_kg, 2),
-            _br_number(p.valor_total, 2)
+            str(p.id_pedido), # Using ID as code if no specific code
+            str(p.cliente or "")[:20],
+            str(p.nome_fantasia or "")[:15],
+            str(p.cidade or "")[:15],
+            str(p.rota_geral or "-"),
+            str(p.rota_aprox or "-")
         ])
 
     # Table Style
-    table = Table(data, colWidths=[1.2*cm, 1.8*cm, 2.0*cm, 5.0*cm, 3.0*cm, 2.0*cm, 4.0*cm, 1.5*cm, 2.2*cm, 2.8*cm])
+    table = Table(data, colWidths=[1.8*cm, 1.8*cm, 2.0*cm, 1.8*cm, 5.0*cm, 3.5*cm, 3.5*cm, 4.0*cm, 4.5*cm])
     style = TableStyle([
         ('BACKGROUND', (0, 0), (-1, 0), SUPRA_BAR),
         ('TEXTCOLOR', (0, 0), (-1, 0), colors.white),
         ('ALIGN', (0, 0), (-1, -1), 'LEFT'),
-        ('ALIGN', (7, 0), (-1, -1), 'RIGHT'), # Numbers to right
+        ('ALIGN', (2, 0), (2, -1), 'RIGHT'), # Peso Liq
         ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
         ('FONTSIZE', (0, 0), (-1, -1), 8),
         ('BOTTOMPADDING', (0, 0), (-1, -1), 4),
@@ -175,10 +179,10 @@ def gerar_pdf_romaneio(db, carga_id: int) -> bytes:
             cp.ordem_carregamento,
             p.id_pedido,
             p.cliente,
+            p.nome_fantasia,
             c.entrega_municipio as cidade,
-            c.entrega_bairro as bairro,
             p.peso_total_kg,
-            p.total_pedido as valor_total
+            cp.observacoes as obs_carga
         FROM tb_cargas_pedidos cp
         JOIN tb_pedidos p ON cp.numero_pedido = p.id_pedido::text
         LEFT JOIN public.t_cadastro_cliente_v2 c ON c.cadastro_codigo_da_empresa::text = p.codigo_cliente
@@ -192,38 +196,41 @@ def gerar_pdf_romaneio(db, carga_id: int) -> bytes:
     c = canvas.Canvas(buffer, pagesize=pagesize)
     width, height = pagesize
 
-    subtitle = f"Carga: {carga.get('numero_carga') or ''} | Motorista: {carga.get('motorista') or ''} | Placa: {carga.get('veiculo_placa') or ''}"
-    y = _draw_header(c, width, height, "Romaneio de Entrega", subtitle)
+    # Header Info from drawing
+    # Filial (static or from env as a placeholder for now), CARGA Nº, DATA
+    y = _draw_header(c, width, height, "Romaneio de Entrega")
 
-    # Transport Info Block
-    c.setFillColor(colors.black)
+    # Header Block
     c.setFont("Helvetica-Bold", 10)
-    c.drawString(0.7*cm, y + 0.1*cm, "DADOS DO TRANSPORTE")
-    c.setFont("Helvetica", 9)
-    y -= 0.5*cm
-    c.drawString(0.7*cm, y, f"Transportadora: {carga.get('transportadora') or 'Próprio'}")
-    c.drawString(8.0*cm, y, f"Motorista: {carga.get('motorista') or '-'}")
-    c.drawString(15.0*cm, y, f"Placa: {carga.get('veiculo_placa') or '-'}")
-    y -= 0.8*cm
+    c.drawString(0.7*cm, y, f"Filial: SUPRA LOG")
+    c.drawString(8.0*cm, y, f"CARGA Nº: {carga.get('numero_carga') or ''}")
+    c.drawRightString(width - 0.7*cm, y, f"DATA: {datetime.now().strftime('%d/%m/%Y')}")
+    y -= 0.6*cm
+    
+    c.drawString(0.7*cm, y, f"TRANSPORTADORA: {carga.get('transportadora') or 'Próprio'}")
+    c.drawString(8.0*cm, y, f"MOTORISTA: {carga.get('motorista') or '-'}")
+    c.drawRightString(width - 0.7*cm, y, f"VEÍCULO/PLACA: {carga.get('veiculo_placa') or '-'}")
+    y -= 1.0*cm
 
-    data = [["Ord", "Pedido", "Cliente", "Cidade", "Bairro", "Peso (kg)", "Valor Total"]]
+    # Table columns: CÓDIGO | CLIENTE | N. FANTASIA | MUNICÍPIO | ORDEM CARREG. | PESO LÍQUIDO | OBSERVAÇÃO PEDIDO
+    data = [["CÓDIGO", "CLIENTE", "N. FANTASIA", "MUNICÍPIO", "ORDEM CARREG.", "PESO LÍQUIDO", "OBSERVAÇÃO PEDIDO"]]
     for p in pedidos:
         data.append([
-            str(p.ordem_carregamento or ""),
             str(p.id_pedido),
-            str(p.cliente or "")[:45],
-            str(p.cidade or "")[:25],
-            str(p.bairro or "")[:25],
+            str(p.cliente or "")[:35],
+            str(p.nome_fantasia or "")[:20],
+            str(p.cidade or "")[:20],
+            str(p.ordem_carregamento or ""),
             _br_number(p.peso_total_kg, 2),
-            _br_number(p.valor_total, 2)
+            str(p.obs_carga or "")[:40]
         ])
 
-    table = Table(data, colWidths=[1.0*cm, 2.0*cm, 10.0*cm, 4.5*cm, 4.5*cm, 2.5*cm, 3.0*cm])
+    table = Table(data, colWidths=[2.0*cm, 7.0*cm, 4.0*cm, 4.0*cm, 2.5*cm, 2.5*cm, 5.0*cm])
     style = TableStyle([
         ('BACKGROUND', (0, 0), (-1, 0), SUPRA_BAR),
         ('TEXTCOLOR', (0, 0), (-1, 0), colors.white),
         ('ALIGN', (0, 0), (-1, -1), 'LEFT'),
-        ('ALIGN', (5, 0), (-1, -1), 'RIGHT'),
+        ('ALIGN', (5, 0), (5, -1), 'RIGHT'),
         ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
         ('FONTSIZE', (0, 0), (-1, -1), 9),
         ('GRID', (0, 0), (-1, -1), 0.5, colors.grey),
@@ -250,131 +257,70 @@ def gerar_pdf_resumo_produtos(db, carga_id: int) -> bytes:
             i.codigo as item_codigo,
             i.nome as item_nome,
             SUM(i.quantidade) as qtd_total,
-            i.embalagem as item_embalagem
+            MAX(i.embalagem) as item_embalagem,
+            CAST(SUM(i.quantidade * COALESCE(prod.peso, 0)) AS FLOAT) AS peso_liquido_total
         FROM tb_cargas_pedidos cp
-        JOIN tb_pedidos_itens i ON i.id_pedido::text = cp.numero_pedido::text
+        JOIN tb_pedidos p ON cp.numero_pedido = p.id_pedido::text
+        JOIN tb_pedidos_itens i ON i.id_pedido = p.id_pedido
+        LEFT JOIN (
+            SELECT codigo_supra, MAX(CAST(peso AS FLOAT)) as peso
+            FROM t_cadastro_produto_v2
+            GROUP BY codigo_supra
+        ) prod ON prod.codigo_supra = i.codigo
         WHERE cp.id_carga = :cid
-        GROUP BY i.codigo, i.nome, i.embalagem
-        ORDER BY i.nome
+        GROUP BY i.codigo, i.nome
+        ORDER BY peso_liquido_total DESC
     """)
     produtos = db.execute(sql_resumo, {"cid": carga_id}).mappings().all()
-
     carga = db.execute(text("SELECT * FROM tb_cargas WHERE id = :cid"), {"cid": carga_id}).mappings().first()
 
     buffer = io.BytesIO()
-    pagesize = A4
-    c = canvas.Canvas(buffer, pagesize=pagesize)
-    width, height = pagesize
+    c = canvas.Canvas(buffer, pagesize=A4)
+    width, height = A4
 
-    subtitle = f"Carga: {carga.get('numero_carga') or ''} - {carga.get('nome_carga') or ''}"
-    y = _draw_header(c, width, height, "Resumo de Produtos por Carga", subtitle)
+    # Internal draw logic to reuse in Completo
+    _desenhar_resumo_logic(c, db, carga, produtos, width, height)
 
-    data = [["Código", "Descrição", "Emb.", "Qtd Total"]]
+    c.showPage()
+    c.save()
+    buffer.seek(0)
+    return buffer.read()
+
+def _desenhar_resumo_logic(c, db, carga, produtos, width, height, y_start=None):
+    if y_start is None:
+        y = _draw_header(c, width, height, "Resumo de Produtos por Carga")
+        # Header Info: Filial, CARGA Nº, DATA
+        c.setFont("Helvetica-Bold", 10)
+        c.drawString(0.7*cm, y, f"Filial: SUPRA LOG")
+        c.drawString(7.0*cm, y, f"CARGA Nº: {carga.get('numero_carga') or ''}")
+        c.drawRightString(width - 0.7*cm, y, f"DATA: {datetime.now().strftime('%d/%m/%Y')}")
+        y -= 1.0*cm
+    else:
+        y = y_start
+
+    # Table columns: CÓDIGO | DESCRIÇÃO PRODUTO / EMBALAGEM | PESO LÍQUIDO | EMBALAGEM | PESO LÍQUIDO ACUMULADO
+    data = [["CÓDIGO", "DESCRIÇÃO PRODUTO / EMBALAGEM", "PESO LÍQUIDO", "EMBALAGEM", "PESO LÍQ. ACUM."]]
+    
+    acumulado = 0.0
     for p in produtos:
+        peso = p.peso_liquido_total or 0.0
+        acumulado += peso
         data.append([
             str(p.item_codigo),
-            str(p.item_nome)[:70],
+            str(p.item_nome)[:55],
+            _br_number(peso, 3),
             str(p.item_embalagem or ""),
-            _br_number(p.qtd_total, 0)
+            _br_number(acumulado, 3)
         ])
 
-    table = Table(data, colWidths=[3.0*cm, 10.0*cm, 2.0*cm, 3.0*cm])
+    table = Table(data, colWidths=[2.5*cm, 8.5*cm, 2.5*cm, 2.5*cm, 3.5*cm])
     style = TableStyle([
         ('BACKGROUND', (0, 0), (-1, 0), SUPRA_BAR),
         ('TEXTCOLOR', (0, 0), (-1, 0), colors.white),
-        ('ALIGN', (0, 0), (1, -1), 'LEFT'),
-        ('ALIGN', (2, 0), (-1, -1), 'CENTER'),
-        ('ALIGN', (3, 0), (-1, -1), 'RIGHT'),
+        ('ALIGN', (0, 0), (-1, -1), 'LEFT'),
+        ('ALIGN', (2, 0), (2, -1), 'RIGHT'),
+        ('ALIGN', (4, 0), (4, -1), 'RIGHT'),
         ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
-        ('FONTSIZE', (0, 0), (-1, -1), 10),
-        ('GRID', (0, 0), (-1, -1), 0.5, colors.grey),
-    ])
-    for i in range(1, len(data)):
-        if i % 2 == 0: style.add('BACKGROUND', (0, i), (-1, i), SUPRA_BG_LIGHT)
-    
-    table.setStyle(style)
-    tw, th = table.wrap(width - 1.4*cm, height)
-    table.drawOn(c, 0.7*cm, y - th)
-
-    c.showPage()
-    c.save()
-    buffer.seek(0)
-    return buffer.read()
-
-# ----------------------------------------------------------------------------
-# REPORT 4 - RELATÓRIO COMPLETO (MERGED)
-# ----------------------------------------------------------------------------
-
-def gerar_pdf_relatorio_completo(db, carga_id: int) -> bytes:
-    buffer = io.BytesIO()
-    pagesize = landscape(A4)
-    c = canvas.Canvas(buffer, pagesize=pagesize)
-    width, height = pagesize
-
-    _desenhar_romaneio_logic(c, db, carga_id, width, height)
-    c.showPage()
-    _desenhar_resumo_logic(c, db, carga_id, width, height)
-
-    c.save()
-    buffer.seek(0)
-    return buffer.read()
-
-def _desenhar_romaneio_logic(c, db, carga_id, width, height):
-    sql_carga = text("""
-        SELECT c.*, t.motorista, t.veiculo_placa, t.transportadora 
-        FROM tb_cargas c 
-        LEFT JOIN tb_transporte t ON c.id_transporte = t.id
-        WHERE c.id = :cid
-    """)
-    carga = db.execute(sql_carga, {"cid": carga_id}).mappings().first()
-    if not carga: return
-
-    sql_pedidos = text("""
-        SELECT 
-            cp.ordem_carregamento,
-            p.id_pedido,
-            p.cliente,
-            c.entrega_municipio as cidade,
-            c.entrega_bairro as bairro,
-            p.peso_total_kg,
-            p.total_pedido as valor_total
-        FROM tb_cargas_pedidos cp
-        JOIN tb_pedidos p ON cp.numero_pedido = p.id_pedido::text
-        LEFT JOIN public.t_cadastro_cliente_v2 c ON c.cadastro_codigo_da_empresa::text = p.codigo_cliente
-        WHERE cp.id_carga = :cid
-        ORDER BY cp.ordem_carregamento
-    """)
-    pedidos = db.execute(sql_pedidos, {"cid": carga_id}).mappings().all()
-
-    subtitle = f"Carga: {carga.get('numero_carga') or ''} | Motorista: {carga.get('motorista') or ''} | Placa: {carga.get('veiculo_placa') or ''}"
-    y = _draw_header(c, width, height, "Relatório Completo - Romaneio", subtitle)
-
-    y -= 0.5*cm
-    c.setFont("Helvetica", 9)
-    c.setFillColor(colors.black)
-    c.drawString(0.7*cm, y, f"Transportadora: {carga.get('transportadora') or 'Próprio'}")
-    c.drawString(8.0*cm, y, f"Motorista: {carga.get('motorista') or '-'}")
-    c.drawString(15.0*cm, y, f"Placa: {carga.get('veiculo_placa') or '-'}")
-    y -= 0.8*cm
-
-    data = [["Ord", "Pedido", "Cliente", "Cidade", "Bairro", "Peso (kg)", "Valor Total"]]
-    for p in pedidos:
-        data.append([
-            str(p.ordem_carregamento or ""),
-            str(p.id_pedido),
-            str(p.cliente or "")[:50],
-            str(p.cidade or "")[:30],
-            str(p.bairro or "")[:30],
-            _br_number(p.peso_total_kg, 2),
-            _br_number(p.valor_total, 2)
-        ])
-
-    table = Table(data, colWidths=[1.0*cm, 2.0*cm, 10.0*cm, 5.0*cm, 5.0*cm, 2.5*cm, 3.0*cm])
-    style = TableStyle([
-        ('BACKGROUND', (0, 0), (-1, 0), SUPRA_BAR),
-        ('TEXTCOLOR', (0, 0), (-1, 0), colors.white),
-        ('ALIGN', (0, 0), (4, -1), 'LEFT'),
-        ('ALIGN', (5, 0), (-1, -1), 'RIGHT'),
         ('FONTSIZE', (0, 0), (-1, -1), 9),
         ('GRID', (0, 0), (-1, -1), 0.5, colors.grey),
     ])
@@ -384,44 +330,123 @@ def _desenhar_romaneio_logic(c, db, carga_id, width, height):
     table.setStyle(style)
     tw, th = table.wrap(width - 1.4*cm, height)
     table.drawOn(c, 0.7*cm, y - th)
+    return y - th
 
-def _desenhar_resumo_logic(c, db, carga_id, width, height):
+# ----------------------------------------------------------------------------
+# REPORT 4 - RELATÓRIO COMPLETO (MERGED)
+# ----------------------------------------------------------------------------
+
+def gerar_pdf_relatorio_completo(db, carga_id: int) -> bytes:
+    # Fetch all info for both parts
+    sql_carga = text("""
+        SELECT c.*, t.motorista, t.veiculo_placa, t.transportadora 
+        FROM tb_cargas c 
+        LEFT JOIN tb_transporte t ON c.id_transporte = t.id
+        WHERE c.id = :cid
+    """)
+    carga = db.execute(sql_carga, {"cid": carga_id}).mappings().first()
+    if not carga: return None
+
+    sql_pedidos = text("""
+        SELECT 
+            cp.ordem_carregamento,
+            p.id_pedido,
+            p.cliente,
+            p.nome_fantasia,
+            c.entrega_municipio as cidade,
+            p.peso_total_kg,
+            cp.observacoes as obs_carga
+        FROM tb_cargas_pedidos cp
+        JOIN tb_pedidos p ON cp.numero_pedido = p.id_pedido::text
+        LEFT JOIN public.t_cadastro_cliente_v2 c ON c.cadastro_codigo_da_empresa::text = p.codigo_cliente
+        WHERE cp.id_carga = :cid
+        ORDER BY cp.ordem_carregamento
+    """)
+    pedidos = db.execute(sql_pedidos, {"cid": carga_id}).mappings().all()
+
     sql_resumo = text("""
         SELECT 
             i.codigo as item_codigo,
             i.nome as item_nome,
             SUM(i.quantidade) as qtd_total,
-            i.embalagem as item_embalagem
+            MAX(i.embalagem) as item_embalagem,
+            CAST(SUM(i.quantidade * COALESCE(prod.peso, 0)) AS FLOAT) AS peso_liquido_total
         FROM tb_cargas_pedidos cp
-        JOIN tb_pedidos_itens i ON i.id_pedido::text = cp.numero_pedido::text
+        JOIN tb_pedidos p ON cp.numero_pedido = p.id_pedido::text
+        JOIN tb_pedidos_itens i ON p.id_pedido = i.id_pedido
+        LEFT JOIN (
+            SELECT codigo_supra, MAX(CAST(peso AS FLOAT)) as peso
+            FROM t_cadastro_produto_v2
+            GROUP BY codigo_supra
+        ) prod ON prod.codigo_supra = i.codigo
         WHERE cp.id_carga = :cid
-        GROUP BY i.codigo, i.nome, i.embalagem
-        ORDER BY i.nome
+        GROUP BY i.codigo, i.nome
+        ORDER BY peso_liquido_total DESC
     """)
     produtos = db.execute(sql_resumo, {"cid": carga_id}).mappings().all()
 
-    carga = db.execute(text("SELECT * FROM tb_cargas WHERE id = :cid"), {"cid": carga_id}).mappings().first()
+    buffer = io.BytesIO()
+    pagesize = landscape(A4)
+    c = canvas.Canvas(buffer, pagesize=pagesize)
+    width, height = pagesize
 
-    subtitle = f"Carga: {carga.get('numero_carga') or ''} - {carga.get('nome_carga') or ''}"
-    y = _draw_header(c, width, height, "Relatório Completo - Resumo de Produtos", subtitle)
+    # Part 1: Romaneio
+    y = _desenhar_romaneio_logic(c, carga, pedidos, width, height)
 
-    data = [["Código", "Descrição", "Emb.", "Qtd Total"]]
-    for p in produtos:
+    # Add space and Part 2: Resumo
+    y -= 1.0 * cm
+    # If not enough room, new page
+    if y < 4 * cm:
+        c.showPage()
+        y = None # None triggers draw_header
+
+    c.setFont("Helvetica-Bold", 11)
+    if y is None: y = _draw_header(c, width, height, "Relatório Completo - Resumo de Produtos")
+    else: c.drawString(0.7*cm, y + 0.2*cm, "RESUMO DE PRODUTOS")
+
+    _desenhar_resumo_logic(c, db, carga, produtos, width, height, y_start=y)
+
+    c.showPage()
+    c.save()
+    buffer.seek(0)
+    return buffer.read()
+
+def _desenhar_romaneio_logic(c, carga, pedidos, width, height):
+    y = _draw_header(c, width, height, "Romaneio de Entrega")
+
+    # Header Info: Filial, CARGA Nº, DATA
+    c.setFont("Helvetica-Bold", 10)
+    c.drawString(0.7*cm, y, f"Filial: SUPRA LOG")
+    c.drawString(8.0*cm, y, f"CARGA Nº: {carga.get('numero_carga') or ''}")
+    c.drawRightString(width - 0.7*cm, y, f"DATA: {datetime.now().strftime('%d/%m/%Y')}")
+    y -= 0.6*cm
+    
+    c.drawString(0.7*cm, y, f"TRANSPORTADORA: {carga.get('transportadora') or 'Próprio'}")
+    c.drawString(8.0*cm, y, f"MOTORISTA: {carga.get('motorista') or '-'}")
+    c.drawRightString(width - 0.7*cm, y, f"VEÍCULO/PLACA: {carga.get('veiculo_placa') or '-'}")
+    y -= 1.0*cm
+
+    # Table columns: CÓDIGO | CLIENTE | N. FANTASIA | MUNICÍPIO | ORDEM CARREG. | PESO LÍQUIDO | OBSERVAÇÃO PEDIDO
+    data = [["CÓDIGO", "CLIENTE", "N. FANTASIA", "MUNICÍPIO", "ORDEM CARREG.", "PESO LÍQUIDO", "OBSERVAÇÃO PEDIDO"]]
+    for p in pedidos:
         data.append([
-            str(p.item_codigo),
-            str(p.item_nome)[:75],
-            str(p.item_embalagem or ""),
-            _br_number(p.qtd_total, 0)
+            str(p.id_pedido),
+            str(p.cliente or "")[:35],
+            str(p.nome_fantasia or "")[:20],
+            str(p.cidade or "")[:20],
+            str(p.ordem_carregamento or ""),
+            _br_number(p.peso_total_kg, 2),
+            str(p.obs_carga or "")[:40]
         ])
 
-    table = Table(data, colWidths=[3.0*cm, 12.0*cm, 2.5*cm, 3.5*cm])
+    table = Table(data, colWidths=[2.0*cm, 7.0*cm, 4.0*cm, 4.0*cm, 2.5*cm, 2.5*cm, 5.0*cm])
     style = TableStyle([
         ('BACKGROUND', (0, 0), (-1, 0), SUPRA_BAR),
         ('TEXTCOLOR', (0, 0), (-1, 0), colors.white),
-        ('ALIGN', (0, 0), (1, -1), 'LEFT'),
-        ('ALIGN', (2, 0), (2, -1), 'CENTER'),
-        ('ALIGN', (3, 0), (3, -1), 'RIGHT'),
-        ('FONTSIZE', (0, 0), (-1, -1), 10),
+        ('ALIGN', (0, 0), (-1, -1), 'LEFT'),
+        ('ALIGN', (5, 0), (5, -1), 'RIGHT'),
+        ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
+        ('FONTSIZE', (0, 0), (-1, -1), 9),
         ('GRID', (0, 0), (-1, -1), 0.5, colors.grey),
     ])
     for i in range(1, len(data)):
@@ -430,3 +455,4 @@ def _desenhar_resumo_logic(c, db, carga_id, width, height):
     table.setStyle(style)
     tw, th = table.wrap(width - 1.4*cm, height)
     table.drawOn(c, 0.7*cm, y - th)
+    return y - th
