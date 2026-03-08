@@ -167,7 +167,6 @@ async function renderFormacaoCargas() {
             <th>Data Cadastro</th>
             <th>Veículo</th>
             <th>Motorista</th>
-            <th>Qtd Pedidos</th>
             <th>Ações</th>
         </tr>
     `;
@@ -204,7 +203,6 @@ async function renderFormacaoCargas() {
                     <td>${dispData}</td>
                     <td>${dispVeiculo}</td>
                     <td>${dispMotorista}</td>
-                    <td>${totalPed}</td>
                     <td>
                        <button class="os-btn os-btn-sm os-btn-secondary btn-gerenciar-carga" data-id="${c.id}" data-nome="${c.numero_carga}">Gerenciar Pedidos</button>
                        <button class="os-btn os-btn-sm os-btn-danger btn-excluir-carga" data-id="${c.id}">Excluir</button>
@@ -262,7 +260,22 @@ async function abrirGerenciadorDeCarga(idCarga, numCarga) {
 async function carregarPedidosDaCargaAtiva() {
     const tbodyPedidos = document.getElementById('tbody-pedidos-carga');
     const emptyPedidos = document.getElementById('empty-carga-pedidos');
-    tbodyPedidos.innerHTML = '<tr><td colspan="7" style="text-align:center;">Carregando...</td></tr>';
+    const thead = tbodyPedidos.closest('table').querySelector('thead');
+
+    thead.innerHTML = `
+        <tr>
+            <th>Pedido</th>
+            <th>Cliente</th>
+            <th>Fornecedor</th>
+            <th>Modalidade</th>
+            <th>Status</th>
+            <th>Cidade</th>
+            <th>Peso</th>
+            <th>Ações</th>
+        </tr>
+    `;
+
+    tbodyPedidos.innerHTML = '<tr><td colspan="8" style="text-align:center;">Carregando...</td></tr>';
 
     try {
         const resp = await fetch(`${API_BASE}/api/relatorios/cargas/${cargaEmGerenciamento}/pedidos-detalhes`, {
@@ -284,9 +297,10 @@ async function carregarPedidosDaCargaAtiva() {
                 <tr>
                     <td><strong>${p.numero_pedido}</strong></td>
                     <td>${p.cliente_nome || '-'}</td>
+                    <td>${p.fornecedor || '-'}</td>
+                    <td>${p.modalidade || '-'}</td>
                     <td>${p.status}</td>
                     <td>${p.municipio || '-'}</td>
-                    <td>${p.rota_principal || '-'}</td>
                     <td>${peso}</td>
                     <td><button class="os-btn os-btn-sm os-btn-danger btn-remover-pedido-carga" data-id="${p.id_carga_pedido}">Remover</button></td>
                 </tr>
@@ -332,7 +346,20 @@ function abrirModalBuscaPedidos() {
 
     // Função interna para carregar os pedidos ativos
     async function fetchPedidosAbertos() {
-        tbodyRes.innerHTML = '<tr><td colspan="7" style="text-align: center; padding: 20px;">Carregando pedidos ativos...</td></tr>';
+        const theadBusca = tbodyRes.closest('table').querySelector('thead');
+        theadBusca.innerHTML = `
+            <tr>
+                <th style="width: 40px;"><input type="checkbox" id="chk-select-all-pedidos" /></th>
+                <th>Pedido</th>
+                <th>Cliente</th>
+                <th>Fornecedor</th>
+                <th>Modalidade</th>
+                <th>Cidade</th>
+                <th>Status</th>
+                <th>Peso</th>
+            </tr>
+        `;
+        tbodyRes.innerHTML = '<tr><td colspan="8" style="text-align: center; padding: 20px;">Carregando pedidos ativos...</td></tr>';
         inputBusca.value = '';
         if (chkSelectAll) chkSelectAll.checked = false;
 
@@ -344,7 +371,7 @@ function abrirModalBuscaPedidos() {
             const resultados = json.data || [];
 
             if (resultados.length === 0) {
-                tbodyRes.innerHTML = '<tr><td colspan="7" style="text-align: center;">Nenhum pedido compatível encontrado (Nenhum Confirmado ou Faturado localizável).</td></tr>';
+                tbodyRes.innerHTML = '<tr><td colspan="8" style="text-align: center;">Nenhum pedido compatível encontrado (Nenhum Confirmado ou Faturado localizável).</td></tr>';
                 return;
             }
 
@@ -363,14 +390,15 @@ function abrirModalBuscaPedidos() {
                 const termoBusca = `${p.numero_pedido} ${p.cliente_nome} ${destMuni} ${destRota}`.toLowerCase();
 
                 html += `
-                    <tr class="row-pedido-busca" data-termo="${termoBusca}">
+                    <tr class="row-pedido-busca" data-termo="${termoBusca}" data-modalidade="${p.modalidade}">
                         <td style="text-align: center;">
-                             <input type="checkbox" class="chk-pedido-item" value="${p.numero_pedido}" />
+                             <input type="checkbox" class="chk-pedido-item" value="${p.numero_pedido}" data-id="${p.numero_pedido}" />
                         </td>
                         <td><strong>${p.numero_pedido}</strong></td>
                         <td>${p.cliente_nome}</td>
+                        <td>${p.fornecedor || '-'}</td>
+                        <td>${p.modalidade}</td>
                         <td>${destMuni}</td>
-                        <td>${destRota}</td>
                         <td>${badge}</td>
                         <td>${peso} kg</td>
                     </tr>
@@ -425,15 +453,34 @@ function abrirModalBuscaPedidos() {
                 return;
             }
 
+            // 1. Verificar modalidades existentes na carga
+            const rowsExistentes = document.querySelectorAll('#tbody-pedidos-carga tr');
+            const modalidadesNaCarga = new Set();
+            rowsExistentes.forEach(r => {
+                const modCell = r.cells[3];
+                if (modCell) {
+                    const txt = modCell.textContent.trim().toUpperCase();
+                    if (txt === 'ENTREGA' || txt === 'RETIRADA') modalidadesNaCarga.add(txt);
+                }
+            });
+
             newBtnVincular.textContent = "Vinculando...";
             newBtnVincular.disabled = true;
 
             let concluidos = 0;
             let erros = 0;
 
-            // Itera sobre todos os selecionados e envia as requisições
-            const chamadas = Array.from(checkedBoxes).map(async (chk) => {
+            for (const chk of checkedBoxes) {
                 const numPed = chk.value;
+                const row = chk.closest('tr');
+                const modNovo = row.dataset.modalidade;
+
+                if (modalidadesNaCarga.size > 0 && !modalidadesNaCarga.has(modNovo)) {
+                    const opo = modNovo === 'ENTREGA' ? 'RETIRADA' : 'ENTREGA';
+                    const msg = `O pedido ${numPed} é de ${modNovo}, mas a carga já possui pedidos de ${opo}. Deseja adicionar mesmo assim?`;
+                    if (!confirm(msg)) continue;
+                }
+
                 try {
                     const linkResp = await fetch(`${API_BASE}/api/relatorios/cargas/${cargaEmGerenciamento}/pedidos`, {
                         method: "POST",
@@ -448,25 +495,20 @@ function abrirModalBuscaPedidos() {
                     });
 
                     if (!linkResp.ok) throw new Error("Erro");
-
-                    // Remove visualmente a linha se o vinculo foi feito com sucesso
-                    chk.closest('tr').remove();
+                    modalidadesNaCarga.add(modNovo);
+                    row.remove();
                     concluidos++;
                 } catch (err) {
                     erros++;
                 }
-            });
-
-            await Promise.all(chamadas);
+            }
 
             newBtnVincular.textContent = "Vincular Selecionados";
             newBtnVincular.disabled = false;
 
             if (erros > 0) {
-                alert(`${concluidos} adicionados. Houve falha ao adicionar ${erros} pedidos (talvez já vinculados).`);
+                alert(`${concluidos} adicionados. Houve falha ao adicionar ${erros} pedidos.`);
             }
-
-            // Atualiza a grid por trás, mas mantém modal aberto pra próximas buscas
             carregarPedidosDaCargaAtiva();
         });
     }

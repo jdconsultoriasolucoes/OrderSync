@@ -175,6 +175,8 @@ def get_carga_pedidos_detalhes(carga_id: int, db: Session = Depends(get_db)):
             cp.ordem_carregamento,
             p.cliente AS cliente_nome,
             p.status,
+            p.fornecedor,
+            CASE WHEN p.usar_valor_com_frete THEN 'ENTREGA' ELSE 'RETIRADA' END as modalidade,
             CAST(COALESCE(p.peso_total_kg, 0) AS FLOAT) AS peso_total,
             c.entrega_municipio AS municipio,
             c.entrega_rota_principal AS rota_principal
