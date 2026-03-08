@@ -162,11 +162,10 @@ async function renderFormacaoCargas() {
 
     thead.innerHTML = `
         <tr>
+            <th style="width: 40px; text-align: center;"><input type="checkbox" id="chk-all-cargas"></th>
             <th>Nº Carga</th>
             <th>Nome / Descrição</th>
             <th>Data Cadastro</th>
-            <th>Veículo</th>
-            <th>Motorista</th>
             <th>Ações</th>
         </tr>
     `;
@@ -190,19 +189,12 @@ async function renderFormacaoCargas() {
         let html = "";
         cargas.forEach(c => {
             const dispData = c.data_criacao ? new Date(c.data_criacao).toLocaleDateString('pt-BR') : "-";
-            const trans = transportes.find(t => t.id === c.id_transporte);
-            const totalPed = c.pedidos ? c.pedidos.length : 0;
-
-            const dispVeiculo = trans ? trans.veiculo_placa : "-";
-            const dispMotorista = trans ? trans.motorista : "Pendente";
-
             html += `
                 <tr>
+                    <td style="text-align: center;"><input type="checkbox" class="chk-carga-item" value="${c.id}"></td>
                     <td><strong>${c.numero_carga}</strong></td>
                     <td>${c.nome_carga || '-'}</td>
                     <td>${dispData}</td>
-                    <td>${dispVeiculo}</td>
-                    <td>${dispMotorista}</td>
                     <td>
                        <button class="os-btn os-btn-sm os-btn-secondary btn-gerenciar-carga" data-id="${c.id}" data-nome="${c.numero_carga}">Gerenciar Pedidos</button>
                        <button class="os-btn os-btn-sm os-btn-danger btn-excluir-carga" data-id="${c.id}">Excluir</button>
@@ -225,14 +217,22 @@ async function renderFormacaoCargas() {
             btn.addEventListener('click', async (e) => {
                 if (confirm("Excluir definitivamente esta Carga do mapa de expedição?")) {
                     const id = e.target.dataset.id;
+                    const row = e.target.closest('tr');
                     await fetch(`${API_BASE}/api/relatorios/cargas/${id}`, {
                         method: "DELETE",
                         headers: { "Authorization": `Bearer ${window.Auth ? window.Auth.getToken() : ''}` }
                     });
-                    renderFormacaoCargas();
+                    if (row) row.remove();
                 }
             });
         });
+
+        const chkAll = document.getElementById('chk-all-cargas');
+        if (chkAll) {
+            chkAll.onchange = (e) => {
+                document.querySelectorAll('.chk-carga-item').forEach(c => c.checked = e.target.checked);
+            };
+        }
 
     } catch (e) {
         console.error(e);
@@ -250,6 +250,8 @@ async function abrirGerenciadorDeCarga(idCarga, numCarga) {
     document.getElementById('painel-listagem').style.display = 'none';
     document.getElementById('painel-gerenciar-carga').style.display = 'block';
     document.getElementById('titulo-carga-ativa').textContent = "Gerenciando Carga: " + numCarga;
+    document.getElementById('titulo-carga-ativa').style.whiteSpace = "normal";
+    document.getElementById('titulo-carga-ativa').style.maxWidth = "600px";
 
     document.getElementById('btn-voltar-listagem').onclick = () => renderFormacaoCargas();
     document.getElementById('btn-buscar-pedidos').onclick = () => abrirModalBuscaPedidos();
@@ -296,7 +298,7 @@ async function carregarPedidosDaCargaAtiva() {
             h += `
                 <tr>
                     <td><strong>${p.numero_pedido}</strong></td>
-                    <td>${p.cliente_nome || '-'}</td>
+                    <td style="max-width: 250px; white-space: normal; line-height: 1.2; overflow: hidden; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical;">${p.cliente_nome || '-'}</td>
                     <td>${p.fornecedor || '-'}</td>
                     <td>${p.modalidade || '-'}</td>
                     <td>${p.status}</td>
@@ -311,13 +313,21 @@ async function carregarPedidosDaCargaAtiva() {
         document.querySelectorAll('.btn-remover-pedido-carga').forEach(btn => {
             btn.addEventListener('click', async (e) => {
                 const linkId = e.target.dataset.id;
+                const row = e.target.closest('tr');
                 await fetch(`${API_BASE}/api/relatorios/cargas/pedidos/${linkId}`, {
                     method: 'DELETE',
                     headers: { "Authorization": `Bearer ${window.Auth ? window.Auth.getToken() : ''}` }
                 });
-                carregarPedidosDaCargaAtiva();
+                if (row) row.remove();
             });
         });
+
+        const chkAll = document.getElementById('chk-all-cargas');
+        if (chkAll) {
+            chkAll.onchange = (e) => {
+                document.querySelectorAll('.chk-carga-item').forEach(c => c.checked = e.target.checked);
+            };
+        }
     } catch (e) {
         console.error(e);
         tbodyPedidos.innerHTML = '';
@@ -475,9 +485,9 @@ function abrirModalBuscaPedidos() {
                 const row = chk.closest('tr');
                 const modNovo = row.dataset.modalidade;
 
-                if (modalidadesNaCarga.size > 0 && !modalidadesNaCarga.has(modNovo)) {
-                    const opo = modNovo === 'ENTREGA' ? 'RETIRADA' : 'ENTREGA';
-                    const msg = `O pedido ${numPed} é de ${modNovo}, mas a carga já possui pedidos de ${opo}. Deseja adicionar mesmo assim?`;
+                // Prioridade: ENTREGA. Só questiona se estiver adicionando RETIRADA em carga com ENTREGA.
+                if (modNovo === 'RETIRADA' && modalidadesNaCarga.has('ENTREGA')) {
+                    const msg = `O pedido ${numPed} é de RETIRADA, mas a carga já possui pedidos de ENTREGA. Deseja adicionar mesmo assim?`;
                     if (!confirm(msg)) continue;
                 }
 
@@ -524,6 +534,7 @@ async function renderRomaneio() {
 
     thead.innerHTML = `
         <tr>
+            <th style="width: 40px; text-align: center;"><input type="checkbox" id="chk-all-cargas"></th>
             <th>Nº Carga</th>
             <th>Motorista / Veículo</th>
             <th>Cliente</th>
@@ -564,6 +575,7 @@ async function renderRomaneio() {
 
             html += `
                 <tr>
+                    <td style="text-align: center;"><input type="checkbox" class="chk-carga-item" value="${c.id}"></td>
                     <td><strong>${c.numero_carga}</strong></td>
                     <td>
                         <select class="os-input sel-transporte" data-carga="${c.id}" style="max-width:300px;">
@@ -655,6 +667,7 @@ async function renderResumoProdutos() {
                 </select>
             </td></tr>
             <tr>
+                <th style="width: 40px; text-align: center;"><input type="checkbox" id="chk-all-prods"></th>
                 <th>Código</th>
                 <th>Descrição</th>
                 <th>Qtd Total</th>
@@ -697,6 +710,7 @@ async function renderResumoProdutos() {
                         const pesoStr = p.peso_liquido_total ? p.peso_liquido_total.toFixed(3).replace('.', ',') : "0,000";
                         h += `
                             <tr>
+                                <td style="text-align: center;"><input type="checkbox" class="chk-item-resumo"></td>
                                 <td><strong>${p.codigo || '-'}</strong></td>
                                 <td>${p.descricao}</td>
                                 <td>${p.qtd_total}</td>
@@ -707,6 +721,12 @@ async function renderResumoProdutos() {
                         `;
                     });
                     tbody.innerHTML = h;
+                }
+                const chkAll = document.getElementById('chk-all-prods');
+                if (chkAll) {
+                    chkAll.onchange = (e) => {
+                        document.querySelectorAll('.chk-item-resumo').forEach(c => c.checked = e.target.checked);
+                    };
                 }
             } catch (err) {
                 console.error(err);
@@ -745,6 +765,7 @@ async function renderRelatorioCompleto() {
 
         thead.innerHTML = `
             <tr><td colspan="4" style="background:#f8fafc; padding: 12px; border-bottom: 2px solid var(--os-border);">
+                <input type="checkbox" id="chk-all-completo" style="margin-right: 12px;">
                 <span style="font-weight: 600; margin-right: 12px;">Carregar Documento Unificado da Carga:</span>
                 <select class="os-input" id="sel-completo-carga" style="max-width: 300px; display:inline-block;">
                     ${optCargas}
@@ -817,6 +838,7 @@ async function renderRelatorioCompleto() {
                         pesoTotalCarga += p.peso_liquido_total;
                         h += `
                             <tr>
+                                <td style="text-align: center;"><input type="checkbox" class="chk-item-completo"></td>
                                 <td>${p.codigo || '-'} - ${p.descricao}</td>
                                 <td>${p.embalagem || '-'}</td>
                                 <td>${p.qtd_total} ${p.unidade || 'UN'}</td>
@@ -826,15 +848,22 @@ async function renderRelatorioCompleto() {
                     });
                     h += `
                         <tr style="background: #fafafa; font-weight: bold;">
-                            <td colspan="3" style="text-align:right">TOTAL PESO LÍQUIDO DA CARGA:</td>
+                            <td colspan="4" style="text-align:right">TOTAL PESO LÍQUIDO DA CARGA:</td>
                             <td>${pesoTotalCarga.toFixed(3).replace('.', ',')} kg</td>
                         </tr>
                     `;
                 } else {
-                    h += `<tr><td colspan="4" style="text-align:center; padding: 20px;">Não há produtos faturados associados nesta carga.</td></tr>`;
+                    h += `<tr><td colspan="5" style="text-align:center; padding: 20px;">Não há produtos faturados associados nesta carga.</td></tr>`;
                 }
 
                 tbody.innerHTML = h;
+
+                const chkAll = document.getElementById('chk-all-completo');
+                if (chkAll) {
+                    chkAll.onchange = (e) => {
+                        document.querySelectorAll('.chk-item-completo').forEach(c => c.checked = e.target.checked);
+                    };
+                }
             } catch (err) {
                 console.error(err);
                 emptyStateEl.style.display = "block";
@@ -856,46 +885,42 @@ btnExport.addEventListener('click', () => {
     let endpoint = "";
     let cargaId = "";
 
+    // Tenta pegar a primeira carga selecionada via checkbox
+    const firstChecked = document.querySelector('.chk-carga-item:checked');
+    if (firstChecked) cargaId = firstChecked.value;
+
     if (activeRelatorio === "formacao") {
-        cargaId = cargaEmGerenciamento; // If we are inside a specific load management
+        cargaId = cargaId || cargaEmGerenciamento;
         if (!cargaId) {
-            alert("Selecione 'Gerenciar Pedidos' em uma carga para exportar este relatório.");
+            alert("Selecione pelo menos uma carga (checkbox) ou entre em 'Gerenciar Pedidos'.");
             return;
         }
         endpoint = `${API_BASE}/api/relatorios/carga/${cargaId}/pdf`;
     } else if (activeRelatorio === "romaneio") {
-        // In Romaneio list, maybe we should export the last saved one or ask user
-        // However, the standard is to export the one being viewed. 
-        // For now, let's take the first saved carga if any or alert.
-        const firstCarga = document.querySelector('.btn-save-romaneio');
-        if (!firstCarga) {
-            alert("Nenhuma carga disponível para exportar romaneio.");
+        if (!cargaId) {
+            alert("Selecione uma carga nos checkboxes da lista para exportar o Romaneio.");
             return;
         }
-        // As there is no 'active' selection here yet, let's try to get from the grid if user is clicking export.
-        // To keep it simple, we'll suggest using a specific carga.
-        alert("Para exportar o Romaneio, utilize o Relatório Completo ou selecione uma carga específica no gerenciador.");
-        return;
+        endpoint = `${API_BASE}/api/relatorios/romaneio/${cargaId}/pdf`;
     } else if (activeRelatorio === "resumo") {
         const sel = document.getElementById("sel-resumo-carga");
-        cargaId = sel ? sel.value : "";
+        cargaId = cargaId || (sel ? sel.value : "");
         if (!cargaId) {
-            alert("Selecione uma carga no filtro para exportar o Resumo.");
+            alert("Selecione uma carga via filtro ou checkbox para exportar o Resumo.");
             return;
         }
         endpoint = `${API_BASE}/api/relatorios/resumo-produtos/${cargaId}/pdf`;
     } else if (activeRelatorio === "completo") {
         const sel = document.getElementById("sel-completo-carga");
-        cargaId = sel ? sel.value : "";
+        cargaId = cargaId || (sel ? sel.value : "");
         if (!cargaId) {
-            alert("Selecione uma carga no filtro para exportar o Relatório Completo.");
+            alert("Selecione uma carga via filtro ou checkbox para exportar o Relatório Completo.");
             return;
         }
         endpoint = `${API_BASE}/api/relatorios/relatorio-completo/${cargaId}/pdf`;
     }
 
     if (endpoint) {
-        // Trigger download
         const token = window.Auth ? window.Auth.getToken() : '';
         window.open(`${endpoint}?token=${token}`, '_blank');
     }
