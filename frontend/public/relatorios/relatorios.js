@@ -207,7 +207,7 @@ async function renderFormacaoCargas() {
                     <td>${totalPed}</td>
                     <td>
                        <button class="os-btn os-btn-sm os-btn-secondary btn-gerenciar-carga" data-id="${c.id}" data-nome="${c.numero_carga}">Gerenciar Pedidos</button>
-                       <button class="os-btn os-btn-sm os-btn-danger btn-excluir-carga" data-id="${c.id}" style="color:red; border-color:red; margin-left:5px;">Excluir</button>
+                       <button class="os-btn os-btn-sm os-btn-danger btn-excluir-carga" data-id="${c.id}">Excluir</button>
                     </td>
                 </tr>
             `;
@@ -288,7 +288,7 @@ async function carregarPedidosDaCargaAtiva() {
                     <td>${p.municipio || '-'}</td>
                     <td>${p.rota_principal || '-'}</td>
                     <td>${peso}</td>
-                    <td><button class="os-btn os-btn-sm btn-remover-pedido-carga" data-id="${p.id_carga_pedido}" style="color:red; border:1px solid red; background:transparent;">Remover</button></td>
+                    <td><button class="os-btn os-btn-sm os-btn-danger btn-remover-pedido-carga" data-id="${p.id_carga_pedido}">Remover</button></td>
                 </tr>
             `;
         });
@@ -809,7 +809,52 @@ async function renderRelatorioCompleto() {
     }
 }
 
-// Global Event para impressão em tela
+// Logic for Export Button - NEW: Calls specialized PDF backend endpoints
 btnExport.addEventListener('click', () => {
-    window.print();
+    let endpoint = "";
+    let cargaId = "";
+
+    if (activeRelatorio === "formacao") {
+        cargaId = cargaEmGerenciamento; // If we are inside a specific load management
+        if (!cargaId) {
+            alert("Selecione 'Gerenciar Pedidos' em uma carga para exportar este relatório.");
+            return;
+        }
+        endpoint = `${API_BASE}/api/relatorios/carga/${cargaId}/pdf`;
+    } else if (activeRelatorio === "romaneio") {
+        // In Romaneio list, maybe we should export the last saved one or ask user
+        // However, the standard is to export the one being viewed. 
+        // For now, let's take the first saved carga if any or alert.
+        const firstCarga = document.querySelector('.btn-save-romaneio');
+        if (!firstCarga) {
+            alert("Nenhuma carga disponível para exportar romaneio.");
+            return;
+        }
+        // As there is no 'active' selection here yet, let's try to get from the grid if user is clicking export.
+        // To keep it simple, we'll suggest using a specific carga.
+        alert("Para exportar o Romaneio, utilize o Relatório Completo ou selecione uma carga específica no gerenciador.");
+        return;
+    } else if (activeRelatorio === "resumo") {
+        const sel = document.getElementById("sel-resumo-carga");
+        cargaId = sel ? sel.value : "";
+        if (!cargaId) {
+            alert("Selecione uma carga no filtro para exportar o Resumo.");
+            return;
+        }
+        endpoint = `${API_BASE}/api/relatorios/resumo-produtos/${cargaId}/pdf`;
+    } else if (activeRelatorio === "completo") {
+        const sel = document.getElementById("sel-completo-carga");
+        cargaId = sel ? sel.value : "";
+        if (!cargaId) {
+            alert("Selecione uma carga no filtro para exportar o Relatório Completo.");
+            return;
+        }
+        endpoint = `${API_BASE}/api/relatorios/relatorio-completo/${cargaId}/pdf`;
+    }
+
+    if (endpoint) {
+        // Trigger download
+        const token = window.Auth ? window.Auth.getToken() : '';
+        window.open(`${endpoint}?token=${token}`, '_blank');
+    }
 });

@@ -347,7 +347,7 @@ async function openResumo(id) {
         </div>
         <div class="kv">
           <div><b>Peso Líquido Total:</b> ${parseFloat((p.peso_liquido_calculado || 0).toFixed(3))} kg</div>
-          <div><b>Nº Carga:</b> ---</div>
+          <div><b>Nº Carga:</b> ${p.numero_carga ?? "---"}</div>
         </div>
         <div class="kv">
           <div><b>Fornecedor:</b> ${p.fornecedor ?? "-"}</div>

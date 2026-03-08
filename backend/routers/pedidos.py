@@ -79,6 +79,7 @@ class PedidoResumo(BaseModel):
     link_url: Optional[str] = None
     link_primeiro_acesso_em: Optional[datetime] = None
     link_status: Optional[str] = None
+    numero_carga: Optional[int] = None
     created_at: datetime
     itens: List[PedidoItemResumo] = Field(default_factory=list)
 

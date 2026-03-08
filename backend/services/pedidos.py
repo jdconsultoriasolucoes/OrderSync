@@ -75,10 +75,12 @@ SELECT
   a.link_url,
   a.link_primeiro_acesso_em,
   a.link_status,
-  a.created_at
+  a.created_at,
+  cg.id_carga AS numero_carga
 FROM public.tb_pedidos a
 LEFT JOIN public.tb_tabela_preco b ON a.tabela_preco_id = b.id_tabela
 LEFT JOIN public.t_cadastro_cliente_v2 c ON c.cadastro_codigo_da_empresa::text = a.codigo_cliente
+LEFT JOIN public.tb_cargas_pedidos cg ON cg.id_pedido = a.id_pedido
 WHERE a.id_pedido = :id_pedido
 """)
 
