@@ -118,8 +118,8 @@ async function renderStandardCargaList(tipo) {
     `;
 
     try {
-        const resp = await fetch(\`\${API_BASE}/api/relatorios/cargas\`, { 
-            headers: { "Authorization": \`Bearer \${window.Auth ? window.Auth.getToken() : ''}\` } 
+        const resp = await fetch(`${API_BASE}/api/relatorios/cargas`, {
+            headers: { "Authorization": `Bearer ${window.Auth ? window.Auth.getToken() : ''}` }
         });
         if (!resp.ok) throw new Error("Erro");
         const cargas = await resp.json();
@@ -132,18 +132,18 @@ async function renderStandardCargaList(tipo) {
         let html = "";
         cargas.forEach(c => {
             const dispData = c.data_criacao ? new Date(c.data_criacao).toLocaleDateString('pt-BR') : "-";
-            html += \`
+            html += `
                 <tr>
-                    <td style="text-align: center;"><input type="checkbox" class="chk-carga-item" value="\${c.id}"></td>
-                    <td><strong>\${c.numero_carga}</strong></td>
-                    <td>\${c.nome_carga || '-'}</td>
-                    <td>\${dispData}</td>
+                    <td style="text-align: center;"><input type="checkbox" class="chk-carga-item" value="${c.id}"></td>
+                    <td><strong>${c.numero_carga}</strong></td>
+                    <td>${c.nome_carga || '-'}</td>
+                    <td>${dispData}</td>
                     <td>
-                       <button class="os-btn os-btn-sm os-btn-secondary btn-gerenciar-carga" data-id="\${c.id}" data-nome="\${c.numero_carga}">Gerenciar / Ver \${tipo}</button>
-                       \${activeRelatorio === 'formacao' ? \`<button class="os-btn os-btn-sm os-btn-danger btn-excluir-carga" data-id="\${c.id}">Excluir</button>\` : ''}
+                       <button class="os-btn os-btn-sm os-btn-secondary btn-gerenciar-carga" data-id="${c.id}" data-nome="${c.numero_carga}">Gerenciar / Ver ${tipo}</button>
+                       ${activeRelatorio === 'formacao' ? `<button class="os-btn os-btn-sm os-btn-danger btn-excluir-carga" data-id="${c.id}">Excluir</button>` : ''}
                     </td>
                 </tr>
-            \`;
+            `;
         });
         tbody.innerHTML = html;
 
@@ -160,9 +160,9 @@ async function renderStandardCargaList(tipo) {
                 if (confirm("Excluir definitivamente esta Carga?")) {
                     const id = e.target.dataset.id;
                     const row = e.target.closest('tr');
-                    await fetch(\`\${API_BASE}/api/relatorios/cargas/\${id}\`, {
+                    await fetch(`${API_BASE}/api/relatorios/cargas/${id}`, {
                         method: "DELETE",
-                        headers: { "Authorization": \`Bearer \${window.Auth ? window.Auth.getToken() : ''}\` }
+                        headers: { "Authorization": `Bearer ${window.Auth ? window.Auth.getToken() : ''}` }
                     });
                     if (row) row.remove();
                 }
@@ -199,11 +199,11 @@ function abrirModalNovaCarga() {
         const nomeCarga = inNome.value.trim();
         if (!numCarga) { alert("O número da Carga é obrigatório."); return; }
 
-        const nwResp = await fetch(\`\${API_BASE}/api/relatorios/cargas\`, {
+        const nwResp = await fetch(`${API_BASE}/api/relatorios/cargas`, {
             method: "POST",
             headers: {
                 "Content-Type": "application/json",
-                "Authorization": \`Bearer \${window.Auth ? window.Auth.getToken() : ''}\`
+                "Authorization": `Bearer ${window.Auth ? window.Auth.getToken() : ''}`
             },
             body: JSON.stringify({ numero_carga: numCarga, nome_carga: nomeCarga })
         });
@@ -236,7 +236,7 @@ async function carregarPedidosDaCargaAtiva() {
     const emptyPedidos = document.getElementById('empty-carga-pedidos');
     const theadTable = tbodyPedidos.closest('table').querySelector('thead');
 
-    theadTable.innerHTML = \`
+    theadTable.innerHTML = `
         <tr>
             <th>Ordem</th>
             <th>Nº Pedido</th>
@@ -246,13 +246,13 @@ async function carregarPedidosDaCargaAtiva() {
             <th>Observações</th>
             <th>Ações</th>
         </tr>
-    \`;
+    `;
 
     tbodyPedidos.innerHTML = '<tr><td colspan="7" style="text-align:center;">Carregando...</td></tr>';
 
     try {
-        const resp = await fetch(\`\${API_BASE}/api/relatorios/cargas/\${cargaEmGerenciamento}/pedidos-detalhes\`, {
-            headers: { "Authorization": \`Bearer \${window.Auth ? window.Auth.getToken() : ''}\` }
+        const resp = await fetch(`${API_BASE}/api/relatorios/cargas/${cargaEmGerenciamento}/pedidos-detalhes`, {
+            headers: { "Authorization": `Bearer ${window.Auth ? window.Auth.getToken() : ''}` }
         });
         const ped = await resp.json();
 
@@ -266,20 +266,20 @@ async function carregarPedidosDaCargaAtiva() {
         let h = "";
         ped.forEach(p => {
             const peso = p.peso_total ? p.peso_total.toFixed(2).replace('.', ',') : "0,00";
-            h += \`
+            h += `
                 <tr>
-                    <td style="width: 80px;"><input type="number" class="os-input os-input-sm in-ordem" value="\${p.ordem_carregamento || ''}" data-id="\${p.id_carga_pedido}" style="padding: 4px;"></td>
-                    <td><strong>\${p.numero_pedido}</strong></td>
-                    <td>\${p.cliente_nome || '-'}</td>
-                    <td>\${p.municipio || '-'}</td>
-                    <td>\${peso}</td>
-                    <td><input type="text" class="os-input os-input-sm in-obs" value="\${p.observacoes || ''}" data-id="\${p.id_carga_pedido}" style="padding: 4px;"></td>
+                    <td style="width: 80px;"><input type="number" class="os-input os-input-sm in-ordem" value="${p.ordem_carregamento || ''}" data-id="${p.id_carga_pedido}" style="padding: 4px;"></td>
+                    <td><strong>${p.numero_pedido}</strong></td>
+                    <td>${p.cliente_nome || '-'}</td>
+                    <td>${p.municipio || '-'}</td>
+                    <td>${peso}</td>
+                    <td><input type="text" class="os-input os-input-sm in-obs" value="${p.observacoes || ''}" data-id="${p.id_carga_pedido}" style="padding: 4px;"></td>
                     <td>
-                        <button class="os-btn os-btn-sm os-btn-primary btn-save-item" data-id="\${p.id_carga_pedido}">Salvar</button>
-                        <button class="os-btn os-btn-sm os-btn-danger btn-remover-pedido-carga" data-id="\${p.id_carga_pedido}">Remover</button>
+                        <button class="os-btn os-btn-sm os-btn-primary btn-save-item" data-id="${p.id_carga_pedido}">Salvar</button>
+                        <button class="os-btn os-btn-sm os-btn-danger btn-remover-pedido-carga" data-id="${p.id_carga_pedido}">Remover</button>
                     </td>
                 </tr>
-            \`;
+            `;
         });
         tbodyPedidos.innerHTML = h;
 
@@ -291,11 +291,11 @@ async function carregarPedidosDaCargaAtiva() {
                 const obs = row.querySelector('.in-obs').value;
 
                 btn.textContent = "...";
-                const r = await fetch(\`\${API_BASE}/api/relatorios/cargas/pedidos/\${id}\`, {
+                const r = await fetch(`${API_BASE}/api/relatorios/cargas/pedidos/${id}`, {
                     method: 'PUT',
-                    headers: { 
+                    headers: {
                         'Content-Type': 'application/json',
-                        "Authorization": \`Bearer \${window.Auth ? window.Auth.getToken() : ''}\` 
+                        "Authorization": `Bearer ${window.Auth ? window.Auth.getToken() : ''}`
                     },
                     body: JSON.stringify({ ordem_carregamento: parseInt(ordem) || null, observacoes: obs })
                 });
@@ -308,9 +308,9 @@ async function carregarPedidosDaCargaAtiva() {
             btn.addEventListener('click', async (e) => {
                 if (!confirm("Remover este pedido da carga?")) return;
                 const linkId = e.target.dataset.id;
-                await fetch(\`\${API_BASE}/api/relatorios/cargas/pedidos/\${linkId}\`, {
+                await fetch(`${API_BASE}/api/relatorios/cargas/pedidos/${linkId}`, {
                     method: 'DELETE',
-                    headers: { "Authorization": \`Bearer \${window.Auth ? window.Auth.getToken() : ''}\` }
+                    headers: { "Authorization": `Bearer ${window.Auth ? window.Auth.getToken() : ''}` }
                 });
                 carregarPedidosDaCargaAtiva();
             });
@@ -334,36 +334,36 @@ function abrirModalBuscaPedidos() {
     const tbodyRes = document.getElementById('tbody-resultado-busca');
     tbodyRes.innerHTML = '<tr><td colspan="8" style="text-align: center;">Carregando pedidos ativos...</td></tr>';
 
-    fetch(\`\${API_BASE}/api/pedidos?status=CONFIRMADO,FATURADO&pageSize=300\`, { 
-        headers: { "Authorization": \`Bearer \${window.Auth ? window.Auth.getToken() : ''}\` } 
+    fetch(`${API_BASE}/api/pedidos?status=CONFIRMADO,FATURADO&pageSize=300`, {
+        headers: { "Authorization": `Bearer ${window.Auth ? window.Auth.getToken() : ''}` }
     })
-    .then(r => r.json())
-    .then(json => {
-        const res = json.data || [];
-        let html = "";
-        res.forEach(p => {
-            html += \`
+        .then(r => r.json())
+        .then(json => {
+            const res = json.data || [];
+            let html = "";
+            res.forEach(p => {
+                html += `
                 <tr>
-                    <td><input type="checkbox" class="chk-pedido-item" value="\${p.numero_pedido}"></td>
-                    <td><strong>\${p.numero_pedido}</strong></td>
-                    <td>\${p.cliente_nome}</td>
-                    <td>\${p.municipio || '-'}</td>
-                    <td>\${p.status_codigo}</td>
-                    <td>\${(p.peso_total || 0).toFixed(2)} kg</td>
+                    <td><input type="checkbox" class="chk-pedido-item" value="${p.numero_pedido}"></td>
+                    <td><strong>${p.numero_pedido}</strong></td>
+                    <td>${p.cliente_nome}</td>
+                    <td>${p.municipio || '-'}</td>
+                    <td>${p.status_codigo}</td>
+                    <td>${(p.peso_total || 0).toFixed(2)} kg</td>
                 </tr>
-            \`;
+            `;
+            });
+            tbodyRes.innerHTML = html;
         });
-        tbodyRes.innerHTML = html;
-    });
 
     document.getElementById('btn-vincular-selecionados').onclick = async () => {
         const checked = document.querySelectorAll('.chk-pedido-item:checked');
         for (const chk of checked) {
-            await fetch(\`\${API_BASE}/api/relatorios/cargas/\${cargaEmGerenciamento}/pedidos\`, {
+            await fetch(`${API_BASE}/api/relatorios/cargas/${cargaEmGerenciamento}/pedidos`, {
                 method: "POST",
                 headers: {
                     "Content-Type": "application/json",
-                    "Authorization": \`Bearer \${window.Auth ? window.Auth.getToken() : ''}\`
+                    "Authorization": `Bearer ${window.Auth ? window.Auth.getToken() : ''}`
                 },
                 body: JSON.stringify({ numero_pedido: chk.value, ordem_carregamento: 0 })
             });
@@ -390,12 +390,12 @@ btnExport.addEventListener('click', () => {
         return;
     }
 
-    if (activeRelatorio === "formacao") endpoint = \`\${API_BASE}/api/relatorios/carga/\${cargaId}/pdf\`;
-    else if (activeRelatorio === "romaneio") endpoint = \`\${API_BASE}/api/relatorios/romaneio/\${cargaId}/pdf\`;
-    else if (activeRelatorio === "resumo") endpoint = \`\${API_BASE}/api/relatorios/resumo-produtos/\${cargaId}/pdf\`;
+    if (activeRelatorio === "formacao") endpoint = `${API_BASE}/api/relatorios/carga/${cargaId}/pdf`;
+    else if (activeRelatorio === "romaneio") endpoint = `${API_BASE}/api/relatorios/romaneio/${cargaId}/pdf`;
+    else if (activeRelatorio === "resumo") endpoint = `${API_BASE}/api/relatorios/resumo-produtos/${cargaId}/pdf`;
 
     if (endpoint) {
         const token = window.Auth ? window.Auth.getToken() : '';
-        window.open(\`\${endpoint}?token=\${token}\`, '_blank');
+        window.open(`${endpoint}?token=${token}`, '_blank');
     }
 });
