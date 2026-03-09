@@ -223,18 +223,48 @@ async function abrirGerenciadorDeCarga(idCarga, numCarga) {
     cargaEmGerenciamento = idCarga;
     document.getElementById('painel-listagem').style.display = 'none';
     document.getElementById('painel-gerenciar-carga').style.display = 'block';
-    document.getElementById('titulo-carga-ativa').textContent = "Gerenciando Carga: " + numCarga;
+
+    // Carregar Detalhes da Carga para o Cabeçalho
+    try {
+        const resp = await fetch(`${API_BASE}/api/relatorios/cargas/${idCarga}`, {
+            headers: { "Authorization": `Bearer ${window.Auth ? window.Auth.getToken() : ''}` }
+        });
+        const carga = await resp.json();
+
+        const dataCarregamento = carga.data_carregamento ? new Date(carga.data_carregamento).toLocaleDateString('pt-BR') : "Não informada";
+
+        document.getElementById('titulo-carga-ativa').innerHTML = `
+            <div style="display: flex; flex-direction: column; gap: 5px;">
+                <span style="font-size: 20px; font-weight: 700;">Gerenciando Carga: ${numCarga}</span>
+                <div style="display: flex; gap: 20px; font-size: 14px; color: var(--os-text-muted); font-weight: 500;">
+                    <span><strong>Filial:</strong> Matriz</span>
+                    <span><strong>Nº Carga:</strong> ${numCarga}</span>
+                    <span><strong>Data Carregamento:</strong> ${dataCarregamento}</span>
+                </div>
+            </div>
+        `;
+    } catch (e) {
+        document.getElementById('titulo-carga-ativa').textContent = "Gerenciando Carga: " + numCarga;
+    }
 
     document.getElementById('btn-voltar-listagem').onclick = () => renderRelatorioView(activeRelatorio);
-    document.getElementById('btn-buscar-pedidos').onclick = () => abrirModalBuscaPedidos();
 
-    await carregarPedidosDaCargaAtiva();
+    const btnBusca = document.getElementById('btn-buscar-pedidos');
+    if (activeRelatorio === "resumo") {
+        btnBusca.style.display = 'none';
+        await carregarResumoProdutosDaCargaAtiva();
+    } else {
+        btnBusca.style.display = 'inline-block';
+        btnBusca.onclick = () => abrirModalBuscaPedidos();
+        await carregarPedidosDaCargaAtiva();
+    }
 }
 
 async function carregarPedidosDaCargaAtiva() {
     const tbodyPedidos = document.getElementById('tbody-pedidos-carga');
     const emptyPedidos = document.getElementById('empty-carga-pedidos');
-    const theadTable = tbodyPedidos.closest('table').querySelector('thead');
+    const tableWrap = tbodyPedidos.closest('.os-table-wrap');
+    const theadTable = tableWrap.querySelector('table thead');
 
     theadTable.innerHTML = `
         <tr>
@@ -318,6 +348,62 @@ async function carregarPedidosDaCargaAtiva() {
     } catch (e) {
         console.error(e);
         tbodyPedidos.innerHTML = '';
+        emptyPedidos.style.display = 'block';
+    }
+}
+
+async function carregarResumoProdutosDaCargaAtiva() {
+    const tbodyPedidos = document.getElementById('tbody-pedidos-carga');
+    const emptyPedidos = document.getElementById('empty-carga-pedidos');
+    const tableWrap = tbodyPedidos.closest('.os-table-wrap');
+    const theadTable = tableWrap.querySelector('table thead');
+
+    theadTable.innerHTML = `
+        <tr>
+            <th>Código</th>
+            <th>Descrição</th>
+            <th>Embalagem</th>
+            <th style="text-align: center;">Quantidade</th>
+            <th>Unidade</th>
+            <th style="text-align: right;">Peso Total</th>
+        </tr>
+    `;
+
+    tbodyPedidos.innerHTML = '<tr><td colspan="6" style="text-align:center;">Carregando resumo de produtos...</td></tr>';
+
+    try {
+        const resp = await fetch(`${API_BASE}/api/relatorios/cargas/${cargaEmGerenciamento}/resumo-produtos`, {
+            headers: { "Authorization": `Bearer ${window.Auth ? window.Auth.getToken() : ''}` }
+        });
+        const prods = await resp.json();
+
+        if (prods.length === 0) {
+            tbodyPedidos.innerHTML = '';
+            emptyPedidos.textContent = "Não há produtos faturados para os pedidos desta carga.";
+            emptyPedidos.style.display = 'block';
+            return;
+        }
+
+        emptyPedidos.style.display = 'none';
+        let h = "";
+        prods.forEach(p => {
+            const peso = p.peso_liquido_total ? p.peso_liquido_total.toFixed(3).replace('.', ',') : "0,000";
+            h += `
+                <tr>
+                    <td><strong>${p.codigo || '-'}</strong></td>
+                    <td>${p.descricao}</td>
+                    <td>${p.embalagem || '-'}</td>
+                    <td style="text-align: center;">${p.qtd_total}</td>
+                    <td>${p.unidade || 'UN'}</td>
+                    <td style="text-align: right;">${peso} kg</td>
+                </tr>
+            `;
+        });
+        tbodyPedidos.innerHTML = h;
+    } catch (e) {
+        console.error(e);
+        tbodyPedidos.innerHTML = '';
+        emptyPedidos.textContent = "Erro ao carregar o resumo de produtos.";
         emptyPedidos.style.display = 'block';
     }
 }

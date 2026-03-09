@@ -86,8 +86,7 @@ def gerar_pdf_formacao_carga(db, carga_id: int) -> bytes:
     if not carga: return None
 
     # 2. Fetch Orders linked to this load
-    sql_pedidos = text("""
-        SELECT
+    sql_pedidos = text("""SELECT
             cp.ordem_carregamento,
             p.id_pedido,
             p.codigo_cliente,
@@ -103,8 +102,7 @@ def gerar_pdf_formacao_carga(db, carga_id: int) -> bytes:
         JOIN tb_pedidos p ON cp.numero_pedido = p.id_pedido::text
         LEFT JOIN public.t_cadastro_cliente_v2 c ON c.cadastro_codigo_da_empresa::text = p.codigo_cliente
         WHERE cp.id_carga = :cid
-        ORDER BY cp.ordem_carregamento
-    """)
+        ORDER BY cp.ordem_carregamento""")
     pedidos = db.execute(sql_pedidos, {"cid": carga_id}).mappings().all()
 
     # 3. Draw PDF
@@ -175,8 +173,7 @@ def gerar_pdf_romaneio(db, carga_id: int) -> bytes:
     carga = db.execute(sql_carga, {"cid": carga_id}).mappings().first()
     if not carga: return None
 
-    sql_pedidos = text("""
-        SELECT 
+    sql_pedidos = text("""SELECT 
             cp.ordem_carregamento,
             p.id_pedido,
             p.codigo_cliente,
@@ -258,10 +255,9 @@ def gerar_pdf_romaneio(db, carga_id: int) -> bytes:
 # ----------------------------------------------------------------------------
 
 def gerar_pdf_resumo_produtos(db, carga_id: int) -> bytes:
-    sql_resumo = text("""
-        SELECT 
+    sql_resumo = text("""SELECT 
             i.codigo as item_codigo,
-            i.nome as item_nome,
+            MAX(i.nome) as item_nome,
             SUM(i.quantidade) as qtd_total,
             MAX(i.embalagem) as item_embalagem,
             CAST(SUM(i.quantidade * COALESCE(prod.peso, 0)) AS FLOAT) AS peso_liquido_total
@@ -274,9 +270,8 @@ def gerar_pdf_resumo_produtos(db, carga_id: int) -> bytes:
             GROUP BY codigo_supra
         ) prod ON prod.codigo_supra = i.codigo
         WHERE cp.id_carga = :cid
-        GROUP BY i.codigo, i.nome
-        ORDER BY peso_liquido_total DESC
-    """)
+        GROUP BY i.codigo
+        ORDER BY item_nome ASC""")
     produtos = db.execute(sql_resumo, {"cid": carga_id}).mappings().all()
     carga = db.execute(text("SELECT * FROM tb_cargas WHERE id = :cid"), {"cid": carga_id}).mappings().first()
 
