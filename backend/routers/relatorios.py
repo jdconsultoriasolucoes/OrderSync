@@ -7,7 +7,7 @@ from database import get_db
 from models.cargas import CargaModel, CargaPedidoModel
 from models.pedido import PedidoModel
 from models.transporte import TransporteModel
-from schemas.cargas import CargaCreate, CargaUpdate, CargaResponse, CargaPedidoCreate
+from schemas.cargas import CargaCreate, CargaUpdate, CargaResponse, CargaPedidoCreate, CargaPedidoDetailUpdate
 
 router = APIRouter(
     prefix="/api/relatorios",
@@ -114,6 +114,19 @@ def add_pedido_to_carga(carga_id: int, pedido: CargaPedidoCreate, db: Session = 
     db.refresh(db_item)
     return {"status": "success", "id_carga_pedido": db_item.id}
 
+@router.put("/cargas/pedidos/{item_id}")
+def update_carga_pedido(item_id: int, item_data: CargaPedidoDetailUpdate, db: Session = Depends(get_db)):
+    db_item = db.query(CargaPedidoModel).filter(CargaPedidoModel.id == item_id).first()
+    if not db_item:
+        raise HTTPException(status_code=404, detail="Item de carga não encontrado")
+    
+    update_data = item_data.model_dump(exclude_unset=True)
+    for key, value in update_data.items():
+        setattr(db_item, key, value)
+    
+    db.commit()
+    return {"status": "success"}
+
 @router.delete("/cargas/pedidos/{item_id}", status_code=status.HTTP_204_NO_CONTENT)
 def remove_pedido_from_carga(item_id: int, db: Session = Depends(get_db)):
     db_item = db.query(CargaPedidoModel).filter(CargaPedidoModel.id == item_id).first()
@@ -187,7 +200,8 @@ def get_carga_pedidos_detalhes(carga_id: int, db: Session = Depends(get_db)):
             CASE WHEN p.usar_valor_com_frete THEN 'ENTREGA' ELSE 'RETIRADA' END as modalidade,
             CAST(COALESCE(p.peso_total_kg, 0) AS FLOAT) AS peso_total,
             c.entrega_municipio AS municipio,
-            c.entrega_rota_principal AS rota_principal
+            c.entrega_rota_principal AS rota_principal,
+            cp.observacoes
         FROM tb_cargas_pedidos cp
         JOIN tb_pedidos p ON cp.numero_pedido = p.id_pedido::text
         LEFT JOIN t_cadastro_cliente_v2 c ON c.cadastro_codigo_da_empresa::text = p.codigo_cliente

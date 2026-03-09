@@ -38,6 +38,10 @@ class CargaUpdate(BaseModel):
     id_transporte: Optional[int] = None
     data_carregamento: Optional[datetime] = None
 
+class CargaPedidoDetailUpdate(BaseModel):
+    ordem_carregamento: Optional[int] = None
+    observacoes: Optional[str] = None
+
 class CargaResponse(CargaBase):
     id: int
     data_criacao: datetime

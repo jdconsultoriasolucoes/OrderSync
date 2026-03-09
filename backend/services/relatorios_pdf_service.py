@@ -87,6 +87,7 @@ def gerar_pdf_formacao_carga(db, carga_id: int) -> bytes:
 
     # 2. Fetch Orders linked to this load
     sql_pedidos = text("""
+        SELECT
             cp.ordem_carregamento,
             p.id_pedido,
             p.codigo_cliente,
@@ -205,35 +206,39 @@ def gerar_pdf_romaneio(db, carga_id: int) -> bytes:
     c.setFont("Helvetica-Bold", 10)
     c.drawString(0.7*cm, y, f"Filial: SUPRA LOG")
     c.drawString(8.0*cm, y, f"CARGA Nº: {carga.get('numero_carga') or ''}")
-    c.drawRightString(width - 0.7*cm, y, f"DATA: {datetime.now().strftime('%d/%m/%Y')}")
+    # User requested Data do carregamento in header too
+    data_carregamento = carga.get('data_carregamento')
+    data_str = data_carregamento.strftime('%d/%m/%Y') if data_carregamento else '____/____/____'
+    c.drawRightString(width - 0.7*cm, y, f"DATA CARREGAMENTO: {data_str}")
     y -= 0.6*cm
     
     c.drawString(0.7*cm, y, f"TRANSPORTADORA: {carga.get('transportadora') or 'Próprio'}")
     c.drawString(8.0*cm, y, f"MOTORISTA: {carga.get('motorista') or '-'}")
-    c.drawRightString(width - 0.7*cm, y, f"VEÍCULO/PLACA: {carga.get('veiculo_placa') or '-'}")
+    c.drawRightString(width - 0.7*cm, y, f"VEÍCULO: {carga.get('veiculo_placa') or '-'} / PLACA: {carga.get('veiculo_placa') or '-'}")
     y -= 1.0*cm
 
-    # Table columns: CÓDIGO | CLIENTE | N. FANTASIA | MUNICÍPIO | ORDEM CARREG. | PESO LÍQUIDO | OBSERVAÇÃO PEDIDO
-    data = [["CÓDIGO", "CLIENTE", "N. FANTASIA", "MUNICÍPIO", "ORDEM CARREG.", "PESO LÍQUIDO", "OBSERVAÇÃO PEDIDO"]]
+    # Table columns: CÓDIGO | CLIENTE | N. FANTASIA | MUNICÍPIO | ORDEM | PESO LÍQUID. | OBSERVAÇÕES | DATA
+    data = [["CÓDIGO", "CLIENTE", "N. FANTASIA", "MUNICÍPIO", "ORDEM", "PESO LÍQ.", "OBSERVAÇÕES", "DATA"]]
     for p in pedidos:
         data.append([
             str(p.codigo_cliente or p.id_pedido),
-            str(p.cliente or "")[:35],
-            str(p.nome_fantasia or "")[:20],
-            str(p.cidade or "")[:20],
+            str(p.cliente or "")[:30],
+            str(p.nome_fantasia or "")[:15],
+            str(p.cidade or "")[:15],
             str(p.ordem_carregamento or ""),
             _br_number(p.peso_total_kg, 2),
-            str(p.obs_carga or "")[:40]
+            str(p.obs_carga or "")[:35],
+            data_str
         ])
 
-    table = Table(data, colWidths=[2.0*cm, 7.0*cm, 4.0*cm, 4.0*cm, 2.5*cm, 2.5*cm, 5.0*cm])
+    table = Table(data, colWidths=[2.0*cm, 5.0*cm, 3.5*cm, 3.5*cm, 2.0*cm, 2.5*cm, 6.0*cm, 3.0*cm])
     style = TableStyle([
         ('BACKGROUND', (0, 0), (-1, 0), SUPRA_BAR),
         ('TEXTCOLOR', (0, 0), (-1, 0), colors.white),
         ('ALIGN', (0, 0), (-1, -1), 'LEFT'),
-        ('ALIGN', (5, 0), (5, -1), 'RIGHT'),
+        ('ALIGN', (5, 0), (5, -1), 'RIGHT'), # Peso
         ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
-        ('FONTSIZE', (0, 0), (-1, -1), 9),
+        ('FONTSIZE', (0, 0), (-1, -1), 8),
         ('GRID', (0, 0), (-1, -1), 0.5, colors.grey),
     ])
     for i in range(1, len(data)):
@@ -289,19 +294,22 @@ def gerar_pdf_resumo_produtos(db, carga_id: int) -> bytes:
 
 def _desenhar_resumo_logic(c, db, carga, produtos, width, height, y_start=None):
     if y_start is None:
-        y = _draw_header(c, width, height, "(4) RESUMO DE PRODUTOS")
+        y = _draw_header(c, width, height, "RESUMO DE PRODUTOS")
         # Header Info as per drawing 4: Filial | CARGA Nº | DATA
         c.setFont("Helvetica-Bold", 10)
         c.setFillColor(colors.black)
         c.drawString(0.7*cm, y, f"Filial: SUPRA LOG")
         c.drawString(7.0*cm, y, f"CARGA Nº: {carga.get('numero_carga') or ''}")
-        c.drawRightString(width - 0.7*cm, y, f"DATA: {datetime.now().strftime('%d/%m/%Y')}")
+        
+        data_carregamento = carga.get('data_carregamento')
+        data_str = data_carregamento.strftime('%d/%m/%Y') if data_carregamento else '____/____/____'
+        c.drawRightString(width - 0.7*cm, y, f"DATA CARREGAMENTO: {data_str}")
         y -= 0.8*cm
     else:
         y = y_start
 
-    # Table columns: CÓDIGO | DESCRIÇÃO PRODUTO / EMBALAGEM | PESO LÍQUIDO | EMBALAGEM | PESO LÍQUIDO ACUMULADO
-    data = [["CÓDIGO", "DESCRIÇÃO PRODUTO / EMBALAGEM", "PESO LÍQUIDO", "EMBALAGEM", "PESO LÍQ. ACUM."]]
+    # Table columns: CÓDIGO | DESCRIÇÃO | QTD | PESO | EMBALAGEM | PESO ACUM.
+    data = [["CÓDIGO", "DESCRIÇÃO PRODUTO / EMBALAGEM", "QTD", "PESO LÍQ.", "EMBALAGEM", "PESO ACUM."]]
     
     acumulado = 0.0
     for p in produtos:
@@ -309,21 +317,23 @@ def _desenhar_resumo_logic(c, db, carga, produtos, width, height, y_start=None):
         acumulado += peso
         data.append([
             str(p.item_codigo),
-            str(p.item_nome)[:55],
+            str(p.item_nome)[:50],
+            str(int(p.qtd_total or 0)),
             _br_number(peso, 3),
             str(p.item_embalagem or ""),
             _br_number(acumulado, 3)
         ])
 
-    table = Table(data, colWidths=[2.5*cm, 8.5*cm, 2.5*cm, 2.5*cm, 3.5*cm])
+    table = Table(data, colWidths=[2.5*cm, 7.5*cm, 1.5*cm, 2.5*cm, 2.5*cm, 3.0*cm])
     style = TableStyle([
         ('BACKGROUND', (0, 0), (-1, 0), SUPRA_BAR),
         ('TEXTCOLOR', (0, 0), (-1, 0), colors.white),
         ('ALIGN', (0, 0), (-1, -1), 'LEFT'),
-        ('ALIGN', (2, 0), (2, -1), 'RIGHT'),
-        ('ALIGN', (4, 0), (4, -1), 'RIGHT'),
+        ('ALIGN', (2, 0), (2, -1), 'CENTER'), # Qtd
+        ('ALIGN', (3, 0), (3, -1), 'RIGHT'), # Peso
+        ('ALIGN', (5, 0), (5, -1), 'RIGHT'), # Acum
         ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
-        ('FONTSIZE', (0, 0), (-1, -1), 9),
+        ('FONTSIZE', (0, 0), (-1, -1), 8),
         ('GRID', (0, 0), (-1, -1), 0.5, colors.grey),
     ])
     for i in range(1, len(data)):
