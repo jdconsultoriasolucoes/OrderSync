@@ -224,27 +224,92 @@ async function abrirGerenciadorDeCarga(idCarga, numCarga) {
     document.getElementById('painel-listagem').style.display = 'none';
     document.getElementById('painel-gerenciar-carga').style.display = 'block';
 
-    // Carregar Detalhes da Carga para o Cabeçalho
+    const uiActiveHeader = document.getElementById('titulo-carga-ativa');
+    uiActiveHeader.innerHTML = 'Carregando detalhes da carga...';
+
+    // Carregar Detalhes da Carga e Transportes
     try {
-        const resp = await fetch(`${API_BASE}/api/relatorios/cargas/${idCarga}`, {
-            headers: { "Authorization": `Bearer ${window.Auth ? window.Auth.getToken() : ''}` }
+        const [respCarga, respTransp] = await Promise.all([
+            fetch(`${API_BASE}/api/relatorios/cargas/${idCarga}`, {
+                headers: { "Authorization": `Bearer ${window.Auth ? window.Auth.getToken() : ''}` }
+            }),
+            fetch(`${API_BASE}/api/transporte`, {
+                headers: { "Authorization": `Bearer ${window.Auth ? window.Auth.getToken() : ''}` }
+            })
+        ]);
+
+        const carga = await respCarga.json();
+        const transportes = await respTransp.json();
+
+        const dataCarregamentoVal = carga.data_carregamento ? carga.data_carregamento.split('T')[0] : "";
+
+        let transpOptions = '<option value="">Selecione um Transporte...</option>';
+        transportes.forEach(t => {
+            const selected = (t.id === carga.id_transporte) ? 'selected' : '';
+            transpOptions += `<option value="${t.id}" ${selected}>${t.transportadora} - ${t.motorista} (${t.veiculo_placa})</option>`;
         });
-        const carga = await resp.json();
 
-        const dataCarregamento = carga.data_carregamento ? new Date(carga.data_carregamento).toLocaleDateString('pt-BR') : "Não informada";
-
-        document.getElementById('titulo-carga-ativa').innerHTML = `
-            <div style="display: flex; flex-direction: column; gap: 5px;">
-                <span style="font-size: 20px; font-weight: 700;">Gerenciando Carga: ${numCarga}</span>
-                <div style="display: flex; gap: 20px; font-size: 14px; color: var(--os-text-muted); font-weight: 500;">
-                    <span><strong>Filial:</strong> Matriz</span>
-                    <span><strong>Nº Carga:</strong> ${numCarga}</span>
-                    <span><strong>Data Carregamento:</strong> ${dataCarregamento}</span>
+        uiActiveHeader.innerHTML = `
+            <div style="display: flex; flex-direction: column; gap: 10px; width: 100%;">
+                <div style="display: flex; justify-content: space-between; align-items: center;">
+                    <span style="font-size: 20px; font-weight: 700;">Gerenciando Carga: ${numCarga}</span>
+                    <button class="os-btn os-btn-primary os-btn-sm" id="btn-save-carga-header">Salvar Dados do Cabeçalho</button>
+                </div>
+                
+                <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 15px; background: var(--os-bg-light); padding: 15px; border-radius: 8px; border: 1px solid var(--os-border);">
+                    <div class="os-form-group">
+                        <label style="font-size: 12px; font-weight: 600;">Filial</label>
+                        <input type="text" class="os-input os-input-sm" value="Matriz SUPRA LOG" disabled style="background: #eee;">
+                    </div>
+                    <div class="os-form-group">
+                        <label style="font-size: 12px; font-weight: 600;">Nº Carga</label>
+                        <input type="text" class="os-input os-input-sm" value="${numCarga}" disabled style="background: #eee;">
+                    </div>
+                    <div class="os-form-group">
+                        <label style="font-size: 12px; font-weight: 600;">Data do Carregamento</label>
+                        <input type="date" id="in-header-data" class="os-input os-input-sm" value="${dataCarregamentoVal}">
+                    </div>
+                    <div class="os-form-group" style="grid-column: span 2;">
+                        <label style="font-size: 12px; font-weight: 600;">Transporte (Transportadora / Motorista / Placa)</label>
+                        <select id="sel-header-transporte" class="os-input os-input-sm">
+                            ${transpOptions}
+                        </select>
+                    </div>
                 </div>
             </div>
         `;
+
+        document.getElementById('btn-save-carga-header').addEventListener('click', async () => {
+            const dt = document.getElementById('in-header-data').value;
+            const tr = document.getElementById('sel-header-transporte').value;
+
+            const btn = document.getElementById('btn-save-carga-header');
+            btn.textContent = "Salvando...";
+
+            const updateResp = await fetch(`${API_BASE}/api/relatorios/cargas/${idCarga}`, {
+                method: 'PUT',
+                headers: {
+                    'Content-Type': 'application/json',
+                    "Authorization": `Bearer ${window.Auth ? window.Auth.getToken() : ''}`
+                },
+                body: JSON.stringify({
+                    data_carregamento: dt || null,
+                    id_transporte: parseInt(tr) || null
+                })
+            });
+
+            if (updateResp.ok) {
+                btn.textContent = "Salvo!";
+                setTimeout(() => { btn.textContent = "Salvar Dados do Cabeçalho"; }, 2000);
+            } else {
+                alert("Erro ao salvar cabeçalho");
+                btn.textContent = "Erro!";
+            }
+        });
+
     } catch (e) {
-        document.getElementById('titulo-carga-ativa').textContent = "Gerenciando Carga: " + numCarga;
+        console.error(e);
+        uiActiveHeader.textContent = "Gerenciando Carga: " + numCarga;
     }
 
     document.getElementById('btn-voltar-listagem').onclick = () => renderRelatorioView(activeRelatorio);
@@ -266,25 +331,49 @@ async function carregarPedidosDaCargaAtiva() {
     const tableWrap = tbodyPedidos.closest('.os-table-wrap');
     const theadTable = tableWrap.querySelector('table thead');
 
-    theadTable.innerHTML = `
-        <tr>
-            <th>Ordem</th>
-            <th>Nº Pedido</th>
-            <th>Cliente</th>
-            <th>Cidade</th>
-            <th>Peso Kg</th>
-            <th>Observações</th>
-            <th>Ações</th>
-        </tr>
-    `;
+    // Cabeçalho dinâmico baseado no tipo de relatório
+    if (activeRelatorio === "formacao" || activeRelatorio === "romaneio") {
+        theadTable.innerHTML = `
+            <tr>
+                <th style="font-size: 11px;">Cód. Cliente</th>
+                <th style="font-size: 11px;">Cliente</th>
+                <th style="font-size: 11px;">Nome Fantasia</th>
+                <th style="font-size: 11px;">Município</th>
+                <th style="width: 70px; font-size: 11px;">Ordem</th>
+                <th style="font-size: 11px;">Peso Líq.</th>
+                <th style="font-size: 11px;">Observações</th>
+                <th style="font-size: 11px;">Data</th>
+                <th style="font-size: 11px;">Ações</th>
+            </tr>
+        `;
+    } else {
+        theadTable.innerHTML = `
+            <tr>
+                <th>Ordem</th>
+                <th>Nº Pedido</th>
+                <th>Cliente</th>
+                <th>Cidade</th>
+                <th>Peso Kg</th>
+                <th>Observações</th>
+                <th>Ações</th>
+            </tr>
+        `;
+    }
 
-    tbodyPedidos.innerHTML = '<tr><td colspan="7" style="text-align:center;">Carregando...</td></tr>';
+    tbodyPedidos.innerHTML = `<tr><td colspan="${activeRelatorio === 'resumo' ? 6 : 9}" style="text-align:center;">Carregando pedidos...</td></tr>`;
 
     try {
         const resp = await fetch(`${API_BASE}/api/relatorios/cargas/${cargaEmGerenciamento}/pedidos-detalhes`, {
             headers: { "Authorization": `Bearer ${window.Auth ? window.Auth.getToken() : ''}` }
         });
         const ped = await resp.json();
+
+        // Também precisamos da data da carga para exibir na coluna "Data"
+        const respCarga = await fetch(`${API_BASE}/api/relatorios/cargas/${cargaEmGerenciamento}`, {
+            headers: { "Authorization": `Bearer ${window.Auth ? window.Auth.getToken() : ''}` }
+        });
+        const cargaInfo = await respCarga.json();
+        const dispDataCarga = cargaInfo.data_carregamento ? new Date(cargaInfo.data_carregamento).toLocaleDateString('pt-BR') : "-";
 
         if (ped.length === 0) {
             tbodyPedidos.innerHTML = '';
@@ -296,30 +385,52 @@ async function carregarPedidosDaCargaAtiva() {
         let h = "";
         ped.forEach(p => {
             const peso = p.peso_total ? p.peso_total.toFixed(2).replace('.', ',') : "0,00";
-            h += `
-                <tr>
-                    <td style="width: 80px;"><input type="number" class="os-input os-input-sm in-ordem" value="${p.ordem_carregamento || ''}" data-id="${p.id_carga_pedido}" style="padding: 4px;"></td>
-                    <td><strong>${p.numero_pedido}</strong></td>
-                    <td>${p.cliente_nome || '-'}</td>
-                    <td>${p.municipio || '-'}</td>
-                    <td>${peso}</td>
-                    <td><input type="text" class="os-input os-input-sm in-obs" value="${p.observacoes || ''}" data-id="${p.id_carga_pedido}" style="padding: 4px;"></td>
-                    <td>
-                        <button class="os-btn os-btn-sm os-btn-primary btn-save-item" data-id="${p.id_carga_pedido}">Salvar</button>
-                        <button class="os-btn os-btn-sm os-btn-danger btn-remover-pedido-carga" data-id="${p.id_carga_pedido}">Remover</button>
-                    </td>
-                </tr>
-            `;
+
+            if (activeRelatorio === "formacao" || activeRelatorio === "romaneio") {
+                h += `
+                    <tr>
+                        <td style="font-size: 12px;">${p.codigo_cliente || '-'}</td>
+                        <td style="font-size: 12px;">${p.cliente_nome || '-'}</td>
+                        <td style="font-size: 12px;">${p.nome_fantasia || '-'}</td>
+                        <td style="font-size: 12px;">${p.municipio || '-'}</td>
+                        <td><input type="number" class="os-input os-input-sm in-ordem" value="${p.ordem_carregamento || ''}" data-id="${p.id_carga_pedido}" style="padding: 2px; font-size: 12px; height: 28px;"></td>
+                        <td style="white-space: nowrap; font-size: 12px;">${peso} kg</td>
+                        <td><input type="text" class="os-input os-input-sm in-obs" value="${p.observacoes || ''}" data-id="${p.id_carga_pedido}" style="padding: 2px; font-size: 12px; height: 28px;"></td>
+                        <td style="font-size: 12px;">${dispDataCarga}</td>
+                        <td style="white-space: nowrap;">
+                            <button class="os-btn os-btn-sm os-btn-primary btn-save-item" data-id="${p.id_carga_pedido}" title="Salvar Ordem/Obs">√</button>
+                            <button class="os-btn os-btn-sm os-btn-danger btn-remover-pedido-carga" data-id="${p.id_carga_pedido}" title="Remover">&times;</button>
+                        </td>
+                    </tr>
+                `;
+            } else {
+                // Caso genérico ou fallbacks
+                h += `
+                    <tr>
+                        <td style="width: 80px;"><input type="number" class="os-input os-input-sm in-ordem" value="${p.ordem_carregamento || ''}" data-id="${p.id_carga_pedido}"></td>
+                        <td><strong>${p.numero_pedido}</strong></td>
+                        <td>${p.cliente_nome || '-'}</td>
+                        <td>${p.municipio || '-'}</td>
+                        <td>${peso}</td>
+                        <td><input type="text" class="os-input os-input-sm in-obs" value="${p.observacoes || ''}" data-id="${p.id_carga_pedido}"></td>
+                        <td>
+                            <button class="os-btn os-btn-sm os-btn-primary btn-save-item" data-id="${p.id_carga_pedido}">Salvar</button>
+                            <button class="os-btn os-btn-sm os-btn-danger btn-remover-pedido-carga" data-id="${p.id_carga_pedido}">Remover</button>
+                        </td>
+                    </tr>
+                `;
+            }
         });
         tbodyPedidos.innerHTML = h;
 
         document.querySelectorAll('.btn-save-item').forEach(btn => {
             btn.addEventListener('click', async (e) => {
-                const id = e.target.dataset.id;
-                const row = e.target.closest('tr');
+                const id = e.currentTarget.dataset.id;
+                const row = e.currentTarget.closest('tr');
                 const ordem = row.querySelector('.in-ordem').value;
                 const obs = row.querySelector('.in-obs').value;
 
+                const origText = btn.textContent;
                 btn.textContent = "...";
                 const r = await fetch(`${API_BASE}/api/relatorios/cargas/pedidos/${id}`, {
                     method: 'PUT',
@@ -329,15 +440,20 @@ async function carregarPedidosDaCargaAtiva() {
                     },
                     body: JSON.stringify({ ordem_carregamento: parseInt(ordem) || null, observacoes: obs })
                 });
-                if (r.ok) btn.textContent = "OK!";
-                else { btn.textContent = "Erro"; alert("Falha ao salvar item"); }
+                if (r.ok) {
+                    btn.textContent = "OK";
+                    setTimeout(() => { btn.textContent = origText; }, 1500);
+                } else {
+                    btn.textContent = "!!";
+                    alert("Falha ao salvar item");
+                }
             });
         });
 
         document.querySelectorAll('.btn-remover-pedido-carga').forEach(btn => {
             btn.addEventListener('click', async (e) => {
                 if (!confirm("Remover este pedido da carga?")) return;
-                const linkId = e.target.dataset.id;
+                const linkId = e.currentTarget.dataset.id;
                 await fetch(`${API_BASE}/api/relatorios/cargas/pedidos/${linkId}`, {
                     method: 'DELETE',
                     headers: { "Authorization": `Bearer ${window.Auth ? window.Auth.getToken() : ''}` }
