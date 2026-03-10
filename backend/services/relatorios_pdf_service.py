@@ -128,9 +128,9 @@ def gerar_pdf_formacao_carga(db, carga_id: int) -> bytes:
             str(p.id_pedido),
             _br_number(p.peso_total_kg, 2),
             str(p.codigo_cliente or p.id_pedido),
-            str(p.cliente or "")[:20],
-            str(p.nome_fantasia or "")[:15],
-            str(p.cidade or "")[:15],
+            str(p.cliente or "")[:35],
+            str(p.nome_fantasia or "")[:25],
+            str(p.cidade or "")[:20],
             str(p.rota_geral or "-"),
             str(p.rota_aprox or "-")
         ])
@@ -270,8 +270,8 @@ def gerar_pdf_resumo_produtos(db, carga_id: int) -> bytes:
             GROUP BY codigo_supra
         ) prod ON prod.codigo_supra = i.codigo
         WHERE cp.id_carga = :cid
-        GROUP BY i.codigo
-        ORDER BY item_nome ASC""")
+        GROUP BY i.codigo, i.nome
+        ORDER BY peso_liquido_total DESC""")
     produtos = db.execute(sql_resumo, {"cid": carga_id}).mappings().all()
     carga = db.execute(text("SELECT * FROM tb_cargas WHERE id = :cid"), {"cid": carga_id}).mappings().first()
 

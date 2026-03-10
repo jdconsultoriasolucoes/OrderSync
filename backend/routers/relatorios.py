@@ -169,7 +169,7 @@ def get_resumo_produtos_carga(carga_id: int, db: Session = Depends(get_db)):
         ) prod ON prod.codigo_supra = i.codigo
         WHERE cp.id_carga = :carga_id AND i.quantidade > 0
         GROUP BY i.codigo, i.nome
-        ORDER BY i.nome ASC
+        ORDER BY peso_liquido_total DESC
     """)
     
     rows = db.execute(sql, {"carga_id": carga_id}).mappings().all()
@@ -203,6 +203,7 @@ def get_carga_pedidos_detalhes(carga_id: int, db: Session = Depends(get_db)):
             CAST(COALESCE(p.peso_total_kg, 0) AS FLOAT) AS peso_total,
             c.entrega_municipio AS municipio,
             c.entrega_rota_principal AS rota_principal,
+            c.entrega_rota_aproximacao AS rota_aproximacao,
             cp.observacoes
         FROM tb_cargas_pedidos cp
         JOIN tb_pedidos p ON cp.numero_pedido = p.id_pedido::text

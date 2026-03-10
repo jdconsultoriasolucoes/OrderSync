@@ -204,11 +204,11 @@ function openModal(pkVal = null) {
         cfg.clearForm();
     }
 
-    modal.style.display = 'block';
+    modal.style.display = 'flex';
 }
 
 function closeModals() {
-    document.querySelectorAll('.modal').forEach(m => m.style.display = 'none');
+    document.querySelectorAll('.custom-modal').forEach(m => m.style.display = 'none');
 }
 
 // --- Save Handlers ---

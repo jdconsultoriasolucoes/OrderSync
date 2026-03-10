@@ -249,7 +249,11 @@ async function abrirGerenciadorDeCarga(idCarga, numCarga) {
             transpOptions += `<option value="${t.id}" ${selected}>${t.transportadora} - ${t.motorista} (${t.veiculo_placa})</option>`;
         });
 
-        uiActiveHeader.innerHTML = `
+        if (activeRelatorio === "formacao") {
+            uiActiveHeader.style.display = 'none';
+        } else {
+            uiActiveHeader.style.display = 'block';
+            uiActiveHeader.innerHTML = `
             <div class="compact-header-container">
                 <div class="compact-header-info">
                     <div class="ch-field" style="min-width: 150px;">
@@ -276,34 +280,37 @@ async function abrirGerenciadorDeCarga(idCarga, numCarga) {
                 </div>
             </div>
         `;
+        }
 
-        document.getElementById('btn-save-carga-header').addEventListener('click', async () => {
-            const dt = document.getElementById('in-header-data').value;
-            const tr = document.getElementById('sel-header-transporte').value;
+        if (document.getElementById('btn-save-carga-header')) {
+            document.getElementById('btn-save-carga-header').addEventListener('click', async () => {
+                const dt = document.getElementById('in-header-data').value;
+                const tr = document.getElementById('sel-header-transporte').value;
 
-            const btn = document.getElementById('btn-save-carga-header');
-            btn.textContent = "Salvando...";
+                const btn = document.getElementById('btn-save-carga-header');
+                btn.textContent = "Salvando...";
 
-            const updateResp = await fetch(`${API_BASE}/api/relatorios/cargas/${idCarga}`, {
-                method: 'PUT',
-                headers: {
-                    'Content-Type': 'application/json',
-                    "Authorization": `Bearer ${window.Auth ? window.Auth.getToken() : ''}`
-                },
-                body: JSON.stringify({
-                    data_carregamento: dt || null,
-                    id_transporte: parseInt(tr) || null
-                })
+                const updateResp = await fetch(`${API_BASE}/api/relatorios/cargas/${idCarga}`, {
+                    method: 'PUT',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        "Authorization": `Bearer ${window.Auth ? window.Auth.getToken() : ''}`
+                    },
+                    body: JSON.stringify({
+                        data_carregamento: dt || null,
+                        id_transporte: parseInt(tr) || null
+                    })
+                });
+
+                if (updateResp.ok) {
+                    btn.textContent = "Salvo!";
+                    setTimeout(() => { btn.textContent = "Salvar Dados do Cabeçalho"; }, 2000);
+                } else {
+                    alert("Erro ao salvar cabeçalho");
+                    btn.textContent = "Erro!";
+                }
             });
-
-            if (updateResp.ok) {
-                btn.textContent = "Salvo!";
-                setTimeout(() => { btn.textContent = "Salvar Dados do Cabeçalho"; }, 2000);
-            } else {
-                alert("Erro ao salvar cabeçalho");
-                btn.textContent = "Erro!";
-            }
-        });
+        }
 
     } catch (e) {
         console.error(e);
@@ -330,7 +337,22 @@ async function carregarPedidosDaCargaAtiva() {
     const theadTable = tableWrap.querySelector('table thead');
 
     // Cabeçalho dinâmico baseado no tipo de relatório
-    if (activeRelatorio === "formacao" || activeRelatorio === "romaneio") {
+    if (activeRelatorio === "formacao") {
+        theadTable.innerHTML = `
+            <tr>
+                <th style="font-size: 11px; width: 80px;">Nº Carga</th>
+                <th style="font-size: 11px;">Nº Pedido</th>
+                <th style="font-size: 11px;">Peso Líq.</th>
+                <th style="font-size: 11px;">Código</th>
+                <th style="font-size: 11px;">Cliente</th>
+                <th style="font-size: 11px;">Nome Fantasia</th>
+                <th style="font-size: 11px;">Município</th>
+                <th style="font-size: 11px;">Rota Geral</th>
+                <th style="font-size: 11px;">Rota Aprox.</th>
+                <th style="font-size: 11px;">Ações</th>
+            </tr>
+        `;
+    } else if (activeRelatorio === "romaneio") {
         theadTable.innerHTML = `
             <tr>
                 <th style="font-size: 11px;">Cód. Cliente</th>
@@ -384,7 +406,25 @@ async function carregarPedidosDaCargaAtiva() {
         ped.forEach(p => {
             const peso = p.peso_total ? p.peso_total.toFixed(2).replace('.', ',') : "0,00";
 
-            if (activeRelatorio === "formacao" || activeRelatorio === "romaneio") {
+            if (activeRelatorio === "formacao") {
+                // "tabelão" layout
+                h += `
+                    <tr>
+                        <td><input type="text" class="os-input os-input-sm" value="${numCarga || ''}" style="padding: 2px; font-size: 12px; height: 28px;"></td>
+                        <td style="font-size: 12px;"><strong>${p.numero_pedido}</strong></td>
+                        <td style="white-space: nowrap; font-size: 12px;">${peso} kg</td>
+                        <td style="font-size: 12px;">${p.codigo_cliente || '-'}</td>
+                        <td style="font-size: 12px;">${p.cliente_nome || '-'}</td>
+                        <td style="font-size: 12px;">${p.nome_fantasia || '-'}</td>
+                        <td style="font-size: 12px;">${p.municipio || '-'}</td>
+                        <td style="font-size: 12px;">${p.rota_principal || '-'}</td>
+                        <td style="font-size: 12px;">${p.rota_aproximacao || '-'}</td>
+                        <td style="white-space: nowrap;">
+                            <button class="os-btn os-btn-sm os-btn-danger btn-remover-pedido-carga" data-id="${p.id_carga_pedido}" title="Remover">&times;</button>
+                        </td>
+                    </tr>
+                `;
+            } else if (activeRelatorio === "romaneio") {
                 h += `
                     <tr>
                         <td style="font-size: 12px;">${p.codigo_cliente || '-'}</td>
@@ -480,10 +520,11 @@ async function carregarResumoProdutosDaCargaAtiva() {
             <th style="text-align: center;">Quantidade</th>
             <th>Unidade</th>
             <th style="text-align: right;">Peso Total</th>
+            <th style="text-align: right;">Peso Acum.</th>
         </tr>
     `;
 
-    tbodyPedidos.innerHTML = '<tr><td colspan="6" style="text-align:center;">Carregando resumo de produtos...</td></tr>';
+    tbodyPedidos.innerHTML = '<tr><td colspan="7" style="text-align:center;">Carregando resumo de produtos...</td></tr>';
 
     try {
         const resp = await fetch(`${API_BASE}/api/relatorios/cargas/${cargaEmGerenciamento}/resumo-produtos`, {
@@ -500,8 +541,12 @@ async function carregarResumoProdutosDaCargaAtiva() {
 
         emptyPedidos.style.display = 'none';
         let h = "";
+        let acumulado = 0;
         prods.forEach(p => {
-            const peso = p.peso_liquido_total ? p.peso_liquido_total.toFixed(3).replace('.', ',') : "0,000";
+            const peso = p.peso_liquido_total || 0;
+            acumulado += peso;
+            const pesoStr = peso.toFixed(3).replace('.', ',');
+            const acumStr = acumulado.toFixed(3).replace('.', ',');
             h += `
                 <tr>
                     <td><strong>${p.codigo || '-'}</strong></td>
@@ -509,7 +554,8 @@ async function carregarResumoProdutosDaCargaAtiva() {
                     <td>${p.embalagem || '-'}</td>
                     <td style="text-align: center;">${p.qtd_total}</td>
                     <td>${p.unidade || 'UN'}</td>
-                    <td style="text-align: right;">${peso} kg</td>
+                    <td style="text-align: right;">${pesoStr} kg</td>
+                    <td style="text-align: right;">${acumStr} kg</td>
                 </tr>
             `;
         });
