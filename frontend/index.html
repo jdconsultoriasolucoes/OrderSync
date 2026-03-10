@@ -219,7 +219,8 @@
                 </a></li>
             <li><a href="/tabela_preco/criacao_tabela_preco.html">
                     <svg class="os-nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                        <line x1="12" y1="1" x2="12" y2="23" />
+                        <path d="M20.59 13.41l-7.17 7.17a2 2 0 0 1-2.83 0L2 12V2h10l8.59 8.59a2 2 0 0 1 0 2.82z"></path>
+                        <line x1="7" y1="7" x2="7.01" y2="7"></line>
                     </svg> Tabela de Preço
                 </a></li>
             <li><a href="/produto/produto.html">
@@ -436,6 +437,7 @@
     <!-- ========== SCRIPTS ========== -->
     <script src="/js/config.js"></script>
     <script src="/js/auth.js"></script>
+    <script src="/js/sidebar_control.js"></script>
     <script>
         // Fail-safe: Check token immediately before waiting for Auth object
         (function () {
@@ -453,21 +455,6 @@
             } else {
                 console.error("Auth module failed to load!");
             }
-        });
-
-        // Sidebar toggle
-        const menuButton = document.getElementById("menu-button");
-        const sidebar = document.getElementById("sidebar");
-        const overlay = document.getElementById("overlay");
-
-        menuButton.addEventListener("click", () => {
-            sidebar.classList.toggle("active");
-            overlay.classList.toggle("active");
-        });
-
-        overlay.addEventListener("click", () => {
-            sidebar.classList.remove("active");
-            overlay.classList.remove("active");
         });
     </script>
     <script src="/js/dashboard.js"></script>

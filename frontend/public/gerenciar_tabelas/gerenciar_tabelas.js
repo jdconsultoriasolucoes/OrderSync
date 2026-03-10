@@ -80,6 +80,7 @@ const CONFIG = {
             { key: 'id', label: 'ID' },
             { key: 'transportadora', label: 'Empresa' },
             { key: 'motorista', label: 'Motorista' },
+            { key: 'modelo', label: 'Modelo' },
             { key: 'veiculo_placa', label: 'Placa' },
             { key: 'capacidade_kg', label: 'Capacidade', fmt: v => v ? (v).toLocaleString('pt-BR') + ' kg' : '-' }
         ],
@@ -88,6 +89,7 @@ const CONFIG = {
             document.getElementById('trans-id').value = item.id;
             document.getElementById('trans-empresa').value = item.transportadora;
             document.getElementById('trans-motorista').value = item.motorista;
+            document.getElementById('trans-modelo').value = item.modelo || '';
             document.getElementById('trans-placa').value = item.veiculo_placa;
             document.getElementById('trans-capacidade').value = item.capacidade_kg || '';
         },
@@ -95,6 +97,7 @@ const CONFIG = {
             document.getElementById('trans-id').value = '';
             document.getElementById('trans-empresa').value = '';
             document.getElementById('trans-motorista').value = '';
+            document.getElementById('trans-modelo').value = '';
             document.getElementById('trans-placa').value = '';
             document.getElementById('trans-capacidade').value = '';
         }
@@ -317,6 +320,7 @@ async function saveTransporte(e) {
     const payload = {
         transportadora: empresa,
         motorista: motorista,
+        modelo: document.getElementById('trans-modelo').value || null,
         veiculo_placa: placa,
         capacidade_kg: cap ? parseInt(cap) : null
     };

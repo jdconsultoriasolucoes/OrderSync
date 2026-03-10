@@ -9,6 +9,7 @@ class TransporteModel(Base):
     transportadora = Column(String, nullable=False)
     motorista = Column(String, nullable=False)
     veiculo_placa = Column(String, nullable=False)
+    modelo = Column(String, nullable=True)
     capacidade_kg = Column(Integer, nullable=True)
     
     data_criacao = Column(DateTime, default=datetime.utcnow)

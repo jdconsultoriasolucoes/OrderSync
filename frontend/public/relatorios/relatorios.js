@@ -217,10 +217,9 @@ function abrirModalNovaCarga() {
 // FUNÇÕES DE SUB-TELA "Gerenciar Carga"
 // -----------------------------------------------------
 
-let cargaEmGerenciamento = null;
-
 async function abrirGerenciadorDeCarga(idCarga, numCarga) {
     cargaEmGerenciamento = idCarga;
+    numCargaAtiva = numCarga;
     document.getElementById('painel-listagem').style.display = 'none';
     document.getElementById('painel-gerenciar-carga').style.display = 'block';
 
@@ -410,7 +409,7 @@ async function carregarPedidosDaCargaAtiva() {
                 // "tabelão" layout
                 h += `
                     <tr>
-                        <td><input type="text" class="os-input os-input-sm" value="${numCarga || ''}" style="padding: 2px; font-size: 12px; height: 28px;"></td>
+                        <td><input type="text" class="os-input os-input-sm" value="${numCargaAtiva || ''}" style="padding: 2px; font-size: 12px; height: 28px;"></td>
                         <td style="font-size: 12px;"><strong>${p.numero_pedido}</strong></td>
                         <td style="white-space: nowrap; font-size: 12px;">${peso} kg</td>
                         <td style="font-size: 12px;">${p.codigo_cliente || '-'}</td>

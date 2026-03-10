@@ -100,17 +100,18 @@ def run_migrations():
                     db.rollback()
                     logger.error(f"Falha ao adicionar {col} em tb_pedidos_itens: {e}")
 
-        # 7. tb_transporte: capacidade_kg
-        try:
-            db.execute(text("SELECT capacidade_kg FROM tb_transporte LIMIT 1"))
-        except Exception:
-            db.rollback()
-            logger.info("Adicionando coluna capacidade_kg em tb_transporte...")
+        # 7. tb_transporte: capacidade_kg, modelo
+        for col, col_type in [("capacidade_kg", "INTEGER"), ("modelo", "VARCHAR")]:
             try:
-                db.execute(text("ALTER TABLE tb_transporte ADD COLUMN capacidade_kg INTEGER"))
-                db.commit()
-            except Exception as e:
+                db.execute(text(f"SELECT {col} FROM tb_transporte LIMIT 1"))
+            except Exception:
                 db.rollback()
-                logger.error(f"Falha ao adicionar capacidade_kg em tb_transporte: {e}")
+                logger.info(f"Adicionando coluna {col} em tb_transporte...")
+                try:
+                    db.execute(text(f"ALTER TABLE tb_transporte ADD COLUMN {col} {col_type}"))
+                    db.commit()
+                except Exception as e:
+                    db.rollback()
+                    logger.error(f"Falha ao adicionar {col} em tb_transporte: {e}")
 
     logger.info("Migrações concluídas.")
