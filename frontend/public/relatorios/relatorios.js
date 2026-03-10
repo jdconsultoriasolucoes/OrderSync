@@ -250,30 +250,28 @@ async function abrirGerenciadorDeCarga(idCarga, numCarga) {
         });
 
         uiActiveHeader.innerHTML = `
-            <div style="display: flex; flex-direction: column; gap: 10px; width: 100%;">
-                <div style="display: flex; justify-content: space-between; align-items: center;">
-                    <span style="font-size: 20px; font-weight: 700;">Gerenciando Carga: ${numCarga}</span>
-                    <button class="os-btn os-btn-primary os-btn-sm" id="btn-save-carga-header">Salvar Dados do Cabeçalho</button>
-                </div>
-                
-                <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 15px; background: var(--os-bg-light); padding: 15px; border-radius: 8px; border: 1px solid var(--os-border);">
-                    <div class="os-form-group">
-                        <label style="font-size: 12px; font-weight: 600;">Filial</label>
-                        <input type="text" class="os-input os-input-sm" value="Matriz SUPRA LOG" disabled style="background: #eee;">
+            <div class="compact-header-container">
+                <div class="compact-header-info">
+                    <div class="ch-field" style="min-width: 150px;">
+                        <label>Filial</label>
+                        <input type="text" class="os-input os-input-sm" value="Matriz SUPRA LOG" disabled>
                     </div>
-                    <div class="os-form-group">
-                        <label style="font-size: 12px; font-weight: 600;">Nº Carga</label>
-                        <input type="text" class="os-input os-input-sm" value="${numCarga}" disabled style="background: #eee;">
+                    <div class="ch-field" style="width: 80px;">
+                        <label>Nº Carga</label>
+                        <input type="text" class="os-input os-input-sm" value="${numCarga}" disabled>
                     </div>
-                    <div class="os-form-group">
-                        <label style="font-size: 12px; font-weight: 600;">Data do Carregamento</label>
+                    <div class="ch-field">
+                        <label>Data Carregamento</label>
                         <input type="date" id="in-header-data" class="os-input os-input-sm" value="${dataCarregamentoVal}">
                     </div>
-                    <div class="os-form-group" style="grid-column: span 2;">
-                        <label style="font-size: 12px; font-weight: 600;">Transporte (Transportadora / Motorista / Placa)</label>
+                    <div class="ch-field" style="flex: 1;">
+                        <label>Transporte (Transportadora / Motorista / Veículo / Placa)</label>
                         <select id="sel-header-transporte" class="os-input os-input-sm">
                             ${transpOptions}
                         </select>
+                    </div>
+                    <div class="ch-actions">
+                        <button class="os-btn os-btn-primary os-btn-sm" id="btn-save-carga-header">Salvar Cabeçalho</button>
                     </div>
                 </div>
             </div>

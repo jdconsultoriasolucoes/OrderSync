@@ -445,6 +445,28 @@
         </div>
     </div>
 
+    <!-- ===== Modal: Transporte / Logística ===== -->
+    <div id="modal-transporte" class="custom-modal">
+        <div class="modal-dialog">
+            <h3 id="modal-title-transporte">Novo Transporte / Logística</h3>
+            <form id="form-transporte" onsubmit="saveTransporte(event)">
+                <input type="hidden" id="trans-id" />
+                <label>Transportadora</label>
+                <input id="trans-empresa" type="text" placeholder="Nome da Transportadora" required />
+                <label>Motorista</label>
+                <input id="trans-motorista" type="text" placeholder="Nome do Motorista" required />
+                <label>Veículo / Placa</label>
+                <input id="trans-placa" type="text" placeholder="Ex: Scania ABC-1234" required />
+                <label>Capacidade (kg)</label>
+                <input id="trans-capacidade" type="number" placeholder="Ex: 15000" />
+                <div class="modal-footer">
+                    <button type="button" class="btn" onclick="closeModals()">Cancelar</button>
+                    <button type="submit" class="btn btn-primary">Salvar</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
     <script src="gerenciar_tabelas.js"></script>
 
     <script>
