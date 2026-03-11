@@ -1302,21 +1302,7 @@
 
       <!--  <script src="/js/script.js"></script>-->
 
-      <script>
-        const menuButton = document.getElementById("menu-button");
-        const sidebar = document.getElementById("sidebar");
-        const overlay = document.getElementById("overlay");
 
-        menuButton.addEventListener("click", () => {
-          sidebar.classList.toggle("active");
-          overlay.style.display = sidebar.classList.contains("active") ? "block" : "none";
-        });
-
-        overlay.addEventListener("click", () => {
-          sidebar.classList.remove("active");
-          overlay.style.display = "none";
-        });
-      </script>
 
       <script>
         // Função genérica para preencher selects

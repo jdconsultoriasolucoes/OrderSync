@@ -258,7 +258,7 @@ async function abrirGerenciadorDeCarga(idCarga, numCarga) {
                     <div class="compact-header-info">
                         <div class="ch-field" style="min-width: 150px;">
                             <label>Filial</label>
-                            <input type="text" class="os-input os-input-sm" value="${filialFornecedor}" disabled>
+                            <input type="text" id="in-header-filial" class="os-input os-input-sm" value="Carregando..." disabled>
                         </div>
                         <div class="ch-field" style="width: 80px;">
                             <label>Nº Carga</label>
@@ -274,7 +274,7 @@ async function abrirGerenciadorDeCarga(idCarga, numCarga) {
                 <div class="compact-header-info">
                     <div class="ch-field" style="min-width: 150px;">
                         <label>Filial</label>
-                        <input type="text" class="os-input os-input-sm" value="Matriz SUPRA LOG" disabled>
+                        <input type="text" id="in-header-filial" class="os-input os-input-sm" value="Matriz SUPRA LOG" disabled>
                     </div>
                     <div class="ch-field" style="width: 80px;">
                         <label>Nº Carga</label>
@@ -403,6 +403,12 @@ async function carregarPedidosDaCargaAtiva() {
             headers: { "Authorization": `Bearer ${window.Auth ? window.Auth.getToken() : ''}` }
         });
         const ped = await resp.json();
+
+        // Round 3: Atuallizar Filial com o Fornecedor do primeiro pedido (se for Formação de Carga)
+        if (activeRelatorio === "formacao" && ped.length > 0) {
+            const elFilial = document.getElementById('in-header-filial');
+            if (elFilial) elFilial.value = ped[0].fornecedor || "Matriz SUPRA LOG";
+        }
 
         // Também precisamos da data da carga para exibir na coluna "Data"
         const respCarga = await fetch(`${API_BASE}/api/relatorios/cargas/${cargaEmGerenciamento}`, {
