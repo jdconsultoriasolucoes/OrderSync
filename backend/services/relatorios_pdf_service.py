@@ -125,7 +125,17 @@ def gerar_pdf_formacao_carga(db, carga_id: int) -> bytes:
     style_wrapped.fontSize = 7
     style_wrapped.leading = 8
 
-    data = [["Nº CARGA", "Nº PEDIDO", "PESO LÍQ. TOTAL", "CÓDIGO", "CLIENTE", "N. FANTASIA", "MUNICÍPIO", "ROTA GERAL", "ROTA APROX."]]
+    # style_header for wrapping
+    style_header = styles["Normal"]
+    style_header.fontSize = 8
+    style_header.leading = 9
+    style_header.fontName = 'Helvetica-Bold'
+    style_header.textColor = colors.white
+    style_header.alignment = 0 # Left
+
+    header_labels = ["Nº CARGA", "Nº PEDIDO", "PESO LÍQ. TOTAL", "CÓDIGO", "CLIENTE", "N. FANTASIA", "MUNICÍPIO", "ROTA GERAL", "ROTA APROX."]
+    header_row = [Paragraph(h, style_header) for h in header_labels]
+    data = [header_row]
     
     for p in pedidos:
         # Paragraphs for wrapping
@@ -145,20 +155,21 @@ def gerar_pdf_formacao_carga(db, carga_id: int) -> bytes:
             str(p.rota_aprox or "")[:2]
         ])
 
-    # Width distribution (landscape A4 has ~28cm useful width)
-    # Nº CARGA (1.5) | Nº PEDIDO (1.5) | PESO ACUM (2.0) | CÓDIGO (1.5) | CLIENTE (7.0) | N. FANTASIA (5.0) | MUNICÍPIO (4.5) | ROTA G (1.0) | ROTA A (1.0)
-    col_widths = [1.5*cm, 1.5*cm, 2.0*cm, 1.5*cm, 7.5*cm, 5.5*cm, 5.0*cm, 1.2*cm, 1.2*cm]
+    # Width distribution (landscape A4 has ~27.7cm useful width)
+    # Increased widths for first 3 columns and Rota fields for better visibility
+    col_widths = [2.0*cm, 2.0*cm, 2.8*cm, 1.8*cm, 7.5*cm, 5.0*cm, 4.2*cm, 1.2*cm, 1.2*cm]
 
     table = Table(data, colWidths=col_widths, repeatRows=1)
     style = TableStyle([
         ('BACKGROUND', (0, 0), (-1, 0), SUPRA_BAR),
-        ('TEXTCOLOR', (0, 0), (-1, 0), colors.white),
+        # ('TEXTCOLOR', (0, 0), (-1, 0), colors.white), # Handled by Paragraph
         ('ALIGN', (0, 0), (-1, -1), 'LEFT'),
-        ('ALIGN', (2, 0), (2, -1), 'RIGHT'), # Peso Acum
+        ('ALIGN', (2, 0), (2, -1), 'RIGHT'), # Peso Liquido
         ('VALIGN', (0, 0), (-1, -1), 'MIDDLE'),
-        ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
+        # ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'), # Handled by Paragraph
         ('FONTSIZE', (0, 0), (-1, -1), 8),
-        ('BOTTOMPADDING', (0, 0), (-1, -1), 4),
+        ('BOTTOMPADDING', (0, 0), (-1, 0), 4),
+        ('TOPPADDING', (0, 0), (-1, 0), 4),
         ('GRID', (0, 0), (-1, -1), 0.5, colors.grey),
     ])
     for i in range(1, len(data)):
