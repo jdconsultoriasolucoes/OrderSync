@@ -249,7 +249,24 @@ async function abrirGerenciadorDeCarga(idCarga, numCarga) {
         });
 
         if (activeRelatorio === "formacao") {
-            uiActiveHeader.style.display = 'none';
+            const firstPed = (carga.pedidos_detalhes && carga.pedidos_detalhes.length > 0) ? carga.pedidos_detalhes[0] : null;
+            const filialFornecedor = firstPed ? (firstPed.fornecedor || "Matriz SUPRA LOG") : "Matriz SUPRA LOG";
+
+            uiActiveHeader.style.display = 'block';
+            uiActiveHeader.innerHTML = `
+                <div class="compact-header-container">
+                    <div class="compact-header-info">
+                        <div class="ch-field" style="min-width: 150px;">
+                            <label>Filial</label>
+                            <input type="text" class="os-input os-input-sm" value="${filialFornecedor}" disabled>
+                        </div>
+                        <div class="ch-field" style="width: 80px;">
+                            <label>Nº Carga</label>
+                            <input type="text" class="os-input os-input-sm" value="${numCarga}" disabled>
+                        </div>
+                    </div>
+                </div>
+            `;
         } else {
             uiActiveHeader.style.display = 'block';
             uiActiveHeader.innerHTML = `
@@ -341,7 +358,7 @@ async function carregarPedidosDaCargaAtiva() {
             <tr>
                 <th style="font-size: 11px; width: 80px;">Nº Carga</th>
                 <th style="font-size: 11px;">Nº Pedido</th>
-                <th style="font-size: 11px;">Peso Líq.</th>
+                <th style="font-size: 11px;">Peso Líq. Total</th>
                 <th style="font-size: 11px;">Código</th>
                 <th style="font-size: 11px;">Cliente</th>
                 <th style="font-size: 11px;">Nome Fantasia</th>
@@ -409,7 +426,7 @@ async function carregarPedidosDaCargaAtiva() {
                 // "tabelão" layout
                 h += `
                     <tr>
-                        <td><input type="text" class="os-input os-input-sm" value="${numCargaAtiva || ''}" style="padding: 2px; font-size: 12px; height: 28px;"></td>
+                        <td style="font-size: 12px;">${numCargaAtiva || ''}</td>
                         <td style="font-size: 12px;"><strong>${p.numero_pedido}</strong></td>
                         <td style="white-space: nowrap; font-size: 12px;">${peso} kg</td>
                         <td style="font-size: 12px;">${p.codigo_cliente || '-'}</td>

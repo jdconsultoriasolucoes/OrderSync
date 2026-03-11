@@ -87,7 +87,23 @@
     display: flex;
     flex-direction: column;
     transition: all 0.2s ease;
+    width: 100%;
+    max-width: 1400px;
+    /* Increased from default */
+    margin: 0 auto;
 }
+
+.os-table-wrap {
+    overflow-x: auto;
+    width: 100%;
+}
+
+.os-table td {
+    white-space: normal;
+    /* Allow wrapping */
+    word-break: break-word;
+}
+
 
 .relatorio-header {
     display: flex;
