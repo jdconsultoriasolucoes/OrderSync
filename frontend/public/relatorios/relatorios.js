@@ -285,13 +285,13 @@ async function abrirGerenciadorDeCarga(idCarga, numCarga) {
                         <input type="date" id="in-header-data" class="os-input os-input-sm" value="${dataCarregamentoVal}" ${activeRelatorio === 'resumo' ? 'disabled' : ''}>
                     </div>
                     <div class="ch-field" style="flex: 1;">
-                        <label>Transporte (Transportadora / Motorista / Veículo / Placa)</label>
+                        <label>Transporte (Transportadora / Motorista / Modelo / Placa)</label>
                         <select id="sel-header-transporte" class="os-input os-input-sm" ${activeRelatorio === 'resumo' ? 'disabled' : ''}>
                             ${transpOptions}
                         </select>
                     </div>
                     <div class="ch-actions">
-                        <button class="os-btn os-btn-primary os-btn-sm" id="btn-save-carga-header">Salvar Cabeçalho</button>
+                        <button class="os-btn os-btn-primary os-btn-sm" id="btn-save-carga-header">Salvar Tela</button>
                     </div>
                 </div>
             </div>
@@ -318,9 +318,31 @@ async function abrirGerenciadorDeCarga(idCarga, numCarga) {
                     })
                 });
 
+                // Save items sequentially/parallel
+                const promises = [];
+                document.querySelectorAll('#tbody-pedidos-carga tr').forEach(row => {
+                    const id = row.querySelector('.in-ordem')?.dataset?.id;
+                    if (id) {
+                        const ordem = row.querySelector('.in-ordem').value;
+                        const obs = row.querySelector('.in-obs').value;
+                        promises.push(fetch(`${API_BASE}/api/relatorios/cargas/pedidos/${id}`, {
+                            method: 'PUT',
+                            headers: {
+                                'Content-Type': 'application/json',
+                                "Authorization": `Bearer ${window.Auth ? window.Auth.getToken() : ''}`
+                            },
+                            body: JSON.stringify({ ordem_carregamento: parseInt(ordem) || null, observacoes: obs })
+                        }));
+                    }
+                });
+
+                if (promises.length > 0) {
+                    await Promise.allSettled(promises);
+                }
+
                 if (updateResp.ok) {
                     btn.textContent = "Salvo!";
-                    setTimeout(() => { btn.textContent = "Salvar Dados do Cabeçalho"; }, 2000);
+                    setTimeout(() => { btn.textContent = "Salvar Tela"; }, 2000);
                 } else {
                     alert("Erro ao salvar cabeçalho");
                     btn.textContent = "Erro!";
@@ -452,11 +474,10 @@ async function carregarPedidosDaCargaAtiva() {
                         <td style="font-size: 12px;">${p.cliente_nome || '-'}</td>
                         <td style="font-size: 12px;">${p.nome_fantasia || '-'}</td>
                         <td style="font-size: 12px;">${p.municipio || '-'}</td>
-                        <td><input type="number" class="os-input os-input-sm in-ordem" value="${p.ordem_carregamento || ''}" data-id="${p.id_carga_pedido}" style="padding: 2px; font-size: 12px; height: 28px;"></td>
-                        <td style="white-space: nowrap; font-size: 12px;">${peso} kg</td>
-                        <td><input type="text" class="os-input os-input-sm in-obs" value="${p.observacoes || ''}" data-id="${p.id_carga_pedido}" style="padding: 2px; font-size: 12px; height: 28px;"></td>
-                        <td style="white-space: nowrap;">
-                            <button class="os-btn os-btn-sm os-btn-primary btn-save-item" data-id="${p.id_carga_pedido}" title="Salvar Ordem/Obs">√</button>
+                        <td style="vertical-align: top;"><input type="number" class="os-input os-input-sm in-ordem" value="${p.ordem_carregamento || ''}" data-id="${p.id_carga_pedido}" style="padding: 2px; font-size: 12px; height: 32px; text-align: right; width: 60px;"></td>
+                        <td style="white-space: nowrap; font-size: 12px; vertical-align: top;">${peso} kg</td>
+                        <td style="vertical-align: top;"><textarea class="os-input os-input-sm in-obs" data-id="${p.id_carga_pedido}" style="padding: 4px; font-size: 12px; height: 38px; resize: vertical; width: 100%; min-width: 200px;">${p.observacoes || ''}</textarea></td>
+                        <td style="white-space: nowrap; vertical-align: top;">
                             <button class="os-btn os-btn-sm os-btn-danger btn-remover-pedido-carga" data-id="${p.id_carga_pedido}" title="Remover">&times;</button>
                         </td>
                     </tr>
@@ -481,32 +502,7 @@ async function carregarPedidosDaCargaAtiva() {
         });
         tbodyPedidos.innerHTML = h;
 
-        document.querySelectorAll('.btn-save-item').forEach(btn => {
-            btn.addEventListener('click', async (e) => {
-                const id = e.currentTarget.dataset.id;
-                const row = e.currentTarget.closest('tr');
-                const ordem = row.querySelector('.in-ordem').value;
-                const obs = row.querySelector('.in-obs').value;
-
-                const origText = btn.textContent;
-                btn.textContent = "...";
-                const r = await fetch(`${API_BASE}/api/relatorios/cargas/pedidos/${id}`, {
-                    method: 'PUT',
-                    headers: {
-                        'Content-Type': 'application/json',
-                        "Authorization": `Bearer ${window.Auth ? window.Auth.getToken() : ''}`
-                    },
-                    body: JSON.stringify({ ordem_carregamento: parseInt(ordem) || null, observacoes: obs })
-                });
-                if (r.ok) {
-                    btn.textContent = "OK";
-                    setTimeout(() => { btn.textContent = origText; }, 1500);
-                } else {
-                    btn.textContent = "!!";
-                    alert("Falha ao salvar item");
-                }
-            });
-        });
+        // No row save listeners anymore.
 
         document.querySelectorAll('.btn-remover-pedido-carga').forEach(btn => {
             btn.addEventListener('click', async (e) => {

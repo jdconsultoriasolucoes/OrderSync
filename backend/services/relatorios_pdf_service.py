@@ -114,17 +114,13 @@ def gerar_pdf_formacao_carga(db, carga_id: int) -> bytes:
     subtitle = f"Carga: {carga.get('numero_carga') or ''} - {carga.get('nome_carga') or ''}"
     y = _draw_header(c, width, height, "Manutenção de Pedidos / Formação de Carga", subtitle)
 
-    # Extra Header - Campo p/ Digitar
-    c.setFillColor(colors.black)
-    c.setFont("Helvetica", 10)
-    c.drawString(width - 9.0*cm, height - 1.0*cm, "Campo p/ Digitar Nº Carga: ________________")
-
     # Table Data
     # Columns: Nº CARGA | Nº PEDIDO | PESO LIQUIDO | CÓDIGO | CLIENTE | N. FANTASIA | MUNICÍPIO | ROTA GERAL | ROTA DE APROXIMAÇÃO
     styles = getSampleStyleSheet()
     style_wrapped = styles["Normal"]
     style_wrapped.fontSize = 7
     style_wrapped.leading = 8
+    style_wrapped.textColor = colors.black
 
     # style_header for wrapping
     style_header = styles["Normal"]
@@ -191,7 +187,7 @@ def gerar_pdf_formacao_carga(db, carga_id: int) -> bytes:
 
 def gerar_pdf_romaneio(db, carga_id: int) -> bytes:
     sql_carga = text("""
-        SELECT c.*, t.motorista, t.veiculo_placa, t.transportadora 
+        SELECT c.*, t.motorista, t.modelo, t.veiculo_placa, t.transportadora 
         FROM tb_cargas c 
         LEFT JOIN tb_transporte t ON c.id_transporte = t.id
         WHERE c.id = :cid
@@ -238,7 +234,7 @@ def gerar_pdf_romaneio(db, carga_id: int) -> bytes:
     
     c.drawString(0.7*cm, y, f"TRANSPORTADORA: {carga.get('transportadora') or 'Próprio'}")
     c.drawString(8.0*cm, y, f"MOTORISTA: {carga.get('motorista') or '-'}")
-    c.drawRightString(width - 0.7*cm, y, f"VEÍCULO: {carga.get('veiculo_placa') or '-'} / PLACA: {carga.get('veiculo_placa') or '-'}")
+    c.drawRightString(width - 0.7*cm, y, f"VEÍCULO: {carga.get('modelo') or '-'} / PLACA: {carga.get('veiculo_placa') or '-'}")
     y -= 1.0*cm
 
     # Table columns: CÓDIGO | CLIENTE | N. FANTASIA | MUNICÍPIO | ORDEM | PESO LÍQ. | OBSERVAÇÕES
@@ -246,6 +242,7 @@ def gerar_pdf_romaneio(db, carga_id: int) -> bytes:
     style_wrapped = styles["Normal"]
     style_wrapped.fontSize = 8
     style_wrapped.leading = 9
+    style_wrapped.textColor = colors.black
 
     # Wrap cells that might get too large
     data = [["CÓDIGO", "CLIENTE", "N. FANTASIA", "MUNICÍPIO", "ORDEM", "PESO LÍQ.", "OBSERVAÇÕES"]]
@@ -382,7 +379,7 @@ def _desenhar_resumo_logic(c, db, carga, produtos, width, height, y_start=None):
 def gerar_pdf_relatorio_completo(db, carga_id: int) -> bytes:
     # Fetch all info for both parts
     sql_carga = text("""
-        SELECT c.*, t.motorista, t.veiculo_placa, t.transportadora 
+        SELECT c.*, t.motorista, t.modelo, t.veiculo_placa, t.transportadora 
         FROM tb_cargas c 
         LEFT JOIN tb_transporte t ON c.id_transporte = t.id
         WHERE c.id = :cid
@@ -472,13 +469,14 @@ def _desenhar_romaneio_logic(c, carga, pedidos, width, height):
     
     c.drawString(0.7*cm, y, f"TRANSPORTADORA: {carga.get('transportadora') or 'Próprio'}")
     c.drawString(8.0*cm, y, f"MOTORISTA: {carga.get('motorista') or '-'}")
-    c.drawRightString(width - 0.7*cm, y, f"VEÍCULO/PLACA: {carga.get('veiculo_placa') or '-'}")
+    c.drawRightString(width - 0.7*cm, y, f"VEÍCULO/PLACA: {carga.get('modelo') or '-'} / {carga.get('veiculo_placa') or '-'}")
     y -= 1.0*cm
 
     styles = getSampleStyleSheet()
     style_wrapped = styles["Normal"]
     style_wrapped.fontSize = 9
     style_wrapped.leading = 10
+    style_wrapped.textColor = colors.black
 
     data = [["CÓDIGO", "CLIENTE", "N. FANTASIA", "MUNICÍPIO", "ORDEM CARREG.", "PESO LÍQUIDO", "OBSERVAÇÃO PEDIDO"]]
     for p in pedidos:
