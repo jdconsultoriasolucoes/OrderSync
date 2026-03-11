@@ -158,6 +158,7 @@ def get_resumo_produtos_carga(carga_id: int, db: Session = Depends(get_db)):
             MAX(i.embalagem) AS embalagem,
             SUM(i.quantidade) AS qtd_total,
             MAX(prod.unidade_medida) AS unidade,
+            MAX(CAST(prod.peso AS FLOAT)) AS peso_unitario,
             CAST(SUM(i.quantidade * COALESCE(prod.peso, 0)) AS FLOAT) AS peso_liquido_total
         FROM tb_cargas_pedidos cp
         JOIN tb_pedidos p ON cp.numero_pedido = p.id_pedido::text

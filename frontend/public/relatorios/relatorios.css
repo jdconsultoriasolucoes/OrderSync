@@ -76,7 +76,6 @@
     font-weight: 600;
 }
 
-/* Coluna 2: Workarea do Relatório */
 .relatorios-content {
     background: var(--os-bg-white);
     border-radius: var(--os-radius-lg);
@@ -88,8 +87,7 @@
     flex-direction: column;
     transition: all 0.2s ease;
     width: 100%;
-    max-width: 1400px;
-    /* Increased from default */
+    max-width: 100%; /* Changed from 1400px to allow spreading fully within container */
     margin: 0 auto;
 }
 

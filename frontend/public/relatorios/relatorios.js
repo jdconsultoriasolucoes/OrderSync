@@ -282,11 +282,11 @@ async function abrirGerenciadorDeCarga(idCarga, numCarga) {
                     </div>
                     <div class="ch-field">
                         <label>Data Carregamento</label>
-                        <input type="date" id="in-header-data" class="os-input os-input-sm" value="${dataCarregamentoVal}">
+                        <input type="date" id="in-header-data" class="os-input os-input-sm" value="${dataCarregamentoVal}" ${activeRelatorio === 'resumo' ? 'disabled' : ''}>
                     </div>
                     <div class="ch-field" style="flex: 1;">
                         <label>Transporte (Transportadora / Motorista / Veículo / Placa)</label>
-                        <select id="sel-header-transporte" class="os-input os-input-sm">
+                        <select id="sel-header-transporte" class="os-input os-input-sm" ${activeRelatorio === 'resumo' ? 'disabled' : ''}>
                             ${transpOptions}
                         </select>
                     </div>
@@ -298,7 +298,7 @@ async function abrirGerenciadorDeCarga(idCarga, numCarga) {
         `;
         }
 
-        if (document.getElementById('btn-save-carga-header')) {
+        if (document.getElementById('btn-save-carga-header') && activeRelatorio !== 'resumo') {
             document.getElementById('btn-save-carga-header').addEventListener('click', async () => {
                 const dt = document.getElementById('in-header-data').value;
                 const tr = document.getElementById('sel-header-transporte').value;
@@ -378,7 +378,6 @@ async function carregarPedidosDaCargaAtiva() {
                 <th style="width: 70px; font-size: 11px;">Ordem</th>
                 <th style="font-size: 11px;">Peso Líq.</th>
                 <th style="font-size: 11px;">Observações</th>
-                <th style="font-size: 11px;">Data</th>
                 <th style="font-size: 11px;">Ações</th>
             </tr>
         `;
@@ -426,7 +425,7 @@ async function carregarPedidosDaCargaAtiva() {
         emptyPedidos.style.display = 'none';
         let h = "";
         ped.forEach(p => {
-            const peso = p.peso_total ? p.peso_total.toFixed(2).replace('.', ',') : "0,00";
+            const peso = p.peso_total ? Math.round(p.peso_total).toString() : "0";
 
             if (activeRelatorio === "formacao") {
                 // "tabelão" layout
@@ -456,7 +455,6 @@ async function carregarPedidosDaCargaAtiva() {
                         <td><input type="number" class="os-input os-input-sm in-ordem" value="${p.ordem_carregamento || ''}" data-id="${p.id_carga_pedido}" style="padding: 2px; font-size: 12px; height: 28px;"></td>
                         <td style="white-space: nowrap; font-size: 12px;">${peso} kg</td>
                         <td><input type="text" class="os-input os-input-sm in-obs" value="${p.observacoes || ''}" data-id="${p.id_carga_pedido}" style="padding: 2px; font-size: 12px; height: 28px;"></td>
-                        <td style="font-size: 12px;">${dispDataCarga}</td>
                         <td style="white-space: nowrap;">
                             <button class="os-btn os-btn-sm os-btn-primary btn-save-item" data-id="${p.id_carga_pedido}" title="Salvar Ordem/Obs">√</button>
                             <button class="os-btn os-btn-sm os-btn-danger btn-remover-pedido-carga" data-id="${p.id_carga_pedido}" title="Remover">&times;</button>
@@ -563,12 +561,11 @@ async function carregarResumoProdutosDaCargaAtiva() {
 
         emptyPedidos.style.display = 'none';
         let h = "";
-        let acumulado = 0;
         prods.forEach(p => {
-            const peso = p.peso_liquido_total || 0;
-            acumulado += peso;
-            const pesoStr = peso.toFixed(3).replace('.', ',');
-            const acumStr = acumulado.toFixed(3).replace('.', ',');
+            const pesoUnit = p.peso_unitario || 0;
+            const pesoRow = p.peso_liquido_total || 0;
+            const pesoStr = Math.round(pesoUnit).toString();
+            const acumStr = Math.round(pesoRow).toString();
             h += `
                 <tr>
                     <td><strong>${p.codigo || '-'}</strong></td>
@@ -617,7 +614,7 @@ function abrirModalBuscaPedidos() {
                     <td>${p.cliente_nome}</td>
                     <td>${p.municipio || '-'}</td>
                     <td>${p.status_codigo}</td>
-                    <td>${(p.peso_total || 0).toFixed(2)} kg</td>
+                    <td>${Math.round(p.peso_total || 0).toString()} kg</td>
                 </tr>
             `;
             });
