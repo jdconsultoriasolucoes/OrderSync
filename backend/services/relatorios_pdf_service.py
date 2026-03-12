@@ -305,6 +305,7 @@ def gerar_pdf_resumo_produtos(db, carga_id: int) -> bytes:
         ) prod ON prod.codigo_supra = i.codigo
         WHERE cp.id_carga = :cid
         GROUP BY i.codigo, i.nome
+        HAVING SUM(i.quantidade) > 0
         ORDER BY peso_liquido_total DESC""")
     produtos = db.execute(sql_resumo, {"cid": carga_id}).mappings().all()
     carga = db.execute(text("SELECT * FROM tb_cargas WHERE id = :cid"), {"cid": carga_id}).mappings().first()
@@ -423,6 +424,7 @@ def gerar_pdf_relatorio_completo(db, carga_id: int) -> bytes:
         ) prod ON prod.codigo_supra = i.codigo
         WHERE cp.id_carga = :cid
         GROUP BY i.codigo, i.nome
+        HAVING SUM(i.quantidade) > 0
         ORDER BY peso_liquido_total DESC
     """)
     produtos = db.execute(sql_resumo, {"cid": carga_id}).mappings().all()

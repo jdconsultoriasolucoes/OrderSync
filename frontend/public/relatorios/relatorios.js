@@ -373,24 +373,28 @@ async function carregarPedidosDaCargaAtiva() {
     const emptyPedidos = document.getElementById('empty-carga-pedidos');
     const tableWrap = tbodyPedidos.closest('.os-table-wrap');
     const theadTable = tableWrap.querySelector('table thead');
+    const tableEl = tableWrap.querySelector('table');
 
     // Cabeçalho dinâmico baseado no tipo de relatório
     if (activeRelatorio === "formacao") {
+        tableEl.style.tableLayout = "fixed";
+        tableEl.style.width = "100%";
         theadTable.innerHTML = `
             <tr>
-                <th style="font-size: 11px; width: 80px;">Nº Carga</th>
-                <th style="font-size: 11px;">Nº Pedido</th>
-                <th style="font-size: 11px;">Peso Líq. Total</th>
-                <th style="font-size: 11px;">Código</th>
-                <th style="font-size: 11px;">Cliente</th>
-                <th style="font-size: 11px;">Nome Fantasia</th>
-                <th style="font-size: 11px;">Município</th>
-                <th style="font-size: 11px;">Rota Geral</th>
-                <th style="font-size: 11px;">Rota Aprox.</th>
-                <th style="font-size: 11px;">Ações</th>
+                <th style="font-size: 11px; width: 40px; padding: 12px 4px;">Carga</th>
+                <th style="font-size: 11px; width: 50px; padding: 12px 4px;">Pedido</th>
+                <th style="font-size: 11px; width: 60px; padding: 12px 4px;">Peso Líq.</th>
+                <th style="font-size: 11px; width: 50px; padding: 12px 4px;">Cód.</th>
+                <th style="font-size: 11px; width: auto; min-width: 250px;">Cliente</th>
+                <th style="font-size: 11px; width: 25%; min-width: 150px;">Nome Fantasia</th>
+                <th style="font-size: 11px; width: 80px; padding: 12px 4px;">Município</th>
+                <th style="font-size: 11px; width: 40px; padding: 12px 4px;">Rota G.</th>
+                <th style="font-size: 11px; width: 40px; padding: 12px 4px;">Rota A.</th>
+                <th style="font-size: 11px; width: 30px; text-align: center; padding: 12px 4px;">&nbsp;</th>
             </tr>
         `;
     } else if (activeRelatorio === "romaneio") {
+        tableEl.style.tableLayout = "auto";
         theadTable.innerHTML = `
             <tr>
                 <th style="font-size: 11px;">Cód. Cliente</th>
@@ -453,16 +457,16 @@ async function carregarPedidosDaCargaAtiva() {
                 // "tabelão" layout
                 h += `
                     <tr>
-                        <td style="font-size: 12px;">${numCargaAtiva || ''}</td>
-                        <td style="font-size: 12px;"><strong>${p.numero_pedido}</strong></td>
-                        <td style="white-space: nowrap; font-size: 12px;">${peso} kg</td>
-                        <td style="font-size: 12px;">${p.codigo_cliente || '-'}</td>
-                        <td style="font-size: 12px;">${p.cliente_nome || '-'}</td>
-                        <td style="font-size: 12px;">${p.nome_fantasia || '-'}</td>
-                        <td style="font-size: 12px;">${p.municipio || '-'}</td>
-                        <td style="font-size: 12px;">${p.rota_principal || '-'}</td>
-                        <td style="font-size: 12px;">${p.rota_aproximacao || '-'}</td>
-                        <td style="white-space: nowrap;">
+                        <td style="font-size: 12px; padding: 12px 4px;">${numCargaAtiva || ''}</td>
+                        <td style="font-size: 12px; padding: 12px 4px;"><strong>${p.numero_pedido}</strong></td>
+                        <td style="white-space: nowrap; font-size: 12px; padding: 12px 4px;">${peso} kg</td>
+                        <td style="font-size: 12px; padding: 12px 4px;">${p.codigo_cliente || '-'}</td>
+                        <td style="font-size: 12px; width: auto; min-width: 250px; white-space: normal;">${p.cliente_nome || '-'}</td>
+                        <td style="font-size: 12px; width: 25%; min-width: 150px; white-space: normal;">${p.nome_fantasia || '-'}</td>
+                        <td style="font-size: 12px; padding: 12px 4px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 100px;" title="${p.municipio || '-'}">${p.municipio || '-'}</td>
+                        <td style="font-size: 12px; padding: 12px 4px;">${p.rota_principal || '-'}</td>
+                        <td style="font-size: 12px; padding: 12px 4px;">${p.rota_aproximacao || '-'}</td>
+                        <td style="white-space: nowrap; padding: 12px 4px; text-align: center;">
                             <button class="os-btn os-btn-sm os-btn-danger btn-remover-pedido-carga" data-id="${p.id_carga_pedido}" title="Remover">&times;</button>
                         </td>
                     </tr>
