@@ -714,16 +714,6 @@ function aplicarPeriodoRapido() {
 
 // ---------------------- INIT ----------------------
 document.addEventListener('DOMContentLoaded', async () => {
-  // Sidebar
-  const menuButton = document.getElementById('menu-button');
-  const sidebar = document.getElementById('sidebar');
-  const overlay = document.getElementById('overlay');
-  if (menuButton && sidebar && overlay) {
-    const open = () => { sidebar.classList.add('active'); overlay.classList.add('active'); };
-    const close = () => { sidebar.classList.remove('active'); overlay.classList.remove('active'); };
-    menuButton.addEventListener('click', (e) => { e.stopPropagation(); sidebar.classList.contains('active') ? close() : open(); });
-    overlay.addEventListener('click', close);
-  }
 
   bindUI();
   await loadStatus();

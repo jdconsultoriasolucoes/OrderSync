@@ -167,6 +167,7 @@ def get_resumo_produtos_carga(carga_id: int, db: Session = Depends(get_db)):
             SELECT codigo_supra, MAX(CAST(peso AS FLOAT)) as peso, MAX(unidade) as unidade_medida
             FROM t_cadastro_produto_v2
             GROUP BY codigo_supra
+        ) prod ON prod.codigo_supra = i.codigo
         WHERE cp.id_carga = :carga_id AND i.quantidade > 0
         GROUP BY i.codigo, i.nome
         HAVING SUM(i.quantidade) > 0

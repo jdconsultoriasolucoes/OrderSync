@@ -282,10 +282,21 @@
             <div class="os-modal-body" style="padding-bottom: 0;">
                 <div class="os-form-group"
                     style="display: flex; gap: 10px; align-items: flex-end; margin-bottom: 20px;">
+                    <div>
+                        <label>Data Inicial:</label>
+                        <input type="date" id="input-busca-pedido-data-ini" class="os-input">
+                    </div>
+                    <div>
+                        <label>Data Final:</label>
+                        <input type="date" id="input-busca-pedido-data-fim" class="os-input">
+                    </div>
                     <div style="flex:1">
                         <label>Filtro Rápido (Cliente/Código):</label>
                         <input type="text" id="input-busca-pedido-livre" class="os-input"
                             placeholder="Digite para filtrar a lista abaixo..." autocomplete="off">
+                    </div>
+                    <div>
+                        <button class="os-btn os-btn-secondary" id="btn-atualizar-busca-pedidos" style="height: 38px;">Buscar</button>
                     </div>
                 </div>
 
@@ -297,8 +308,8 @@
                                         id="chk-select-all-pedidos" /></th>
                                 <th>Nº Pedido</th>
                                 <th>Cliente</th>
+                                <th>Entrega/Retirada</th>
                                 <th>Município</th>
-                                <th>Rota</th>
                                 <th>Status</th>
                                 <th>Peso Líq.</th>
                             </tr>

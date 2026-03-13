@@ -3,7 +3,7 @@
  * Gerencia a lógica da visualização de 2 colunas do Módulo "Exportar Relatórios"
  */
 
-const API_BASE = window.API_BASE || window.location.origin;
+var API_BASE = window.API_BASE || window.location.origin;
 
 const relatoriosDict = {
     "formacao": {
@@ -21,6 +21,8 @@ const relatoriosDict = {
 };
 
 let activeRelatorio = "formacao";
+let cargaEmGerenciamento = null;
+let numCargaAtiva = null;
 
 // DOM Elements
 const menuBtns = document.querySelectorAll('.relatorios-menu button');
@@ -88,6 +90,8 @@ async function renderRelatorioView(relKey) {
 // -----------------------------------------------------
 
 async function renderStandardCargaList(tipo) {
+    cargaEmGerenciamento = null;
+    numCargaAtiva = null;
     document.getElementById('painel-gerenciar-carga').style.display = 'none';
     document.getElementById('painel-listagem').style.display = 'block';
 
@@ -385,11 +389,11 @@ async function carregarPedidosDaCargaAtiva() {
                 <th style="font-size: 11px; width: 50px; padding: 12px 4px;">Pedido</th>
                 <th style="font-size: 11px; width: 60px; padding: 12px 4px;">Peso Líq.</th>
                 <th style="font-size: 11px; width: 50px; padding: 12px 4px;">Cód.</th>
-                <th style="font-size: 11px; width: auto; min-width: 250px;">Cliente</th>
-                <th style="font-size: 11px; width: 25%; min-width: 150px;">Nome Fantasia</th>
+                <th style="font-size: 11px; width: auto; min-width: 180px;">Cliente</th>
+                <th style="font-size: 11px; width: 25%; min-width: 120px;">Nome Fantasia</th>
                 <th style="font-size: 11px; width: 80px; padding: 12px 4px;">Município</th>
-                <th style="font-size: 11px; width: 40px; padding: 12px 4px;">Rota G.</th>
-                <th style="font-size: 11px; width: 40px; padding: 12px 4px;">Rota A.</th>
+                <th style="font-size: 11px; width: 50px; padding: 12px 4px;">Rota G.</th>
+                <th style="font-size: 11px; width: 50px; padding: 12px 4px;">Rota A.</th>
                 <th style="font-size: 11px; width: 30px; text-align: center; padding: 12px 4px;">&nbsp;</th>
             </tr>
         `;
@@ -550,9 +554,14 @@ async function carregarResumoProdutosDaCargaAtiva() {
         const resp = await fetch(`${API_BASE}/api/relatorios/cargas/${cargaEmGerenciamento}/resumo-produtos`, {
             headers: { "Authorization": `Bearer ${window.Auth ? window.Auth.getToken() : ''}` }
         });
+        
+        if (!resp.ok) {
+            throw new Error(`Erro do servidor: ${resp.status}`);
+        }
+        
         const prods = await resp.json();
 
-        if (prods.length === 0) {
+        if (!Array.isArray(prods) || prods.length === 0) {
             tbodyPedidos.innerHTML = '';
             emptyPedidos.textContent = "Não há produtos faturados para os pedidos desta carga.";
             emptyPedidos.style.display = 'block';
@@ -596,30 +605,23 @@ function abrirModalBuscaPedidos() {
     modal.classList.add('active');
     document.getElementById('modal-buscar-close').onclick = () => modal.classList.remove('active');
 
-    const tbodyRes = document.getElementById('tbody-resultado-busca');
-    tbodyRes.innerHTML = '<tr><td colspan="8" style="text-align: center;">Carregando pedidos ativos...</td></tr>';
+    // Inicializa datas
+    const dtIniEl = document.getElementById('input-busca-pedido-data-ini');
+    const dtFimEl = document.getElementById('input-busca-pedido-data-fim');
+    if (dtIniEl && dtFimEl && !dtIniEl.value) {
+        const hoje = new Date();
+        const inicio = new Date();
+        inicio.setDate(hoje.getDate() - 30);
+        dtIniEl.value = inicio.toISOString().slice(0, 10);
+        dtFimEl.value = hoje.toISOString().slice(0, 10);
+    }
 
-    fetch(`${API_BASE}/api/pedidos?status=CONFIRMADO,FATURADO&pageSize=300`, {
-        headers: { "Authorization": `Bearer ${window.Auth ? window.Auth.getToken() : ''}` }
-    })
-        .then(r => r.json())
-        .then(json => {
-            const res = json.data || [];
-            let html = "";
-            res.forEach(p => {
-                html += `
-                <tr>
-                    <td><input type="checkbox" class="chk-pedido-item" value="${p.numero_pedido}"></td>
-                    <td><strong>${p.numero_pedido}</strong></td>
-                    <td>${p.cliente_nome}</td>
-                    <td>${p.municipio || '-'}</td>
-                    <td>${p.status_codigo}</td>
-                    <td>${Math.round(p.peso_total || 0).toString()} kg</td>
-                </tr>
-            `;
-            });
-            tbodyRes.innerHTML = html;
-        });
+    const btnAtualizar = document.getElementById('btn-atualizar-busca-pedidos');
+    if (btnAtualizar) {
+        btnAtualizar.onclick = () => carregarPedidosParaModal();
+    }
+
+    carregarPedidosParaModal();
 
     document.getElementById('btn-vincular-selecionados').onclick = async () => {
         const checked = document.querySelectorAll('.chk-pedido-item:checked');
@@ -638,6 +640,44 @@ function abrirModalBuscaPedidos() {
     };
 }
 
+function carregarPedidosParaModal() {
+    const tbodyRes = document.getElementById('tbody-resultado-busca');
+    tbodyRes.innerHTML = '<tr><td colspan="7" style="text-align: center;">Carregando pedidos ativos...</td></tr>';
+
+    const dtIniEl = document.getElementById('input-busca-pedido-data-ini');
+    const dtFimEl = document.getElementById('input-busca-pedido-data-fim');
+    const dtIni = dtIniEl ? dtIniEl.value : null;
+    const dtFim = dtFimEl ? dtFimEl.value : null;
+
+    let url = `${API_BASE}/api/pedidos?status=PENDENTE,EM_SEPARACAO,CONFIRMADO,FATURADO,PRONTO,ENTREGUE&pageSize=300`;
+    if (dtIni) url += `&from=${dtIni}`;
+    if (dtFim) url += `&to=${dtFim}`;
+
+    fetch(url, {
+        headers: { "Authorization": `Bearer ${window.Auth ? window.Auth.getToken() : ''}` }
+    })
+        .then(r => r.json())
+        .then(json => {
+            const res = json.data || [];
+            let html = "";
+            res.forEach(p => {
+                const modalidade = p.modalidade || (p.usar_valor_com_frete === false ? "RETIRADA" : "ENTREGA");
+                html += `
+                <tr>
+                    <td><input type="checkbox" class="chk-pedido-item" value="${p.numero_pedido}"></td>
+                    <td><strong>${p.numero_pedido}</strong></td>
+                    <td>${p.cliente_nome}</td>
+                    <td><span class="badge-alert" style="color:#374151; background:#e5e7eb; border-color:#d1d5db;">${modalidade}</span></td>
+                    <td>${p.municipio || '-'}</td>
+                    <td>${p.status_codigo}</td>
+                    <td>${Math.round(p.peso_total || 0).toString()} kg</td>
+                </tr>
+            `;
+            });
+            tbodyRes.innerHTML = html;
+        });
+}
+
 // -----------------------------------------------------
 // BOTÃO EXPORTAR PDF
 // -----------------------------------------------------
@@ -646,13 +686,21 @@ btnExport.addEventListener('click', () => {
     let endpoint = "";
     let cargaId = "";
 
-    const firstChecked = document.querySelector('.chk-carga-item:checked');
-    if (firstChecked) cargaId = firstChecked.value;
-    else cargaId = cargaEmGerenciamento;
+    const isListagem = document.getElementById('painel-listagem').style.display !== 'none';
 
-    if (!cargaId) {
-        alert("Selecione uma carga (checkbox) ou entre em um relatório.");
-        return;
+    if (isListagem) {
+        const firstChecked = document.querySelector('.chk-carga-item:checked');
+        if (!firstChecked) {
+            alert("Você precisa selecionar uma carga (marcar o checkbox) para exportar.");
+            return;
+        }
+        cargaId = firstChecked.value;
+    } else {
+        if (!cargaEmGerenciamento) {
+            alert("Selecione uma carga ou entre em um relatório.");
+            return;
+        }
+        cargaId = cargaEmGerenciamento;
     }
 
     if (activeRelatorio === "formacao") endpoint = `${API_BASE}/api/relatorios/carga/${cargaId}/pdf`;

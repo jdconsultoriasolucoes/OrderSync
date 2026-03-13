@@ -10,6 +10,7 @@ from reportlab.lib.utils import ImageReader
 from datetime import datetime
 from pathlib import Path
 import io
+from copy import copy
 from sqlalchemy import text
 
 # Palette and standard formatters (based on pdf_service.py)
@@ -117,13 +118,13 @@ def gerar_pdf_formacao_carga(db, carga_id: int) -> bytes:
     # Table Data
     # Columns: Nº CARGA | Nº PEDIDO | PESO LIQUIDO | CÓDIGO | CLIENTE | N. FANTASIA | MUNICÍPIO | ROTA GERAL | ROTA DE APROXIMAÇÃO
     styles = getSampleStyleSheet()
-    style_wrapped = styles["Normal"]
+    style_wrapped = copy(styles["Normal"])
     style_wrapped.fontSize = 7
     style_wrapped.leading = 8
     style_wrapped.textColor = colors.black
 
     # style_header for wrapping
-    style_header = styles["Normal"]
+    style_header = copy(styles["Normal"])
     style_header.fontSize = 8
     style_header.leading = 9
     style_header.fontName = 'Helvetica-Bold'
@@ -239,7 +240,7 @@ def gerar_pdf_romaneio(db, carga_id: int) -> bytes:
 
     # Table columns: CÓDIGO | CLIENTE | N. FANTASIA | MUNICÍPIO | ORDEM | PESO LÍQ. | OBSERVAÇÕES
     styles = getSampleStyleSheet()
-    style_wrapped = styles["Normal"]
+    style_wrapped = copy(styles["Normal"])
     style_wrapped.fontSize = 8
     style_wrapped.leading = 9
     style_wrapped.textColor = colors.black
@@ -475,7 +476,7 @@ def _desenhar_romaneio_logic(c, carga, pedidos, width, height):
     y -= 1.0*cm
 
     styles = getSampleStyleSheet()
-    style_wrapped = styles["Normal"]
+    style_wrapped = copy(styles["Normal"])
     style_wrapped.fontSize = 9
     style_wrapped.leading = 10
     style_wrapped.textColor = colors.black
