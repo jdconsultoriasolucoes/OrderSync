@@ -649,7 +649,7 @@ function carregarPedidosParaModal() {
     const dtIni = dtIniEl ? dtIniEl.value : null;
     const dtFim = dtFimEl ? dtFimEl.value : null;
 
-    let url = `${API_BASE}/api/pedidos?status=PENDENTE,EM_SEPARACAO,CONFIRMADO,FATURADO,PRONTO,ENTREGUE&pageSize=300`;
+    let url = `${API_BASE}/api/pedidos?pageSize=300`;
     if (dtIni) url += `&from=${dtIni}`;
     if (dtFim) url += `&to=${dtFim}`;
 
