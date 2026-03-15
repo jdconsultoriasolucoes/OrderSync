@@ -113,13 +113,16 @@ def to_iso_or_none(v):
 def listar_pedidos(
     from_: Optional[str] = Query(None, alias="from"),  # "YYYY-MM-DD"
     to_:   Optional[str] = Query(None, alias="to"),    # "YYYY-MM-DD"
-    status: Optional[str] = Query(None, description="CSV ex.: ABERTO,CONFIRMADO"),
-    tabela_nome: Optional[str] = Query(None),
+    status: Optional[str] = None,
+    exclude_status: Optional[str] = None,
+    tabela_nome: Optional[str] = None,
     cliente: Optional[str] = Query(None, description="busca em nome ou código"),
-    fornecedor: Optional[str] = Query(None),
+    fornecedor: Optional[str] = None,
     page: int = 1,
     pageSize: int = 25,
-    db: Session = Depends(get_db),
+    limit: Optional[int] = None,
+    offset: Optional[int] = None,
+    db: Session = Depends(get_db)
 ):
     # 1. período padrão = últimos 30 dias
     if not from_ or not to_:
@@ -172,6 +175,13 @@ def listar_pedidos(
         filtros_sql.append(f"a.status IN ({placeholders})")
         for i, status_val in enumerate(status_list):
             params[f"st_{i}"] = status_val
+
+    if exclude_status:
+        ex_status_list = [s.strip() for s in exclude_status.split(",") if s.strip()]
+        placeholders_ex = ", ".join([f":ex_st_{i}" for i in range(len(ex_status_list))])
+        filtros_sql.append(f"a.status NOT IN ({placeholders_ex})")
+        for i, status_val in enumerate(ex_status_list):
+            params[f"ex_st_{i}"] = status_val
 
     if tabela_nome:
         filtros_sql.append("a.tabela_preco_nome ILIKE :tabela_nome")

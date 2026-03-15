@@ -238,11 +238,17 @@ async function abrirGerenciadorDeCarga(idCarga, numCarga) {
             }),
             fetch(`${API_BASE}/api/transporte`, {
                 headers: { "Authorization": `Bearer ${window.Auth ? window.Auth.getToken() : ''}` }
+            }),
+            fetch(`${API_BASE}/api/pedidos/status`, {
+                headers: { "Authorization": `Bearer ${window.Auth ? window.Auth.getToken() : ''}` }
             })
         ]);
 
         const carga = await respCarga.json();
         const transportes = await respTransp.json();
+        
+        const statusRaw = await respStatus.json();
+        window.relatoriosStatusList = Array.isArray(statusRaw) ? statusRaw : (statusRaw.data || statusRaw.items || []);
 
         const dataCarregamentoVal = carga.data_carregamento ? carga.data_carregamento.split('T')[0] : "";
 
@@ -286,7 +292,7 @@ async function abrirGerenciadorDeCarga(idCarga, numCarga) {
                     </div>
                     <div class="ch-field">
                         <label>Data Carregamento</label>
-                        <input type="date" id="in-header-data" class="os-input os-input-sm" value="${dataCarregamentoVal}" ${activeRelatorio === 'resumo' ? 'disabled' : ''}>
+                        <input type="date" id="in-header-data" class="os-input os-input-sm" value="${dataCarregamentoVal}" min="${new Date().toISOString().split('T')[0]}" ${activeRelatorio === 'resumo' ? 'disabled' : ''}>
                     </div>
                     <div class="ch-field" style="flex: 1;">
                         <label>Transporte (Transportadora / Motorista / Modelo / Placa)</label>
@@ -326,9 +332,20 @@ async function abrirGerenciadorDeCarga(idCarga, numCarga) {
                 const promises = [];
                 document.querySelectorAll('#tbody-pedidos-carga tr').forEach(row => {
                     const id = row.querySelector('.in-ordem')?.dataset?.id;
+                    const statusSel = row.querySelector('.in-status');
+                    
+                    if (statusSel && statusSel.value && statusSel.value !== String(statusSel.dataset.original)) {
+                         const numPedido = statusSel.dataset.numeroPedido;
+                         promises.push(fetch(`${API_BASE}/api/pedidos/${numPedido}/status`, {
+                             method: 'POST',
+                             headers: { 'Content-Type': 'application/json', "Authorization": `Bearer ${window.Auth ? window.Auth.getToken() : ''}` },
+                             body: JSON.stringify({ para: statusSel.value, motivo: "Alteração via Gerenciamento de Carga", user_id: "sistema" })
+                         }));
+                    }
+
                     if (id) {
-                        const ordem = row.querySelector('.in-ordem').value;
-                        const obs = row.querySelector('.in-obs').value;
+                        const ordem = row.querySelector('.in-ordem') ? row.querySelector('.in-ordem').value : null;
+                        const obs = row.querySelector('.in-obs') ? row.querySelector('.in-obs').value : null;
                         promises.push(fetch(`${API_BASE}/api/relatorios/cargas/pedidos/${id}`, {
                             method: 'PUT',
                             headers: {
@@ -388,6 +405,12 @@ async function carregarPedidosDaCargaAtiva() {
                 <th style="font-size: 11px; width: 40px; padding: 12px 4px;">Carga</th>
                 <th style="font-size: 11px; width: 50px; padding: 12px 4px;">Pedido</th>
                 <th style="font-size: 11px; width: 60px; padding: 12px 4px;">Peso Líq.</th>
+                <th style="font-size: 11px; width: 120px; padding: 12px 4px;">
+                    Status<br>
+                    <select id="sel-mass-status" class="os-input os-input-sm" style="font-size: 9px; padding: 2px; height: 22px; margin-top: 4px;">
+                        <option value="">Alterar Todos...</option>
+                    </select>
+                </th>
                 <th style="font-size: 11px; width: 50px; padding: 12px 4px;">Cód.</th>
                 <th style="font-size: 11px; width: auto; min-width: 180px;">Cliente</th>
                 <th style="font-size: 11px; width: 25%; min-width: 120px;">Nome Fantasia</th>
@@ -457,6 +480,14 @@ async function carregarPedidosDaCargaAtiva() {
         ped.forEach(p => {
             const peso = p.peso_total ? Math.round(p.peso_total).toString() : "0";
 
+            let statusOptionsHtml = "";
+            (window.relatoriosStatusList || []).forEach(s => {
+                 const codigo = s.codigo || s.code || s.id || s;
+                 const rotulo = s.rotulo || s.label || s.nome || codigo;
+                 const selected = (String(codigo) === String(p.status_codigo) || String(rotulo) === String(p.status_codigo)) ? 'selected' : '';
+                 statusOptionsHtml += `<option value="${codigo}" ${selected}>${rotulo}</option>`;
+            });
+
             if (activeRelatorio === "formacao") {
                 // "tabelão" layout
                 h += `
@@ -464,6 +495,11 @@ async function carregarPedidosDaCargaAtiva() {
                         <td style="font-size: 12px; padding: 12px 4px;">${numCargaAtiva || ''}</td>
                         <td style="font-size: 12px; padding: 12px 4px;"><strong>${p.numero_pedido}</strong></td>
                         <td style="white-space: nowrap; font-size: 12px; padding: 12px 4px;">${peso} kg</td>
+                        <td style="padding: 12px 4px;">
+                            <select class="os-input os-input-sm in-status" data-numero-pedido="${p.numero_pedido}" data-original="${p.status_codigo}" style="font-size: 10px; padding: 4px; height: 26px; width: 100%;">
+                                ${statusOptionsHtml}
+                            </select>
+                        </td>
                         <td style="font-size: 12px; padding: 12px 4px;">${p.codigo_cliente || '-'}</td>
                         <td style="font-size: 12px; width: auto; min-width: 250px; white-space: normal;">${p.cliente_nome || '-'}</td>
                         <td style="font-size: 12px; width: 25%; min-width: 150px; white-space: normal;">${p.nome_fantasia || '-'}</td>
@@ -523,6 +559,25 @@ async function carregarPedidosDaCargaAtiva() {
                 carregarPedidosDaCargaAtiva();
             });
         });
+
+        const selMassStatus = document.getElementById('sel-mass-status');
+        if (selMassStatus) {
+            let opts = '<option value="">Massa...</option>';
+            (window.relatoriosStatusList || []).forEach(s => {
+                 const codigo = s.codigo || s.code || s.id || s;
+                 const rotulo = s.rotulo || s.label || s.nome || codigo;
+                 opts += `<option value="${codigo}">${rotulo}</option>`;
+            });
+            selMassStatus.innerHTML = opts;
+
+            selMassStatus.addEventListener('change', (e) => {
+                const val = e.target.value;
+                if (!val) return;
+                document.querySelectorAll('.in-status').forEach(sel => {
+                    sel.value = val;
+                });
+            });
+        }
     } catch (e) {
         console.error(e);
         tbodyPedidos.innerHTML = '';
@@ -617,8 +672,46 @@ function abrirModalBuscaPedidos() {
     }
 
     const btnAtualizar = document.getElementById('btn-atualizar-busca-pedidos');
-    if (btnAtualizar) {
-        btnAtualizar.onclick = () => carregarPedidosParaModal();
+    if (btnAtualizar) btnAtualizar.style.display = 'none';
+
+    // Auto-search on typing
+    const txtBox = document.getElementById('input-busca-pedido-livre');
+    if (txtBox) {
+        txtBox.removeEventListener('input', carregarPedidosParaModal);
+        txtBox.addEventListener('input', () => {
+            clearTimeout(txtBox.searchTimeout);
+            txtBox.searchTimeout = setTimeout(() => carregarPedidosParaModal(), 400);
+        });
+    }
+
+    // Auto-search on date changes
+    if (dtIniEl) {
+        dtIniEl.removeEventListener('change', carregarPedidosParaModal);
+        dtIniEl.addEventListener('change', carregarPedidosParaModal);
+    }
+    if (dtFimEl) {
+        dtFimEl.removeEventListener('change', carregarPedidosParaModal);
+        dtFimEl.addEventListener('change', carregarPedidosParaModal);
+    }
+
+    // Clear Filters Button Action
+    const btnLimpar = document.getElementById('btn-limpar-busca-pedidos');
+    if (btnLimpar) {
+        btnLimpar.addEventListener('click', () => {
+             const dtIniEl = document.getElementById('input-busca-pedido-data-ini');
+             const dtFimEl = document.getElementById('input-busca-pedido-data-fim');
+             const txtBox = document.getElementById('input-busca-pedido-livre');
+
+             if (dtIniEl && dtFimEl) {
+                 const hoje = new Date();
+                 const inicio = new Date();
+                 inicio.setDate(hoje.getDate() - 30);
+                 dtIniEl.value = inicio.toISOString().slice(0, 10);
+                 dtFimEl.value = hoje.toISOString().slice(0, 10);
+             }
+             if (txtBox) txtBox.value = "";
+             carregarPedidosParaModal();
+        });
     }
 
     carregarPedidosParaModal();
@@ -646,12 +739,16 @@ function carregarPedidosParaModal() {
 
     const dtIniEl = document.getElementById('input-busca-pedido-data-ini');
     const dtFimEl = document.getElementById('input-busca-pedido-data-fim');
+    const txtBox = document.getElementById('input-busca-pedido-livre');
+
     const dtIni = dtIniEl ? dtIniEl.value : null;
     const dtFim = dtFimEl ? dtFimEl.value : null;
+    const txt = txtBox ? txtBox.value.trim() : "";
 
-    let url = `${API_BASE}/api/pedidos?pageSize=300`;
+    let url = `${API_BASE}/api/pedidos?exclude_status=FATURADO,CANCELADO&pageSize=100`;
     if (dtIni) url += `&from=${dtIni}`;
     if (dtFim) url += `&to=${dtFim}`;
+    if (txt) url += `&cliente=${encodeURIComponent(txt)}`;
 
     fetch(url, {
         headers: { "Authorization": `Bearer ${window.Auth ? window.Auth.getToken() : ''}` }

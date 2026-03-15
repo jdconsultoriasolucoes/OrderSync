@@ -115,11 +115,14 @@
 
     <!-- ========== MAIN CONTENT (LAYOUT 2 COLUNAS) ========== -->
     <main class="os-main module-relatorios">
-        <div class="relatorios-container">
-
-            <!-- Coluna 1: Menu Lateral Esquerdo dos Relatórios -->
-            <aside class="relatorios-sidebar">
-                <h3 class="relatorios-sidebar-title">Relatórios</h3>
+        <div class="    .relatorios-container {
+        grid-template-columns: 260px 1fr;
+        gap: var(--os-space-4);
+        max-width: 98%;
+        width: 100%;
+        margin: 0 auto;
+        align-items: start;
+    }                <h3 class="relatorios-sidebar-title">Relatórios</h3>
                 <ul class="relatorios-menu" id="relatorios-menu">
                     <li><button data-rel="formacao" class="active">Manutenção de Pedidos / Formação de Cargas</button>
                     </li>
@@ -258,6 +261,9 @@
                     <label>Número da Carga</label>
                     <input type="text" id="input-nova-carga-numero" class="os-input" placeholder="Ex: 12345"
                         autocomplete="off">
+                    <small style="color: #ea580c; display: block; margin-top: 5px; font-size: 12px; line-height: 1.4;">
+                        <strong>Atenção:</strong> Utilizar um número de carga já existente editará a carga antiga ao invés de criar uma nova viagem!
+                    </small>
                 </div>
                 <div class="os-form-group" style="margin-top: 15px;">
                     <label>Nome / Descrição da Carga</label>
@@ -274,7 +280,7 @@
 
     <!-- Modal Adicionar Pedido -->
     <div id="modal-buscar-pedido" class="os-modal-backdrop">
-        <div class="os-modal-dialog" style="max-width: 900px; width: 95%;">
+        <div class="os-modal-dialog" style="max-width: 1300px; width: 95%;">
             <div class="os-modal-header">
                 <h3 class="os-modal-title">Adicionar Pedidos à Carga</h3>
                 <button class="os-modal-close" id="modal-buscar-close">&times;</button>
@@ -282,21 +288,24 @@
             <div class="os-modal-body" style="padding-bottom: 0;">
                 <div class="os-form-group"
                     style="display: flex; gap: 10px; align-items: flex-end; margin-bottom: 20px;">
-                    <div>
-                        <label>Data Inicial:</label>
-                        <input type="date" id="input-busca-pedido-data-ini" class="os-input">
-                    </div>
-                    <div>
-                        <label>Data Final:</label>
-                        <input type="date" id="input-busca-pedido-data-fim" class="os-input">
+                    <div style="display: flex; flex-direction: column; gap: 10px;">
+                        <div>
+                            <label>Data Inicial:</label>
+                            <input type="date" id="input-busca-pedido-data-ini" class="os-input">
+                        </div>
+                        <div>
+                            <label>Data Final:</label>
+                            <input type="date" id="input-busca-pedido-data-fim" class="os-input">
+                        </div>
                     </div>
                     <div style="flex:1">
                         <label>Filtro Rápido (Cliente/Código):</label>
                         <input type="text" id="input-busca-pedido-livre" class="os-input"
                             placeholder="Digite para filtrar a lista abaixo..." autocomplete="off">
                     </div>
-                    <div>
-                        <button class="os-btn os-btn-secondary" id="btn-atualizar-busca-pedidos" style="height: 38px;">Buscar</button>
+                    <div style="flex: 0 0 auto; display: flex; gap: 8px;">
+                        <button class="os-btn os-btn-secondary" id="btn-limpar-busca-pedidos" style="height: 38px;">Limpar Filtros</button>
+                        <button class="os-btn os-btn-primary" id="btn-vincular-selecionados" style="height: 38px;">Vincular Selecionados</button>
                     </div>
                 </div>
 
@@ -324,7 +333,7 @@
                 </div>
             </div>
             <div class="os-modal-footer">
-                <button class="os-btn os-btn-primary" id="btn-vincular-selecionados">Vincular Selecionados</button>
+                <button class="os-btn os-btn-secondary" onclick="document.getElementById('modal-buscar-pedido').classList.remove('active')">Fechar</button>
             </div>
         </div>
     </div>
