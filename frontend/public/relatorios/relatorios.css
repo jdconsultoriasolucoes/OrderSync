@@ -87,7 +87,8 @@
     flex-direction: column;
     transition: all 0.2s ease;
     width: 100%;
-    max-width: fit-content;
+    min-width: 0;
+    max-width: 100%;
     margin: 0;
 }
 

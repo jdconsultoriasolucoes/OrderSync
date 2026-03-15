@@ -319,8 +319,8 @@ async function abrirGerenciadorDeCarga(idCarga, numCarga) {
                 const statusSel = row.querySelector('.in-status');
                 
                 if (statusSel && statusSel.value && statusSel.value !== String(statusSel.dataset.original)) {
-                     const numPedido = statusSel.dataset.numeroPedido;
-                     promises.push(fetch(`${API_BASE}/api/pedidos/${numPedido}/status`, {
+                     const idPedidoDb = statusSel.dataset.idPedido;
+                     promises.push(fetch(`${API_BASE}/api/pedidos/${idPedidoDb}/status`, {
                          method: 'POST',
                          headers: { 'Content-Type': 'application/json', "Authorization": `Bearer ${window.Auth ? window.Auth.getToken() : ''}` },
                          body: JSON.stringify({ para: statusSel.value, motivo: "Alteração via Gerenciamento de Carga", user_id: "sistema" })
@@ -537,7 +537,7 @@ async function carregarPedidosDaCargaAtiva() {
                         <td style="font-size: 12px; padding: 12px 4px;">${p.rota_principal || '-'}</td>
                         <td style="font-size: 12px; padding: 12px 4px;">${p.rota_aproximacao || '-'}</td>
                         <td style="padding: 12px 4px;">
-                            <select class="os-input os-input-sm in-status" data-numero-pedido="${p.numero_pedido}" data-original="${p.status_codigo}" style="font-size: 10px; padding: 4px; height: 26px; width: 100%;">
+                            <select class="os-input os-input-sm in-status" data-numero-pedido="${p.numero_pedido}" data-id-pedido="${p.id_pedido}" data-original="${p.status_codigo}" style="font-size: 10px; padding: 4px; height: 26px; width: 100%;">
                                 ${statusOptionsHtml}
                             </select>
                         </td>
