@@ -87,8 +87,8 @@
     flex-direction: column;
     transition: all 0.2s ease;
     width: 100%;
-    max-width: 100%; /* Changed from 1400px to allow spreading fully within container */
-    margin: 0 auto;
+    max-width: fit-content;
+    margin: 0;
 }
 
 .os-table-wrap {

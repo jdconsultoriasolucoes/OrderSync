@@ -27,35 +27,35 @@ window.cargaEmGerenciamento = window.cargaEmGerenciamento || null;
 window.numCargaAtiva = window.numCargaAtiva || null;
 
 // DOM Elements
-const menuBtns = document.querySelectorAll('.relatorios-menu button');
-const uiTitle = document.getElementById("relatorio-titulo-view");
-const uiDesc = document.getElementById("relatorio-desc-view");
-const thead = document.getElementById("tabela-head");
-const tbody = document.getElementById("tabela-body");
-const loadingEl = document.getElementById("loading");
-const emptyStateEl = document.getElementById("empty-state");
+window.menuBtns = document.querySelectorAll('.relatorios-menu button');
+window.uiTitle = document.getElementById("relatorio-titulo-view");
+window.uiDesc = document.getElementById("relatorio-desc-view");
+window.thead = document.getElementById("tabela-head");
+window.tbody = document.getElementById("tabela-body");
+window.loadingEl = document.getElementById("loading");
+window.emptyStateEl = document.getElementById("empty-state");
 
 // Botões (Sendo dinâmicos, buscaremos via document quando necessário ou atualizaremos a ref)
-let btnNovo = document.getElementById("btn-novo");
-const btnExport = document.getElementById("btn-export-pdf");
-const inputSearch = document.getElementById("relatorio-pesquisa");
+window.btnNovo = document.getElementById("btn-novo");
+window.btnExport = document.getElementById("btn-export-pdf");
+window.inputSearch = document.getElementById("relatorio-pesquisa");
 
 document.addEventListener("DOMContentLoaded", () => {
     // Registra clique no menu lateral
-    menuBtns.forEach(btn => {
+    window.menuBtns.forEach(btn => {
         btn.addEventListener('click', (e) => {
             // Remove active dos outros
-            menuBtns.forEach(b => b.classList.remove('active'));
+            window.menuBtns.forEach(b => b.classList.remove('active'));
             // Coloca active no atual
             e.currentTarget.classList.add('active');
 
-            activeRelatorio = e.currentTarget.dataset.rel;
-            renderRelatorioView(activeRelatorio);
+            window.activeRelatorio = e.currentTarget.dataset.rel;
+            renderRelatorioView(window.activeRelatorio);
         });
     });
 
     // Primeira carga
-    renderRelatorioView(activeRelatorio);
+    renderRelatorioView(window.activeRelatorio);
 });
 
 async function renderRelatorioView(relKey) {
@@ -835,9 +835,9 @@ btnExport.addEventListener('click', () => {
         cargaId = cargaEmGerenciamento;
     }
 
-    if (activeRelatorio === "formacao") endpoint = `${API_BASE}/api/relatorios/carga/${cargaId}/pdf`;
-    else if (activeRelatorio === "romaneio") endpoint = `${API_BASE}/api/relatorios/romaneio/${cargaId}/pdf`;
-    else if (activeRelatorio === "resumo") endpoint = `${API_BASE}/api/relatorios/resumo-produtos/${cargaId}/pdf`;
+    if (window.activeRelatorio === "formacao") endpoint = `${API_BASE}/api/relatorios/carga/${cargaId}/pdf`;
+    else if (window.activeRelatorio === "romaneio") endpoint = `${API_BASE}/api/relatorios/romaneio/${cargaId}/pdf`;
+    else if (window.activeRelatorio === "resumo") endpoint = `${API_BASE}/api/relatorios/resumo-produtos/${cargaId}/pdf`;
 
     if (endpoint) {
         const token = window.Auth ? window.Auth.getToken() : '';
