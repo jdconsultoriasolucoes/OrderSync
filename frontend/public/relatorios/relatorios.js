@@ -5,20 +5,22 @@
 
 var API_BASE = window.API_BASE || window.location.origin;
 
-const relatoriosDict = {
-    "formacao": {
-        title: "Manutenção de Pedidos / Formação de Cargas",
-        desc: "Organizar os pedidos para formação de cargas e planejamento de rota de entrega."
-    },
-    "romaneio": {
-        title: "Romaneio",
-        desc: "Gerar documento com informações da carga montada para transporte e frotista."
-    },
-    "resumo": {
-        title: "Resumo de Produtos",
-        desc: "Resumo consolidado e somatório de produtos baseados em uma Carga montada."
-    }
-};
+if (typeof window.relatoriosDict === 'undefined') {
+    window.relatoriosDict = {
+        "formacao": {
+            title: "Manutenção de Pedidos / Formação de Cargas",
+            desc: "Organizar os pedidos para formação de cargas e planejamento de rota de entrega."
+        },
+        "romaneio": {
+            title: "Romaneio",
+            desc: "Gerar documento com informações da carga montada para transporte e frotista."
+        },
+        "resumo": {
+            title: "Resumo de Produtos",
+            desc: "Resumo consolidado e somatório de produtos baseados em uma Carga montada."
+        }
+    };
+}
 
 let activeRelatorio = "formacao";
 let cargaEmGerenciamento = null;
@@ -58,8 +60,8 @@ document.addEventListener("DOMContentLoaded", () => {
 
 async function renderRelatorioView(relKey) {
     // 1. Altera Cabeçalho
-    uiTitle.textContent = relatoriosDict[relKey].title;
-    uiDesc.textContent = relatoriosDict[relKey].desc;
+    uiTitle.textContent = window.relatoriosDict[relKey].title;
+    uiDesc.textContent = window.relatoriosDict[relKey].desc;
 
     // 2. Limpa Tabela
     thead.innerHTML = "";
@@ -232,7 +234,7 @@ async function abrirGerenciadorDeCarga(idCarga, numCarga) {
 
     // Carregar Detalhes da Carga e Transportes
     try {
-        const [respCarga, respTransp] = await Promise.all([
+        const [respCarga, respTransp, respStatus] = await Promise.all([
             fetch(`${API_BASE}/api/relatorios/cargas/${idCarga}`, {
                 headers: { "Authorization": `Bearer ${window.Auth ? window.Auth.getToken() : ''}` }
             }),
