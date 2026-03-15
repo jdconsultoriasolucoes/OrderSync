@@ -352,7 +352,7 @@ async function abrirGerenciadorDeCarga(idCarga, numCarga) {
 
         const btnSaveItems = document.getElementById('btn-save-carga-items');
         if (btnSaveItems) {
-            if (window.activeRelatorio === "resumo") {
+            if (window.activeRelatorio !== "formacao") {
                 btnSaveItems.style.display = "none";
             } else {
                 btnSaveItems.style.display = "inline-block";
@@ -796,13 +796,13 @@ function carregarPedidosParaModal() {
                 const modalidade = p.modalidade || (p.usar_valor_com_frete === false ? "RETIRADA" : "ENTREGA");
                 html += `
                 <tr>
-                    <td><input type="checkbox" class="chk-pedido-item" value="${p.numero_pedido}"></td>
-                    <td><strong>${p.numero_pedido}</strong></td>
-                    <td>${p.cliente_nome}</td>
-                    <td><span class="badge-alert" style="color:#374151; background:#e5e7eb; border-color:#d1d5db;">${modalidade}</span></td>
-                    <td>${p.municipio || '-'}</td>
-                    <td>${p.status_codigo}</td>
-                    <td>${Math.round(p.peso_total || 0).toString()} kg</td>
+                    <td style="padding: 6px;"><input type="checkbox" class="chk-pedido-item" value="${p.numero_pedido}"></td>
+                    <td style="font-size: 11px; padding: 6px;"><strong>${p.numero_pedido}</strong></td>
+                    <td style="font-size: 11px; padding: 6px;">${p.cliente_nome}</td>
+                    <td style="font-size: 11px; padding: 6px;"><span class="badge-alert" style="color:#374151; background:#e5e7eb; border-color:#d1d5db; font-size: 10px;">${modalidade}</span></td>
+                    <td style="font-size: 11px; padding: 6px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 150px;">${p.municipio || '-'}</td>
+                    <td style="font-size: 10px; padding: 6px; white-space: nowrap;">${p.status_codigo}</td>
+                    <td style="font-size: 11px; padding: 6px; white-space: nowrap;">${Math.round(p.peso_total || 0).toString()} kg</td>
                 </tr>
             `;
             });
