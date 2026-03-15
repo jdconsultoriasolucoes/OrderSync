@@ -437,22 +437,22 @@ async function carregarPedidosDaCargaAtiva() {
         tableEl.style.minWidth = "1400px";
         theadTable.innerHTML = `
             <tr>
-                <th style="font-size: 11px; width: 40px; padding: 12px 4px;">Carga</th>
-                <th style="font-size: 11px; width: 50px; padding: 12px 4px;">Pedido</th>
-                <th style="font-size: 11px; width: 60px; padding: 12px 4px;">Peso Líq.</th>
-                <th style="font-size: 11px; width: 50px; padding: 12px 4px;">Cód.</th>
-                <th style="font-size: 11px; width: auto; min-width: 180px;">Cliente</th>
-                <th style="font-size: 11px; width: 25%; min-width: 120px;">Nome Fantasia</th>
-                <th style="font-size: 11px; width: 80px; padding: 12px 4px;">Município</th>
-                <th style="font-size: 11px; width: 50px; padding: 12px 4px;">Rota G.</th>
-                <th style="font-size: 11px; width: 50px; padding: 12px 4px;">Rota A.</th>
-                <th style="font-size: 11px; width: 120px; padding: 12px 4px;">
+                <th style="font-size: 11px; padding: 12px 4px; white-space: nowrap;">Carga</th>
+                <th style="font-size: 11px; padding: 12px 4px; white-space: nowrap;">Pedido</th>
+                <th style="font-size: 11px; padding: 12px 4px; white-space: nowrap;">Peso Líq.</th>
+                <th style="font-size: 11px; padding: 12px 4px; white-space: nowrap;">Cód.</th>
+                <th style="font-size: 11px; padding: 12px 4px; white-space: nowrap;">Cliente</th>
+                <th style="font-size: 11px; padding: 12px 4px; white-space: nowrap;">Nome Fantasia</th>
+                <th style="font-size: 11px; padding: 12px 4px; white-space: nowrap;">Município</th>
+                <th style="font-size: 11px; padding: 12px 4px; white-space: nowrap;">Rota G.</th>
+                <th style="font-size: 11px; padding: 12px 4px; white-space: nowrap;">Rota A.</th>
+                <th style="font-size: 11px; padding: 12px 4px; white-space: nowrap;">
                     Status<br>
                     <select id="sel-mass-status" class="os-input os-input-sm" style="font-size: 9px; padding: 2px; height: 22px; margin-top: 4px;">
                         <option value="">Alterar Todos...</option>
                     </select>
                 </th>
-                <th style="font-size: 11px; width: 30px; text-align: center; padding: 12px 4px;">&nbsp;</th>
+                <th style="font-size: 11px; text-align: center; padding: 12px 4px;">&nbsp;</th>
             </tr>
         `;
     } else if (window.activeRelatorio === "romaneio") {
@@ -527,15 +527,15 @@ async function carregarPedidosDaCargaAtiva() {
                 // "tabelão" layout
                 h += `
                     <tr>
-                        <td style="font-size: 12px; padding: 12px 4px;">${window.numCargaAtiva || ''}</td>
-                        <td style="font-size: 12px; padding: 12px 4px;"><strong>${p.numero_pedido}</strong></td>
-                        <td style="white-space: nowrap; font-size: 12px; padding: 12px 4px;">${peso} kg</td>
-                        <td style="font-size: 12px; padding: 12px 4px;">${p.codigo_cliente || '-'}</td>
-                        <td style="font-size: 12px; width: auto; min-width: 250px; white-space: normal;">${p.cliente_nome || '-'}</td>
-                        <td style="font-size: 12px; width: 25%; min-width: 150px; white-space: normal;">${p.nome_fantasia || '-'}</td>
-                        <td style="font-size: 12px; padding: 12px 4px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 100px;" title="${p.municipio || '-'}">${p.municipio || '-'}</td>
-                        <td style="font-size: 12px; padding: 12px 4px;">${p.rota_principal || '-'}</td>
-                        <td style="font-size: 12px; padding: 12px 4px;">${p.rota_aproximacao || '-'}</td>
+                        <td style="font-size: 12px; padding: 12px 4px; white-space: nowrap;">${window.numCargaAtiva || ''}</td>
+                        <td style="font-size: 12px; padding: 12px 4px; white-space: nowrap;"><strong>${p.numero_pedido}</strong></td>
+                        <td style="font-size: 12px; padding: 12px 4px; white-space: nowrap;">${peso} kg</td>
+                        <td style="font-size: 12px; padding: 12px 4px; white-space: nowrap;">${p.codigo_cliente || '-'}</td>
+                        <td style="font-size: 12px; padding: 12px 4px; min-width: 200px;">${p.cliente_nome || '-'}</td>
+                        <td style="font-size: 12px; padding: 12px 4px; min-width: 150px;">${p.nome_fantasia || '-'}</td>
+                        <td style="font-size: 12px; padding: 12px 4px;">${p.municipio || '-'}</td>
+                        <td style="font-size: 12px; padding: 12px 4px; white-space: nowrap;">${p.rota_principal || '-'}</td>
+                        <td style="font-size: 12px; padding: 12px 4px; white-space: nowrap;">${p.rota_aproximacao || '-'}</td>
                         <td style="padding: 12px 4px;">
                             <select class="os-input os-input-sm in-status" data-numero-pedido="${p.numero_pedido}" data-id-pedido="${p.id_pedido}" data-original="${p.status_codigo}" style="font-size: 10px; padding: 4px; height: 26px; width: 100%;">
                                 ${statusOptionsHtml}

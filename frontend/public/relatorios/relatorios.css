@@ -2,21 +2,22 @@
 
 /* Layout Base Modulo */
 .module-relatorios {
-    margin-left: 0;
-    padding: var(--os-space-4);
+    margin: 0;
+    padding: var(--os-space-2);
     padding-top: calc(var(--os-header-height) + var(--os-space-3));
     min-height: 100vh;
     box-sizing: border-box;
+    width: 100%;
 }
 
 /* Container Duas Colunas (Grid) */
 .relatorios-container {
     display: grid;
     grid-template-columns: 260px 1fr;
-    gap: var(--os-space-4);
-    max-width: 98%;
+    gap: var(--os-space-2);
+    max-width: 100%;
     width: 100%;
-    margin: 0 auto;
+    margin: 0;
     align-items: start;
 }
 
@@ -95,14 +96,14 @@
 .os-table-wrap {
     overflow-x: auto;
     width: 100%;
+    min-width: 100%;
 }
 
-.os-table td {
+.os-table td, .os-table th {
     white-space: normal;
-    /* Allow wrapping */
-    word-break: break-word;
+    word-break: break-word; /* Allows long text like fantasy names to wrap instead of pushing screen */
+    min-width: 80px; /* Base constraint so it doesn't squish to 1 letter per line */
 }
-
 
 .relatorio-header {
     display: flex;
