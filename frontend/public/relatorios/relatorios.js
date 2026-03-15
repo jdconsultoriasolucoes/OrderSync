@@ -22,9 +22,9 @@ if (typeof window.relatoriosDict === 'undefined') {
     };
 }
 
-let activeRelatorio = "formacao";
-let cargaEmGerenciamento = null;
-let numCargaAtiva = null;
+window.activeRelatorio = window.activeRelatorio || "formacao";
+window.cargaEmGerenciamento = window.cargaEmGerenciamento || null;
+window.numCargaAtiva = window.numCargaAtiva || null;
 
 // DOM Elements
 const menuBtns = document.querySelectorAll('.relatorios-menu button');
@@ -59,6 +59,8 @@ document.addEventListener("DOMContentLoaded", () => {
 });
 
 async function renderRelatorioView(relKey) {
+    if(!relKey) return;
+    window.activeRelatorio = relKey;
     // 1. Altera Cabeçalho
     uiTitle.textContent = window.relatoriosDict[relKey].title;
     uiDesc.textContent = window.relatoriosDict[relKey].desc;
@@ -224,8 +226,8 @@ function abrirModalNovaCarga() {
 // -----------------------------------------------------
 
 async function abrirGerenciadorDeCarga(idCarga, numCarga) {
-    cargaEmGerenciamento = idCarga;
-    numCargaAtiva = numCarga;
+    window.cargaEmGerenciamento = idCarga;
+    window.numCargaAtiva = numCarga;
     document.getElementById('painel-listagem').style.display = 'none';
     document.getElementById('painel-gerenciar-carga').style.display = 'block';
 
@@ -310,60 +312,91 @@ async function abrirGerenciadorDeCarga(idCarga, numCarga) {
         `;
         }
 
-        if (document.getElementById('btn-save-carga-header') && activeRelatorio !== 'resumo') {
+        const saveItemsLogic = async (btnRef) => {
+            const promises = [];
+            document.querySelectorAll('#tbody-pedidos-carga tr').forEach(row => {
+                const id = row.querySelector('.in-ordem')?.dataset?.id;
+                const statusSel = row.querySelector('.in-status');
+                
+                if (statusSel && statusSel.value && statusSel.value !== String(statusSel.dataset.original)) {
+                     const numPedido = statusSel.dataset.numeroPedido;
+                     promises.push(fetch(`${API_BASE}/api/pedidos/${numPedido}/status`, {
+                         method: 'POST',
+                         headers: { 'Content-Type': 'application/json', "Authorization": `Bearer ${window.Auth ? window.Auth.getToken() : ''}` },
+                         body: JSON.stringify({ para: statusSel.value, motivo: "Alteração via Gerenciamento de Carga", user_id: "sistema" })
+                     }));
+                }
+
+                if (id) {
+                    const ordem = row.querySelector('.in-ordem') ? row.querySelector('.in-ordem').value : null;
+                    const obs = row.querySelector('.in-obs') ? row.querySelector('.in-obs').value : null;
+                    promises.push(fetch(`${API_BASE}/api/relatorios/cargas/pedidos/${id}`, {
+                        method: 'PUT',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            "Authorization": `Bearer ${window.Auth ? window.Auth.getToken() : ''}`
+                        },
+                        body: JSON.stringify({ ordem_carregamento: parseInt(ordem) || null, observacoes: obs })
+                    }));
+                }
+            });
+
+            if (promises.length > 0) {
+                await Promise.allSettled(promises);
+            }
+            if(btnRef) {
+                btnRef.textContent = "Salvo!";
+                setTimeout(() => { btnRef.textContent = "Salvar Tela"; }, 2000);
+            }
+        };
+
+        const btnSaveItems = document.getElementById('btn-save-carga-items');
+        if (btnSaveItems) {
+            if (window.activeRelatorio === "resumo") {
+                btnSaveItems.style.display = "none";
+            } else {
+                btnSaveItems.style.display = "inline-block";
+                const oldBtnItems = btnSaveItems;
+                const newBtnItems = oldBtnItems.cloneNode(true);
+                oldBtnItems.parentNode.replaceChild(newBtnItems, oldBtnItems);
+                
+                newBtnItems.addEventListener('click', async () => {
+                    newBtnItems.textContent = "Salvando...";
+                    await saveItemsLogic(newBtnItems);
+                    carregarPedidosDaCargaAtiva();
+                });
+            }
+        }
+
+        if (document.getElementById('btn-save-carga-header') && window.activeRelatorio !== 'resumo') {
             document.getElementById('btn-save-carga-header').addEventListener('click', async () => {
-                const dt = document.getElementById('in-header-data').value;
-                const tr = document.getElementById('sel-header-transporte').value;
+                const dtEl = document.getElementById('in-header-data');
+                const trEl = document.getElementById('sel-header-transporte');
+                const dt = dtEl ? dtEl.value : null;
+                const tr = trEl ? trEl.value : null;
 
                 const btn = document.getElementById('btn-save-carga-header');
                 btn.textContent = "Salvando...";
 
-                const updateResp = await fetch(`${API_BASE}/api/relatorios/cargas/${idCarga}`, {
-                    method: 'PUT',
-                    headers: {
-                        'Content-Type': 'application/json',
-                        "Authorization": `Bearer ${window.Auth ? window.Auth.getToken() : ''}`
-                    },
-                    body: JSON.stringify({
-                        data_carregamento: dt || null,
-                        id_transporte: parseInt(tr) || null
-                    })
-                });
-
-                // Save items sequentially/parallel
-                const promises = [];
-                document.querySelectorAll('#tbody-pedidos-carga tr').forEach(row => {
-                    const id = row.querySelector('.in-ordem')?.dataset?.id;
-                    const statusSel = row.querySelector('.in-status');
-                    
-                    if (statusSel && statusSel.value && statusSel.value !== String(statusSel.dataset.original)) {
-                         const numPedido = statusSel.dataset.numeroPedido;
-                         promises.push(fetch(`${API_BASE}/api/pedidos/${numPedido}/status`, {
-                             method: 'POST',
-                             headers: { 'Content-Type': 'application/json', "Authorization": `Bearer ${window.Auth ? window.Auth.getToken() : ''}` },
-                             body: JSON.stringify({ para: statusSel.value, motivo: "Alteração via Gerenciamento de Carga", user_id: "sistema" })
-                         }));
-                    }
-
-                    if (id) {
-                        const ordem = row.querySelector('.in-ordem') ? row.querySelector('.in-ordem').value : null;
-                        const obs = row.querySelector('.in-obs') ? row.querySelector('.in-obs').value : null;
-                        promises.push(fetch(`${API_BASE}/api/relatorios/cargas/pedidos/${id}`, {
-                            method: 'PUT',
-                            headers: {
-                                'Content-Type': 'application/json',
-                                "Authorization": `Bearer ${window.Auth ? window.Auth.getToken() : ''}`
-                            },
-                            body: JSON.stringify({ ordem_carregamento: parseInt(ordem) || null, observacoes: obs })
-                        }));
-                    }
-                });
-
-                if (promises.length > 0) {
-                    await Promise.allSettled(promises);
+                let ok = true;
+                if (dtEl && trEl) {
+                    const updateResp = await fetch(`${API_BASE}/api/relatorios/cargas/${idCarga}`, {
+                        method: 'PUT',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            "Authorization": `Bearer ${window.Auth ? window.Auth.getToken() : ''}`
+                        },
+                        body: JSON.stringify({
+                            data_carregamento: dt || null,
+                            id_transporte: parseInt(tr) || null
+                        })
+                    });
+                    ok = updateResp.ok;
                 }
 
-                if (updateResp.ok) {
+                await saveItemsLogic(null);
+
+                if (ok) {
                     btn.textContent = "Salvo!";
                     setTimeout(() => { btn.textContent = "Salvar Tela"; }, 2000);
                 } else {
@@ -399,30 +432,30 @@ async function carregarPedidosDaCargaAtiva() {
     const tableEl = tableWrap.querySelector('table');
 
     // Cabeçalho dinâmico baseado no tipo de relatório
-    if (activeRelatorio === "formacao") {
-        tableEl.style.tableLayout = "fixed";
-        tableEl.style.width = "100%";
+    if (window.activeRelatorio === "formacao") {
+        tableEl.style.tableLayout = "auto";
+        tableEl.style.minWidth = "1400px";
         theadTable.innerHTML = `
             <tr>
                 <th style="font-size: 11px; width: 40px; padding: 12px 4px;">Carga</th>
                 <th style="font-size: 11px; width: 50px; padding: 12px 4px;">Pedido</th>
                 <th style="font-size: 11px; width: 60px; padding: 12px 4px;">Peso Líq.</th>
-                <th style="font-size: 11px; width: 120px; padding: 12px 4px;">
-                    Status<br>
-                    <select id="sel-mass-status" class="os-input os-input-sm" style="font-size: 9px; padding: 2px; height: 22px; margin-top: 4px;">
-                        <option value="">Alterar Todos...</option>
-                    </select>
-                </th>
                 <th style="font-size: 11px; width: 50px; padding: 12px 4px;">Cód.</th>
                 <th style="font-size: 11px; width: auto; min-width: 180px;">Cliente</th>
                 <th style="font-size: 11px; width: 25%; min-width: 120px;">Nome Fantasia</th>
                 <th style="font-size: 11px; width: 80px; padding: 12px 4px;">Município</th>
                 <th style="font-size: 11px; width: 50px; padding: 12px 4px;">Rota G.</th>
                 <th style="font-size: 11px; width: 50px; padding: 12px 4px;">Rota A.</th>
+                <th style="font-size: 11px; width: 120px; padding: 12px 4px;">
+                    Status<br>
+                    <select id="sel-mass-status" class="os-input os-input-sm" style="font-size: 9px; padding: 2px; height: 22px; margin-top: 4px;">
+                        <option value="">Alterar Todos...</option>
+                    </select>
+                </th>
                 <th style="font-size: 11px; width: 30px; text-align: center; padding: 12px 4px;">&nbsp;</th>
             </tr>
         `;
-    } else if (activeRelatorio === "romaneio") {
+    } else if (window.activeRelatorio === "romaneio") {
         tableEl.style.tableLayout = "auto";
         theadTable.innerHTML = `
             <tr>
@@ -490,24 +523,24 @@ async function carregarPedidosDaCargaAtiva() {
                  statusOptionsHtml += `<option value="${codigo}" ${selected}>${rotulo}</option>`;
             });
 
-            if (activeRelatorio === "formacao") {
+            if (window.activeRelatorio === "formacao") {
                 // "tabelão" layout
                 h += `
                     <tr>
-                        <td style="font-size: 12px; padding: 12px 4px;">${numCargaAtiva || ''}</td>
+                        <td style="font-size: 12px; padding: 12px 4px;">${window.numCargaAtiva || ''}</td>
                         <td style="font-size: 12px; padding: 12px 4px;"><strong>${p.numero_pedido}</strong></td>
                         <td style="white-space: nowrap; font-size: 12px; padding: 12px 4px;">${peso} kg</td>
-                        <td style="padding: 12px 4px;">
-                            <select class="os-input os-input-sm in-status" data-numero-pedido="${p.numero_pedido}" data-original="${p.status_codigo}" style="font-size: 10px; padding: 4px; height: 26px; width: 100%;">
-                                ${statusOptionsHtml}
-                            </select>
-                        </td>
                         <td style="font-size: 12px; padding: 12px 4px;">${p.codigo_cliente || '-'}</td>
                         <td style="font-size: 12px; width: auto; min-width: 250px; white-space: normal;">${p.cliente_nome || '-'}</td>
                         <td style="font-size: 12px; width: 25%; min-width: 150px; white-space: normal;">${p.nome_fantasia || '-'}</td>
                         <td style="font-size: 12px; padding: 12px 4px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 100px;" title="${p.municipio || '-'}">${p.municipio || '-'}</td>
                         <td style="font-size: 12px; padding: 12px 4px;">${p.rota_principal || '-'}</td>
                         <td style="font-size: 12px; padding: 12px 4px;">${p.rota_aproximacao || '-'}</td>
+                        <td style="padding: 12px 4px;">
+                            <select class="os-input os-input-sm in-status" data-numero-pedido="${p.numero_pedido}" data-original="${p.status_codigo}" style="font-size: 10px; padding: 4px; height: 26px; width: 100%;">
+                                ${statusOptionsHtml}
+                            </select>
+                        </td>
                         <td style="white-space: nowrap; padding: 12px 4px; text-align: center;">
                             <button class="os-btn os-btn-sm os-btn-danger btn-remover-pedido-carga" data-id="${p.id_carga_pedido}" title="Remover">&times;</button>
                         </td>
