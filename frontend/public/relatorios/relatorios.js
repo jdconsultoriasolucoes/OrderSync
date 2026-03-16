@@ -190,9 +190,8 @@ function abrirModalNovaCarga() {
     const modalNovaCarga = document.getElementById('modal-nova-carga');
     modalNovaCarga.classList.add('active');
 
-    const inNum = document.getElementById('input-nova-carga-numero');
     const inNome = document.getElementById('input-nova-carga-nome');
-    inNum.value = ''; inNome.value = '';
+    inNome.value = '';
 
     const closeNovaCarga = () => modalNovaCarga.classList.remove('active');
     document.getElementById('modal-nova-carga-close').onclick = closeNovaCarga;
@@ -203,9 +202,7 @@ function abrirModalNovaCarga() {
     btnSalvar.parentNode.replaceChild(newBtnSalvar, btnSalvar);
 
     newBtnSalvar.addEventListener('click', async () => {
-        const numCarga = inNum.value.trim();
         const nomeCarga = inNome.value.trim();
-        if (!numCarga) { alert("O número da Carga é obrigatório."); return; }
 
         const nwResp = await fetch(`${API_BASE}/api/relatorios/cargas`, {
             method: "POST",
@@ -213,7 +210,7 @@ function abrirModalNovaCarga() {
                 "Content-Type": "application/json",
                 "Authorization": `Bearer ${window.Auth ? window.Auth.getToken() : ''}`
             },
-            body: JSON.stringify({ numero_carga: numCarga, nome_carga: nomeCarga })
+            body: JSON.stringify({ numero_carga: "", nome_carga: nomeCarga })
         });
 
         if (nwResp.ok) { closeNovaCarga(); renderFormacaoCargas(); }
@@ -299,13 +296,13 @@ async function abrirGerenciadorDeCarga(idCarga, numCarga) {
                         <input type="date" id="in-header-data" class="os-input os-input-sm" value="${dataCarregamentoVal}" min="${new Date().toISOString().split('T')[0]}" ${activeRelatorio === 'resumo' ? 'disabled' : ''}>
                     </div>
                     <div class="ch-field" style="flex: 1;">
-                        <label>Transporte (Transportadora / Motorista / Modelo / Placa)</label>
+                        <label>Transporte</label>
                         <select id="sel-header-transporte" class="os-input os-input-sm" ${activeRelatorio === 'resumo' ? 'disabled' : ''}>
                             ${transpOptions}
                         </select>
                     </div>
                     <div class="ch-actions">
-                        <button class="os-btn os-btn-primary os-btn-sm" id="btn-save-carga-header">Salvar Tela</button>
+                        ${activeRelatorio !== 'resumo' ? '<button class="os-btn os-btn-primary os-btn-sm" id="btn-save-carga-header">Salvar Tela</button>' : ''}
                     </div>
                 </div>
             </div>
@@ -414,11 +411,20 @@ async function abrirGerenciadorDeCarga(idCarga, numCarga) {
     document.getElementById('btn-voltar-listagem').onclick = () => renderRelatorioView(activeRelatorio);
 
     const btnBusca = document.getElementById('btn-buscar-pedidos');
-    if (activeRelatorio === "resumo") {
+    const descSpan = document.querySelector('.relatorio-desc-view');
+    
+    if (activeRelatorio === "resumo" || activeRelatorio === "romaneio") {
         btnBusca.style.display = 'none';
-        await carregarResumoProdutosDaCargaAtiva();
+        if (descSpan) descSpan.style.display = 'none';
+        
+        if (activeRelatorio === "resumo") {
+            await carregarResumoProdutosDaCargaAtiva();
+        } else {
+            await carregarPedidosDaCargaAtiva();
+        }
     } else {
         btnBusca.style.display = 'inline-block';
+        if (descSpan) descSpan.style.display = 'inline-block';
         btnBusca.onclick = () => abrirModalBuscaPedidos();
         await carregarPedidosDaCargaAtiva();
     }
@@ -437,10 +443,10 @@ async function carregarPedidosDaCargaAtiva() {
         tableEl.style.minWidth = "1400px";
         theadTable.innerHTML = `
             <tr>
-                <th style="font-size: 11px; padding: 12px 4px; white-space: nowrap;">Carga</th>
-                <th style="font-size: 11px; padding: 12px 4px; white-space: nowrap;">Pedido</th>
-                <th style="font-size: 11px; padding: 12px 4px; white-space: nowrap;">Peso Líq.</th>
-                <th style="font-size: 11px; padding: 12px 4px; white-space: nowrap;">Cód.</th>
+                <th style="font-size: 11px; padding: 12px 4px; white-space: nowrap; width: 60px;">Carga</th>
+                <th style="font-size: 11px; padding: 12px 4px; white-space: nowrap; width: 60px;">Pedido</th>
+                <th style="font-size: 11px; padding: 12px 4px; white-space: nowrap; width: 65px;">Peso Líq.</th>
+                <th style="font-size: 11px; padding: 12px 4px; white-space: nowrap; width: 50px;">Cód.</th>
                 <th style="font-size: 11px; padding: 12px 4px; white-space: nowrap;">Cliente</th>
                 <th style="font-size: 11px; padding: 12px 4px; white-space: nowrap;">Nome Fantasia</th>
                 <th style="font-size: 11px; padding: 12px 4px; white-space: nowrap;">Município</th>
@@ -527,10 +533,10 @@ async function carregarPedidosDaCargaAtiva() {
                 // "tabelão" layout
                 h += `
                     <tr>
-                        <td style="font-size: 12px; padding: 12px 4px; white-space: nowrap;">${window.numCargaAtiva || ''}</td>
-                        <td style="font-size: 12px; padding: 12px 4px; white-space: nowrap;"><strong>${p.numero_pedido}</strong></td>
-                        <td style="font-size: 12px; padding: 12px 4px; white-space: nowrap;">${peso} kg</td>
-                        <td style="font-size: 12px; padding: 12px 4px; white-space: nowrap;">${p.codigo_cliente || '-'}</td>
+                        <td style="font-size: 12px; padding: 12px 4px; white-space: nowrap; width: 60px;">${window.numCargaAtiva || ''}</td>
+                        <td style="font-size: 12px; padding: 12px 4px; white-space: nowrap; width: 60px;"><strong>${p.numero_pedido}</strong></td>
+                        <td style="font-size: 12px; padding: 12px 4px; white-space: nowrap; width: 65px;">${peso} kg</td>
+                        <td style="font-size: 12px; padding: 12px 4px; white-space: nowrap; width: 50px;">${p.codigo_cliente || '-'}</td>
                         <td style="font-size: 12px; padding: 12px 4px; min-width: 200px;">${p.cliente_nome || '-'}</td>
                         <td style="font-size: 12px; padding: 12px 4px; min-width: 150px;">${p.nome_fantasia || '-'}</td>
                         <td style="font-size: 12px; padding: 12px 4px;">${p.municipio || '-'}</td>
@@ -633,12 +639,14 @@ async function carregarResumoProdutosDaCargaAtiva() {
             <th>Embalagem</th>
             <th style="text-align: center;">Quantidade</th>
             <th>Unidade</th>
-            <th style="text-align: right;">Peso Total</th>
-            <th style="text-align: right;">Peso Acum.</th>
+            <th style="text-align: right;">Peso Líq. UN</th>
+            <th style="text-align: right;">Peso Líq. Acum</th>
+            <th style="text-align: right;">Peso Br. UN</th>
+            <th style="text-align: right;">Peso Br. Acum</th>
         </tr>
     `;
 
-    tbodyPedidos.innerHTML = '<tr><td colspan="7" style="text-align:center;">Carregando resumo de produtos...</td></tr>';
+    tbodyPedidos.innerHTML = '<tr><td colspan="9" style="text-align:center;">Carregando resumo de produtos...</td></tr>';
 
     try {
         const resp = await fetch(`${API_BASE}/api/relatorios/cargas/${cargaEmGerenciamento}/resumo-produtos`, {
@@ -662,9 +670,13 @@ async function carregarResumoProdutosDaCargaAtiva() {
         let h = "";
         prods.forEach(p => {
             const pesoUnit = p.peso_unitario || 0;
+            const pesoBrutoUnit = p.peso_bruto_unitario || 0;
             const pesoRow = p.peso_liquido_total || 0;
+            const pesoBrutoRow = p.peso_bruto_total || 0;
             const pesoStr = Math.round(pesoUnit).toString();
+            const pesoBrutoStr = Math.round(pesoBrutoUnit).toString();
             const acumStr = Math.round(pesoRow).toString();
+            const acumBrutoStr = Math.round(pesoBrutoRow).toString();
             h += `
                 <tr>
                     <td><strong>${p.codigo || '-'}</strong></td>
@@ -674,6 +686,8 @@ async function carregarResumoProdutosDaCargaAtiva() {
                     <td>${p.unidade || 'UN'}</td>
                     <td style="text-align: right;">${pesoStr} kg</td>
                     <td style="text-align: right;">${acumStr} kg</td>
+                    <td style="text-align: right;">${pesoBrutoStr} kg</td>
+                    <td style="text-align: right;">${acumBrutoStr} kg</td>
                 </tr>
             `;
         });

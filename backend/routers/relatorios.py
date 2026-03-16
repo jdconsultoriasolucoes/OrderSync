@@ -36,6 +36,12 @@ def create_carga(carga: CargaCreate, db: Session = Depends(get_db)):
     db.commit()
     db.refresh(new_carga)
 
+    # Se numero_carga vier em branco, usamos o ID auto-increment gerado
+    if not new_carga.numero_carga:
+        new_carga.numero_carga = str(new_carga.id)
+        db.commit()
+        db.refresh(new_carga)
+
     # Inserção de itens (Pedidos vinculados à carga)
     if carga.pedidos:
         for p in carga.pedidos:
@@ -159,12 +165,14 @@ def get_resumo_produtos_carga(carga_id: int, db: Session = Depends(get_db)):
             SUM(i.quantidade) AS qtd_total,
             MAX(prod.unidade_medida) AS unidade,
             MAX(CAST(prod.peso AS FLOAT)) AS peso_unitario,
-            CAST(SUM(i.quantidade * COALESCE(prod.peso, 0)) AS FLOAT) AS peso_liquido_total
+            MAX(CAST(COALESCE(prod.peso_bruto, prod.peso, 0) AS FLOAT)) AS peso_bruto_unitario,
+            CAST(SUM(i.quantidade * COALESCE(prod.peso, 0)) AS FLOAT) AS peso_liquido_total,
+            CAST(SUM(i.quantidade * COALESCE(prod.peso_bruto, prod.peso, 0)) AS FLOAT) AS peso_bruto_total
         FROM tb_cargas_pedidos cp
         JOIN tb_pedidos p ON cp.numero_pedido = p.id_pedido::text
         JOIN tb_pedidos_itens i ON p.id_pedido = i.id_pedido
         LEFT JOIN (
-            SELECT codigo_supra, MAX(CAST(peso AS FLOAT)) as peso, MAX(unidade) as unidade_medida
+            SELECT codigo_supra, MAX(CAST(peso AS FLOAT)) as peso, MAX(CAST(peso_bruto AS FLOAT)) as peso_bruto, MAX(unidade) as unidade_medida
             FROM t_cadastro_produto_v2
             GROUP BY codigo_supra
         ) prod ON prod.codigo_supra = i.codigo

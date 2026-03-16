@@ -8,6 +8,7 @@
     min-height: 100vh;
     box-sizing: border-box;
     width: 100%;
+    max-width: 1500px !important;
 }
 
 /* Container Duas Colunas (Grid) */
@@ -316,8 +317,8 @@
     padding: 15px;
     border-radius: var(--os-radius-lg);
     border: 1px solid var(--os-border);
-    flex-wrap: nowrap;
-    overflow-x: auto;
+    flex-wrap: wrap;
+    overflow-x: hidden;
 }
 
 .ch-field {

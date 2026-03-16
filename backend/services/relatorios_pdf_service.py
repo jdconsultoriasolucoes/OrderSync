@@ -98,9 +98,21 @@ def gerar_pdf_formacao_carga(db, carga_id: int) -> bytes:
             c.entrega_rota_principal as rota_geral,
             c.entrega_rota_aproximacao as rota_aprox,
             p.peso_total_kg,
+            COALESCE(pb.peso_bruto_total, p.peso_total_kg) as peso_bruto_total,
             p.total_pedido as valor_total
         FROM tb_cargas_pedidos cp
         JOIN tb_pedidos p ON cp.numero_pedido = p.id_pedido::text
+        LEFT JOIN (
+             SELECT 
+                 id_pedido,
+                 SUM(i.quantidade * COALESCE(prod.peso_bruto, prod.peso, 0)) as peso_bruto_total
+             FROM tb_pedidos_itens i
+             LEFT JOIN (
+                 SELECT codigo_supra, MAX(peso) as peso, MAX(peso_bruto) as peso_bruto 
+                 FROM t_cadastro_produto_v2 GROUP BY codigo_supra
+             ) prod ON prod.codigo_supra = i.codigo
+             GROUP BY id_pedido
+        ) pb ON pb.id_pedido = p.id_pedido
         LEFT JOIN public.t_cadastro_cliente_v2 c ON c.cadastro_codigo_da_empresa::text = p.codigo_cliente
         WHERE cp.id_carga = :cid
         ORDER BY cp.ordem_carregamento""")
@@ -131,7 +143,7 @@ def gerar_pdf_formacao_carga(db, carga_id: int) -> bytes:
     style_header.textColor = colors.white
     style_header.alignment = 0 # Left
 
-    header_labels = ["Nº CARGA", "Nº PEDIDO", "PESO LÍQ. TOTAL", "CÓDIGO", "CLIENTE", "N. FANTASIA", "MUNICÍPIO", "ROTA GERAL", "ROTA APROX."]
+    header_labels = ["Nº CARGA", "Nº PEDIDO", "PESO LÍQ.", "PESO BR.", "CÓDIGO", "CLIENTE", "N. FANTASIA", "MUNICÍPIO", "ROTA G.", "ROTA A."]
     header_row = [Paragraph(h, style_header) for h in header_labels]
     data = [header_row]
     
@@ -145,6 +157,7 @@ def gerar_pdf_formacao_carga(db, carga_id: int) -> bytes:
             str(carga.get('numero_carga') or ""),
             str(p.id_pedido),
             _br_number(p.peso_total_kg, 0),
+            _br_number(p.peso_bruto_total, 0),
             str(p.codigo_cliente or p.id_pedido),
             cliente_p,
             fantasia_p,
@@ -155,14 +168,14 @@ def gerar_pdf_formacao_carga(db, carga_id: int) -> bytes:
 
     # Width distribution (landscape A4 has ~27.7cm useful width)
     # Increased widths for first 3 columns and Rota fields for better visibility
-    col_widths = [1.8*cm, 2.0*cm, 2.6*cm, 1.8*cm, 7.8*cm, 5.0*cm, 4.3*cm, 1.5*cm, 1.5*cm]
+    col_widths = [1.4*cm, 1.6*cm, 2.0*cm, 2.0*cm, 1.4*cm, 7.8*cm, 4.8*cm, 4.3*cm, 1.5*cm, 1.5*cm]
 
     table = Table(data, colWidths=col_widths, repeatRows=1)
     style = TableStyle([
         ('BACKGROUND', (0, 0), (-1, 0), SUPRA_BAR),
         # ('TEXTCOLOR', (0, 0), (-1, 0), colors.white), # Handled by Paragraph
         ('ALIGN', (0, 0), (-1, -1), 'LEFT'),
-        ('ALIGN', (2, 0), (2, -1), 'RIGHT'), # Peso Liquido
+        ('ALIGN', (2, 0), (3, -1), 'RIGHT'), # Pesos Liquido e Bruto
         ('VALIGN', (0, 0), (-1, -1), 'MIDDLE'),
         # ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'), # Handled by Paragraph
         ('FONTSIZE', (0, 0), (-1, -1), 8),
@@ -204,9 +217,21 @@ def gerar_pdf_romaneio(db, carga_id: int) -> bytes:
             c.cadastro_nome_fantasia as nome_fantasia,
             c.entrega_municipio as cidade,
             p.peso_total_kg,
+            COALESCE(pb.peso_bruto_total, p.peso_total_kg) as peso_bruto_total,
             cp.observacoes as obs_carga
         FROM tb_cargas_pedidos cp
         JOIN tb_pedidos p ON cp.numero_pedido = p.id_pedido::text
+        LEFT JOIN (
+             SELECT 
+                 id_pedido,
+                 SUM(i.quantidade * COALESCE(prod.peso_bruto, prod.peso, 0)) as peso_bruto_total
+             FROM tb_pedidos_itens i
+             LEFT JOIN (
+                 SELECT codigo_supra, MAX(peso) as peso, MAX(peso_bruto) as peso_bruto 
+                 FROM t_cadastro_produto_v2 GROUP BY codigo_supra
+             ) prod ON prod.codigo_supra = i.codigo
+             GROUP BY id_pedido
+        ) pb ON pb.id_pedido = p.id_pedido
         LEFT JOIN public.t_cadastro_cliente_v2 c ON c.cadastro_codigo_da_empresa::text = p.codigo_cliente
         WHERE cp.id_carga = :cid
         ORDER BY cp.ordem_carregamento
@@ -246,7 +271,7 @@ def gerar_pdf_romaneio(db, carga_id: int) -> bytes:
     style_wrapped.textColor = colors.black
 
     # Wrap cells that might get too large
-    data = [["CÓDIGO", "CLIENTE", "N. FANTASIA", "MUNICÍPIO", "ORDEM", "PESO LÍQ.", "OBSERVAÇÕES"]]
+    data = [["CÓDIGO", "CLIENTE", "N. FANTASIA", "MUNICÍPIO", "ORDEM", "PESO LÍQ.", "PESO BR.", "OBSERVAÇÕES"]]
     for p in pedidos:
         cliente_p = Paragraph(str(p.cliente or ""), style_wrapped)
         fantasia_p = Paragraph(str(p.nome_fantasia or ""), style_wrapped)
@@ -259,15 +284,16 @@ def gerar_pdf_romaneio(db, carga_id: int) -> bytes:
             str(p.cidade or "")[:15],
             str(p.ordem_carregamento or ""),
             _br_number(p.peso_total_kg, 0),
+            _br_number(p.peso_bruto_total, 0),
             obs_p
         ])
 
-    table = Table(data, colWidths=[2.0*cm, 7.5*cm, 5.0*cm, 3.5*cm, 1.5*cm, 2.0*cm, 6.8*cm])
+    table = Table(data, colWidths=[1.8*cm, 7.0*cm, 4.5*cm, 3.2*cm, 1.3*cm, 2.0*cm, 2.0*cm, 6.5*cm])
     style = TableStyle([
         ('BACKGROUND', (0, 0), (-1, 0), SUPRA_BAR),
         ('TEXTCOLOR', (0, 0), (-1, 0), colors.white),
         ('ALIGN', (0, 0), (-1, -1), 'LEFT'),
-        ('ALIGN', (5, 0), (5, -1), 'RIGHT'), # Peso
+        ('ALIGN', (5, 0), (6, -1), 'RIGHT'), # Pesos Liquido e Bruto
         ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
         ('FONTSIZE', (0, 0), (-1, -1), 8),
         ('GRID', (0, 0), (-1, -1), 0.5, colors.grey),
@@ -295,12 +321,14 @@ def gerar_pdf_resumo_produtos(db, carga_id: int) -> bytes:
             SUM(i.quantidade) as qtd_total,
             MAX(i.embalagem) as item_embalagem,
             MAX(CAST(prod.peso AS FLOAT)) AS peso_unitario,
-            CAST(SUM(i.quantidade * COALESCE(prod.peso, 0)) AS FLOAT) AS peso_liquido_total
+            MAX(CAST(COALESCE(prod.peso_bruto, prod.peso, 0) AS FLOAT)) AS peso_bruto_unitario,
+            CAST(SUM(i.quantidade * COALESCE(prod.peso, 0)) AS FLOAT) AS peso_liquido_total,
+            CAST(SUM(i.quantidade * COALESCE(prod.peso_bruto, prod.peso, 0)) AS FLOAT) AS peso_bruto_total
         FROM tb_cargas_pedidos cp
         JOIN tb_pedidos p ON cp.numero_pedido = p.id_pedido::text
         JOIN tb_pedidos_itens i ON i.id_pedido = p.id_pedido
         LEFT JOIN (
-            SELECT codigo_supra, MAX(CAST(peso AS FLOAT)) as peso
+            SELECT codigo_supra, MAX(CAST(peso AS FLOAT)) as peso, MAX(CAST(peso_bruto AS FLOAT)) as peso_bruto
             FROM t_cadastro_produto_v2
             GROUP BY codigo_supra
         ) prod ON prod.codigo_supra = i.codigo
@@ -312,8 +340,9 @@ def gerar_pdf_resumo_produtos(db, carga_id: int) -> bytes:
     carga = db.execute(text("SELECT * FROM tb_cargas WHERE id = :cid"), {"cid": carga_id}).mappings().first()
 
     buffer = io.BytesIO()
-    c = canvas.Canvas(buffer, pagesize=A4)
-    width, height = A4
+    pagesize = landscape(A4)
+    c = canvas.Canvas(buffer, pagesize=pagesize)
+    width, height = pagesize
 
     # Internal draw logic to reuse in Completo
     _desenhar_resumo_logic(c, db, carga, produtos, width, height)
@@ -339,29 +368,33 @@ def _desenhar_resumo_logic(c, db, carga, produtos, width, height, y_start=None):
     else:
         y = y_start
 
-    # Table columns: CÓDIGO | DESCRIÇÃO | QTD | PESO | EMBALAGEM | PESO ACUM.
-    data = [["CÓDIGO", "DESCRIÇÃO PRODUTO / EMBALAGEM", "QTD", "PESO LÍQ.", "EMBALAGEM", "PESO ACUM."]]
+    # Table columns: CÓDIGO | DESCRIÇÃO | QTD | P. LÍQ. UN | P. BR. UN | EMBALAGEM | P. LÍQ. ACUM. | P. BR. ACUM.
+    data = [["CÓDIGO", "DESCRIÇÃO PRODUTO / EMBALAGEM", "QTD", "P. LÍQ. UN", "P. BR. UN", "EMBALAGEM", "P. LÍQ ACUM", "P. BR ACUM"]]
     
     for p in produtos:
         peso_unit = getattr(p, 'peso_unitario', 0.0) or 0.0
-        peso_total = p.peso_liquido_total or 0.0
+        peso_bruto_unit = getattr(p, 'peso_bruto_unitario', 0.0) or 0.0
+        peso_total = getattr(p, 'peso_liquido_total', 0.0) or 0.0
+        peso_bruto_total = getattr(p, 'peso_bruto_total', 0.0) or 0.0
         data.append([
             str(p.item_codigo),
             str(p.item_nome)[:50],
             str(int(p.qtd_total or 0)),
             _br_number(peso_unit, 0),
+            _br_number(peso_bruto_unit, 0),
             str(p.item_embalagem or ""),
-            _br_number(peso_total, 0)
+            _br_number(peso_total, 0),
+            _br_number(peso_bruto_total, 0)
         ])
 
-    table = Table(data, colWidths=[2.5*cm, 7.5*cm, 1.5*cm, 2.5*cm, 2.5*cm, 3.0*cm])
+    table = Table(data, colWidths=[2.5*cm, 10.5*cm, 1.5*cm, 2.0*cm, 2.0*cm, 2.5*cm, 2.5*cm, 2.5*cm])
     style = TableStyle([
         ('BACKGROUND', (0, 0), (-1, 0), SUPRA_BAR),
         ('TEXTCOLOR', (0, 0), (-1, 0), colors.white),
         ('ALIGN', (0, 0), (-1, -1), 'LEFT'),
         ('ALIGN', (2, 0), (2, -1), 'CENTER'), # Qtd
-        ('ALIGN', (3, 0), (3, -1), 'RIGHT'), # Peso
-        ('ALIGN', (5, 0), (5, -1), 'RIGHT'), # Acum
+        ('ALIGN', (3, 0), (4, -1), 'RIGHT'), # Pesos UN
+        ('ALIGN', (6, 0), (7, -1), 'RIGHT'), # Acum
         ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
         ('FONTSIZE', (0, 0), (-1, -1), 8),
         ('GRID', (0, 0), (-1, -1), 0.5, colors.grey),
@@ -398,9 +431,21 @@ def gerar_pdf_relatorio_completo(db, carga_id: int) -> bytes:
             c.cadastro_nome_fantasia as nome_fantasia,
             c.entrega_municipio as cidade,
             p.peso_total_kg,
+            COALESCE(pb.peso_bruto_total, p.peso_total_kg) as peso_bruto_total,
             cp.observacoes as obs_carga
         FROM tb_cargas_pedidos cp
         JOIN tb_pedidos p ON cp.numero_pedido = p.id_pedido::text
+        LEFT JOIN (
+             SELECT 
+                 id_pedido,
+                 SUM(i.quantidade * COALESCE(prod.peso_bruto, prod.peso, 0)) as peso_bruto_total
+             FROM tb_pedidos_itens i
+             LEFT JOIN (
+                 SELECT codigo_supra, MAX(peso) as peso, MAX(peso_bruto) as peso_bruto 
+                 FROM t_cadastro_produto_v2 GROUP BY codigo_supra
+             ) prod ON prod.codigo_supra = i.codigo
+             GROUP BY id_pedido
+        ) pb ON pb.id_pedido = p.id_pedido
         LEFT JOIN public.t_cadastro_cliente_v2 c ON c.cadastro_codigo_da_empresa::text = p.codigo_cliente
         WHERE cp.id_carga = :cid
         ORDER BY cp.ordem_carregamento
@@ -414,12 +459,14 @@ def gerar_pdf_relatorio_completo(db, carga_id: int) -> bytes:
             SUM(i.quantidade) as qtd_total,
             MAX(i.embalagem) as item_embalagem,
             MAX(CAST(prod.peso AS FLOAT)) AS peso_unitario,
-            CAST(SUM(i.quantidade * COALESCE(prod.peso, 0)) AS FLOAT) AS peso_liquido_total
+            MAX(CAST(COALESCE(prod.peso_bruto, prod.peso, 0) AS FLOAT)) AS peso_bruto_unitario,
+            CAST(SUM(i.quantidade * COALESCE(prod.peso, 0)) AS FLOAT) AS peso_liquido_total,
+            CAST(SUM(i.quantidade * COALESCE(prod.peso_bruto, prod.peso, 0)) AS FLOAT) AS peso_bruto_total
         FROM tb_cargas_pedidos cp
         JOIN tb_pedidos p ON cp.numero_pedido = p.id_pedido::text
         JOIN tb_pedidos_itens i ON p.id_pedido = i.id_pedido
         LEFT JOIN (
-            SELECT codigo_supra, MAX(CAST(peso AS FLOAT)) as peso
+            SELECT codigo_supra, MAX(CAST(peso AS FLOAT)) as peso, MAX(CAST(peso_bruto AS FLOAT)) as peso_bruto
             FROM t_cadastro_produto_v2
             GROUP BY codigo_supra
         ) prod ON prod.codigo_supra = i.codigo
@@ -481,11 +528,14 @@ def _desenhar_romaneio_logic(c, carga, pedidos, width, height):
     style_wrapped.leading = 10
     style_wrapped.textColor = colors.black
 
-    data = [["CÓDIGO", "CLIENTE", "N. FANTASIA", "MUNICÍPIO", "ORDEM CARREG.", "PESO LÍQUIDO", "OBSERVAÇÃO PEDIDO"]]
+    data = [["CÓDIGO", "CLIENTE", "N. FANTASIA", "MUNICÍPIO", "ORDEM CARREG.", "PESO LÍQ.", "PESO BR.", "OBSERVAÇÃO PEDIDO"]]
     for p in pedidos:
         cliente_p = Paragraph(str(p.cliente or ""), style_wrapped)
         fantasia_p = Paragraph(str(p.nome_fantasia or ""), style_wrapped)
         obs_p = Paragraph(str(p.obs_carga or ""), style_wrapped)
+
+        peso_total_kg = getattr(p, 'peso_total_kg', 0.0) or 0.0
+        peso_bruto_total = getattr(p, 'peso_bruto_total', 0.0) or 0.0
 
         data.append([
             str(p.codigo_cliente or p.id_pedido),
@@ -493,16 +543,17 @@ def _desenhar_romaneio_logic(c, carga, pedidos, width, height):
             fantasia_p,
             str(p.cidade or "")[:20],
             str(p.ordem_carregamento or ""),
-            _br_number(p.peso_total_kg, 0),
+            _br_number(peso_total_kg, 0),
+            _br_number(peso_bruto_total, 0),
             obs_p
         ])
 
-    table = Table(data, colWidths=[2.0*cm, 7.5*cm, 5.0*cm, 3.5*cm, 2.5*cm, 2.0*cm, 5.8*cm])
+    table = Table(data, colWidths=[1.8*cm, 7.0*cm, 4.5*cm, 3.2*cm, 2.5*cm, 2.0*cm, 2.0*cm, 4.8*cm])
     style = TableStyle([
         ('BACKGROUND', (0, 0), (-1, 0), SUPRA_BAR),
         ('TEXTCOLOR', (0, 0), (-1, 0), colors.white),
         ('ALIGN', (0, 0), (-1, -1), 'LEFT'),
-        ('ALIGN', (5, 0), (5, -1), 'RIGHT'),
+        ('ALIGN', (5, 0), (6, -1), 'RIGHT'),
         ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
         ('FONTSIZE', (0, 0), (-1, -1), 9),
         ('GRID', (0, 0), (-1, -1), 0.5, colors.grey),
