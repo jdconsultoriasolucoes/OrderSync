@@ -446,6 +446,7 @@ async function carregarPedidosDaCargaAtiva() {
                 <th style="font-size: 11px; padding: 12px 4px; white-space: nowrap; width: 60px;">Carga</th>
                 <th style="font-size: 11px; padding: 12px 4px; white-space: nowrap; width: 60px;">Pedido</th>
                 <th style="font-size: 11px; padding: 12px 4px; white-space: nowrap; width: 65px;">Peso Líq.</th>
+                <th style="font-size: 11px; padding: 12px 4px; white-space: nowrap; width: 65px;">Peso Br.</th>
                 <th style="font-size: 11px; padding: 12px 4px; white-space: nowrap; width: 50px;">Cód.</th>
                 <th style="font-size: 11px; padding: 12px 4px; white-space: nowrap;">Cliente</th>
                 <th style="font-size: 11px; padding: 12px 4px; white-space: nowrap;">Nome Fantasia</th>
@@ -471,6 +472,7 @@ async function carregarPedidosDaCargaAtiva() {
                 <th style="font-size: 11px;">Município</th>
                 <th style="width: 70px; font-size: 11px;">Ordem</th>
                 <th style="font-size: 11px;">Peso Líq.</th>
+                <th style="font-size: 11px;">Peso Br.</th>
                 <th style="font-size: 11px;">Observações</th>
                 <th style="font-size: 11px;">Ações</th>
             </tr>
@@ -536,6 +538,7 @@ async function carregarPedidosDaCargaAtiva() {
                         <td style="font-size: 12px; padding: 12px 4px; white-space: nowrap; width: 60px;">${window.numCargaAtiva || ''}</td>
                         <td style="font-size: 12px; padding: 12px 4px; white-space: nowrap; width: 60px;"><strong>${p.numero_pedido}</strong></td>
                         <td style="font-size: 12px; padding: 12px 4px; white-space: nowrap; width: 65px;">${peso} kg</td>
+                        <td style="font-size: 12px; padding: 12px 4px; white-space: nowrap; width: 65px;">${Math.round(p.peso_bruto_total || 0)} kg</td>
                         <td style="font-size: 12px; padding: 12px 4px; white-space: nowrap; width: 50px;">${p.codigo_cliente || '-'}</td>
                         <td style="font-size: 12px; padding: 12px 4px; min-width: 200px;">${p.cliente_nome || '-'}</td>
                         <td style="font-size: 12px; padding: 12px 4px; min-width: 150px;">${p.nome_fantasia || '-'}</td>
@@ -561,6 +564,7 @@ async function carregarPedidosDaCargaAtiva() {
                         <td style="font-size: 12px;">${p.municipio || '-'}</td>
                         <td style="vertical-align: top;"><input type="number" class="os-input os-input-sm in-ordem" value="${p.ordem_carregamento || ''}" data-id="${p.id_carga_pedido}" style="padding: 2px; font-size: 12px; height: 32px; text-align: right; width: 60px;"></td>
                         <td style="white-space: nowrap; font-size: 12px; vertical-align: top;">${peso} kg</td>
+                        <td style="white-space: nowrap; font-size: 12px; vertical-align: top;">${Math.round(p.peso_bruto_total || 0)} kg</td>
                         <td style="vertical-align: top;"><textarea class="os-input os-input-sm in-obs" data-id="${p.id_carga_pedido}" style="padding: 4px; font-size: 12px; height: 38px; resize: vertical; width: 100%; min-width: 200px;">${p.observacoes || ''}</textarea></td>
                         <td style="white-space: nowrap; vertical-align: top;">
                             <button class="os-btn os-btn-sm os-btn-danger btn-remover-pedido-carga" data-id="${p.id_carga_pedido}" title="Remover">&times;</button>

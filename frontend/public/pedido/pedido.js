@@ -44,9 +44,17 @@ function fmtDate(s) {
 function getStatusBadge(status) {
   if (!status) return '<span class="status-badge status-aberto">---</span>';
   const s = status.toUpperCase();
+  
+  // Novos statuses definidos
+  if (s === 'ORÇAMENTO') return `<span class="status-badge status-aberto" style="background-color: #fef3c7; color: #92400e; border: 1px solid #fcd34d;">ORÇAMENTO</span>`;
+  if (s === 'PEDIDO') return `<span class="status-badge status-env">PEDIDO</span>`;
+  if (s === 'FATURADO SUPRA') return `<span class="status-badge status-conf">FATURADO SUPRA</span>`;
+  if (s === 'FATURADO DISPET') return `<span class="status-badge status-conf" style="background-color: #d1fae5; color: #065f46; border: 1px solid #6ee7b7;">FATURADO DISPET</span>`;
+  if (s === 'CANCELADO') return `<span class="status-badge status-cancel">CANCELADO</span>`;
+  
+  // Legados ou fallbacks
   if (s === 'CONFIRMADO') return `<span class="status-badge status-conf">CONFIRMADO</span>`;
   if (s === 'EM SEPARAÇÃO') return `<span class="status-badge status-conf" style="background-color: #f59e0b; color: #fff;">EM SEPARAÇÃO</span>`;
-  if (s === 'CANCELADO') return `<span class="status-badge status-cancel">CANCELADO</span>`;
   if (s === 'ENVIADO') return `<span class="status-badge status-env">ENVIADO</span>`;
   if (s === 'ENTREGUE') return `<span class="status-badge status-entregue">ENTREGUE</span>`;
 

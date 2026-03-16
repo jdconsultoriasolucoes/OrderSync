@@ -36,9 +36,21 @@ def create_carga(carga: CargaCreate, db: Session = Depends(get_db)):
     db.commit()
     db.refresh(new_carga)
 
-    # Se numero_carga vier em branco, usamos o ID auto-increment gerado
+    # Se numero_carga vier em branco, calculamos o próximo número sequencial visual (Max + 1)
     if not new_carga.numero_carga:
-        new_carga.numero_carga = str(new_carga.id)
+        # Tenta pegar o maior número de carga que seja numérico
+        last_carga = db.execute(text("""
+            SELECT numero_carga FROM tb_cargas 
+            WHERE numero_carga ~ '^[0-9]+$' 
+            ORDER BY CAST(numero_carga AS INTEGER) DESC 
+            LIMIT 1
+        """)).fetchone()
+        
+        proximo = 1
+        if last_carga and last_carga[0]:
+            proximo = int(last_carga[0]) + 1
+            
+        new_carga.numero_carga = str(proximo)
         db.commit()
         db.refresh(new_carga)
 
@@ -212,12 +224,24 @@ def get_carga_pedidos_detalhes(carga_id: int, db: Session = Depends(get_db)):
             p.fornecedor,
             CASE WHEN p.usar_valor_com_frete THEN 'ENTREGA' ELSE 'RETIRADA' END as modalidade,
             CAST(COALESCE(p.peso_total_kg, 0) AS FLOAT) AS peso_total,
+            CAST(COALESCE(pb.peso_bruto_total, p.peso_total_kg) AS FLOAT) AS peso_bruto_total,
             c.entrega_municipio AS municipio,
             c.entrega_rota_principal AS rota_principal,
             c.entrega_rota_aproximacao AS rota_aproximacao,
             cp.observacoes
         FROM tb_cargas_pedidos cp
         JOIN tb_pedidos p ON cp.numero_pedido = p.id_pedido::text
+        LEFT JOIN (
+             SELECT 
+                 id_pedido,
+                 SUM(i.quantidade * COALESCE(prod.peso_bruto, prod.peso, 0)) as peso_bruto_total
+             FROM tb_pedidos_itens i
+             LEFT JOIN (
+                 SELECT codigo_supra, MAX(peso) as peso, MAX(peso_bruto) as peso_bruto 
+                 FROM t_cadastro_produto_v2 GROUP BY codigo_supra
+             ) prod ON prod.codigo_supra = i.codigo
+             GROUP BY id_pedido
+        ) pb ON pb.id_pedido = p.id_pedido
         LEFT JOIN t_cadastro_cliente_v2 c ON c.cadastro_codigo_da_empresa::text = p.codigo_cliente
         WHERE cp.id_carga = :carga_id
         ORDER BY cp.ordem_carregamento ASC NULLS LAST, cp.id ASC

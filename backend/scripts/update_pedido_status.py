@@ -14,10 +14,12 @@ SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 def update_statuses():
     db = SessionLocal()
     try:
-        # Desativar todos os status antigos
-        db.execute(text("UPDATE public.pedido_status SET ativo = FALSE;"))
+        # Limpar a tabela para garantir que teremos apenas os status novos
+        # Se houver FKs, isso pode falhar, mas baseado na análise, o status é armazenado como string no pedido
+        print("Cleaning old statuses...")
+        db.execute(text("DELETE FROM public.pedido_status;"))
         
-        # Inserir ou Reativar os 5 permitidos
+        # Inserir os 5 permitidos
         novos_status = [
             {"codigo": "ORCAMENTO", "rotulo": "Orçamento", "ordem": 1, "ativo": True},
             {"codigo": "PEDIDO", "rotulo": "Pedido", "ordem": 2, "ativo": True},
@@ -30,10 +32,6 @@ def update_statuses():
             sql = text("""
                 INSERT INTO public.pedido_status (codigo, rotulo, ordem, ativo)
                 VALUES (:codigo, :rotulo, :ordem, :ativo)
-                ON CONFLICT (codigo) DO UPDATE 
-                SET rotulo = EXCLUDED.rotulo, 
-                    ordem = EXCLUDED.ordem, 
-                    ativo = TRUE;
             """)
             db.execute(sql, st)
             
