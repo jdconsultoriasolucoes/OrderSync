@@ -271,12 +271,11 @@ def gerar_pdf_romaneio(db, carga_id: int) -> bytes:
     c.drawString(0.7*cm, y, f"TRANSPORTADORA: {carga.get('transportadora') or 'Próprio'}")
     c.drawString(8.0*cm, y, f"MOTORISTA: {carga.get('motorista') or '-'}")
     c.drawRightString(width - 0.7*cm, y, f"VEÍCULO: {carga.get('modelo') or '-'} / PLACA: {carga.get('veiculo_placa') or '-'}")
-    y -= 0.55*cm
-
+    y -= 0.8*cm
     # Totais abaixo da linha do veículo, canto direito
     c.setFont("Helvetica-Bold", 9)
     c.drawRightString(width - 0.7*cm, y, f"TOTAL P. LÍQ: {_br_number(total_liq_val, 0)} kg   |   TOTAL P. BRUTO: {_br_number(total_bruto_val, 0)} kg")
-    y -= 0.8*cm
+    y -= 0.3*cm
 
     # Table columns: CÓDIGO | CLIENTE | N. FANTASIA | MUNICÍPIO | ORDEM | PESO LÍQ. ACUM | OBSERVAÇÕES
     styles = getSampleStyleSheet()
@@ -285,7 +284,16 @@ def gerar_pdf_romaneio(db, carga_id: int) -> bytes:
     style_wrapped.leading = 9
     style_wrapped.textColor = colors.black
 
-    data = [["CÓDIGO", "CLIENTE", "N. FANTASIA", "MUNICÍPIO", "ORDEM", "PESO LÍQ. ACUM", "OBSERVAÇÕES"]]
+    style_header_col = copy(styles["Normal"])
+    style_header_col.fontSize = 8
+    style_header_col.leading = 9
+    style_header_col.textColor = colors.white
+    style_header_col.fontName = 'Helvetica-Bold'
+    style_header_col.alignment = 2  # Right
+
+    peso_liq_hdr = Paragraph("PESO LÍQ.<br/>ACUM", style_header_col)
+
+    data = [["CÓDIGO", "CLIENTE", "N. FANTASIA", "MUNICÍPIO", "ORDEM", peso_liq_hdr, "OBSERVAÇÕES"]]
 
     for p in pedidos:
         cliente_p = Paragraph(str(p.cliente or ""), style_wrapped)
