@@ -130,15 +130,14 @@ def gerar_pdf_formacao_carga(db, carga_id: int) -> bytes:
     subtitle = f"Carga: {carga.get('numero_carga') or ''} - {carga.get('nome_carga') or ''}"
     y = _draw_header(c, width, height, "Manutenção de Pedidos / Formação de Carga", subtitle)
 
-    # Totais no cabeçalho
+    # Totais no cabeçalho — canto direito, acima da tabela
     c.setFont("Helvetica-Bold", 9)
     c.setFillColor(colors.black)
-    c.drawString(0.7*cm, y, f"TOTAL PESO LÍQUIDO: {_br_number(total_liq, 0)} kg")
-    c.drawString(7.0*cm, y, f"TOTAL PESO BRUTO: {_br_number(total_bruto, 0)} kg")
+    c.drawRightString(width - 0.7*cm, y, f"TOTAL P. LÍQ: {_br_number(total_liq, 0)} kg   |   TOTAL P. BRUTO: {_br_number(total_bruto, 0)} kg")
     y -= 0.8*cm
 
     # Table Data
-    # Columns: Nº CARGA | Nº PEDIDO | PESO LIQUIDO | CÓDIGO | CLIENTE | N. FANTASIA | MUNICÍPIO | ROTA GERAL | ROTA DE APROXIMAÇÃO
+    # Columns: Nº CARGA | Nº PEDIDO | PESO LÍQ. ACUM | CÓDIGO | CLIENTE | N. FANTASIA | MUNICÍPIO | ROTA G. | ROTA A.
     styles = getSampleStyleSheet()
     style_wrapped = copy(styles["Normal"])
     style_wrapped.fontSize = 7
@@ -153,30 +152,12 @@ def gerar_pdf_formacao_carga(db, carga_id: int) -> bytes:
     style_header.textColor = colors.white
     style_header.alignment = 0 # Left
 
-    header_labels = ["Nº CARGA", "Nº PEDIDO", "PESO LÍQ. ACUM", "PESO BR. ACUM", "CÓDIGO", "CLIENTE", "N. FANTASIA", "MUNICÍPIO", "ROTA G.", "ROTA A."]
+    header_labels = ["Nº CARGA", "Nº PEDIDO", "PESO LÍQ. ACUM", "CÓDIGO", "CLIENTE", "N. FANTASIA", "MUNICÍPIO", "ROTA G.", "ROTA A."]
     header_row = [Paragraph(h, style_header) for h in header_labels]
-    
-    # Calcular totais
-    total_liq = sum(p.peso_total_kg or 0 for p in pedidos)
-    total_bruto = sum(p.peso_bruto_total or 0 for p in pedidos)
-    
-    # Linha de Totais (logo abaixo do header)
-    total_style = copy(style_wrapped)
-    total_style.fontName = 'Helvetica-Bold'
-    total_style.fontSize = 8
-    
-    totals_row = [
-        "TOTAL:",
-        "",
-        Paragraph(f"<b>{_br_number(total_liq, 0)} kg</b>", total_style),
-        Paragraph(f"<b>{_br_number(total_bruto, 0)} kg</b>", total_style),
-        "", "", "", "", "", ""
-    ]
-    
-    data = [header_row, totals_row]
-    
+
+    data = [header_row]
+
     for p in pedidos:
-        # Paragraphs for wrapping
         cliente_p = Paragraph(str(p.cliente or ""), style_wrapped)
         fantasia_p = Paragraph(str(p.nome_fantasia or ""), style_wrapped)
         cidade_p = Paragraph(str(p.cidade or ""), style_wrapped)
@@ -185,7 +166,6 @@ def gerar_pdf_formacao_carga(db, carga_id: int) -> bytes:
             str(carga.get('numero_carga') or ""),
             str(p.id_pedido),
             _br_number(p.peso_total_kg, 0),
-            _br_number(p.peso_bruto_total, 0),
             str(p.codigo_cliente or p.id_pedido),
             cliente_p,
             fantasia_p,
@@ -194,18 +174,15 @@ def gerar_pdf_formacao_carga(db, carga_id: int) -> bytes:
             str(p.rota_aprox or "")[:2]
         ])
 
-    # Width distribution (landscape A4 has ~27.7cm useful width)
-    # Increased widths for first 3 columns and Rota fields for better visibility
-    col_widths = [1.4*cm, 1.6*cm, 2.0*cm, 2.0*cm, 1.4*cm, 7.8*cm, 4.8*cm, 4.3*cm, 1.5*cm, 1.5*cm]
+    # 9 colunas: sem Peso Br. Acum
+    col_widths = [1.4*cm, 1.6*cm, 2.2*cm, 1.6*cm, 8.0*cm, 5.0*cm, 4.3*cm, 1.6*cm, 1.6*cm]
 
     table = Table(data, colWidths=col_widths, repeatRows=1)
     style = TableStyle([
         ('BACKGROUND', (0, 0), (-1, 0), SUPRA_BAR),
-        ('BACKGROUND', (0, 1), (-1, 1), colors.lightgrey), # Fundo para a linha de totais
         ('ALIGN', (0, 0), (-1, -1), 'LEFT'),
-        ('ALIGN', (2, 0), (3, -1), 'RIGHT'), # Pesos Liquido e Bruto
+        ('ALIGN', (2, 0), (2, -1), 'RIGHT'),  # Peso Líq.
         ('VALIGN', (0, 0), (-1, -1), 'MIDDLE'),
-        # ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'), # Handled by Paragraph
         ('FONTSIZE', (0, 0), (-1, -1), 8),
         ('BOTTOMPADDING', (0, 0), (-1, 0), 4),
         ('TOPPADDING', (0, 0), (-1, 0), 4),
@@ -286,41 +263,28 @@ def gerar_pdf_romaneio(db, carga_id: int) -> bytes:
     c.drawRightString(width - 0.7*cm, y, f"DATA CARREGAMENTO: {data_str}")
     y -= 0.5*cm
 
-    # Totais no cabeçalho
+    # Totais no cabeçalho — canto direito, acima da tabela
     total_liq_val = sum(p.peso_total_kg or 0 for p in pedidos)
     total_bruto_val = sum(p.peso_bruto_total or 0 for p in pedidos)
-    
+
     c.setFont("Helvetica-Bold", 9)
-    c.drawString(0.7*cm, y, f"TOTAL P. LÍQ: {_br_number(total_liq_val, 0)} kg")
-    c.drawString(7.0*cm, y, f"TOTAL P. BRUTO: {_br_number(total_bruto_val, 0)} kg")
-    y -= 0.8*cm
-    
+    c.drawRightString(width - 0.7*cm, y, f"TOTAL P. LÍQ: {_br_number(total_liq_val, 0)} kg   |   TOTAL P. BRUTO: {_br_number(total_bruto_val, 0)} kg")
+    y -= 0.6*cm
+
     c.drawString(0.7*cm, y, f"TRANSPORTADORA: {carga.get('transportadora') or 'Próprio'}")
     c.drawString(8.0*cm, y, f"MOTORISTA: {carga.get('motorista') or '-'}")
     c.drawRightString(width - 0.7*cm, y, f"VEÍCULO: {carga.get('modelo') or '-'} / PLACA: {carga.get('veiculo_placa') or '-'}")
     y -= 1.0*cm
 
-    # Table columns: CÓDIGO | CLIENTE | N. FANTASIA | MUNICÍPIO | ORDEM | PESO LÍQ. ACUM | PESO BR. ACUM | OBSERVAÇÕES
+    # Table columns: CÓDIGO | CLIENTE | N. FANTASIA | MUNICÍPIO | ORDEM | PESO LÍQ. ACUM | OBSERVAÇÕES
     styles = getSampleStyleSheet()
     style_wrapped = copy(styles["Normal"])
     style_wrapped.fontSize = 8
     style_wrapped.leading = 9
     style_wrapped.textColor = colors.black
 
-    data = [["CÓDIGO", "CLIENTE", "N. FANTASIA", "MUNICÍPIO", "ORDEM", "PESO LÍQ. ACUM", "PESO BR. ACUM", "OBSERVAÇÕES"]]
-    
-    # Linha de Totais
-    total_style = copy(style_wrapped)
-    total_style.fontName = 'Helvetica-Bold'
-    total_style.fontSize = 8
-    
-    totals_row = [
-        "TOTAL:", "", "", "", "",
-        Paragraph(f"<b>{_br_number(total_liq_val, 0)} kg</b>", total_style),
-        Paragraph(f"<b>{_br_number(total_bruto_val, 0)} kg</b>", total_style),
-        ""
-    ]
-    data.append(totals_row)
+    data = [["CÓDIGO", "CLIENTE", "N. FANTASIA", "MUNICÍPIO", "ORDEM", "PESO LÍQ. ACUM", "OBSERVAÇÕES"]]
+
     for p in pedidos:
         cliente_p = Paragraph(str(p.cliente or ""), style_wrapped)
         fantasia_p = Paragraph(str(p.nome_fantasia or ""), style_wrapped)
@@ -333,17 +297,16 @@ def gerar_pdf_romaneio(db, carga_id: int) -> bytes:
             str(p.cidade or "")[:15],
             str(p.ordem_carregamento or ""),
             _br_number(p.peso_total_kg, 0),
-            _br_number(p.peso_bruto_total, 0),
             obs_p
         ])
 
-    table = Table(data, colWidths=[1.8*cm, 7.0*cm, 4.5*cm, 3.2*cm, 1.3*cm, 2.0*cm, 2.0*cm, 6.5*cm], repeatRows=1)
+    # 7 colunas: sem Peso Br. Acum
+    table = Table(data, colWidths=[1.8*cm, 7.5*cm, 4.5*cm, 3.2*cm, 1.3*cm, 2.2*cm, 7.8*cm], repeatRows=1)
     style = TableStyle([
         ('BACKGROUND', (0, 0), (-1, 0), SUPRA_BAR),
-        ('BACKGROUND', (0, 1), (-1, 1), colors.lightgrey),  # Linha de totais
         ('TEXTCOLOR', (0, 0), (-1, 0), colors.white),
         ('ALIGN', (0, 0), (-1, -1), 'LEFT'),
-        ('ALIGN', (5, 0), (6, -1), 'RIGHT'),  # Pesos Líquido e Bruto
+        ('ALIGN', (5, 0), (5, -1), 'RIGHT'),  # Peso Líq.
         ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
         ('FONTSIZE', (0, 0), (-1, -1), 8),
         ('GRID', (0, 0), (-1, -1), 0.5, colors.grey),
@@ -420,10 +383,9 @@ def _desenhar_resumo_logic(c, db, carga, produtos, width, height, y_start=None):
         c.drawRightString(width - 0.7*cm, y, f"DATA CARREGAMENTO: {data_str}")
         y -= 0.5*cm
 
-        # Totais no cabeçalho
+        # Totais no cabeçalho — canto direito, acima da tabela
         c.setFont("Helvetica-Bold", 9)
-        c.drawString(0.7*cm, y, f"TOTAL P. LÍQ: {_br_number(total_liq, 0)} kg")
-        c.drawString(7.0*cm, y, f"TOTAL P. BRUTO: {_br_number(total_bruto, 0)} kg")
+        c.drawRightString(width - 0.7*cm, y, f"TOTAL P. LÍQ: {_br_number(total_liq, 0)} kg   |   TOTAL P. BRUTO: {_br_number(total_bruto, 0)} kg")
         y -= 0.8*cm
     else:
         y = y_start
@@ -575,14 +537,13 @@ def _desenhar_romaneio_logic(c, carga, pedidos, width, height):
     c.drawRightString(width - 0.7*cm, y, f"DATA CARREGAMENTO: {data_str}")
     y -= 0.5*cm
 
-    # Calcular totais para o cabeçalho
+    # Calcular totais para o cabeçalho — canto direito
     t_liq = sum(getattr(p, 'peso_total_kg', 0.0) or 0.0 for p in pedidos)
     t_bru = sum(getattr(p, 'peso_bruto_total', 0.0) or 0.0 for p in pedidos)
 
     c.setFont("Helvetica-Bold", 9)
-    c.drawString(0.7*cm, y, f"TOTAL P. LÍQ: {_br_number(t_liq, 0)} kg")
-    c.drawString(7.0*cm, y, f"TOTAL P. BRUTO: {_br_number(t_bru, 0)} kg")
-    y -= 0.8*cm
+    c.drawRightString(width - 0.7*cm, y, f"TOTAL P. LÍQ: {_br_number(t_liq, 0)} kg   |   TOTAL P. BRUTO: {_br_number(t_bru, 0)} kg")
+    y -= 0.6*cm
     
     c.drawString(0.7*cm, y, f"TRANSPORTADORA: {carga.get('transportadora') or 'Próprio'}")
     c.drawString(8.0*cm, y, f"MOTORISTA: {carga.get('motorista') or '-'}")
@@ -595,26 +556,13 @@ def _desenhar_romaneio_logic(c, carga, pedidos, width, height):
     style_wrapped.leading = 10
     style_wrapped.textColor = colors.black
 
-    # Linha de Totais na tabela
-    total_style_r = copy(style_wrapped)
-    total_style_r.fontName = 'Helvetica-Bold'
-    total_style_r.fontSize = 9
-
-    data = [["CÓDIGO", "CLIENTE", "N. FANTASIA", "MUNICÍPIO", "ORDEM CARREG.", "PESO LÍQ. ACUM", "PESO BR. ACUM", "OBSERVAÇÃO PEDIDO"]]
-    totals_row_r = [
-        "TOTAL:", "", "", "", "",
-        Paragraph(f"<b>{_br_number(t_liq, 0)} kg</b>", total_style_r),
-        Paragraph(f"<b>{_br_number(t_bru, 0)} kg</b>", total_style_r),
-        ""
-    ]
-    data.append(totals_row_r)
+    data = [["CÓDIGO", "CLIENTE", "N. FANTASIA", "MUNICÍPIO", "ORDEM CARREG.", "PESO LÍQ. ACUM", "OBSERVAÇÃO PEDIDO"]]
     for p in pedidos:
         cliente_p = Paragraph(str(p.cliente or ""), style_wrapped)
         fantasia_p = Paragraph(str(p.nome_fantasia or ""), style_wrapped)
         obs_p = Paragraph(str(p.obs_carga or ""), style_wrapped)
 
         peso_total_kg = getattr(p, 'peso_total_kg', 0.0) or 0.0
-        peso_bruto_total = getattr(p, 'peso_bruto_total', 0.0) or 0.0
 
         data.append([
             str(p.codigo_cliente or p.id_pedido),
@@ -623,17 +571,16 @@ def _desenhar_romaneio_logic(c, carga, pedidos, width, height):
             str(p.cidade or "")[:20],
             str(p.ordem_carregamento or ""),
             _br_number(peso_total_kg, 0),
-            _br_number(peso_bruto_total, 0),
             obs_p
         ])
 
-    table = Table(data, colWidths=[1.8*cm, 7.0*cm, 4.5*cm, 3.2*cm, 2.5*cm, 2.0*cm, 2.0*cm, 4.8*cm], repeatRows=1)
+    # 7 colunas: sem Peso Br. Acum
+    table = Table(data, colWidths=[1.8*cm, 7.5*cm, 4.5*cm, 3.2*cm, 2.5*cm, 2.2*cm, 6.1*cm], repeatRows=1)
     style = TableStyle([
         ('BACKGROUND', (0, 0), (-1, 0), SUPRA_BAR),
-        ('BACKGROUND', (0, 1), (-1, 1), colors.lightgrey),  # Linha de totais
         ('TEXTCOLOR', (0, 0), (-1, 0), colors.white),
         ('ALIGN', (0, 0), (-1, -1), 'LEFT'),
-        ('ALIGN', (5, 0), (6, -1), 'RIGHT'),  # Pesos Líquido e Bruto
+        ('ALIGN', (5, 0), (5, -1), 'RIGHT'),  # Peso Líq.
         ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
         ('FONTSIZE', (0, 0), (-1, -1), 9),
         ('GRID', (0, 0), (-1, -1), 0.5, colors.grey),
