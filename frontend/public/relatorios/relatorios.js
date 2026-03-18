@@ -483,24 +483,25 @@ async function carregarPedidosDaCargaAtiva() {
                 </tr>
             `;
         } else if (window.activeRelatorio === "romaneio") {
-            tableEl.style.tableLayout = "auto";
+            tableEl.style.tableLayout = "fixed";
+            tableEl.style.width = "100%";
             theadTable.innerHTML = `
                 <tr>
-                    <th style="font-size: 11px;">Cód. Cliente</th>
+                    <th style="font-size: 11px; width: 55px; white-space: normal; word-break: break-word;">Cód.<br>Cliente</th>
                     <th style="font-size: 11px;">Cliente</th>
                     <th style="font-size: 11px;">Nome Fantasia</th>
                     <th style="font-size: 11px;">Município</th>
-                    <th style="width: 70px; font-size: 11px;">Ordem</th>
-                    <th style="font-size: 11px; color: #1e40af; text-align: right;">
-                        Peso Líq. Acum<br>
+                    <th style="width: 48px; font-size: 11px; white-space: normal;">Ord.</th>
+                    <th style="font-size: 11px; color: #1e40af; text-align: right; width: 90px; white-space: normal;">
+                        Peso Líq.<br>Acum
                         <span style="font-size: 11px; font-weight: 800; background: #dbeafe; padding: 2px 4px; border-radius: 4px; display: block; margin-top: 4px;">${totalLiqStr} kg</span>
                     </th>
-                    <th style="font-size: 11px; color: #92400e; text-align: right;">
-                        Peso Br. Acum<br>
+                    <th style="font-size: 11px; color: #92400e; text-align: right; width: 90px; white-space: normal;">
+                        Peso Br.<br>Acum
                         <span style="font-size: 11px; font-weight: 800; background: #fef3c7; padding: 2px 4px; border-radius: 4px; display: block; margin-top: 4px;">${totalBrutoStr} kg</span>
                     </th>
                     <th style="font-size: 11px;">Observações</th>
-                    <th style="font-size: 11px;">Ações</th>
+                    <th style="font-size: 11px; width: 50px;">Ações</th>
                 </tr>
             `;
         } else {

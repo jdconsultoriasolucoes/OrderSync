@@ -263,18 +263,20 @@ def gerar_pdf_romaneio(db, carga_id: int) -> bytes:
     c.drawRightString(width - 0.7*cm, y, f"DATA CARREGAMENTO: {data_str}")
     y -= 0.5*cm
 
-    # Totais no cabeçalho — canto direito, acima da tabela
+    # Totais: calculados aqui para exibir abaixo do veículo
     total_liq_val = sum(p.peso_total_kg or 0 for p in pedidos)
     total_bruto_val = sum(p.peso_bruto_total or 0 for p in pedidos)
 
-    c.setFont("Helvetica-Bold", 9)
-    c.drawRightString(width - 0.7*cm, y, f"TOTAL P. LÍQ: {_br_number(total_liq_val, 0)} kg   |   TOTAL P. BRUTO: {_br_number(total_bruto_val, 0)} kg")
-    y -= 0.6*cm
-
+    c.setFont("Helvetica-Bold", 10)
     c.drawString(0.7*cm, y, f"TRANSPORTADORA: {carga.get('transportadora') or 'Próprio'}")
     c.drawString(8.0*cm, y, f"MOTORISTA: {carga.get('motorista') or '-'}")
     c.drawRightString(width - 0.7*cm, y, f"VEÍCULO: {carga.get('modelo') or '-'} / PLACA: {carga.get('veiculo_placa') or '-'}")
-    y -= 1.0*cm
+    y -= 0.55*cm
+
+    # Totais abaixo da linha do veículo, canto direito
+    c.setFont("Helvetica-Bold", 9)
+    c.drawRightString(width - 0.7*cm, y, f"TOTAL P. LÍQ: {_br_number(total_liq_val, 0)} kg   |   TOTAL P. BRUTO: {_br_number(total_bruto_val, 0)} kg")
+    y -= 0.8*cm
 
     # Table columns: CÓDIGO | CLIENTE | N. FANTASIA | MUNICÍPIO | ORDEM | PESO LÍQ. ACUM | OBSERVAÇÕES
     styles = getSampleStyleSheet()
@@ -548,7 +550,12 @@ def _desenhar_romaneio_logic(c, carga, pedidos, width, height):
     c.drawString(0.7*cm, y, f"TRANSPORTADORA: {carga.get('transportadora') or 'Próprio'}")
     c.drawString(8.0*cm, y, f"MOTORISTA: {carga.get('motorista') or '-'}")
     c.drawRightString(width - 0.7*cm, y, f"VEÍCULO/PLACA: {carga.get('modelo') or '-'} / {carga.get('veiculo_placa') or '-'}")
-    y -= 1.0*cm
+    y -= 0.55*cm
+
+    # Totais abaixo da linha do veículo — canto direito
+    c.setFont("Helvetica-Bold", 9)
+    c.drawRightString(width - 0.7*cm, y, f"TOTAL P. LÍQ: {_br_number(t_liq, 0)} kg   |   TOTAL P. BRUTO: {_br_number(t_bru, 0)} kg")
+    y -= 0.8*cm
 
     styles = getSampleStyleSheet()
     style_wrapped = copy(styles["Normal"])
