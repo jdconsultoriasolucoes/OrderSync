@@ -218,7 +218,7 @@ def get_carga_pedidos_detalhes(carga_id: int, db: Session = Depends(get_db)):
             cp.ordem_carregamento,
             p.id_pedido,
             p.codigo_cliente,
-            p.cliente AS cliente_nome,
+            COALESCE(c.cadastro_nome_cliente, p.cliente) AS cliente_nome,
             c.cadastro_nome_fantasia as nome_fantasia,
             p.status as status_codigo,
             p.fornecedor,

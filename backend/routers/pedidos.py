@@ -208,7 +208,7 @@ def listar_pedidos(
         SELECT
           a.id_pedido                               AS numero_pedido,
           a.created_at                              AS data_pedido,
-          a.cliente                                 AS cliente_nome,
+          COALESCE(c.cadastro_nome_cliente, a.cliente) AS cliente_nome,
           a.codigo_cliente                          AS cliente_codigo,
           CASE WHEN a.usar_valor_com_frete THEN 'ENTREGA' ELSE 'RETIRADA' END AS modalidade,
           a.total_pedido                            AS valor_total,

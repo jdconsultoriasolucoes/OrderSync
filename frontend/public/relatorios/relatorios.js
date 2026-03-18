@@ -437,67 +437,85 @@ async function carregarPedidosDaCargaAtiva() {
     const theadTable = tableWrap.querySelector('table thead');
     const tableEl = tableWrap.querySelector('table');
 
-    // Cabeçalho dinâmico baseado no tipo de relatório
-    if (window.activeRelatorio === "formacao") {
-        tableEl.style.tableLayout = "auto";
-        tableEl.style.minWidth = "1400px";
-        theadTable.innerHTML = `
-            <tr>
-                <th style="font-size: 11px; padding: 12px 4px; white-space: nowrap; width: 60px;">Carga</th>
-                <th style="font-size: 11px; padding: 12px 4px; white-space: nowrap; width: 60px;">Pedido</th>
-                <th style="font-size: 11px; padding: 12px 4px; white-space: nowrap; width: 65px;">Peso Líq.</th>
-                <th style="font-size: 11px; padding: 12px 4px; white-space: nowrap; width: 65px;">Peso Br.</th>
-                <th style="font-size: 11px; padding: 12px 4px; white-space: nowrap; width: 50px;">Cód.</th>
-                <th style="font-size: 11px; padding: 12px 4px; white-space: nowrap;">Cliente</th>
-                <th style="font-size: 11px; padding: 12px 4px; white-space: nowrap;">Nome Fantasia</th>
-                <th style="font-size: 11px; padding: 12px 4px; white-space: nowrap;">Município</th>
-                <th style="font-size: 11px; padding: 12px 4px; white-space: nowrap;">Rota G.</th>
-                <th style="font-size: 11px; padding: 12px 4px; white-space: nowrap;">Rota A.</th>
-                <th style="font-size: 11px; padding: 12px 4px; white-space: nowrap;">
-                    Status<br>
-                    <select id="sel-mass-status" class="os-input os-input-sm" style="font-size: 9px; padding: 2px; height: 22px; margin-top: 4px;">
-                        <option value="">Alterar Todos...</option>
-                    </select>
-                </th>
-                <th style="font-size: 11px; text-align: center; padding: 12px 4px;">&nbsp;</th>
-            </tr>
-        `;
-    } else if (window.activeRelatorio === "romaneio") {
-        tableEl.style.tableLayout = "auto";
-        theadTable.innerHTML = `
-            <tr>
-                <th style="font-size: 11px;">Cód. Cliente</th>
-                <th style="font-size: 11px;">Cliente</th>
-                <th style="font-size: 11px;">Nome Fantasia</th>
-                <th style="font-size: 11px;">Município</th>
-                <th style="width: 70px; font-size: 11px;">Ordem</th>
-                <th style="font-size: 11px;">Peso Líq.</th>
-                <th style="font-size: 11px;">Peso Br.</th>
-                <th style="font-size: 11px;">Observações</th>
-                <th style="font-size: 11px;">Ações</th>
-            </tr>
-        `;
-    } else {
-        theadTable.innerHTML = `
-            <tr>
-                <th>Ordem</th>
-                <th>Nº Pedido</th>
-                <th>Cliente</th>
-                <th>Cidade</th>
-                <th>Peso Kg</th>
-                <th>Observações</th>
-                <th>Ações</th>
-            </tr>
-        `;
-    }
-
     tbodyPedidos.innerHTML = `<tr><td colspan="${activeRelatorio === 'resumo' ? 6 : 9}" style="text-align:center;">Carregando pedidos...</td></tr>`;
-
+    
     try {
         const resp = await fetch(`${API_BASE}/api/relatorios/cargas/${cargaEmGerenciamento}/pedidos-detalhes`, {
             headers: { "Authorization": `Bearer ${window.Auth ? window.Auth.getToken() : ''}` }
         });
         const ped = await resp.json();
+
+        // Calcular totais para os cabeçalhos
+        const totalLiq = ped.reduce((sum, p) => sum + (parseFloat(p.peso_total) || 0), 0);
+        const totalBruto = ped.reduce((sum, p) => sum + (parseFloat(p.peso_bruto_total) || 0), 0);
+        const totalLiqStr = Math.round(totalLiq).toLocaleString('pt-BR');
+        const totalBrutoStr = Math.round(totalBruto).toLocaleString('pt-BR');
+
+        // Cabeçalho dinâmico baseado no tipo de relatório
+        if (window.activeRelatorio === "formacao") {
+            tableEl.style.tableLayout = "auto";
+            tableEl.style.minWidth = "1400px";
+            theadTable.innerHTML = `
+                <tr>
+                    <th style="font-size: 11px; padding: 12px 4px; white-space: nowrap; width: 60px;">Carga</th>
+                    <th style="font-size: 11px; padding: 12px 4px; white-space: nowrap; width: 60px;">Pedido</th>
+                    <th style="font-size: 11px; padding: 12px 4px; white-space: nowrap; width: 85px; color: #1e40af; text-align: right;">
+                        Peso Líq. Acum<br>
+                        <span style="font-size: 11px; font-weight: 800; background: #dbeafe; padding: 2px 4px; border-radius: 4px; display: block; margin-top: 4px;">${totalLiqStr} kg</span>
+                    </th>
+                    <th style="font-size: 11px; padding: 12px 4px; white-space: nowrap; width: 85px; color: #92400e; text-align: right;">
+                        Peso Br. Acum<br>
+                        <span style="font-size: 11px; font-weight: 800; background: #fef3c7; padding: 2px 4px; border-radius: 4px; display: block; margin-top: 4px;">${totalBrutoStr} kg</span>
+                    </th>
+                    <th style="font-size: 11px; padding: 12px 4px; white-space: nowrap; width: 50px;">Cód.</th>
+                    <th style="font-size: 11px; padding: 12px 4px; white-space: nowrap;">Cliente</th>
+                    <th style="font-size: 11px; padding: 12px 4px; white-space: nowrap;">Nome Fantasia</th>
+                    <th style="font-size: 11px; padding: 12px 4px; white-space: nowrap;">Município</th>
+                    <th style="font-size: 11px; padding: 12px 4px; white-space: nowrap;">Rota G.</th>
+                    <th style="font-size: 11px; padding: 12px 4px; white-space: nowrap;">Rota A.</th>
+                    <th style="font-size: 11px; padding: 12px 4px; white-space: nowrap;">
+                        Status<br>
+                        <select id="sel-mass-status" class="os-input os-input-sm" style="font-size: 9px; padding: 2px; height: 22px; margin-top: 4px;">
+                            <option value="">Alterar Todos...</option>
+                        </select>
+                    </th>
+                    <th style="font-size: 11px; text-align: center; padding: 12px 4px;">&nbsp;</th>
+                </tr>
+            `;
+        } else if (window.activeRelatorio === "romaneio") {
+            tableEl.style.tableLayout = "auto";
+            theadTable.innerHTML = `
+                <tr>
+                    <th style="font-size: 11px;">Cód. Cliente</th>
+                    <th style="font-size: 11px;">Cliente</th>
+                    <th style="font-size: 11px;">Nome Fantasia</th>
+                    <th style="font-size: 11px;">Município</th>
+                    <th style="width: 70px; font-size: 11px;">Ordem</th>
+                    <th style="font-size: 11px; color: #1e40af; text-align: right;">
+                        Peso Líq. Acum<br>
+                        <span style="font-size: 11px; font-weight: 800; background: #dbeafe; padding: 2px 4px; border-radius: 4px; display: block; margin-top: 4px;">${totalLiqStr} kg</span>
+                    </th>
+                    <th style="font-size: 11px; color: #92400e; text-align: right;">
+                        Peso Br. Acum<br>
+                        <span style="font-size: 11px; font-weight: 800; background: #fef3c7; padding: 2px 4px; border-radius: 4px; display: block; margin-top: 4px;">${totalBrutoStr} kg</span>
+                    </th>
+                    <th style="font-size: 11px;">Observações</th>
+                    <th style="font-size: 11px;">Ações</th>
+                </tr>
+            `;
+        } else {
+            theadTable.innerHTML = `
+                <tr>
+                    <th>Ordem</th>
+                    <th>Nº Pedido</th>
+                    <th>Cliente</th>
+                    <th>Cidade</th>
+                    <th>Peso Kg</th>
+                    <th>Observações</th>
+                    <th>Ações</th>
+                </tr>
+            `;
+        }
 
         // Round 3: Atuallizar Filial com o Fornecedor do primeiro pedido (se for Formação de Carga)
         if (activeRelatorio === "formacao" && ped.length > 0) {
@@ -537,8 +555,8 @@ async function carregarPedidosDaCargaAtiva() {
                     <tr>
                         <td style="font-size: 12px; padding: 12px 4px; white-space: nowrap; width: 60px;">${window.numCargaAtiva || ''}</td>
                         <td style="font-size: 12px; padding: 12px 4px; white-space: nowrap; width: 60px;"><strong>${p.numero_pedido}</strong></td>
-                        <td style="font-size: 12px; padding: 12px 4px; white-space: nowrap; width: 65px;">${peso} kg</td>
-                        <td style="font-size: 12px; padding: 12px 4px; white-space: nowrap; width: 65px;">${Math.round(p.peso_bruto_total || 0)} kg</td>
+                        <td style="font-size: 12px; padding: 12px 4px; white-space: nowrap; width: 65px; text-align: right;">${peso} kg</td>
+                        <td style="font-size: 12px; padding: 12px 4px; white-space: nowrap; width: 65px; text-align: right;">${Math.round(p.peso_bruto_total || 0)} kg</td>
                         <td style="font-size: 12px; padding: 12px 4px; white-space: nowrap; width: 50px;">${p.codigo_cliente || '-'}</td>
                         <td style="font-size: 12px; padding: 12px 4px; min-width: 200px;">${p.cliente_nome || '-'}</td>
                         <td style="font-size: 12px; padding: 12px 4px; min-width: 150px;">${p.nome_fantasia || '-'}</td>
@@ -563,8 +581,8 @@ async function carregarPedidosDaCargaAtiva() {
                         <td style="font-size: 12px;">${p.nome_fantasia || '-'}</td>
                         <td style="font-size: 12px;">${p.municipio || '-'}</td>
                         <td style="vertical-align: top;"><input type="number" class="os-input os-input-sm in-ordem" value="${p.ordem_carregamento || ''}" data-id="${p.id_carga_pedido}" style="padding: 2px; font-size: 12px; height: 32px; text-align: right; width: 60px;"></td>
-                        <td style="white-space: nowrap; font-size: 12px; vertical-align: top;">${peso} kg</td>
-                        <td style="white-space: nowrap; font-size: 12px; vertical-align: top;">${Math.round(p.peso_bruto_total || 0)} kg</td>
+                        <td style="white-space: nowrap; font-size: 12px; vertical-align: top; text-align: right;">${peso} kg</td>
+                        <td style="white-space: nowrap; font-size: 12px; vertical-align: top; text-align: right;">${Math.round(p.peso_bruto_total || 0)} kg</td>
                         <td style="vertical-align: top;"><textarea class="os-input os-input-sm in-obs" data-id="${p.id_carga_pedido}" style="padding: 4px; font-size: 12px; height: 38px; resize: vertical; width: 100%; min-width: 200px;">${p.observacoes || ''}</textarea></td>
                         <td style="white-space: nowrap; vertical-align: top;">
                             <button class="os-btn os-btn-sm os-btn-danger btn-remover-pedido-carga" data-id="${p.id_carga_pedido}" title="Remover">&times;</button>
@@ -636,20 +654,6 @@ async function carregarResumoProdutosDaCargaAtiva() {
     const tableWrap = tbodyPedidos.closest('.os-table-wrap');
     const theadTable = tableWrap.querySelector('table thead');
 
-    theadTable.innerHTML = `
-        <tr>
-            <th>Código</th>
-            <th>Descrição</th>
-            <th>Embalagem</th>
-            <th style="text-align: center;">Quantidade</th>
-            <th>Unidade</th>
-            <th style="text-align: right;">Peso Líq. UN</th>
-            <th style="text-align: right;">Peso Líq. Acum</th>
-            <th style="text-align: right;">Peso Br. UN</th>
-            <th style="text-align: right;">Peso Br. Acum</th>
-        </tr>
-    `;
-
     tbodyPedidos.innerHTML = '<tr><td colspan="9" style="text-align:center;">Carregando resumo de produtos...</td></tr>';
 
     try {
@@ -662,6 +666,32 @@ async function carregarResumoProdutosDaCargaAtiva() {
         }
         
         const prods = await resp.json();
+
+        // Calcular totais
+        const totalLiq = prods.reduce((sum, p) => sum + (parseFloat(p.peso_liquido_total) || 0), 0);
+        const totalBruto = prods.reduce((sum, p) => sum + (parseFloat(p.peso_bruto_total) || 0), 0);
+        const totalLiqStr = Math.round(totalLiq).toLocaleString('pt-BR');
+        const totalBrutoStr = Math.round(totalBruto).toLocaleString('pt-BR');
+
+        theadTable.innerHTML = `
+            <tr>
+                <th>Código</th>
+                <th>Descrição</th>
+                <th>Embalagem</th>
+                <th style="text-align: center;">Quantidade</th>
+                <th>Unidade</th>
+                <th style="text-align: right;">Peso Líq. UN</th>
+                <th style="text-align: right; color: #1e40af;">
+                    Peso Líq. Acum<br>
+                    <span style="font-size: 11px; font-weight: 800; background: #dbeafe; padding: 2px 4px; border-radius: 4px; display: block; margin-top: 4px;">${totalLiqStr} kg</span>
+                </th>
+                <th style="text-align: right;">Peso Br. UN</th>
+                <th style="text-align: right; color: #92400e;">
+                    Peso Br. Acum<br>
+                    <span style="font-size: 11px; font-weight: 800; background: #fef3c7; padding: 2px 4px; border-radius: 4px; display: block; margin-top: 4px;">${totalBrutoStr} kg</span>
+                </th>
+            </tr>
+        `;
 
         if (!Array.isArray(prods) || prods.length === 0) {
             tbodyPedidos.innerHTML = '';
