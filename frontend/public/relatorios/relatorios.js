@@ -487,10 +487,10 @@ async function carregarPedidosDaCargaAtiva() {
             tableEl.style.minWidth = "900px";
             theadTable.innerHTML = `
                 <tr>
-                    <th style="font-size: 11px; width: 80px; white-space: normal;">Cód.<br>Cliente</th>
+                    <th style="font-size: 11px; white-space: normal;">Cód.<br>Cliente</th>
                     <th style="font-size: 11px;">Cliente</th>
                     <th style="font-size: 11px;">Nome Fantasia</th>
-                    <th style="font-size: 11px;">Município</th>
+                    <th style="font-size: 11px; white-space: nowrap;">Município</th>
                     <th style="width: 62px; font-size: 11px; white-space: nowrap;">Ordem</th>
                     <th style="font-size: 11px; color: #1e40af; text-align: right; width: 90px; white-space: normal;">
                         Peso Líq.<br>Acum
