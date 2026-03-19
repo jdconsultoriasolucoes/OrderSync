@@ -483,11 +483,11 @@ async function carregarPedidosDaCargaAtiva() {
                 </tr>
             `;
         } else if (window.activeRelatorio === "romaneio") {
-            tableEl.style.tableLayout = "fixed";
-            tableEl.style.width = "100%";
+            tableEl.style.tableLayout = "auto";
+            tableEl.style.minWidth = "900px";
             theadTable.innerHTML = `
                 <tr>
-                    <th style="font-size: 11px; width: 65px; white-space: normal;">Cód.<br>Cliente</th>
+                    <th style="font-size: 11px; width: 80px; white-space: normal;">Cód.<br>Cliente</th>
                     <th style="font-size: 11px;">Cliente</th>
                     <th style="font-size: 11px;">Nome Fantasia</th>
                     <th style="font-size: 11px;">Município</th>
@@ -501,7 +501,7 @@ async function carregarPedidosDaCargaAtiva() {
                         <span style="font-size: 11px; font-weight: 800; background: #fef3c7; padding: 2px 4px; border-radius: 4px; display: block; margin-top: 4px;">${totalBrutoStr} kg</span>
                     </th>
                     <th style="font-size: 11px;">Observações</th>
-                    <th style="font-size: 11px; width: 50px;">Ações</th>
+                    <th style="font-size: 11px; width: 55px; white-space: nowrap;">Ações</th>
                 </tr>
             `;
         } else {
