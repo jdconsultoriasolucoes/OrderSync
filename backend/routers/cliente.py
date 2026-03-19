@@ -11,12 +11,65 @@ from services.cliente import (
 from fastapi import Depends
 from core.deps import get_current_user
 from models.usuario import UsuarioModel
+from database import SessionLocal
+from sqlalchemy import text
 
 router = APIRouter()
 
 @router.get("/", response_model=List[ClienteCompleto])
 def get_clientes():
     return listar_clientes()
+
+@router.get("/{codigo_da_empresa}/ultimas_compras")
+def get_ultimas_compras(codigo_da_empresa: str):
+    """Retorna as últimas 3 compras (pedidos) de um cliente, incluindo cancelados."""
+    try:
+        with SessionLocal() as db:
+            rows = db.execute(text("""
+                SELECT
+                    id_pedido,
+                    created_at,
+                    total_pedido,
+                    frete_total,
+                    status,
+                    tabela_preco_nome
+                FROM tb_pedidos
+                WHERE codigo_cliente = :codigo
+                ORDER BY created_at DESC
+                LIMIT 3
+            """), {"codigo": codigo_da_empresa}).mappings().all()
+        return [
+            {
+                "id_pedido": r["id_pedido"],
+                "data": r["created_at"].strftime("%d/%m/%Y") if r["created_at"] else "-",
+                "tabela_preco_nome": r["tabela_preco_nome"] or "-",
+                "total_pedido": float(r["total_pedido"] or 0),
+                "frete_total": float(r["frete_total"] or 0),
+                "status": r["status"] or "-",
+            }
+            for r in rows
+        ]
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Erro ao buscar compras: {e}")
+
+@router.get("/{codigo_da_empresa}/tabelas_preco")
+def get_tabelas_preco_cliente(codigo_da_empresa: str):
+    """Retorna as tabelas de preço ativas vinculadas ao codigo_cliente."""
+    try:
+        with SessionLocal() as db:
+            rows = db.execute(text("""
+                SELECT DISTINCT id_tabela, nome_tabela
+                FROM tb_tabela_preco
+                WHERE codigo_cliente = :codigo
+                  AND ativo IS TRUE
+                ORDER BY nome_tabela
+            """), {"codigo": codigo_da_empresa}).mappings().all()
+        return [
+            {"id_tabela": r["id_tabela"], "nome_tabela": r["nome_tabela"]}
+            for r in rows
+        ]
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Erro ao buscar tabelas: {e}")
 
 @router.get("/{codigo_da_empresa}", response_model=ClienteCompleto)
 def get_cliente(codigo_da_empresa: str):
@@ -47,5 +100,3 @@ def put_cliente(codigo_da_empresa: str, cliente: ClienteCompleto, current_user: 
     if not atualizado:
         raise HTTPException(status_code=404, detail="Cliente não encontrado")
     return atualizado
-
-
