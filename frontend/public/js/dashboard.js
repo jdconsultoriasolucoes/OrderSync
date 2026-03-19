@@ -71,8 +71,6 @@ async function carregarKPIs() {
         // Elementos DOM
         const elFaturamento = document.getElementById("kpi-faturamento");
         const elPedidosPendentes = document.getElementById("kpi-pedidos-pendentes");
-        const elContasPagar = document.getElementById("kpi-contas-pagar");
-        const elContasReceber = document.getElementById("kpi-contas-receber");
         const elTicketMedio = document.getElementById("kpi-ticket-medio");
 
         // Formatador BRL
@@ -83,8 +81,6 @@ async function carregarKPIs() {
 
         if (elFaturamento) elFaturamento.innerText = formatter.format(data.faturamento_mes || 0);
         if (elPedidosPendentes) elPedidosPendentes.innerText = data.pedidos_pendentes || 0;
-        if (elContasPagar) elContasPagar.innerText = formatter.format(data.contas_pagar || 0);
-        if (elContasReceber) elContasReceber.innerText = formatter.format(data.contas_receber || 0);
         if (elTicketMedio) elTicketMedio.innerText = formatter.format(data.ticket_medio || 0);
 
     } catch (error) {

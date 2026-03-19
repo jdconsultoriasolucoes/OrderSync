@@ -59,6 +59,7 @@ class CadastroCliente(BaseModel):
 class ResponsavelCompras(BaseModel):
     nome_responsavel: Optional[str]
     celular_responsavel: Optional[str]
+    telefone_fixo_responsavel: Optional[str]
     email_resposavel: Optional[str]
     data_nascimento_resposavel: Optional[str]
     observacoes_responsavel: Optional[str]

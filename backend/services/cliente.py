@@ -44,6 +44,7 @@ def _flat_to_nested(model: ClienteModelV2) -> dict:
         "responsavel_compras": {
             "nome_responsavel": model.compras_nome_responsavel,
             "celular_responsavel": model.compras_celular_responsavel,
+            "telefone_fixo_responsavel": model.compras_telefone_fixo_responsavel,
             "email_resposavel": model.compras_email_resposavel,
             "data_nascimento_resposavel": model.compras_data_nascimento_resposavel,
             "observacoes_responsavel": model.compras_observacoes_responsavel,
@@ -221,6 +222,7 @@ def _nested_to_flat(data: dict) -> ClienteModelV2:
     # 2. Responsavel Compras
     model.compras_nome_responsavel = rc.get("nome_responsavel")
     model.compras_celular_responsavel = rc.get("celular_responsavel")
+    model.compras_telefone_fixo_responsavel = rc.get("telefone_fixo_responsavel")
     model.compras_email_resposavel = rc.get("email_resposavel")
     model.compras_data_nascimento_resposavel = rc.get("data_nascimento_resposavel")
     model.compras_observacoes_responsavel = rc.get("observacoes_responsavel")

@@ -30,6 +30,7 @@ class ClienteModelV2(Base):
     # 2. ResponsavelCompras
     compras_nome_responsavel = Column(String)
     compras_celular_responsavel = Column(String)
+    compras_telefone_fixo_responsavel = Column(String)
     compras_email_resposavel = Column(String)
     compras_data_nascimento_resposavel = Column(String)
     compras_observacoes_responsavel = Column(String)

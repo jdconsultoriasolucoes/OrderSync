@@ -27,15 +27,16 @@ def get_ultimas_compras(codigo_da_empresa: str):
         with SessionLocal() as db:
             rows = db.execute(text("""
                 SELECT
-                    id_pedido,
-                    created_at,
-                    total_pedido,
-                    frete_total,
-                    status,
-                    tabela_preco_nome
-                FROM tb_pedidos
-                WHERE codigo_cliente = :codigo
-                ORDER BY created_at DESC
+                    a.id_pedido,
+                    a.created_at,
+                    a.total_pedido,
+                    a.frete_total,
+                    a.status,
+                    COALESCE(a.tabela_preco_nome, b.nome_tabela) AS tabela_preco_nome
+                FROM public.tb_pedidos a
+                LEFT JOIN public.tb_tabela_preco b ON a.tabela_preco_id = b.id_tabela
+                WHERE a.codigo_cliente = :codigo
+                ORDER BY a.created_at DESC
                 LIMIT 3
             """), {"codigo": codigo_da_empresa}).mappings().all()
         return [

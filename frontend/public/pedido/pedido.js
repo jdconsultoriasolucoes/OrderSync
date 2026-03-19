@@ -43,21 +43,21 @@ function fmtDate(s) {
 
 function getStatusBadge(status) {
   if (!status) return '<span class="status-badge status-aberto">---</span>';
-  const s = status.toUpperCase();
   
-  // Novos statuses definidos
-  if (s === 'ORÇAMENTO') return `<span class="status-badge status-aberto" style="background-color: #fef3c7; color: #92400e; border: 1px solid #fcd34d;">ORÇAMENTO</span>`;
-  if (s === 'PEDIDO') return `<span class="status-badge status-env">PEDIDO</span>`;
-  if (s === 'FATURADO SUPRA') return `<span class="status-badge status-conf">FATURADO SUPRA</span>`;
-  if (s === 'FATURADO DISPET') return `<span class="status-badge status-conf" style="background-color: #d1fae5; color: #065f46; border: 1px solid #6ee7b7;">FATURADO DISPET</span>`;
-  if (s === 'CANCELADO') return `<span class="status-badge status-cancel">CANCELADO</span>`;
+  // Normalizar: remover acentos e converter para maiúsculo para comparação robusta
+  const normalize = (str) => str.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toUpperCase();
+  const s = normalize(status);
   
-  // Legados ou fallbacks
-  if (s === 'CONFIRMADO') return `<span class="status-badge status-conf">CONFIRMADO</span>`;
-  if (s === 'EM SEPARAÇÃO') return `<span class="status-badge status-conf" style="background-color: #f59e0b; color: #fff;">EM SEPARAÇÃO</span>`;
-  if (s === 'ENVIADO') return `<span class="status-badge status-env">ENVIADO</span>`;
-  if (s === 'ENTREGUE') return `<span class="status-badge status-entregue">ENTREGUE</span>`;
-
+  if (s === 'ORCAMENTO') {
+      return `<span class="status-badge" style="background-color: #fef3c7; color: #92400e; border: 1px solid #fcd34d;">Orçamento</span>`;
+  }
+  if (s === 'PEDIDO') return `<span class="status-badge status-env">Pedido</span>`;
+  if (s === 'FATURADO SUPRA') return `<span class="status-badge status-conf">Faturado Supra</span>`;
+  if (s === 'FATURADO DISPET') {
+      return `<span class="status-badge status-conf" style="background-color: #d1fae5; color: #065f46; border: 1px solid #6ee7b7;">Faturado Dispet</span>`;
+  }
+  if (s === 'CANCELADO') return `<span class="status-badge status-cancel">Cancelado</span>`;
+  
   return `<span class="status-badge status-aberto">${status}</span>`;
 }
 
@@ -157,6 +157,7 @@ function getFilters() {
   const fTabela = document.getElementById("fTabela").value || null;
   const fCliente = document.getElementById("fCliente").value || null;
   const fFornecedor = document.getElementById("fFornecedor").value || null;
+  const fPedido = document.getElementById("fPedido")?.value || null;
 
   // mesmo que seja um <select> simples, selectedOptions ainda funciona
   const selStatusEl = document.getElementById("fStatus");
@@ -164,13 +165,13 @@ function getFilters() {
     selStatusEl.selectedOptions
   ).map((o) => o.value) : [];
 
-  return { fFrom, fTo, fTabela, fCliente, fFornecedor, selStatus };
+  return { fFrom, fTo, fTabela, fCliente, fFornecedor, selStatus, fPedido };
 }
 
 async function loadList(page = 1) {
   state.page = page;
 
-  const { fFrom, fTo, fTabela, fCliente, fFornecedor, selStatus } = getFilters();
+  const { fFrom, fTo, fTabela, fCliente, fFornecedor, selStatus, fPedido } = getFilters();
   let fromISO = toISO(fFrom);
   let toISO_ = toISO(fTo);
 
@@ -201,6 +202,7 @@ async function loadList(page = 1) {
   if (fTabela) params.set("tabela_nome", fTabela);
   if (fCliente) params.set("cliente", fCliente);
   if (fFornecedor) params.set("fornecedor", fFornecedor);
+  if (fPedido) params.set("id_pedido", fPedido);
 
   params.set("page", state.page);
   params.set("pageSize", state.pageSize);
@@ -641,7 +643,7 @@ function bindUI() {
   // Busca dinâmica (Debounced)
   const doSearch = debounce(() => loadList(1), 500);
 
-  const inputs = ["fTabela", "fCliente", "fFornecedor"];
+  const inputs = ["fTabela", "fCliente", "fFornecedor", "fPedido"];
   inputs.forEach(id => {
     document.getElementById(id)?.addEventListener("input", doSearch);
   });
@@ -699,6 +701,7 @@ function limparFiltros() {
   document.getElementById("fTabela").value = "";
   document.getElementById("fCliente").value = "";
   document.getElementById("fFornecedor").value = "";
+  const fped = document.getElementById("fPedido"); if (fped) fped.value = "";
   const fs = document.getElementById("fStatus"); if (fs) fs.value = "";
   const fp = document.getElementById("fPeriodoRapido"); if (fp) fp.value = "30";
 

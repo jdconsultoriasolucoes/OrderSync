@@ -118,6 +118,7 @@ def listar_pedidos(
     tabela_nome: Optional[str] = None,
     cliente: Optional[str] = Query(None, description="busca em nome ou código"),
     fornecedor: Optional[str] = None,
+    id_pedido: Optional[int] = Query(None, description="Filtrar por número exato do pedido"),
     page: int = 1,
     pageSize: int = 25,
     limit: Optional[int] = None,
@@ -194,6 +195,10 @@ def listar_pedidos(
     if fornecedor:
         filtros_sql.append("a.fornecedor ILIKE :fornecedor_busca")
         params["fornecedor_busca"] = f"%{fornecedor}%"
+
+    if id_pedido:
+        filtros_sql.append("a.id_pedido = :id_pedido_filtro")
+        params["id_pedido_filtro"] = id_pedido
 
     where_clause = " AND ".join(filtros_sql)
 
