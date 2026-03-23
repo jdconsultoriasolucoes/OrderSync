@@ -85,10 +85,10 @@ def get_dashboard_vendas(
 
     # Vendas por Região (Top 5 municípios)
     q_regiao = text("""
-        SELECT c.cadastro_municipio as mun, SUM(p.total_pedido) as total
+        SELECT COALESCE(c.faturamento_municipio, c.entrega_municipio) as mun, SUM(p.total_pedido) as total
         FROM public.tb_pedidos p
         JOIN public.t_cadastro_cliente_v2 c ON p.codigo_cliente = c.cadastro_codigo_da_empresa
-        GROUP BY c.cadastro_municipio
+        GROUP BY COALESCE(c.faturamento_municipio, c.entrega_municipio)
         ORDER BY total DESC
         LIMIT 5
     """)
@@ -176,7 +176,7 @@ def get_dashboard_pivot(
     q = text("""
         SELECT 
             p.status as "Status",
-            c.cadastro_municipio as "Municipio",
+            COALESCE(c.faturamento_municipio, c.entrega_municipio) as "Municipio",
             p.cliente_nome as "Cliente",
             p.total_pedido as "Valor_Total",
             TO_CHAR(p.created_at, 'YYYY-MM') as "Mes_Ano"

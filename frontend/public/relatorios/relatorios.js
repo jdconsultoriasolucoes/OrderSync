@@ -192,6 +192,10 @@ async function renderFormacaoCargas() { await renderStandardCargaList("Carga"); 
 async function renderRomaneio() { await renderStandardCargaList("Romaneio"); }
 async function renderResumoProdutos() { await renderStandardCargaList("Resumo"); }
 
+window.dadosCaptacao = [];
+window.filtrosCaptacao = { geral: "", aprox: "", cliente: "", vendedor: "" };
+window.ordemCaptacao = { col: null, desc: false };
+
 async function renderCaptacaoPedidos() {
     window.cargaEmGerenciamento = null;
     window.numCargaAtiva = null;
@@ -203,16 +207,24 @@ async function renderCaptacaoPedidos() {
 
     thead.innerHTML = `
         <tr>
-            <th style="font-size: 11px; white-space: nowrap;">Rota Geral</th>
-            <th style="font-size: 11px; white-space: nowrap;">Rota Aprox.</th>
-            <th style="font-size: 11px; white-space: nowrap;">Cód.</th>
-            <th style="font-size: 11px; min-width: 180px;">Cliente</th>
-            <th style="font-size: 11px; min-width: 150px;">Nome Fantasia</th>
-            <th style="font-size: 11px;">Município</th>
-            <th style="font-size: 11px; white-space: nowrap;">Última Compra</th>
-            <th style="font-size: 11px; white-space: nowrap; text-align: center;">Período (Dias)</th>
-            <th style="font-size: 11px; white-space: nowrap;">Previsão Próxima</th>
-            <th style="font-size: 11px; white-space: nowrap; text-align: center;">Status</th>
+            <th style="font-size: 11px; white-space: normal; min-width: 80px; cursor: pointer;" onclick="ordenarCaptacao('rota_geral')">Rota<br>Geral</th>
+            <th style="font-size: 11px; white-space: normal; min-width: 80px; cursor: pointer;" onclick="ordenarCaptacao('rota_aproximacao')">Rota<br>Aprox.</th>
+            <th style="font-size: 11px; white-space: nowrap; cursor: pointer;" onclick="ordenarCaptacao('vendedor')">Vendedor</th>
+            <th style="font-size: 11px; white-space: nowrap; cursor: pointer;" onclick="ordenarCaptacao('codigo_cliente')">Cód.</th>
+            <th style="font-size: 11px; min-width: 180px; cursor: pointer;" onclick="ordenarCaptacao('cliente')">Cliente</th>
+            <th style="font-size: 11px; min-width: 150px; cursor: pointer;" onclick="ordenarCaptacao('nome_fantasia')">Nome Fantasia</th>
+            <th style="font-size: 11px; min-width: 160px; white-space: normal; word-break: break-word; cursor: pointer;" onclick="ordenarCaptacao('municipio')">Município</th>
+            <th style="font-size: 11px; white-space: nowrap; cursor: pointer;" onclick="ordenarCaptacao('data_ultima_compra')">Última Compra</th>
+            <th style="font-size: 11px; white-space: nowrap; text-align: center; cursor: pointer;" onclick="ordenarCaptacao('periodo_em_dias')">Período (Dias)</th>
+            <th style="font-size: 11px; white-space: nowrap; cursor: pointer;" onclick="ordenarCaptacao('data_previsao_proxima')">Previsão Próxima</th>
+            <th style="font-size: 11px; white-space: nowrap; text-align: center; cursor: pointer;" onclick="ordenarCaptacao('ativo')">Status</th>
+        </tr>
+        <tr class="filtros-captacao">
+            <th><input type="text" class="os-input os-input-sm in-filtro-cap" style="width: 100%; min-width: 60px;" data-f="geral" placeholder="Filtro" oninput="filtrarCaptacao(this)"></th>
+            <th><input type="text" class="os-input os-input-sm in-filtro-cap" style="width: 100%; min-width: 60px;" data-f="aprox" placeholder="Filtro" oninput="filtrarCaptacao(this)"></th>
+            <th><input type="text" class="os-input os-input-sm in-filtro-cap" style="width: 100%; min-width: 60px;" data-f="vendedor" placeholder="Filtro" oninput="filtrarCaptacao(this)"></th>
+            <th><input type="text" class="os-input os-input-sm in-filtro-cap" style="width: 100%; min-width: 50px;" data-f="cliente" placeholder="Cód/Cli" oninput="filtrarCaptacao(this)"></th>
+            <th colspan="7"></th>
         </tr>
     `;
 
@@ -221,54 +233,112 @@ async function renderCaptacaoPedidos() {
             headers: { "Authorization": `Bearer ${window.Auth ? window.Auth.getToken() : ''}` }
         });
         if (!resp.ok) throw new Error("Erro ao buscar captação");
-        const dados = await resp.json();
+        window.dadosCaptacao = await resp.json();
 
-        if (!dados || dados.length === 0) {
-            emptyStateEl.style.display = "block";
-            return;
-        }
-
-        let html = "";
-        dados.forEach(d => {
-            let badgeBg = "#9ca3af"; 
-            let badgeText = "white";
-            let statusLabel = d.ativo ? (d.dias_sem_comprar + " dias") : "Inativo";
-            
-            if (d.ativo) {
-                if (d.status_cor === "verde") { badgeBg = "#16a34a"; }
-                else if (d.status_cor === "amarelo") { badgeBg = "#ca8a04"; }
-                else if (d.status_cor === "vermelho") { badgeBg = "#dc2626"; }
-            } else {
-                badgeBg = "#4b5563"; // inativo escuro
-                badgeText = "#e5e7eb";
-            }
-
-            html += `
-                <tr>
-                    <td style="font-size: 12px; padding: 8px 4px;">${d.rota_geral || '-'}</td>
-                    <td style="font-size: 12px; padding: 8px 4px;">${d.rota_aproximacao || '-'}</td>
-                    <td style="font-size: 12px; padding: 8px 4px;"><strong>${d.codigo_cliente || '-'}</strong></td>
-                    <td style="font-size: 12px; padding: 8px 4px;">${d.cliente || '-'}</td>
-                    <td style="font-size: 12px; padding: 8px 4px;">${d.nome_fantasia || '-'}</td>
-                    <td style="font-size: 12px; padding: 8px 4px;">${d.municipio || '-'}</td>
-                    <td style="font-size: 12px; padding: 8px 4px; white-space: nowrap;">${d.data_ultima_compra || '-'}</td>
-                    <td style="font-size: 12px; padding: 8px 4px; text-align: center;">${d.periodo_em_dias || '-'}</td>
-                    <td style="font-size: 12px; padding: 8px 4px; white-space: nowrap; font-weight: 600; color: #1e3a8a;">${d.data_previsao_proxima || '-'}</td>
-                    <td style="font-size: 12px; padding: 8px 4px; text-align: center;">
-                        <span style="background-color: ${badgeBg}; color: ${badgeText}; padding: 4px 8px; border-radius: 4px; font-weight: 600; font-size: 11px;">
-                            ${statusLabel}
-                        </span>
-                    </td>
-                </tr>
-            `;
-        });
-        tbody.innerHTML = html;
+        desenharTabelaCaptacao();
         
     } catch (e) {
         console.error(e);
         emptyStateEl.textContent = "Erro ao carregar dados de captação.";
         emptyStateEl.style.display = "block";
     }
+}
+
+function filtrarCaptacao(el) {
+    window.filtrosCaptacao[el.dataset.f] = el.value.toLowerCase();
+    desenharTabelaCaptacao();
+}
+
+function ordenarCaptacao(col) {
+    if (window.ordemCaptacao.col === col) {
+        window.ordemCaptacao.desc = !window.ordemCaptacao.desc;
+    } else {
+        window.ordemCaptacao.col = col;
+        window.ordemCaptacao.desc = false;
+    }
+    
+    window.dadosCaptacao.sort((a, b) => {
+        let va = a[col] || "";
+        let vb = b[col] || "";
+        
+        if (col === 'periodo_em_dias' || col === 'dias_sem_comprar') {
+            va = parseInt(va) || 0;
+            vb = parseInt(vb) || 0;
+        } else if (col === 'data_ultima_compra' || col === 'data_previsao_proxima') {
+            const pA = (typeof va === 'string' && va.includes('/')) ? va.split('/') : [];
+            const pB = (typeof vb === 'string' && vb.includes('/')) ? vb.split('/') : [];
+            va = pA.length === 3 ? new Date(+pA[2], pA[1]-1, +pA[0]).getTime() : 0;
+            vb = pB.length === 3 ? new Date(+pB[2], pB[1]-1, +pB[0]).getTime() : 0;
+        } else {
+            va = va.toString().toLowerCase();
+            vb = vb.toString().toLowerCase();
+        }
+
+        if (va < vb) return window.ordemCaptacao.desc ? 1 : -1;
+        if (va > vb) return window.ordemCaptacao.desc ? -1 : 1;
+        return 0;
+    });
+    
+    desenharTabelaCaptacao();
+}
+
+function desenharTabelaCaptacao() {
+    let dados = window.dadosCaptacao || [];
+    const f = window.filtrosCaptacao;
+    
+    if (f.geral) dados = dados.filter(d => (d.rota_geral || "").toLowerCase().includes(f.geral));
+    if (f.aprox) dados = dados.filter(d => (d.rota_aproximacao || "").toLowerCase().includes(f.aprox));
+    if (f.vendedor) dados = dados.filter(d => (d.vendedor || "").toLowerCase().includes(f.vendedor));
+    if (f.cliente) {
+        dados = dados.filter(d => 
+            (d.cliente || "").toLowerCase().includes(f.cliente) || 
+            (d.codigo_cliente || "").toString().toLowerCase().includes(f.cliente)
+        );
+    }
+    
+    if (dados.length === 0) {
+        tbody.innerHTML = "";
+        emptyStateEl.style.display = "block";
+        return;
+    }
+    emptyStateEl.style.display = "none";
+
+    let html = "";
+    dados.forEach(d => {
+        let badgeBg = "#9ca3af"; 
+        let badgeText = "white";
+        let statusLabel = d.ativo ? (d.dias_sem_comprar + " dias") : "Inativo";
+        
+        if (d.ativo) {
+            if (d.status_cor === "verde") { badgeBg = "#16a34a"; }
+            else if (d.status_cor === "amarelo") { badgeBg = "#ca8a04"; }
+            else if (d.status_cor === "vermelho") { badgeBg = "#dc2626"; }
+        } else {
+            badgeBg = "#4b5563";
+            badgeText = "#e5e7eb";
+        }
+
+        html += `
+            <tr>
+                <td style="font-size: 12px; padding: 8px 4px; white-space: normal; word-break: break-word;">${d.rota_geral || '-'}</td>
+                <td style="font-size: 12px; padding: 8px 4px; white-space: normal; word-break: break-word;">${d.rota_aproximacao || '-'}</td>
+                <td style="font-size: 12px; padding: 8px 4px;">${d.vendedor || '-'}</td>
+                <td style="font-size: 12px; padding: 8px 4px;"><strong>${d.codigo_cliente || '-'}</strong></td>
+                <td style="font-size: 12px; padding: 8px 4px;">${d.cliente || '-'}</td>
+                <td style="font-size: 12px; padding: 8px 4px;">${d.nome_fantasia || '-'}</td>
+                <td style="font-size: 12px; padding: 8px 4px; white-space: normal; word-break: break-word;">${d.municipio || '-'}</td>
+                <td style="font-size: 12px; padding: 8px 4px; white-space: nowrap;">${d.data_ultima_compra || '-'}</td>
+                <td style="font-size: 12px; padding: 8px 4px; text-align: center;">${d.periodo_em_dias || '-'}</td>
+                <td style="font-size: 12px; padding: 8px 4px; white-space: nowrap; font-weight: 600; color: #1e3a8a;">${d.data_previsao_proxima || '-'}</td>
+                <td style="font-size: 12px; padding: 8px 4px; text-align: center;">
+                    <span style="background-color: ${badgeBg}; color: ${badgeText}; padding: 4px 8px; border-radius: 4px; font-weight: 600; font-size: 11px;">
+                        ${statusLabel}
+                    </span>
+                </td>
+            </tr>
+        `;
+    });
+    tbody.innerHTML = html;
 }
 
 function abrirModalNovaCarga() {
@@ -954,6 +1024,11 @@ btnExport.addEventListener('click', () => {
 
     const isListagem = document.getElementById('painel-listagem').style.display !== 'none';
 
+    if (window.activeRelatorio === "captacao") {
+        exportTableToCSV('relatorio_captacao.csv');
+        return;
+    }
+
     if (isListagem) {
         const firstChecked = document.querySelector('.chk-carga-item:checked');
         if (!firstChecked) {
@@ -978,3 +1053,32 @@ btnExport.addEventListener('click', () => {
         window.open(`${endpoint}?token=${token}`, '_blank');
     }
 });
+
+function exportTableToCSV(filename) {
+    const csv = [];
+    const rows = document.querySelectorAll("table.os-table tr");
+    
+    for (let i = 0; i < rows.length; i++) {
+        // Ignorar linha de filtros
+        if (rows[i].classList.contains('filtros-captacao')) continue;
+
+        let row = [], cols = rows[i].querySelectorAll("td, th");
+        for (let j = 0; j < cols.length; j++) {
+            // Remove espaços e quebras
+            let data = cols[j].innerText.replace(/(\r\n|\n|\r)/gm, " ").trim();
+            // Escapar aspas
+            data = data.replace(/"/g, '""');
+            row.push('"' + data + '"');
+        }
+        csv.push(row.join(";"));
+    }
+
+    const csvFile = new Blob(["\\uFEFF" + csv.join("\\n")], { type: "text/csv;charset=utf-8;" });
+    const downloadLink = document.createElement("a");
+    downloadLink.download = filename;
+    downloadLink.href = window.URL.createObjectURL(csvFile);
+    downloadLink.style.display = "none";
+    document.body.appendChild(downloadLink);
+    downloadLink.click();
+    document.body.removeChild(downloadLink);
+}

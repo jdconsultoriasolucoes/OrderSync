@@ -56,6 +56,8 @@ def get_captacao_pedidos(db: Session = Depends(get_db)):
         periodo_str = c.cadastro_periodo_de_compra or ""
         periodo_em_dias = extract_days(periodo_str)
         
+        vendedor = c.elaboracao_vendedor or ""
+        
         dias_sem_comprar = 0
         previsao_data = None
         status_cor = "vermelho" # default for inactive or no info
@@ -108,7 +110,8 @@ def get_captacao_pedidos(db: Session = Depends(get_db)):
             "data_previsao_proxima": previsao_data.strftime('%d/%m/%Y') if previsao_data else "",
             "dias_sem_comprar": dias_sem_comprar,
             "status_cor": status_cor,
-            "ativo": ativo
+            "ativo": ativo,
+            "vendedor": vendedor
         })
         
     # Ordenar por grupo (1, 2, 3) e depois pela previsao da data ascendente
