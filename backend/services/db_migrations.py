@@ -114,4 +114,18 @@ def run_migrations():
                     db.rollback()
                     logger.error(f"Falha ao adicionar {col} em tb_transporte: {e}")
 
+        # 8. CadastroCliente: elaboracao_vendedor
+        try:
+            db.execute(text("SELECT elaboracao_vendedor FROM t_cadastro_cliente_v2 LIMIT 1"))
+        except Exception:
+            db.rollback()
+            logger.info("Adicionando coluna elaboracao_vendedor em t_cadastro_cliente_v2...")
+            try:
+                db.execute(text("ALTER TABLE t_cadastro_cliente_v2 ADD COLUMN elaboracao_vendedor VARCHAR"))
+                db.commit()
+                logger.info("Coluna elaboracao_vendedor adicionada com sucesso.")
+            except Exception as e:
+                db.rollback()
+                logger.error(f"Falha ao adicionar coluna elaboracao_vendedor em t_cadastro_cliente_v2: {e}")
+
     logger.info("Migrações concluídas.")

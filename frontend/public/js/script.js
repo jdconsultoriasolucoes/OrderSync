@@ -111,7 +111,8 @@ function obterDadosFormulario() {
       classificacao_ElaboracaoCadastro: document.getElementById("classificacao_ElaboracaoCadastro")?.value || "",
       tipo_venda_prazo_ou_vista_ElaboracaoCadastro: document.getElementById("tipo_venda_prazo_ou_vista_ElaboracaoCadastro")?.value || "",
       limite_credito_ElaboracaoCadastro: parseFloat(document.getElementById("limite_credito_ElaboracaoCadastro")?.value || 0),
-      data_vencimento_ElaboracaoCadastro: document.getElementById("data_vencimento_ElaboracaoCadastro")?.value || ""
+      data_vencimento_ElaboracaoCadastro: document.getElementById("data_vencimento_ElaboracaoCadastro")?.value || "",
+      vendedor_ElaboracaoCadastro: document.getElementById("vendedor_ElaboracaoCadastro")?.value || ""
     },
     grupo_economico: {
       codigo_ElaboracaoCadastro: document.getElementById("codigo_ElaboracaoCadastro")?.value || "",
@@ -269,6 +270,7 @@ function preencherFormularioCliente(cliente) {
   document.getElementById("tipo_venda_prazo_ou_vista_ElaboracaoCadastro").value = ed.tipo_venda_prazo_ou_vista_ElaboracaoCadastro || "";
   document.getElementById("limite_credito_ElaboracaoCadastro").value = ed.limite_credito_ElaboracaoCadastro || "";
   document.getElementById("data_vencimento_ElaboracaoCadastro").value = ed.data_vencimento_ElaboracaoCadastro || "";
+  document.getElementById("vendedor_ElaboracaoCadastro").value = ed.vendedor_ElaboracaoCadastro || "";
 
   // Bloco: grupo_economico
   const grupo = dados.grupo_economico || {};

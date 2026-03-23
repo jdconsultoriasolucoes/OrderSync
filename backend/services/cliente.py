@@ -112,7 +112,7 @@ def _flat_to_nested(model: ClienteModelV2) -> dict:
             "prazo_medio_compra_Compras": model.ultimas_compras_prazo_medio,
             "previsao_proxima_compra_Compras": model.ultimas_compras_previsao_proxima,
         },
-         "observacoes_nao_compra": {
+        "observacoes_nao_compra": {
             "observacoes_Compras": model.obs_nao_compra_observacoes,
         },
         "dados_elaboracao_cadastro": {
@@ -120,6 +120,7 @@ def _flat_to_nested(model: ClienteModelV2) -> dict:
             "tipo_venda_prazo_ou_vista_ElaboracaoCadastro": model.elaboracao_tipo_venda,
             "limite_credito_ElaboracaoCadastro": model.elaboracao_limite_credito,
             "data_vencimento_ElaboracaoCadastro": model.elaboracao_data_vencimento,
+            "vendedor_ElaboracaoCadastro": model.elaboracao_vendedor,
         },
         "grupo_economico": {
             "codigo_ElaboracaoCadastro": model.grupo_economico_codigo,
@@ -298,6 +299,7 @@ def _nested_to_flat(data: dict) -> ClienteModelV2:
     model.elaboracao_tipo_venda = dec.get("tipo_venda_prazo_ou_vista_ElaboracaoCadastro")
     model.elaboracao_limite_credito = dec.get("limite_credito_ElaboracaoCadastro")
     model.elaboracao_data_vencimento = dec.get("data_vencimento_ElaboracaoCadastro")
+    model.elaboracao_vendedor = dec.get("vendedor_ElaboracaoCadastro")
 
     # 12. Grupo
     model.grupo_economico_codigo = ge.get("codigo_ElaboracaoCadastro")

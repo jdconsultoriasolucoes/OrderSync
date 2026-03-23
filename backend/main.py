@@ -11,7 +11,7 @@ from fastapi.staticfiles import StaticFiles
 from pathlib import Path  
 # Routers
 from routers.tabela_preco import router_meta, router as router_tabela
-from routers import pedido_preview, link_pedido, admin_config_email, cliente, listas, fiscal,pedidos,net_diag, produto, pedido_pdf, auth, usuario, fornecedor, dashboard
+from routers import pedido_preview, link_pedido, admin_config_email, cliente, listas, fiscal,pedidos,net_diag, produto, pedido_pdf, auth, usuario, fornecedor, dashboard, captacao_pedidos
 from database import SessionLocal
 
 from slowapi import _rate_limit_exceeded_handler
@@ -243,6 +243,7 @@ app.include_router(system_tables.router)
 # ---- Novos Módulos de Relatórios/Logística ----
 app.include_router(transporte.router)
 app.include_router(relatorios.router)
+app.include_router(captacao_pedidos.router, prefix="/captacao-pedidos", tags=["Captacao Pedidos"])
 
 # ---- Static (se precisar servir arquivos públicos do front) ----
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))

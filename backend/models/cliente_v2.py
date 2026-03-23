@@ -106,6 +106,7 @@ class ClienteModelV2(Base):
     elaboracao_tipo_venda = Column(String)
     elaboracao_limite_credito = Column(Float)
     elaboracao_data_vencimento = Column(String)
+    elaboracao_vendedor = Column(String)
 
     # 12. GrupoEconomico
     grupo_economico_codigo = Column(String)

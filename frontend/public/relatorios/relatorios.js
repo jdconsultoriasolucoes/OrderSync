@@ -18,6 +18,10 @@ if (typeof window.relatoriosDict === 'undefined') {
         "resumo": {
             title: "Resumo de Produtos",
             desc: "Resumo consolidado e somatório de produtos baseados em uma Carga montada."
+        },
+        "captacao": {
+            title: "Relatório p/ Captação de Pedidos",
+            desc: "Acompanhamento de clientes para prospecção baseada no período de compras."
         }
     };
 }
@@ -79,6 +83,8 @@ async function renderRelatorioView(relKey) {
             await renderRomaneio();
         } else if (relKey === "resumo") {
             await renderResumoProdutos();
+        } else if (relKey === "captacao") {
+            await renderCaptacaoPedidos();
         }
     } catch (err) {
         console.error("Erro ao carregar relatório:", err);
@@ -185,6 +191,85 @@ async function renderStandardCargaList(tipo) {
 async function renderFormacaoCargas() { await renderStandardCargaList("Carga"); }
 async function renderRomaneio() { await renderStandardCargaList("Romaneio"); }
 async function renderResumoProdutos() { await renderStandardCargaList("Resumo"); }
+
+async function renderCaptacaoPedidos() {
+    window.cargaEmGerenciamento = null;
+    window.numCargaAtiva = null;
+    document.getElementById('painel-gerenciar-carga').style.display = 'none';
+    document.getElementById('painel-listagem').style.display = 'block';
+
+    const btnNovoRef = document.getElementById("btn-novo");
+    btnNovoRef.style.display = 'none'; // Não tem "Nova Carga" aqui
+
+    thead.innerHTML = `
+        <tr>
+            <th style="font-size: 11px; white-space: nowrap;">Rota Geral</th>
+            <th style="font-size: 11px; white-space: nowrap;">Rota Aprox.</th>
+            <th style="font-size: 11px; white-space: nowrap;">Cód.</th>
+            <th style="font-size: 11px; min-width: 180px;">Cliente</th>
+            <th style="font-size: 11px; min-width: 150px;">Nome Fantasia</th>
+            <th style="font-size: 11px;">Município</th>
+            <th style="font-size: 11px; white-space: nowrap;">Última Compra</th>
+            <th style="font-size: 11px; white-space: nowrap; text-align: center;">Período (Dias)</th>
+            <th style="font-size: 11px; white-space: nowrap;">Previsão Próxima</th>
+            <th style="font-size: 11px; white-space: nowrap; text-align: center;">Status</th>
+        </tr>
+    `;
+
+    try {
+        const resp = await fetch(`${API_BASE}/captacao-pedidos`, {
+            headers: { "Authorization": `Bearer ${window.Auth ? window.Auth.getToken() : ''}` }
+        });
+        if (!resp.ok) throw new Error("Erro ao buscar captação");
+        const dados = await resp.json();
+
+        if (!dados || dados.length === 0) {
+            emptyStateEl.style.display = "block";
+            return;
+        }
+
+        let html = "";
+        dados.forEach(d => {
+            let badgeBg = "#9ca3af"; 
+            let badgeText = "white";
+            let statusLabel = d.ativo ? (d.dias_sem_comprar + " dias") : "Inativo";
+            
+            if (d.ativo) {
+                if (d.status_cor === "verde") { badgeBg = "#16a34a"; }
+                else if (d.status_cor === "amarelo") { badgeBg = "#ca8a04"; }
+                else if (d.status_cor === "vermelho") { badgeBg = "#dc2626"; }
+            } else {
+                badgeBg = "#4b5563"; // inativo escuro
+                badgeText = "#e5e7eb";
+            }
+
+            html += `
+                <tr>
+                    <td style="font-size: 12px; padding: 8px 4px;">${d.rota_geral || '-'}</td>
+                    <td style="font-size: 12px; padding: 8px 4px;">${d.rota_aproximacao || '-'}</td>
+                    <td style="font-size: 12px; padding: 8px 4px;"><strong>${d.codigo_cliente || '-'}</strong></td>
+                    <td style="font-size: 12px; padding: 8px 4px;">${d.cliente || '-'}</td>
+                    <td style="font-size: 12px; padding: 8px 4px;">${d.nome_fantasia || '-'}</td>
+                    <td style="font-size: 12px; padding: 8px 4px;">${d.municipio || '-'}</td>
+                    <td style="font-size: 12px; padding: 8px 4px; white-space: nowrap;">${d.data_ultima_compra || '-'}</td>
+                    <td style="font-size: 12px; padding: 8px 4px; text-align: center;">${d.periodo_em_dias || '-'}</td>
+                    <td style="font-size: 12px; padding: 8px 4px; white-space: nowrap; font-weight: 600; color: #1e3a8a;">${d.data_previsao_proxima || '-'}</td>
+                    <td style="font-size: 12px; padding: 8px 4px; text-align: center;">
+                        <span style="background-color: ${badgeBg}; color: ${badgeText}; padding: 4px 8px; border-radius: 4px; font-weight: 600; font-size: 11px;">
+                            ${statusLabel}
+                        </span>
+                    </td>
+                </tr>
+            `;
+        });
+        tbody.innerHTML = html;
+        
+    } catch (e) {
+        console.error(e);
+        emptyStateEl.textContent = "Erro ao carregar dados de captação.";
+        emptyStateEl.style.display = "block";
+    }
+}
 
 function abrirModalNovaCarga() {
     const modalNovaCarga = document.getElementById('modal-nova-carga');
