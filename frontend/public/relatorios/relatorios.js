@@ -72,6 +72,10 @@ async function renderRelatorioView(relKey) {
     // 2. Limpa Tabela
     thead.innerHTML = "";
     tbody.innerHTML = "";
+    const oldFiltros = document.getElementById('filtros-avancados-captacao');
+    if (oldFiltros) oldFiltros.remove();
+    const oldPaginator = document.getElementById('paginacao-captacao');
+    if (oldPaginator) oldPaginator.remove();
     emptyStateEl.style.display = "none";
     loadingEl.style.display = "block";
 
@@ -205,26 +209,48 @@ async function renderCaptacaoPedidos() {
     const btnNovoRef = document.getElementById("btn-novo");
     btnNovoRef.style.display = 'none'; // Não tem "Nova Carga" aqui
 
+    const oldFiltros = document.getElementById('filtros-avancados-captacao');
+    if (oldFiltros) oldFiltros.remove();
+
+    const divFiltros = document.createElement('div');
+    divFiltros.id = 'filtros-avancados-captacao';
+    divFiltros.style.cssText = "display: flex; gap: 10px; margin-bottom: 15px; padding: 15px; background: var(--os-bg-secondary); border-radius: 8px; border: 1px solid var(--os-border); align-items: center; flex-wrap: wrap;";
+    divFiltros.innerHTML = `
+        <div style="flex:1; min-width: 120px;">
+            <label style="display:block; font-size: 11px; margin-bottom:4px; font-weight: 600;">Rota Geral</label>
+            <input type="text" class="os-input os-input-sm" data-f="geral" placeholder="Filtrar..." oninput="filtrarCaptacao(this)">
+        </div>
+        <div style="flex:1; min-width: 120px;">
+            <label style="display:block; font-size: 11px; margin-bottom:4px; font-weight: 600;">Rota Aprox.</label>
+            <input type="text" class="os-input os-input-sm" data-f="aprox" placeholder="Filtrar..." oninput="filtrarCaptacao(this)">
+        </div>
+        <div style="flex:1; min-width: 120px;">
+            <label style="display:block; font-size: 11px; margin-bottom:4px; font-weight: 600;">Vendedor</label>
+            <input type="text" class="os-input os-input-sm" data-f="vendedor" placeholder="Filtrar..." oninput="filtrarCaptacao(this)">
+        </div>
+        <div style="flex:1; min-width: 120px;">
+            <label style="display:block; font-size: 11px; margin-bottom:4px; font-weight: 600;">Cliente/Cód.</label>
+            <input type="text" class="os-input os-input-sm" data-f="cliente" placeholder="Código ou Nome..." oninput="filtrarCaptacao(this)">
+        </div>
+    `;
+    const containerTabela = thead.closest('.os-table-wrap');
+    containerTabela.parentNode.insertBefore(divFiltros, containerTabela);
+
+    window.paginaCaptacao = 1;
+
     thead.innerHTML = `
         <tr>
-            <th style="font-size: 11px; white-space: normal; min-width: 80px; cursor: pointer;" onclick="ordenarCaptacao('rota_geral')">Rota<br>Geral</th>
-            <th style="font-size: 11px; white-space: normal; min-width: 80px; cursor: pointer;" onclick="ordenarCaptacao('rota_aproximacao')">Rota<br>Aprox.</th>
+            <th style="font-size: 11px; white-space: normal; min-width: 70px; cursor: pointer;" onclick="ordenarCaptacao('rota_geral')">Rota<br>Geral</th>
+            <th style="font-size: 11px; white-space: normal; min-width: 70px; cursor: pointer;" onclick="ordenarCaptacao('rota_aproximacao')">Rota<br>Aprox.</th>
             <th style="font-size: 11px; white-space: nowrap; cursor: pointer;" onclick="ordenarCaptacao('vendedor')">Vendedor</th>
             <th style="font-size: 11px; white-space: nowrap; cursor: pointer;" onclick="ordenarCaptacao('codigo_cliente')">Cód.</th>
-            <th style="font-size: 11px; min-width: 180px; cursor: pointer;" onclick="ordenarCaptacao('cliente')">Cliente</th>
-            <th style="font-size: 11px; min-width: 150px; cursor: pointer;" onclick="ordenarCaptacao('nome_fantasia')">Nome Fantasia</th>
-            <th style="font-size: 11px; min-width: 160px; white-space: normal; word-break: break-word; cursor: pointer;" onclick="ordenarCaptacao('municipio')">Município</th>
-            <th style="font-size: 11px; white-space: nowrap; cursor: pointer;" onclick="ordenarCaptacao('data_ultima_compra')">Última Compra</th>
-            <th style="font-size: 11px; white-space: nowrap; text-align: center; cursor: pointer;" onclick="ordenarCaptacao('periodo_em_dias')">Período (Dias)</th>
-            <th style="font-size: 11px; white-space: nowrap; cursor: pointer;" onclick="ordenarCaptacao('data_previsao_proxima')">Previsão Próxima</th>
-            <th style="font-size: 11px; white-space: nowrap; text-align: center; cursor: pointer;" onclick="ordenarCaptacao('ativo')">Status</th>
-        </tr>
-        <tr class="filtros-captacao">
-            <th><input type="text" class="os-input os-input-sm in-filtro-cap" style="width: 100%; min-width: 60px;" data-f="geral" placeholder="Filtro" oninput="filtrarCaptacao(this)"></th>
-            <th><input type="text" class="os-input os-input-sm in-filtro-cap" style="width: 100%; min-width: 60px;" data-f="aprox" placeholder="Filtro" oninput="filtrarCaptacao(this)"></th>
-            <th><input type="text" class="os-input os-input-sm in-filtro-cap" style="width: 100%; min-width: 60px;" data-f="vendedor" placeholder="Filtro" oninput="filtrarCaptacao(this)"></th>
-            <th><input type="text" class="os-input os-input-sm in-filtro-cap" style="width: 100%; min-width: 50px;" data-f="cliente" placeholder="Cód/Cli" oninput="filtrarCaptacao(this)"></th>
-            <th colspan="7"></th>
+            <th style="font-size: 11px; min-width: 150px; cursor: pointer;" onclick="ordenarCaptacao('cliente')">Cliente</th>
+            <th style="font-size: 11px; min-width: 120px; cursor: pointer;" onclick="ordenarCaptacao('nome_fantasia')">Nome Fantasia</th>
+            <th style="font-size: 11px; min-width: 130px; white-space: normal; word-break: break-word; cursor: pointer;" onclick="ordenarCaptacao('municipio')">Município</th>
+            <th style="font-size: 10px; width: 60px; white-space: normal; padding: 4px; cursor: pointer;" onclick="ordenarCaptacao('data_ultima_compra')">Última Compra</th>
+            <th style="font-size: 10px; width: 50px; white-space: normal; padding: 4px; text-align: center; cursor: pointer;" onclick="ordenarCaptacao('periodo_em_dias')">Período (Dias)</th>
+            <th style="font-size: 10px; width: 60px; white-space: normal; padding: 4px; cursor: pointer;" onclick="ordenarCaptacao('data_previsao_proxima')">Previsão Próxima</th>
+            <th style="font-size: 11px; width: 60px; text-align: center; padding: 4px; cursor: pointer;" onclick="ordenarCaptacao('ativo')">Status</th>
         </tr>
     `;
 
@@ -282,6 +308,12 @@ function ordenarCaptacao(col) {
     desenharTabelaCaptacao();
 }
 
+window.paginaCaptacao = 1;
+window.mudarPaginaCaptacao = function(dir) {
+    window.paginaCaptacao += dir;
+    desenharTabelaCaptacao();
+}
+
 function desenharTabelaCaptacao() {
     let dados = window.dadosCaptacao || [];
     const f = window.filtrosCaptacao;
@@ -296,6 +328,9 @@ function desenharTabelaCaptacao() {
         );
     }
     
+    const oldPaginator = document.getElementById('paginacao-captacao');
+    if (oldPaginator) oldPaginator.remove();
+
     if (dados.length === 0) {
         tbody.innerHTML = "";
         emptyStateEl.style.display = "block";
@@ -303,11 +338,20 @@ function desenharTabelaCaptacao() {
     }
     emptyStateEl.style.display = "none";
 
+    const LIMIT = 30;
+    const totalPages = Math.ceil(dados.length / LIMIT);
+    if (window.paginaCaptacao > totalPages) window.paginaCaptacao = totalPages;
+    if (window.paginaCaptacao < 1) window.paginaCaptacao = 1;
+
+    const startIndex = (window.paginaCaptacao - 1) * LIMIT;
+    const paginatedDados = dados.slice(startIndex, startIndex + LIMIT);
+
     let html = "";
-    dados.forEach(d => {
+    paginatedDados.forEach(d => {
         let badgeBg = "#9ca3af"; 
         let badgeText = "white";
-        let statusLabel = d.ativo ? (d.dias_sem_comprar + " dias") : "Inativo";
+        // Always displaying "Ativo" or "Inativo"
+        let statusLabel = d.ativo ? "Ativo" : "Inativo";
         
         if (d.ativo) {
             if (d.status_cor === "verde") { badgeBg = "#16a34a"; }
@@ -320,18 +364,18 @@ function desenharTabelaCaptacao() {
 
         html += `
             <tr>
-                <td style="font-size: 12px; padding: 8px 4px; white-space: normal; word-break: break-word;">${d.rota_geral || '-'}</td>
-                <td style="font-size: 12px; padding: 8px 4px; white-space: normal; word-break: break-word;">${d.rota_aproximacao || '-'}</td>
-                <td style="font-size: 12px; padding: 8px 4px;">${d.vendedor || '-'}</td>
-                <td style="font-size: 12px; padding: 8px 4px;"><strong>${d.codigo_cliente || '-'}</strong></td>
-                <td style="font-size: 12px; padding: 8px 4px;">${d.cliente || '-'}</td>
-                <td style="font-size: 12px; padding: 8px 4px;">${d.nome_fantasia || '-'}</td>
-                <td style="font-size: 12px; padding: 8px 4px; white-space: normal; word-break: break-word;">${d.municipio || '-'}</td>
-                <td style="font-size: 12px; padding: 8px 4px; white-space: nowrap;">${d.data_ultima_compra || '-'}</td>
-                <td style="font-size: 12px; padding: 8px 4px; text-align: center;">${d.periodo_em_dias || '-'}</td>
-                <td style="font-size: 12px; padding: 8px 4px; white-space: nowrap; font-weight: 600; color: #1e3a8a;">${d.data_previsao_proxima || '-'}</td>
-                <td style="font-size: 12px; padding: 8px 4px; text-align: center;">
-                    <span style="background-color: ${badgeBg}; color: ${badgeText}; padding: 4px 8px; border-radius: 4px; font-weight: 600; font-size: 11px;">
+                <td style="font-size: 11px; padding: 6px 4px; white-space: normal; word-break: break-word;">${d.rota_geral || '-'}</td>
+                <td style="font-size: 11px; padding: 6px 4px; white-space: normal; word-break: break-word;">${d.rota_aproximacao || '-'}</td>
+                <td style="font-size: 11px; padding: 6px 4px;">${d.vendedor || '-'}</td>
+                <td style="font-size: 11px; padding: 6px 4px;"><strong>${d.codigo_cliente || '-'}</strong></td>
+                <td style="font-size: 11px; padding: 6px 4px;">${d.cliente || '-'}</td>
+                <td style="font-size: 11px; padding: 6px 4px;">${d.nome_fantasia || '-'}</td>
+                <td style="font-size: 11px; padding: 6px 4px; white-space: normal; word-break: break-word;">${d.municipio || '-'}</td>
+                <td style="font-size: 10px; padding: 6px 2px; white-space: nowrap;">${d.data_ultima_compra || '-'}</td>
+                <td style="font-size: 10px; padding: 6px 2px; text-align: center;">${d.periodo_em_dias || '-'}</td>
+                <td style="font-size: 10px; padding: 6px 2px; white-space: nowrap; font-weight: 600; color: #1e3a8a;">${d.data_previsao_proxima || '-'}</td>
+                <td style="font-size: 11px; padding: 6px 4px; text-align: center;">
+                    <span style="background-color: ${badgeBg}; color: ${badgeText}; padding: 4px 8px; border-radius: 4px; font-weight: 600; font-size: 10px;">
                         ${statusLabel}
                     </span>
                 </td>
@@ -339,6 +383,18 @@ function desenharTabelaCaptacao() {
         `;
     });
     tbody.innerHTML = html;
+
+    if (totalPages > 1) {
+        const paginatorHtml = `
+            <div id="paginacao-captacao" style="display: flex; justify-content: center; align-items: center; gap: 15px; margin-top: 15px;">
+                <button class="os-btn os-btn-sm os-btn-secondary" onclick="mudarPaginaCaptacao(-1)" ${window.paginaCaptacao === 1 ? 'disabled' : ''}>Anterior</button>
+                <span style="font-size: 12px; font-weight: 600;">Página ${window.paginaCaptacao} de ${totalPages}</span>
+                <button class="os-btn os-btn-sm os-btn-secondary" onclick="mudarPaginaCaptacao(1)" ${window.paginaCaptacao === totalPages ? 'disabled' : ''}>Próxima</button>
+            </div>
+        `;
+        const containerTabela = tbody.closest('.os-table-wrap');
+        containerTabela.insertAdjacentHTML('afterend', paginatorHtml);
+    }
 }
 
 function abrirModalNovaCarga() {
@@ -1025,7 +1081,7 @@ btnExport.addEventListener('click', () => {
     const isListagem = document.getElementById('painel-listagem').style.display !== 'none';
 
     if (window.activeRelatorio === "captacao") {
-        exportTableToCSV('relatorio_captacao.csv');
+        window.print();
         return;
     }
 

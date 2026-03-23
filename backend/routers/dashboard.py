@@ -32,10 +32,10 @@ def get_dashboard_geral(
 
     q_cargas = text("""
         SELECT COUNT(id) as cargas_abertas
-        FROM public.m_carga
-        WHERE status_carga != 'FINALIZADA' AND status_carga != 'CANCELADA'
+        FROM public.tb_cargas
+        WHERE EXTRACT(MONTH FROM data_criacao) = :m AND EXTRACT(YEAR FROM data_criacao) = :a
     """)
-    cargas_row = db.execute(q_cargas).mappings().first()
+    cargas_row = db.execute(q_cargas, {"m": mes_atual, "a": ano_atual}).mappings().first()
 
     # Gráfico (últimos 6 meses)
     labels = []
@@ -129,27 +129,32 @@ def get_dashboard_logistica(
 
     q_kpi = text("""
         SELECT COUNT(id) as cargas_env
-        FROM public.m_carga
-        WHERE EXTRACT(MONTH FROM created_at) = :m AND EXTRACT(YEAR FROM created_at) = :a
+        FROM public.tb_cargas
+        WHERE EXTRACT(MONTH FROM data_criacao) = :m AND EXTRACT(YEAR FROM data_criacao) = :a
     """)
     kpi_env = db.execute(q_kpi, {"m": mes_atual, "a": ano_atual}).mappings().first()
 
     q_peso = text("""
-        SELECT COALESCE(AVG(peso_bruto_total), 0) as peso_med
-        FROM public.m_carga
-        WHERE peso_bruto_total > 0
+        SELECT COALESCE(AVG(carga_peso), 0) as peso_med
+        FROM (
+            SELECT cp.id_carga, SUM(COALESCE(p.peso_total_kg, 0)) as carga_peso
+            FROM public.tb_cargas_pedidos cp
+            JOIN public.tb_pedidos p ON cp.numero_pedido = CAST(p.id_pedido AS VARCHAR)
+            GROUP BY cp.id_carga
+        ) sub
     """)
     kpi_peso = db.execute(q_peso).mappings().first()
 
-    # Histórico de peso das cargas nas ultimas semanas/meses (vamos usar os ultimos 6 meses)
     labels = []
     pesos = []
     for i in range(5, -1, -1):
         dt = hoje - relativedelta(months=i)
         q_chart = text("""
-            SELECT COALESCE(SUM(peso_bruto_total), 0) as p
-            FROM public.m_carga
-            WHERE EXTRACT(MONTH FROM created_at) = :m AND EXTRACT(YEAR FROM created_at) = :a
+            SELECT COALESCE(SUM(p.peso_total_kg), 0) as p
+            FROM public.tb_cargas_pedidos cp
+            JOIN public.tb_pedidos p ON cp.numero_pedido = CAST(p.id_pedido AS VARCHAR)
+            JOIN public.tb_cargas c ON cp.id_carga = c.id
+            WHERE EXTRACT(MONTH FROM c.data_criacao) = :m AND EXTRACT(YEAR FROM c.data_criacao) = :a
         """)
         row = db.execute(q_chart, {"m": dt.month, "a": dt.year}).mappings().first()
         labels.append(dt.strftime("%b/%y"))
@@ -177,7 +182,7 @@ def get_dashboard_pivot(
         SELECT 
             p.status as "Status",
             COALESCE(c.faturamento_municipio, c.entrega_municipio) as "Municipio",
-            p.cliente_nome as "Cliente",
+            p.cliente as "Cliente",
             p.total_pedido as "Valor_Total",
             TO_CHAR(p.created_at, 'YYYY-MM') as "Mes_Ano"
         FROM public.tb_pedidos p
