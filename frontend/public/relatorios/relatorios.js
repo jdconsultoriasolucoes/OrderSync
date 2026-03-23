@@ -232,6 +232,10 @@ async function renderCaptacaoPedidos() {
             <label style="display:block; font-size: 11px; margin-bottom:4px; font-weight: 600;">Cliente/Cód.</label>
             <input type="text" class="os-input os-input-sm" data-f="cliente" placeholder="Código ou Nome..." oninput="filtrarCaptacao(this)">
         </div>
+        <div style="flex:1; min-width: 120px;">
+            <label style="display:block; font-size: 11px; margin-bottom:4px; font-weight: 600;">Município</label>
+            <input type="text" class="os-input os-input-sm" data-f="municipio" placeholder="Filtrar..." oninput="filtrarCaptacao(this)">
+        </div>
     `;
     const containerTabela = thead.closest('.os-table-wrap');
     containerTabela.parentNode.insertBefore(divFiltros, containerTabela);
@@ -321,6 +325,7 @@ function desenharTabelaCaptacao() {
     if (f.geral) dados = dados.filter(d => (d.rota_geral || "").toLowerCase().includes(f.geral));
     if (f.aprox) dados = dados.filter(d => (d.rota_aproximacao || "").toLowerCase().includes(f.aprox));
     if (f.vendedor) dados = dados.filter(d => (d.vendedor || "").toLowerCase().includes(f.vendedor));
+    if (f.municipio) dados = dados.filter(d => (d.municipio || "").toLowerCase().includes(f.municipio));
     if (f.cliente) {
         dados = dados.filter(d => 
             (d.cliente || "").toLowerCase().includes(f.cliente) || 
@@ -348,19 +353,10 @@ function desenharTabelaCaptacao() {
 
     let html = "";
     paginatedDados.forEach(d => {
-        let badgeBg = "#9ca3af"; 
+        let badgeBg = d.ativo ? "#16a34a" : "#dc2626"; // Sempre verde se ativo, senão vermelho
         let badgeText = "white";
         // Always displaying "Ativo" or "Inativo"
         let statusLabel = d.ativo ? "Ativo" : "Inativo";
-        
-        if (d.ativo) {
-            if (d.status_cor === "verde") { badgeBg = "#16a34a"; }
-            else if (d.status_cor === "amarelo") { badgeBg = "#ca8a04"; }
-            else if (d.status_cor === "vermelho") { badgeBg = "#dc2626"; }
-        } else {
-            badgeBg = "#4b5563";
-            badgeText = "#e5e7eb";
-        }
 
         html += `
             <tr>
@@ -1081,7 +1077,7 @@ btnExport.addEventListener('click', () => {
     const isListagem = document.getElementById('painel-listagem').style.display !== 'none';
 
     if (window.activeRelatorio === "captacao") {
-        window.print();
+        imprimirCaptacao();
         return;
     }
 
@@ -1137,4 +1133,129 @@ function exportTableToCSV(filename) {
     document.body.appendChild(downloadLink);
     downloadLink.click();
     document.body.removeChild(downloadLink);
+}
+
+// -----------------------------------------------------
+// IMPRIMIR RELATÓRIO CAPTAÇÃO
+// -----------------------------------------------------
+
+function imprimirCaptacao() {
+    let dados = window.dadosCaptacao || [];
+    const f = window.filtrosCaptacao;
+    if (f.geral) dados = dados.filter(d => (d.rota_geral || "").toLowerCase().includes(f.geral));
+    if (f.aprox) dados = dados.filter(d => (d.rota_aproximacao || "").toLowerCase().includes(f.aprox));
+    if (f.vendedor) dados = dados.filter(d => (d.vendedor || "").toLowerCase().includes(f.vendedor));
+    if (f.municipio) dados = dados.filter(d => (d.municipio || "").toLowerCase().includes(f.municipio));
+    if (f.cliente) {
+        dados = dados.filter(d => 
+            (d.cliente || "").toLowerCase().includes(f.cliente) || 
+            (d.codigo_cliente || "").toString().toLowerCase().includes(f.cliente)
+        );
+    }
+
+    if (window.ordemCaptacao && window.ordemCaptacao.col) {
+        const col = window.ordemCaptacao.col;
+        dados.sort((a, b) => {
+            let va = a[col] || "";
+            let vb = b[col] || "";
+            
+            if (col === 'periodo_em_dias' || col === 'dias_sem_comprar') {
+                va = parseInt(va) || 0;
+                vb = parseInt(vb) || 0;
+            } else if (col === 'data_ultima_compra' || col === 'data_previsao_proxima') {
+                const pA = (typeof va === 'string' && va.includes('/')) ? va.split('/') : [];
+                const pB = (typeof vb === 'string' && vb.includes('/')) ? vb.split('/') : [];
+                va = pA.length === 3 ? new Date(+pA[2], pA[1]-1, +pA[0]).getTime() : 0;
+                vb = pB.length === 3 ? new Date(+pB[2], pB[1]-1, +pB[0]).getTime() : 0;
+            } else {
+                va = va.toString().toLowerCase();
+                vb = vb.toString().toLowerCase();
+            }
+
+            if (va < vb) return window.ordemCaptacao.desc ? 1 : -1;
+            if (va > vb) return window.ordemCaptacao.desc ? -1 : 1;
+            return 0;
+        });
+    }
+
+    let agrupado = {};
+    dados.forEach(d => {
+        let key = `${d.rota_geral || 'S/ Rota Geral'}|${d.rota_aproximacao || 'S/ Rota Aprox'}`;
+        if (!agrupado[key]) agrupado[key] = [];
+        agrupado[key].push(d);
+    });
+
+    let chaves = Object.keys(agrupado).sort(); 
+
+    let html = `
+    <style>
+        @media print {
+            body * { visibility: hidden; }
+            #print-area, #print-area * { visibility: visible; }
+            #print-area { position: absolute; left: 0; top: 0; width: 100%; }
+        }
+        .print-header { font-family: 'Inter', sans-serif; text-align: center; margin-bottom: 20px; }
+        .print-group { font-family: 'Inter', sans-serif; font-size: 13px; font-weight: 600; margin-top: 25px; margin-bottom: 10px; background: #f1f5f9; padding: 8px 12px; border-left: 4px solid #3b82f6; border-radius: 4px; }
+        .print-table { width: 100%; border-collapse: collapse; font-family: 'Inter', sans-serif; font-size: 10px; margin-bottom: 20px; }
+        .print-table th, .print-table td { border-bottom: 1px solid #e2e8f0; padding: 6px 4px; text-align: left; }
+        .print-table th { color: #475569; font-weight: 600; text-transform: uppercase; font-size: 9px; }
+        .print-table tbody tr:nth-child(even) { background: #f8fafc; }
+    </style>
+    <div class="print-header">
+        <h2 style="margin:0 0 5px 0; font-size: 18px; color: #1e293b;">Relatório de Captação</h2>
+        <p style="margin:0; font-size: 11px; color: #64748b;">Exportado em: ${new Date().toLocaleString('pt-BR')}</p>
+    </div>
+    `;
+
+    chaves.forEach(k => {
+        let [rGeral, rAprox] = k.split('|');
+        html += `<div class="print-group">Rota Geral: ${rGeral} &nbsp;&mdash;&nbsp; Rota Aprox: ${rAprox}</div>`;
+        html += `
+        <table class="print-table">
+            <thead>
+                <tr>
+                    <th style="width: 50px;">Cód</th>
+                    <th style="width: 25%;">Cliente</th>
+                    <th style="width: 20%;">Nome Fantasia</th>
+                    <th style="width: 15%;">Vendedor</th>
+                    <th style="width: 70px;">Última Compra</th>
+                    <th style="width: 55px; text-align: center;">Dias</th>
+                    <th style="width: 80px;">Previsão</th>
+                </tr>
+            </thead>
+            <tbody>
+        `;
+        agrupado[k].forEach(d => {
+            html += `
+                <tr>
+                    <td><strong>${d.codigo_cliente || '-'}</strong></td>
+                    <td>${d.cliente || '-'}</td>
+                    <td>${d.nome_fantasia || '-'}</td>
+                    <td>${d.vendedor || '-'}</td>
+                    <td>${d.data_ultima_compra || '-'}</td>
+                    <td style="text-align: center;">${d.periodo_em_dias || '-'}</td>
+                    <td><strong>${d.data_previsao_proxima || '-'}</strong></td>
+                </tr>
+            `;
+        });
+        html += `</tbody></table>`;
+    });
+
+    if (dados.length === 0) {
+        html += `<p style="text-align:center; font-family:'Inter', sans-serif; font-size: 12px; margin-top:30px;">Nenhum cliente atende aos filtros atuais para impressão.</p>`;
+    }
+
+    let printContainer = document.getElementById('print-area');
+    if (!printContainer) {
+        printContainer = document.createElement('div');
+        printContainer.id = 'print-area';
+        document.body.appendChild(printContainer);
+    }
+    printContainer.innerHTML = html;
+
+    window.print();
+    
+    setTimeout(() => {
+        printContainer.innerHTML = '';
+    }, 2000);
 }

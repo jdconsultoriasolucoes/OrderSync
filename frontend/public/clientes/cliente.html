@@ -263,8 +263,8 @@
               <input type="number" step="0.01" id="cadastro_markup" name="cadastro_markup" placeholder="0.00" />
             </div>
             <div>
-              <label for="periodo_de_compra">Período de Compra:</label>
-              <input type="text" id="periodo_de_compra" name="periodo_de_compra" placeholder="Ex: A cada 15 dias" />
+              <label for="periodo_de_compra">Período de Compra (Em dias):</label>
+              <input type="number" id="periodo_de_compra" name="periodo_de_compra" placeholder="Ex: 15" oninput="this.value = this.value.replace(/[^0-9]/g, '')" min="0" step="1"/>
             </div>
           </div>
 

@@ -2,8 +2,10 @@ from fastapi import APIRouter, Depends
 from sqlalchemy.orm import Session
 from database import get_db
 from models.cliente_v2 import ClienteModelV2
+from models.pedido import PedidoModel
 from datetime import datetime
-from typing import Optional
+from typing import Optional, List, Dict
+from sqlalchemy import func
 import re
 
 router = APIRouter()
@@ -33,14 +35,25 @@ def extract_days(period_str: str) -> int:
 
 @router.get("/")
 def get_captacao_pedidos(db: Session = Depends(get_db)):
+    # 1. Obter todos os clientes
     clientes = db.query(ClienteModelV2).all()
+    
+    # 2. Obter a última data de pedido para cada cliente (MAX por codigo_cliente)
+    # Filtramos por status para evitar considerar orçamentos ou cancelados se desejar, 
+    # mas o pedido mais recente costuma ser o melhor indicador de atividade.
+    ultimas_datas = db.query(
+        PedidoModel.codigo_cliente,
+        func.max(PedidoModel.created_at).label("ultima_data")
+    ).filter(PedidoModel.status != "CANCELADO").group_by(PedidoModel.codigo_cliente).all()
+    
+    dict_ultimas_datas = {row.codigo_cliente: row.ultima_data for row in ultimas_datas}
     
     hoje = datetime.now()
     resultados = []
     
     for c in clientes:
         ativo = getattr(c, 'cadastro_ativo', False)
-        if ativo is None: # handle potential nulls
+        if ativo is None:
             ativo = False
             
         codigo_cliente = c.cadastro_codigo_da_empresa or ""
@@ -50,23 +63,27 @@ def get_captacao_pedidos(db: Session = Depends(get_db)):
         rota_aprox = c.entrega_rota_aproximacao or ""
         municipio = c.entrega_municipio or c.faturamento_municipio or ""
         
-        ultima_compra_str = c.ultimas_compras_emissao or ""
-        ultima_compra_data = parse_date(ultima_compra_str)
+        # LOGICA NOVA: Busca na dict de pedidos reais
+        ultima_compra_data = dict_ultimas_datas.get(codigo_cliente)
+        
+        # Fallback (opcional): se não tem pedido no sistema novo, tenta o campo legado se estiver preenchido
+        if not ultima_compra_data and c.ultimas_compras_emissao:
+            ultima_compra_data = parse_date(c.ultimas_compras_emissao)
         
         periodo_str = c.cadastro_periodo_de_compra or ""
-        periodo_em_dias = extract_days(periodo_str)
+        periodo_em_dias = extract_days(period_str)
         
         vendedor = c.elaboracao_vendedor or ""
         
         dias_sem_comprar = 0
         previsao_data = None
-        status_cor = "vermelho" # default for inactive or no info
+        status_cor = "vermelho"
         
         if ultima_compra_data:
             delta = (hoje - ultima_compra_data).days
             dias_sem_comprar = delta if delta > 0 else 0
             
-            # Cor
+            # Cor (Verde <= 60, Amarelo <= 90, Vermelho > 90)
             if dias_sem_comprar <= 60:
                 status_cor = "verde"
             elif dias_sem_comprar <= 90:
@@ -78,14 +95,8 @@ def get_captacao_pedidos(db: Session = Depends(get_db)):
             previsao_data = ultima_compra_data + dt.timedelta(days=periodo_em_dias)
             
         else:
-            # Sem compras
             status_cor = "vermelho"
             
-        # Classificacao Customizada para o Sort
-        # 1 = Ativos com previsão mais próxima (tem ultima_compra_data)
-        # 2 = Ativos sem compras (ultima_compra_data is None mas ativo=True)
-        # 3 = Inativos (ativo=False)
-        
         grupo_ordem = 3
         if ativo:
             if ultima_compra_data:
@@ -93,7 +104,6 @@ def get_captacao_pedidos(db: Session = Depends(get_db)):
             else:
                 grupo_ordem = 2
                 
-        # Data limite para sort para tratar Nones
         sort_date = previsao_data if previsao_data else datetime.max
         
         resultados.append({
@@ -114,7 +124,6 @@ def get_captacao_pedidos(db: Session = Depends(get_db)):
             "vendedor": vendedor
         })
         
-    # Ordenar por grupo (1, 2, 3) e depois pela previsao da data ascendente
     resultados.sort(key=lambda x: (x["grupo_ordem"], x["sort_date"]))
     
     # Remover campos de sorting que nao precisaremos entregar no json (opcional, mas economiza banda)
