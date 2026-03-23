@@ -1066,7 +1066,8 @@
               classificacao_ElaboracaoCadastro: document.getElementById("classificacao_ElaboracaoCadastro")?.value || "",
               tipo_venda_prazo_ou_vista_ElaboracaoCadastro: document.getElementById("tipo_venda_prazo_ou_vista_ElaboracaoCadastro")?.value || "",
               limite_credito_ElaboracaoCadastro: parseFloat(document.getElementById("limite_credito_ElaboracaoCadastro")?.value || 0),
-              data_vencimento_ElaboracaoCadastro: document.getElementById("data_vencimento_ElaboracaoCadastro")?.value || ""
+              data_vencimento_ElaboracaoCadastro: document.getElementById("data_vencimento_ElaboracaoCadastro")?.value || "",
+              vendedor_ElaboracaoCadastro: document.getElementById("vendedor_ElaboracaoCadastro")?.value || ""
             },
             grupo_economico: {
               codigo_ElaboracaoCadastro: document.getElementById("codigo_ElaboracaoCadastro")?.value || "",
@@ -1240,6 +1241,7 @@
           setVal("tipo_venda_prazo_ou_vista_ElaboracaoCadastro", ed.tipo_venda_prazo_ou_vista_ElaboracaoCadastro || "");
           setVal("limite_credito_ElaboracaoCadastro", ed.limite_credito_ElaboracaoCadastro || "");
           setVal("data_vencimento_ElaboracaoCadastro", ed.data_vencimento_ElaboracaoCadastro || "");
+          setVal("vendedor_ElaboracaoCadastro", ed.vendedor_ElaboracaoCadastro || "");
 
           // Bloco: grupo_economico
           const grupo = dados.grupo_economico || {};
