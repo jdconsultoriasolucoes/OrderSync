@@ -71,7 +71,7 @@ def get_captacao_pedidos(db: Session = Depends(get_db)):
             ultima_compra_data = parse_date(c.ultimas_compras_emissao)
         
         periodo_str = c.cadastro_periodo_de_compra or ""
-        periodo_em_dias = extract_days(period_str)
+        periodo_em_dias = extract_days(periodo_str)
         
         vendedor = c.elaboracao_vendedor or ""
         
@@ -91,8 +91,8 @@ def get_captacao_pedidos(db: Session = Depends(get_db)):
             else:
                 status_cor = "vermelho"
                 
-            import datetime as dt
-            previsao_data = ultima_compra_data + dt.timedelta(days=periodo_em_dias)
+            import datetime as dt_mod
+            previsao_data = ultima_compra_data + dt_mod.timedelta(days=periodo_em_dias)
             
         else:
             status_cor = "vermelho"
@@ -126,9 +126,4 @@ def get_captacao_pedidos(db: Session = Depends(get_db)):
         
     resultados.sort(key=lambda x: (x["grupo_ordem"], x["sort_date"]))
     
-    # Remover campos de sorting que nao precisaremos entregar no json (opcional, mas economiza banda)
-    for res in resultados:
-        res.pop('grupo_ordem', None)
-        res.pop('sort_date', None)
-        
     return resultados
