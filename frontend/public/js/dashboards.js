@@ -130,6 +130,7 @@ async function loadDashboardGeral() {
 // ----------------------------------------------------------------------------------
 let chartVendasRegInst = null;
 let chartVendasStatusInst = null;
+let chartEvolucaoTicketInst = null;
 async function loadDashboardVendas() {
     try {
         const resp = await fetch(`${API_BASE}/api/dashboard/vendas`, {
@@ -168,6 +169,24 @@ async function loadDashboardVendas() {
                 }]
             },
             options: { responsive: true, maintainAspectRatio: false }
+        });
+
+        const ctx3 = document.getElementById("chart-evolucao-ticket").getContext("2d");
+        if(chartEvolucaoTicketInst) chartEvolucaoTicketInst.destroy();
+        chartEvolucaoTicketInst = new Chart(ctx3, {
+            type: 'line',
+            data: {
+                labels: data.chart_evolucao_ticket.labels,
+                datasets: [{
+                    label: 'Ticket Médio (R$)',
+                    data: data.chart_evolucao_ticket.data,
+                    borderColor: '#10b981',
+                    backgroundColor: 'rgba(16, 185, 129, 0.1)',
+                    fill: true,
+                    tension: 0.4
+                }]
+            },
+            options: { responsive: true, maintainAspectRatio: false, plugins: { title: { display: true, text: 'Evolução do Ticket Médio Mês a Mês'} } }
         });
 
     } catch(e) { console.error(e); }
@@ -222,6 +241,7 @@ async function loadDashboardProdutos() {
 // 2B. Clientes
 // ----------------------------------------------------------------------------------
 let chartTopClientesInst = null;
+let chartEvolucaoClientesInst = null;
 async function loadDashboardClientes() {
     try {
         const resp = await fetch(`${API_BASE}/api/dashboard/clientes`, {
@@ -247,6 +267,28 @@ async function loadDashboardClientes() {
                 }]
             },
             options: { responsive: true, maintainAspectRatio: false }
+        });
+
+        const ctx2 = document.getElementById("chart-evolucao-clientes").getContext("2d");
+        if(chartEvolucaoClientesInst) chartEvolucaoClientesInst.destroy();
+        chartEvolucaoClientesInst = new Chart(ctx2, {
+            type: 'bar',
+            data: {
+                labels: data.chart_evolucao_clientes.labels,
+                datasets: [
+                    {
+                        label: 'Novos Orçamentos',
+                        data: data.chart_evolucao_clientes.orcamentos,
+                        backgroundColor: '#9ca3af'
+                    },
+                    {
+                        label: 'Pedidos Confirmados',
+                        data: data.chart_evolucao_clientes.confirmados,
+                        backgroundColor: '#8b5cf6'
+                    }
+                ]
+            },
+            options: { responsive: true, maintainAspectRatio: false, plugins: { title: { display: true, text: 'Evolução do Funil Mês a Mês'} } }
         });
 
     } catch(e) { console.error(e); }

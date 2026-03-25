@@ -100,8 +100,8 @@ def run_migrations():
                     db.rollback()
                     logger.error(f"Falha ao adicionar {col} em tb_pedidos_itens: {e}")
 
-        # 7. tb_transporte: capacidade_kg, modelo
-        for col, col_type in [("capacidade_kg", "INTEGER"), ("modelo", "VARCHAR")]:
+        # 7. tb_transporte: capacidade_kg, modelo, tipo_veiculo
+        for col, col_type in [("capacidade_kg", "INTEGER"), ("modelo", "VARCHAR"), ("tipo_veiculo", "VARCHAR")]:
             try:
                 db.execute(text(f"SELECT {col} FROM tb_transporte LIMIT 1"))
             except Exception:

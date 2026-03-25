@@ -102,6 +102,22 @@ def get_dashboard_vendas(
     st_labels = [s["status"] for s in status_rows]
     st_data = [int(s["qtd"]) for s in status_rows]
 
+    # Evolução Ticket Médio (Mês a Mês - 6 messes)
+    hoje = datetime.date.today()
+    evo_labels = []
+    evo_ticket = []
+    for i in range(5, -1, -1):
+        dt = hoje - relativedelta(months=i)
+        q_evo = text("""
+            SELECT COALESCE(AVG(total_pedido), 0) as tkt
+            FROM public.tb_pedidos
+            WHERE status != 'Cancelado' AND total_pedido > 0
+              AND EXTRACT(MONTH FROM created_at) = :m AND EXTRACT(YEAR FROM created_at) = :a
+        """)
+        row = db.execute(q_evo, {"m": dt.month, "a": dt.year}).mappings().first()
+        evo_labels.append(dt.strftime("%b/%y"))
+        evo_ticket.append(float(row["tkt"]))
+
     return {
         "kpis": {
             "ticket_medio": float(tkt_row["tkt"] if tkt_row else 0),
@@ -114,6 +130,10 @@ def get_dashboard_vendas(
         "chart_status": {
             "labels": st_labels,
             "data": st_data
+        },
+        "chart_evolucao_ticket": {
+            "labels": evo_labels,
+            "data": evo_ticket
         }
     }
 
@@ -356,6 +376,25 @@ def get_dashboard_clientes(
     q_ticket_geral = text("SELECT COALESCE(AVG(total_pedido), 0) as med FROM public.tb_pedidos WHERE status != 'Cancelado' AND total_pedido > 0")
     tkt_row = db.execute(q_ticket_geral).mappings().first()
 
+    # Evolução Mensal de Novos Orçamentos vs Confirmados (6 meses)
+    hoje = datetime.date.today()
+    evo_labels = []
+    evo_orcamentos = []
+    evo_confirmados = []
+    for i in range(5, -1, -1):
+        dt = hoje - relativedelta(months=i)
+        q_evo = text("""
+            SELECT 
+                COUNT(CASE WHEN status = 'Orçamento' THEN 1 END) as orcs,
+                COUNT(CASE WHEN status != 'Orçamento' AND status != 'Cancelado' THEN 1 END) as confs
+            FROM public.tb_pedidos
+            WHERE EXTRACT(MONTH FROM created_at) = :m AND EXTRACT(YEAR FROM created_at) = :a
+        """)
+        row = db.execute(q_evo, {"m": dt.month, "a": dt.year}).mappings().first()
+        evo_labels.append(dt.strftime("%b/%y"))
+        evo_orcamentos.append(int(row["orcs"] or 0))
+        evo_confirmados.append(int(row["confs"] or 0))
+
     return {
         "top_clientes": {
             "labels": [r["cliente"] for r in top_cli_rows],
@@ -367,5 +406,10 @@ def get_dashboard_clientes(
         },
         "kpis": {
             "ticket_record": float(tkt_row["med"] if tkt_row else 0)
+        },
+        "chart_evolucao_clientes": {
+            "labels": evo_labels,
+            "orcamentos": evo_orcamentos,
+            "confirmados": evo_confirmados
         }
     }

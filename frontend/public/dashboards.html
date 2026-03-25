@@ -266,7 +266,7 @@
     <div class="os-sidebar-overlay" id="overlay"></div>
 
     <!-- ========== MAIN CONTENT ========== -->
-    <main class="os-main" style="padding: 0;">
+    <main class="os-main" style="padding: 0; max-width: none;">
         <div class="dashboard-container">
             <!-- Sidebar Interna do Dashboard -->
             <aside class="dashboard-sidebar">
@@ -316,6 +316,11 @@
                             <canvas id="chart-vendas-por-status"></canvas>
                         </div>
                     </div>
+                    <div class="chart-grid" style="margin-top: 20px;">
+                        <div class="chart-box chart-box-full" style="min-height: 400px;">
+                            <canvas id="chart-evolucao-ticket"></canvas>
+                        </div>
+                    </div>
                 </div>
 
                 <!-- Painel: Produtos -->
@@ -342,6 +347,11 @@
                             <canvas id="chart-top-clientes"></canvas>
                         </div>
                     </div>
+                    <div class="chart-grid" style="margin-top: 20px;">
+                        <div class="chart-box chart-box-full" style="min-height: 400px;">
+                            <canvas id="chart-evolucao-clientes"></canvas>
+                        </div>
+                    </div>
                 </div>
 
                 <!-- Painel: Logística -->
@@ -351,19 +361,18 @@
                         <div class="kpi-card"><div class="kpi-title">Peso Médio por Carga</div><div class="kpi-value" id="kpi-peso-medio">-</div></div>
                         <div class="kpi-card"><div class="kpi-title">Total Custo Frete (Mês)</div><div class="kpi-value" id="kpi-custo-frete">-</div></div>
                     </div>
+                    
                     <div class="chart-grid" style="margin-bottom: 20px;">
-                        <div class="chart-box">
+                        <div class="chart-box" style="min-height: 350px;">
                             <canvas id="chart-modalidade"></canvas>
                         </div>
-                        <div class="chart-box">
+                        <div class="chart-box" style="min-height: 350px;">
                             <canvas id="chart-eficiencia-frota"></canvas>
                         </div>
                     </div>
-                        <div class="kpi-card"><div class="kpi-title">Cargas Enviadas (Mês)</div><div class="kpi-value" id="kpi-cargas-mes">-</div></div>
-                        <div class="kpi-card"><div class="kpi-title">Peso Médio por Carga</div><div class="kpi-value" id="kpi-peso-medio">-</div></div>
-                    </div>
+
                     <div class="chart-grid">
-                        <div class="chart-box chart-box-full">
+                        <div class="chart-box chart-box-full" style="min-height: 400px;">
                             <canvas id="chart-cargas-historico"></canvas>
                         </div>
                     </div>
