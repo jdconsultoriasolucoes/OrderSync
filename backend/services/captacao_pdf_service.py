@@ -38,7 +38,10 @@ def gerar_pdf_prospeccao(dados_captacao: list, nome_vendedor: str) -> bytes:
         spaceAfter=20
     )
     
-    hoje_str = datetime.now().strftime("%d/%m/%Y %H:%M")
+    from zoneinfo import ZoneInfo
+    TZ = ZoneInfo("America/Sao_Paulo")
+    hoje_str = datetime.now(TZ).strftime("%d/%m/%Y %H:%M")
+    
     elements.append(Paragraph(f"Relatório de Prospecção - {nome_vendedor}", title_style))
     elements.append(Paragraph(f"Gerado em: {hoje_str}", styles['Normal']))
     elements.append(Spacer(1, 15))

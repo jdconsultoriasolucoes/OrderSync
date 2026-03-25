@@ -26,7 +26,10 @@ def enviar_relatorios_prospeccao(db: Session):
         
     # 2. Filtra os dados apenas para a semana atual
     import datetime as dt_mod
-    hoje = dt_mod.date.today()
+    from zoneinfo import ZoneInfo
+    
+    TZ = ZoneInfo("America/Sao_Paulo")
+    hoje = datetime.now(TZ).date()
     start_of_week = hoje - dt_mod.timedelta(days=hoje.weekday())
     end_of_week = start_of_week + dt_mod.timedelta(days=6)
     
