@@ -193,3 +193,57 @@ def get_dashboard_pivot(
     rows = db.execute(q).mappings().all()
     
     return [dict(r) for r in rows]
+
+
+@router.get("/kpis")
+def get_dashboard_kpis(
+    month: int = Query(None),
+    year: int = Query(None),
+    db: Session = Depends(get_db),
+    current_user: UsuarioModel = Depends(get_current_user)
+):
+    """
+    Retorna os KPIs principais para o dashboard da home (index.html).
+    Suporta filtros por mês e ano.
+    """
+    # Filtro de data
+    where_clause = ""
+    params = {}
+    
+    if year:
+        where_clause += " AND EXTRACT(YEAR FROM created_at) = :year"
+        params["year"] = year
+    if month:
+        where_clause += " AND EXTRACT(MONTH FROM created_at) = :month"
+        params["month"] = month
+
+    # 1. Faturamento Total
+    q_faturamento = text(f"""
+        SELECT COALESCE(SUM(total_pedido), 0) as total
+        FROM public.tb_pedidos
+        WHERE status != 'Cancelado' {where_clause}
+    """)
+    faturamento = db.execute(q_faturamento, params).scalar() or 0
+
+    # 2. Pedidos Pendentes (Status 'Pedido')
+    # Nota: Pendentes aqui costumam ser os que ainda não foram faturados nem cancelados.
+    q_pendentes = text(f"""
+        SELECT COUNT(id_pedido)
+        FROM public.tb_pedidos
+        WHERE status = 'Pedido' {where_clause}
+    """)
+    pendentes = db.execute(q_pendentes, params).scalar() or 0
+
+    # 3. Ticket Médio
+    q_ticket = text(f"""
+        SELECT COALESCE(AVG(total_pedido), 0) as avg_val
+        FROM public.tb_pedidos
+        WHERE status != 'Cancelado' AND total_pedido > 0 {where_clause}
+    """)
+    ticket_medio = db.execute(q_ticket, params).scalar() or 0
+
+    return {
+        "faturamento_mes": float(faturamento),
+        "pedidos_pendentes": int(pendentes),
+        "ticket_medio": float(ticket_medio)
+    }

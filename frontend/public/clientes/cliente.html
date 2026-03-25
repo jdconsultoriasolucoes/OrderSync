@@ -23,6 +23,15 @@
   <script src="/js/config.js"></script>
   <script src="/js/auth.js"></script>
   <script src="/js/sidebar_control.js"></script>
+  <script>
+    function updateCharCounter(textareaId, counterId) {
+      const textarea = document.getElementById(textareaId);
+      const counter = document.getElementById(counterId);
+      if (textarea && counter) {
+        counter.textContent = `${textarea.value.length} / 1000`;
+      }
+    }
+  </script>
 </head>
 
 <script>
@@ -288,16 +297,17 @@
               <input type="date" id="data_nascimento_resposavel" name="data_nascimento_resposavel" />
             </div>
             <div>
+              <label for="telefone_fixo_responsavel">Telefone Fixo:</label>
+              <input type="text" id="telefone_fixo_responsavel" name="telefone_fixo_responsavel" />
+            </div>
+            <div style="grid-column: span 2;">
               <label for="observacoes_responsavel">Observações:</label>
-              <input type="text" id="observacoes_responsavel" name="observacoes_responsavel" />
+              <textarea id="observacoes_responsavel" name="observacoes_responsavel" rows="3" maxlength="1000" oninput="updateCharCounter('observacoes_responsavel', 'counter-observacoes_responsavel')"></textarea>
+              <div class="char-counter" id="counter-observacoes_responsavel">0 / 1000</div>
             </div>
             <div>
               <label for="filial_resposavel">Filial:</label>
               <input type="text" id="filial_resposavel" name="filial_resposavel" />
-            </div>
-            <div>
-              <label for="telefone_fixo_responsavel">Telefone Fixo:</label>
-              <input type="text" id="telefone_fixo_responsavel" name="telefone_fixo_responsavel" />
             </div>
           </div>
         </div>
@@ -354,9 +364,10 @@
               <label for="data_nascimento_RepresentanteLegal">Data de Nascimento:</label>
               <input type="date" id="data_nascimento_RepresentanteLegal" name="data_nascimento_RepresentanteLegal" />
             </div>
-            <div>
+            <div style="grid-column: span 2;">
               <label for="observacoes_RepresentanteLegal">Observações:</label>
-              <input type="text" id="observacoes_RepresentanteLegal" name="observacoes_RepresentanteLegal" />
+              <textarea id="observacoes_RepresentanteLegal" name="observacoes_RepresentanteLegal" rows="3" maxlength="1000" oninput="updateCharCounter('observacoes_RepresentanteLegal', 'counter-observacoes_RepresentanteLegal')"></textarea>
+              <div class="char-counter" id="counter-observacoes_RepresentanteLegal">0 / 1000</div>
             </div>
           </div>
         </div>
@@ -426,9 +437,10 @@
               <input type="date" id="data_nascimento_ResponsavelRecebimento"
                 name="data_nascimento_ResponsavelRecebimento" />
             </div>
-            <div>
+            <div style="grid-column: span 2;">
               <label for="observacoes_ResponsavelRecebimento">Observações:</label>
-              <input type="text" id="observacoes_ResponsavelRecebimento" name="observacoes_ResponsavelRecebimento" />
+              <textarea id="observacoes_ResponsavelRecebimento" name="observacoes_ResponsavelRecebimento" rows="3" maxlength="1000" oninput="updateCharCounter('observacoes_ResponsavelRecebimento', 'counter-observacoes_ResponsavelRecebimento')"></textarea>
+              <div class="char-counter" id="counter-observacoes_ResponsavelRecebimento">0 / 1000</div>
             </div>
           </div>
         </div>
@@ -482,9 +494,10 @@
               <label for="data_nascimento_ResponsavelCobranca">Data de Nascimento:</label>
               <input type="date" id="data_nascimento_ResponsavelCobranca" name="data_nascimento_ResponsavelCobranca" />
             </div>
-            <div>
+            <div style="grid-column: span 2;">
               <label for="observacoes_ResponsavelCobranca">Observações:</label>
-              <input type="text" id="observacoes_ResponsavelCobranca" name="observacoes_ResponsavelCobranca" />
+              <textarea id="observacoes_ResponsavelCobranca" name="observacoes_ResponsavelCobranca" rows="3" maxlength="1000" oninput="updateCharCounter('observacoes_ResponsavelCobranca', 'counter-observacoes_ResponsavelCobranca')"></textarea>
+              <div class="char-counter" id="counter-observacoes_ResponsavelCobranca">0 / 1000</div>
             </div>
           </div>
         </div>
@@ -732,8 +745,11 @@
                 id="insumos_ElaboracaoCadastro" name="insumos_ElaboracaoCadastro" /></div>
             <div><label for="pet_ElaboracaoCadastro">Pet:</label><input type="text" id="pet_ElaboracaoCadastro"
                 name="pet_ElaboracaoCadastro" /></div>
-            <div><label for="observacoes_ElaboracaoCadastro">Observações:</label><input type="text"
-                id="observacoes_ElaboracaoCadastro" name="observacoes_ElaboracaoCadastro" /></div>
+            <div style="grid-column: span 2;">
+              <label for="observacoes_ElaboracaoCadastro">Observações:</label>
+              <textarea id="observacoes_ElaboracaoCadastro" name="observacoes_ElaboracaoCadastro" rows="3" maxlength="1000" oninput="updateCharCounter('observacoes_ElaboracaoCadastro', 'counter-observacoes_ElaboracaoCadastro')"></textarea>
+              <div class="char-counter" id="counter-observacoes_ElaboracaoCadastro">0 / 1000</div>
+            </div>
           </div>
         </div>
       </form>

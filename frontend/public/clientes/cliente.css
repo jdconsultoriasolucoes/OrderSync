@@ -343,3 +343,29 @@ select:focus {
   flex-wrap: wrap;
   justify-content: flex-start;
 }
+
+.char-counter {
+  font-size: 11px;
+  color: var(--os-text-muted, #6b7280);
+  text-align: right;
+  margin-top: 2px;
+}
+
+textarea {
+  width: 100%;
+  padding: 10px 12px;
+  border-radius: var(--os-radius);
+  border: 1px solid var(--os-border);
+  font-family: var(--os-font);
+  font-size: var(--os-text-sm);
+  color: var(--os-text);
+  outline: none;
+  transition: border-color 0.15s, box-shadow 0.15s;
+  resize: vertical;
+  box-sizing: border-box;
+}
+
+textarea:focus {
+  border-color: var(--os-primary);
+  box-shadow: 0 0 0 3px var(--os-primary-ring);
+}
