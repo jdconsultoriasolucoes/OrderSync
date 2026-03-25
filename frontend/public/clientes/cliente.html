@@ -641,8 +641,11 @@
             </div>
             <div><label for="data_vencimento_ElaboracaoCadastro">Data de Vencimento:</label><input type="date"
                 id="data_vencimento_ElaboracaoCadastro" name="data_vencimento_ElaboracaoCadastro" /></div>
-            <div><label for="vendedor_ElaboracaoCadastro">Vendedor:</label><input type="text"
-                id="vendedor_ElaboracaoCadastro" name="vendedor_ElaboracaoCadastro" /></div>
+            <div><label for="vendedor_ElaboracaoCadastro">Vendedor:</label>
+                <select id="vendedor_ElaboracaoCadastro" name="vendedor_ElaboracaoCadastro">
+                  <option value="">Selecione</option>
+                </select>
+            </div>
           </div>
 
           <h2 class="subtitulo">Grupo Econômico Amarrado ao Cliente</h2>
@@ -1123,7 +1126,18 @@
           // Helper para evitar erros se o elemento não existir
           const setVal = (id, val) => {
             const el = document.getElementById(id);
-            if (el) el.value = val;
+            if (el) {
+              if (el.tagName === 'SELECT' && val) {
+                let exists = Array.from(el.options).some(opt => opt.value === String(val));
+                if (!exists) {
+                  const opt = document.createElement('option');
+                  opt.value = val;
+                  opt.text = val;
+                  el.appendChild(opt);
+                }
+              }
+              el.value = val;
+            }
           };
           const setCheck = (id, val) => {
             const el = document.getElementById(id);
@@ -1483,6 +1497,40 @@
             });
         }
 
+        function carregarVendedores() {
+          const api = window.API_BASE || "http://127.0.0.1:8000";
+          const token = window.Auth ? window.Auth.getToken() : localStorage.getItem('ordersync_token');
+          const headers = token ? { 'Authorization': `Bearer ${token}` } : {};
+
+          fetch(`${api}/vendedores/`, { headers })
+            .then(res => res.json())
+            .then(data => {
+              const select = document.getElementById("vendedor_ElaboracaoCadastro");
+              if (!select) return;
+              
+              const valAtual = select.value;
+              select.innerHTML = '<option value="">Selecione</option>';
+              data.forEach(v => {
+                const opt = document.createElement("option");
+                opt.value = v.nome;
+                opt.text = v.nome;
+                select.appendChild(opt);
+              });
+              
+              if (valAtual) {
+                let exists = Array.from(select.options).some(o => o.value === valAtual);
+                if (!exists) {
+                  const opt = document.createElement('option');
+                  opt.value = valAtual;
+                  opt.text = valAtual;
+                  select.appendChild(opt);
+                }
+                select.value = valAtual;
+              }
+            })
+            .catch(err => console.error("Erro ao carregar vendedores:", err));
+        }
+
         // Chamada ao carregar a página
         window.onload = () => {
           preencherSelect("situacao", "situacao");
@@ -1492,6 +1540,7 @@
           preencherSelect("tipo_venda", "tipo_venda");
           preencherSelect("tipo_compra", "tipo_compra");
           preencherSelect("ramo_de_atividade", "ramo_de_atividade");
+          carregarVendedores();
 
           setViewState('INITIAL');
         };

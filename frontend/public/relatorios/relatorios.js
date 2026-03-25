@@ -353,13 +353,20 @@ function desenharTabelaCaptacao() {
 
     let html = "";
     paginatedDados.forEach(d => {
-        let badgeBg = d.ativo ? "#16a34a" : "#dc2626"; // Sempre verde se ativo, senão vermelho
+        let badgeBg = d.ativo ? "#16a34a" : "#dc2626"; // Verde se ativo, senão vermelho para a badge de status de cadastro
         let badgeText = "white";
-        // Always displaying "Ativo" or "Inativo"
         let statusLabel = d.ativo ? "Ativo" : "Inativo";
+        
+        let rowBgColor = "transparent";
+        switch (d.status_cor) {
+            case "verde": rowBgColor = "#dcfce7"; break;
+            case "amarelo": rowBgColor = "#fef3c7"; break;
+            case "vermelho": rowBgColor = "#fee2e2"; break;
+            case "cinza": rowBgColor = "#f3f4f6"; break;
+        }
 
         html += `
-            <tr>
+            <tr style="background-color: ${rowBgColor};">
                 <td style="font-size: 11px; padding: 6px 4px; white-space: normal; word-break: break-word;">${d.rota_geral || '-'}</td>
                 <td style="font-size: 11px; padding: 6px 4px; white-space: normal; word-break: break-word;">${d.rota_aproximacao || '-'}</td>
                 <td style="font-size: 11px; padding: 6px 4px;">${d.vendedor || '-'}</td>

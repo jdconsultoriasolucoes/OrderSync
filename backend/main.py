@@ -11,7 +11,7 @@ from fastapi.staticfiles import StaticFiles
 from pathlib import Path  
 # Routers
 from routers.tabela_preco import router_meta, router as router_tabela
-from routers import pedido_preview, link_pedido, admin_config_email, cliente, listas, fiscal,pedidos,net_diag, produto, pedido_pdf, auth, usuario, fornecedor, dashboard, captacao_pedidos
+from routers import pedido_preview, link_pedido, admin_config_email, cliente, listas, fiscal,pedidos,net_diag, produto, pedido_pdf, auth, usuario, fornecedor, dashboard, captacao_pedidos, automation
 from database import SessionLocal
 
 from slowapi import _rate_limit_exceeded_handler
@@ -104,6 +104,7 @@ def startup_ensure_admin():
     from database import Base, engine
     from models.idempotency import IdempotencyKeyModel
     from models.background_task import BackgroundTaskModel
+    from models.automation_config import AutomationConfigModel
     Base.metadata.create_all(bind=engine)
 
     # --- MIGRAÇOES DE SCHEMA (Colunas novas) ---
@@ -237,13 +238,15 @@ app.include_router(usuario.router)
 app.include_router(fornecedor.router)
 app.include_router(dashboard.router)
 
-from routers import system_tables, transporte, relatorios
+from routers import system_tables, transporte, relatorios, vendedores
 app.include_router(system_tables.router)
 
 # ---- Novos Módulos de Relatórios/Logística ----
 app.include_router(transporte.router)
 app.include_router(relatorios.router)
 app.include_router(captacao_pedidos.router, prefix="/captacao-pedidos", tags=["Captacao Pedidos"])
+app.include_router(vendedores.router, prefix="/vendedores", tags=["Vendedores"])
+app.include_router(automation.router)
 
 # ---- Static (se precisar servir arquivos públicos do front) ----
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))

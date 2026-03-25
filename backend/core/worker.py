@@ -92,6 +92,39 @@ async def process_email_task(db, task: BackgroundTaskModel):
          
     return True
 
+async def check_automation_schedules(db):
+    try:
+        from models.automation_config import AutomationConfigModel
+        from services.prospeccao_service import enviar_relatorios_prospeccao
+        import datetime as dt_mod
+        
+        cfg = db.query(AutomationConfigModel).first()
+        if not cfg or not cfg.prospeccao_ativa:
+            return
+            
+        hoje = dt_mod.date.today()
+        agora = datetime.now(TZ)
+        
+        # O dia da semana no Python: Monday is 0 and Sunday is 6
+        if hoje.weekday() != cfg.prospeccao_dia_semana:
+            return
+            
+        if cfg.prospeccao_horario:
+            hora_config = cfg.prospeccao_horario
+            hora_atual = agora.time()
+            # Se a hora atual for maior ou igual à hora configurada
+            if hora_atual >= hora_config:
+                hoje_str = hoje.strftime("%Y-%m-%d")
+                if cfg.prospeccao_ultimo_envio != hoje_str:
+                    logger.info("Disparando envio de Relatório de Prospecção agendado")
+                    success = enviar_relatorios_prospeccao(db)
+                    
+                    # Atualiza independente de 100% success ou partial, pra não ficar em loop
+                    cfg.prospeccao_ultimo_envio = hoje_str
+                    db.commit()
+    except Exception as e:
+        logger.error(f"Erro ao checar automações: {e}")
+
 async def worker_loop():
     logger.info("Worker assíncrono de Background Tasks iniciado")
     while True:
@@ -133,6 +166,9 @@ async def worker_loop():
                     task.atualizado_em = datetime.now(TZ)
                     db.commit()
                 else:
+                    # Checa o agendamento de relatórios antes de dormir
+                    await check_automation_schedules(db)
+                    
                     # Nenhuma task para pegar, dorme antes de poolear de novo.
                     await asyncio.sleep(5)
                     continue

@@ -385,11 +385,14 @@
                 <button class="module-nav-btn" onclick="selectModule('descontos')">Descontos</button>
                 <button class="module-nav-btn" onclick="selectModule('familias')">Grupo de Produtos</button>
                 <button class="module-nav-btn" onclick="selectModule('transporte')">Transporte / Logística</button>
+                <button class="module-nav-btn" onclick="selectModule('vendedores')">Vendedores</button>
+                <button class="module-nav-btn" onclick="selectModule('previsao_semanal')">Previsão Semanal</button>
+                <button class="module-nav-btn" onclick="selectModule('automacao')">Automação de Relatórios</button>
             </nav>
 
             <div class="toolbar">
                 <div class="module-section-title" id="sectionTitle">Condições de Pagamento</div>
-                <button class="os-btn os-btn-primary os-btn-sm" onclick="openModal()">+ Novo</button>
+                <button id="btn-novo" class="os-btn os-btn-primary os-btn-sm" onclick="openModal()">+ Novo</button>
             </div>
 
             <div id="loading" style="display: none;">Carregando...</div>
@@ -469,6 +472,24 @@
                 <input id="trans-placa" type="text" placeholder="Ex: ABC-1234" required />
                 <label>Capacidade (kg)</label>
                 <input id="trans-capacidade" type="number" placeholder="Ex: 15000" />
+                <div class="modal-footer">
+                    <button type="button" class="btn" onclick="closeModals()">Cancelar</button>
+                    <button type="submit" class="btn btn-primary">Salvar</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- ===== Modal: Vendedores ===== -->
+    <div id="modal-vendedores" class="custom-modal">
+        <div class="modal-dialog">
+            <h3 id="modal-title-vendedores">Novo Vendedor</h3>
+            <form id="form-vendedores" onsubmit="saveVendedor(event)">
+                <input type="hidden" id="vend-id" />
+                <label>Nome do Vendedor</label>
+                <input id="vend-nome" type="text" placeholder="Nome completo" required />
+                <label>E-mail</label>
+                <input id="vend-email" type="email" placeholder="email@exemplo.com" />
                 <div class="modal-footer">
                     <button type="button" class="btn" onclick="closeModals()">Cancelar</button>
                     <button type="submit" class="btn btn-primary">Salvar</button>
