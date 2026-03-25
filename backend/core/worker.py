@@ -102,8 +102,8 @@ async def check_automation_schedules(db):
         if not cfg or not cfg.prospeccao_ativa:
             return
             
-        hoje = dt_mod.date.today()
         agora = datetime.now(TZ)
+        hoje = agora.date()
         
         # O dia da semana no Python: Monday is 0 and Sunday is 6
         if hoje.weekday() != cfg.prospeccao_dia_semana:
@@ -111,7 +111,7 @@ async def check_automation_schedules(db):
             
         if cfg.prospeccao_horario:
             hora_config = cfg.prospeccao_horario
-            hora_atual = agora.time()
+            hora_atual = dt_mod.time(agora.hour, agora.minute, agora.second)
             # Se a hora atual for maior ou igual à hora configurada
             if hora_atual >= hora_config:
                 hoje_str = hoje.strftime("%Y-%m-%d")
