@@ -274,6 +274,8 @@
                 <ul class="dashboard-menu">
                     <li><button data-tab="geral" class="active">Visão Geral</button></li>
                     <li><button data-tab="vendas">Vendas</button></li>
+                    <li><button data-tab="produtos">Produtos & Categorias</button></li>
+                    <li><button data-tab="clientes">Inteligência de Clientes</button></li>
                     <li><button data-tab="logistica">Logística</button></li>
                     <li><button data-tab="dinamica">Análise Dinâmica</button></li>
                 </ul>
@@ -316,9 +318,47 @@
                     </div>
                 </div>
 
+                <!-- Painel: Produtos -->
+                <div id="panel-produtos" style="display: none;">
+                    <div class="chart-grid">
+                        <div class="chart-box" style="min-height: 400px;">
+                            <canvas id="chart-top-produtos"></canvas>
+                        </div>
+                        <div class="chart-box" style="min-height: 400px;">
+                            <canvas id="chart-familias"></canvas>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Painel: Clientes -->
+                <div id="panel-clientes" style="display: none;">
+                    <div class="kpi-grid">
+                        <div class="kpi-card"><div class="kpi-title">Orçamentos no Sistema</div><div class="kpi-value" id="kpi-orcamentos-funil">-</div></div>
+                        <div class="kpi-card"><div class="kpi-title">Pedidos Confirmados</div><div class="kpi-value" id="kpi-convertidos-funil">-</div></div>
+                        <div class="kpi-card"><div class="kpi-title">Ticket Médio Top 10</div><div class="kpi-value" id="kpi-ticket-top10">-</div></div>
+                    </div>
+                    <div class="chart-grid">
+                        <div class="chart-box chart-box-full">
+                            <canvas id="chart-top-clientes"></canvas>
+                        </div>
+                    </div>
+                </div>
+
                 <!-- Painel: Logística -->
                 <div id="panel-logistica" style="display: none;">
                     <div class="kpi-grid">
+                        <div class="kpi-card"><div class="kpi-title">Cargas Enviadas (Mês)</div><div class="kpi-value" id="kpi-cargas-mes">-</div></div>
+                        <div class="kpi-card"><div class="kpi-title">Peso Médio por Carga</div><div class="kpi-value" id="kpi-peso-medio">-</div></div>
+                        <div class="kpi-card"><div class="kpi-title">Total Custo Frete (Mês)</div><div class="kpi-value" id="kpi-custo-frete">-</div></div>
+                    </div>
+                    <div class="chart-grid" style="margin-bottom: 20px;">
+                        <div class="chart-box">
+                            <canvas id="chart-modalidade"></canvas>
+                        </div>
+                        <div class="chart-box">
+                            <canvas id="chart-eficiencia-frota"></canvas>
+                        </div>
+                    </div>
                         <div class="kpi-card"><div class="kpi-title">Cargas Enviadas (Mês)</div><div class="kpi-value" id="kpi-cargas-mes">-</div></div>
                         <div class="kpi-card"><div class="kpi-title">Peso Médio por Carga</div><div class="kpi-value" id="kpi-peso-medio">-</div></div>
                     </div>

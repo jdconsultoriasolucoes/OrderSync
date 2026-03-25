@@ -11,6 +11,7 @@ class TransporteModel(Base):
     veiculo_placa = Column(String, nullable=False)
     modelo = Column(String, nullable=True)
     capacidade_kg = Column(Integer, nullable=True)
+    tipo_veiculo = Column(String, nullable=True) # [Ex: 'Proprio', 'Terceiro']
     
     data_criacao = Column(DateTime, default=datetime.utcnow)
     data_update = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)

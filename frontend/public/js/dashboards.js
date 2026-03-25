@@ -26,6 +26,8 @@ function initTabs() {
 function showPanel(tab) {
     document.getElementById("panel-geral").style.display = "none";
     document.getElementById("panel-vendas").style.display = "none";
+    document.getElementById("panel-produtos").style.display = "none";
+    document.getElementById("panel-clientes").style.display = "none";
     document.getElementById("panel-logistica").style.display = "none";
     document.getElementById("panel-dinamica").style.display = "none";
     
@@ -42,6 +44,16 @@ function showPanel(tab) {
         document.getElementById("dash-title").innerText = "Performance de Vendas";
         document.getElementById("dash-desc").innerText = "Análise detalhada de vendas, tickets e mapa.";
         loadDashboardVendas();
+    } else if (tab === "produtos") {
+        document.getElementById("panel-produtos").style.display = "block";
+        document.getElementById("dash-title").innerText = "Produtos & Categorias";
+        document.getElementById("dash-desc").innerText = "Performance dos itens mais vendidos e distribuição por famílias.";
+        loadDashboardProdutos();
+    } else if (tab === "clientes") {
+        document.getElementById("panel-clientes").style.display = "block";
+        document.getElementById("dash-title").innerText = "Inteligência de Clientes";
+        document.getElementById("dash-desc").innerText = "Ranking dos melhores clientes e análise de conversão do funil de vendas.";
+        loadDashboardClientes();
     } else if (tab === "logistica") {
         document.getElementById("panel-logistica").style.display = "block";
         document.getElementById("dash-title").innerText = "Logística & Cargas";
@@ -162,9 +174,90 @@ async function loadDashboardVendas() {
 }
 
 // ----------------------------------------------------------------------------------
+// 2A. Produtos
+// ----------------------------------------------------------------------------------
+let chartTopProdutosInst = null;
+let chartFamiliasInst = null;
+async function loadDashboardProdutos() {
+    try {
+        const resp = await fetch(`${API_BASE}/api/dashboard/produtos`, {
+            headers: { "Authorization": `Bearer ${window.Auth ? window.Auth.getToken() : ''}` }
+        });
+        if (!resp.ok) throw new Error("Erro Produtos");
+        const data = await resp.json();
+
+        const ctx1 = document.getElementById("chart-top-produtos").getContext("2d");
+        if(chartTopProdutosInst) chartTopProdutosInst.destroy();
+        chartTopProdutosInst = new Chart(ctx1, {
+            type: 'bar',
+            data: {
+                labels: data.top_produtos.labels,
+                datasets: [{
+                    label: 'Faturamento (R$)',
+                    data: data.top_produtos.faturamento,
+                    backgroundColor: '#10b981'
+                }]
+            },
+            options: { responsive: true, maintainAspectRatio: false, indexAxis: 'y' }
+        });
+
+        const ctx2 = document.getElementById("chart-familias").getContext("2d");
+        if(chartFamiliasInst) chartFamiliasInst.destroy();
+        chartFamiliasInst = new Chart(ctx2, {
+            type: 'doughnut',
+            data: {
+                labels: data.familias.labels,
+                datasets: [{
+                    data: data.familias.faturamento,
+                    backgroundColor: ['#3b82f6', '#8b5cf6', '#ec4899', '#f43f5e', '#f97316', '#eab308']
+                }]
+            },
+            options: { responsive: true, maintainAspectRatio: false }
+        });
+
+    } catch(e) { console.error(e); }
+}
+
+// ----------------------------------------------------------------------------------
+// 2B. Clientes
+// ----------------------------------------------------------------------------------
+let chartTopClientesInst = null;
+async function loadDashboardClientes() {
+    try {
+        const resp = await fetch(`${API_BASE}/api/dashboard/clientes`, {
+            headers: { "Authorization": `Bearer ${window.Auth ? window.Auth.getToken() : ''}` }
+        });
+        if (!resp.ok) throw new Error("Erro Clientes");
+        const data = await resp.json();
+
+        document.getElementById("kpi-orcamentos-funil").innerText = data.funil.orcamentos;
+        document.getElementById("kpi-convertidos-funil").innerText = data.funil.convertidos;
+        document.getElementById("kpi-ticket-top10").innerText = `R$ ${data.kpis.ticket_record.toLocaleString('pt-BR', {minimumFractionDigits: 2})}`;
+
+        const ctx = document.getElementById("chart-top-clientes").getContext("2d");
+        if(chartTopClientesInst) chartTopClientesInst.destroy();
+        chartTopClientesInst = new Chart(ctx, {
+            type: 'bar',
+            data: {
+                labels: data.top_clientes.labels,
+                datasets: [{
+                    label: 'Faturamento Total (R$)',
+                    data: data.top_clientes.faturamento,
+                    backgroundColor: '#8b5cf6'
+                }]
+            },
+            options: { responsive: true, maintainAspectRatio: false }
+        });
+
+    } catch(e) { console.error(e); }
+}
+
+// ----------------------------------------------------------------------------------
 // 3. Logística
 // ----------------------------------------------------------------------------------
 let chartLogisticaInst = null;
+let chartModalidadeInst = null;
+let chartFrotaInst = null;
 async function loadDashboardLogistica() {
     try {
         const resp = await fetch(`${API_BASE}/api/dashboard/logistica`, {
@@ -175,10 +268,11 @@ async function loadDashboardLogistica() {
 
         document.getElementById("kpi-cargas-mes").innerText = data.kpis.cargas_enviadas_mes;
         document.getElementById("kpi-peso-medio").innerText = `${data.kpis.peso_medio_carga.toLocaleString('pt-BR')} kg`;
+        document.getElementById("kpi-custo-frete").innerText = `R$ ${data.kpis.custo_frete_mes.toLocaleString('pt-BR', {minimumFractionDigits: 2})}`;
 
-        const ctx = document.getElementById("chart-cargas-historico").getContext("2d");
+        const ctx1 = document.getElementById("chart-cargas-historico").getContext("2d");
         if(chartLogisticaInst) chartLogisticaInst.destroy();
-        chartLogisticaInst = new Chart(ctx, {
+        chartLogisticaInst = new Chart(ctx1, {
             type: 'line',
             data: {
                 labels: data.chart_historico.labels,
@@ -192,6 +286,34 @@ async function loadDashboardLogistica() {
                 }]
             },
             options: { responsive: true, maintainAspectRatio: false }
+        });
+
+        const ctx2 = document.getElementById("chart-modalidade").getContext("2d");
+        if(chartModalidadeInst) chartModalidadeInst.destroy();
+        chartModalidadeInst = new Chart(ctx2, {
+            type: 'pie',
+            data: {
+                labels: data.chart_modalidade.labels,
+                datasets: [{
+                    data: data.chart_modalidade.data,
+                    backgroundColor: ['#10b981', '#6b7280']
+                }]
+            },
+            options: { responsive: true, maintainAspectRatio: false, plugins: { title: { display: true, text: 'Modalidade (Entrega vs Retirada)'} } }
+        });
+
+        const ctx3 = document.getElementById("chart-eficiencia-frota").getContext("2d");
+        if(chartFrotaInst) chartFrotaInst.destroy();
+        chartFrotaInst = new Chart(ctx3, {
+            type: 'doughnut',
+            data: {
+                labels: data.chart_frota.labels,
+                datasets: [{
+                    data: data.chart_frota.data,
+                    backgroundColor: ['#2563eb', '#f43f5e', '#eab308']
+                }]
+            },
+            options: { responsive: true, maintainAspectRatio: false, plugins: { title: { display: true, text: 'Eficiência de Frota (Próprio vs Terceiro)'} } }
         });
 
     } catch(e) { console.error(e); }

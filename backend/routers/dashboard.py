@@ -145,6 +145,34 @@ def get_dashboard_logistica(
     """)
     kpi_peso = db.execute(q_peso).mappings().first()
 
+    # Frete Total (Mês atual)
+    q_frete = text("""
+        SELECT COALESCE(SUM(frete_total), 0) as total_frete 
+        FROM public.tb_pedidos 
+        WHERE status != 'Cancelado' 
+          AND EXTRACT(MONTH FROM created_at) = :m AND EXTRACT(YEAR FROM created_at) = :a
+    """)
+    kpi_frete = db.execute(q_frete, {"m": mes_atual, "a": ano_atual}).mappings().first()
+
+    # Modalidade (Entrega vs Retirada)
+    q_modalidade = text("""
+        SELECT 
+            COUNT(CASE WHEN frete_total > 0 THEN 1 END) as entrega,
+            COUNT(CASE WHEN frete_total <= 0 THEN 1 END) as retirada
+        FROM public.tb_pedidos
+        WHERE status != 'Cancelado'
+    """)
+    mod_row = db.execute(q_modalidade).mappings().first()
+
+    # Eficiência Frota (Próprio vs Terceiro)
+    q_frota = text("""
+        SELECT COALESCE(t.tipo_veiculo, 'Não Informado') as tipo, COUNT(c.id) as qtd
+        FROM public.tb_cargas c
+        JOIN public.tb_transporte t ON c.id_transporte = t.id
+        GROUP BY t.tipo_veiculo
+    """)
+    frota_rows = db.execute(q_frota).mappings().all()
+
     labels = []
     pesos = []
     for i in range(5, -1, -1):
@@ -163,11 +191,20 @@ def get_dashboard_logistica(
     return {
         "kpis": {
             "cargas_enviadas_mes": int(kpi_env["cargas_env"] if kpi_env else 0),
-            "peso_medio_carga": float(kpi_peso["peso_med"] if kpi_peso else 0)
+            "peso_medio_carga": float(kpi_peso["peso_med"] if kpi_peso else 0),
+            "custo_frete_mes": float(kpi_frete["total_frete"] if kpi_frete else 0)
         },
         "chart_historico": {
             "labels": labels,
             "data": pesos
+        },
+        "chart_modalidade": {
+            "labels": ["Entrega", "Retirada"],
+            "data": [int(mod_row["entrega"] or 0), int(mod_row["retirada"] or 0)]
+        },
+        "chart_frota": {
+            "labels": [r["tipo"] for r in frota_rows],
+            "data": [int(r["qtd"]) for r in frota_rows]
         }
     }
 
@@ -246,4 +283,89 @@ def get_dashboard_kpis(
         "faturamento_mes": float(faturamento),
         "pedidos_pendentes": int(pendentes),
         "ticket_medio": float(ticket_medio)
+    }
+
+@router.get("/produtos")
+def get_dashboard_produtos(
+    db: Session = Depends(get_db),
+    current_user: UsuarioModel = Depends(get_current_user)
+):
+    # Top 10 Produtos
+    q_top_produtos = text("""
+        SELECT i.nome, SUM(i.quantidade) as qtd, COALESCE(SUM(i.subtotal_com_f), 0) as fat
+        FROM public.tb_pedidos_itens i
+        JOIN public.tb_pedidos p ON i.id_pedido = p.id_pedido
+        WHERE p.status != 'Cancelado' AND i.nome IS NOT NULL AND i.nome != ''
+        GROUP BY i.nome
+        ORDER BY fat DESC
+        LIMIT 10
+    """)
+    top_prods_rows = db.execute(q_top_produtos).mappings().all()
+
+    # Distribuição por Família
+    q_familias = text("""
+        SELECT COALESCE(pr.familia, 'Sem Família') as fam, COALESCE(SUM(i.subtotal_com_f), 0) as fat
+        FROM public.tb_pedidos_itens i
+        JOIN public.tb_pedidos p ON i.id_pedido = p.id_pedido
+        LEFT JOIN public.t_cadastro_produto_v2 pr ON i.codigo = pr.codigo_supra
+        WHERE p.status != 'Cancelado' AND pr.familia IS NOT NULL AND pr.familia != ''
+        GROUP BY pr.familia
+        ORDER BY fat DESC
+        LIMIT 10
+    """)
+    familias_rows = db.execute(q_familias).mappings().all()
+
+    return {
+        "top_produtos": {
+            "labels": [r["nome"] for r in top_prods_rows],
+            "faturamento": [float(r["fat"]) for r in top_prods_rows],
+            "quantidade": [float(r["qtd"]) for r in top_prods_rows]
+        },
+        "familias": {
+            "labels": [r["fam"] for r in familias_rows],
+            "faturamento": [float(r["fat"]) for r in familias_rows]
+        }
+    }
+
+@router.get("/clientes")
+def get_dashboard_clientes(
+    db: Session = Depends(get_db),
+    current_user: UsuarioModel = Depends(get_current_user)
+):
+    # Top 10 Clientes (Ranking de Receita)
+    q_top_cli = text("""
+        SELECT p.cliente, COALESCE(SUM(p.total_pedido), 0) as fat
+        FROM public.tb_pedidos p
+        WHERE p.status != 'Cancelado' AND p.cliente IS NOT NULL AND p.cliente != ''
+        GROUP BY p.cliente
+        ORDER BY fat DESC
+        LIMIT 10
+    """)
+    top_cli_rows = db.execute(q_top_cli).mappings().all()
+
+    # Funil de Conversão (Orçamentos vs Pedidos/Faturados)
+    q_funil = text("""
+        SELECT 
+            COUNT(CASE WHEN status = 'Orçamento' THEN 1 END) as orcamentos,
+            COUNT(CASE WHEN status != 'Orçamento' AND status != 'Cancelado' THEN 1 END) as convertidos
+        FROM public.tb_pedidos
+    """)
+    funil_row = db.execute(q_funil).mappings().first()
+
+    # Ticket médio dos top 10 clientes (apenas para exibir no card se necessário)
+    q_ticket_geral = text("SELECT COALESCE(AVG(total_pedido), 0) as med FROM public.tb_pedidos WHERE status != 'Cancelado' AND total_pedido > 0")
+    tkt_row = db.execute(q_ticket_geral).mappings().first()
+
+    return {
+        "top_clientes": {
+            "labels": [r["cliente"] for r in top_cli_rows],
+            "faturamento": [float(r["fat"]) for r in top_cli_rows]
+        },
+        "funil": {
+            "orcamentos": int(funil_row["orcamentos"] or 0),
+            "convertidos": int(funil_row["convertidos"] or 0)
+        },
+        "kpis": {
+            "ticket_record": float(tkt_row["med"] if tkt_row else 0)
+        }
     }

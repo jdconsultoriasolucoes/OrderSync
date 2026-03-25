@@ -82,6 +82,7 @@ const CONFIG = {
             { key: 'motorista', label: 'Motorista' },
             { key: 'modelo', label: 'Modelo' },
             { key: 'veiculo_placa', label: 'Placa' },
+            { key: 'tipo_veiculo', label: 'Tipo', fmt: v => v === 'Proprio' ? 'Próprio' : 'Terceiro' },
             { key: 'capacidade_kg', label: 'Capacidade', fmt: v => v ? (v).toLocaleString('pt-BR') + ' kg' : '-' }
         ],
         modalId: 'modal-transporte',
@@ -91,6 +92,7 @@ const CONFIG = {
             document.getElementById('trans-motorista').value = item.motorista;
             document.getElementById('trans-modelo').value = item.modelo || '';
             document.getElementById('trans-placa').value = item.veiculo_placa;
+            document.getElementById('trans-tipo').value = item.tipo_veiculo || 'Proprio';
             document.getElementById('trans-capacidade').value = item.capacidade_kg || '';
         },
         clearForm: () => {
@@ -99,6 +101,7 @@ const CONFIG = {
             document.getElementById('trans-motorista').value = '';
             document.getElementById('trans-modelo').value = '';
             document.getElementById('trans-placa').value = '';
+            document.getElementById('trans-tipo').value = 'Proprio';
             document.getElementById('trans-capacidade').value = '';
         }
     },
@@ -459,6 +462,7 @@ async function saveTransporte(e) {
         motorista: motorista,
         modelo: document.getElementById('trans-modelo').value || null,
         veiculo_placa: placa,
+        tipo_veiculo: document.getElementById('trans-tipo').value,
         capacidade_kg: cap ? parseInt(cap) : null
     };
 
