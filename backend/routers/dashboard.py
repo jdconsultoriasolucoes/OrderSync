@@ -3,7 +3,7 @@ from sqlalchemy.orm import Session
 from sqlalchemy import text
 from database import get_db
 from pydantic import BaseModel
-from typing import List, Dict, Any
+from typing import List, Dict, Any, Optional
 from core.deps import get_current_user
 from models.usuario import UsuarioModel
 import datetime
@@ -11,31 +11,74 @@ from dateutil.relativedelta import relativedelta
 
 router = APIRouter(prefix="/api/dashboard", tags=["Dashboard"])
 
+def get_dashboard_filters(status: Optional[str] = None, periodo: str = "mes"):
+    """
+    Retorna o fragmento SQL WHERE (sem o 'WHERE' ou 'AND' inicial)
+    e os parâmetros para os filtros globais.
+    """
+    hoje = datetime.date.today()
+    params: Dict[str, Any] = {}
+    where_parts: List[str] = []
+
+    # 1. Filtro de Status
+    if status and status != "Todos":
+        where_parts.append("status = :status")
+        params["status"] = status
+    
+    # 2. Filtro de Período
+    start_date = None
+    if periodo == "ytd":
+        start_date = datetime.date(hoje.year, 1, 1)
+    elif periodo == "trimestre":
+        quarter_month = ((hoje.month - 1) // 3) * 3 + 1
+        start_date = datetime.date(hoje.year, quarter_month, 1)
+    elif periodo == "semestre":
+        semester_month = 1 if hoje.month <= 6 else 7
+        start_date = datetime.date(hoje.year, semester_month, 1)
+    else: # "mes"
+        start_date = datetime.date(hoje.year, hoje.month, 1)
+    
+    where_parts.append("created_at >= :start_date")
+    params["start_date"] = start_date
+    
+    return " AND ".join(where_parts), params
+
 @router.get("/geral")
 def get_dashboard_geral(
+    status: str = Query(None),
+    periodo: str = Query("mes"),
     db: Session = Depends(get_db),
     current_user: UsuarioModel = Depends(get_current_user)
 ):
+    where_clause, params = get_dashboard_filters(status, periodo)
     hoje = datetime.date.today()
-    mes_atual = hoje.month
-    ano_atual = hoje.year
 
     # KPIs
-    q_kpi = text("""
+    q_kpi = text(f"""
         SELECT 
             COUNT(id_pedido) as pedidos_mes,
-            COALESCE(SUM(total_pedido), 0) as faturamento_mes
+            COALESCE(SUM(total_pedido), 0) as faturamento_mes,
+            COALESCE(AVG(total_pedido), 0) as ticket_medio
         FROM public.tb_pedidos
-        WHERE EXTRACT(MONTH FROM created_at) = :mes AND EXTRACT(YEAR FROM created_at) = :ano
+        WHERE {where_clause}
     """)
-    kpi_row = db.execute(q_kpi, {"mes": mes_atual, "ano": ano_atual}).mappings().first()
+    kpi_row = db.execute(q_kpi, params).mappings().first()
 
-    q_cargas = text("""
+    # Cargas (Ajustando filtro de data para cargas também)
+    # tb_cargas usa data_criacao em vez de created_at
+    c_where = where_clause.replace("created_at", "data_criacao")
+    # Cargas não tem 'status' do pedido diretamente, então removemos se estiver filtrando por status?
+    # No, idealmente cargas abertas seriam filtradas apenas por período se o status for de pedido.
+    # Mas se o user filtrar por 'Cancelado', cargas abertas faz sentido? 
+    # Por enquanto, aplicamos apenas o filtro de período nas cargas.
+    _, c_params = get_dashboard_filters(None, periodo)
+    q_cargas = text(f"""
         SELECT COUNT(id) as cargas_abertas
         FROM public.tb_cargas
-        WHERE EXTRACT(MONTH FROM data_criacao) = :m AND EXTRACT(YEAR FROM data_criacao) = :a
+        WHERE data_criacao >= :start_date
+          AND (is_historico = FALSE OR is_historico IS NULL)
     """)
-    cargas_row = db.execute(q_cargas, {"m": mes_atual, "a": ano_atual}).mappings().first()
+    cargas_row = db.execute(q_cargas, c_params).mappings().first()
 
     # Gráfico (últimos 6 meses)
     labels = []
@@ -58,9 +101,10 @@ def get_dashboard_geral(
 
     return {
         "kpis": {
-            "pedidos_mes": int(kpi_row["pedidos_mes"] if kpi_row and kpi_row["pedidos_mes"] else 0),
-            "faturamento_mes": float(kpi_row["faturamento_mes"] if kpi_row and kpi_row["faturamento_mes"] else 0),
-            "cargas_abertas": int(cargas_row["cargas_abertas"] if cargas_row and cargas_row["cargas_abertas"] else 0)
+            "pedidos_mes": int(kpi_row["pedidos_mes"] or 0),
+            "faturamento_mes": float(kpi_row["faturamento_mes"] or 0),
+            "ticket_medio": float(kpi_row["ticket_medio"] or 0),
+            "cargas_abertas": int(cargas_row["cargas_abertas"] or 0)
         },
         "chart": {
             "labels": labels,
@@ -72,33 +116,40 @@ def get_dashboard_geral(
 
 @router.get("/vendas")
 def get_dashboard_vendas(
+    status: str = Query(None),
+    periodo: str = Query("mes"),
     db: Session = Depends(get_db),
     current_user: UsuarioModel = Depends(get_current_user)
 ):
-    # Ticket médio geral
-    q_ticket = text("SELECT COALESCE(AVG(total_pedido), 0) as tkt FROM public.tb_pedidos WHERE total_pedido > 0")
-    tkt_row = db.execute(q_ticket).mappings().first()
+    where_clause, params = get_dashboard_filters(status, periodo)
+
+    # Ticket médio especificado no período/status
+    q_ticket = text(f"SELECT COALESCE(AVG(total_pedido), 0) as tkt FROM public.tb_pedidos WHERE total_pedido > 0 AND {where_clause}")
+    tkt_row = db.execute(q_ticket, params).mappings().first()
     
     # Vendedores ativos vêm do cliente (elaboracao_vendedor)
     q_vendedores = text("SELECT COUNT(DISTINCT elaboracao_vendedor) as vends FROM public.t_cadastro_cliente_v2 WHERE elaboracao_vendedor IS NOT NULL AND elaboracao_vendedor != ''")
     vend_row = db.execute(q_vendedores).mappings().first()
 
     # Vendas por Região (Top 5 municípios)
-    q_regiao = text("""
+    q_regiao = text(f"""
         SELECT COALESCE(c.faturamento_municipio, c.entrega_municipio) as mun, SUM(p.total_pedido) as total
         FROM public.tb_pedidos p
         JOIN public.t_cadastro_cliente_v2 c ON p.codigo_cliente = c.cadastro_codigo_da_empresa
+        WHERE {where_clause.replace('status', 'p.status').replace('created_at', 'p.created_at')}
         GROUP BY COALESCE(c.faturamento_municipio, c.entrega_municipio)
         ORDER BY total DESC
         LIMIT 5
     """)
-    regioes = db.execute(q_regiao).mappings().all()
+    regioes = db.execute(q_regiao, params).mappings().all()
     reg_labels = [r["mun"] or "N/I" for r in regioes]
     reg_data = [float(r["total"] or 0) for r in regioes]
 
     # Vendas por Status
-    q_status = text("SELECT status, COUNT(id_pedido) as qtd FROM public.tb_pedidos GROUP BY status")
-    status_rows = db.execute(q_status).mappings().all()
+    # Nota: Este gráfico ignora o filtro de status para mostrar a proporção geral
+    where_period, period_params = get_dashboard_filters(None, periodo)
+    q_status = text(f"SELECT status, COUNT(id_pedido) as qtd FROM public.tb_pedidos WHERE {where_period} GROUP BY status")
+    status_rows = db.execute(q_status, period_params).mappings().all()
     st_labels = [s["status"] for s in status_rows]
     st_data = [int(s["qtd"]) for s in status_rows]
 
@@ -140,49 +191,53 @@ def get_dashboard_vendas(
 
 @router.get("/logistica")
 def get_dashboard_logistica(
+    status: str = Query(None),
+    periodo: str = Query("mes"),
     db: Session = Depends(get_db),
     current_user: UsuarioModel = Depends(get_current_user)
 ):
-    hoje = datetime.date.today()
-    mes_atual = hoje.month
-    ano_atual = hoje.year
+    where_clause, params = get_dashboard_filters(status, periodo)
+    # Filtro de cargas (apenas período)
+    _, p_params = get_dashboard_filters(None, periodo)
 
-    q_kpi = text("""
+    q_kpi = text(f"""
         SELECT COUNT(id) as cargas_env
         FROM public.tb_cargas
-        WHERE EXTRACT(MONTH FROM data_criacao) = :m AND EXTRACT(YEAR FROM data_criacao) = :a
+        WHERE data_criacao >= :start_date
+          AND is_historico = TRUE
     """)
-    kpi_env = db.execute(q_kpi, {"m": mes_atual, "a": ano_atual}).mappings().first()
+    kpi_env = db.execute(q_kpi, p_params).mappings().first()
 
-    q_peso = text("""
+    hoje = datetime.date.today()
+    q_peso = text(f"""
         SELECT COALESCE(AVG(carga_peso), 0) as peso_med
         FROM (
             SELECT cp.id_carga, SUM(COALESCE(p.peso_total_kg, 0)) as carga_peso
             FROM public.tb_cargas_pedidos cp
             JOIN public.tb_pedidos p ON cp.numero_pedido = CAST(p.id_pedido AS VARCHAR)
+            WHERE {where_clause.replace('status', 'p.status').replace('created_at', 'p.created_at')}
             GROUP BY cp.id_carga
         ) sub
     """)
-    kpi_peso = db.execute(q_peso).mappings().first()
+    kpi_peso = db.execute(q_peso, params).mappings().first()
 
-    # Frete Total (Mês atual)
-    q_frete = text("""
+    # Frete Total
+    q_frete = text(f"""
         SELECT COALESCE(SUM(frete_total), 0) as total_frete 
         FROM public.tb_pedidos 
-        WHERE status != 'Cancelado' 
-          AND EXTRACT(MONTH FROM created_at) = :m AND EXTRACT(YEAR FROM created_at) = :a
+        WHERE {where_clause}
     """)
-    kpi_frete = db.execute(q_frete, {"m": mes_atual, "a": ano_atual}).mappings().first()
+    kpi_frete = db.execute(q_frete, params).mappings().first()
 
     # Modalidade (Entrega vs Retirada)
-    q_modalidade = text("""
+    q_modalidade = text(f"""
         SELECT 
             COUNT(CASE WHEN frete_total > 0 THEN 1 END) as entrega,
             COUNT(CASE WHEN frete_total <= 0 THEN 1 END) as retirada
         FROM public.tb_pedidos
-        WHERE status != 'Cancelado'
+        WHERE {where_clause}
     """)
-    mod_row = db.execute(q_modalidade).mappings().first()
+    mod_row = db.execute(q_modalidade, params).mappings().first()
 
     # Eficiência Frota (Próprio vs Terceiro)
     q_frota = text("""
@@ -231,23 +286,27 @@ def get_dashboard_logistica(
 
 @router.get("/pivot")
 def get_dashboard_pivot(
+    status: Optional[str] = Query(None),
+    periodo: str = Query("mes"),
     db: Session = Depends(get_db),
     current_user: UsuarioModel = Depends(get_current_user)
 ):
+    where_clause, params = get_dashboard_filters(status, periodo)
     # Retorna uma lista de dicionários para o PivotTable.js
-    q = text("""
+    q = text(f"""
         SELECT 
             p.status as "Status",
             COALESCE(c.faturamento_municipio, c.entrega_municipio) as "Municipio",
             p.cliente as "Cliente",
             p.total_pedido as "Valor_Total",
-            TO_CHAR(p.created_at, 'YYYY-MM') as "Mes_Ano"
+            TO_CHAR(p.created_at, 'YYYY-MM-DD') as "Data"
         FROM public.tb_pedidos p
         LEFT JOIN public.t_cadastro_cliente_v2 c ON p.codigo_cliente = c.cadastro_codigo_da_empresa
+        WHERE {where_clause.replace('status', 'p.status').replace('created_at', 'p.created_at')}
         ORDER BY p.created_at DESC
-        LIMIT 1000
+        LIMIT 2000
     """)
-    rows = db.execute(q).mappings().all()
+    rows = db.execute(q, params).mappings().all()
     
     return [dict(r) for r in rows]
 
@@ -263,6 +322,7 @@ def get_dashboard_kpis(
     Retorna os KPIs principais para o dashboard da home (index.html).
     Suporta filtros por mês e ano.
     """
+    hoje = datetime.date.today()
     # Filtro de data
     where_clause = ""
     params = {}
@@ -307,33 +367,39 @@ def get_dashboard_kpis(
 
 @router.get("/produtos")
 def get_dashboard_produtos(
+    status: str = Query(None),
+    periodo: str = Query("mes"),
     db: Session = Depends(get_db),
     current_user: UsuarioModel = Depends(get_current_user)
 ):
+    where_clause, params = get_dashboard_filters(status, periodo)
+
     # Top 10 Produtos
-    q_top_produtos = text("""
+    q_top_produtos = text(f"""
         SELECT i.nome, SUM(i.quantidade) as qtd, COALESCE(SUM(i.subtotal_com_f), 0) as fat
         FROM public.tb_pedidos_itens i
         JOIN public.tb_pedidos p ON i.id_pedido = p.id_pedido
-        WHERE p.status != 'Cancelado' AND i.nome IS NOT NULL AND i.nome != ''
+        WHERE {where_clause.replace('status', 'p.status').replace('created_at', 'p.created_at')} 
+          AND i.nome IS NOT NULL AND i.nome != ''
         GROUP BY i.nome
         ORDER BY fat DESC
         LIMIT 10
     """)
-    top_prods_rows = db.execute(q_top_produtos).mappings().all()
+    top_prods_rows = db.execute(q_top_produtos, params).mappings().all()
 
     # Distribuição por Família
-    q_familias = text("""
+    q_familias = text(f"""
         SELECT COALESCE(pr.familia, 'Sem Família') as fam, COALESCE(SUM(i.subtotal_com_f), 0) as fat
         FROM public.tb_pedidos_itens i
         JOIN public.tb_pedidos p ON i.id_pedido = p.id_pedido
         LEFT JOIN public.t_cadastro_produto_v2 pr ON i.codigo = pr.codigo_supra
-        WHERE p.status != 'Cancelado' AND pr.familia IS NOT NULL AND pr.familia != ''
+        WHERE {where_clause.replace('status', 'p.status').replace('created_at', 'p.created_at')}
+          AND pr.familia IS NOT NULL AND pr.familia != ''
         GROUP BY pr.familia
         ORDER BY fat DESC
         LIMIT 10
     """)
-    familias_rows = db.execute(q_familias).mappings().all()
+    familias_rows = db.execute(q_familias, params).mappings().all()
 
     return {
         "top_produtos": {
@@ -349,32 +415,40 @@ def get_dashboard_produtos(
 
 @router.get("/clientes")
 def get_dashboard_clientes(
+    status: str = Query(None),
+    periodo: str = Query("mes"),
     db: Session = Depends(get_db),
     current_user: UsuarioModel = Depends(get_current_user)
 ):
+    where_clause, params = get_dashboard_filters(status, periodo)
+
     # Top 10 Clientes (Ranking de Receita)
-    q_top_cli = text("""
+    q_top_cli = text(f"""
         SELECT p.cliente, COALESCE(SUM(p.total_pedido), 0) as fat
         FROM public.tb_pedidos p
-        WHERE p.status != 'Cancelado' AND p.cliente IS NOT NULL AND p.cliente != ''
+        WHERE {where_clause.replace('status', 'p.status').replace('created_at', 'p.created_at')}
+          AND p.cliente IS NOT NULL AND p.cliente != ''
         GROUP BY p.cliente
         ORDER BY fat DESC
         LIMIT 10
     """)
-    top_cli_rows = db.execute(q_top_cli).mappings().all()
+    top_cli_rows = db.execute(q_top_cli, params).mappings().all()
 
     # Funil de Conversão (Orçamentos vs Pedidos/Faturados)
-    q_funil = text("""
+    # Nota: Este kpi ignora o status 'Cancelado' mas respeita o período
+    where_period, period_params = get_dashboard_filters(None, periodo)
+    q_funil = text(f"""
         SELECT 
             COUNT(CASE WHEN status = 'Orçamento' THEN 1 END) as orcamentos,
             COUNT(CASE WHEN status != 'Orçamento' AND status != 'Cancelado' THEN 1 END) as convertidos
         FROM public.tb_pedidos
+        WHERE {where_period}
     """)
-    funil_row = db.execute(q_funil).mappings().first()
+    funil_row = db.execute(q_funil, period_params).mappings().first()
 
-    # Ticket médio dos top 10 clientes (apenas para exibir no card se necessário)
-    q_ticket_geral = text("SELECT COALESCE(AVG(total_pedido), 0) as med FROM public.tb_pedidos WHERE status != 'Cancelado' AND total_pedido > 0")
-    tkt_row = db.execute(q_ticket_geral).mappings().first()
+    # Ticket médio geral no período/status
+    q_ticket_geral = text(f"SELECT COALESCE(AVG(total_pedido), 0) as med FROM public.tb_pedidos WHERE total_pedido > 0 AND {where_clause}")
+    tkt_row = db.execute(q_ticket_geral, params).mappings().first()
 
     # Evolução Mensal de Novos Orçamentos vs Confirmados (6 meses)
     hoje = datetime.date.today()

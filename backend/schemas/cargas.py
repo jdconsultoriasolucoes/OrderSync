@@ -44,6 +44,8 @@ class CargaPedidoDetailUpdate(BaseModel):
 
 class CargaResponse(CargaBase):
     id: int
+    is_historico: Optional[bool] = False
+    data_faturamento: Optional[datetime] = None
     data_criacao: datetime
     data_update: datetime
     pedidos: List[CargaPedidoResponse] = []

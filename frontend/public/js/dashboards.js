@@ -1,14 +1,41 @@
-/**
- * dashboards.js
- * Controls the Dashboards UI (Geral, Vendas, Logística, Pivot Table)
- */
-
 var API_BASE = window.API_BASE || window.location.origin;
+
+let currentTab = "geral";
+// Estado independente por aba
+let tabFilters = {
+    geral: { periodo: "mes", status: "Todos" },
+    vendas: { periodo: "mes", status: "Todos" },
+    produtos: { periodo: "mes", status: "Todos" },
+    clientes: { periodo: "mes", status: "Todos" },
+    logistica: { periodo: "mes", status: "Todos" },
+    dinamica: { periodo: "mes", status: "Todos" }
+};
 
 document.addEventListener("DOMContentLoaded", () => {
     initTabs();
-    loadDashboardGeral(); // default
+    initFilters();
+    loadActivePanel(); // default
 });
+
+function initFilters() {
+    const selPeriodo = document.getElementById("filter-periodo");
+    const selStatus = document.getElementById("filter-status");
+    const btnRefresh = document.getElementById("btn-refresh-dash");
+
+    selPeriodo.addEventListener("change", () => {
+        tabFilters[currentTab].periodo = selPeriodo.value;
+        loadActivePanel();
+    });
+
+    selStatus.addEventListener("change", () => {
+        tabFilters[currentTab].status = selStatus.value;
+        loadActivePanel();
+    });
+
+    btnRefresh.addEventListener("click", () => {
+        loadActivePanel();
+    });
+}
 
 function initTabs() {
     const btns = document.querySelectorAll(".dashboard-menu button");
@@ -17,8 +44,8 @@ function initTabs() {
             btns.forEach(b => b.classList.remove("active"));
             e.currentTarget.classList.add("active");
             
-            const tab = e.currentTarget.dataset.tab;
-            showPanel(tab);
+            currentTab = e.currentTarget.dataset.tab;
+            showPanel(currentTab);
         });
     });
 }
@@ -34,10 +61,14 @@ function showPanel(tab) {
     document.getElementById("dash-title").innerText = "Carregando...";
     document.getElementById("dash-desc").innerText = "Buscando dados em tempo real.";
 
+    // Sincroniza a barra de filtros com os valores salvos para esta aba
+    document.getElementById("filter-periodo").value = tabFilters[tab].periodo;
+    document.getElementById("filter-status").value = tabFilters[tab].status;
+
     if (tab === "geral") {
         document.getElementById("panel-geral").style.display = "block";
         document.getElementById("dash-title").innerText = "Visão Geral";
-        document.getElementById("dash-desc").innerText = "Resumo executivo de pedidos e faturamento.";
+        document.getElementById("dash-desc").innerText = "Resumo executivo de pedidos e faturamento conforme filtros aplicados.";
         loadDashboardGeral();
     } else if (tab === "vendas") {
         document.getElementById("panel-vendas").style.display = "block";
@@ -67,13 +98,22 @@ function showPanel(tab) {
     }
 }
 
+function loadActivePanel() {
+    showPanel(currentTab);
+}
+
+function getQueryString() {
+    const f = tabFilters[currentTab];
+    return `periodo=${f.periodo}&status=${f.status}`;
+}
+
 // ----------------------------------------------------------------------------------
 // 1. Visão Geral
 // ----------------------------------------------------------------------------------
 let chartGeralInst = null;
 async function loadDashboardGeral() {
     try {
-        const resp = await fetch(`${API_BASE}/api/dashboard/geral`, {
+        const resp = await fetch(`${API_BASE}/api/dashboard/geral?${getQueryString()}`, {
             headers: { "Authorization": `Bearer ${window.Auth ? window.Auth.getToken() : ''}` }
         });
         if (!resp.ok) throw new Error("Erro Geral");
@@ -81,6 +121,7 @@ async function loadDashboardGeral() {
 
         document.getElementById("kpi-pedidos-mes").innerText = data.kpis.pedidos_mes;
         document.getElementById("kpi-faturamento-mes").innerText = `R$ ${data.kpis.faturamento_mes.toLocaleString('pt-BR', {minimumFractionDigits: 2})}`;
+        document.getElementById("kpi-ticket-medio-geral").innerText = `R$ ${data.kpis.ticket_medio.toLocaleString('pt-BR', {minimumFractionDigits: 2})}`;
         document.getElementById("kpi-cargas-abertas").innerText = data.kpis.cargas_abertas;
 
         // Gráfico de Faturamento/Pedidos nos últimos 6 meses
@@ -133,7 +174,7 @@ let chartVendasStatusInst = null;
 let chartEvolucaoTicketInst = null;
 async function loadDashboardVendas() {
     try {
-        const resp = await fetch(`${API_BASE}/api/dashboard/vendas`, {
+        const resp = await fetch(`${API_BASE}/api/dashboard/vendas?${getQueryString()}`, {
             headers: { "Authorization": `Bearer ${window.Auth ? window.Auth.getToken() : ''}` }
         });
         if (!resp.ok) throw new Error("Erro Vendas");
@@ -199,7 +240,7 @@ let chartTopProdutosInst = null;
 let chartFamiliasInst = null;
 async function loadDashboardProdutos() {
     try {
-        const resp = await fetch(`${API_BASE}/api/dashboard/produtos`, {
+        const resp = await fetch(`${API_BASE}/api/dashboard/produtos?${getQueryString()}`, {
             headers: { "Authorization": `Bearer ${window.Auth ? window.Auth.getToken() : ''}` }
         });
         if (!resp.ok) throw new Error("Erro Produtos");
@@ -244,7 +285,7 @@ let chartTopClientesInst = null;
 let chartEvolucaoClientesInst = null;
 async function loadDashboardClientes() {
     try {
-        const resp = await fetch(`${API_BASE}/api/dashboard/clientes`, {
+        const resp = await fetch(`${API_BASE}/api/dashboard/clientes?${getQueryString()}`, {
             headers: { "Authorization": `Bearer ${window.Auth ? window.Auth.getToken() : ''}` }
         });
         if (!resp.ok) throw new Error("Erro Clientes");
@@ -302,7 +343,7 @@ let chartModalidadeInst = null;
 let chartFrotaInst = null;
 async function loadDashboardLogistica() {
     try {
-        const resp = await fetch(`${API_BASE}/api/dashboard/logistica`, {
+        const resp = await fetch(`${API_BASE}/api/dashboard/logistica?${getQueryString()}`, {
             headers: { "Authorization": `Bearer ${window.Auth ? window.Auth.getToken() : ''}` }
         });
         if (!resp.ok) throw new Error("Erro Log");
@@ -368,7 +409,7 @@ async function loadDashboardPivot() {
     const container = document.getElementById("pivot-table-container");
     container.innerHTML = "Carregando dados, aguarde...";
     try {
-        const resp = await fetch(`${API_BASE}/api/dashboard/pivot`, {
+        const resp = await fetch(`${API_BASE}/api/dashboard/pivot?${getQueryString()}`, {
             headers: { "Authorization": `Bearer ${window.Auth ? window.Auth.getToken() : ''}` }
         });
         if (!resp.ok) throw new Error("Erro Pivot");

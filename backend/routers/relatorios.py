@@ -71,7 +71,12 @@ def create_carga(carga: CargaCreate, db: Session = Depends(get_db)):
 
 @router.get("/cargas", response_model=List[CargaResponse])
 def read_cargas(skip: int = 0, limit: int = 100, db: Session = Depends(get_db)):
-    cargas = db.query(CargaModel).offset(skip).limit(limit).all()
+    cargas = db.query(CargaModel).filter((CargaModel.is_historico == False) | (CargaModel.is_historico == None)).offset(skip).limit(limit).all()
+    return cargas
+
+@router.get("/cargas/historico", response_model=List[CargaResponse])
+def read_cargas_historico(skip: int = 0, limit: int = 100, db: Session = Depends(get_db)):
+    cargas = db.query(CargaModel).filter(CargaModel.is_historico == True).order_by(CargaModel.data_faturamento.desc()).offset(skip).limit(limit).all()
     return cargas
 
 @router.get("/cargas/{carga_id}", response_model=CargaResponse)

@@ -128,4 +128,20 @@ def run_migrations():
                 db.rollback()
                 logger.error(f"Falha ao adicionar coluna elaboracao_vendedor em t_cadastro_cliente_v2: {e}")
 
+        # 9. tb_cargas: is_historico, data_faturamento, faturado_por_id
+        try:
+            db.execute(text("SELECT is_historico FROM tb_cargas LIMIT 1"))
+        except Exception:
+            db.rollback()
+            logger.info("Adicionando colunas de histórico em tb_cargas...")
+            try:
+                db.execute(text("ALTER TABLE tb_cargas ADD COLUMN is_historico BOOLEAN DEFAULT FALSE"))
+                db.execute(text("ALTER TABLE tb_cargas ADD COLUMN data_faturamento TIMESTAMP WITHOUT TIME ZONE"))
+                db.execute(text("ALTER TABLE tb_cargas ADD COLUMN faturado_por_id BIGINT"))
+                db.commit()
+                logger.info("Colunas de histórico adicionadas com sucesso.")
+            except Exception as e:
+                db.rollback()
+                logger.error(f"Falha ao adicionar colunas de histórico em tb_cargas: {e}")
+
     logger.info("Migrações concluídas.")

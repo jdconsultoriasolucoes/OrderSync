@@ -22,6 +22,10 @@ if (typeof window.relatoriosDict === 'undefined') {
         "captacao": {
             title: "Relatório p/ Captação de Pedidos",
             desc: "Acompanhamento de clientes para prospecção baseada no período de compras."
+        },
+        "historico": {
+            title: "Histórico de Cargas",
+            desc: "Cargas faturadas ou arquivadas."
         }
     };
 }
@@ -89,6 +93,8 @@ async function renderRelatorioView(relKey) {
             await renderResumoProdutos();
         } else if (relKey === "captacao") {
             await renderCaptacaoPedidos();
+        } else if (relKey === "historico") {
+            await renderHistoricoCargas();
         }
     } catch (err) {
         console.error("Erro ao carregar relatório:", err);
@@ -131,12 +137,14 @@ async function renderStandardCargaList(tipo) {
             <th>Nº Carga</th>
             <th>Nome / Descrição</th>
             <th>Data Cadastro</th>
+            ${activeRelatorio === 'historico' ? '<th>Data Faturamento</th>' : ''}
             <th>Ações</th>
         </tr>
     `;
 
     try {
-        const resp = await fetch(`${API_BASE}/api/relatorios/cargas`, {
+        const urlToFetch = activeRelatorio === 'historico' ? `${API_BASE}/api/relatorios/cargas/historico` : `${API_BASE}/api/relatorios/cargas`;
+        const resp = await fetch(urlToFetch, {
             headers: { "Authorization": `Bearer ${window.Auth ? window.Auth.getToken() : ''}` }
         });
         if (!resp.ok) throw new Error("Erro");
@@ -150,14 +158,16 @@ async function renderStandardCargaList(tipo) {
         let html = "";
         cargas.forEach(c => {
             const dispData = c.data_criacao ? new Date(c.data_criacao).toLocaleDateString('pt-BR') : "-";
+            const dispDataFaturamento = c.data_faturamento ? new Date(c.data_faturamento).toLocaleDateString('pt-BR') : "-";
             html += `
                 <tr>
                     <td style="text-align: center;"><input type="checkbox" class="chk-carga-item" value="${c.id}"></td>
                     <td><strong>${c.numero_carga}</strong></td>
                     <td>${c.nome_carga || '-'}</td>
                     <td>${dispData}</td>
+                    ${activeRelatorio === 'historico' ? `<td>${dispDataFaturamento}</td>` : ''}
                     <td>
-                       <button class="os-btn os-btn-sm os-btn-secondary btn-gerenciar-carga" data-id="${c.id}" data-nome="${c.numero_carga}">Gerenciar / Ver ${tipo}</button>
+                       <button class="os-btn os-btn-sm os-btn-secondary btn-gerenciar-carga" data-id="${c.id}" data-nome="${c.numero_carga}">${activeRelatorio === 'historico' ? 'Visualizar' : `Gerenciar / Ver ${tipo}`}</button>
                        ${activeRelatorio === 'formacao' ? `<button class="os-btn os-btn-sm os-btn-danger btn-excluir-carga" data-id="${c.id}">Excluir</button>` : ''}
                     </td>
                 </tr>
@@ -195,6 +205,7 @@ async function renderStandardCargaList(tipo) {
 async function renderFormacaoCargas() { await renderStandardCargaList("Carga"); }
 async function renderRomaneio() { await renderStandardCargaList("Romaneio"); }
 async function renderResumoProdutos() { await renderStandardCargaList("Resumo"); }
+async function renderHistoricoCargas() { await renderStandardCargaList("Histórico"); }
 
 window.dadosCaptacao = [];
 window.filtrosCaptacao = { geral: "", aprox: "", cliente: "", vendedor: "" };
@@ -627,7 +638,7 @@ async function abrirGerenciadorDeCarga(idCarga, numCarga) {
     const btnBusca = document.getElementById('btn-buscar-pedidos');
     const descSpan = document.querySelector('.relatorio-desc-view');
     
-    if (activeRelatorio === "resumo" || activeRelatorio === "romaneio") {
+    if (activeRelatorio === "resumo" || activeRelatorio === "romaneio" || activeRelatorio === "historico") {
         btnBusca.style.display = 'none';
         if (descSpan) descSpan.style.display = 'none';
         
@@ -696,7 +707,7 @@ async function carregarPedidosDaCargaAtiva() {
                     <th style="font-size: 11px; text-align: center; padding: 12px 4px;">&nbsp;</th>
                 </tr>
             `;
-        } else if (window.activeRelatorio === "romaneio") {
+        } else if (window.activeRelatorio === "romaneio" || window.activeRelatorio === "historico") {
             tableEl.style.tableLayout = "auto";
             tableEl.style.minWidth = "900px";
             theadTable.innerHTML = `
@@ -714,7 +725,7 @@ async function carregarPedidosDaCargaAtiva() {
                         Peso Br.<br>Acum
                         <span style="font-size: 11px; font-weight: 800; background: #fef3c7; padding: 2px 4px; border-radius: 4px; display: block; margin-top: 4px;">${totalBrutoStr} kg</span>
                     </th>
-                    <th style="font-size: 11px;">Observações</th>
+                    <th style="font-size: 11px;">Status</th>
                     <th style="font-size: 11px; width: 55px; white-space: nowrap;">Ações</th>
                 </tr>
             `;
@@ -788,19 +799,21 @@ async function carregarPedidosDaCargaAtiva() {
                         </td>
                     </tr>
                 `;
-            } else if (activeRelatorio === "romaneio") {
+            } else if (activeRelatorio === "romaneio" || activeRelatorio === "historico") {
+                const badgeStatus = (p.status_codigo === "CANCELADO") ? '<span style="color: red; font-size: 10px;">Cancelado</span>' : '<span style="color: green; font-size: 10px;">Faturado</span>';
                 h += `
                     <tr>
                         <td style="font-size: 12px;">${p.codigo_cliente || '-'}</td>
                         <td style="font-size: 12px;">${p.cliente_nome || '-'}</td>
                         <td style="font-size: 12px;">${p.nome_fantasia || '-'}</td>
                         <td style="font-size: 12px;">${p.municipio || '-'}</td>
-                        <td style="vertical-align: top;"><input type="number" class="os-input os-input-sm in-ordem" value="${p.ordem_carregamento || ''}" data-id="${p.id_carga_pedido}" style="padding: 2px; font-size: 12px; height: 32px; text-align: right; width: 60px;"></td>
+                        <td style="vertical-align: top;"><input type="number" class="os-input os-input-sm in-ordem" value="${p.ordem_carregamento || ''}" data-id="${p.id_carga_pedido}" style="padding: 2px; font-size: 12px; height: 32px; text-align: right; width: 60px;" ${activeRelatorio === 'historico' ? 'disabled' : ''}></td>
                         <td style="white-space: nowrap; font-size: 12px; vertical-align: top; text-align: right;">${peso} kg</td>
                         <td style="white-space: nowrap; font-size: 12px; vertical-align: top; text-align: right;">${Math.round(p.peso_bruto_total || 0)} kg</td>
-                        <td style="vertical-align: top;"><textarea class="os-input os-input-sm in-obs" data-id="${p.id_carga_pedido}" style="padding: 4px; font-size: 12px; height: 38px; resize: vertical; width: 100%; min-width: 200px;">${p.observacoes || ''}</textarea></td>
-                        <td style="white-space: nowrap; vertical-align: top;">
-                            <button class="os-btn os-btn-sm os-btn-danger btn-remover-pedido-carga" data-id="${p.id_carga_pedido}" title="Remover">&times;</button>
+                        <td style="font-size: 12px; vertical-align: top;">${activeRelatorio === 'historico' ? badgeStatus : `<textarea class="os-input os-input-sm in-obs" data-id="${p.id_carga_pedido}" style="padding: 4px; font-size: 12px; height: 38px; resize: vertical; width: 100%; min-width: 200px;">${p.observacoes || ''}</textarea>`}</td>
+                        <td style="white-space: nowrap; vertical-align: top; padding-top: 4px; text-align: center;">
+                            <a href="/pedido/pedido.html?id=${p.id_pedido}" target="_blank" class="os-btn os-btn-sm os-btn-secondary" title="Abrir Pedido">Ver</a>
+                            ${activeRelatorio !== 'historico' ? `<button class="os-btn os-btn-sm os-btn-danger btn-remover-pedido-carga" data-id="${p.id_carga_pedido}" title="Remover">&times;</button>` : ''}
                         </td>
                     </tr>
                 `;

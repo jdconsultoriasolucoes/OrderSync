@@ -288,12 +288,43 @@
                     <p class="dash-desc" id="dash-desc">Navegue pelas métricas atualizadas em tempo real.</p>
                 </div>
 
+                <!-- Barra de Filtros Globais -->
+                <div class="filter-bar" style="margin-bottom: 25px; display: flex; flex-wrap: wrap; gap: 20px; background: white; padding: 20px; border-radius: 12px; border: 1px solid var(--os-border); align-items: flex-end; box-shadow: 0 1px 2px rgba(0,0,0,0.05);">
+                    <div style="display: flex; flex-direction: column; gap: 6px;">
+                        <label style="font-size: 11px; font-weight: 700; color: var(--os-text-muted); text-transform: uppercase; letter-spacing: 0.05em;">Período de Análise</label>
+                        <select id="filter-periodo" class="os-input" style="padding: 10px 14px; min-width: 180px; border-color: #cbd5e1;">
+                            <option value="mes">Mês Atual</option>
+                            <option value="trimestre">Trimestre</option>
+                            <option value="semestre">Semestre</option>
+                            <option value="ytd">Ano Atual (Year to Date)</option>
+                        </select>
+                    </div>
+                    <div style="display: flex; flex-direction: column; gap: 6px;">
+                        <label style="font-size: 11px; font-weight: 700; color: var(--os-text-muted); text-transform: uppercase; letter-spacing: 0.05em;">Status do Pedido</label>
+                        <select id="filter-status" class="os-input" style="padding: 10px 14px; min-width: 200px; border-color: #cbd5e1;">
+                            <option value="Todos">Todos os Status</option>
+                            <option value="Orçamento">Orçamento</option>
+                            <option value="Pedido">Pedido</option>
+                            <option value="Faturado Supra">Faturado Supra</option>
+                            <option value="Faturado Dispet">Faturado Dispet</option>
+                            <option value="Cancelado">Cancelado</option>
+                        </select>
+                    </div>
+                    <div style="flex: 1; text-align: right;">
+                        <button id="btn-refresh-dash" class="os-btn os-btn-secondary" style="height: 42px; padding: 0 15px;">
+                            <svg style="width: 18px; margin-right: 5px; vertical-align: middle;" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M23 4v6h-6M1 20v-6h6M3.51 9a9 9 0 0114.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0020.49 15"></path></svg>
+                            Atualizar
+                        </button>
+                    </div>
+                </div>
+
                 <!-- Painel: Geral -->
                 <div id="panel-geral" style="display: none;">
                     <div class="kpi-grid" id="geral-kpis">
-                        <div class="kpi-card"><div class="kpi-title">Pedidos Mês Atual</div><div class="kpi-value" id="kpi-pedidos-mes">-</div></div>
-                        <div class="kpi-card"><div class="kpi-title">Total Faturado Mês</div><div class="kpi-value" id="kpi-faturamento-mes">-</div></div>
-                        <div class="kpi-card"><div class="kpi-title">Cargas Abertas</div><div class="kpi-value" id="kpi-cargas-abertas">-</div></div>
+                        <div class="kpi-card"><div class="kpi-title">Qtd Pedidos</div><div class="kpi-value" id="kpi-pedidos-mes">-</div></div>
+                        <div class="kpi-card"><div class="kpi-title">Valor Dashboard</div><div class="kpi-value" id="kpi-faturamento-mes">-</div></div>
+                        <div class="kpi-card"><div class="kpi-title">Ticket Médio</div><div class="kpi-value" id="kpi-ticket-medio-geral">-</div></div>
+                        <div class="kpi-card"><div class="kpi-title">Cargas no Período</div><div class="kpi-value" id="kpi-cargas-abertas">-</div></div>
                     </div>
                     <div class="chart-grid">
                         <div class="chart-box chart-box-full" id="geral-chart2">

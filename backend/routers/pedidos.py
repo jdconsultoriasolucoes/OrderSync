@@ -297,7 +297,47 @@ def resumo_pedido(id_pedido: int, db: Session = Depends(get_db)):
 
     return PedidoResumo(**head_dict)
 
+def verificar_e_historico_carga(db: Session, id_pedido: int, user_id: Optional[str]):
+    try:
+        # Encontra as cargas onde esse pedido está
+        cargas = db.execute(text("""
+            SELECT DISTINCT c.id, c.is_historico 
+            FROM tb_cargas c
+            JOIN tb_cargas_pedidos cp ON cp.id_carga = c.id
+            WHERE cp.numero_pedido = :id_pedido AND (c.is_historico IS NULL OR c.is_historico = FALSE)
+        """), {"id_pedido": str(id_pedido)}).fetchall()
+
+        for carga_row in cargas:
+            carga_id = carga_row[0]
+            # Verifica se TODOS os pedidos dessa carga estão faturados ou cancelados
+            todos_faturados = db.execute(text("""
+                SELECT COUNT(*) as total_pendente
+                FROM tb_cargas_pedidos cp
+                JOIN tb_pedidos p ON p.id_pedido::text = cp.numero_pedido
+                WHERE cp.id_carga = :carga_id
+                  AND p.status NOT IN ('FATURADO_SUPRA', 'FATURADO_DISPET', 'CANCELADO')
+            """), {"carga_id": carga_id}).scalar()
+
+            if todos_faturados == 0:
+                # Todos os pedidos da carga estão no status desejado, mover para histórico
+                user_id_int = None
+                if user_id and str(user_id).isdigit():
+                    user_id_int = int(user_id)
+                db.execute(text("""
+                    UPDATE tb_cargas
+                    SET is_historico = TRUE,
+                        data_faturamento = now(),
+                        faturado_por_id = :user_id
+                    WHERE id = :carga_id
+                """), {"carga_id": carga_id, "user_id": user_id_int})
+    except Exception as e:
+        import traceback
+        import logging
+        logger = logging.getLogger("ordersync.errors")
+        logger.error(f"Erro ao verificar histórico de carga {id_pedido}: {e}\\n{traceback.format_exc()}")
+
 @router.get("/status", response_model=StatusListResponse)
+
 def listar_status(db: Session = Depends(get_db)):
     rows = db.execute(STATUS_SQL).mappings().all()
     data = [StatusEntry(**dict(r)) for r in rows]
@@ -332,6 +372,9 @@ def mudar_status(id_pedido: int, body: StatusChangeBody, db: Session = Depends(g
             })
     except Exception:
         pass
+
+    if body.para in ("FATURADO_SUPRA", "FATURADO_DISPET", "CANCELADO"):
+        verificar_e_historico_carga(db, id_pedido, body.user_id)
 
     db.commit()
     return {"ok": True}
@@ -372,6 +415,8 @@ def cancelar_pedido(id_pedido: int, db: Session = Depends(get_db), user_id: Opti
     except Exception:
         pass
 
+    verificar_e_historico_carga(db, id_pedido, user_id or "sistema")
+    
     db.commit()
     return {"message": "Pedido cancelado com sucesso", "status": "CANCELADO"}
 

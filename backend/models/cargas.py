@@ -1,4 +1,4 @@
-from sqlalchemy import Column, Integer, String, DateTime, ForeignKey, Text
+from sqlalchemy import Column, Integer, String, DateTime, ForeignKey, Text, Boolean, BigInteger
 from sqlalchemy.orm import relationship
 from datetime import datetime
 from database import Base
@@ -11,6 +11,9 @@ class CargaModel(Base):
     numero_carga = Column(String, unique=True, index=True, nullable=True)
     id_transporte = Column(Integer, ForeignKey("tb_transporte.id"), nullable=True) # Ligação com transporte (Motorista/Veículo)
     data_carregamento = Column(DateTime, nullable=True)
+    is_historico = Column(Boolean, default=False)
+    data_faturamento = Column(DateTime, nullable=True)
+    faturado_por_id = Column(BigInteger, ForeignKey("t_usuario.id"), nullable=True)
     data_criacao = Column(DateTime, default=datetime.utcnow)
     data_update = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
 
