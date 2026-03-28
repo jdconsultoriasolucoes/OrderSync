@@ -315,7 +315,7 @@ def verificar_e_historico_carga(db: Session, id_pedido: int, user_id: Optional[s
                 FROM tb_cargas_pedidos cp
                 JOIN tb_pedidos p ON p.id_pedido::text = cp.numero_pedido
                 WHERE cp.id_carga = :carga_id
-                  AND p.status NOT IN ('Faturado Supra', 'Faturado Dispet', 'Cancelado')
+                  AND LOWER(p.status) NOT IN ('faturado supra', 'faturado dispet', 'cancelado')
             """), {"carga_id": carga_id}).scalar()
 
             if todos_faturados == 0:
@@ -373,7 +373,7 @@ def mudar_status(id_pedido: int, body: StatusChangeBody, db: Session = Depends(g
     except Exception:
         pass
 
-    if body.para in ("Faturado Supra", "Faturado Dispet", "Cancelado"):
+    if body.para and body.para.lower() in ("faturado supra", "faturado dispet", "cancelado"):
         verificar_e_historico_carga(db, id_pedido, body.user_id)
 
     db.commit()
@@ -448,4 +448,27 @@ def reenviar_email_pedido(
     db.commit()
 
     return {"message": "E-mail agendado para reenvio com sucesso (via fila)."}
+
+@router.get("/debug_historico/{carga_id}")
+def debug_historico_carga(carga_id: int, db: Session = Depends(get_db)):
+    """ Endpoint temporário para debug de histórico """
+    detalhes = db.execute(text("""
+        SELECT cp.numero_pedido, p.status
+        FROM tb_cargas_pedidos cp
+        LEFT JOIN tb_pedidos p ON p.id_pedido::text = cp.numero_pedido
+        WHERE cp.id_carga = :carga_id
+    """), {"carga_id": carga_id}).mappings().all()
+    
+    pendentes = [
+        dict(d) for d in detalhes 
+        if (d["status"] or "").lower() not in ('faturado supra', 'faturado dispet', 'cancelado')
+    ]
+    
+    return {
+        "carga_id": carga_id,
+        "todos_pedidos": [dict(d) for d in detalhes],
+        "qdt_pendentes_python": len(pendentes),
+        "pendentes_detalhes": pendentes
+    }
+
 
