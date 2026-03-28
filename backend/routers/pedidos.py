@@ -315,7 +315,7 @@ def verificar_e_historico_carga(db: Session, id_pedido: int, user_id: Optional[s
                 FROM tb_cargas_pedidos cp
                 JOIN tb_pedidos p ON p.id_pedido::text = cp.numero_pedido
                 WHERE cp.id_carga = :carga_id
-                  AND p.status NOT IN ('FATURADO_SUPRA', 'FATURADO_DISPET', 'CANCELADO')
+                  AND p.status NOT IN ('Faturado Supra', 'Faturado Dispet', 'Cancelado')
             """), {"carga_id": carga_id}).scalar()
 
             if todos_faturados == 0:
@@ -373,7 +373,7 @@ def mudar_status(id_pedido: int, body: StatusChangeBody, db: Session = Depends(g
     except Exception:
         pass
 
-    if body.para in ("FATURADO_SUPRA", "FATURADO_DISPET", "CANCELADO"):
+    if body.para in ("Faturado Supra", "Faturado Dispet", "Cancelado"):
         verificar_e_historico_carga(db, id_pedido, body.user_id)
 
     db.commit()

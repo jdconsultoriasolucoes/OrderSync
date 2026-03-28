@@ -136,7 +136,7 @@ def get_dashboard_vendas(
         SELECT COALESCE(c.faturamento_municipio, c.entrega_municipio) as mun, SUM(p.total_pedido) as total
         FROM public.tb_pedidos p
         JOIN public.t_cadastro_cliente_v2 c ON p.codigo_cliente = c.cadastro_codigo_da_empresa
-        WHERE {where_clause.replace('status', 'p.status').replace('created_at', 'p.created_at')}
+        WHERE {where_clause.replace('status =', 'p.status =').replace('created_at >=', 'p.created_at >=')}
         GROUP BY COALESCE(c.faturamento_municipio, c.entrega_municipio)
         ORDER BY total DESC
         LIMIT 5
@@ -215,7 +215,7 @@ def get_dashboard_logistica(
             SELECT cp.id_carga, SUM(COALESCE(p.peso_total_kg, 0)) as carga_peso
             FROM public.tb_cargas_pedidos cp
             JOIN public.tb_pedidos p ON cp.numero_pedido = CAST(p.id_pedido AS VARCHAR)
-            WHERE {where_clause.replace('status', 'p.status').replace('created_at', 'p.created_at')}
+            WHERE {where_clause.replace('status =', 'p.status =').replace('created_at >=', 'p.created_at >=')}
             GROUP BY cp.id_carga
         ) sub
     """)
@@ -302,7 +302,7 @@ def get_dashboard_pivot(
             TO_CHAR(p.created_at, 'YYYY-MM-DD') as "Data"
         FROM public.tb_pedidos p
         LEFT JOIN public.t_cadastro_cliente_v2 c ON p.codigo_cliente = c.cadastro_codigo_da_empresa
-        WHERE {where_clause.replace('status', 'p.status').replace('created_at', 'p.created_at')}
+        WHERE {where_clause.replace('status =', 'p.status =').replace('created_at >=', 'p.created_at >=')}
         ORDER BY p.created_at DESC
         LIMIT 2000
     """)
@@ -379,7 +379,7 @@ def get_dashboard_produtos(
         SELECT i.nome, SUM(i.quantidade) as qtd, COALESCE(SUM(i.subtotal_com_f), 0) as fat
         FROM public.tb_pedidos_itens i
         JOIN public.tb_pedidos p ON i.id_pedido = p.id_pedido
-        WHERE {where_clause.replace('status', 'p.status').replace('created_at', 'p.created_at')} 
+        WHERE {where_clause.replace('status =', 'p.status =').replace('created_at >=', 'p.created_at >=')} 
           AND i.nome IS NOT NULL AND i.nome != ''
         GROUP BY i.nome
         ORDER BY fat DESC
@@ -393,7 +393,7 @@ def get_dashboard_produtos(
         FROM public.tb_pedidos_itens i
         JOIN public.tb_pedidos p ON i.id_pedido = p.id_pedido
         LEFT JOIN public.t_cadastro_produto_v2 pr ON i.codigo = pr.codigo_supra
-        WHERE {where_clause.replace('status', 'p.status').replace('created_at', 'p.created_at')}
+        WHERE {where_clause.replace('status =', 'p.status =').replace('created_at >=', 'p.created_at >=')}
           AND pr.familia IS NOT NULL AND pr.familia != ''
         GROUP BY pr.familia
         ORDER BY fat DESC
@@ -426,7 +426,7 @@ def get_dashboard_clientes(
     q_top_cli = text(f"""
         SELECT p.cliente, COALESCE(SUM(p.total_pedido), 0) as fat
         FROM public.tb_pedidos p
-        WHERE {where_clause.replace('status', 'p.status').replace('created_at', 'p.created_at')}
+        WHERE {where_clause.replace('status =', 'p.status =').replace('created_at >=', 'p.created_at >=')}
           AND p.cliente IS NOT NULL AND p.cliente != ''
         GROUP BY p.cliente
         ORDER BY fat DESC
