@@ -71,6 +71,7 @@ class PedidoResumo(BaseModel):
     frete_total: float
     total_pedido: float
     peso_liquido_calculado: Optional[float] = None
+    peso_bruto_calculado: Optional[float] = None
     observacoes: Optional[str] = None
     status: str
     confirmado_em: Optional[datetime] = None
@@ -294,6 +295,7 @@ def resumo_pedido(id_pedido: int, db: Session = Depends(get_db)):
     from services.pedido_pdf_data import carregar_pedido_pdf
     pdf_data = carregar_pedido_pdf(db, id_pedido)
     head_dict["peso_liquido_calculado"] = pdf_data.total_peso_liquido
+    head_dict["peso_bruto_calculado"] = pdf_data.total_peso_bruto
 
     return PedidoResumo(**head_dict)
 
