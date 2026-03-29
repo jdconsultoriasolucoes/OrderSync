@@ -518,16 +518,16 @@ async function abrirGerenciadorDeCarga(idCarga, numCarga) {
                     </div>
                     <div class="ch-field">
                         <label>Data Carregamento</label>
-                        <input type="date" id="in-header-data" class="os-input os-input-sm" value="${dataCarregamentoVal}" min="${new Date().toISOString().split('T')[0]}" ${activeRelatorio === 'resumo' ? 'disabled' : ''}>
+                        <input type="date" id="in-header-data" class="os-input os-input-sm" value="${dataCarregamentoVal}" min="${new Date().toISOString().split('T')[0]}" ${(activeRelatorio === 'resumo' || activeRelatorio === 'historico') ? 'disabled' : ''}>
                     </div>
                     <div class="ch-field" style="flex: 1;">
                         <label>Transporte</label>
-                        <select id="sel-header-transporte" class="os-input os-input-sm" ${activeRelatorio === 'resumo' ? 'disabled' : ''}>
+                        <select id="sel-header-transporte" class="os-input os-input-sm" ${(activeRelatorio === 'resumo' || activeRelatorio === 'historico') ? 'disabled' : ''}>
                             ${transpOptions}
                         </select>
                     </div>
                     <div class="ch-actions">
-                        ${activeRelatorio !== 'resumo' ? '<button class="os-btn os-btn-primary os-btn-sm" id="btn-save-carga-header">Salvar Tela</button>' : ''}
+                        ${(activeRelatorio !== 'resumo' && activeRelatorio !== 'historico') ? '<button class="os-btn os-btn-primary os-btn-sm" id="btn-save-carga-header">Salvar Tela</button>' : ''}
                     </div>
                 </div>
             </div>
