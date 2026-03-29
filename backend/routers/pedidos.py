@@ -299,23 +299,28 @@ def resumo_pedido(id_pedido: int, db: Session = Depends(get_db)):
 
 def verificar_e_historico_carga(db: Session, id_pedido: int, user_id: Optional[str]):
     try:
+        # Garante que qualquer alteração ORM (como o pedido.status = 'CANCELADO') seja persistida
+        # no banco de dados para que o SELECT abaixo consiga enxergá-la.
+        db.flush()
+
         # Encontra as cargas onde esse pedido está
         cargas = db.execute(text("""
             SELECT DISTINCT c.id, c.is_historico 
             FROM tb_cargas c
             JOIN tb_cargas_pedidos cp ON cp.id_carga = c.id
-            WHERE cp.numero_pedido = :id_pedido AND (c.is_historico IS NULL OR c.is_historico = FALSE)
-        """), {"id_pedido": str(id_pedido)}).fetchall()
+            WHERE TRIM(cp.numero_pedido) = :id_pedido AND (c.is_historico IS NULL OR c.is_historico = FALSE)
+        """), {"id_pedido": str(id_pedido).strip()}).fetchall()
 
         for carga_row in cargas:
             carga_id = carga_row[0]
             # Verifica se TODOS os pedidos dessa carga estão faturados ou cancelados
+            # Usa TRIM() para evitar falso negativos com espaços adicionais
             todos_faturados = db.execute(text("""
                 SELECT COUNT(*) as total_pendente
                 FROM tb_cargas_pedidos cp
-                JOIN tb_pedidos p ON p.id_pedido::text = cp.numero_pedido
+                JOIN tb_pedidos p ON TRIM(p.id_pedido::text) = TRIM(cp.numero_pedido)
                 WHERE cp.id_carga = :carga_id
-                  AND LOWER(p.status) NOT IN ('faturado supra', 'faturado dispet', 'cancelado')
+                  AND LOWER(TRIM(p.status)) NOT IN ('faturado supra', 'faturado dispet', 'cancelado')
             """), {"carga_id": carga_id}).scalar()
 
             if todos_faturados == 0:
@@ -334,7 +339,7 @@ def verificar_e_historico_carga(db: Session, id_pedido: int, user_id: Optional[s
         import traceback
         import logging
         logger = logging.getLogger("ordersync.errors")
-        logger.error(f"Erro ao verificar histórico de carga {id_pedido}: {e}\\n{traceback.format_exc()}")
+        logger.error(f"Erro ao verificar histórico de carga {id_pedido}: {e}\n{traceback.format_exc()}")
 
 @router.get("/status", response_model=StatusListResponse)
 
