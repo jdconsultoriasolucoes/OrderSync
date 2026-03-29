@@ -338,6 +338,22 @@
         </div>
     </div>
 
+    <!-- Modal Detalhes do Pedido (Histórico) -->
+    <div id="modal-detalhes-pedido" class="os-modal-backdrop">
+        <div class="os-modal-dialog" style="max-width: 900px; width: 95%;">
+            <div class="os-modal-header">
+                <h3 class="os-modal-title" id="titulo-detalhes-pedido">Detalhes do Pedido</h3>
+                <button class="os-modal-close" onclick="document.getElementById('modal-detalhes-pedido').classList.remove('active')">&times;</button>
+            </div>
+            <div class="os-modal-body" id="body-detalhes-pedido" style="max-height: 70vh; overflow-y: auto;">
+                <div style="text-align: center; padding: 20px;">Carregando detalhes...</div>
+            </div>
+            <div class="os-modal-footer">
+                <button class="os-btn os-btn-secondary" onclick="document.getElementById('modal-detalhes-pedido').classList.remove('active')">Fechar</button>
+            </div>
+        </div>
+    </div>
+
     <!-- Scripts do Módulo -->
     <script src="relatorios.js"></script>
     <!-- Scripts do Módulo -->

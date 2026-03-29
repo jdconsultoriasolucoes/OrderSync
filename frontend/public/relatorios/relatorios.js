@@ -712,6 +712,7 @@ async function carregarPedidosDaCargaAtiva() {
             tableEl.style.minWidth = "900px";
             theadTable.innerHTML = `
                 <tr>
+                    <th style="font-size: 11px; white-space: nowrap;">Nº Pedido</th>
                     <th style="font-size: 11px; white-space: nowrap;">Cód.<br>Cliente</th>
                     <th style="font-size: 11px;">Cliente</th>
                     <th style="font-size: 11px;">Nome Fantasia</th>
@@ -803,6 +804,7 @@ async function carregarPedidosDaCargaAtiva() {
                 const badgeStatus = (p.status_codigo === "CANCELADO") ? '<span style="color: red; font-size: 10px;">Cancelado</span>' : '<span style="color: green; font-size: 10px;">Faturado</span>';
                 h += `
                     <tr>
+                        <td style="font-size: 12px;"><strong>${p.numero_pedido || '-'}</strong></td>
                         <td style="font-size: 12px;">${p.codigo_cliente || '-'}</td>
                         <td style="font-size: 12px;">${p.cliente_nome || '-'}</td>
                         <td style="font-size: 12px;">${p.nome_fantasia || '-'}</td>
@@ -812,7 +814,7 @@ async function carregarPedidosDaCargaAtiva() {
                         <td style="white-space: nowrap; font-size: 12px; vertical-align: top; text-align: right;">${Math.round(p.peso_bruto_total || 0)} kg</td>
                         <td style="font-size: 12px; vertical-align: top;">${activeRelatorio === 'historico' ? badgeStatus : `<textarea class="os-input os-input-sm in-obs" data-id="${p.id_carga_pedido}" style="padding: 4px; font-size: 12px; height: 38px; resize: vertical; width: 100%; min-width: 200px;">${p.observacoes || ''}</textarea>`}</td>
                         <td style="white-space: nowrap; vertical-align: top; padding-top: 4px; text-align: center;">
-                            <a href="/pedido/pedido.html?id=${p.id_pedido}" target="_blank" class="os-btn os-btn-sm os-btn-secondary" title="Abrir Pedido">Ver</a>
+                            <button onclick="abrirModalDetalhesPedido('${p.id_pedido}')" class="os-btn os-btn-sm os-btn-secondary" title="Ver Produtos do Pedido">Ver</button>
                             ${activeRelatorio !== 'historico' ? `<button class="os-btn os-btn-sm os-btn-danger btn-remover-pedido-carga" data-id="${p.id_carga_pedido}" title="Remover">&times;</button>` : ''}
                         </td>
                     </tr>
@@ -1279,3 +1281,105 @@ function imprimirCaptacao() {
         printContainer.innerHTML = '';
     }, 2000);
 }
+
+// -----------------------------------------------------
+// MODAL DETALHES DO PEDIDO
+// -----------------------------------------------------
+
+async function abrirModalDetalhesPedido(idPedido) {
+    const modal = document.getElementById('modal-detalhes-pedido');
+    const bodyContainer = document.getElementById('body-detalhes-pedido');
+    const titleEl = document.getElementById('titulo-detalhes-pedido');
+    
+    // Abre modal mostrando que está carregando...
+    modal.classList.add('active');
+    bodyContainer.innerHTML = '<div style="text-align: center; padding: 40px; color: var(--os-text-muted);">Carregando produtos do pedido...</div>';
+    titleEl.textContent = `Detalhes do Pedido`;
+
+    try {
+        const resp = await fetch(`${API_BASE}/api/pedidos/${idPedido}/resumo`, {
+            headers: { "Authorization": `Bearer ${window.Auth ? window.Auth.getToken() : ''}` }
+        });
+        
+        if (!resp.ok) {
+            throw new Error(`Erro ao buscar dados do pedido (Status: ${resp.status})`);
+        }
+        
+        const p = await resp.json();
+        
+        titleEl.textContent = `Itens do Pedido: ${p.id_pedido || idPedido}`;
+        
+        // Formataçao visual alinhada a theme do modals
+        let htmlDetalhes = `
+            <!-- Cabeçalho Informativo -->
+            <div style="background: var(--os-bg-secondary); padding: 15px; border-radius: 8px; border: 1px solid var(--os-border); margin-bottom: 20px; display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 10px; font-size: 13px;">
+                <div><span style="color: var(--os-text-secondary); font-weight: 600;">Cliente:</span><br> ${p.cliente || '-'}</div>
+                <div><span style="color: var(--os-text-secondary); font-weight: 600;">Filial:</span><br> ${p.fornecedor || 'Matriz SUPRA LOG'}</div>
+                <div><span style="color: var(--os-text-secondary); font-weight: 600;">Modalidade:</span><br> ${p.usar_valor_com_frete === false ? 'RETIRADA' : 'ENTREGA'}</div>
+                <div><span style="color: var(--os-text-secondary); font-weight: 600;">Tabela de Preço:</span><br> ${p.tabela_preco_nome || '-'}</div>
+                <div><span style="color: var(--os-text-secondary); font-weight: 600;">Peso Líq.:</span><br> ${parseFloat((p.peso_liquido_calculado || 0).toFixed(3))} kg</div>
+                <div><span style="color: var(--os-text-secondary); font-weight: 600;">Peso Bruto:</span><br> ${parseFloat((p.peso_bruto_calculado || 0).toFixed(3))} kg</div>
+                <div style="grid-column: 1 / -1;"><span style="color: var(--os-text-secondary); font-weight: 600;">Observações:</span><br> ${p.observacoes || 'Nenhuma observação.'}</div>
+            </div>
+            
+            <h4 style="margin: 0 0 10px 0; font-size: 15px;">Lista de Produtos</h4>
+        `;
+        
+        if (p.itens && p.itens.length > 0) {
+            htmlDetalhes += `
+                <div class="os-table-wrap">
+                    <table class="os-table" style="font-size: 12px;">
+                        <thead>
+                            <tr>
+                                <th>Código</th>
+                                <th>Produto</th>
+                                <th>Emb</th>
+                                <th style="text-align: center;">Qtd</th>
+                                <th style="text-align: right;">Unitário</th>
+                                <th style="text-align: right;">Subtotal</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+            `;
+            
+            p.itens.forEach(i => {
+                const subtotal = i.subtotal !== undefined ? i.subtotal : (i.quantidade * (i.preco_unit || 0));
+                
+                htmlDetalhes += `
+                    <tr>
+                        <td><strong>${i.codigo}</strong></td>
+                        <td style="white-space: normal; word-break: break-word;">${i.nome}</td>
+                        <td>${i.embalagem || 'UN'}</td>
+                        <td style="text-align: center;"><strong>${i.quantidade}</strong></td>
+                        <td style="text-align: right;">R$ ${(i.preco_unit || 0).toFixed(2).replace('.', ',')}</td>
+                        <td style="text-align: right; color: var(--os-primary);"><strong>R$ ${subtotal.toFixed(2).replace('.', ',')}</strong></td>
+                    </tr>
+                `;
+            });
+            
+            // Totalizador Final
+            htmlDetalhes += `
+                        </tbody>
+                        <tfoot>
+                            <tr>
+                                <td colspan="5" style="text-align: right; font-weight: bold;">TOTAL DO PEDIDO:</td>
+                                <td style="text-align: right; font-weight: 900; color: #15803d; font-size: 14px;">
+                                    R$ ${(p.total_pedido || 0).toFixed(2).replace('.', ',')}
+                                </td>
+                            </tr>
+                        </tfoot>
+                    </table>
+                </div>
+            `;
+        } else {
+            htmlDetalhes += `<div class="os-empty-state">Este pedido não possui produtos registrados.</div>`;
+        }
+
+        bodyContainer.innerHTML = htmlDetalhes;
+        
+    } catch (err) {
+        console.error(err);
+        bodyContainer.innerHTML = `<div style="text-align: center; padding: 40px; color: #dc2626;">Falha ao carregar informações do pedido.<br><br>Verifique a conexão ou tente novamente.</div>`;
+    }
+}
+
