@@ -20,21 +20,20 @@ document.addEventListener("DOMContentLoaded", () => {
 function initFilters() {
     const selPeriodo = document.getElementById("filter-periodo");
     const selStatus = document.getElementById("filter-status");
-    const btnRefresh = document.getElementById("btn-refresh-dash");
 
-    selPeriodo.addEventListener("change", () => {
-        tabFilters[currentTab].periodo = selPeriodo.value;
-        loadActivePanel();
-    });
+    if (selPeriodo) {
+        selPeriodo.addEventListener("change", () => {
+            tabFilters[currentTab].periodo = selPeriodo.value;
+            loadActivePanel();
+        });
+    }
 
-    selStatus.addEventListener("change", () => {
-        tabFilters[currentTab].status = selStatus.value;
-        loadActivePanel();
-    });
-
-    btnRefresh.addEventListener("click", () => {
-        loadActivePanel();
-    });
+    if (selStatus) {
+        selStatus.addEventListener("change", () => {
+            tabFilters[currentTab].status = selStatus.value;
+            loadActivePanel();
+        });
+    }
 }
 
 function initTabs() {

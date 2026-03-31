@@ -294,9 +294,10 @@
                         <label style="font-size: 11px; font-weight: 700; color: var(--os-text-muted); text-transform: uppercase; letter-spacing: 0.05em;">Período de Análise</label>
                         <select id="filter-periodo" class="os-input" style="padding: 10px 14px; min-width: 180px; border-color: #cbd5e1;">
                             <option value="mes">Mês Atual</option>
-                            <option value="trimestre">Trimestre</option>
+                            <option value="trimestre">Quarter</option>
                             <option value="semestre">Semestre</option>
-                            <option value="ytd">Ano Atual (Year to Date)</option>
+                            <option value="ytd">Anual</option>
+                            <option value="12_meses">Últimos 12 Meses</option>
                         </select>
                     </div>
                     <div style="display: flex; flex-direction: column; gap: 6px;">
@@ -309,12 +310,6 @@
                             <option value="Faturado Dispet">Faturado Dispet</option>
                             <option value="Cancelado">Cancelado</option>
                         </select>
-                    </div>
-                    <div style="flex: 1; text-align: right;">
-                        <button id="btn-refresh-dash" class="os-btn os-btn-secondary" style="height: 42px; padding: 0 15px;">
-                            <svg style="width: 18px; margin-right: 5px; vertical-align: middle;" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M23 4v6h-6M1 20v-6h6M3.51 9a9 9 0 0114.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0020.49 15"></path></svg>
-                            Atualizar
-                        </button>
                     </div>
                 </div>
 

@@ -11,6 +11,8 @@ from dateutil.relativedelta import relativedelta
 
 router = APIRouter(prefix="/api/dashboard", tags=["Dashboard"])
 
+MONTH_NAMES = ["Jan", "Fev", "Mar", "Abr", "Mai", "Jun", "Jul", "Ago", "Set", "Out", "Nov", "Dez"]
+
 def get_dashboard_filters(status: Optional[str] = None, periodo: str = "mes"):
     """
     Retorna o fragmento SQL WHERE (sem o 'WHERE' ou 'AND' inicial)
@@ -29,6 +31,8 @@ def get_dashboard_filters(status: Optional[str] = None, periodo: str = "mes"):
     start_date = None
     if periodo == "ytd":
         start_date = datetime.date(hoje.year, 1, 1)
+    elif periodo == "12_meses":
+        start_date = datetime.date(hoje.year, hoje.month, 1) - relativedelta(months=11)
     elif periodo == "trimestre":
         quarter_month = ((hoje.month - 1) // 3) * 3 + 1
         start_date = datetime.date(hoje.year, quarter_month, 1)
@@ -43,6 +47,71 @@ def get_dashboard_filters(status: Optional[str] = None, periodo: str = "mes"):
     
     return " AND ".join(where_parts), params
 
+def get_chart_intervals(periodo: str):
+    hoje = datetime.date.today()
+    intervals = []
+    
+    if periodo == "mes":
+        start_date = datetime.date(hoje.year, hoje.month, 1)
+        if hoje.month == 12:
+            next_month = datetime.date(hoje.year + 1, 1, 1)
+        else:
+            next_month = datetime.date(hoje.year, hoje.month + 1, 1)
+        num_days = (next_month - start_date).days
+        
+        for d in range(1, num_days + 1):
+            date_d = datetime.date(hoje.year, hoje.month, d)
+            intervals.append({
+                "label": f"{d:02d}/{hoje.month:02d}",
+                "start": date_d,
+                "end": date_d + relativedelta(days=1)
+            })
+
+    elif periodo == "12_meses":
+        for i in range(11, -1, -1):
+            dt = hoje - relativedelta(months=i)
+            start_m = datetime.date(dt.year, dt.month, 1)
+            end_m = start_m + relativedelta(months=1)
+            intervals.append({
+                "label": f"{MONTH_NAMES[dt.month-1]}/{str(dt.year)[-2:]}",
+                "start": start_m,
+                "end": end_m
+            })
+            
+    elif periodo == "trimestre": 
+        for q in range(1, 5):
+            start_m = (q - 1) * 3 + 1
+            start_q = datetime.date(hoje.year, start_m, 1)
+            end_q = start_q + relativedelta(months=3)
+            intervals.append({
+                "label": f"Q{q} {hoje.year}",
+                "start": start_q,
+                "end": end_q
+            })
+
+    elif periodo == "semestre":
+        for s in range(1, 3):
+            start_m = 1 if s == 1 else 7
+            start_s = datetime.date(hoje.year, start_m, 1)
+            end_s = start_s + relativedelta(months=6)
+            intervals.append({
+                "label": f"S{s} {hoje.year}",
+                "start": start_s,
+                "end": end_s
+            })
+
+    else: # ytd implies Anual
+        for m in range(1, 13):
+            start_m = datetime.date(hoje.year, m, 1)
+            end_m = start_m + relativedelta(months=1)
+            intervals.append({
+                "label": f"{MONTH_NAMES[start_m.month-1]}/{str(start_m.year)[-2:]}",
+                "start": start_m,
+                "end": end_m
+            })
+            
+    return intervals
+
 @router.get("/geral")
 def get_dashboard_geral(
     status: str = Query(None),
@@ -51,7 +120,6 @@ def get_dashboard_geral(
     current_user: UsuarioModel = Depends(get_current_user)
 ):
     where_clause, params = get_dashboard_filters(status, periodo)
-    hoje = datetime.date.today()
 
     # KPIs
     q_kpi = text(f"""
@@ -64,13 +132,7 @@ def get_dashboard_geral(
     """)
     kpi_row = db.execute(q_kpi, params).mappings().first()
 
-    # Cargas (Ajustando filtro de data para cargas também)
-    # tb_cargas usa data_criacao em vez de created_at
-    c_where = where_clause.replace("created_at", "data_criacao")
-    # Cargas não tem 'status' do pedido diretamente, então removemos se estiver filtrando por status?
-    # No, idealmente cargas abertas seriam filtradas apenas por período se o status for de pedido.
-    # Mas se o user filtrar por 'Cancelado', cargas abertas faz sentido? 
-    # Por enquanto, aplicamos apenas o filtro de período nas cargas.
+    # Cargas
     _, c_params = get_dashboard_filters(None, periodo)
     q_cargas = text(f"""
         SELECT COUNT(id) as cargas_abertas
@@ -80,22 +142,31 @@ def get_dashboard_geral(
     """)
     cargas_row = db.execute(q_cargas, c_params).mappings().first()
 
-    # Gráfico (últimos 6 meses)
+    # Gráfico
+    intervals = get_chart_intervals(periodo)
     labels = []
     faturamentos = []
     qtds = []
     
-    for i in range(5, -1, -1):
-        dt = hoje - relativedelta(months=i)
-        q_chart = text("""
+    status_clause = "1=1"
+    if status and status != "Todos":
+        status_clause = "status = :status"
+        
+    for iv in intervals:
+        q_chart = text(f"""
             SELECT 
                 COUNT(id_pedido) as qtd,
                 COALESCE(SUM(total_pedido), 0) as fat
             FROM public.tb_pedidos
-            WHERE EXTRACT(MONTH FROM created_at) = :m AND EXTRACT(YEAR FROM created_at) = :a
+            WHERE {status_clause} 
+              AND created_at >= :start AND created_at < :end
         """)
-        row = db.execute(q_chart, {"m": dt.month, "a": dt.year}).mappings().first()
-        labels.append(dt.strftime("%b/%y"))
+        c_params_chart = {"start": iv["start"], "end": iv["end"]}
+        if status and status != "Todos":
+            c_params_chart["status"] = status
+            
+        row = db.execute(q_chart, c_params_chart).mappings().first()
+        labels.append(iv["label"])
         faturamentos.append(float(row["fat"]))
         qtds.append(int(row["qtd"]))
 
@@ -146,27 +217,26 @@ def get_dashboard_vendas(
     reg_data = [float(r["total"] or 0) for r in regioes]
 
     # Vendas por Status
-    # Nota: Este gráfico ignora o filtro de status para mostrar a proporção geral
     where_period, period_params = get_dashboard_filters(None, periodo)
     q_status = text(f"SELECT status, COUNT(id_pedido) as qtd FROM public.tb_pedidos WHERE {where_period} GROUP BY status")
     status_rows = db.execute(q_status, period_params).mappings().all()
     st_labels = [s["status"] for s in status_rows]
     st_data = [int(s["qtd"]) for s in status_rows]
 
-    # Evolução Ticket Médio (Mês a Mês - 6 messes)
-    hoje = datetime.date.today()
+    # Evolução Ticket Médio
+    intervals = get_chart_intervals(periodo)
     evo_labels = []
     evo_ticket = []
-    for i in range(5, -1, -1):
-        dt = hoje - relativedelta(months=i)
+        
+    for iv in intervals:
         q_evo = text("""
             SELECT COALESCE(AVG(total_pedido), 0) as tkt
             FROM public.tb_pedidos
             WHERE status != 'Cancelado' AND total_pedido > 0
-              AND EXTRACT(MONTH FROM created_at) = :m AND EXTRACT(YEAR FROM created_at) = :a
+              AND created_at >= :start AND created_at < :end
         """)
-        row = db.execute(q_evo, {"m": dt.month, "a": dt.year}).mappings().first()
-        evo_labels.append(dt.strftime("%b/%y"))
+        row = db.execute(q_evo, {"start": iv["start"], "end": iv["end"]}).mappings().first()
+        evo_labels.append(iv["label"])
         evo_ticket.append(float(row["tkt"]))
 
     return {
@@ -197,7 +267,6 @@ def get_dashboard_logistica(
     current_user: UsuarioModel = Depends(get_current_user)
 ):
     where_clause, params = get_dashboard_filters(status, periodo)
-    # Filtro de cargas (apenas período)
     _, p_params = get_dashboard_filters(None, periodo)
 
     q_kpi = text(f"""
@@ -208,7 +277,6 @@ def get_dashboard_logistica(
     """)
     kpi_env = db.execute(q_kpi, p_params).mappings().first()
 
-    hoje = datetime.date.today()
     q_peso = text(f"""
         SELECT COALESCE(AVG(carga_peso), 0) as peso_med
         FROM (
@@ -229,7 +297,7 @@ def get_dashboard_logistica(
     """)
     kpi_frete = db.execute(q_frete, params).mappings().first()
 
-    # Modalidade (Entrega vs Retirada)
+    # Modalidade
     q_modalidade = text(f"""
         SELECT 
             COUNT(CASE WHEN frete_total > 0 THEN 1 END) as entrega,
@@ -239,7 +307,7 @@ def get_dashboard_logistica(
     """)
     mod_row = db.execute(q_modalidade, params).mappings().first()
 
-    # Eficiência Frota (Próprio vs Terceiro)
+    # Eficiência Frota
     q_frota = text("""
         SELECT COALESCE(t.tipo_veiculo, 'Não Informado') as tipo, COUNT(c.id) as qtd
         FROM public.tb_cargas c
@@ -248,19 +316,27 @@ def get_dashboard_logistica(
     """)
     frota_rows = db.execute(q_frota).mappings().all()
 
+    intervals = get_chart_intervals(periodo)
     labels = []
     pesos = []
-    for i in range(5, -1, -1):
-        dt = hoje - relativedelta(months=i)
-        q_chart = text("""
+    
+    for iv in intervals:
+        status_cond = "1=1"
+        c_params_chart = {"start": iv["start"], "end": iv["end"]}
+        if status and status != "Todos":
+            status_cond = "p.status = :status"
+            c_params_chart["status"] = status
+            
+        q_chart = text(f"""
             SELECT COALESCE(SUM(p.peso_total_kg), 0) as p
             FROM public.tb_cargas_pedidos cp
             JOIN public.tb_pedidos p ON cp.numero_pedido = CAST(p.id_pedido AS VARCHAR)
             JOIN public.tb_cargas c ON cp.id_carga = c.id
-            WHERE EXTRACT(MONTH FROM c.data_criacao) = :m AND EXTRACT(YEAR FROM c.data_criacao) = :a
+            WHERE {status_cond}
+              AND c.data_criacao >= :start AND c.data_criacao < :end
         """)
-        row = db.execute(q_chart, {"m": dt.month, "a": dt.year}).mappings().first()
-        labels.append(dt.strftime("%b/%y"))
+        row = db.execute(q_chart, c_params_chart).mappings().first()
+        labels.append(iv["label"])
         pesos.append(float(row["p"]))
 
     return {
@@ -292,7 +368,6 @@ def get_dashboard_pivot(
     current_user: UsuarioModel = Depends(get_current_user)
 ):
     where_clause, params = get_dashboard_filters(status, periodo)
-    # Retorna uma lista de dicionários para o PivotTable.js
     q = text(f"""
         SELECT 
             p.status as "Status",
@@ -318,12 +393,6 @@ def get_dashboard_kpis(
     db: Session = Depends(get_db),
     current_user: UsuarioModel = Depends(get_current_user)
 ):
-    """
-    Retorna os KPIs principais para o dashboard da home (index.html).
-    Suporta filtros por mês e ano.
-    """
-    hoje = datetime.date.today()
-    # Filtro de data
     where_clause = ""
     params = {}
     
@@ -342,8 +411,7 @@ def get_dashboard_kpis(
     """)
     faturamento = db.execute(q_faturamento, params).scalar() or 0
 
-    # 2. Pedidos Pendentes (Status 'Pedido')
-    # Nota: Pendentes aqui costumam ser os que ainda não foram faturados nem cancelados.
+    # 2. Pedidos Pendentes
     q_pendentes = text(f"""
         SELECT COUNT(id_pedido)
         FROM public.tb_pedidos
@@ -434,8 +502,7 @@ def get_dashboard_clientes(
     """)
     top_cli_rows = db.execute(q_top_cli, params).mappings().all()
 
-    # Funil de Conversão (Orçamentos vs Pedidos/Faturados)
-    # Nota: Este kpi ignora o status 'Cancelado' mas respeita o período
+    # Funil
     where_period, period_params = get_dashboard_filters(None, periodo)
     q_funil = text(f"""
         SELECT 
@@ -446,26 +513,25 @@ def get_dashboard_clientes(
     """)
     funil_row = db.execute(q_funil, period_params).mappings().first()
 
-    # Ticket médio geral no período/status
     q_ticket_geral = text(f"SELECT COALESCE(AVG(total_pedido), 0) as med FROM public.tb_pedidos WHERE total_pedido > 0 AND {where_clause}")
     tkt_row = db.execute(q_ticket_geral, params).mappings().first()
 
-    # Evolução Mensal de Novos Orçamentos vs Confirmados (6 meses)
-    hoje = datetime.date.today()
+    # Evolução do Funil
+    intervals = get_chart_intervals(periodo)
     evo_labels = []
     evo_orcamentos = []
     evo_confirmados = []
-    for i in range(5, -1, -1):
-        dt = hoje - relativedelta(months=i)
+    
+    for iv in intervals:
         q_evo = text("""
             SELECT 
                 COUNT(CASE WHEN status = 'Orçamento' THEN 1 END) as orcs,
                 COUNT(CASE WHEN status != 'Orçamento' AND status != 'Cancelado' THEN 1 END) as confs
             FROM public.tb_pedidos
-            WHERE EXTRACT(MONTH FROM created_at) = :m AND EXTRACT(YEAR FROM created_at) = :a
+            WHERE created_at >= :start AND created_at < :end
         """)
-        row = db.execute(q_evo, {"m": dt.month, "a": dt.year}).mappings().first()
-        evo_labels.append(dt.strftime("%b/%y"))
+        row = db.execute(q_evo, {"start": iv["start"], "end": iv["end"]}).mappings().first()
+        evo_labels.append(iv["label"])
         evo_orcamentos.append(int(row["orcs"] or 0))
         evo_confirmados.append(int(row["confs"] or 0))
 
