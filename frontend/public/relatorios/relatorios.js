@@ -613,17 +613,25 @@ async function abrirGerenciadorDeCarga(idCarga, numCarga) {
                             id_transporte: parseInt(tr) || null
                         })
                     });
-                    ok = updateResp.ok;
+                    
+                    if (!updateResp.ok) {
+                        try {
+                            const errData = await updateResp.json();
+                            alert(errData.detail || "Erro ao salvar cabeçalho");
+                        } catch(e) {
+                            alert("Erro ao salvar cabeçalho");
+                        }
+                        ok = false;
+                    }
                 }
 
-                await saveItemsLogic(null);
-
                 if (ok) {
+                    await saveItemsLogic(null);
                     btn.textContent = "Salvo!";
                     setTimeout(() => { btn.textContent = "Salvar Tela"; }, 2000);
                 } else {
-                    alert("Erro ao salvar cabeçalho");
                     btn.textContent = "Erro!";
+                    setTimeout(() => { btn.textContent = "Salvar Tela"; }, 2000);
                 }
             });
         }

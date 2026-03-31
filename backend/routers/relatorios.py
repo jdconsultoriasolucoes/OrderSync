@@ -93,6 +93,28 @@ def update_carga(carga_id: int, carga: CargaUpdate, db: Session = Depends(get_db
         raise HTTPException(status_code=404, detail="Carga não encontrada")
     
     update_data = carga.model_dump(exclude_unset=True)
+    
+    # Validação de peso do transporte
+    if "id_transporte" in update_data and update_data["id_transporte"]:
+        id_transp = update_data["id_transporte"]
+        transp = db.query(TransporteModel).filter(TransporteModel.id == id_transp).first()
+        if transp and transp.capacidade_kg:
+            # Calcula peso total da carga
+            q_peso = text("""
+                SELECT COALESCE(SUM(p.peso_total_kg), 0) as total_peso
+                FROM tb_cargas_pedidos cp
+                JOIN tb_pedidos p ON cp.numero_pedido = CAST(p.id_pedido AS VARCHAR)
+                WHERE cp.id_carga = :carga_id
+            """)
+            peso_row = db.execute(q_peso, {"carga_id": carga_id}).mappings().first()
+            peso_total = float(peso_row["total_peso"] if peso_row and peso_row["total_peso"] else 0)
+            
+            if peso_total > transp.capacidade_kg:
+                raise HTTPException(
+                    status_code=400, 
+                    detail=f"Caminhão não comporta o peso! Capacidade: {transp.capacidade_kg} kg | Peso Carga: {peso_total:.2f} kg."
+                )
+
     for key, value in update_data.items():
         setattr(db_carga, key, value)
         

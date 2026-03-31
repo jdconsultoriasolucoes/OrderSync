@@ -198,8 +198,8 @@ def get_dashboard_vendas(
     q_ticket = text(f"SELECT COALESCE(AVG(total_pedido), 0) as tkt FROM public.tb_pedidos WHERE total_pedido > 0 AND {where_clause}")
     tkt_row = db.execute(q_ticket, params).mappings().first()
     
-    # Vendedores ativos vêm do cliente (elaboracao_vendedor)
-    q_vendedores = text("SELECT COUNT(DISTINCT elaboracao_vendedor) as vends FROM public.t_cadastro_cliente_v2 WHERE elaboracao_vendedor IS NOT NULL AND elaboracao_vendedor != ''")
+    # Vendedores ativos reajustado para tb_vendedores
+    q_vendedores = text("SELECT COUNT(id) as vends FROM public.tb_vendedores WHERE ativo = TRUE")
     vend_row = db.execute(q_vendedores).mappings().first()
 
     # Vendas por Região (Top 5 municípios)
@@ -277,6 +277,13 @@ def get_dashboard_logistica(
     """)
     kpi_env = db.execute(q_kpi, p_params).mappings().first()
 
+    q_kpi_tot = text(f"""
+        SELECT COUNT(id) as cargas_tot
+        FROM public.tb_cargas
+        WHERE data_criacao >= :start_date
+    """)
+    kpi_tot = db.execute(q_kpi_tot, p_params).mappings().first()
+
     q_peso = text(f"""
         SELECT COALESCE(AVG(carga_peso), 0) as peso_med
         FROM (
@@ -333,15 +340,19 @@ def get_dashboard_logistica(
             JOIN public.tb_pedidos p ON cp.numero_pedido = CAST(p.id_pedido AS VARCHAR)
             JOIN public.tb_cargas c ON cp.id_carga = c.id
             WHERE {status_cond}
+              AND c.is_historico = TRUE
               AND c.data_criacao >= :start AND c.data_criacao < :end
         """)
         row = db.execute(q_chart, c_params_chart).mappings().first()
         labels.append(iv["label"])
         pesos.append(float(row["p"]))
 
+    cargas_env_val = int(kpi_env["cargas_env"] if kpi_env else 0)
+    cargas_tot_val = int(kpi_tot["cargas_tot"] if kpi_tot else 0)
+
     return {
         "kpis": {
-            "cargas_enviadas_mes": int(kpi_env["cargas_env"] if kpi_env else 0),
+            "cargas_enviadas_mes": f"{cargas_env_val} / {cargas_tot_val}",
             "peso_medio_carga": float(kpi_peso["peso_med"] if kpi_peso else 0),
             "custo_frete_mes": float(kpi_frete["total_frete"] if kpi_frete else 0)
         },

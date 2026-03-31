@@ -130,24 +130,56 @@
         .chart-box-full {
             grid-column: span 2;
         }
-        /* Ajustes Pivot Table */
-        .pvtUi {
-            font-family: 'Inter', sans-serif !important;
-            font-size: 13px !important;
-        }
-        .pvtAxisContainer, .pvtVals { background: #f8fafc; border: 1px solid #e2e8f0; }
+        /* Ajustes Pivot Table Modernos */
+        .pvtUi { font-family: 'Inter', sans-serif !important; font-size: 13px !important; width: 100%; border-collapse: separate; border-spacing: 0; }
+        .pvtAxisContainer { background: #f8fafc; border: 1px solid #e2e8f0; padding: 10px; border-radius: 8px; }
+        .pvtVals { background: white; border: 1px solid #e2e8f0; padding: 10px; border-radius: 8px; }
         .pvtRowLabel, .pvtColLabel {
-            background: var(--os-bg-hover); 
-            border: 1px solid var(--os-border); 
-            padding: 8px 12px !important;
+            background: #f1f5f9; 
+            border: 1px solid #cbd5e1; 
+            padding: 10px 14px !important;
+            font-weight: 600;
+            color: #334155;
+            text-transform: uppercase;
+            font-size: 11px;
+            letter-spacing: 0.05em;
         }
-        .pvtVal { padding: 8px 12px !important; }
+        .pvtVal { 
+            padding: 10px 14px !important; 
+            border: 1px solid #e2e8f0; 
+            color: #0f172a;
+            font-weight: 500;
+            background: white;
+        }
+        .pvtTotal, .pvtTotalLabel, .pvtGrandTotal {
+            background: #e0f2fe !important;
+            font-weight: 700 !important;
+            color: #0369a1 !important;
+        }
         .pvtAxisContainer li span.pvtAttr {
             background: white;
-            border: 1px solid var(--os-border);
-            padding: 4px 10px;
-            border-radius: 4px;
-            box-shadow: 0 1px 2px rgba(0,0,0,0.05);
+            border: 1px solid #cbd5e1;
+            padding: 6px 12px;
+            border-radius: 6px;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+            font-weight: 500;
+            color: #334155;
+            transition: all 0.2s;
+        }
+        .pvtAxisContainer li span.pvtAttr:hover {
+            border-color: #3b82f6;
+            color: #1d4ed8;
+            box-shadow: 0 2px 4px rgba(59,130,246,0.15);
+        }
+        .pvtTriangle { color: #94a3b8; }
+        select.pvtRenderer, select.pvtAggregator {
+            padding: 8px 12px;
+            border-radius: 6px;
+            border: 1px solid #cbd5e1;
+            font-size: 13px;
+            outline: none;
+            cursor: pointer;
+            background: white;
         }
         
         @media (max-width: 900px) {
@@ -319,7 +351,7 @@
                         <div class="kpi-card"><div class="kpi-title">Qtd Pedidos</div><div class="kpi-value" id="kpi-pedidos-mes">-</div></div>
                         <div class="kpi-card"><div class="kpi-title">Valor Dashboard</div><div class="kpi-value" id="kpi-faturamento-mes">-</div></div>
                         <div class="kpi-card"><div class="kpi-title">Ticket Médio</div><div class="kpi-value" id="kpi-ticket-medio-geral">-</div></div>
-                        <div class="kpi-card"><div class="kpi-title">Cargas no Período</div><div class="kpi-value" id="kpi-cargas-abertas">-</div></div>
+                        <div class="kpi-card"><div class="kpi-title">Cargas Pendentes</div><div class="kpi-value" id="kpi-cargas-abertas">-</div></div>
                     </div>
                     <div class="chart-grid">
                         <div class="chart-box chart-box-full" id="geral-chart2">
