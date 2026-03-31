@@ -99,11 +99,15 @@ def update_carga(carga_id: int, carga: CargaUpdate, db: Session = Depends(get_db
         id_transp = update_data["id_transporte"]
         transp = db.query(TransporteModel).filter(TransporteModel.id == id_transp).first()
         if transp and transp.capacidade_kg:
-            # Calcula peso total da carga
+            # Calcula peso bruto total da carga
             q_peso = text("""
-                SELECT COALESCE(SUM(p.peso_total_kg), 0) as total_peso
+                SELECT COALESCE(SUM(i.quantidade * COALESCE(prod.peso_bruto, prod.peso, 0)), 0) as total_peso
                 FROM tb_cargas_pedidos cp
-                JOIN tb_pedidos p ON cp.numero_pedido = CAST(p.id_pedido AS VARCHAR)
+                JOIN tb_pedidos_itens i ON cp.numero_pedido = CAST(i.id_pedido AS VARCHAR)
+                LEFT JOIN (
+                    SELECT codigo_supra, MAX(CAST(peso AS FLOAT)) as peso, MAX(CAST(peso_bruto AS FLOAT)) as peso_bruto 
+                    FROM t_cadastro_produto_v2 GROUP BY codigo_supra
+                ) prod ON prod.codigo_supra = i.codigo
                 WHERE cp.id_carga = :carga_id
             """)
             peso_row = db.execute(q_peso, {"carga_id": carga_id}).mappings().first()
@@ -112,7 +116,7 @@ def update_carga(carga_id: int, carga: CargaUpdate, db: Session = Depends(get_db
             if peso_total > transp.capacidade_kg:
                 raise HTTPException(
                     status_code=400, 
-                    detail=f"Caminhão não comporta o peso! Capacidade: {transp.capacidade_kg} kg | Peso Carga: {peso_total:.2f} kg."
+                    detail=f"Caminhão não comporta o peso BRUTO! Capacidade: {transp.capacidade_kg} kg | Peso Bruto Carga: {peso_total:.2f} kg."
                 )
 
     for key, value in update_data.items():
