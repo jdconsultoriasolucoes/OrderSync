@@ -5,7 +5,6 @@ from sqlalchemy.exc import IntegrityError
 from typing import List
 
 from database import SessionLocal
-from utils.security import get_current_user
 
 # Models
 from models.catalogo_referencias import (
