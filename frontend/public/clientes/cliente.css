@@ -135,6 +135,13 @@ form {
   margin-bottom: var(--os-space-3);
 }
 
+.form-grid-3col {
+  display: grid;
+  grid-template-columns: 1fr 1fr 1fr;
+  gap: var(--os-space-2);
+  margin-bottom: var(--os-space-3);
+}
+
 /* Labels */
 label {
   display: flex;
@@ -301,6 +308,7 @@ select:focus {
   }
 
   .form-grid-2col,
+  .form-grid-3col,
   .form-grid {
     grid-template-columns: 1fr;
     gap: var(--os-space-3);

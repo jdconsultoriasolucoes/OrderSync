@@ -112,6 +112,10 @@ def carregar_pedido_pdf(db, pedido_id: int) -> PedidoPdf:
 
         qtd = float(r["item_quantidade"] or 0)
         
+        # FILTRO: Somente itens com quantidade > 0
+        if qtd <= 0:
+            continue
+
         # Pesos unitários suportando strings Sujas ("5,00 kg", "2.0")
         def _parse_peso(val):
             if not val:

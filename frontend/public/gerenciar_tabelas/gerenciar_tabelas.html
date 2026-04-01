@@ -19,9 +19,8 @@
         .page-container {
             padding: var(--os-space-4);
             padding-top: calc(var(--os-header-height) + var(--os-space-3));
-            max-width: var(--os-max-content);
+            max-width: 1550px;
             margin: 0 auto;
-            /* Centralize */
         }
 
         .card {
@@ -45,6 +44,13 @@
             gap: 0;
             border-bottom: 2px solid var(--os-border);
             margin-bottom: var(--os-space-3);
+            overflow-x: auto; /* Barra de rolagem horizontal */
+            scrollbar-width: none; /* Esconde no Firefox */
+            -ms-overflow-style: none; /* Esconde no IE/Edge */
+        }
+
+        .module-nav::-webkit-scrollbar {
+            display: none; /* Esconde no Chrome/Safari */
         }
 
         .module-nav-btn {
@@ -60,6 +66,8 @@
             margin-bottom: -2px;
             transition: color 0.15s, border-color 0.15s;
             font-family: var(--os-font);
+            flex-shrink: 0; /* Impede que os botões esmaguem */
+            white-space: nowrap; /* Garante o texto em uma linha */
         }
 
         .module-nav-btn:hover {
