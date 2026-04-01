@@ -260,6 +260,10 @@ def get_dashboard_vendas(
     intervals = get_chart_intervals(periodo)
     evo_labels = []
     evo_ticket = []
+    
+    filial_clause = ""
+    if filial and filial != "Todos":
+        filial_clause = " AND fornecedor = :filial"
         
     for iv in intervals:
         q_evo = text(f"""
@@ -493,13 +497,13 @@ def get_dashboard_produtos(
     where_clause, params = get_dashboard_filters(status, periodo, filial)
 
     # Top 10 Produtos (Valor/Peso) sem frete
-    # i.subtotal é quant * preco_unit
+    # i.subtotal_sem_f é o valor sem frete
     q_top_produtos = text(f"""
         SELECT 
             i.nome, 
             SUM(i.quantidade) as qtd, 
-            COALESCE(SUM(i.subtotal), 0) as fat,
-            COALESCE(SUM(i.peso_liquido_total), 0) as peso
+            COALESCE(SUM(i.subtotal_sem_f), 0) as fat,
+            COALESCE(SUM(i.peso_kg * i.quantidade), 0) as peso
         FROM public.tb_pedidos_itens i
         JOIN public.tb_pedidos p ON i.id_pedido = p.id_pedido
         WHERE {where_clause.replace('status =', 'p.status =').replace('created_at >=', 'p.created_at >=').replace('fornecedor =', 'p.fornecedor =')} 
@@ -581,6 +585,10 @@ def get_dashboard_clientes(
     evo_labels = []
     evo_orcamentos = []
     evo_confirmados = []
+    
+    filial_clause = ""
+    if filial and filial != "Todos":
+        filial_clause = " AND fornecedor = :filial"
     
     for iv in intervals:
         q_evo = text(f"""
