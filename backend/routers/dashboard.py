@@ -235,13 +235,13 @@ def get_dashboard_vendas(
     q_regiao = text(f"""
         SELECT 
             COALESCE(c.faturamento_municipio, c.entrega_municipio, 'Sem Município') as mun, 
-            SUM(GREATEST(p.total_pedido - COALESCE(p.frete_total, 0), 0)) as total_valor,
+            SUM(GREATEST(CAST(p.total_pedido AS NUMERIC) - COALESCE(CAST(p.frete_total AS NUMERIC), 0), 0)) as total_valor,
             SUM(COALESCE(p.peso_total_kg, 0)) as total_peso
         FROM public.tb_pedidos p
         LEFT JOIN public.t_cadastro_cliente_v2 c ON p.codigo_cliente = c.cadastro_codigo_da_empresa
         WHERE {where_clause.replace('status =', 'p.status =').replace('created_at >=', 'p.created_at >=').replace('fornecedor =', 'p.fornecedor =')}
-        GROUP BY COALESCE(c.faturamento_municipio, c.entrega_municipio)
-        ORDER BY total_valor DESC
+        GROUP BY 1
+        ORDER BY 2 DESC
         LIMIT 10
     """)
     regioes = db.execute(q_regiao, params).mappings().all()
@@ -503,13 +503,13 @@ def get_dashboard_produtos(
             i.nome, 
             SUM(i.quantidade) as qtd, 
             COALESCE(SUM(i.subtotal_sem_f), 0) as fat,
-            COALESCE(SUM(i.peso_kg * i.quantidade), 0) as peso
+            COALESCE(SUM(CAST(i.peso_kg AS NUMERIC) * CAST(i.quantidade AS NUMERIC)), 0) as peso
         FROM public.tb_pedidos_itens i
         JOIN public.tb_pedidos p ON i.id_pedido = p.id_pedido
         WHERE {where_clause.replace('status =', 'p.status =').replace('created_at >=', 'p.created_at >=').replace('fornecedor =', 'p.fornecedor =')} 
           AND i.nome IS NOT NULL AND i.nome != ''
-        GROUP BY i.nome
-        ORDER BY fat DESC
+        GROUP BY 1
+        ORDER BY 3 DESC
         LIMIT 10
     """)
     top_prods_rows = db.execute(q_top_produtos, params).mappings().all()
@@ -520,10 +520,10 @@ def get_dashboard_produtos(
         FROM public.tb_pedidos_itens i
         JOIN public.tb_pedidos p ON i.id_pedido = p.id_pedido
         LEFT JOIN public.t_cadastro_produto_v2 pr ON i.codigo = pr.codigo_supra
-        WHERE {where_clause.replace('status =', 'p.status =').replace('created_at >=', 'p.created_at >=')}
+        WHERE {where_clause.replace('status =', 'p.status =').replace('created_at >=', 'p.created_at >=').replace('fornecedor =', 'p.fornecedor =')}
           AND pr.familia IS NOT NULL AND pr.familia != ''
-        GROUP BY pr.familia
-        ORDER BY fat DESC
+        GROUP BY 1
+        ORDER BY 2 DESC
         LIMIT 10
     """)
     familias_rows = db.execute(q_familias, params).mappings().all()
@@ -560,8 +560,8 @@ def get_dashboard_clientes(
         FROM public.tb_pedidos p
         WHERE {where_clause.replace('status =', 'p.status =').replace('created_at >=', 'p.created_at >=').replace('fornecedor =', 'p.fornecedor =')}
           AND p.cliente IS NOT NULL AND p.cliente != ''
-        GROUP BY p.cliente
-        ORDER BY fat DESC
+        GROUP BY 1
+        ORDER BY 2 DESC
         LIMIT 10
     """)
     top_cli_rows = db.execute(q_top_cli, params).mappings().all()
