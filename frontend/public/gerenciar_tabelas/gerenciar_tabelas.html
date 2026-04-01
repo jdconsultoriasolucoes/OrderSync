@@ -44,13 +44,24 @@
             gap: 0;
             border-bottom: 2px solid var(--os-border);
             margin-bottom: var(--os-space-3);
-            overflow-x: auto; /* Barra de rolagem horizontal */
-            scrollbar-width: none; /* Esconde no Firefox */
-            -ms-overflow-style: none; /* Esconde no IE/Edge */
+            overflow-x: scroll; /* Força a exibição da barra de rolagem */
+            width: 100%;
+            padding-bottom: 12px; 
+            scrollbar-width: auto; /* Padrão do navegador no Firefox para ser bem visível */
+            scrollbar-color: var(--os-primary) rgba(0,0,0,0.05);
         }
 
+        /* Estilização para Chrome e Safari - Mais visível */
         .module-nav::-webkit-scrollbar {
-            display: none; /* Esconde no Chrome/Safari */
+            height: 10px; /* Mais grossa */
+        }
+        .module-nav::-webkit-scrollbar-thumb {
+            background-color: var(--os-primary); /* Cor azul vibrante */
+            border-radius: 10px;
+        }
+        .module-nav::-webkit-scrollbar-track {
+            background: rgba(0,0,0,0.05); /* Track visível */
+            border-radius: 10px;
         }
 
         .module-nav-btn {
