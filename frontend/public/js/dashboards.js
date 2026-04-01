@@ -3,23 +3,45 @@ var API_BASE = window.API_BASE || window.location.origin;
 let currentTab = "geral";
 // Estado independente por aba
 let tabFilters = {
-    geral: { periodo: "mes", status: "Todos" },
-    vendas: { periodo: "mes", status: "Todos" },
-    produtos: { periodo: "mes", status: "Todos" },
-    clientes: { periodo: "mes", status: "Todos" },
-    logistica: { periodo: "mes", status: "Todos" },
-    dinamica: { periodo: "mes", status: "Todos" }
+    geral: { periodo: "mes", status: "Todos", filial: "Todos" },
+    vendas: { periodo: "mes", status: "Todos", filial: "Todos" },
+    produtos: { periodo: "mes", status: "Todos", filial: "Todos" },
+    clientes: { periodo: "mes", status: "Todos", filial: "Todos" },
+    logistica: { periodo: "mes", status: "Todos", filial: "Todos" },
+    dinamica: { periodo: "mes", status: "Todos", filial: "Todos" }
 };
 
 document.addEventListener("DOMContentLoaded", () => {
     initTabs();
     initFilters();
+    loadFiliais();
     loadActivePanel(); // default
 });
+
+async function loadFiliais() {
+    try {
+        const resp = await fetch(`${API_BASE}/api/dashboard/filiais`, {
+            headers: { "Authorization": `Bearer ${window.Auth ? window.Auth.getToken() : ''}` }
+        });
+        if (resp.ok) {
+            const data = await resp.json();
+            const sel = document.getElementById("filter-filial");
+            if (sel) {
+                data.filiais.forEach(f => {
+                    const opt = document.createElement("option");
+                    opt.value = f;
+                    opt.textContent = f;
+                    sel.appendChild(opt);
+                });
+            }
+        }
+    } catch(e) { console.error("Erro ao puxar filiais", e); }
+}
 
 function initFilters() {
     const selPeriodo = document.getElementById("filter-periodo");
     const selStatus = document.getElementById("filter-status");
+    const selFilial = document.getElementById("filter-filial");
 
     if (selPeriodo) {
         selPeriodo.addEventListener("change", () => {
@@ -31,6 +53,13 @@ function initFilters() {
     if (selStatus) {
         selStatus.addEventListener("change", () => {
             tabFilters[currentTab].status = selStatus.value;
+            loadActivePanel();
+        });
+    }
+
+    if (selFilial) {
+        selFilial.addEventListener("change", () => {
+            tabFilters[currentTab].filial = selFilial.value;
             loadActivePanel();
         });
     }
@@ -63,6 +92,7 @@ function showPanel(tab) {
     // Sincroniza a barra de filtros com os valores salvos para esta aba
     document.getElementById("filter-periodo").value = tabFilters[tab].periodo;
     document.getElementById("filter-status").value = tabFilters[tab].status;
+    document.getElementById("filter-filial").value = tabFilters[tab].filial;
 
     if (tab === "geral") {
         document.getElementById("panel-geral").style.display = "block";
@@ -103,7 +133,7 @@ function loadActivePanel() {
 
 function getQueryString() {
     const f = tabFilters[currentTab];
-    return `periodo=${f.periodo}&status=${f.status}`;
+    return `periodo=${f.periodo}&status=${f.status}&filial=${f.filial}`;
 }
 
 // ----------------------------------------------------------------------------------
@@ -169,6 +199,7 @@ async function loadDashboardGeral() {
 // 2. Vendas
 // ----------------------------------------------------------------------------------
 let chartVendasRegInst = null;
+let chartVendasRegPesoInst = null;
 let chartVendasStatusInst = null;
 let chartEvolucaoTicketInst = null;
 async function loadDashboardVendas() {
@@ -189,9 +220,24 @@ async function loadDashboardVendas() {
             data: {
                 labels: data.chart_regioes.labels,
                 datasets: [{
-                    label: 'Vendas por Município (R$)',
+                    label: 'Vendas por Município (Valor s/ frete)',
                     data: data.chart_regioes.data,
                     backgroundColor: '#3b82f6'
+                }]
+            },
+            options: { responsive: true, maintainAspectRatio: false }
+        });
+
+        const ctx1B = document.getElementById("chart-vendas-por-regiao-peso").getContext("2d");
+        if(chartVendasRegPesoInst) chartVendasRegPesoInst.destroy();
+        chartVendasRegPesoInst = new Chart(ctx1B, {
+            type: 'bar',
+            data: {
+                labels: data.chart_regioes.labels,
+                datasets: [{
+                    label: 'Vendas por Município (Peso Líquido Kg)',
+                    data: data.chart_regioes.data_peso,
+                    backgroundColor: '#10b981'
                 }]
             },
             options: { responsive: true, maintainAspectRatio: false }
@@ -236,6 +282,7 @@ async function loadDashboardVendas() {
 // 2A. Produtos
 // ----------------------------------------------------------------------------------
 let chartTopProdutosInst = null;
+let chartTopProdutosPesoInst = null;
 let chartFamiliasInst = null;
 async function loadDashboardProdutos() {
     try {
@@ -252,9 +299,24 @@ async function loadDashboardProdutos() {
             data: {
                 labels: data.top_produtos.labels,
                 datasets: [{
-                    label: 'Faturamento (R$)',
+                    label: 'Faturamento (Valor Subtotal s/ frete)',
                     data: data.top_produtos.faturamento,
                     backgroundColor: '#10b981'
+                }]
+            },
+            options: { responsive: true, maintainAspectRatio: false, indexAxis: 'y' }
+        });
+
+        const ctx1B = document.getElementById("chart-top-produtos-peso").getContext("2d");
+        if(chartTopProdutosPesoInst) chartTopProdutosPesoInst.destroy();
+        chartTopProdutosPesoInst = new Chart(ctx1B, {
+            type: 'bar',
+            data: {
+                labels: data.top_produtos.labels,
+                datasets: [{
+                    label: 'Peso Líquido (Kg)',
+                    data: data.top_produtos.peso_liquido,
+                    backgroundColor: '#f59e0b'
                 }]
             },
             options: { responsive: true, maintainAspectRatio: false, indexAxis: 'y' }
@@ -281,6 +343,7 @@ async function loadDashboardProdutos() {
 // 2B. Clientes
 // ----------------------------------------------------------------------------------
 let chartTopClientesInst = null;
+let chartTopClientesPesoInst = null;
 let chartEvolucaoClientesInst = null;
 async function loadDashboardClientes() {
     try {
@@ -304,6 +367,21 @@ async function loadDashboardClientes() {
                     label: 'Faturamento Total (R$)',
                     data: data.top_clientes.faturamento,
                     backgroundColor: '#8b5cf6'
+                }]
+            },
+            options: { responsive: true, maintainAspectRatio: false }
+        });
+
+        const ctx1B = document.getElementById("chart-top-clientes-peso").getContext("2d");
+        if(chartTopClientesPesoInst) chartTopClientesPesoInst.destroy();
+        chartTopClientesPesoInst = new Chart(ctx1B, {
+            type: 'bar',
+            data: {
+                labels: data.top_clientes.labels,
+                datasets: [{
+                    label: 'Peso Líquido Total (Kg)',
+                    data: data.top_clientes.peso_liquido,
+                    backgroundColor: '#10b981'
                 }]
             },
             options: { responsive: true, maintainAspectRatio: false }

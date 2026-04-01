@@ -392,6 +392,11 @@ async function saveCondicao(e) {
     const desc = document.getElementById('cond-desc').value;
     const custo = document.getElementById('cond-custo').value;
 
+    if (!id) {
+        alert("Obrigatório informar o código.");
+        return;
+    }
+
     const payload = {
         codigo_prazo: parseInt(id),
         prazo,
@@ -414,6 +419,11 @@ async function saveDesconto(e) {
     e.preventDefault();
     const id = document.getElementById('desc-id').value;
     const fator = document.getElementById('desc-fator').value;
+
+    if (!id) {
+        alert("Obrigatório informar o ID.");
+        return;
+    }
 
     const payload = {
         id_desconto: parseInt(id),

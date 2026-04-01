@@ -105,35 +105,51 @@ async def check_automation_schedules(db):
         agora = datetime.now(TZ)
         hoje = agora.date()
         
-        # O dia da semana no Python: Monday is 0 and Sunday is 6
-        if hoje.weekday() != cfg.prospeccao_dia_semana:
+        # Log detalhado apenas se estamos na mesma hora da config para evitar poluição visual excessiva
+        # Mas vamos imprimir ao menos se o dia bate ou não bater
+        
+        dia_config = cfg.prospeccao_dia_semana
+        dia_hoje = hoje.weekday() # Monday is 0
+        
+        if dia_hoje != dia_config:
+            # Não loga aqui para não fludar o log a cada 5 segundos de um dia inteiro errado
             return
             
         if cfg.prospeccao_horario:
             hora_config = cfg.prospeccao_horario
             hora_atual = dt_mod.time(agora.hour, agora.minute, agora.second)
+            
+            # Log quando está perto do horário (mesmo dia e hora, mas minutos diferentes, ou mesmo minuto)
+            if hora_atual.hour == hora_config.hour:
+                 logger.debug(f"[SysTime] Automação: Dia OK, Hora atual SP: {hora_atual.strftime('%H:%M:%S')} vs Config: {hora_config.strftime('%H:%M:%S')}")
+
             # Se a hora atual for maior ou igual à hora configurada
             if hora_atual >= hora_config:
                 hoje_str = hoje.strftime("%Y-%m-%d")
                 if cfg.prospeccao_ultimo_envio != hoje_str:
-                    logger.info("Disparando envio de Relatório de Prospecção agendado")
+                    logger.info(f"Disparando envio de Relatório de Prospecção agendado. Hora SP: {hora_atual.strftime('%H:%M:%S')} >= Config {hora_config.strftime('%H:%M:%S')}")
                     success = enviar_relatorios_prospeccao(db)
                     
                     # Atualiza independente de 100% success ou partial, pra não ficar em loop
                     cfg.prospeccao_ultimo_envio = hoje_str
                     db.commit()
+                else:
+                    pass # Já enviado hoje
+            else:
+                pass # Dia certo, mas a hora ainda não chegou
+        
     except Exception as e:
         logger.error(f"Erro ao checar automações: {e}")
 
 async def worker_loop():
-    logger.info("Worker assíncrono de Background Tasks iniciado")
+    import datetime as dt_mod
+    logger.info(f"Worker assíncrono iniciado. Fuso horário do Worker (TZ): {datetime.now(TZ).strftime('%Y-%m-%d %H:%M:%S')} (SP)")
+    
     while True:
         try:
             with SessionLocal() as db:
-                # Lock FOR UPDATE SKIP LOCKED no postgres busca a procxima tarefa livre
-                # Sqlite via SQLAlchemy não suporta bem SKIP LOCKED nativamente mas o postgresl sim.
-                # Como rodamos postgres no Render, podemos tentar fetch-and-lock puro:
-                # Se não usarmos skip locked cruzes, tratamos o lock otimista ou no code.
+                # Checa sempre as automações agendadas no início do loop, independente da fila
+                await check_automation_schedules(db)
                 
                 # Fetch pending top 1
                 task = db.query(BackgroundTaskModel)\
@@ -166,9 +182,6 @@ async def worker_loop():
                     task.atualizado_em = datetime.now(TZ)
                     db.commit()
                 else:
-                    # Checa o agendamento de relatórios antes de dormir
-                    await check_automation_schedules(db)
-                    
                     # Nenhuma task para pegar, dorme antes de poolear de novo.
                     await asyncio.sleep(5)
                     continue

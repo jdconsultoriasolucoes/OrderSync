@@ -13,7 +13,7 @@ router = APIRouter(prefix="/api/dashboard", tags=["Dashboard"])
 
 MONTH_NAMES = ["Jan", "Fev", "Mar", "Abr", "Mai", "Jun", "Jul", "Ago", "Set", "Out", "Nov", "Dez"]
 
-def get_dashboard_filters(status: Optional[str] = None, periodo: str = "mes"):
+def get_dashboard_filters(status: Optional[str] = None, periodo: str = "mes", filial: Optional[str] = None):
     """
     Retorna o fragmento SQL WHERE (sem o 'WHERE' ou 'AND' inicial)
     e os parâmetros para os filtros globais.
@@ -44,6 +44,11 @@ def get_dashboard_filters(status: Optional[str] = None, periodo: str = "mes"):
     
     where_parts.append("created_at >= :start_date")
     params["start_date"] = start_date
+    
+    # 3. Filtro de Filial/Fornecedor
+    if filial and filial != "Todos":
+        where_parts.append("fornecedor = :filial")
+        params["filial"] = filial
     
     return " AND ".join(where_parts), params
 
@@ -112,14 +117,22 @@ def get_chart_intervals(periodo: str):
             
     return intervals
 
+@router.get("/filiais")
+def get_dashboard_filiais(db: Session = Depends(get_db)):
+    """ Retorna a lista de fornecedores únicos (filiais) para o filtro """
+    q = text("SELECT DISTINCT fornecedor FROM public.tb_pedidos WHERE fornecedor IS NOT NULL AND TRIM(fornecedor) != '' ORDER BY fornecedor")
+    rows = db.execute(q).mappings().all()
+    return {"filiais": [r["fornecedor"] for r in rows]}
+
 @router.get("/geral")
 def get_dashboard_geral(
     status: str = Query(None),
     periodo: str = Query("mes"),
+    filial: str = Query(None),
     db: Session = Depends(get_db),
     current_user: UsuarioModel = Depends(get_current_user)
 ):
-    where_clause, params = get_dashboard_filters(status, periodo)
+    where_clause, params = get_dashboard_filters(status, periodo, filial)
 
     # KPIs
     q_kpi = text(f"""
@@ -133,13 +146,17 @@ def get_dashboard_geral(
     kpi_row = db.execute(q_kpi, params).mappings().first()
 
     # Cargas
-    _, c_params = get_dashboard_filters(None, periodo)
+    _, c_params = get_dashboard_filters(None, periodo, filial)
+    # Se tem filial, as cargas dependem dos pedidos com esse fornecedor,
+    # então usaremos tb_cargas -> tb_cargas_pedidos -> tb_pedidos
     q_cargas = text(f"""
-        SELECT COUNT(id) as cargas_abertas
-        FROM public.tb_cargas
-        WHERE data_criacao >= :start_date
-          AND (is_historico = FALSE OR is_historico IS NULL)
-    """)
+        SELECT COUNT(DISTINCT c.id) as cargas_abertas
+        FROM public.tb_cargas c
+        JOIN public.tb_cargas_pedidos cp ON c.id = cp.id_carga
+        JOIN public.tb_pedidos p ON cp.numero_pedido = CAST(p.id_pedido AS VARCHAR)
+        WHERE c.data_criacao >= :start_date
+          AND (c.is_historico = FALSE OR c.is_historico IS NULL)
+    """ + (" AND p.fornecedor = :filial" if filial and filial != 'Todos' else ""))
     cargas_row = db.execute(q_cargas, c_params).mappings().first()
 
     # Gráfico
@@ -152,18 +169,24 @@ def get_dashboard_geral(
     if status and status != "Todos":
         status_clause = "status = :status"
         
+    filial_clause = ""
+    if filial and filial != "Todos":
+        filial_clause = " AND fornecedor = :filial"
+        
     for iv in intervals:
         q_chart = text(f"""
             SELECT 
                 COUNT(id_pedido) as qtd,
                 COALESCE(SUM(total_pedido), 0) as fat
             FROM public.tb_pedidos
-            WHERE {status_clause} 
+            WHERE {status_clause} {filial_clause}
               AND created_at >= :start AND created_at < :end
         """)
         c_params_chart = {"start": iv["start"], "end": iv["end"]}
         if status and status != "Todos":
             c_params_chart["status"] = status
+        if filial and filial != "Todos":
+            c_params_chart["filial"] = filial
             
         row = db.execute(q_chart, c_params_chart).mappings().first()
         labels.append(iv["label"])
@@ -189,10 +212,11 @@ def get_dashboard_geral(
 def get_dashboard_vendas(
     status: str = Query(None),
     periodo: str = Query("mes"),
+    filial: str = Query(None),
     db: Session = Depends(get_db),
     current_user: UsuarioModel = Depends(get_current_user)
 ):
-    where_clause, params = get_dashboard_filters(status, periodo)
+    where_clause, params = get_dashboard_filters(status, periodo, filial)
 
     # Ticket médio especificado no período/status
     q_ticket = text(f"SELECT COALESCE(AVG(total_pedido), 0) as tkt FROM public.tb_pedidos WHERE total_pedido > 0 AND {where_clause}")
@@ -202,22 +226,31 @@ def get_dashboard_vendas(
     q_vendedores = text("SELECT COUNT(id) as vends FROM public.tb_vendedores WHERE ativo = TRUE")
     vend_row = db.execute(q_vendedores).mappings().first()
 
-    # Vendas por Região (Top 5 municípios)
+    # Vendas por Região (Top 10 municípios: Peso vs Valor)
+    # A métrica é "Valor (Subtotal sem frete)"
+    # Valor sem frete em tb_pedidos não é direto se o valor for total.
+    # Pode-se usar SUM(p.total_pedido - p.frete_total) mas a melhor aproximação p/ "Valor (sem frete)"
+    # é fazer join com tbl_pedidos_itens e somar subtotal (que é qtd * preco).
+    # Como isso pode ser lerdo, p.total_pedido - COALESCE(p.frete_total, 0) é seguro.
     q_regiao = text(f"""
-        SELECT COALESCE(c.faturamento_municipio, c.entrega_municipio) as mun, SUM(p.total_pedido) as total
+        SELECT 
+            COALESCE(c.faturamento_municipio, c.entrega_municipio, 'Sem Município') as mun, 
+            SUM(GREATEST(p.total_pedido - COALESCE(p.frete_total, 0), 0)) as total_valor,
+            SUM(COALESCE(p.peso_total_kg, 0)) as total_peso
         FROM public.tb_pedidos p
-        JOIN public.t_cadastro_cliente_v2 c ON p.codigo_cliente = c.cadastro_codigo_da_empresa
-        WHERE {where_clause.replace('status =', 'p.status =').replace('created_at >=', 'p.created_at >=')}
+        LEFT JOIN public.t_cadastro_cliente_v2 c ON p.codigo_cliente = c.cadastro_codigo_da_empresa
+        WHERE {where_clause.replace('status =', 'p.status =').replace('created_at >=', 'p.created_at >=').replace('fornecedor =', 'p.fornecedor =')}
         GROUP BY COALESCE(c.faturamento_municipio, c.entrega_municipio)
-        ORDER BY total DESC
-        LIMIT 5
+        ORDER BY total_valor DESC
+        LIMIT 10
     """)
     regioes = db.execute(q_regiao, params).mappings().all()
     reg_labels = [r["mun"] or "N/I" for r in regioes]
-    reg_data = [float(r["total"] or 0) for r in regioes]
+    reg_data_valor = [float(r["total_valor"] or 0) for r in regioes]
+    reg_data_peso = [float(r["total_peso"] or 0) for r in regioes]
 
     # Vendas por Status
-    where_period, period_params = get_dashboard_filters(None, periodo)
+    where_period, period_params = get_dashboard_filters(None, periodo, filial)
     q_status = text(f"SELECT status, COUNT(id_pedido) as qtd FROM public.tb_pedidos WHERE {where_period} GROUP BY status")
     status_rows = db.execute(q_status, period_params).mappings().all()
     st_labels = [s["status"] for s in status_rows]
@@ -229,13 +262,16 @@ def get_dashboard_vendas(
     evo_ticket = []
         
     for iv in intervals:
-        q_evo = text("""
+        q_evo = text(f"""
             SELECT COALESCE(AVG(total_pedido), 0) as tkt
             FROM public.tb_pedidos
             WHERE status != 'Cancelado' AND total_pedido > 0
-              AND created_at >= :start AND created_at < :end
+              AND created_at >= :start AND created_at < :end {filial_clause}
         """)
-        row = db.execute(q_evo, {"start": iv["start"], "end": iv["end"]}).mappings().first()
+        params_evo = {"start": iv["start"], "end": iv["end"]}
+        if filial and filial != "Todos": params_evo["filial"] = filial
+        
+        row = db.execute(q_evo, params_evo).mappings().first()
         evo_labels.append(iv["label"])
         evo_ticket.append(float(row["tkt"]))
 
@@ -246,7 +282,8 @@ def get_dashboard_vendas(
         },
         "chart_regioes": {
             "labels": reg_labels,
-            "data": reg_data
+            "data": reg_data_valor,   # Usado para Vendas
+            "data_peso": reg_data_peso # Usado para Logística/Comparação Cliente
         },
         "chart_status": {
             "labels": st_labels,
@@ -263,11 +300,12 @@ def get_dashboard_vendas(
 def get_dashboard_logistica(
     status: str = Query(None),
     periodo: str = Query("mes"),
+    filial: str = Query(None),
     db: Session = Depends(get_db),
     current_user: UsuarioModel = Depends(get_current_user)
 ):
-    where_clause, params = get_dashboard_filters(status, periodo)
-    _, p_params = get_dashboard_filters(None, periodo)
+    where_clause, params = get_dashboard_filters(status, periodo, filial)
+    _, p_params = get_dashboard_filters(None, periodo, filial)
 
     q_kpi = text(f"""
         SELECT COUNT(id) as cargas_env
@@ -448,17 +486,23 @@ def get_dashboard_kpis(
 def get_dashboard_produtos(
     status: str = Query(None),
     periodo: str = Query("mes"),
+    filial: str = Query(None),
     db: Session = Depends(get_db),
     current_user: UsuarioModel = Depends(get_current_user)
 ):
-    where_clause, params = get_dashboard_filters(status, periodo)
+    where_clause, params = get_dashboard_filters(status, periodo, filial)
 
-    # Top 10 Produtos
+    # Top 10 Produtos (Valor/Peso) sem frete
+    # i.subtotal é quant * preco_unit
     q_top_produtos = text(f"""
-        SELECT i.nome, SUM(i.quantidade) as qtd, COALESCE(SUM(i.subtotal_com_f), 0) as fat
+        SELECT 
+            i.nome, 
+            SUM(i.quantidade) as qtd, 
+            COALESCE(SUM(i.subtotal), 0) as fat,
+            COALESCE(SUM(i.peso_liquido_total), 0) as peso
         FROM public.tb_pedidos_itens i
         JOIN public.tb_pedidos p ON i.id_pedido = p.id_pedido
-        WHERE {where_clause.replace('status =', 'p.status =').replace('created_at >=', 'p.created_at >=')} 
+        WHERE {where_clause.replace('status =', 'p.status =').replace('created_at >=', 'p.created_at >=').replace('fornecedor =', 'p.fornecedor =')} 
           AND i.nome IS NOT NULL AND i.nome != ''
         GROUP BY i.nome
         ORDER BY fat DESC
@@ -484,7 +528,8 @@ def get_dashboard_produtos(
         "top_produtos": {
             "labels": [r["nome"] for r in top_prods_rows],
             "faturamento": [float(r["fat"]) for r in top_prods_rows],
-            "quantidade": [float(r["qtd"]) for r in top_prods_rows]
+            "quantidade": [float(r["qtd"]) for r in top_prods_rows],
+            "peso_liquido": [float(r["peso"]) for r in top_prods_rows]
         },
         "familias": {
             "labels": [r["fam"] for r in familias_rows],
@@ -496,16 +541,20 @@ def get_dashboard_produtos(
 def get_dashboard_clientes(
     status: str = Query(None),
     periodo: str = Query("mes"),
+    filial: str = Query(None),
     db: Session = Depends(get_db),
     current_user: UsuarioModel = Depends(get_current_user)
 ):
-    where_clause, params = get_dashboard_filters(status, periodo)
+    where_clause, params = get_dashboard_filters(status, periodo, filial)
 
-    # Top 10 Clientes (Ranking de Receita)
+    # Top 10 Clientes (Ranking de Receita e Peso)
     q_top_cli = text(f"""
-        SELECT p.cliente, COALESCE(SUM(p.total_pedido), 0) as fat
+        SELECT 
+            p.cliente, 
+            COALESCE(SUM(p.total_pedido), 0) as fat,
+            COALESCE(SUM(p.peso_total_kg), 0) as peso
         FROM public.tb_pedidos p
-        WHERE {where_clause.replace('status =', 'p.status =').replace('created_at >=', 'p.created_at >=')}
+        WHERE {where_clause.replace('status =', 'p.status =').replace('created_at >=', 'p.created_at >=').replace('fornecedor =', 'p.fornecedor =')}
           AND p.cliente IS NOT NULL AND p.cliente != ''
         GROUP BY p.cliente
         ORDER BY fat DESC
@@ -514,7 +563,7 @@ def get_dashboard_clientes(
     top_cli_rows = db.execute(q_top_cli, params).mappings().all()
 
     # Funil
-    where_period, period_params = get_dashboard_filters(None, periodo)
+    where_period, period_params = get_dashboard_filters(None, periodo, filial)
     q_funil = text(f"""
         SELECT 
             COUNT(CASE WHEN status = 'Orçamento' THEN 1 END) as orcamentos,
@@ -534,14 +583,17 @@ def get_dashboard_clientes(
     evo_confirmados = []
     
     for iv in intervals:
-        q_evo = text("""
+        q_evo = text(f"""
             SELECT 
                 COUNT(CASE WHEN status = 'Orçamento' THEN 1 END) as orcs,
                 COUNT(CASE WHEN status != 'Orçamento' AND status != 'Cancelado' THEN 1 END) as confs
             FROM public.tb_pedidos
-            WHERE created_at >= :start AND created_at < :end
+            WHERE created_at >= :start AND created_at < :end {filial_clause}
         """)
-        row = db.execute(q_evo, {"start": iv["start"], "end": iv["end"]}).mappings().first()
+        params_evo = {"start": iv["start"], "end": iv["end"]}
+        if filial and filial != "Todos": params_evo["filial"] = filial
+        
+        row = db.execute(q_evo, params_evo).mappings().first()
         evo_labels.append(iv["label"])
         evo_orcamentos.append(int(row["orcs"] or 0))
         evo_confirmados.append(int(row["confs"] or 0))
@@ -549,7 +601,8 @@ def get_dashboard_clientes(
     return {
         "top_clientes": {
             "labels": [r["cliente"] for r in top_cli_rows],
-            "faturamento": [float(r["fat"]) for r in top_cli_rows]
+            "faturamento": [float(r["fat"]) for r in top_cli_rows],
+            "peso_liquido": [float(r["peso"]) for r in top_cli_rows]
         },
         "funil": {
             "orcamentos": int(funil_row["orcamentos"] or 0),

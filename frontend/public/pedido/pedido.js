@@ -7,7 +7,8 @@ const API = {
   resumo: (id) => `${API_BASE}/api/pedidos/${id}/resumo`,
   cancelar: (id) => `${API_BASE}/api/pedidos/${id}/cancelar`,
   reenviar: (id) => `${API_BASE}/api/pedidos/${id}/reenviar_email`,
-  pdf: (id) => `${API_BASE}/api/pedido/${id}/pdf`, // endpoint de download direto
+  pdf: (id) => `${API_BASE}/api/pedido/${id}/pdf`, // endpoint de download direto padrão
+  pdf_cliente: (id) => `${API_BASE}/api/pedido/${id}/pdf_cliente`, // endpoint de download cliente
 };
 
 let state = {
@@ -408,13 +409,21 @@ async function openResumo(id) {
   if (actionsEl) {
     actionsEl.innerHTML = ""; // limpa
 
-    // 1. PDF
+    // 1. PDF Interno
     const btnPdf = document.createElement("a");
     btnPdf.className = "btn btn-outline";
     btnPdf.href = API.pdf(id);
     btnPdf.target = "_blank";
-    btnPdf.innerHTML = "📄 Baixar PDF";
+    btnPdf.innerHTML = "📄 PDF Confirmação";
     actionsEl.appendChild(btnPdf);
+
+    // 1.1 PDF Cliente
+    const btnPdfCliente = document.createElement("a");
+    btnPdfCliente.className = "btn btn-outline";
+    btnPdfCliente.href = API.pdf_cliente(id);
+    btnPdfCliente.target = "_blank";
+    btnPdfCliente.innerHTML = "📄 PDF Orçamento (Cliente)";
+    actionsEl.appendChild(btnPdfCliente);
 
     // 2. Reenviar Email (REMOVIDO por solicitação do usuário)
     // const btnEmail = document.createElement("button"); ...

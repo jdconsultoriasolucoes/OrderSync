@@ -202,12 +202,19 @@ def enviar_email_notificacao(
                 alt.attach(MIMEText("Novo pedido recebido.", "plain", "utf-8"))
             msg.attach(alt)
 
-            # Anexo: PDF Vendedor (Completo) - usa pdf_bytes
+            # Anexo 1: PDF Vendedor (Completo) - usa pdf_bytes
             if pdf_bytes:
                 part = MIMEApplication(pdf_bytes, _subtype="pdf")
                 filename = f"Pedido_{pedido_info['pedido_id']}_Interno.pdf"
                 part.add_header("Content-Disposition", "attachment", filename=filename)
                 msg.attach(part)
+                
+            # Anexo 2: PDF Cliente (Resumido) - usa pdf_bytes_cliente
+            if pdf_bytes_cliente:
+                part2 = MIMEApplication(pdf_bytes_cliente, _subtype="pdf")
+                filename2 = f"Pedido_{pedido_info['pedido_id']}_Cliente.pdf"
+                part2.add_header("Content-Disposition", "attachment", filename=filename2)
+                msg.attach(part2)
 
             with _abrir_conexao(cfg_smtp) as server:
                 server.sendmail(remetente, destinatarios_internos, msg.as_string())

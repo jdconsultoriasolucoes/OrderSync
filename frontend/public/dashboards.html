@@ -343,6 +343,12 @@
                             <option value="Cancelado">Cancelado</option>
                         </select>
                     </div>
+                    <div style="display: flex; flex-direction: column; gap: 6px;">
+                        <label style="font-size: 11px; font-weight: 700; color: var(--os-text-muted); text-transform: uppercase; letter-spacing: 0.05em;">Filial / Fornecedor</label>
+                        <select id="filter-filial" class="os-input" style="padding: 10px 14px; min-width: 180px; border-color: #cbd5e1;">
+                            <option value="Todos">Todas as Filiais</option>
+                        </select>
+                    </div>
                 </div>
 
                 <!-- Painel: Geral -->
@@ -368,14 +374,17 @@
                     </div>
                     <div class="chart-grid">
                         <div class="chart-box">
-                            <canvas id="chart-vendas-por-regiao"></canvas>
+                            <canvas id="chart-vendas-por-regiao"></canvas> <!-- Valor (Subtotal) -->
                         </div>
                         <div class="chart-box">
-                            <canvas id="chart-vendas-por-status"></canvas>
+                            <canvas id="chart-vendas-por-regiao-peso"></canvas> <!-- Peso -->
                         </div>
                     </div>
                     <div class="chart-grid" style="margin-top: 20px;">
-                        <div class="chart-box chart-box-full" style="min-height: 400px;">
+                        <div class="chart-box">
+                            <canvas id="chart-vendas-por-status"></canvas>
+                        </div>
+                        <div class="chart-box" style="min-height: 400px;">
                             <canvas id="chart-evolucao-ticket"></canvas>
                         </div>
                     </div>
@@ -385,9 +394,14 @@
                 <div id="panel-produtos" style="display: none;">
                     <div class="chart-grid">
                         <div class="chart-box" style="min-height: 400px;">
-                            <canvas id="chart-top-produtos"></canvas>
+                            <canvas id="chart-top-produtos"></canvas> <!-- Valor -->
                         </div>
                         <div class="chart-box" style="min-height: 400px;">
+                            <canvas id="chart-top-produtos-peso"></canvas> <!-- Peso -->
+                        </div>
+                    </div>
+                    <div class="chart-grid" style="margin-top: 20px;">
+                        <div class="chart-box chart-box-full" style="min-height: 400px;">
                             <canvas id="chart-familias"></canvas>
                         </div>
                     </div>
@@ -401,8 +415,11 @@
                         <div class="kpi-card"><div class="kpi-title">Ticket Médio Top 10</div><div class="kpi-value" id="kpi-ticket-top10">-</div></div>
                     </div>
                     <div class="chart-grid">
-                        <div class="chart-box chart-box-full">
-                            <canvas id="chart-top-clientes"></canvas>
+                        <div class="chart-box">
+                            <canvas id="chart-top-clientes"></canvas> <!-- Valor -->
+                        </div>
+                        <div class="chart-box">
+                            <canvas id="chart-top-clientes-peso"></canvas> <!-- Peso -->
                         </div>
                     </div>
                     <div class="chart-grid" style="margin-top: 20px;">

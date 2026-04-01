@@ -404,7 +404,8 @@
         <div class="modal-dialog">
             <h3 id="modal-title-condicoes">Nova Condição</h3>
             <form id="form-condicoes" onsubmit="saveCondicao(event)">
-                <input type="hidden" id="cond-id" />
+                <label>Código</label>
+                <input type="number" id="cond-id" placeholder="Ex: 5" required />
                 <label>Prazo</label>
                 <input id="cond-prazo" type="text" placeholder="Ex: 28/42DDL" required />
                 <label>Descrição</label>
@@ -424,7 +425,8 @@
         <div class="modal-dialog">
             <h3 id="modal-title-descontos">Novo Desconto</h3>
             <form id="form-descontos" onsubmit="saveDesconto(event)">
-                <input type="hidden" id="desc-id" />
+                <label>ID Desconto</label>
+                <input type="number" id="desc-id" placeholder="Ex: 1" required />
                 <label>Fator Comissão (%)</label>
                 <input id="desc-fator" type="number" step="0.01" value="0" required />
                 <div class="modal-footer">
