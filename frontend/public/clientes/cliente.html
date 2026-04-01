@@ -334,7 +334,7 @@
             </div>
             <div>
               <label for="municipio_faturamento">Município:</label>
-              <input type="text" id="municipio_faturamento" name="municipio_faturamento" />
+              <input type="text" id="municipio_faturamento" name="municipio_faturamento" onblur="buscarSupervisorPetEInsumos()" />
             </div>
             <div>
               <label for="estado_faturamento">Estado:</label>
@@ -739,6 +739,16 @@
                 id="nome_pet_ElaboracaoCadastro" name="nome_pet_ElaboracaoCadastro" /></div>
           </div>
 
+          <h2 class="subtitulo">Canal de Venda</h2>
+          <div class="form-grid-3col">
+            <div><label for="id_canal_ElaboracaoCadastro">ID do Canal:</label><input type="number"
+                id="id_canal_ElaboracaoCadastro" name="id_canal_ElaboracaoCadastro" onblur="buscarCanalVenda()" /></div>
+            <div><label for="tipo_canal_ElaboracaoCadastro">Tipo:</label><input type="text"
+                id="tipo_canal_ElaboracaoCadastro" name="tipo_canal_ElaboracaoCadastro" readonly style="background-color: #f3f4f6;" /></div>
+            <div><label for="linha_canal_ElaboracaoCadastro">Linha:</label><input type="text"
+                id="linha_canal_ElaboracaoCadastro" name="linha_canal_ElaboracaoCadastro" readonly style="background-color: #f3f4f6;" /></div>
+          </div>
+
           <h2 class="subtitulo">Comissão Dispet</h2>
           <div class="form-grid-2col">
             <div><label for="insumos_ElaboracaoCadastro">Insumos:</label><input type="text"
@@ -1131,6 +1141,11 @@
               insumos_ElaboracaoCadastro: document.getElementById("insumos_ElaboracaoCadastro")?.value || "",
               pet_ElaboracaoCadastro: document.getElementById("pet_ElaboracaoCadastro")?.value || "",
               observacoes_ElaboracaoCadastro: document.getElementById("observacoes_ElaboracaoCadastro")?.value || ""
+            },
+            canal_venda_cliente: {
+              id_canal_ElaboracaoCadastro: document.getElementById("id_canal_ElaboracaoCadastro")?.value ? parseInt(document.getElementById("id_canal_ElaboracaoCadastro").value) : null,
+              tipo_canal_ElaboracaoCadastro: document.getElementById("tipo_canal_ElaboracaoCadastro")?.value || "",
+              linha_canal_ElaboracaoCadastro: document.getElementById("linha_canal_ElaboracaoCadastro")?.value || ""
             }
           };
         }
@@ -1319,11 +1334,15 @@
           setVal("codigo_pet_ElaboracaoCadastro", sup.codigo_pet_ElaboracaoCadastro || "");
           setVal("nome_pet_ElaboracaoCadastro", sup.nome_pet_ElaboracaoCadastro || "");
 
-          // Bloco: comissao_dispet
-          const com = dados.comissao_dispet || {};
-          setVal("insumos_ElaboracaoCadastro", com.insumos_ElaboracaoCadastro || "");
-          setVal("pet_ElaboracaoCadastro", com.pet_ElaboracaoCadastro || "");
-          setVal("observacoes_ElaboracaoCadastro", com.observacoes_ElaboracaoCadastro || "");
+          const cd = dados.comissao_dispet || {};
+          setVal("insumos_ElaboracaoCadastro", cd.insumos_ElaboracaoCadastro || "");
+          setVal("pet_ElaboracaoCadastro", cd.pet_ElaboracaoCadastro || "");
+          setVal("observacoes_ElaboracaoCadastro", cd.observacoes_ElaboracaoCadastro || "");
+
+          const cv = dados.canal_venda_cliente || {};
+          setVal("id_canal_ElaboracaoCadastro", cv.id_canal_ElaboracaoCadastro || "");
+          setVal("tipo_canal_ElaboracaoCadastro", cv.tipo_canal_ElaboracaoCadastro || "");
+          setVal("linha_canal_ElaboracaoCadastro", cv.linha_canal_ElaboracaoCadastro || "");
 
           setViewState('SELECTED');
         }
@@ -1483,8 +1502,56 @@
           }
         }
 
+        // Helpers auto-preenchimento Catalogo
+        async function buscarCanalVenda() {
+          const idCanal = document.getElementById("id_canal_ElaboracaoCadastro").value;
+          if (!idCanal) return;
+
+          const token = localStorage.getItem("ordersync_token");
+          try {
+            const api = window.API_BASE || "http://127.0.0.1:8000";
+            const res = await fetch(`${api}/catalogo/canal-venda/${idCanal}`, {
+               headers: { "Authorization": `Bearer ${token}` }
+            });
+            if (res.ok) {
+              const data = await res.json();
+              document.getElementById("tipo_canal_ElaboracaoCadastro").value = data.tipo || "";
+              document.getElementById("linha_canal_ElaboracaoCadastro").value = data.linha || "";
+            } else {
+              document.getElementById("tipo_canal_ElaboracaoCadastro").value = "";
+              document.getElementById("linha_canal_ElaboracaoCadastro").value = "";
+            }
+          } catch (e) {
+            console.error(e);
+          }
+        }
+
+        async function buscarSupervisorPetEInsumos() {
+          const municipio = document.getElementById("municipio_faturamento").value;
+          if (!municipio) return;
+
+          const token = localStorage.getItem("ordersync_token");
+          try {
+            const api = window.API_BASE || "http://127.0.0.1:8000";
+            const res = await fetch(`${api}/catalogo/cidade-supervisor/buscar?municipio=${encodeURIComponent(municipio)}`, {
+               headers: { "Authorization": `Bearer ${token}` }
+            });
+            if (res.ok) {
+              const data = await res.json();
+              document.getElementById("codigo_insumo_ElaboracaoCadastro").value = data.codigo_insumo || "";
+              document.getElementById("nome_insumos_ElaboracaoCadastro").value = data.nome_insumos || "";
+              document.getElementById("codigo_pet_ElaboracaoCadastro").value = data.codigo_pet || "";
+              document.getElementById("nome_pet_ElaboracaoCadastro").value = data.nome_pet || "";
+            }
+          } catch (e) {
+            console.error(e);
+          }
+        }
+
         // Disponibiliza para o modal chamar
         window.preencherFormulario = preencherFormularioCliente;
+        window.buscarCanalVenda = buscarCanalVenda;
+        window.buscarSupervisorPetEInsumos = buscarSupervisorPetEInsumos;
       </script>
 
       <!--  <script src="/js/script.js"></script>-->

@@ -238,7 +238,7 @@ app.include_router(usuario.router)
 app.include_router(fornecedor.router)
 app.include_router(dashboard.router)
 
-from routers import system_tables, transporte, relatorios, vendedores
+from routers import system_tables, transporte, relatorios, vendedores, catalogo_referencias
 app.include_router(system_tables.router)
 
 # ---- Novos Módulos de Relatórios/Logística ----
@@ -247,6 +247,7 @@ app.include_router(relatorios.router)
 app.include_router(captacao_pedidos.router, prefix="/captacao-pedidos", tags=["Captacao Pedidos"])
 app.include_router(vendedores.router, prefix="/vendedores", tags=["Vendedores"])
 app.include_router(automation.router)
+app.include_router(catalogo_referencias.router)
 
 # ---- Static (se precisar servir arquivos públicos do front) ----
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))

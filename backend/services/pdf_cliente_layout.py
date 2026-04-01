@@ -149,7 +149,19 @@ def gerar_pdf_cliente_simplificado(pedido: PedidoPdf) -> bytes:
 
     # Preparar todas as linhas de produtos
     all_rows = []
-    for idx, item in enumerate(pedido.itens, start=1):
+    
+    # Filtrar apenas itens com quantidade > 0
+    itens_validos = []
+    for item in pedido.itens:
+        try:
+            qtd = float(item.quantidade) if item.quantidade else 0.0
+        except (ValueError, TypeError):
+            qtd = 0.0
+            
+        if qtd > 0:
+            itens_validos.append(item)
+            
+    for idx, item in enumerate(itens_validos, start=1):
         # Escolher valor correto
         if pedido.usar_valor_com_frete:
             valor_unitario = item.valor_entrega

@@ -227,6 +227,132 @@ const CONFIG = {
             `;
             container.innerHTML = html;
         }
+    },
+    canal_venda: {
+        apiPath: '/catalogo/canal-venda',
+        pk: 'Id',
+        cols: [
+            { key: 'Id', label: 'ID' },
+            { key: 'tipo', label: 'Tipo' },
+            { key: 'linha', label: 'Linha' }
+        ],
+        modalId: 'modal-canal_venda',
+        fillForm: (item) => {
+            document.getElementById('cv-id').value = item.Id;
+            document.getElementById('cv-tipo').value = item.tipo || '';
+            document.getElementById('cv-linha').value = item.linha || '';
+        },
+        clearForm: () => {
+            document.getElementById('cv-id').value = '';
+            document.getElementById('cv-tipo').value = '';
+            document.getElementById('cv-linha').value = '';
+        }
+    },
+    cidade_supervisor: {
+        apiPath: '/catalogo/cidade-supervisor',
+        pk: 'codigo',
+        cols: [
+            { key: 'codigo', label: 'Cód.' },
+            { key: 'cidades', label: 'Cidade' },
+            { key: 'uf', label: 'UF' },
+            { key: 'nome_supervisor_insumos', label: 'Sup. Insumos' },
+            { key: 'nome_supervisor_pet', label: 'Sup. Pet' }
+        ],
+        modalId: 'modal-cidade_supervisor',
+        fillForm: (item) => {
+            document.getElementById('cs-codigo').value = item.codigo;
+            document.getElementById('cs-num-insumos').value = item.numero_supervisor_insumos || '';
+            document.getElementById('cs-num-pet').value = item.numero_supervisor_pet || '';
+            document.getElementById('cs-nome-insumos').value = item.nome_supervisor_insumos || '';
+            document.getElementById('cs-nome-pet').value = item.nome_supervisor_pet || '';
+            document.getElementById('cs-cidade').value = item.cidades || '';
+            document.getElementById('cs-uf').value = item.uf || '';
+        },
+        clearForm: () => {
+            document.getElementById('cs-codigo').value = '';
+            document.getElementById('cs-num-insumos').value = '';
+            document.getElementById('cs-num-pet').value = '';
+            document.getElementById('cs-nome-insumos').value = '';
+            document.getElementById('cs-nome-pet').value = '';
+            document.getElementById('cs-cidade').value = '';
+            document.getElementById('cs-uf').value = '';
+        }
+    },
+    municipio_rota: {
+        apiPath: '/catalogo/municipio-rota',
+        pk: 'id',
+        cols: [
+            { key: 'id', label: 'ID' },
+            { key: 'rota', label: 'Rota' },
+            { key: 'municipio', label: 'Município' },
+            { key: 'km', label: 'KM' }
+        ],
+        modalId: 'modal-municipio_rota',
+        fillForm: (item) => {
+            document.getElementById('mr-id').value = item.id;
+            document.getElementById('mr-rota').value = item.rota || '';
+            document.getElementById('mr-municipio').value = item.municipio || '';
+            document.getElementById('mr-km').value = item.km || '';
+        },
+        clearForm: () => {
+            document.getElementById('mr-id').value = '';
+            document.getElementById('mr-rota').value = '';
+            document.getElementById('mr-municipio').value = '';
+            document.getElementById('mr-km').value = '';
+        }
+    },
+    referencias: {
+        apiPath: '/catalogo/referencias',
+        pk: 'codigo',
+        cols: [
+            { key: 'codigo', label: 'Cód.' },
+            { key: 'empresa', label: 'Empresa' },
+            { key: 'cidade', label: 'Cidade' },
+            { key: 'contato', label: 'Contato' }
+        ],
+        modalId: 'modal-referencias',
+        fillForm: (item) => {
+            document.getElementById('ref-codigo').value = item.codigo;
+            document.getElementById('ref-empresa').value = item.empresa || '';
+            document.getElementById('ref-cidade').value = item.cidade || '';
+            document.getElementById('ref-telefone').value = item.telefone || '';
+            document.getElementById('ref-contato').value = item.contato || '';
+        },
+        clearForm: () => {
+            document.getElementById('ref-codigo').value = '';
+            document.getElementById('ref-empresa').value = '';
+            document.getElementById('ref-cidade').value = '';
+            document.getElementById('ref-telefone').value = '';
+            document.getElementById('ref-contato').value = '';
+        }
+    },
+    supervisores: {
+        apiPath: '/catalogo/supervisores',
+        pk: 'id',
+        cols: [
+            { key: 'id', label: 'ID' },
+            { key: 'codigo', label: 'Cód' },
+            { key: 'supervisores', label: 'Supervisor' },
+            { key: 'tipo', label: 'Tipo' },
+            { key: 'email', label: 'E-mail' }
+        ],
+        modalId: 'modal-supervisores',
+        fillForm: (item) => {
+            document.getElementById('sup-id').value = item.id;
+            document.getElementById('sup-codigo').value = item.codigo || '';
+            document.getElementById('sup-supervisores').value = item.supervisores || '';
+            document.getElementById('sup-tipo').value = item.tipo || '';
+            document.getElementById('sup-telefone').value = item.telefone || '';
+            document.getElementById('sup-email').value = item.email || '';
+        },
+        clearForm: () => {
+            document.getElementById('sup-id').value = '';
+            document.getElementById('sup-codigo').value = '';
+            document.getElementById('sup-supervisores').value = '';
+            document.getElementById('sup-tipo').value = '';
+            document.getElementById('sup-telefone').value = '';
+            document.getElementById('sup-email').value = '';
+        }
     }
 };
 
@@ -249,7 +375,12 @@ function selectModule(mod) {
         transporte: 'Transporte / Logística',
         vendedores: 'Vendedores',
         previsao_semanal: 'Previsão de Vendas Semanal',
-        automacao: 'Automação de Relatórios'
+        automacao: 'Automação de Relatórios',
+        canal_venda: 'Canal de Venda',
+        cidade_supervisor: 'Cidade Supervisor',
+        municipio_rota: 'Município Rota',
+        referencias: 'Referências Comerciais e Bancárias',
+        supervisores: 'Supervisores'
     };
 
     const sectionTitle = document.getElementById('sectionTitle');
@@ -541,6 +672,66 @@ async function testarAutomacaoAgora() {
     } catch (err) {
         alert("Erro ao disparar teste: " + err.message);
     }
+}
+
+async function saveCanalVenda(e) {
+    e.preventDefault();
+    const id = document.getElementById('cv-id').value;
+    const payload = {
+        tipo: document.getElementById('cv-tipo').value || null,
+        linha: document.getElementById('cv-linha').value || null
+    };
+    await saveGeneric(payload, !!currentItem, id);
+}
+
+async function saveCidadeSupervisor(e) {
+    e.preventDefault();
+    const id = document.getElementById('cs-codigo').value;
+    const payload = {
+        numero_supervisor_insumos: parseFloat(document.getElementById('cs-num-insumos').value) || null,
+        numero_supervisor_pet: parseFloat(document.getElementById('cs-num-pet').value) || null,
+        nome_supervisor_insumos: document.getElementById('cs-nome-insumos').value || null,
+        nome_supervisor_pet: document.getElementById('cs-nome-pet').value || null,
+        cidades: document.getElementById('cs-cidade').value || null,
+        uf: document.getElementById('cs-uf').value || null
+    };
+    await saveGeneric(payload, !!currentItem, id);
+}
+
+async function saveMunicipioRota(e) {
+    e.preventDefault();
+    const id = document.getElementById('mr-id').value;
+    const payload = {
+        rota: parseInt(document.getElementById('mr-rota').value),
+        municipio: document.getElementById('mr-municipio').value || null,
+        km: document.getElementById('mr-km').value || null
+    };
+    await saveGeneric(payload, !!currentItem, id);
+}
+
+async function saveReferencias(e) {
+    e.preventDefault();
+    const id = document.getElementById('ref-codigo').value;
+    const payload = {
+        empresa: document.getElementById('ref-empresa').value || null,
+        cidade: document.getElementById('ref-cidade').value || null,
+        telefone: document.getElementById('ref-telefone').value || null,
+        contato: document.getElementById('ref-contato').value || null
+    };
+    await saveGeneric(payload, !!currentItem, id);
+}
+
+async function saveSupervisores(e) {
+    e.preventDefault();
+    const id = document.getElementById('sup-id').value;
+    const payload = {
+        codigo: parseFloat(document.getElementById('sup-codigo').value) || null,
+        supervisores: document.getElementById('sup-supervisores').value || null,
+        tipo: document.getElementById('sup-tipo').value || null,
+        telefone: document.getElementById('sup-telefone').value || null,
+        email: document.getElementById('sup-email').value || null
+    };
+    await saveGeneric(payload, !!currentItem, id);
 }
 
 // --- Delete Handler ---

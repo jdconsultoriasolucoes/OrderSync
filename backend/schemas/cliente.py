@@ -283,7 +283,10 @@ class ComissaoDispet(BaseModel):
     pet_ElaboracaoCadastro: Optional[str]
     observacoes_ElaboracaoCadastro: Optional[str]
 
-
+class CanalVendaCliente(BaseModel):
+    id_canal_ElaboracaoCadastro: Optional[int]
+    tipo_canal_ElaboracaoCadastro: Optional[str]
+    linha_canal_ElaboracaoCadastro: Optional[str]
 
 class ClienteCompleto(BaseModel):
     cadastrocliente: CadastroCliente
@@ -305,6 +308,7 @@ class ClienteCompleto(BaseModel):
     plantel_animal: Optional[PlantelAnimal] = None
     supervisores: Optional[Supervisores] = None
     comissao_dispet: Optional[ComissaoDispet] = None
+    canal_venda_cliente: Optional[CanalVendaCliente] = None
 
 class ClienteResumo(BaseModel):
     id: int

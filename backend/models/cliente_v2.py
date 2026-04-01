@@ -152,6 +152,11 @@ class ClienteModelV2(Base):
     comissao_pet = Column(String)
     comissao_observacoes = Column(String)
 
+    # 20. CanalVenda
+    canal_id = Column(Integer)
+    canal_tipo = Column(String)
+    canal_linha = Column(String)
+
     # Meta
     data_criacao = Column(DateTime)
     data_atualizacao = Column(DateTime)
