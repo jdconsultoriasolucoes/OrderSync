@@ -156,6 +156,10 @@
             style="display: none;">Salvar</button>
           <button class="btn btn-cancelar" id="btn-cancelar" onclick="cancelarEdicao()" type="button"
             style="display: none;">Cancelar</button>
+          <button class="btn" id="btn-export-excel" onclick="exportarSupra('xlsx')" type="button"
+            style="display: none; background-color: #27ae60; color: #fff;">Exportar Supra (Excel)</button>
+          <button class="btn" id="btn-export-pdf" onclick="exportarSupra('pdf')" type="button"
+            style="display: none; background-color: #e74c3c; color: #fff;">Exportar Supra (PDF)</button>
         </div>
       </div>
 
@@ -741,12 +745,24 @@
 
           <h2 class="subtitulo">Canal de Venda</h2>
           <div class="form-grid-3col">
-            <div><label for="id_canal_ElaboracaoCadastro">ID do Canal:</label><input type="number"
-                id="id_canal_ElaboracaoCadastro" name="id_canal_ElaboracaoCadastro" onblur="buscarCanalVenda()" /></div>
-            <div><label for="tipo_canal_ElaboracaoCadastro">Tipo:</label><input type="text"
-                id="tipo_canal_ElaboracaoCadastro" name="tipo_canal_ElaboracaoCadastro" readonly style="background-color: #f3f4f6;" /></div>
-            <div><label for="linha_canal_ElaboracaoCadastro">Linha:</label><input type="text"
-                id="linha_canal_ElaboracaoCadastro" name="linha_canal_ElaboracaoCadastro" readonly style="background-color: #f3f4f6;" /></div>
+            <div>
+              <label for="canal_pet_ElaboracaoCadastro">Canal Pet:</label>
+              <select id="canal_pet_ElaboracaoCadastro" name="canal_pet_ElaboracaoCadastro">
+                <option value="">-- Selecione --</option>
+              </select>
+            </div>
+            <div>
+              <label for="canal_frost_ElaboracaoCadastro">Canal Frost:</label>
+              <select id="canal_frost_ElaboracaoCadastro" name="canal_frost_ElaboracaoCadastro">
+                <option value="">-- Selecione --</option>
+              </select>
+            </div>
+            <div>
+              <label for="canal_insumos_ElaboracaoCadastro">Canal Insumos:</label>
+              <select id="canal_insumos_ElaboracaoCadastro" name="canal_insumos_ElaboracaoCadastro">
+                <option value="">-- Selecione --</option>
+              </select>
+            </div>
           </div>
 
           <h2 class="subtitulo">Comissão Dispet</h2>
@@ -802,6 +818,8 @@
           const btnVoltar = document.getElementById("btn-voltar");
           const btnSalvar = document.getElementById("btn-salvar");
           const btnCancelar = document.getElementById("btn-cancelar");
+          const btnExpExcel = document.getElementById("btn-export-excel");
+          const btnExpPdf = document.getElementById("btn-export-pdf");
 
           // Helper to show/hide
           const show = (el) => el.style.display = "inline-block";
@@ -821,6 +839,8 @@
             hide(btnVoltar);
             hide(btnSalvar);
             hide(btnCancelar);
+            hide(btnExpExcel);
+            hide(btnExpPdf);
             disableForm(true);
             // Clear form logic typically handles resetting ID to ""
           } else if (mode === 'SELECTED') {
@@ -831,6 +851,8 @@
             show(btnVoltar);
             hide(btnSalvar);
             hide(btnCancelar);
+            show(btnExpExcel);
+            show(btnExpPdf);
             disableForm(true);
           } else if (mode === 'EDITING' || mode === 'CREATING') {
             hide(btnListar);
@@ -840,6 +862,8 @@
             // hide(btnVoltar); // Usually hidden during edit
             show(btnSalvar);
             show(btnCancelar);
+            hide(btnExpExcel);
+            hide(btnExpPdf);
             disableForm(false);
           }
         }
@@ -960,36 +984,75 @@
           window.location.href = "listar_clientes.html";
         }
 
-        // On load event: Check if we returned from the list view with a selected client
-        document.addEventListener('DOMContentLoaded', () => {
-          const selectedClientId = localStorage.getItem('Ordersync_ClienteSelecionadoIdListar');
-          if (selectedClientId) {
-            // Limpa o item para que não carregue infinitamente se recarregar a página
-            localStorage.removeItem('Ordersync_ClienteSelecionadoIdListar');
-
-            // Busca o cliente pelo ID e preenche o formulário
-            const api = window.API_BASE || "http://127.0.0.1:8000";
-            const token = window.Auth ? window.Auth.getToken() : localStorage.getItem('ordersync_token');
-            if (token) {
-              axios.get(`${api}/cliente/${selectedClientId}`, {
-                headers: { 'Authorization': `Bearer ${token}` }
-              })
-                .then(res => {
-                  if (res.data) {
-                    // A interface original usava preencherFormulario(cliente), 
-                    // aqui estamos num contexto standalone, vamos chamar a função (assumindo que existe nas outras centenas de linhas):
-                    if (typeof preencherFormularioCliente === "function") {
-                      preencherFormularioCliente(res.data);
-                    } else if (typeof window.preencherFormulario === "function") {
-                      window.preencherFormulario(res.data);
-                    } else {
-                      console.warn("Função de preenchimento não encontrada, dados obtidos:", res.data);
-                    }
-                  }
-                })
-                .catch(err => console.error("Erro ao carregar cliente selecionado:", err));
-            }
+        async function exportarSupra(format) {
+          const idInput = document.getElementById("id");
+          const codigoInput = document.getElementById("codigo_da_empresa");
+          const codigo = codigoInput ? codigoInput.value : "";
+          
+          if (!codigo) {
+            alert("Selecione um cliente primeiro.");
+            return;
           }
+
+          const api = window.API_BASE || "http://127.0.0.1:8000";
+          const token = window.Auth ? window.Auth.getToken() : localStorage.getItem('ordersync_token');
+          
+          try {
+            const response = await fetch(`${api}/cliente/${codigo}/exportar-supra?format=${format}`, {
+              headers: {
+                'Authorization': `Bearer ${token}`
+              }
+            });
+
+            if (!response.ok) {
+              const errorData = await response.json();
+              throw new Error(errorData.detail || "Erro ao gerar exportação.");
+            }
+
+            const blob = await response.blob();
+            const url = window.URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `ficha_supra_${codigo}.${format}`;
+            document.body.appendChild(a);
+            a.click();
+            window.URL.revokeObjectURL(url);
+            a.remove();
+          } catch (error) {
+            console.error("Erro na exportação:", error);
+            alert("Erro ao exportar: " + error.message);
+          }
+        }
+
+        // On load event: Carrega canais e verifica cliente selecionado vindo da listagem
+        document.addEventListener('DOMContentLoaded', () => {
+          // 1. Sempre carrega as opções do select de Canal de Venda
+          carregarOpcoesCanal().then(() => {
+            // 2. Depois verifica se há cliente selecionado para preencher
+            const selectedClientId = localStorage.getItem('Ordersync_ClienteSelecionadoIdListar');
+            if (selectedClientId) {
+              localStorage.removeItem('Ordersync_ClienteSelecionadoIdListar');
+              const api = window.API_BASE || "http://127.0.0.1:8000";
+              const token = window.Auth ? window.Auth.getToken() : localStorage.getItem('ordersync_token');
+              if (token) {
+                axios.get(`${api}/cliente/${selectedClientId}`, {
+                  headers: { 'Authorization': `Bearer ${token}` }
+                })
+                  .then(res => {
+                    if (res.data) {
+                      if (typeof preencherFormularioCliente === "function") {
+                        preencherFormularioCliente(res.data);
+                      } else if (typeof window.preencherFormulario === "function") {
+                        window.preencherFormulario(res.data);
+                      } else {
+                        console.warn("Função de preenchimento não encontrada, dados obtidos:", res.data);
+                      }
+                    }
+                  })
+                  .catch(err => console.error("Erro ao carregar cliente selecionado:", err));
+              }
+            }
+          });
         });
 
         function obterDadosFormulario() {
@@ -1143,9 +1206,9 @@
               observacoes_ElaboracaoCadastro: document.getElementById("observacoes_ElaboracaoCadastro")?.value || ""
             },
             canal_venda_cliente: {
-              id_canal_ElaboracaoCadastro: document.getElementById("id_canal_ElaboracaoCadastro")?.value ? parseInt(document.getElementById("id_canal_ElaboracaoCadastro").value) : null,
-              tipo_canal_ElaboracaoCadastro: document.getElementById("tipo_canal_ElaboracaoCadastro")?.value || "",
-              linha_canal_ElaboracaoCadastro: document.getElementById("linha_canal_ElaboracaoCadastro")?.value || ""
+              canal_pet_ElaboracaoCadastro:     document.getElementById("canal_pet_ElaboracaoCadastro")?.value || "",
+              canal_frost_ElaboracaoCadastro:   document.getElementById("canal_frost_ElaboracaoCadastro")?.value || "",
+              canal_insumos_ElaboracaoCadastro: document.getElementById("canal_insumos_ElaboracaoCadastro")?.value || ""
             }
           };
         }
@@ -1340,9 +1403,9 @@
           setVal("observacoes_ElaboracaoCadastro", cd.observacoes_ElaboracaoCadastro || "");
 
           const cv = dados.canal_venda_cliente || {};
-          setVal("id_canal_ElaboracaoCadastro", cv.id_canal_ElaboracaoCadastro || "");
-          setVal("tipo_canal_ElaboracaoCadastro", cv.tipo_canal_ElaboracaoCadastro || "");
-          setVal("linha_canal_ElaboracaoCadastro", cv.linha_canal_ElaboracaoCadastro || "");
+          setVal("canal_pet_ElaboracaoCadastro",     cv.canal_pet_ElaboracaoCadastro || "");
+          setVal("canal_frost_ElaboracaoCadastro",   cv.canal_frost_ElaboracaoCadastro || "");
+          setVal("canal_insumos_ElaboracaoCadastro", cv.canal_insumos_ElaboracaoCadastro || "");
 
           setViewState('SELECTED');
         }
@@ -1503,26 +1566,37 @@
         }
 
         // Helpers auto-preenchimento Catalogo
-        async function buscarCanalVenda() {
-          const idCanal = document.getElementById("id_canal_ElaboracaoCadastro").value;
-          if (!idCanal) return;
 
+        // Carrega todas as opções de Canal de Venda (ID - Tipo) nos 3 selects
+        async function carregarOpcoesCanal() {
           const token = localStorage.getItem("ordersync_token");
+          const api = window.API_BASE || "http://127.0.0.1:8000";
+          const selectIds = [
+            "canal_pet_ElaboracaoCadastro",
+            "canal_frost_ElaboracaoCadastro",
+            "canal_insumos_ElaboracaoCadastro"
+          ];
           try {
-            const api = window.API_BASE || "http://127.0.0.1:8000";
-            const res = await fetch(`${api}/catalogo/canal-venda/${idCanal}`, {
-               headers: { "Authorization": `Bearer ${token}` }
+            const res = await fetch(`${api}/catalogo/canal-venda`, {
+              headers: { "Authorization": `Bearer ${token}` }
             });
-            if (res.ok) {
-              const data = await res.json();
-              document.getElementById("tipo_canal_ElaboracaoCadastro").value = data.tipo || "";
-              document.getElementById("linha_canal_ElaboracaoCadastro").value = data.linha || "";
-            } else {
-              document.getElementById("tipo_canal_ElaboracaoCadastro").value = "";
-              document.getElementById("linha_canal_ElaboracaoCadastro").value = "";
-            }
+            if (!res.ok) return;
+            const canais = await res.json();
+            selectIds.forEach(selId => {
+              const sel = document.getElementById(selId);
+              if (!sel) return;
+              // mantém apenas a opção placeholder
+              sel.innerHTML = '<option value="">-- Selecione --</option>';
+              canais.forEach(c => {
+                const label = `${c.Id} - ${c.tipo}`;
+                const opt = document.createElement("option");
+                opt.value = label;
+                opt.textContent = label;
+                sel.appendChild(opt);
+              });
+            });
           } catch (e) {
-            console.error(e);
+            console.error("Erro ao carregar canais de venda:", e);
           }
         }
 
@@ -1550,7 +1624,6 @@
 
         // Disponibiliza para o modal chamar
         window.preencherFormulario = preencherFormularioCliente;
-        window.buscarCanalVenda = buscarCanalVenda;
         window.buscarSupervisorPetEInsumos = buscarSupervisorPetEInsumos;
       </script>
 

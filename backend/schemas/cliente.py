@@ -284,9 +284,9 @@ class ComissaoDispet(BaseModel):
     observacoes_ElaboracaoCadastro: Optional[str]
 
 class CanalVendaCliente(BaseModel):
-    id_canal_ElaboracaoCadastro: Optional[int]
-    tipo_canal_ElaboracaoCadastro: Optional[str]
-    linha_canal_ElaboracaoCadastro: Optional[str]
+    canal_pet_ElaboracaoCadastro:     Optional[str] = None
+    canal_frost_ElaboracaoCadastro:   Optional[str] = None
+    canal_insumos_ElaboracaoCadastro: Optional[str] = None
 
 class ClienteCompleto(BaseModel):
     cadastrocliente: CadastroCliente

@@ -167,9 +167,9 @@ def _flat_to_nested(model: ClienteModelV2) -> dict:
             "observacoes_ElaboracaoCadastro": model.comissao_observacoes,
         },
         "canal_venda_cliente": {
-            "id_canal_ElaboracaoCadastro": model.canal_id,
-            "tipo_canal_ElaboracaoCadastro": model.canal_tipo,
-            "linha_canal_ElaboracaoCadastro": model.canal_linha,
+            "canal_pet_ElaboracaoCadastro":     model.canal_pet,
+            "canal_frost_ElaboracaoCadastro":   model.canal_frost,
+            "canal_insumos_ElaboracaoCadastro": model.canal_insumos,
         }
     }
 
@@ -352,9 +352,9 @@ def _nested_to_flat(data: dict) -> ClienteModelV2:
     model.comissao_observacoes = cd.get("observacoes_ElaboracaoCadastro")
 
     # 20. Canal Venda
-    model.canal_id = cv.get("id_canal_ElaboracaoCadastro")
-    model.canal_tipo = cv.get("tipo_canal_ElaboracaoCadastro")
-    model.canal_linha = cv.get("linha_canal_ElaboracaoCadastro")
+    model.canal_pet     = cv.get("canal_pet_ElaboracaoCadastro")
+    model.canal_frost   = cv.get("canal_frost_ElaboracaoCadastro")
+    model.canal_insumos = cv.get("canal_insumos_ElaboracaoCadastro")
 
     # Meta
     model.data_atualizacao = datetime.now()

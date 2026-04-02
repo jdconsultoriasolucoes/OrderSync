@@ -1,5 +1,8 @@
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, HTTPException, Depends
+from fastapi.responses import StreamingResponse
 from typing import List
+import io
+import logging
 from schemas.cliente import ClienteCompleto, ClienteResumo
 from services.cliente import (
     listar_clientes,
@@ -8,11 +11,14 @@ from services.cliente import (
     atualizar_cliente,
     deletar_cliente
 )
-from fastapi import Depends
 from core.deps import get_current_user
 from models.usuario import UsuarioModel
+from models.cliente_v2 import ClienteModelV2
 from database import SessionLocal
 from sqlalchemy import text
+
+# Configuração de logger para o router
+logger = logging.getLogger("ordersync.routers.cliente")
 
 router = APIRouter()
 
@@ -71,6 +77,57 @@ def get_tabelas_preco_cliente(codigo_da_empresa: str):
         ]
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Erro ao buscar tabelas: {e}")
+
+@router.get("/{codigo_da_empresa}/exportar-supra")
+def exportar_supra(
+    codigo_da_empresa: str,
+    format: str = "pdf",
+    current_user: UsuarioModel = Depends(get_current_user)
+):
+    """
+    Exporta a Ficha de Cadastro Alisul/Supra para .xlsx ou .pdf.
+    Implementação robusta com tratamento de erros centralizado.
+    """
+    try:
+        with SessionLocal() as db:
+            cli = db.query(ClienteModelV2).filter(
+                ClienteModelV2.cadastro_codigo_da_empresa == codigo_da_empresa
+            ).first()
+        
+        if not cli:
+            logger.warning(f"Tentativa de exportação Supra para cliente inexistente: {codigo_da_empresa}")
+            raise HTTPException(status_code=404, detail="Cliente não encontrado no banco de dados.")
+
+        nome_arquivo = f"ficha_supra_{codigo_da_empresa}"
+
+        if format.lower() == "xlsx":
+            from services.excel_supra_service import gerar_excel_cliente_supra
+            conteudo = gerar_excel_cliente_supra(cli)
+            media_type = "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+            ext = "xlsx"
+        else:
+            from services.pdf_supra_service import gerar_pdf_cliente_supra
+            conteudo = gerar_pdf_cliente_supra(cli)
+            media_type = "application/pdf"
+            ext = "pdf"
+
+        headers = {
+            "Content-Disposition": f'attachment; filename="{nome_arquivo}.{ext}"',
+            "Access-Control-Expose-Headers": "Content-Disposition"
+        }
+        
+        return StreamingResponse(io.BytesIO(conteudo), media_type=media_type, headers=headers)
+
+    except FileNotFoundError as e:
+        logger.error(f"Erro de infraestrutura na exportação (ARQUIVO AUSENTE): {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+    except RuntimeError as e:
+        logger.error(f"Erro técnico na geração da exportação Supra: {e}")
+        raise HTTPException(status_code=500, detail="Erro técnico ao gerar o arquivo. Contate o suporte.")
+    except Exception as e:
+        logger.critical(f"Erro inesperado na exportação Supra: {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail="Erro interno inesperado no servidor.")
+
 
 @router.get("/{codigo_da_empresa}", response_model=ClienteCompleto)
 def get_cliente(codigo_da_empresa: str):
