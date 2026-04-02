@@ -13,9 +13,9 @@ import openpyxl
 # Configuração de Logs para auditoria
 logger = logging.getLogger("ordersync.excel_supra")
 
-# Tenta carregar do ENV ou usa o fallback do ambiente local
-TEMPLATE_PATH_DEFAULT = r"E:\Projeto Sistema pedidos\Planejamento\Arquivos bases edson\NOVA_FICHA_DE_CADASTRO_ALISUL (1).xlsx"
-TEMPLATE_PATH = Path(os.getenv("SUPRA_TEMPLATE_PATH", TEMPLATE_PATH_DEFAULT))
+# Tenta carregar do ENV ou usa o caminho relativo ao projeto (Seguro para o Render)
+TEMPLATE_PATH_DEFAULT = Path(__file__).resolve().parent.parent / "assets" / "template_supra.xlsx"
+TEMPLATE_PATH = Path(os.getenv("SUPRA_TEMPLATE_PATH", str(TEMPLATE_PATH_DEFAULT)))
 
 
 def _br_number(value, decimals=2) -> str:

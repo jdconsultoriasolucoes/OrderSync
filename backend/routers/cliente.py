@@ -78,9 +78,9 @@ def get_tabelas_preco_cliente(codigo_da_empresa: str):
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Erro ao buscar tabelas: {e}")
 
-@router.get("/{codigo_da_empresa}/exportar-supra")
+@router.get("/{id}/exportar-supra")
 def exportar_supra(
-    codigo_da_empresa: str,
+    id: int,
     format: str = "pdf",
     current_user: UsuarioModel = Depends(get_current_user)
 ):
@@ -91,14 +91,15 @@ def exportar_supra(
     try:
         with SessionLocal() as db:
             cli = db.query(ClienteModelV2).filter(
-                ClienteModelV2.cadastro_codigo_da_empresa == codigo_da_empresa
+                ClienteModelV2.id == id
             ).first()
         
         if not cli:
-            logger.warning(f"Tentativa de exportação Supra para cliente inexistente: {codigo_da_empresa}")
+            logger.warning(f"Tentativa de exportação Supra para cliente inexistente ID: {id}")
             raise HTTPException(status_code=404, detail="Cliente não encontrado no banco de dados.")
 
-        nome_arquivo = f"ficha_supra_{codigo_da_empresa}"
+        codigo = cli.cadastro_codigo_da_empresa or "S_COD"
+        nome_arquivo = f"ficha_supra_{codigo}"
 
         if format.lower() == "xlsx":
             from services.excel_supra_service import gerar_excel_cliente_supra

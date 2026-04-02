@@ -986,11 +986,10 @@
 
         async function exportarSupra(format) {
           const idInput = document.getElementById("id");
-          const codigoInput = document.getElementById("codigo_da_empresa");
-          const codigo = codigoInput ? codigoInput.value : "";
+          const id = idInput ? idInput.value : "";
           
-          if (!codigo) {
-            alert("Selecione um cliente primeiro.");
+          if (!id) {
+            alert("Salve o cliente primeiro para poder exportar.");
             return;
           }
 
@@ -998,7 +997,7 @@
           const token = window.Auth ? window.Auth.getToken() : localStorage.getItem('ordersync_token');
           
           try {
-            const response = await fetch(`${api}/cliente/${codigo}/exportar-supra?format=${format}`, {
+            const response = await fetch(`${api}/cliente/${id}/exportar-supra?format=${format}`, {
               headers: {
                 'Authorization': `Bearer ${token}`
               }
