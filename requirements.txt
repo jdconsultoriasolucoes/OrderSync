@@ -22,3 +22,5 @@ xlsx2html
 xlsxwriter
 jinja2
 pyyaml
+pandas>=2.0.0
+flask
