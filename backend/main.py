@@ -2,6 +2,17 @@ import sys
 import os
 sys.path.append(os.path.dirname(os.path.abspath(__file__)))
 
+# --- VALIDACAO DE AMBIENTE (Senior QA Shield) ---
+try:
+    import openpyxl
+    import reportlab
+    import slowapi
+    import pandas
+except ImportError as e:
+    print(f"ERRO DE AMBIENTE: Biblioteca obrigatoria ausente: {e}")
+    # Nota: Nao levantamos Exception aqui para nao travar o boot local, 
+    # mas o log do Render mostrara se falhar.
+
 # --- imports extras para o middleware de erro ---
 import logging, traceback, uuid
 from fastapi import FastAPI, Request, HTTPException, APIRouter, Depends
