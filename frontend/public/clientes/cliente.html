@@ -1012,7 +1012,8 @@
             const url = window.URL.createObjectURL(blob);
             const a = document.createElement('a');
             a.href = url;
-            a.download = `ficha_supra_${codigo}.${format}`;
+            const nomeCliente = (document.getElementById("cadastro_nome_cliente")?.value || `cliente_${id}`).replace(/\s+/g, '_');
+            a.download = `ficha_supra_${nomeCliente}.${format === 'xlsx' ? 'xlsx' : 'pdf'}`;
             document.body.appendChild(a);
             a.click();
             window.URL.revokeObjectURL(url);
