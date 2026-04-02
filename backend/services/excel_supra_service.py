@@ -41,15 +41,29 @@ def gerar_excel_cliente_supra(cliente) -> bytes:
     Recebe o objeto ClienteModelV2 e gera o xlsx preenchido.
     Lança exceção amigável em caso de falha no template ou IO.
     """
+    logger.info(f"Iniciando geração de Excel para cliente ID: {cliente.id} (Cód: {cliente.cadastro_codigo_da_empresa})")
+    
     if not TEMPLATE_PATH.exists():
-        logger.error(f"Template não encontrado: {TEMPLATE_PATH}")
-        raise FileNotFoundError(f"O modelo de Ficha Supra não foi encontrado no servidor no caminho configurado.")
+        msg = f"ERRO CRÍTICO: Template não encontrado em {TEMPLATE_PATH}. Verifique se o arquivo existe e se o backend tem permissão de leitura."
+        logger.error(msg)
+        raise FileNotFoundError(msg)
 
     try:
+        # Abrir em modo leitura primeiro para testar acesso
+        with open(TEMPLATE_PATH, "rb") as f:
+            pass
+        
+        # Carregar Workbook
         wb = openpyxl.load_workbook(str(TEMPLATE_PATH))
+        logger.info("Template carregado com sucesso.")
+    except PermissionError:
+        msg = f"ERRO DE PERMISSÃO: O arquivo {TEMPLATE_PATH} pode estar aberto em outro programa. Feche o Excel e tente novamente."
+        logger.error(msg)
+        raise RuntimeError(msg)
     except Exception as e:
-        logger.error(f"Erro ao carregar workbook: {e}")
-        raise RuntimeError(f"Erro técnico ao abrir o modelo Excel de exportação: {str(e)}")
+        msg = f"ERRO INESPERADO ao carregar template: {str(e)}"
+        logger.error(msg, exc_info=True)
+        raise RuntimeError(msg)
 
     try:
         # =========================================================
