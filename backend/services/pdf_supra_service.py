@@ -186,6 +186,55 @@ def gerar_pdf_cliente_supra(cli) -> bytes:
         c.drawString(mx + 0.5*cm, 2.5*cm, f"Local e Data: {_s(cli.faturamento_municipio)}/SP, {datetime.now().strftime('%d/%m/%Y')}")
 
         c.showPage()
+        
+        # --- PÁGINA 2: USO INTERNO E COMERCIAL (Aba 2) ---
+        col_w_2, row_h_2, spans_2 = _get_page2_grid()
+        matrix2 = [["" for _ in range(11)] for _ in range(45)]
+        
+        # Dados Página 2
+        matrix2[6][4] = f"Razão Social: {_s(cli.cadastro_nome_cliente)}"
+        matrix2[7][4] = f"Fantasia: {_s(cli.cadastro_nome_fantasia)}"
+        
+        # Canais (C14-16) -> Rows 13, 14, 15
+        matrix2[13][2] = _s(cli.canal_pet)
+        matrix2[14][2] = _s(cli.canal_frost)
+        matrix2[15][2] = _s(cli.canal_insumos)
+        
+        # Comissões (C20-21) -> Rows 19, 20
+        matrix2[19][2] = _s(cli.comissao_pet)
+        matrix2[20][2] = _s(cli.comissao_insumos)
+
+        # Supervisores (E25, H25) -> Row 24
+        matrix2[24][4] = _s(cli.supervisor_nome_pet)
+        matrix2[24][7] = _s(cli.supervisor_nome_insumo)
+
+        # Análise Financeira (D34, D35) -> Rows 33, 34
+        matrix2[33][3] = _s(cli.cadastro_tipo_compra)
+        matrix2[34][3] = _br_number(cli.elaboracao_limite_credito, 2, " R$")
+
+        # Títulos Pág 2 (Marrom)
+        matrix2[5][0] = "FICHA CADASTRAL - Página 2/2"
+        matrix2[11][0] = "ESTRUTURA COMERCIAL"
+        matrix2[31][0] = "ANÁLISE FINANCEIRA"
+
+        style_list_2 = spans_2 + [
+            ('GRID', (0,5), (10,40), 0.4, colors.grey),
+            ('FONTSIZE', (0,0), (-1,-1), 6.5),
+            ('VALIGN', (0,0), (-1,-1), 'MIDDLE'),
+            ('BACKGROUND', (0,5), (10,5), _HEADER_COLOR),
+            ('BACKGROUND', (0,11), (10,11), _HEADER_COLOR),
+            ('BACKGROUND', (0,31), (10,31), _HEADER_COLOR),
+            ('TEXTCOLOR', (0,5), (10,5), colors.white),
+            ('TEXTCOLOR', (0,11), (10,11), colors.white),
+            ('TEXTCOLOR', (0,31), (10,31), colors.white),
+        ]
+        
+        t2 = Table(matrix2, colWidths=col_w_2, rowHeights=row_h_2)
+        t2.setStyle(TableStyle(style_list_2))
+        
+        tw2, th2 = t2.wrap(w - 2*mx, h)
+        t2.drawOn(c, mx, h - th2 - 1*cm)
+
         c.save()
         buffer.seek(0)
         return buffer.read()

@@ -164,6 +164,9 @@ def gerar_excel_cliente_supra(cliente) -> bytes:
         ws2["A41"] = _s(cliente.elaboracao_classificacao) or "CLIENTE NOVO"
         ws2["A43"] = _s(cliente.elaboracao_tipo_venda) or "Venda a Prazo"
 
+        # Garante que abra na primeira guia por padrão
+        wb.active = 0
+
         # Exportação segura para buffer de memória
         output = io.BytesIO()
         wb.save(output)
