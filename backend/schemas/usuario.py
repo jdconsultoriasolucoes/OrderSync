@@ -1,5 +1,5 @@
 
-from pydantic import BaseModel, validator
+from pydantic import BaseModel, field_validator
 from typing import Optional
 from datetime import datetime
 import re
@@ -23,7 +23,8 @@ class UsuarioBase(BaseModel):
     funcao: str = "vendedor"
     ativo: bool = True
 
-    @validator('email')
+    @field_validator('email')
+    @classmethod
     def validate_email(cls, v):
         # Strict regex for email validation
         regex = r'^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$'
@@ -34,7 +35,8 @@ class UsuarioBase(BaseModel):
 class UsuarioCreate(UsuarioBase):
     senha: str
 
-    @validator('senha')
+    @field_validator('senha')
+    @classmethod
     def valid_senha(cls, v):
         return validate_strength(v)
 
@@ -63,7 +65,8 @@ class UsuarioUpdateSenha(BaseModel):
     senha_antiga: str
     senha_nova: str
 
-    @validator('senha_nova')
+    @field_validator('senha_nova')
+    @classmethod
     def valid_senha_nova(cls, v):
         return validate_strength(v)
 
@@ -71,14 +74,16 @@ class UsuarioResetSenha(BaseModel):
     token: str
     senha_nova: str
 
-    @validator('senha_nova')
+    @field_validator('senha_nova')
+    @classmethod
     def valid_senha_nova(cls, v):
         return validate_strength(v)
 
 class UsuarioAdminResetSenha(BaseModel):
     senha_nova: str
 
-    @validator('senha_nova')
+    @field_validator('senha_nova')
+    @classmethod
     def valid_senha_nova(cls, v):
         return validate_strength(v)
 
@@ -89,7 +94,8 @@ class UsuarioChangePassword(BaseModel):
     senha_atual: str
     nova_senha: str
 
-    @validator('nova_senha')
+    @field_validator('nova_senha')
+    @classmethod
     def valid_nova_senha(cls, v):
         return validate_strength(v)
 
