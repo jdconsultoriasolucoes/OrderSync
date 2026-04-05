@@ -254,15 +254,22 @@
               </select>
             </div>
 
-            <div>
+            <div style="grid-column: span 2; margin-top: 15px;">
               <label>Indicação do Cliente:</label>
               <style>
-                /* Container de indicações em 2 colunas */
+                /* Estilização específica para o grid de indicações: 2 por linha */
                 #container-indicacoes {
                   display: grid !important;
                   grid-template-columns: 1fr 1fr;
-                  gap: 10px;
-                  margin-top: 20px;
+                  gap: 15px;
+                  margin-top: 10px;
+                  margin-bottom: 10px;
+                }
+                /* Garantir que o bloco de indicação simples não ocupe espaço desnecessário */
+                #container-indicacoes .item-dinamico-bloco {
+                  border: 1px solid #eee;
+                  padding: 10px;
+                  border-radius: 4px;
                 }
               </style>
               <div id="container-indicacoes"></div>
@@ -843,12 +850,24 @@
           document.getElementById("id").value = "";
           document.getElementById("ativo").checked = true;
           setViewState('CREATING');
+          inicializarListasVazias();
         }
 
         function voltarEstadoInicial() {
           document.getElementById("formCliente").reset();
           document.getElementById("id").value = "";
           setViewState('INITIAL');
+          inicializarListasVazias();
+        }
+
+        function inicializarListasVazias() {
+          renderizarLista('indicacoes', 5, []);
+          renderizarLista('grupos_economicos', 3, []);
+          renderizarLista('referencias_comerciais', 3, []);
+          renderizarLista('referencias_bancarias', 3, []);
+          renderizarLista('bens_imoveis', 3, []);
+          renderizarLista('bens_moveis', 3, []);
+          renderizarLista('planteis_animais', 3, []);
         }
 
         function salvarCliente() {
@@ -1021,6 +1040,9 @@
                   })
                   .catch(err => console.error("Erro ao carregar cliente selecionado:", err));
               }
+            } else {
+              // Se não há cliente para carregar, inicializa as listas vazias (abre 1 bloco padrão)
+              inicializarListasVazias();
             }
           });
         });
