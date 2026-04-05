@@ -1155,64 +1155,100 @@
 
         // Definição dos campos de cada seção dinâmica
         const TEMPLATE_CAMPOS = {
-          indicacoes: [
-            { key: 'valor', label: 'Indicação', type: 'text' }
-          ],
-          grupos_economicos: [
-            { key: 'codigo', label: 'Código', type: 'text' },
-            { key: 'nome',   label: 'Nome Empresarial', type: 'text' }
-          ],
-          referencias_comerciais: [
-            { key: 'empresa',  label: 'Empresa',  type: 'text' },
-            { key: 'cidade',   label: 'Cidade',   type: 'text' },
-            { key: 'telefone', label: 'Telefone', type: 'text' },
-            { key: 'contato',  label: 'Contato',  type: 'text' }
-          ],
-          referencias_bancarias: [
-            { key: 'banco',          label: 'Banco',          type: 'text' },
-            { key: 'agencia',        label: 'Agência',        type: 'text' },
-            { key: 'conta_corrente', label: 'Conta Corrente', type: 'text' }
-          ],
-          bens_imoveis: [
-            { key: 'imovel',      label: 'Imóvel',       type: 'text' },
-            { key: 'localizacao', label: 'Localização',  type: 'text' },
-            { key: 'area',        label: 'Área',          type: 'text' },
-            { key: 'valor',       label: 'Valor (R$)',    type: 'number' },
-            { key: 'hipotecado',  label: 'Hipotecado',   type: 'text' }
-          ],
-          bens_moveis: [
-            { key: 'marca',    label: 'Marca',    type: 'text' },
-            { key: 'modelo',   label: 'Modelo',   type: 'text' },
-            { key: 'alienado', label: 'Alienado', type: 'text' }
-          ],
-          planteis_animais: [
-            { key: 'especie',          label: 'Espécie',           type: 'text' },
-            { key: 'numero_de_animais',label: 'Número de Animais', type: 'number' },
-            { key: 'consumo_diario',   label: 'Consumo Diário (kg)',type: 'number' },
-            { key: 'consumo_mensal',   label: 'Consumo Mensal (kg)',type: 'number' }
-          ]
+          indicacoes: {
+            gridClass: 'form-grid-1col',
+            fields: [
+              { key: 'valor', label: 'Indicação', type: 'text' }
+            ]
+          },
+          grupos_economicos: {
+            gridClass: 'form-grid-2col',
+            fields: [
+              { key: 'codigo', label: 'Código', type: 'text' },
+              { key: 'nome',   label: 'Nome Empresarial', type: 'text' }
+            ]
+          },
+          referencias_comerciais: {
+            gridClass: 'form-grid-2col',
+            fields: [
+              { key: 'empresa',  label: 'Empresa',  type: 'text' },
+              { key: 'cidade',   label: 'Cidade',   type: 'text' },
+              { key: 'telefone', label: 'Telefone', type: 'text' },
+              { key: 'contato',  label: 'Contato',  type: 'text' }
+            ]
+          },
+          referencias_bancarias: {
+            gridClass: 'form-grid-3col',
+            fields: [
+              { key: 'banco',          label: 'Banco',          type: 'text' },
+              { key: 'agencia',        label: 'Agência',        type: 'text' },
+              { key: 'conta_corrente', label: 'Conta Corrente', type: 'text' }
+            ]
+          },
+          bens_imoveis: {
+            gridClass: 'form-grid-3col',
+            fields: [
+              { key: 'imovel',      label: 'Imóvel',       type: 'text' },
+              { key: 'localizacao', label: 'Localização',  type: 'text' },
+              { key: 'area',        label: 'Área',          type: 'text' },
+              { key: 'valor',       label: 'Valor (R$)',    type: 'number' },
+              { key: 'hipotecado',  label: 'Hipotecado',   type: 'select', options: ['', 'Sim', 'Não'] }
+            ]
+          },
+          bens_moveis: {
+            gridClass: 'form-grid-3col',
+            fields: [
+              { key: 'marca',    label: 'Marca',    type: 'text' },
+              { key: 'modelo',   label: 'Modelo',   type: 'text' },
+              { key: 'alienado', label: 'Alienado', type: 'select', options: ['', 'Sim', 'Não'] }
+            ]
+          },
+          planteis_animais: {
+            gridClass: 'form-grid-4col',
+            fields: [
+              { key: 'especie',          label: 'Espécie',           type: 'text' },
+              { key: 'numero_de_animais',label: 'Número de Animais', type: 'number' },
+              { key: 'consumo_diario',   label: 'Consumo Diário (kg)',type: 'number' },
+              { key: 'consumo_mensal',   label: 'Consumo Mensal (kg)',type: 'number' }
+            ]
+          }
         };
 
         function criarBlocoItem(secao, index, dados = {}) {
-          const campos = TEMPLATE_CAMPOS[secao];
+          const config = TEMPLATE_CAMPOS[secao];
+          const campos = config.fields;
           const bloco = document.createElement('div');
           bloco.className = 'item-dinamico-bloco';
           bloco.dataset.index = index;
 
           // Grid de campos
           const grid = document.createElement('div');
-          grid.className = 'form-grid-2col';
+          grid.className = config.gridClass || 'form-grid-2col';
           grid.style.flex = '1';
 
           campos.forEach(campo => {
             const wrapper = document.createElement('div');
             const label = document.createElement('label');
             label.textContent = campo.label + ':';
-            const input = document.createElement('input');
-            input.type = campo.type || 'text';
-            if (campo.type === 'number') input.step = '0.01';
+            
+            let input;
+            if (campo.type === 'select') {
+              input = document.createElement('select');
+              (campo.options || []).forEach(optVal => {
+                const opt = document.createElement('option');
+                opt.value = optVal;
+                opt.textContent = optVal || '-- Selecione --';
+                input.appendChild(opt);
+              });
+            } else {
+              input = document.createElement('input');
+              input.type = campo.type || 'text';
+              if (campo.type === 'number') input.step = '0.01';
+            }
+            
             input.dataset.key = campo.key;
             input.value = dados[campo.key] ?? '';
+            
             wrapper.appendChild(label);
             wrapper.appendChild(input);
             grid.appendChild(wrapper);
@@ -1261,7 +1297,7 @@
           const blocos = container.querySelectorAll('.item-dinamico-bloco');
           const result = [];
           blocos.forEach(bloco => {
-            const inputs = bloco.querySelectorAll('input');
+            const inputs = bloco.querySelectorAll('input, select');
             if (secao === 'indicacoes') {
               const val = inputs[0]?.value?.trim();
               if (val) result.push(val);
@@ -1270,7 +1306,7 @@
               let temValor = false;
               inputs.forEach(inp => {
                 const key = inp.dataset.key;
-                const val = inp.type === 'number' ? (parseFloat(inp.value) || null) : (inp.value?.trim() || null);
+                const val = (inp.type === 'number' || inp.tagName === 'SELECT') ? (inp.value || null) : (inp.value?.trim() || null);
                 obj[key] = val;
                 if (val !== null && val !== '') temValor = true;
               });
