@@ -255,8 +255,11 @@
             </div>
 
             <div>
-              <label for="indicacao_cliente">Indicação do Cliente:</label>
-              <input type="text" id="indicacao_cliente" name="indicacao_cliente" />
+              <label>Indicação do Cliente:</label>
+              <div id="container-indicacoes" style="display:flex; flex-direction:column; gap:6px;"></div>
+              <button type="button" class="btn-add-item" onclick="adicionarItem('indicacoes', 5)" id="btn-add-indicacoes">
+                + Adicionar Indicação
+              </button>
             </div>
             <div>
               <label for="ramo_de_atividade">Ramo de Atividade:</label>
@@ -666,70 +669,28 @@
           </div>
 
           <h2 class="subtitulo">Grupo Econômico Amarrado ao Cliente</h2>
-          <div class="form-grid-2col">
-            <div><label for="codigo_ElaboracaoCadastro">Código:</label><input type="text" id="codigo_ElaboracaoCadastro"
-                name="codigo_ElaboracaoCadastro" /></div>
-            <div><label for="nome_empresarial_ElaboracaoCadastro">Nome Empresarial:</label><input type="text"
-                id="nome_empresarial_ElaboracaoCadastro" name="nome_empresarial_ElaboracaoCadastro" /></div>
-          </div>
+          <div id="container-grupos_economicos" class="lista-dinamica-container"></div>
+          <button type="button" class="btn-add-item" onclick="adicionarItem('grupos_economicos', 3)" id="btn-add-grupos_economicos">+ Adicionar Grupo Econômico</button>
 
-          <h2 class="subtitulo">Referências Comerciais</h2>
-          <div class="form-grid-2col">
-            <div><label for="empresa_ElaboracaoCadastro">Empresa:</label><input type="text"
-                id="empresa_ElaboracaoCadastro" name="empresa_ElaboracaoCadastro" /></div>
-            <div><label for="cidade_ElaboracaoCadastro">Cidade:</label><input type="text" id="cidade_ElaboracaoCadastro"
-                name="cidade_ElaboracaoCadastro" /></div>
-            <div><label for="telefone_ElaboracaoCadastro">Telefone:</label><input type="text"
-                id="telefone_ElaboracaoCadastro" name="telefone_ElaboracaoCadastro" /></div>
-            <div><label for="contato_ElaboracaoCadastro">Contato:</label><input type="text"
-                id="contato_ElaboracaoCadastro" name="contato_ElaboracaoCadastro" /></div>
-          </div>
+          <h2 class="subtitulo" style="margin-top:20px;">Referências Comerciais</h2>
+          <div id="container-referencias_comerciais" class="lista-dinamica-container"></div>
+          <button type="button" class="btn-add-item" onclick="adicionarItem('referencias_comerciais', 3)" id="btn-add-referencias_comerciais">+ Adicionar Referência Comercial</button>
 
-          <h2 class="subtitulo">Referências Bancárias</h2>
-          <div class="form-grid-2col">
-            <div><label for="banco_ElaboracaoCadastro">Banco:</label><input type="text" id="banco_ElaboracaoCadastro"
-                name="banco_ElaboracaoCadastro" /></div>
-            <div><label for="agencia_ElaboracaoCadastro">Agência:</label><input type="text"
-                id="agencia_ElaboracaoCadastro" name="agencia_ElaboracaoCadastro" /></div>
-            <div><label for="conta_corrente_ElaboracaoCadastro">Conta Corrente:</label><input type="text"
-                id="conta_corrente_ElaboracaoCadastro" name="conta_corrente_ElaboracaoCadastro" /></div>
-          </div>
+          <h2 class="subtitulo" style="margin-top:20px;">Referências Bancárias</h2>
+          <div id="container-referencias_bancarias" class="lista-dinamica-container"></div>
+          <button type="button" class="btn-add-item" onclick="adicionarItem('referencias_bancarias', 3)" id="btn-add-referencias_bancarias">+ Adicionar Referência Bancária</button>
 
-          <h2 class="subtitulo">Bens Imóveis</h2>
-          <div class="form-grid-2col">
-            <div><label for="imovel_ElaboracaoCadastro">Imóvel:</label><input type="text" id="imovel_ElaboracaoCadastro"
-                name="imovel_ElaboracaoCadastro" /></div>
-            <div><label for="localizacao_ElaboracaoCadastro">Localização:</label><input type="text"
-                id="localizacao_ElaboracaoCadastro" name="localizacao_ElaboracaoCadastro" /></div>
-            <div><label for="area_ElaboracaoCadastro">Área:</label><input type="text" id="area_ElaboracaoCadastro"
-                name="area_ElaboracaoCadastro" /></div>
-            <div><label for="valor_ElaboracaoCadastro">Valor:</label><input type="number" step="0.01"
-                id="valor_ElaboracaoCadastro" name="valor_ElaboracaoCadastro" /></div>
-            <div><label for="hipotecado_ElaboracaoCadastro">Hipotecado:</label><input type="text"
-                id="hipotecado_ElaboracaoCadastro" name="hipotecado_ElaboracaoCadastro" /></div>
-          </div>
+          <h2 class="subtitulo" style="margin-top:20px;">Bens Imóveis</h2>
+          <div id="container-bens_imoveis" class="lista-dinamica-container"></div>
+          <button type="button" class="btn-add-item" onclick="adicionarItem('bens_imoveis', 3)" id="btn-add-bens_imoveis">+ Adicionar Bem Imóvel</button>
 
-          <h2 class="subtitulo">Bens Móveis</h2>
-          <div class="form-grid-2col">
-            <div><label for="marca_ElaboracaoCadastro">Marca:</label><input type="text" id="marca_ElaboracaoCadastro"
-                name="marca_ElaboracaoCadastro" /></div>
-            <div><label for="modelo_ElaboracaoCadastro">Modelo:</label><input type="text" id="modelo_ElaboracaoCadastro"
-                name="modelo_ElaboracaoCadastro" /></div>
-            <div><label for="alienado_ElaboracaoCadastro">Alienado:</label><input type="text"
-                id="alienado_ElaboracaoCadastro" name="alienado_ElaboracaoCadastro" /></div>
-          </div>
+          <h2 class="subtitulo" style="margin-top:20px;">Bens Móveis</h2>
+          <div id="container-bens_moveis" class="lista-dinamica-container"></div>
+          <button type="button" class="btn-add-item" onclick="adicionarItem('bens_moveis', 3)" id="btn-add-bens_moveis">+ Adicionar Bem Móvel</button>
 
-          <h2 class="subtitulo">Plantel de Animais</h2>
-          <div class="form-grid-2col">
-            <div><label for="especie_ElaboracaoCadastro">Espécie:</label><input type="text"
-                id="especie_ElaboracaoCadastro" name="especie_ElaboracaoCadastro" /></div>
-            <div><label for="numero_de_animais_ElaboracaoCadastro">Número de Animais:</label><input type="number"
-                id="numero_de_animais_ElaboracaoCadastro" name="numero_de_animais_ElaboracaoCadastro" /></div>
-            <div><label for="consumo_diario_ElaboracaoCadastro">Consumo Diário (kg):</label><input type="number"
-                step="0.01" id="consumo_diario_ElaboracaoCadastro" name="consumo_diario_ElaboracaoCadastro" /></div>
-            <div><label for="consumo_mensal_ElaboracaoCadastro">Consumo Mensal (kg):</label><input type="number"
-                step="0.01" id="consumo_mensal_ElaboracaoCadastro" name="consumo_mensal_ElaboracaoCadastro" /></div>
-          </div>
+          <h2 class="subtitulo" style="margin-top:20px;">Plantel de Animais</h2>
+          <div id="container-planteis_animais" class="lista-dinamica-container"></div>
+          <button type="button" class="btn-add-item" onclick="adicionarItem('planteis_animais', 3)" id="btn-add-planteis_animais">+ Adicionar Plantel de Animais</button>
 
           <h2 class="subtitulo">Supervisores</h2>
           <div class="form-grid-2col">
@@ -1073,7 +1034,7 @@
               inscricao_estadual: document.getElementById("inscricao_estadual")?.value || "",
               cpf: document.getElementById("cpf")?.value || "",
               situacao: document.getElementById("situacao")?.value || "",
-              indicacao_cliente: document.getElementById("indicacao_cliente")?.value || "",
+              indicacao_cliente: null,  // legado; dado real em indicacoes_clientes
               ramo_de_atividade: document.getElementById("ramo_de_atividade")?.value || "",
               ramo_de_atividade: document.getElementById("ramo_de_atividade")?.value || "",
               atividade_principal: document.getElementById("atividade_principal")?.value || "",
@@ -1161,39 +1122,14 @@
               data_vencimento_ElaboracaoCadastro: document.getElementById("data_vencimento_ElaboracaoCadastro")?.value || "",
               vendedor_ElaboracaoCadastro: document.getElementById("vendedor_ElaboracaoCadastro")?.value || ""
             },
-            grupo_economico: {
-              codigo_ElaboracaoCadastro: document.getElementById("codigo_ElaboracaoCadastro")?.value || "",
-              nome_empresarial_ElaboracaoCadastro: document.getElementById("nome_empresarial_ElaboracaoCadastro")?.value || ""
-            },
-            referencia_comercial: {
-              empresa_ElaboracaoCadastro: document.getElementById("empresa_ElaboracaoCadastro")?.value || "",
-              cidade_ElaboracaoCadastro: document.getElementById("cidade_ElaboracaoCadastro")?.value || "",
-              telefone_ElaboracaoCadastro: document.getElementById("telefone_ElaboracaoCadastro")?.value || "",
-              contato_ElaboracaoCadastro: document.getElementById("contato_ElaboracaoCadastro")?.value || ""
-            },
-            referencia_bancaria: {
-              banco_ElaboracaoCadastro: document.getElementById("banco_ElaboracaoCadastro")?.value || "",
-              agencia_ElaboracaoCadastro: document.getElementById("agencia_ElaboracaoCadastro")?.value || "",
-              conta_corrente_ElaboracaoCadastro: document.getElementById("conta_corrente_ElaboracaoCadastro")?.value || ""
-            },
-            bem_imovel: {
-              imovel_ElaboracaoCadastro: document.getElementById("imovel_ElaboracaoCadastro")?.value || "",
-              localizacao_ElaboracaoCadastro: document.getElementById("localizacao_ElaboracaoCadastro")?.value || "",
-              area_ElaboracaoCadastro: document.getElementById("area_ElaboracaoCadastro")?.value || "",
-              valor_ElaboracaoCadastro: parseFloat(document.getElementById("valor_ElaboracaoCadastro")?.value || 0),
-              hipotecado_ElaboracaoCadastro: document.getElementById("hipotecado_ElaboracaoCadastro")?.value || ""
-            },
-            bem_movel: {
-              marca_ElaboracaoCadastro: document.getElementById("marca_ElaboracaoCadastro")?.value || "",
-              modelo_ElaboracaoCadastro: document.getElementById("modelo_ElaboracaoCadastro")?.value || "",
-              alienado_ElaboracaoCadastro: document.getElementById("alienado_ElaboracaoCadastro")?.value || ""
-            },
-            plantel_animal: {
-              especie_ElaboracaoCadastro: document.getElementById("especie_ElaboracaoCadastro")?.value || "",
-              numero_de_animais_ElaboracaoCadastro: parseInt(document.getElementById("numero_de_animais_ElaboracaoCadastro")?.value || 0),
-              consumo_diario_ElaboracaoCadastro: parseFloat(document.getElementById("consumo_diario_ElaboracaoCadastro")?.value || 0),
-              consumo_mensal_ElaboracaoCadastro: parseFloat(document.getElementById("consumo_mensal_ElaboracaoCadastro")?.value || 0)
-            },
+            // Listas dinâmicas (JSONB)
+            indicacoes_clientes: coletarLista('indicacoes'),
+            grupos_economicos:    coletarLista('grupos_economicos'),
+            referencias_comerciais: coletarLista('referencias_comerciais'),
+            referencias_bancarias:  coletarLista('referencias_bancarias'),
+            bens_imoveis:  coletarLista('bens_imoveis'),
+            bens_moveis:   coletarLista('bens_moveis'),
+            planteis_animais: coletarLista('planteis_animais'),
             supervisores: {
               codigo_insumo_ElaboracaoCadastro: document.getElementById("codigo_insumo_ElaboracaoCadastro")?.value || "",
               nome_insumos_ElaboracaoCadastro: document.getElementById("nome_insumos_ElaboracaoCadastro")?.value || "",
@@ -1211,6 +1147,151 @@
               canal_insumos_ElaboracaoCadastro: document.getElementById("canal_insumos_ElaboracaoCadastro")?.value || ""
             }
           };
+        }
+
+        // =========================================================
+        //  SISTEMA DE LISTAS DINÂMICAS (JSONB)
+        // =========================================================
+
+        // Definição dos campos de cada seção dinâmica
+        const TEMPLATE_CAMPOS = {
+          indicacoes: [
+            { key: 'valor', label: 'Indicação', type: 'text' }
+          ],
+          grupos_economicos: [
+            { key: 'codigo', label: 'Código', type: 'text' },
+            { key: 'nome',   label: 'Nome Empresarial', type: 'text' }
+          ],
+          referencias_comerciais: [
+            { key: 'empresa',  label: 'Empresa',  type: 'text' },
+            { key: 'cidade',   label: 'Cidade',   type: 'text' },
+            { key: 'telefone', label: 'Telefone', type: 'text' },
+            { key: 'contato',  label: 'Contato',  type: 'text' }
+          ],
+          referencias_bancarias: [
+            { key: 'banco',          label: 'Banco',          type: 'text' },
+            { key: 'agencia',        label: 'Agência',        type: 'text' },
+            { key: 'conta_corrente', label: 'Conta Corrente', type: 'text' }
+          ],
+          bens_imoveis: [
+            { key: 'imovel',      label: 'Imóvel',       type: 'text' },
+            { key: 'localizacao', label: 'Localização',  type: 'text' },
+            { key: 'area',        label: 'Área',          type: 'text' },
+            { key: 'valor',       label: 'Valor (R$)',    type: 'number' },
+            { key: 'hipotecado',  label: 'Hipotecado',   type: 'text' }
+          ],
+          bens_moveis: [
+            { key: 'marca',    label: 'Marca',    type: 'text' },
+            { key: 'modelo',   label: 'Modelo',   type: 'text' },
+            { key: 'alienado', label: 'Alienado', type: 'text' }
+          ],
+          planteis_animais: [
+            { key: 'especie',          label: 'Espécie',           type: 'text' },
+            { key: 'numero_de_animais',label: 'Número de Animais', type: 'number' },
+            { key: 'consumo_diario',   label: 'Consumo Diário (kg)',type: 'number' },
+            { key: 'consumo_mensal',   label: 'Consumo Mensal (kg)',type: 'number' }
+          ]
+        };
+
+        function criarBlocoItem(secao, index, dados = {}) {
+          const campos = TEMPLATE_CAMPOS[secao];
+          const bloco = document.createElement('div');
+          bloco.className = 'item-dinamico-bloco';
+          bloco.dataset.index = index;
+
+          // Grid de campos
+          const grid = document.createElement('div');
+          grid.className = 'form-grid-2col';
+          grid.style.flex = '1';
+
+          campos.forEach(campo => {
+            const wrapper = document.createElement('div');
+            const label = document.createElement('label');
+            label.textContent = campo.label + ':';
+            const input = document.createElement('input');
+            input.type = campo.type || 'text';
+            if (campo.type === 'number') input.step = '0.01';
+            input.dataset.key = campo.key;
+            input.value = dados[campo.key] ?? '';
+            wrapper.appendChild(label);
+            wrapper.appendChild(input);
+            grid.appendChild(wrapper);
+          });
+
+          // Botão remover
+          const btnRemover = document.createElement('button');
+          btnRemover.type = 'button';
+          btnRemover.className = 'btn-remover-item';
+          btnRemover.title = 'Remover';
+          btnRemover.innerHTML = '&#128465;';
+          btnRemover.onclick = () => removerItem(secao, bloco);
+
+          bloco.appendChild(grid);
+          bloco.appendChild(btnRemover);
+          return bloco;
+        }
+
+        function adicionarItem(secao, limite) {
+          const container = document.getElementById(`container-${secao}`);
+          const btnAdd = document.getElementById(`btn-add-${secao}`);
+          if (!container) return;
+          const atual = container.querySelectorAll('.item-dinamico-bloco').length;
+          if (atual >= limite) {
+            alert(`Limite máximo de ${limite} ${secao === 'indicacoes' ? 'indicações' : 'itens'} atingido.`);
+            return;
+          }
+          const bloco = criarBlocoItem(secao, atual);
+          container.appendChild(bloco);
+          // Oculta botão se atingiu o limite
+          if (btnAdd && container.querySelectorAll('.item-dinamico-bloco').length >= limite) {
+            btnAdd.style.opacity = '0.5';
+          }
+        }
+
+        function removerItem(secao, bloco) {
+          const container = document.getElementById(`container-${secao}`);
+          const btnAdd = document.getElementById(`btn-add-${secao}`);
+          bloco.remove();
+          if (btnAdd) btnAdd.style.opacity = '1';
+        }
+
+        function coletarLista(secao) {
+          const container = document.getElementById(`container-${secao}`);
+          if (!container) return [];
+          const blocos = container.querySelectorAll('.item-dinamico-bloco');
+          const result = [];
+          blocos.forEach(bloco => {
+            const inputs = bloco.querySelectorAll('input');
+            if (secao === 'indicacoes') {
+              const val = inputs[0]?.value?.trim();
+              if (val) result.push(val);
+            } else {
+              const obj = {};
+              let temValor = false;
+              inputs.forEach(inp => {
+                const key = inp.dataset.key;
+                const val = inp.type === 'number' ? (parseFloat(inp.value) || null) : (inp.value?.trim() || null);
+                obj[key] = val;
+                if (val !== null && val !== '') temValor = true;
+              });
+              if (temValor) result.push(obj);
+            }
+          });
+          return result;
+        }
+
+        function renderizarLista(secao, limite, dados) {
+          const container = document.getElementById(`container-${secao}`);
+          const btnAdd = document.getElementById(`btn-add-${secao}`);
+          if (!container) return;
+          container.innerHTML = '';
+          (dados || []).forEach((item, i) => {
+            const blocoData = (secao === 'indicacoes') ? { valor: item } : item;
+            container.appendChild(criarBlocoItem(secao, i, blocoData));
+          });
+          if (btnAdd) {
+            btnAdd.style.opacity = container.querySelectorAll('.item-dinamico-bloco').length >= limite ? '0.5' : '1';
+          }
         }
 
 
@@ -1254,7 +1335,7 @@
           setVal("inscricao_estadual", c.inscricao_estadual || "");
           setVal("cpf", c.cpf || "");
           setVal("situacao", c.situacao || "");
-          setVal("indicacao_cliente", c.indicacao_cliente || "");
+          // indicacoes_clientes é renderizado via renderizarLista() mais abaixo
           setVal("ramo_de_atividade", c.ramo_de_atividade || "");
           setVal("atividade_principal", c.atividade_principal || "");
           setVal("cadastro_markup", c.cadastro_markup || "");
@@ -1351,44 +1432,14 @@
           setVal("data_vencimento_ElaboracaoCadastro", ed.data_vencimento_ElaboracaoCadastro || "");
           setVal("vendedor_ElaboracaoCadastro", ed.vendedor_ElaboracaoCadastro || "");
 
-          // Bloco: grupo_economico
-          const grupo = dados.grupo_economico || {};
-          setVal("codigo_ElaboracaoCadastro", grupo.codigo_ElaboracaoCadastro || "");
-          setVal("nome_empresarial_ElaboracaoCadastro", grupo.nome_empresarial_ElaboracaoCadastro || "");
-
-          // Bloco: referencia_comercial
-          const refcom = dados.referencia_comercial || {};
-          setVal("empresa_ElaboracaoCadastro", refcom.empresa_ElaboracaoCadastro || "");
-          setVal("cidade_ElaboracaoCadastro", refcom.cidade_ElaboracaoCadastro || "");
-          setVal("telefone_ElaboracaoCadastro", refcom.telefone_ElaboracaoCadastro || "");
-          setVal("contato_ElaboracaoCadastro", refcom.contato_ElaboracaoCadastro || "");
-
-          // Bloco: referencia_bancaria
-          const refbanco = dados.referencia_bancaria || {};
-          setVal("banco_ElaboracaoCadastro", refbanco.banco_ElaboracaoCadastro || "");
-          setVal("agencia_ElaboracaoCadastro", refbanco.agencia_ElaboracaoCadastro || "");
-          setVal("conta_corrente_ElaboracaoCadastro", refbanco.conta_corrente_ElaboracaoCadastro || "");
-
-          // Bloco: bem_imovel
-          const imovel = dados.bem_imovel || {};
-          setVal("imovel_ElaboracaoCadastro", imovel.imovel_ElaboracaoCadastro || "");
-          setVal("localizacao_ElaboracaoCadastro", imovel.localizacao_ElaboracaoCadastro || "");
-          setVal("area_ElaboracaoCadastro", imovel.area_ElaboracaoCadastro || "");
-          setVal("valor_ElaboracaoCadastro", imovel.valor_ElaboracaoCadastro || "");
-          setVal("hipotecado_ElaboracaoCadastro", imovel.hipotecado_ElaboracaoCadastro || "");
-
-          // Bloco: bem_movel
-          const movel = dados.bem_movel || {};
-          setVal("marca_ElaboracaoCadastro", movel.marca_ElaboracaoCadastro || "");
-          setVal("modelo_ElaboracaoCadastro", movel.modelo_ElaboracaoCadastro || "");
-          setVal("alienado_ElaboracaoCadastro", movel.alienado_ElaboracaoCadastro || "");
-
-          // Bloco: plantel_animal
-          const plantel = dados.plantel_animal || {};
-          setVal("especie_ElaboracaoCadastro", plantel.especie_ElaboracaoCadastro || "");
-          setVal("numero_de_animais_ElaboracaoCadastro", plantel.numero_de_animais_ElaboracaoCadastro || "");
-          setVal("consumo_diario_ElaboracaoCadastro", plantel.consumo_diario_ElaboracaoCadastro || "");
-          setVal("consumo_mensal_ElaboracaoCadastro", plantel.consumo_mensal_ElaboracaoCadastro || "");
+          // Listas dinâmicas (JSONB)
+          renderizarLista('indicacoes', 5, dados.indicacoes_clientes || []);
+          renderizarLista('grupos_economicos', 3, dados.grupos_economicos || []);
+          renderizarLista('referencias_comerciais', 3, dados.referencias_comerciais || []);
+          renderizarLista('referencias_bancarias', 3, dados.referencias_bancarias || []);
+          renderizarLista('bens_imoveis', 3, dados.bens_imoveis || []);
+          renderizarLista('bens_moveis', 3, dados.bens_moveis || []);
+          renderizarLista('planteis_animais', 3, dados.planteis_animais || []);
 
           // Bloco: supervisores
           const sup = dados.supervisores || {};

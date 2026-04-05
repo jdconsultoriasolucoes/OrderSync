@@ -35,7 +35,7 @@ def _flat_to_nested(model: ClienteModelV2) -> dict:
             "inscricao_estadual": model.cadastro_inscricao_estadual,
             "cpf": model.cadastro_cpf,
             "situacao": model.cadastro_situacao,
-            "indicacao_cliente": model.cadastro_indicacao_cliente,
+            "indicacao_cliente": None,  # legado mantido; usar indicacoes_clientes
             "ramo_de_atividade": model.cadastro_ramo_de_atividade,
             "atividade_principal": model.cadastro_atividade_principal,
             "cadastro_markup": model.cadastro_markup,
@@ -122,39 +122,15 @@ def _flat_to_nested(model: ClienteModelV2) -> dict:
             "data_vencimento_ElaboracaoCadastro": model.elaboracao_data_vencimento,
             "vendedor_ElaboracaoCadastro": model.elaboracao_vendedor,
         },
-        "grupo_economico": {
-            "codigo_ElaboracaoCadastro": model.grupo_economico_codigo,
-            "nome_empresarial_ElaboracaoCadastro": model.grupo_economico_nome,
-        },
-        "referencia_comercial": {
-            "empresa_ElaboracaoCadastro": model.ref_comercial_empresa,
-            "cidade_ElaboracaoCadastro": model.ref_comercial_cidade,
-            "telefone_ElaboracaoCadastro": model.ref_comercial_telefone,
-            "contato_ElaboracaoCadastro": model.ref_comercial_contato,
-        },
-        "referencia_bancaria": {
-            "banco_ElaboracaoCadastro": model.ref_bancaria_banco,
-            "agencia_ElaboracaoCadastro": model.ref_bancaria_agencia,
-            "conta_corrente_ElaboracaoCadastro": model.ref_bancaria_conta,
-        },
-        "bem_imovel": {
-            "imovel_ElaboracaoCadastro": model.bem_imovel_imovel,
-            "localizacao_ElaboracaoCadastro": model.bem_imovel_localizacao,
-            "area_ElaboracaoCadastro": model.bem_imovel_area,
-            "valor_ElaboracaoCadastro": model.bem_imovel_valor,
-            "hipotecado_ElaboracaoCadastro": model.bem_imovel_hipotecado,
-        },
-        "bem_movel": {
-            "marca_ElaboracaoCadastro": model.bem_movel_marca,
-            "modelo_ElaboracaoCadastro": model.bem_movel_modelo,
-            "alienado_ElaboracaoCadastro": model.bem_movel_alienado,
-        },
-        "plantel_animal": {
-            "especie_ElaboracaoCadastro": model.animal_especie,
-            "numero_de_animais_ElaboracaoCadastro": model.animal_numero,
-            "consumo_diario_ElaboracaoCadastro": model.animal_consumo_diario,
-            "consumo_mensal_ElaboracaoCadastro": model.animal_consumo_mensal,
-        },
+        # Listas dinâmicas (JSONB)
+        "grupos_economicos": model.grupos_economicos or [],
+        "referencias_comerciais": model.referencias_comerciais or [],
+        "referencias_bancarias": model.referencias_bancarias or [],
+        "bens_imoveis": model.bens_imoveis or [],
+        "bens_moveis": model.bens_moveis or [],
+        "planteis_animais": model.planteis_animais or [],
+        # Indicações (JSONB - lista de strings)
+        "indicacoes_clientes": model.cadastro_indicacao_cliente or [],
         "supervisores": {
             "codigo_insumo_ElaboracaoCadastro": model.supervisor_codigo_insumo,
             "nome_insumos_ElaboracaoCadastro": model.supervisor_nome_insumo,
@@ -307,38 +283,16 @@ def _nested_to_flat(data: dict) -> ClienteModelV2:
     model.elaboracao_data_vencimento = dec.get("data_vencimento_ElaboracaoCadastro")
     model.elaboracao_vendedor = dec.get("vendedor_ElaboracaoCadastro")
 
-    # 12. Grupo
-    model.grupo_economico_codigo = ge.get("codigo_ElaboracaoCadastro")
-    model.grupo_economico_nome = ge.get("nome_empresarial_ElaboracaoCadastro")
-    
-    # 13. Ref Comercial
-    model.ref_comercial_empresa = rcom.get("empresa_ElaboracaoCadastro")
-    model.ref_comercial_cidade = rcom.get("cidade_ElaboracaoCadastro")
-    model.ref_comercial_telefone = rcom.get("telefone_ElaboracaoCadastro")
-    model.ref_comercial_contato = rcom.get("contato_ElaboracaoCadastro")
+    # 12-17. Listas dinâmicas (JSONB)
+    model.grupos_economicos = data.get("grupos_economicos") or []
+    model.referencias_comerciais = data.get("referencias_comerciais") or []
+    model.referencias_bancarias = data.get("referencias_bancarias") or []
+    model.bens_imoveis = data.get("bens_imoveis") or []
+    model.bens_moveis = data.get("bens_moveis") or []
+    model.planteis_animais = data.get("planteis_animais") or []
 
-    # 14. Ref Bancaria
-    model.ref_bancaria_banco = rb.get("banco_ElaboracaoCadastro")
-    model.ref_bancaria_agencia = rb.get("agencia_ElaboracaoCadastro")
-    model.ref_bancaria_conta = rb.get("conta_corrente_ElaboracaoCadastro")
-
-    # 15. Bem Imovel
-    model.bem_imovel_imovel = bi.get("imovel_ElaboracaoCadastro")
-    model.bem_imovel_localizacao = bi.get("localizacao_ElaboracaoCadastro")
-    model.bem_imovel_area = bi.get("area_ElaboracaoCadastro")
-    model.bem_imovel_valor = bi.get("valor_ElaboracaoCadastro")
-    model.bem_imovel_hipotecado = bi.get("hipotecado_ElaboracaoCadastro")
-
-    # 16. Bem Movel
-    model.bem_movel_marca = bm.get("marca_ElaboracaoCadastro")
-    model.bem_movel_modelo = bm.get("modelo_ElaboracaoCadastro")
-    model.bem_movel_alienado = bm.get("alienado_ElaboracaoCadastro")
-
-    # 17. Animal
-    model.animal_especie = pa.get("especie_ElaboracaoCadastro")
-    model.animal_numero = pa.get("numero_de_animais_ElaboracaoCadastro")
-    model.animal_consumo_diario = pa.get("consumo_diario_ElaboracaoCadastro")
-    model.animal_consumo_mensal = pa.get("consumo_mensal_ElaboracaoCadastro")
+    # Indicações do cliente (JSONB - lista de strings)
+    model.cadastro_indicacao_cliente = data.get("indicacoes_clientes") or []
 
     # 18. Supervisor
     model.supervisor_codigo_insumo = sup.get("codigo_insumo_ElaboracaoCadastro")

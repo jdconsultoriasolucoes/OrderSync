@@ -235,37 +235,37 @@ class DadosElaboracaoCadastro(BaseModel):
 #        return v
 
 class GrupoEconomico(BaseModel):
-    codigo_ElaboracaoCadastro: Optional[str]
-    nome_empresarial_ElaboracaoCadastro: Optional[str]
+    codigo: Optional[str] = None
+    nome: Optional[str] = None
 
 class ReferenciaComercial(BaseModel):
-    empresa_ElaboracaoCadastro: Optional[str]
-    cidade_ElaboracaoCadastro: Optional[str]
-    telefone_ElaboracaoCadastro: Optional[str]
-    contato_ElaboracaoCadastro: Optional[str]
+    empresa: Optional[str] = None
+    cidade: Optional[str] = None
+    telefone: Optional[str] = None
+    contato: Optional[str] = None
 
 class ReferenciaBancaria(BaseModel):
-    banco_ElaboracaoCadastro: Optional[str]
-    agencia_ElaboracaoCadastro: Optional[str]
-    conta_corrente_ElaboracaoCadastro: Optional[str]
+    banco: Optional[str] = None
+    agencia: Optional[str] = None
+    conta_corrente: Optional[str] = None
 
 class BemImovel(BaseModel):
-    imovel_ElaboracaoCadastro: Optional[str]
-    localizacao_ElaboracaoCadastro: Optional[str]
-    area_ElaboracaoCadastro: Optional[str]
-    valor_ElaboracaoCadastro: Optional[float]
-    hipotecado_ElaboracaoCadastro: Optional[str]
+    imovel: Optional[str] = None
+    localizacao: Optional[str] = None
+    area: Optional[str] = None
+    valor: Optional[float] = None
+    hipotecado: Optional[str] = None
 
 class BemMovel(BaseModel):
-    marca_ElaboracaoCadastro: Optional[str]
-    modelo_ElaboracaoCadastro: Optional[str]
-    alienado_ElaboracaoCadastro: Optional[str]
+    marca: Optional[str] = None
+    modelo: Optional[str] = None
+    alienado: Optional[str] = None
 
 class PlantelAnimal(BaseModel):
-    especie_ElaboracaoCadastro: Optional[str]
-    numero_de_animais_ElaboracaoCadastro: Optional[int]
-    consumo_diario_ElaboracaoCadastro: Optional[float]
-    consumo_mensal_ElaboracaoCadastro: Optional[float]    
+    especie: Optional[str] = None
+    numero_de_animais: Optional[int] = None
+    consumo_diario: Optional[float] = None
+    consumo_mensal: Optional[float] = None
 
 #@model_validator(mode="after")
 #def validar_consumo_animal(cls, values):
@@ -300,12 +300,15 @@ class ClienteCompleto(BaseModel):
     dados_ultimas_compras: Optional[DadosUltimasCompras] = None
     observacoes_nao_compra: Optional[ObservacoesNaoCompra] = None
     dados_elaboracao_cadastro: Optional[DadosElaboracaoCadastro] = None
-    grupo_economico: Optional[GrupoEconomico] = None
-    referencia_comercial: Optional[ReferenciaComercial] = None
-    referencia_bancaria: Optional[ReferenciaBancaria] = None
-    bem_imovel: Optional[BemImovel] = None
-    bem_movel: Optional[BemMovel] = None
-    plantel_animal: Optional[PlantelAnimal] = None
+    # Listas dinâmicas (JSONB)
+    grupos_economicos: Optional[List[GrupoEconomico]] = []
+    referencias_comerciais: Optional[List[ReferenciaComercial]] = []
+    referencias_bancarias: Optional[List[ReferenciaBancaria]] = []
+    bens_imoveis: Optional[List[BemImovel]] = []
+    bens_moveis: Optional[List[BemMovel]] = []
+    planteis_animais: Optional[List[PlantelAnimal]] = []
+    # Indicacões (lista de até 5 strings)
+    indicacoes_clientes: Optional[List[str]] = []
     supervisores: Optional[Supervisores] = None
     comissao_dispet: Optional[ComissaoDispet] = None
     canal_venda_cliente: Optional[CanalVendaCliente] = None

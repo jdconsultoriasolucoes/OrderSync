@@ -377,3 +377,76 @@ textarea:focus {
   border-color: var(--os-primary);
   box-shadow: 0 0 0 3px var(--os-primary-ring);
 }
+
+/* ============================================================
+   LISTAS DINÂMICAS (JSONB) — botões + e blocos de itens
+   ============================================================ */
+
+.lista-dinamica-container {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin-bottom: 10px;
+}
+
+.item-dinamico-bloco {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  background: #f8fafc;
+  border: 1px solid var(--os-border, #e2e8f0);
+  border-radius: var(--os-radius, 8px);
+  padding: 12px;
+  position: relative;
+  animation: fadeInBloco 0.18s ease;
+}
+
+@keyframes fadeInBloco {
+  from { opacity: 0; transform: translateY(-4px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+.item-dinamico-bloco .form-grid-2col {
+  margin-bottom: 0;
+}
+
+.btn-add-item {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 7px 14px;
+  font-size: 0.82rem;
+  font-weight: 500;
+  font-family: var(--os-font);
+  border-radius: var(--os-radius, 8px);
+  border: 1.5px dashed var(--os-primary, #2563eb);
+  background: transparent;
+  color: var(--os-primary, #2563eb);
+  cursor: pointer;
+  transition: background 0.15s, color 0.15s;
+  margin-top: 4px;
+  margin-bottom: 6px;
+}
+
+.btn-add-item:hover {
+  background: #eff6ff;
+}
+
+.btn-remover-item {
+  flex-shrink: 0;
+  align-self: center;
+  background: transparent;
+  border: 1px solid #fca5a5;
+  border-radius: var(--os-radius, 8px);
+  color: #ef4444;
+  font-size: 0.95rem;
+  padding: 6px 9px;
+  cursor: pointer;
+  transition: background 0.15s, color 0.15s;
+  line-height: 1;
+}
+
+.btn-remover-item:hover {
+  background: #fee2e2;
+  color: #b91c1c;
+}

@@ -1,5 +1,6 @@
 
 from sqlalchemy import Column, Integer, String, Boolean, Float, DateTime, BigInteger, Sequence
+from sqlalchemy.dialects.postgresql import JSONB
 from database import Base
 
 class ClienteModelV2(Base):
@@ -20,7 +21,8 @@ class ClienteModelV2(Base):
     cadastro_inscricao_estadual = Column(String)
     cadastro_cpf = Column(String)
     cadastro_situacao = Column(String)
-    cadastro_indicacao_cliente = Column(String)
+    # JSONB: lista de strings com até 5 indicações. Ex: ["Fulano", "Ciclano"]
+    cadastro_indicacao_cliente = Column(JSONB, default=list)
     cadastro_ramo_de_atividade = Column(String)
     cadastro_atividade_principal = Column(String)
     cadastro_markup = Column(Float, default=0.0) # Markup % (ex: 10.5 para 10.5%)
@@ -108,38 +110,23 @@ class ClienteModelV2(Base):
     elaboracao_data_vencimento = Column(String)
     elaboracao_vendedor = Column(String)
 
-    # 12. GrupoEconomico
-    grupo_economico_codigo = Column(String)
-    grupo_economico_nome = Column(String)
+    # 12. GrupoEconomico — JSONB: lista com até 3 grupos. Ex: [{"codigo": "G1", "nome": "Grupo X"}]
+    grupos_economicos = Column(JSONB, default=list)
 
-    # 13. ReferenciaComercial
-    ref_comercial_empresa = Column(String)
-    ref_comercial_cidade = Column(String)
-    ref_comercial_telefone = Column(String)
-    ref_comercial_contato = Column(String)
+    # 13. ReferenciaComercial — JSONB: lista com até 3 refs. Ex: [{"empresa": "X", "cidade": "Y", "telefone": "Z", "contato": "W"}]
+    referencias_comerciais = Column(JSONB, default=list)
 
-    # 14. ReferenciaBancaria
-    ref_bancaria_banco = Column(String)
-    ref_bancaria_agencia = Column(String)
-    ref_bancaria_conta = Column(String)
+    # 14. ReferenciaBancaria — JSONB: lista com até 3 refs. Ex: [{"banco": "X", "agencia": "Y", "conta_corrente": "Z"}]
+    referencias_bancarias = Column(JSONB, default=list)
 
-    # 15. BemImovel
-    bem_imovel_imovel = Column(String)
-    bem_imovel_localizacao = Column(String)
-    bem_imovel_area = Column(String)
-    bem_imovel_valor = Column(Float)
-    bem_imovel_hipotecado = Column(String)
+    # 15. BemImovel — JSONB: lista com até 3 bens. Ex: [{"imovel": "X", "localizacao": "Y", "area": "Z", "valor": 100.0, "hipotecado": "Sim"}]
+    bens_imoveis = Column(JSONB, default=list)
 
-    # 16. BemMovel
-    bem_movel_marca = Column(String)
-    bem_movel_modelo = Column(String)
-    bem_movel_alienado = Column(String)
+    # 16. BemMovel — JSONB: lista com até 3 bens. Ex: [{"marca": "X", "modelo": "Y", "alienado": "Sim"}]
+    bens_moveis = Column(JSONB, default=list)
 
-    # 17. PlantelAnimal
-    animal_especie = Column(String)
-    animal_numero = Column(Integer)
-    animal_consumo_diario = Column(Float)
-    animal_consumo_mensal = Column(Float)
+    # 17. PlantelAnimal — JSONB: lista com até 3 plantéis. Ex: [{"especie": "X", "numero": 10, "consumo_diario": 5.0, "consumo_mensal": 150.0}]
+    planteis_animais = Column(JSONB, default=list)
 
     # 18. Supervisores
     supervisor_codigo_insumo = Column(String)
