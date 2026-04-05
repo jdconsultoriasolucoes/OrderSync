@@ -256,7 +256,16 @@
 
             <div>
               <label>Indicação do Cliente:</label>
-              <div id="container-indicacoes" style="display:flex; flex-direction:column; gap:6px;"></div>
+              <style>
+                /* Container de indicações em 2 colunas */
+                #container-indicacoes {
+                  display: grid !important;
+                  grid-template-columns: 1fr 1fr;
+                  gap: 10px;
+                  margin-top: 20px;
+                }
+              </style>
+              <div id="container-indicacoes"></div>
               <button type="button" class="btn-add-item" onclick="adicionarItem('indicacoes', 5)" id="btn-add-indicacoes">
                 + Adicionar Indicação
               </button>
@@ -1196,10 +1205,11 @@
             ]
           },
           bens_moveis: {
-            gridClass: 'form-grid-3col',
+            gridClass: 'form-grid-4col',
             fields: [
               { key: 'marca',    label: 'Marca',    type: 'text' },
               { key: 'modelo',   label: 'Modelo',   type: 'text' },
+              { key: 'valor',    label: 'Valor (R$)', type: 'number' },
               { key: 'alienado', label: 'Alienado', type: 'select', options: ['', 'Sim', 'Não'] }
             ]
           },
@@ -1321,10 +1331,17 @@
           const btnAdd = document.getElementById(`btn-add-${secao}`);
           if (!container) return;
           container.innerHTML = '';
-          (dados || []).forEach((item, i) => {
-            const blocoData = (secao === 'indicacoes') ? { valor: item } : item;
-            container.appendChild(criarBlocoItem(secao, i, blocoData));
-          });
+          
+          if (!dados || dados.length === 0) {
+            // Se não houver dados, abre 1 bloco vazio por padrão
+            adicionarItem(secao, limite);
+          } else {
+            dados.forEach((item, i) => {
+              const blocoData = (secao === 'indicacoes') ? { valor: item } : item;
+              container.appendChild(criarBlocoItem(secao, i, blocoData));
+            });
+          }
+
           if (btnAdd) {
             btnAdd.style.opacity = container.querySelectorAll('.item-dinamico-bloco').length >= limite ? '0.5' : '1';
           }
