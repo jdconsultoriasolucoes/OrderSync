@@ -248,6 +248,8 @@ class ReferenciaBancaria(BaseModel):
     banco: Optional[str] = None
     agencia: Optional[str] = None
     conta_corrente: Optional[str] = None
+    gerente: Optional[str] = None
+    contato_gerente: Optional[str] = None
 
 class BemImovel(BaseModel):
     imovel: Optional[str] = None

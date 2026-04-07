@@ -116,7 +116,7 @@ class ClienteModelV2(Base):
     # 13. ReferenciaComercial — JSONB: lista com até 3 refs. Ex: [{"empresa": "X", "cidade": "Y", "telefone": "Z", "contato": "W"}]
     referencias_comerciais = Column(JSONB, default=list)
 
-    # 14. ReferenciaBancaria — JSONB: lista com até 3 refs. Ex: [{"banco": "X", "agencia": "Y", "conta_corrente": "Z"}]
+    # 14. ReferenciaBancaria — JSONB: lista com até 3 refs. Ex: [{"banco": "X", "agencia": "Y", "conta_corrente": "Z", "gerente": "W", "contato_gerente": "K"}]
     referencias_bancarias = Column(JSONB, default=list)
 
     # 15. BemImovel — JSONB: lista com até 3 bens. Ex: [{"imovel": "X", "localizacao": "Y", "area": "Z", "valor": 100.0, "hipotecado": "Sim"}]
