@@ -690,11 +690,18 @@
         <div class="tab-content" id="elaboracao" style="display: none;">
           <h2 class="subtitulo">Dados da Elaboração do Cadastro</h2>
           <div class="form-grid-2col">
-            <div><label for="classificacao_ElaboracaoCadastro">Classificação:</label><input type="text"
-                id="classificacao_ElaboracaoCadastro" name="classificacao_ElaboracaoCadastro" /></div>
-            <div><label for="tipo_venda_prazo_ou_vista_ElaboracaoCadastro">Tipo de Venda (a prazo / à
-                vista):</label><input type="text" id="tipo_venda_prazo_ou_vista_ElaboracaoCadastro"
-                name="tipo_venda_prazo_ou_vista_ElaboracaoCadastro" /></div>
+            <div>
+              <label for="classificacao_ElaboracaoCadastro">Tipo de Cliente:</label>
+              <select id="classificacao_ElaboracaoCadastro" name="classificacao_ElaboracaoCadastro">
+                <option value="">Selecione</option>
+              </select>
+            </div>
+            <div>
+              <label for="tipo_venda_prazo_ou_vista_ElaboracaoCadastro">Tipo de Venda:</label>
+              <select id="tipo_venda_prazo_ou_vista_ElaboracaoCadastro" name="tipo_venda_prazo_ou_vista_ElaboracaoCadastro">
+                <option value="">Selecione</option>
+              </select>
+            </div>
             <div><label for="limite_credito_ElaboracaoCadastro">Limite de Crédito (Complementar):</label><input
                 type="number" step="0.01" id="limite_credito_ElaboracaoCadastro"
                 name="limite_credito_ElaboracaoCadastro" />
@@ -2052,6 +2059,8 @@
           preencherSelect("tipo_venda", "tipo_venda");
           preencherSelect("tipo_compra", "tipo_compra");
           preencherSelect("ramo_de_atividade", "ramo_de_atividade");
+          preencherSelect("tipo_venda", "tipo_venda_prazo_ou_vista_ElaboracaoCadastro");
+          preencherSelect("tipos_cliente", "classificacao_ElaboracaoCadastro");
           carregarVendedores();
           carregarOpcoesReferencia();
           carregarOpcoesPlantel();
