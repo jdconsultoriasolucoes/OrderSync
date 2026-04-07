@@ -116,23 +116,27 @@ def gerar_excel_cliente_supra(cliente) -> bytes:
         ws1["I26"] = f"Estado:   {_s(cliente.cobranca_estado)}"
 
         # --- Referências e Bens ---
-        ws1["A34"] = _s(cliente.ref_bancaria_banco)
-        ws1["C34"] = _s(cliente.ref_bancaria_agencia)
-        ws1["E34"] = _s(cliente.ref_bancaria_conta)
+        ref_b = cliente.referencias_bancarias[0] if cliente.referencias_bancarias else {}
+        ws1["A34"] = _s(ref_b.get("banco"))
+        ws1["C34"] = _s(ref_b.get("agencia"))
+        ws1["E34"] = _s(ref_b.get("conta_corrente"))
 
-        ws1["A40"] = _s(cliente.ref_comercial_empresa)
-        ws1["E40"] = _s(cliente.ref_comercial_cidade)
-        ws1["G40"] = _s(cliente.ref_comercial_telefone)
-        ws1["I40"] = _s(cliente.ref_comercial_contato)
+        ref_c = cliente.referencias_comerciais[0] if cliente.referencias_comerciais else {}
+        ws1["A40"] = _s(ref_c.get("empresa"))
+        ws1["E40"] = _s(ref_c.get("cidade"))
+        ws1["G40"] = _s(ref_c.get("telefone"))
+        ws1["I40"] = _s(ref_c.get("contato"))
 
-        ws1["A46"] = _s(cliente.bem_imovel_imovel)
-        ws1["H46"] = cliente.bem_imovel_valor or 0
-        ws1["J46"] = _s(cliente.bem_imovel_hipotecado)
+        bem_i = cliente.bens_imoveis[0] if cliente.bens_imoveis else {}
+        ws1["A46"] = _s(bem_i.get("imovel"))
+        ws1["H46"] = bem_i.get("valor") or 0
+        ws1["J46"] = _s(bem_i.get("hipotecado"))
 
         # --- Plantel ---
-        ws1["A51"] = _s(cliente.animal_especie)
-        ws1["F51"] = cliente.animal_numero or 0
-        ws1["H51"] = cliente.animal_consumo_diario or 0
+        plantel = cliente.planteis_animais[0] if cliente.planteis_animais else {}
+        ws1["A51"] = _s(plantel.get("especie"))
+        ws1["F51"] = plantel.get("numero_de_animais") or 0
+        ws1["H51"] = plantel.get("consumo_diario") or 0
 
         # --- Local e Data (Auditoria de Geração) ---
         cidade_fat = _s(cliente.faturamento_municipio) or "SÃO ROQUE"
