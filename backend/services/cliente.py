@@ -289,7 +289,16 @@ def _nested_to_flat(data: dict) -> ClienteModelV2:
     model.referencias_bancarias = data.get("referencias_bancarias") or []
     model.bens_imoveis = data.get("bens_imoveis") or []
     model.bens_moveis = data.get("bens_moveis") or []
-    model.planteis_animais = data.get("planteis_animais") or []
+    
+    # Auto-calcula consumo_mensal baseado no consumo_diario
+    plantel = data.get("planteis_animais") or []
+    for p in plantel:
+        try:
+            diario = float(str(p.get("consumo_diario", "0")).replace(",", "."))
+            p["consumo_mensal"] = str(diario * 30)
+        except (ValueError, TypeError):
+            p["consumo_mensal"] = "0"
+    model.planteis_animais = plantel
 
     # Indicações do cliente (JSONB - lista de strings)
     model.cadastro_indicacao_cliente = data.get("indicacoes_clientes") or []

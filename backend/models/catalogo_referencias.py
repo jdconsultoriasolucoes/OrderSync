@@ -45,3 +45,10 @@ class SupervisoresModel(Base):
     tipo = Column("tipo", String)
     telefone = Column("telefone", String)
     email = Column("e-mail", String)  # Note o mapeamento da coluna 'e-mail'
+
+class PlantelAnimalModel(Base):
+    __tablename__ = "tb_plantel_animais"
+
+    id = Column("id", Integer, primary_key=True, index=True, autoincrement=True)
+    plantel_animais = Column("plantel_animais", String)
+

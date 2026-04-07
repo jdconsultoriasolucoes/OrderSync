@@ -130,6 +130,25 @@ def exportar_supra(
         raise HTTPException(status_code=500, detail="Erro interno inesperado no servidor.")
 
 
+@router.get("/lookup")
+def lookup_cliente(query: str):
+    """Retorna clientes para o componente de Lookup."""
+    try:
+        with SessionLocal() as db:
+            # Busca clientes ativos e inativos
+            rows = db.execute(text("""
+                SELECT id, cadastro_codigo_da_empresa, cadastro_nome_cliente, cadastro_nome_fantasia
+                FROM public.t_cadastro_cliente_v2
+                WHERE cadastro_nome_cliente ILIKE :q
+                   OR cadastro_nome_fantasia ILIKE :q
+                   OR cadastro_codigo_da_empresa ILIKE :q
+                LIMIT 20
+            """), {"q": f"%{query}%"}).mappings().all()
+        return [{"codigo": r["cadastro_codigo_da_empresa"], "nome_empresarial": r["cadastro_nome_cliente"], "nome_fantasia": r["cadastro_nome_fantasia"]} for r in rows]
+    except Exception as e:
+        logger.error(f"Erro no lookup de cliente: {e}")
+        raise HTTPException(status_code=500, detail="Erro ao buscar clientes")
+
 @router.get("/{codigo_da_empresa}", response_model=ClienteCompleto)
 def get_cliente(codigo_da_empresa: str):
     cliente = obter_cliente(codigo_da_empresa)

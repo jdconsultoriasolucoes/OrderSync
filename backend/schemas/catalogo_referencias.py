@@ -95,3 +95,19 @@ class SupervisoresResponse(SupervisoresBase):
 
     class Config:
         from_attributes = True
+
+# Plantel Animal
+class PlantelAnimalBase(BaseModel):
+    plantel_animais: Optional[str] = None
+
+class PlantelAnimalCreate(PlantelAnimalBase):
+    pass
+
+class PlantelAnimalUpdate(PlantelAnimalBase):
+    pass
+
+class PlantelAnimalResponse(PlantelAnimalBase):
+    id: int
+
+    class Config:
+        from_attributes = True

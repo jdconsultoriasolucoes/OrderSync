@@ -308,6 +308,7 @@ const CONFIG = {
             { key: 'codigo', label: 'Cód.' },
             { key: 'empresa', label: 'Empresa' },
             { key: 'cidade', label: 'Cidade' },
+            { key: 'telefone', label: 'Telefone' },
             { key: 'contato', label: 'Contato' }
         ],
         modalId: 'modal-referencias',

@@ -12,7 +12,8 @@ from models.catalogo_referencias import (
     CidadeSupervisorModel,
     MunicipioRotaModel,
     ReferenciasModel,
-    SupervisoresModel
+    SupervisoresModel,
+    PlantelAnimalModel
 )
 
 # Schemas
@@ -21,7 +22,8 @@ from schemas.catalogo_referencias import (
     CidadeSupervisorCreate, CidadeSupervisorUpdate, CidadeSupervisorResponse,
     MunicipioRotaCreate, MunicipioRotaUpdate, MunicipioRotaResponse,
     ReferenciasCreate, ReferenciasUpdate, ReferenciasResponse,
-    SupervisoresCreate, SupervisoresUpdate, SupervisoresResponse
+    SupervisoresCreate, SupervisoresUpdate, SupervisoresResponse,
+    PlantelAnimalCreate, PlantelAnimalUpdate, PlantelAnimalResponse
 )
 
 router = APIRouter(
@@ -122,8 +124,9 @@ def buscar_supervisor_por_municipio(municipio: str = Query(..., min_length=1), d
     Usado para preenchimento automático na tela de cadastro do cliente.
     """
     # Comparar lowercase ignorando acentos (forma simplificada usando ilike)
+    # Ensure case-insensitive search by using lower() on both column and query
     item = db.query(CidadeSupervisorModel).filter(
-        CidadeSupervisorModel.cidades.ilike(f"%{municipio}%")
+        func.lower(CidadeSupervisorModel.cidades).like(f"%{municipio.lower()}%")
     ).first()
     
     if not item:
@@ -209,3 +212,23 @@ def update_supervisores(item_id: int, item: SupervisoresUpdate, db: Session = De
 def delete_supervisores(item_id: int, db: Session = Depends(get_db)):
     return delete_item(db, SupervisoresModel, "id", item_id)
 
+
+# ==========================================================
+# 6. PLANTEL ANIMAIS
+# ==========================================================
+
+@router.get("/plantel-animais", response_model=List[PlantelAnimalResponse])
+def get_plantel_animais(db: Session = Depends(get_db)):
+    return db.query(PlantelAnimalModel).order_by(PlantelAnimalModel.id).all()
+
+@router.post("/plantel-animais", response_model=PlantelAnimalResponse)
+def create_plantel_animais(item: PlantelAnimalCreate, db: Session = Depends(get_db)):
+    return create_item(db, PlantelAnimalModel, item)
+
+@router.put("/plantel-animais/{item_id}", response_model=PlantelAnimalResponse)
+def update_plantel_animais(item_id: int, item: PlantelAnimalUpdate, db: Session = Depends(get_db)):
+    return update_item(db, PlantelAnimalModel, "id", item_id, item)
+
+@router.delete("/plantel-animais/{item_id}")
+def delete_plantel_animais(item_id: int, db: Session = Depends(get_db)):
+    return delete_item(db, PlantelAnimalModel, "id", item_id)

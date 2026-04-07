@@ -12,6 +12,30 @@
   <!-- Design System -->
   <link rel="stylesheet" href="../design-system.css">
   <link rel="stylesheet" href="cliente.css">
+  <style>
+      .lookup-results {
+          position: absolute;
+          top: 100%;
+          left: 0;
+          right: 0;
+          background: #fff;
+          border: 1px solid var(--os-border);
+          border-top: none;
+          z-index: 50;
+          max-height: 200px;
+          overflow-y: auto;
+          box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+      }
+      .lookup-item {
+          padding: 8px 12px;
+          cursor: pointer;
+          border-bottom: 1px solid #f1f5f9;
+          font-size: 13px;
+      }
+      .lookup-item:hover {
+          background-color: #f8fafc;
+      }
+  </style>
 
   <!-- Fonts -->
   <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -1195,17 +1219,17 @@
           grupos_economicos: {
             gridClass: 'form-grid-2col',
             fields: [
-              { key: 'codigo', label: 'Código', type: 'text' },
-              { key: 'nome',   label: 'Nome Empresarial', type: 'text' }
+              { key: 'codigo', label: 'Código Cliente (Buscar)', type: 'lookup_cliente' },
+              { key: 'nome',   label: 'Nome Empresarial', type: 'text', attributes: { readonly: true } }
             ]
           },
           referencias_comerciais: {
             gridClass: 'form-grid-2col',
             fields: [
-              { key: 'empresa',  label: 'Empresa',  type: 'text' },
-              { key: 'cidade',   label: 'Cidade',   type: 'text' },
-              { key: 'telefone', label: 'Telefone', type: 'text' },
-              { key: 'contato',  label: 'Contato',  type: 'text' }
+              { key: 'empresa',  label: 'Empresa (Selecionar)',  type: 'select_referencia' },
+              { key: 'cidade',   label: 'Cidade',   type: 'text', attributes: { readonly: true } },
+              { key: 'telefone', label: 'Telefone', type: 'text', attributes: { readonly: true } },
+              { key: 'contato',  label: 'Contato',  type: 'text', attributes: { readonly: true } }
             ]
           },
           referencias_bancarias: {
@@ -1240,10 +1264,10 @@
           planteis_animais: {
             gridClass: 'form-grid-4col',
             fields: [
-              { key: 'especie',          label: 'Espécie',           type: 'text' },
+              { key: 'especie',          label: 'Espécie',           type: 'select_plantel' },
               { key: 'numero_de_animais',label: 'Número de Animais', type: 'number' },
-              { key: 'consumo_diario',   label: 'Consumo Diário (kg)',type: 'number' },
-              { key: 'consumo_mensal',   label: 'Consumo Mensal (kg)',type: 'number' }
+              { key: 'consumo_diario',   label: 'Consumo Diário (kg)',type: 'number', attributes: { oninput: "calcConsumoMensal(this)" } },
+              { key: 'consumo_mensal',   label: 'Consumo Mensal (kg)',type: 'number', attributes: { readonly: true } }
             ]
           }
         };
@@ -1262,11 +1286,14 @@
 
           campos.forEach(campo => {
             const wrapper = document.createElement('div');
+            wrapper.style.position = 'relative'; // For lookup
             const label = document.createElement('label');
             label.textContent = campo.label + ':';
             
             let input;
-            if (campo.type === 'select') {
+            let resultsDiv = null;
+            
+            if (campo.type === 'select' || campo.type === 'select_referencia' || campo.type === 'select_plantel') {
               input = document.createElement('select');
               (campo.options || []).forEach(optVal => {
                 const opt = document.createElement('option');
@@ -1274,10 +1301,37 @@
                 opt.textContent = optVal || '-- Selecione --';
                 input.appendChild(opt);
               });
+              
+              if (campo.type === 'select_referencia') {
+                input.classList.add('select-referencia');
+                input.onchange = function() { preencherDadosReferencia(this); };
+              } else if (campo.type === 'select_plantel') {
+                input.classList.add('select-plantel');
+              }
+            } else if (campo.type === 'lookup_cliente') {
+              input = document.createElement('input');
+              input.type = 'text';
+              input.placeholder = "Digite e aguarde...";
+              input.oninput = function() { buscarClienteLookup(this); };
+              input.onblur = function() { setTimeout(() => { if (resultsDiv) resultsDiv.style.display = 'none'; }, 200); };
+              
+              resultsDiv = document.createElement('div');
+              resultsDiv.className = 'lookup-results';
+              resultsDiv.style.display = 'none';
             } else {
               input = document.createElement('input');
               input.type = campo.type || 'text';
               if (campo.type === 'number') input.step = '0.01';
+            }
+            
+            if (campo.attributes) {
+               Object.keys(campo.attributes).forEach(attr => {
+                  if (attr.startsWith('on')) {
+                     input.setAttribute(attr, campo.attributes[attr]);
+                  } else {
+                     input[attr] = campo.attributes[attr];
+                  }
+               });
             }
             
             input.dataset.key = campo.key;
@@ -1285,6 +1339,7 @@
             
             wrapper.appendChild(label);
             wrapper.appendChild(input);
+            if (resultsDiv) wrapper.appendChild(resultsDiv);
             grid.appendChild(wrapper);
           });
 
@@ -1590,6 +1645,10 @@
             setVal('estado', data.state);
             // 'localizacao' is not provided by data directly (often used for complements or ref), leaving as is.
 
+            if (tipo === 'faturamento') {
+              buscarSupervisorPetEInsumos();
+            }
+
           } catch (error) {
             console.error("Erro ao buscar CEP:", error);
             alert("Erro ao buscar CEP. Verifique se está correto.");
@@ -1750,6 +1809,160 @@
           }
         }
 
+        // ==========================================
+        //  FUNÇÕES DE LOOKUP E INTEGRAÇÃO (NOVO)
+        // ==========================================
+
+        let lookupTimeout = null;
+        async function buscarClienteLookup(inputElement) {
+            const query = inputElement.value.trim();
+            const wrapper = inputElement.parentElement;
+            const resultsDiv = wrapper.querySelector('.lookup-results');
+            if (!resultsDiv) return;
+
+            if (query.length < 2) {
+                resultsDiv.style.display = 'none';
+                return;
+            }
+
+            if(lookupTimeout) clearTimeout(lookupTimeout);
+            
+            lookupTimeout = setTimeout(async () => {
+                const api = window.API_BASE || "http://127.0.0.1:8000";
+                const token = window.Auth ? window.Auth.getToken() : localStorage.getItem('ordersync_token');
+                if (!token) return;
+
+                try {
+                    const res = await axios.get(`${api}/cliente/lookup?query=${encodeURIComponent(query)}`, {
+                        headers: { 'Authorization': `Bearer ${token}` }
+                    });
+                    
+                    const clientes = res.data;
+                    resultsDiv.innerHTML = '';
+                    
+                    if (clientes.length === 0) {
+                        resultsDiv.innerHTML = '<div class="lookup-item" style="color: #6b7280;">Nenhum cliente encontrado</div>';
+                    } else {
+                        clientes.forEach(c => {
+                            const itemDiv = document.createElement('div');
+                            itemDiv.className = 'lookup-item';
+                            itemDiv.textContent = `${c.codigo} - ${c.nome_empresarial}`;
+                            
+                            // Ao clicar no resultado
+                            itemDiv.onmousedown = function (e) {
+                                e.preventDefault(); // Evita que o input perca o foco antes do clique
+                                inputElement.value = c.codigo;
+                                
+                                // Preencher o campo de 'nome_empresarial' que está na mesma row (mesmo dataset.index)
+                                const bloco = inputElement.closest('.item-dinamico-bloco');
+                                if (bloco) {
+                                    const nomeInput = bloco.querySelector('input[data-key="nome"]');
+                                    if (nomeInput) nomeInput.value = c.nome_empresarial;
+                                }
+                                resultsDiv.style.display = 'none';
+                            };
+                            
+                            resultsDiv.appendChild(itemDiv);
+                        });
+                    }
+                    resultsDiv.style.display = 'block';
+                } catch (error) {
+                    console.error("Erro na busca do lookup:", error);
+                }
+            }, 500); // 500ms debounce
+        }
+
+        async function carregarOpcoesReferencia() {
+            const api = window.API_BASE || "http://127.0.0.1:8000";
+            const token = window.Auth ? window.Auth.getToken() : localStorage.getItem('ordersync_token');
+            if (!token) return;
+            try {
+                const res = await axios.get(`${api}/catalogo/referencias`, {
+                    headers: { 'Authorization': `Bearer ${token}` }
+                });
+                window._listaReferencias = res.data; // Armazenar para uso ao preencher
+                
+                document.querySelectorAll('.select-referencia').forEach(select => {
+                    const valAtual = select.value;
+                    select.innerHTML = '<option value="">-- Selecione a Empresa --</option>';
+                    res.data.forEach(ref => {
+                        const opt = document.createElement('option');
+                        opt.value = ref.empresa;
+                        opt.textContent = ref.empresa;
+                        select.appendChild(opt);
+                    });
+                    if (valAtual) select.value = valAtual;
+                });
+            } catch (err) {
+                console.error("Erro ao carregar lista de referências:", err);
+            }
+        }
+
+        function preencherDadosReferencia(selectElement) {
+            const empresa = selectElement.value;
+            const bloco = selectElement.closest('.item-dinamico-bloco');
+            if (!bloco) return;
+            
+            const campoCidade = bloco.querySelector('input[data-key="cidade"]');
+            const campoTelefone = bloco.querySelector('input[data-key="telefone"]');
+            const campoContato = bloco.querySelector('input[data-key="contato"]');
+            
+            if (empresa && window._listaReferencias) {
+                const ref = window._listaReferencias.find(r => r.empresa === empresa);
+                if (ref) {
+                    if (campoCidade) campoCidade.value = ref.cidade || '';
+                    if (campoTelefone) campoTelefone.value = ref.telefone || '';
+                    if (campoContato) campoContato.value = ref.contato || '';
+                    return;
+                }
+            }
+            
+            // Limpa se não achar
+            if (campoCidade) campoCidade.value = '';
+            if (campoTelefone) campoTelefone.value = '';
+            if (campoContato) campoContato.value = '';
+        }
+        
+        async function carregarOpcoesPlantel() {
+            const api = window.API_BASE || "http://127.0.0.1:8000";
+            const token = window.Auth ? window.Auth.getToken() : localStorage.getItem('ordersync_token');
+            if (!token) return;
+            try {
+                const res = await axios.get(`${api}/catalogo/plantel-animais`, {
+                    headers: { 'Authorization': `Bearer ${token}` }
+                });
+                document.querySelectorAll('.select-plantel').forEach(select => {
+                    const valAtual = select.value;
+                    select.innerHTML = '<option value="">-- Selecione --</option>';
+                    res.data.forEach(p => {
+                        const opt = document.createElement('option');
+                        opt.value = p.plantel_animais;
+                        opt.textContent = p.plantel_animais;
+                        select.appendChild(opt);
+                    });
+                    if (valAtual) select.value = valAtual;
+                });
+            } catch (err) {
+                console.error("Erro ao carregar lista de plantel_animais:", err);
+            }
+        }
+
+        function calcConsumoMensal(element) {
+            const bloco = element.closest('.item-dinamico-bloco');
+            if (!bloco) return;
+            const campoMensal = bloco.querySelector('input[data-key="consumo_mensal"]');
+            if (!campoMensal) return;
+            
+            const diarioStr = element.value.replace(',', '.');
+            const diario = parseFloat(diarioStr);
+            
+            if (!isNaN(diario)) {
+                campoMensal.value = (diario * 30).toFixed(2);
+            } else {
+                campoMensal.value = '';
+            }
+        }
+
         // Disponibiliza para o modal chamar
         window.preencherFormulario = preencherFormularioCliente;
         window.buscarSupervisorPetEInsumos = buscarSupervisorPetEInsumos;
@@ -1825,6 +2038,8 @@
           preencherSelect("tipo_compra", "tipo_compra");
           preencherSelect("ramo_de_atividade", "ramo_de_atividade");
           carregarVendedores();
+          carregarOpcoesReferencia();
+          carregarOpcoesPlantel();
 
           setViewState('INITIAL');
         };
