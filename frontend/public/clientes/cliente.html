@@ -1295,10 +1295,24 @@
             
             if (campo.type === 'select' || campo.type === 'select_referencia' || campo.type === 'select_plantel') {
               input = document.createElement('select');
-              (campo.options || []).forEach(optVal => {
+              
+              let listOptions = campo.options || [];
+              if (campo.type === 'select_referencia' && window._listaReferencias) {
+                  listOptions = window._listaReferencias.map(r => r.empresa);
+              } else if (campo.type === 'select_plantel' && window._listaPlantel) {
+                  listOptions = window._listaPlantel.map(p => p.plantel_animais);
+              }
+              
+              const defaultOpt = document.createElement('option');
+              defaultOpt.value = '';
+              defaultOpt.textContent = '-- Selecione --';
+              input.appendChild(defaultOpt);
+
+              listOptions.forEach(optVal => {
+                if(!optVal) return;
                 const opt = document.createElement('option');
                 opt.value = optVal;
-                opt.textContent = optVal || '-- Selecione --';
+                opt.textContent = optVal;
                 input.appendChild(opt);
               });
               
@@ -1931,6 +1945,7 @@
                 const res = await axios.get(`${api}/catalogo/plantel-animais`, {
                     headers: { 'Authorization': `Bearer ${token}` }
                 });
+                window._listaPlantel = res.data;
                 document.querySelectorAll('.select-plantel').forEach(select => {
                     const valAtual = select.value;
                     select.innerHTML = '<option value="">-- Selecione --</option>';

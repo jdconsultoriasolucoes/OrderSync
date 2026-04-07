@@ -354,6 +354,23 @@ const CONFIG = {
             document.getElementById('sup-telefone').value = '';
             document.getElementById('sup-email').value = '';
         }
+    },
+    plantel_animais: {
+        apiPath: '/catalogo/plantel-animais',
+        pk: 'id',
+        cols: [
+            { key: 'id', label: 'ID' },
+            { key: 'plantel_animais', label: 'Espécie' }
+        ],
+        modalId: 'modal-plantel',
+        fillForm: (item) => {
+            document.getElementById('plan-id').value = item.id;
+            document.getElementById('plan-nome').value = item.plantel_animais || '';
+        },
+        clearForm: () => {
+            document.getElementById('plan-id').value = '';
+            document.getElementById('plan-nome').value = '';
+        }
     }
 };
 
@@ -731,6 +748,15 @@ async function saveSupervisores(e) {
         tipo: document.getElementById('sup-tipo').value || null,
         telefone: document.getElementById('sup-telefone').value || null,
         email: document.getElementById('sup-email').value || null
+    };
+    await saveGeneric(payload, !!currentItem, id);
+}
+
+async function savePlantel(e) {
+    e.preventDefault();
+    const id = document.getElementById('plan-id').value;
+    const payload = {
+        plantel_animais: document.getElementById('plan-nome').value || null
     };
     await saveGeneric(payload, !!currentItem, id);
 }

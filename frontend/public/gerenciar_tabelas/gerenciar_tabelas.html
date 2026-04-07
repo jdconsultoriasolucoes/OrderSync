@@ -411,6 +411,7 @@
                 <button class="module-nav-btn" onclick="selectModule('municipio_rota')">Município Rota</button>
                 <button class="module-nav-btn" onclick="selectModule('referencias')">Referências</button>
                 <button class="module-nav-btn" onclick="selectModule('supervisores')">Supervisores</button>
+                <button class="module-nav-btn" onclick="selectModule('plantel_animais')">Plantel de Animais</button>
             </nav>
 
             <div class="toolbar">
@@ -630,6 +631,21 @@
                 <input id="sup-telefone" type="text" />
                 <label>E-mail</label>
                 <input id="sup-email" type="email" />
+                <div class="modal-footer">
+                    <button type="button" class="btn" onclick="closeModals()">Cancelar</button>
+                    <button type="submit" class="btn btn-primary">Salvar</button>
+                </div>
+            </form>
+        </div>
+    </div>
+    <!-- ===== Modal: Plantel Animais ===== -->
+    <div id="modal-plantel" class="custom-modal">
+        <div class="modal-dialog">
+            <h3 id="modal-title-plantel">Novo Plantel</h3>
+            <form id="form-plantel" onsubmit="savePlantel(event)">
+                <input type="hidden" id="plan-id" />
+                <label>Espécie (Plantel)</label>
+                <input id="plan-nome" type="text" placeholder="Nome do animal" required />
                 <div class="modal-footer">
                     <button type="button" class="btn" onclick="closeModals()">Cancelar</button>
                     <button type="submit" class="btn btn-primary">Salvar</button>
