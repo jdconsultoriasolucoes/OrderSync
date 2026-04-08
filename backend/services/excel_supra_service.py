@@ -115,28 +115,42 @@ def gerar_excel_cliente_supra(cliente) -> bytes:
         ws1["F26"] = f"Cidade:   {_s(cliente.cobranca_municipio)}"
         ws1["I26"] = f"Estado:   {_s(cliente.cobranca_estado)}"
 
+        # --- C/Vendas e P/Cobranças ---
+        ws1["A29"] = f"C/Vendas:  {_s(getattr(cliente, 'compras_nome_responsavel', ''))}"
+        ws1["F29"] = f"Telefones:  {_s(getattr(cliente, 'compras_celular_responsavel', ''))}"
+        ws1["A30"] = f"P/Cobranças:  {_s(getattr(cliente, 'cobranca_resp_nome', ''))}"
+        ws1["F30"] = f"Telefones:  {_s(getattr(cliente, 'cobranca_resp_celular', ''))}"
+
         # --- Referências e Bens ---
-        ref_b = cliente.referencias_bancarias[0] if cliente.referencias_bancarias else {}
-        ws1["A34"] = _s(ref_b.get("banco"))
-        ws1["C34"] = _s(ref_b.get("agencia"))
-        ws1["E34"] = _s(ref_b.get("conta_corrente"))
+        if cliente.referencias_bancarias:
+            for i, ref_b in enumerate(cliente.referencias_bancarias[:4]):
+                row = 34 + i
+                ws1[f"A{row}"] = _s(ref_b.get("banco"))
+                ws1[f"C{row}"] = _s(ref_b.get("agencia"))
+                ws1[f"E{row}"] = _s(ref_b.get("conta_corrente"))
 
-        ref_c = cliente.referencias_comerciais[0] if cliente.referencias_comerciais else {}
-        ws1["A40"] = _s(ref_c.get("empresa"))
-        ws1["E40"] = _s(ref_c.get("cidade"))
-        ws1["G40"] = _s(ref_c.get("telefone"))
-        ws1["I40"] = _s(ref_c.get("contato"))
+        if cliente.referencias_comerciais:
+            for i, ref_c in enumerate(cliente.referencias_comerciais[:4]):
+                row = 40 + i
+                ws1[f"A{row}"] = _s(ref_c.get("empresa"))
+                ws1[f"E{row}"] = _s(ref_c.get("cidade"))
+                ws1[f"G{row}"] = _s(ref_c.get("telefone"))
+                ws1[f"I{row}"] = _s(ref_c.get("contato"))
 
-        bem_i = cliente.bens_imoveis[0] if cliente.bens_imoveis else {}
-        ws1["A46"] = _s(bem_i.get("imovel"))
-        ws1["H46"] = bem_i.get("valor") or 0
-        ws1["J46"] = _s(bem_i.get("hipotecado"))
+        if cliente.bens_imoveis:
+            for i, bem_i in enumerate(cliente.bens_imoveis[:3]):
+                row = 46 + i
+                ws1[f"A{row}"] = _s(bem_i.get("imovel"))
+                ws1[f"H{row}"] = bem_i.get("valor") or 0
+                ws1[f"J{row}"] = _s(bem_i.get("hipotecado"))
 
         # --- Plantel ---
-        plantel = cliente.planteis_animais[0] if cliente.planteis_animais else {}
-        ws1["A51"] = _s(plantel.get("especie"))
-        ws1["F51"] = plantel.get("numero_de_animais") or 0
-        ws1["H51"] = plantel.get("consumo_diario") or 0
+        if cliente.planteis_animais:
+            for i, plantel in enumerate(cliente.planteis_animais[:3]):
+                row = 51 + i
+                ws1[f"A{row}"] = _s(plantel.get("especie"))
+                ws1[f"F{row}"] = plantel.get("numero_de_animais") or 0
+                ws1[f"H{row}"] = plantel.get("consumo_diario") or 0
 
         # --- Local e Data (Auditoria de Geração) ---
         cidade_fat = _s(cliente.faturamento_municipio) or "SÃO ROQUE"

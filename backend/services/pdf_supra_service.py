@@ -178,6 +178,42 @@ def gerar_pdf_cliente_supra(cli) -> bytes:
         matrix[48][0] = "Bens Imóveis"
         matrix[54][0] = "Plantel de Animais"
 
+        # --- C/Vendas e P/Cobranças ---
+        matrix[28][0] = f"C/Vendas:  {_s(getattr(cli, 'compras_nome_responsavel', ''))}"
+        matrix[28][5] = f"Telefones:  {_s(getattr(cli, 'compras_celular_responsavel', ''))}"
+        matrix[29][0] = f"P/Cobranças:  {_s(getattr(cli, 'cobranca_resp_nome', ''))}"
+        matrix[29][5] = f"Telefones:  {_s(getattr(cli, 'cobranca_resp_celular', ''))}"
+
+        # --- Referências e Bens (Grid data) ---
+        if cli.referencias_bancarias:
+            for i, ref_b in enumerate(cli.referencias_bancarias[:4]):
+                r = 33 + i # Excel row 34
+                matrix[r][0] = _s(ref_b.get("banco"))
+                matrix[r][2] = _s(ref_b.get("agencia"))
+                matrix[r][4] = _s(ref_b.get("conta_corrente"))
+
+        if cli.referencias_comerciais:
+            for i, ref_c in enumerate(cli.referencias_comerciais[:4]):
+                r = 39 + i # Excel row 40
+                matrix[r][0] = _s(ref_c.get("empresa"))
+                matrix[r][4] = _s(ref_c.get("cidade"))
+                matrix[r][6] = _s(ref_c.get("telefone"))
+                matrix[r][8] = _s(ref_c.get("contato"))
+
+        if cli.bens_imoveis:
+            for i, bem_i in enumerate(cli.bens_imoveis[:3]):
+                r = 45 + i # Excel row 46
+                matrix[r][0] = _s(bem_i.get("imovel"))
+                matrix[r][7] = _s(bem_i.get("valor") or 0)
+                matrix[r][9] = _s(bem_i.get("hipotecado"))
+
+        if cli.planteis_animais:
+            for i, plantel in enumerate(cli.planteis_animais[:3]):
+                r = 50 + i # Excel row 51
+                matrix[r][0] = _s(plantel.get("especie"))
+                matrix[r][5] = _s(plantel.get("numero_de_animais") or 0)
+                matrix[r][7] = _s(plantel.get("consumo_diario") or 0)
+
         style_list = spans + [
             ('GRID', (0,5), (10,63), 0.5, colors.grey),
             ('FONTNAME', (0,0), (-1,-1), 'Helvetica'),
