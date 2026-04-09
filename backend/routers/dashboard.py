@@ -480,11 +480,34 @@ def get_dashboard_kpis(
     """)
     ticket_medio = db.execute(q_ticket, params).scalar() or 0
 
+    # 4. Clientes Sem Código
+    q_clientes_sem_codigo = text("""
+        SELECT COUNT(id) 
+        FROM public.t_cadastro_cliente_v2 
+        WHERE cadastro_codigo_da_empresa IS NULL OR cadastro_codigo_da_empresa = ''
+    """)
+    clientes_sem_codigo = db.execute(q_clientes_sem_codigo).scalar() or 0
+
     return {
         "faturamento_mes": float(faturamento),
         "pedidos_pendentes": int(pendentes),
-        "ticket_medio": float(ticket_medio)
+        "ticket_medio": float(ticket_medio),
+        "clientes_sem_codigo": int(clientes_sem_codigo)
     }
+
+@router.get("/clientes_sem_codigo")
+def get_clientes_sem_codigo(
+    db: Session = Depends(get_db),
+    current_user: UsuarioModel = Depends(get_current_user)
+):
+    q = text("""
+        SELECT id, cadastro_nome_cliente, cadastro_cnpj, cadastro_cpf
+        FROM public.t_cadastro_cliente_v2
+        WHERE cadastro_codigo_da_empresa IS NULL OR cadastro_codigo_da_empresa = ''
+        ORDER BY id DESC
+    """)
+    rows = db.execute(q).mappings().all()
+    return {"clientes": [dict(r) for r in rows]}
 
 @router.get("/produtos")
 def get_dashboard_produtos(

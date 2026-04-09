@@ -72,6 +72,7 @@ async function carregarKPIs() {
         const elFaturamento = document.getElementById("kpi-faturamento");
         const elPedidosPendentes = document.getElementById("kpi-pedidos-pendentes");
         const elTicketMedio = document.getElementById("kpi-ticket-medio");
+        const elClientesSemCodigo = document.getElementById("kpi-clientes-sem-codigo");
 
         // Formatador BRL
         const formatter = new Intl.NumberFormat('pt-BR', {
@@ -82,6 +83,7 @@ async function carregarKPIs() {
         if (elFaturamento) elFaturamento.innerText = formatter.format(data.faturamento_mes || 0);
         if (elPedidosPendentes) elPedidosPendentes.innerText = data.pedidos_pendentes || 0;
         if (elTicketMedio) elTicketMedio.innerText = formatter.format(data.ticket_medio || 0);
+        if (elClientesSemCodigo) elClientesSemCodigo.innerText = data.clientes_sem_codigo || 0;
 
     } catch (error) {
         console.error("Erro ao buscar KPIs do Dashboard:", error);
