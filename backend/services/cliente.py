@@ -356,19 +356,24 @@ def criar_cliente(cliente_data: dict) -> dict:
         condicoes = []
         _codigo = novo_cliente.cadastro_codigo_da_empresa
         _cnpj = novo_cliente.cadastro_cnpj
+        _cpf = novo_cliente.cadastro_cpf
         
         if _codigo and str(_codigo).strip():
             condicoes.append(ClienteModelV2.cadastro_codigo_da_empresa == _codigo)
         if _cnpj and str(_cnpj).strip():
             condicoes.append(ClienteModelV2.cadastro_cnpj == _cnpj)
+        if _cpf and str(_cpf).strip():
+            condicoes.append(ClienteModelV2.cadastro_cpf == _cpf)
             
         if condicoes:
             existente = db.query(ClienteModelV2).filter(or_(*condicoes)).first()
             if existente:
-                if existente.cadastro_codigo_da_empresa == _codigo:
+                if _codigo and existente.cadastro_codigo_da_empresa == _codigo:
                     raise BusinessRuleException(f"Já existe um cliente cadastrado com o código {_codigo}")
-                if existente.cadastro_cnpj == _cnpj:
+                if _cnpj and existente.cadastro_cnpj == _cnpj:
                     raise BusinessRuleException(f"Já existe um cliente cadastrado com o CNPJ {_cnpj}")
+                if _cpf and existente.cadastro_cpf == _cpf:
+                    raise BusinessRuleException(f"Já existe um cliente cadastrado com o CPF {_cpf}")
                     
         novo_cliente.data_criacao = datetime.now()
         db.add(novo_cliente)
@@ -398,11 +403,14 @@ def atualizar_cliente(cliente_id: int, cliente_data: dict) -> dict:
         condicoes = []
         _codigo = novos_dados.cadastro_codigo_da_empresa
         _cnpj = novos_dados.cadastro_cnpj
+        _cpf = novos_dados.cadastro_cpf
         
         if _codigo and str(_codigo).strip():
             condicoes.append(ClienteModelV2.cadastro_codigo_da_empresa == _codigo)
         if _cnpj and str(_cnpj).strip():
             condicoes.append(ClienteModelV2.cadastro_cnpj == _cnpj)
+        if _cpf and str(_cpf).strip():
+            condicoes.append(ClienteModelV2.cadastro_cpf == _cpf)
             
         if condicoes:
             existente = db.query(ClienteModelV2).filter(
@@ -411,10 +419,12 @@ def atualizar_cliente(cliente_id: int, cliente_data: dict) -> dict:
             ).first()
             
             if existente:
-                if existente.cadastro_codigo_da_empresa == _codigo:
+                if _codigo and existente.cadastro_codigo_da_empresa == _codigo:
                     raise BusinessRuleException(f"Já existe outro cliente usando o código {_codigo}")
-                if existente.cadastro_cnpj == _cnpj:
+                if _cnpj and existente.cadastro_cnpj == _cnpj:
                     raise BusinessRuleException(f"Já existe outro cliente usando o CNPJ {_cnpj}")
+                if _cpf and existente.cadastro_cpf == _cpf:
+                    raise BusinessRuleException(f"Já existe outro cliente usando o CPF {_cpf}")
         
         # Update attributes on the persistent object
         for col in ClienteModelV2.__table__.columns:

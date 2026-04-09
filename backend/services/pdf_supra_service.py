@@ -213,6 +213,7 @@ def gerar_pdf_cliente_supra(cli) -> bytes:
                 matrix[r][0] = _s(plantel.get("especie"))
                 matrix[r][5] = _s(plantel.get("numero_de_animais") or 0)
                 matrix[r][7] = _s(plantel.get("consumo_diario") or 0)
+                matrix[r][9] = _s(plantel.get("consumo_mensal") or 0)
 
         style_list = spans + [
             ('GRID', (0,5), (10,63), 0.5, colors.grey),

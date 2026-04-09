@@ -117,18 +117,35 @@ def delete_canal_venda(item_id: int, db: Session = Depends(get_db)): #, user: di
 def get_cidade_supervisores(db: Session = Depends(get_db)):
     return db.query(CidadeSupervisorModel).order_by(CidadeSupervisorModel.codigo).all()
 
+import unicodedata
+
+def _remove_accents(input_str: str) -> str:
+    if not input_str: return ""
+    nfkd_form = unicodedata.normalize('NFKD', input_str)
+    return "".join([c for c in nfkd_form if not unicodedata.combining(c)])
+
 @router.get("/cidade-supervisor/buscar")
 def buscar_supervisor_por_municipio(municipio: str = Query(..., min_length=1), db: Session = Depends(get_db)):
     """
     Busca nome e códigos de supervisor (Pet e Insumos) baseando-se no município.
     Usado para preenchimento automático na tela de cadastro do cliente.
     """
-    # Comparar lowercase ignorando acentos (forma simplificada usando ilike)
-    # Ensure case-insensitive search by using lower() on both column and query
+    # 1. Tenta a busca básica ignorando case (pode falhar por causa dos acentos)
     item = db.query(CidadeSupervisorModel).filter(
         func.lower(CidadeSupervisorModel.cidades).like(f"%{municipio.lower()}%")
     ).first()
     
+    # 2. Se falhar, busca na memória sem os acentos (Fallback)
+    if not item:
+        search_term = _remove_accents(municipio.lower())
+        todos = db.query(CidadeSupervisorModel).all()
+        for cidade_bd in todos:
+            if cidade_bd.cidades:
+                db_term = _remove_accents(cidade_bd.cidades.lower())
+                if search_term in db_term or db_term in search_term:
+                    item = cidade_bd
+                    break
+
     if not item:
         raise HTTPException(status_code=404, detail="Município não encontrado na tabela de supervisores.")
         

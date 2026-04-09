@@ -90,13 +90,23 @@ def gerar_excel_cliente_supra(cliente) -> bytes:
 
         # Lógica de Checkboxes (Tipo de Cliente)
         tipo = _s(cliente.cadastro_tipo_cliente).lower()
-        tipo_map = {
-            "revendedor": "C17", "atacado": "E18", "cli direto": "E17",
-            "pequeno": "G18", "redes": "G17", "pet shop": "I18",
-            "clínica": "I17", "lojista": "C18",
-        }
-        for key, coord in tipo_map.items():
-            if key in tipo:
+        import unicodedata
+        # Remover acentos caso existam na string do banco
+        tipo = ''.join(c for c in unicodedata.normalize('NFD', tipo) if unicodedata.category(c) != 'Mn')
+        
+        tipo_map = [
+            (["revendedor", "revenda"], "C17"),
+            (["atacado", "atacadista"], "E18"),
+            (["direto"], "E17"),
+            (["pequeno"], "G18"),
+            (["redes", "rede"], "G17"),
+            (["pet shop", "petshop", "pet"], "I18"),
+            (["clinica", "vet"], "I17"),
+            (["lojista", "loja"], "C18")
+        ]
+        
+        for chaves, coord in tipo_map:
+            if any(k in tipo for k in chaves):
                 orig = ws1[coord].value or ""
                 if "(XX)" not in str(orig):
                     ws1[coord] = f"{str(orig).split(':')[0]}:  (XX)"
@@ -151,6 +161,7 @@ def gerar_excel_cliente_supra(cliente) -> bytes:
                 ws1[f"A{row}"] = _s(plantel.get("especie"))
                 ws1[f"F{row}"] = plantel.get("numero_de_animais") or 0
                 ws1[f"H{row}"] = plantel.get("consumo_diario") or 0
+                ws1[f"J{row}"] = plantel.get("consumo_mensal") or 0
 
         # --- Local e Data (Auditoria de Geração) ---
         cidade_fat = _s(cliente.faturamento_municipio) or "SÃO ROQUE"

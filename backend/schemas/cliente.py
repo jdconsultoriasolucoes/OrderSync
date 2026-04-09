@@ -1,4 +1,4 @@
-from pydantic import BaseModel , Field #, field_validator, model_validator, FieldValidationInfo, model_validator
+from pydantic import BaseModel, Field, model_validator
 from typing import Optional, List
 from datetime import datetime
 
@@ -18,14 +18,14 @@ from datetime import datetime
 
 class CadastroCliente(BaseModel):
     id: int
-    codigo_da_empresa: Optional[str]
+    codigo_da_empresa: Optional[str] = None
     ativo: Optional[bool]
     tipo_pessoa: Optional[str]
     tipo_cliente: Optional[str]
     tipo_venda: Optional[str]
     tipo_compra: Optional[str]
     limite_credito: Optional[float]
-    nome_cliente: str
+    nome_cliente: str = Field(..., min_length=1, description="O nome do cliente não pode estar vazio")
     nome_fantasia: Optional[str]
     cnpj: Optional[str]
     inscricao_estadual: Optional[str]
@@ -49,12 +49,15 @@ class CadastroCliente(BaseModel):
 #            raise ValueError("CNPJ inválido")
 #        return v
     
-    # Validação cruzada: CPF ou CNPJ obrigatório conforme tipo
-#    @model_validator(mode="after")
-#    def validar_documento(self):
-#        if not validar_documento_por_tipo_pessoa(self.tipo_cliente, self.cpf, self.cnpj):
-#            raise ValueError("CPF ou CNPJ obrigatório conforme tipo de cliente")
-#        return self
+    @model_validator(mode="after")
+    def validar_documento(self):
+        v_cpf = self.cpf.strip() if self.cpf else ""
+        v_cnpj = self.cnpj.strip() if self.cnpj else ""
+        
+        if not v_cpf and not v_cnpj:
+            raise ValueError("Obrigatório preencher o CPF ou o CNPJ do cliente.")
+            
+        return self
 
 class ResponsavelCompras(BaseModel):
     nome_responsavel: Optional[str]
