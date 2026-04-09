@@ -350,6 +350,11 @@ def criar_cliente(cliente_data: dict) -> dict:
         # Validacao: Apenas CPF OU CNPJ, nunca os dois ou nenhum
         from core.exceptions import BusinessRuleException
         _c = cliente_data.get("cadastrocliente", {})
+        # Validacao: Nome Cliente Nao Pode Ser Vazio
+        _nome = str(_c.get("nome_cliente") or "").strip()
+        if not _nome:
+            raise BusinessRuleException("Obrigatório preencher o Nome do Cliente.")
+            
         _cpf = str(_c.get("cpf") or "").strip()
         _cnpj = str(_c.get("cnpj") or "").strip()
         if bool(_cpf) == bool(_cnpj):
@@ -399,6 +404,11 @@ def atualizar_cliente(cliente_id: int, cliente_data: dict) -> dict:
         # Validacao: Apenas CPF OU CNPJ, nunca os dois ou nenhum
         from core.exceptions import BusinessRuleException
         _c = cliente_data.get("cadastrocliente", {})
+        # Validacao: Nome Cliente Nao Pode Ser Vazio
+        _nome = str(_c.get("nome_cliente") or "").strip()
+        if not _nome:
+            raise BusinessRuleException("Obrigatório preencher o Nome do Cliente.")
+            
         _cpf_val = str(_c.get("cpf") or "").strip()
         _cnpj_val = str(_c.get("cnpj") or "").strip()
         if bool(_cpf_val) == bool(_cnpj_val):

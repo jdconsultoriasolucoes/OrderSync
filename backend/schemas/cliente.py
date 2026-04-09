@@ -25,7 +25,7 @@ class CadastroCliente(BaseModel):
     tipo_venda: Optional[str]
     tipo_compra: Optional[str]
     limite_credito: Optional[float]
-    nome_cliente: str = Field(..., min_length=1, description="O nome do cliente não pode estar vazio")
+    nome_cliente: Optional[str] = None
     nome_fantasia: Optional[str]
     cnpj: Optional[str]
     inscricao_estadual: Optional[str]
