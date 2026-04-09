@@ -1,4 +1,4 @@
-from pydantic import BaseModel, Field, model_validator
+from pydantic import BaseModel, Field
 from typing import Optional, List
 from datetime import datetime
 
@@ -46,18 +46,7 @@ class CadastroCliente(BaseModel):
 #    @field_validator("cnpj")
 #    def cnpj_valido(cls, v):
 #        if v and not validar_cnpj_valido(v):
-#            raise ValueError("CNPJ inválido")
-#        return v
-    
-    @model_validator(mode="after")
-    def validar_documento(self):
-        v_cpf = self.cpf.strip() if self.cpf else ""
-        v_cnpj = self.cnpj.strip() if self.cnpj else ""
-        
-        if not v_cpf and not v_cnpj:
-            raise ValueError("Obrigatório preencher o CPF ou o CNPJ do cliente.")
-            
-        return self
+
 
 class ResponsavelCompras(BaseModel):
     nome_responsavel: Optional[str]

@@ -347,10 +347,17 @@ def obter_cliente(cliente_id: int) -> dict:
 def criar_cliente(cliente_data: dict) -> dict:
     db = SessionLocal()
     try:
+        # Validacao: Apenas CPF OU CNPJ, nunca os dois ou nenhum
+        from core.exceptions import BusinessRuleException
+        _c = cliente_data.get("cadastrocliente", {})
+        _cpf = str(_c.get("cpf") or "").strip()
+        _cnpj = str(_c.get("cnpj") or "").strip()
+        if bool(_cpf) == bool(_cnpj):
+            raise BusinessRuleException("Obrigatório preencher apenas um documento: ou o CPF ou o CNPJ (nunca ambos e nem nenhum).")
+            
         novo_cliente = _nested_to_flat(cliente_data)
         
-        # Validacao de duplicidade (CNPJ e Codigo do Cliente)
-        from core.exceptions import BusinessRuleException
+        # Validacao de duplicidade (CNPJ, CPF e Codigo do Cliente)
         from sqlalchemy import or_
         
         condicoes = []
@@ -389,6 +396,14 @@ def criar_cliente(cliente_data: dict) -> dict:
 def atualizar_cliente(cliente_id: int, cliente_data: dict) -> dict:
     db = SessionLocal()
     try:
+        # Validacao: Apenas CPF OU CNPJ, nunca os dois ou nenhum
+        from core.exceptions import BusinessRuleException
+        _c = cliente_data.get("cadastrocliente", {})
+        _cpf_val = str(_c.get("cpf") or "").strip()
+        _cnpj_val = str(_c.get("cnpj") or "").strip()
+        if bool(_cpf_val) == bool(_cnpj_val):
+            raise BusinessRuleException("Obrigatório preencher apenas um documento: ou o CPF ou o CNPJ (nunca ambos e nem nenhum).")
+            
         cliente = db.query(ClienteModelV2).filter(ClienteModelV2.id == cliente_id).first()
         if not cliente:
             return None
@@ -396,8 +411,7 @@ def atualizar_cliente(cliente_id: int, cliente_data: dict) -> dict:
         # Create a transient object with new data
         novos_dados = _nested_to_flat(cliente_data)
         
-        # Validacao de duplicidade (CNPJ e Codigo do Cliente) no Update
-        from core.exceptions import BusinessRuleException
+        # Validacao de duplicidade (CNPJ, CPF e Codigo do Cliente) no Update
         from sqlalchemy import or_
         
         condicoes = []
