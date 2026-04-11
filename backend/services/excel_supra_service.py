@@ -9,6 +9,7 @@ import logging
 from datetime import datetime
 from pathlib import Path
 import openpyxl
+from openpyxl.styles import Font
 
 # Configuração de Logs para auditoria
 logger = logging.getLogger("ordersync.excel_supra")
@@ -197,9 +198,14 @@ def gerar_excel_cliente_supra(cliente) -> bytes:
         ws2["C15"] = _s(cliente.canal_frost)
         ws2["C16"] = _s(cliente.canal_insumos)
 
-        # Comissões
-        ws2["C20"] = _s(cliente.comissao_pet)
-        ws2["C21"] = _s(cliente.comissao_insumos)
+        # Comissões — texto padrão em vermelho
+        _DISPET_RED = Font(color="FF0000")
+        cell_pet    = ws2["C20"]
+        cell_ins    = ws2["C21"]
+        cell_pet.value = _s(cliente.comissao_pet)
+        cell_ins.value = _s(cliente.comissao_insumos)
+        cell_pet.font  = _DISPET_RED
+        cell_ins.font  = _DISPET_RED
 
         # Supervisores — Nome (linha 25) e Código (linha 26)
         ws2["E25"] = _s(cliente.supervisor_nome_pet)

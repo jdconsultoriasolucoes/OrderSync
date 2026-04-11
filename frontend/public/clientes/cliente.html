@@ -899,7 +899,14 @@
           renderizarLista('bens_imoveis', 3, []);
           renderizarLista('bens_moveis', 3, []);
           renderizarLista('planteis_animais', 3, []);
+          // Auto-preencher campos de Comissão Dispet com valor padrão
+          const DISPET_DEFAULT = "DISPET REPRESENTAÇÕES COMERCIAIS - CÓDIGO 178799";
+          const insumosFld = document.getElementById('insumos_ElaboracaoCadastro');
+          const petFld     = document.getElementById('pet_ElaboracaoCadastro');
+          if (insumosFld && !insumosFld.value) insumosFld.value = DISPET_DEFAULT;
+          if (petFld     && !petFld.value)     petFld.value     = DISPET_DEFAULT;
         }
+
 
         function salvarCliente() {
           const id = document.getElementById("id").value;
@@ -1086,6 +1093,20 @@
 
           tipoClienteSel.addEventListener('change', () => {
             autopreencherCanais(tipoClienteSel.value);
+            // ---- Replicar para aba Elaboração ----
+            const selElab = document.getElementById('classificacao_ElaboracaoCadastro');
+            if (selElab) selElab.value = tipoClienteSel.value;
+          });
+        });
+
+        // ---- Replicação do Tipo de Venda ----
+        document.addEventListener('DOMContentLoaded', () => {
+          const tipoVendaSel = document.getElementById('tipo_venda');
+          if (!tipoVendaSel) return;
+
+          tipoVendaSel.addEventListener('change', () => {
+            const selElab = document.getElementById('tipo_venda_prazo_ou_vista_ElaboracaoCadastro');
+            if (selElab) selElab.value = tipoVendaSel.value;
           });
         });
 
