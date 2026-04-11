@@ -38,8 +38,7 @@ logging.config.dictConfig({
     "disable_existing_loggers": False,
     "formatters": {
         "json": {
-            "()": "pythonjsonlogger.jsonlogger.JsonFormatter",
-            "format": "%(asctime)s %(levelname)s %(name)s %(message)s %(error_id)s %(trace_id)s",
+            "format": "%(asctime)s %(levelname)s %(name)s %(message)s",
             "datefmt": "%Y-%m-%dT%H:%M:%SZ"
         },
     },
