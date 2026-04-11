@@ -598,7 +598,16 @@ async function saveStatus(id) {
       body: JSON.stringify(payload)
     });
 
-    if (!r.ok) throw new Error("Erro ao salvar status");
+    if (!r.ok) {
+      let errMsg = "Erro ao salvar status.";
+      try {
+        const errData = await r.json();
+        errMsg = errData.detail || errMsg;
+      } catch (_) {}
+      tdActions.innerHTML = orgHtml;
+      showPremiumAlert(errMsg);
+      return;
+    }
 
     // Update local state
     const row = state.rows.find(r => String(r.numero_pedido || r.id_pedido || r.id) === String(id));
@@ -620,9 +629,58 @@ async function saveStatus(id) {
 
   } catch (e) {
     console.error(e);
-    alert("Falha: " + e.message);
+    showPremiumAlert("Falha de conexão ao salvar status. Tente novamente.");
     tdActions.innerHTML = orgHtml;
   }
+}
+
+// ---------------------- Alerta Visual Premium ----------------------
+function showPremiumAlert(message, type = "warning") {
+  // Remove alerta anterior se existir
+  const existing = document.getElementById("os-premium-alert-backdrop");
+  if (existing) existing.remove();
+
+  const iconMap = {
+    warning: "⚠️",
+    error: "🚫",
+    info: "ℹ️",
+    success: "✅"
+  };
+  const colorMap = {
+    warning: "#D97706",
+    error: "#DC2626",
+    info: "#2563EB",
+    success: "#16A34A"
+  };
+  const icon = iconMap[type] || iconMap.warning;
+  const color = colorMap[type] || colorMap.warning;
+
+  const backdrop = document.createElement("div");
+  backdrop.id = "os-premium-alert-backdrop";
+  backdrop.className = "os-modal-backdrop active";
+  backdrop.style.zIndex = "9999";
+  backdrop.innerHTML = `
+    <div class="os-modal-dialog" style="max-width: 440px; padding: 0; border-radius: 12px; overflow: hidden; animation: os-slide-up 0.2s ease;">
+      <div class="os-modal-header" style="background: ${color}; border: none; padding: 16px 20px;">
+        <h5 class="os-modal-title" style="color: #fff; font-size: 1rem; display: flex; align-items: center; gap: 8px; margin: 0;">
+          <span style="font-size: 1.3rem;">${icon}</span>
+          Atenção
+        </h5>
+      </div>
+      <div class="os-modal-body" style="padding: 20px 24px;">
+        <p style="margin: 0; font-size: 0.9rem; color: #374151; line-height: 1.6;">${message}</p>
+      </div>
+      <div class="os-modal-footer" style="padding: 12px 24px; border-top: 1px solid #E5E7EB;">
+        <button id="os-premium-alert-ok" class="os-btn os-btn-primary os-btn-sm">Entendido</button>
+      </div>
+    </div>
+  `;
+
+  document.body.appendChild(backdrop);
+
+  const closeAlert = () => backdrop.remove();
+  document.getElementById("os-premium-alert-ok").addEventListener("click", closeAlert);
+  backdrop.addEventListener("click", (e) => { if (e.target === backdrop) closeAlert(); });
 }
 
 function sortRows(rows, col, asc) {

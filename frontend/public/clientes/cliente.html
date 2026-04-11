@@ -1078,6 +1078,64 @@
           });
         });
 
+        // ---- Automação de Canal de Venda por Tipo de Cliente ----
+        // Dispara após o DOM estar pronto e os canais carregados
+        document.addEventListener('DOMContentLoaded', () => {
+          const tipoClienteSel = document.getElementById('tipo_cliente');
+          if (!tipoClienteSel) return;
+
+          tipoClienteSel.addEventListener('change', () => {
+            autopreencherCanais(tipoClienteSel.value);
+          });
+        });
+
+        function autopreencherCanais(tipoCliente) {
+          if (!tipoCliente) return;
+
+          const tipo = tipoCliente.toLowerCase()
+            .normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+
+          // Matriz de regras: tipo -> { pet_frost, insumos }
+          // Pet/Frost: canal_pet e canal_frost recebem o mesmo canal
+          let canalPetFrost = null;
+          let canalInsumos  = null;
+
+          const isRevenda = tipo.includes('revend') || tipo.includes('lojist') || tipo.includes('atacad');
+          const isConsumidor = tipo.includes('consumid') || tipo.includes('produtor') || tipo.includes('rural');
+
+          if (isRevenda) {
+            canalPetFrost = '39';
+            canalInsumos  = '38';
+          } else if (isConsumidor) {
+            canalPetFrost = '12';
+            canalInsumos  = '11';
+          } else {
+            return; // Tipo não reconhecido — não altera os canais
+          }
+
+          // Função auxiliar para selecionar a opção cujo value inicia com o código
+          function selecionarCanal(selectId, codigo) {
+            const sel = document.getElementById(selectId);
+            if (!sel) return;
+            // Busca opção cujo value == codigo ou começa com "codigo -"
+            let encontrado = false;
+            for (const opt of sel.options) {
+              const v = String(opt.value).trim();
+              if (v === codigo || v.startsWith(codigo + ' ') || v.startsWith(codigo + '-')) {
+                sel.value = opt.value;
+                encontrado = true;
+                break;
+              }
+            }
+            if (!encontrado) console.warn(`Canal ${codigo} não encontrado em #${selectId}`);
+          }
+
+          selecionarCanal('canal_pet_ElaboracaoCadastro',    canalPetFrost);
+          selecionarCanal('canal_frost_ElaboracaoCadastro',  canalPetFrost);
+          selecionarCanal('canal_insumos_ElaboracaoCadastro', canalInsumos);
+        }
+
+
         function obterDadosFormulario() {
           return {
             cadastrocliente: {

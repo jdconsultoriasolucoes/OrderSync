@@ -535,24 +535,36 @@ async function abrirGerenciadorDeCarga(idCarga, numCarga) {
         }
 
         const saveItemsLogic = async (btnRef) => {
-            const promises = [];
+            const statusPromises = [];
+            const ordemPromises = [];
+
             document.querySelectorAll('#tbody-pedidos-carga tr').forEach(row => {
                 const id = row.querySelector('.in-ordem')?.dataset?.id;
                 const statusSel = row.querySelector('.in-status');
                 
                 if (statusSel && statusSel.value && statusSel.value !== String(statusSel.dataset.original)) {
                      const idPedidoDb = statusSel.dataset.idPedido;
-                     promises.push(fetch(`${API_BASE}/api/pedidos/${idPedidoDb}/status`, {
-                         method: 'POST',
-                         headers: { 'Content-Type': 'application/json', "Authorization": `Bearer ${window.Auth ? window.Auth.getToken() : ''}` },
-                         body: JSON.stringify({ para: statusSel.value, motivo: "Alteração via Gerenciamento de Carga", user_id: "sistema" })
-                     }));
+                     const numeroPedido = statusSel.dataset.numeroPedido || idPedidoDb;
+                     statusPromises.push(
+                         fetch(`${API_BASE}/api/pedidos/${idPedidoDb}/status`, {
+                             method: 'POST',
+                             headers: { 'Content-Type': 'application/json', "Authorization": `Bearer ${window.Auth ? window.Auth.getToken() : ''}` },
+                             body: JSON.stringify({ para: statusSel.value, motivo: "Alteração via Gerenciamento de Carga", user_id: "sistema" })
+                         }).then(async (res) => {
+                             if (!res.ok) {
+                                 let detail = "Erro ao alterar status do pedido.";
+                                 try { const d = await res.json(); detail = d.detail || detail; } catch(_){}
+                                 return { ok: false, pedido: numeroPedido, detail };
+                             }
+                             return { ok: true };
+                         })
+                     );
                 }
 
                 if (id) {
                     const ordem = row.querySelector('.in-ordem') ? row.querySelector('.in-ordem').value : null;
                     const obs = row.querySelector('.in-obs') ? row.querySelector('.in-obs').value : null;
-                    promises.push(fetch(`${API_BASE}/api/relatorios/cargas/pedidos/${id}`, {
+                    ordemPromises.push(fetch(`${API_BASE}/api/relatorios/cargas/pedidos/${id}`, {
                         method: 'PUT',
                         headers: {
                             'Content-Type': 'application/json',
@@ -563,9 +575,24 @@ async function abrirGerenciadorDeCarga(idCarga, numCarga) {
                 }
             });
 
-            if (promises.length > 0) {
-                await Promise.allSettled(promises);
+            // Processar alterações de status e verificar erros
+            if (statusPromises.length > 0) {
+                const results = await Promise.all(statusPromises);
+                const errors = results.filter(r => r && r.ok === false);
+                if (errors.length > 0) {
+                    const msgs = errors.map(e => `• Pedido ${e.pedido}: ${e.detail}`).join('<br>');
+                    showPremiumAlert(`Não foi possível faturar os seguintes pedidos:<br><br>${msgs}`, "warning");
+                    if(btnRef) { btnRef.textContent = "Erro ao Salvar"; setTimeout(() => { btnRef.textContent = "Salvar Tela"; }, 3000); }
+                    // Salva ordem mesmo assim
+                    if (ordemPromises.length > 0) await Promise.allSettled(ordemPromises);
+                    return;
+                }
             }
+
+            if (ordemPromises.length > 0) {
+                await Promise.allSettled(ordemPromises);
+            }
+
             if(btnRef) {
                 btnRef.textContent = "Salvo!";
                 setTimeout(() => { btnRef.textContent = "Salvar Tela"; }, 2000);
@@ -1391,3 +1418,39 @@ async function abrirModalDetalhesPedido(idPedido) {
     }
 }
 
+
+// ---------------------- Alerta Visual Premium ----------------------
+function showPremiumAlert(message, type = "warning") {
+    const existing = document.getElementById("os-premium-alert-backdrop");
+    if (existing) existing.remove();
+
+    const iconMap = { warning: "⚠️", error: "🚫", info: "ℹ️", success: "✅" };
+    const colorMap = { warning: "#D97706", error: "#DC2626", info: "#2563EB", success: "#16A34A" };
+    const icon  = iconMap[type]  || iconMap.warning;
+    const color = colorMap[type] || colorMap.warning;
+
+    const backdrop = document.createElement("div");
+    backdrop.id = "os-premium-alert-backdrop";
+    backdrop.className = "os-modal-backdrop active";
+    backdrop.style.zIndex = "9999";
+    backdrop.innerHTML = `
+        <div class="os-modal-dialog" style="max-width: 480px; padding: 0; border-radius: 12px; overflow: hidden;">
+            <div class="os-modal-header" style="background: ${color}; border: none; padding: 16px 20px;">
+                <h5 class="os-modal-title" style="color: #fff; font-size: 1rem; display: flex; align-items: center; gap: 8px; margin: 0;">
+                    <span style="font-size: 1.3rem;">${icon}</span> Atenção
+                </h5>
+            </div>
+            <div class="os-modal-body" style="padding: 20px 24px;">
+                <p style="margin: 0; font-size: 0.9rem; color: #374151; line-height: 1.7;">${message}</p>
+            </div>
+            <div class="os-modal-footer" style="padding: 12px 24px; border-top: 1px solid #E5E7EB;">
+                <button id="os-premium-alert-ok" class="os-btn os-btn-primary os-btn-sm">Entendido</button>
+            </div>
+        </div>
+    `;
+
+    document.body.appendChild(backdrop);
+    const closeAlert = () => backdrop.remove();
+    document.getElementById("os-premium-alert-ok").addEventListener("click", closeAlert);
+    backdrop.addEventListener("click", (e) => { if (e.target === backdrop) closeAlert(); });
+}

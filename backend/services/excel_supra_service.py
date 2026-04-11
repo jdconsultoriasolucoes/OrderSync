@@ -154,6 +154,23 @@ def gerar_excel_cliente_supra(cliente) -> bytes:
                 ws1[f"H{row}"] = bem_i.get("valor") or 0
                 ws1[f"J{row}"] = _s(bem_i.get("hipotecado"))
 
+        # --- Bens Móveis ---
+        bens_moveis = cliente.bens_moveis if isinstance(cliente.bens_moveis, list) else []
+        for i, bem_m in enumerate(bens_moveis[:3]):
+            row = 57 + i
+            ws1[f"A{row}"] = _s(bem_m.get("marca"))
+            ws1[f"E{row}"] = _s(bem_m.get("modelo"))
+            ws1[f"G{row}"] = bem_m.get("valor") or 0
+            # Converte alienado para "Sim" ou "Não" independente do formato original
+            alienado_raw = bem_m.get("alienado")
+            if isinstance(alienado_raw, bool):
+                alienado_str = "Sim" if alienado_raw else "Não"
+            elif isinstance(alienado_raw, str):
+                alienado_str = "Sim" if alienado_raw.lower() in ("sim", "true", "1", "s", "yes") else "Não"
+            else:
+                alienado_str = "Não"
+            ws1[f"I{row}"] = alienado_str
+
         # --- Plantel ---
         if cliente.planteis_animais:
             for i, plantel in enumerate(cliente.planteis_animais[:3]):
@@ -184,9 +201,11 @@ def gerar_excel_cliente_supra(cliente) -> bytes:
         ws2["C20"] = _s(cliente.comissao_pet)
         ws2["C21"] = _s(cliente.comissao_insumos)
 
-        # Supervisores
+        # Supervisores — Nome (linha 25) e Código (linha 26)
         ws2["E25"] = _s(cliente.supervisor_nome_pet)
         ws2["H25"] = _s(cliente.supervisor_nome_insumo)
+        ws2["E26"] = _s(getattr(cliente, 'supervisor_codigo_pet', ''))
+        ws2["H26"] = _s(getattr(cliente, 'supervisor_codigo_insumo', ''))
 
         # Financeiro e Recomendações
         ws2["D35"] = cliente.elaboracao_limite_credito or 0

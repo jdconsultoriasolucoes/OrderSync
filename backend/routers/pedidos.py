@@ -358,6 +358,25 @@ def mudar_status(id_pedido: int, body: StatusChangeBody, db: Session = Depends(g
         raise HTTPException(status_code=404, detail="Pedido não encontrado")
     de_status = cur[0]
 
+    # VALIDAÇÃO DE FATURAMENTO: Bloqueia se o cliente não tem código da empresa
+    status_faturamento = {"faturado supra", "faturado dispet"}
+    if body.para and body.para.lower() in status_faturamento:
+        resultado = db.execute(
+            text("""
+                SELECT c.cadastro_codigo_da_empresa
+                FROM public.tb_pedidos p
+                LEFT JOIN public.tb_clientes_v2 c ON c.id = p.cliente_id
+                WHERE p.id_pedido = :id
+            """),
+            {"id": id_pedido}
+        ).first()
+        codigo_empresa = resultado[0] if resultado else None
+        if not codigo_empresa or not str(codigo_empresa).strip():
+            raise HTTPException(
+                status_code=400,
+                detail="O código da empresa não está preenchido. Por favor, complete o cadastro antes de faturar."
+            )
+
     upd = db.execute(STATUS_UPDATE_SQL, {
         "para_status": body.para, 
         "id_pedido": id_pedido,
