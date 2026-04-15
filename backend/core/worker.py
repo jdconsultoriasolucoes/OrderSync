@@ -141,6 +141,28 @@ async def check_automation_schedules(db):
     except Exception as e:
         logger.error(f"Erro ao checar automações: {e}")
 
+_last_inactivity_check_date = None
+
+async def check_daily_inactivity_schedule():
+    global _last_inactivity_check_date
+    agora = datetime.now(TZ)
+    hoje_str = agora.strftime("%Y-%m-%d")
+
+    if _last_inactivity_check_date is None:
+        # Considera como já verificado hoje, pois o main.py (startup) garante a primeira passada.
+        _last_inactivity_check_date = hoje_str
+        return
+
+    if _last_inactivity_check_date != hoje_str:
+        from services.cliente import verificar_inatividade_clientes
+        logger.info(f"Virada de dia detectada ({hoje_str}). Tarefa Agendada [00:00] - Verificação de Clientes Inativos.")
+        try:
+            verificar_inatividade_clientes()
+        except Exception as e:
+            logger.error(f"Falha na auto-inativação pelo Worker: {e}")
+        finally:
+            _last_inactivity_check_date = hoje_str
+
 async def worker_loop():
     import datetime as dt_mod
     logger.info(f"Worker assíncrono iniciado. Fuso horário do Worker (TZ): {datetime.now(TZ).strftime('%Y-%m-%d %H:%M:%S')} (SP)")
@@ -150,6 +172,7 @@ async def worker_loop():
             with SessionLocal() as db:
                 # Checa sempre as automações agendadas no início do loop, independente da fila
                 await check_automation_schedules(db)
+                await check_daily_inactivity_schedule()
                 
                 # Fetch pending top 1
                 task = db.query(BackgroundTaskModel)\
