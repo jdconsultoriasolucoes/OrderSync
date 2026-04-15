@@ -157,34 +157,38 @@ def gerar_excel_cliente_supra(cliente) -> bytes:
         ws1["A30"] = f"P/Cobranças:  {_s(getattr(cliente, 'cobranca_resp_nome', ''))}"
         ws1["F30"] = f"Telefones:  {_s(getattr(cliente, 'cobranca_resp_celular', ''))}"
 
-        # --- Referências e Bens ---
-        if cliente.referencias_bancarias:
-            for i, ref_b in enumerate(cliente.referencias_bancarias[:4]):
-                row = 34 + i
-                ws1[f"A{row}"] = _s(ref_b.get("banco"))
-                ws1[f"C{row}"] = _s(ref_b.get("agencia"))
-                ws1[f"E{row}"] = _s(ref_b.get("conta_corrente"))
+        # --- Referências e Bancos ---
+        refs_bancarias = cliente.referencias_bancarias if isinstance(cliente.referencias_bancarias, list) else []
+        for i, ref_b in enumerate(refs_bancarias[:4]):
+            if not isinstance(ref_b, dict): continue
+            row = 34 + i
+            ws1[f"A{row}"] = _s(ref_b.get("banco"))
+            ws1[f"C{row}"] = _s(ref_b.get("agencia"))
+            ws1[f"E{row}"] = _s(ref_b.get("conta_corrente"))
 
-        if cliente.referencias_comerciais:
-            for i, ref_c in enumerate(cliente.referencias_comerciais[:4]):
-                row = 40 + i
-                ws1[f"A{row}"] = _s(ref_c.get("empresa"))
-                ws1[f"E{row}"] = _s(ref_c.get("cidade"))
-                ws1[f"G{row}"] = _s(ref_c.get("telefone"))
-                ws1[f"I{row}"] = _s(ref_c.get("contato"))
+        refs_comerciais = cliente.referencias_comerciais if isinstance(cliente.referencias_comerciais, list) else []
+        for i, ref_c in enumerate(refs_comerciais[:4]):
+            if not isinstance(ref_c, dict): continue
+            row = 40 + i
+            ws1[f"A{row}"] = _s(ref_c.get("empresa"))
+            ws1[f"E{row}"] = _s(ref_c.get("cidade"))
+            ws1[f"G{row}"] = _s(ref_c.get("telefone"))
+            ws1[f"I{row}"] = _s(ref_c.get("contato"))
 
-        if cliente.bens_imoveis:
-            for i, bem_i in enumerate(cliente.bens_imoveis[:3]):
-                row = 46 + i
-                ws1[f"A{row}"] = _s(bem_i.get("imovel"))
-                ws1[f"C{row}"] = _s(bem_i.get("localizacao"))
-                ws1[f"E{row}"] = _s(bem_i.get("area"))
-                ws1[f"H{row}"] = bem_i.get("valor") or 0
-                ws1[f"J{row}"] = _s(bem_i.get("hipotecado"))
+        # --- Bens Imóveis e Móveis ---
+        bens_imoveis = cliente.bens_imoveis if isinstance(cliente.bens_imoveis, list) else []
+        for i, bem_i in enumerate(bens_imoveis[:3]):
+            if not isinstance(bem_i, dict): continue
+            row = 46 + i
+            ws1[f"A{row}"] = _s(bem_i.get("imovel"))
+            ws1[f"C{row}"] = _s(bem_i.get("localizacao"))
+            ws1[f"E{row}"] = _s(bem_i.get("area"))
+            ws1[f"H{row}"] = bem_i.get("valor") or 0
+            ws1[f"J{row}"] = _s(bem_i.get("hipotecado"))
 
-        # --- Bens Móveis ---
         bens_moveis = cliente.bens_moveis if isinstance(cliente.bens_moveis, list) else []
         for i, bem_m in enumerate(bens_moveis[:3]):
+            if not isinstance(bem_m, dict): continue
             row = 57 + i
             ws1[f"A{row}"] = _s(bem_m.get("marca"))
             ws1[f"E{row}"] = _s(bem_m.get("modelo"))
@@ -200,13 +204,14 @@ def gerar_excel_cliente_supra(cliente) -> bytes:
             ws1[f"I{row}"] = alienado_str
 
         # --- Plantel ---
-        if cliente.planteis_animais:
-            for i, plantel in enumerate(cliente.planteis_animais[:3]):
-                row = 51 + i
-                ws1[f"A{row}"] = _s(plantel.get("especie"))
-                ws1[f"F{row}"] = plantel.get("numero_de_animais") or 0
-                ws1[f"H{row}"] = plantel.get("consumo_diario") or 0
-                ws1[f"J{row}"] = plantel.get("consumo_mensal") or 0
+        planteis = cliente.planteis_animais if isinstance(cliente.planteis_animais, list) else []
+        for i, plantel in enumerate(planteis[:3]):
+            if not isinstance(plantel, dict): continue
+            row = 51 + i
+            ws1[f"A{row}"] = _s(plantel.get("especie"))
+            ws1[f"F{row}"] = plantel.get("numero_de_animais") or 0
+            ws1[f"H{row}"] = plantel.get("consumo_diario") or 0
+            ws1[f"J{row}"] = plantel.get("consumo_mensal") or 0
 
         # --- Local e Data (Cidade do Cliente + Data Atual) ---
         cidade_cliente = _s(cliente.faturamento_municipio)
