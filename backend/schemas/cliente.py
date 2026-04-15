@@ -213,6 +213,8 @@ class DadosElaboracaoCadastro(BaseModel):
     limite_credito_ElaboracaoCadastro: Optional[float]
     data_vencimento_ElaboracaoCadastro: Optional[str]
     vendedor_ElaboracaoCadastro: Optional[str]
+    gerente_insumos_ElaboracaoCadastro: Optional[str] = None
+    gerente_pet_ElaboracaoCadastro: Optional[str] = None
 
 #    @field_validator("data_vencimento_ElaboracaoCadastro")
 #    def vencimento_valido(cls, v):

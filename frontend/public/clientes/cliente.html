@@ -138,6 +138,12 @@
                         <path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z" />
                     </svg> Configuração E-mail
                 </a></li>
+            <li><a href="/profile/profile.html">
+                    <svg class="os-nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" />
+                        <circle cx="12" cy="7" r="4" />
+                    </svg> Profile
+                </a></li>
             <li><a href="/usuarios.html">
                     <svg class="os-nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                         <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" />
@@ -268,7 +274,7 @@
             </div>
             <div>
               <label for="limite_credito">Limite de Crédito:</label>
-              <input type="number" step="0.01" id="limite_credito" name="limite_credito" />
+              <input type="text" id="limite_credito" name="limite_credito" placeholder="0,00" />
             </div>
 
             <div>
@@ -702,9 +708,9 @@
                 <option value="">Selecione</option>
               </select>
             </div>
-            <div><label for="limite_credito_ElaboracaoCadastro">Limite de Crédito (Complementar):</label><input
-                type="number" step="0.01" id="limite_credito_ElaboracaoCadastro"
-                name="limite_credito_ElaboracaoCadastro" />
+            <div><label for="limite_credito_ElaboracaoCadastro">Limite de Crédito:</label><input
+                type="text" id="limite_credito_ElaboracaoCadastro"
+                name="limite_credito_ElaboracaoCadastro" placeholder="0,00" />
             </div>
             <div><label for="data_vencimento_ElaboracaoCadastro">Data de Vencimento:</label><input type="date"
                 id="data_vencimento_ElaboracaoCadastro" name="data_vencimento_ElaboracaoCadastro" /></div>
@@ -712,6 +718,14 @@
                 <select id="vendedor_ElaboracaoCadastro" name="vendedor_ElaboracaoCadastro">
                   <option value="">Selecione</option>
                 </select>
+            </div>
+            <div>
+              <label for="gerente_insumos_ElaboracaoCadastro">Gerente Insumos:</label>
+              <input type="text" id="gerente_insumos_ElaboracaoCadastro" name="gerente_insumos_ElaboracaoCadastro" />
+            </div>
+            <div>
+              <label for="gerente_pet_ElaboracaoCadastro">Gerente Pet:</label>
+              <input type="text" id="gerente_pet_ElaboracaoCadastro" name="gerente_pet_ElaboracaoCadastro" />
             </div>
           </div>
 
@@ -1039,8 +1053,14 @@
             const url = window.URL.createObjectURL(blob);
             const a = document.createElement('a');
             a.href = url;
-            const nomeCliente = (document.getElementById("cadastro_nome_cliente")?.value || `cliente_${id}`).replace(/\s+/g, '_');
-            a.download = `ficha_supra_${nomeCliente}.${format === 'xlsx' ? 'xlsx' : 'pdf'}`;
+            // Extrair nome do arquivo do header Content-Disposition do servidor
+            const disposition = response.headers.get('Content-Disposition');
+            let filename = `cliente_${id}.${format === 'xlsx' ? 'xlsx' : 'pdf'}`;
+            if (disposition) {
+              const match = disposition.match(/filename="?(.+?)"?$/);
+              if (match && match[1]) filename = match[1];
+            }
+            a.download = filename;
             document.body.appendChild(a);
             a.click();
             window.URL.revokeObjectURL(url);
@@ -1110,6 +1130,47 @@
           });
         });
 
+        // ---- Replicação do Limite de Crédito entre abas ----
+        document.addEventListener('DOMContentLoaded', () => {
+          const limCadastro = document.getElementById('limite_credito');
+          const limElab = document.getElementById('limite_credito_ElaboracaoCadastro');
+
+          // Máscara monetária BR com IMask (formato: 1.234,56)
+          const maskOpts = {
+            mask: Number,
+            scale: 2,
+            thousandsSeparator: '.',
+            padFractionalZeros: true,
+            normalizeZeros: true,
+            radix: ',',
+            mapToRadix: ['.'],
+            min: 0,
+            max: 999999999.99
+          };
+
+          let maskCadastro = null;
+          let maskElabor = null;
+
+          if (limCadastro) maskCadastro = IMask(limCadastro, maskOpts);
+          if (limElab) maskElabor = IMask(limElab, maskOpts);
+
+          // Sincronização bidirecional
+          if (limCadastro && maskElabor) {
+            limCadastro.addEventListener('input', () => {
+              if (maskCadastro && maskElabor) {
+                maskElabor.unmaskedValue = maskCadastro.unmaskedValue;
+              }
+            });
+          }
+          if (limElab && maskCadastro) {
+            limElab.addEventListener('input', () => {
+              if (maskElabor && maskCadastro) {
+                maskCadastro.unmaskedValue = maskElabor.unmaskedValue;
+              }
+            });
+          }
+        });
+
         function autopreencherCanais(tipoCliente) {
           if (!tipoCliente) return;
 
@@ -1168,7 +1229,7 @@
               tipo_cliente: document.getElementById("tipo_cliente")?.value || "",
               tipo_venda: document.getElementById("tipo_venda")?.value || "",
               tipo_compra: document.getElementById("tipo_compra")?.value || "",
-              limite_credito: parseFloat(document.getElementById("limite_credito")?.value || 0),
+              limite_credito: parseFloat((document.getElementById("limite_credito")?.value || "0").replace(/\./g, '').replace(',', '.')) || 0,
               nome_cliente: document.getElementById("nome_cliente")?.value || "",
               nome_fantasia: document.getElementById("nome_fantasia")?.value || "",
               cnpj: document.getElementById("cnpj")?.value || "",
@@ -1259,9 +1320,11 @@
             dados_elaboracao_cadastro: {
               classificacao_ElaboracaoCadastro: document.getElementById("classificacao_ElaboracaoCadastro")?.value || "",
               tipo_venda_prazo_ou_vista_ElaboracaoCadastro: document.getElementById("tipo_venda_prazo_ou_vista_ElaboracaoCadastro")?.value || "",
-              limite_credito_ElaboracaoCadastro: parseFloat(document.getElementById("limite_credito_ElaboracaoCadastro")?.value || 0),
+              limite_credito_ElaboracaoCadastro: parseFloat((document.getElementById("limite_credito_ElaboracaoCadastro")?.value || "0").replace(/\./g, '').replace(',', '.')) || 0,
               data_vencimento_ElaboracaoCadastro: document.getElementById("data_vencimento_ElaboracaoCadastro")?.value || "",
-              vendedor_ElaboracaoCadastro: document.getElementById("vendedor_ElaboracaoCadastro")?.value || ""
+              vendedor_ElaboracaoCadastro: document.getElementById("vendedor_ElaboracaoCadastro")?.value || "",
+              gerente_insumos_ElaboracaoCadastro: document.getElementById("gerente_insumos_ElaboracaoCadastro")?.value || "",
+              gerente_pet_ElaboracaoCadastro: document.getElementById("gerente_pet_ElaboracaoCadastro")?.value || ""
             },
             // Listas dinâmicas (JSONB)
             indicacoes_clientes: coletarLista('indicacoes'),
@@ -1560,7 +1623,14 @@
           setVal("tipo_cliente", c.tipo_cliente || "");
           setVal("tipo_venda", c.tipo_venda || "");
           setVal("tipo_compra", c.tipo_compra || "");
-          setVal("limite_credito", c.limite_credito || "");
+          // Limite de crédito: formata como moeda BR
+          const limCred = c.limite_credito;
+          if (limCred) {
+            const limFmt = parseFloat(limCred).toFixed(2).replace('.', ',').replace(/\B(?=(\d{3})+(?!\d))/g, '.');
+            setVal("limite_credito", limFmt);
+          } else {
+            setVal("limite_credito", "");
+          }
           setVal("nome_cliente", c.nome_cliente || "");
           setVal("nome_fantasia", c.nome_fantasia || "");
           setVal("cnpj", c.cnpj || "");
@@ -1660,9 +1730,18 @@
           const ed = dados.dados_elaboracao_cadastro || {};
           setVal("classificacao_ElaboracaoCadastro", ed.classificacao_ElaboracaoCadastro || "");
           setVal("tipo_venda_prazo_ou_vista_ElaboracaoCadastro", ed.tipo_venda_prazo_ou_vista_ElaboracaoCadastro || "");
-          setVal("limite_credito_ElaboracaoCadastro", ed.limite_credito_ElaboracaoCadastro || "");
+          // Limite de crédito: formata como moeda BR
+          const limElab = ed.limite_credito_ElaboracaoCadastro;
+          if (limElab) {
+            const limFormatado = parseFloat(limElab).toFixed(2).replace('.', ',').replace(/\B(?=(\d{3})+(?!\d))/g, '.');
+            setVal("limite_credito_ElaboracaoCadastro", limFormatado);
+          } else {
+            setVal("limite_credito_ElaboracaoCadastro", "");
+          }
           setVal("data_vencimento_ElaboracaoCadastro", ed.data_vencimento_ElaboracaoCadastro || "");
           setVal("vendedor_ElaboracaoCadastro", ed.vendedor_ElaboracaoCadastro || "");
+          setVal("gerente_insumos_ElaboracaoCadastro", ed.gerente_insumos_ElaboracaoCadastro || "");
+          setVal("gerente_pet_ElaboracaoCadastro", ed.gerente_pet_ElaboracaoCadastro || "");
 
           // Listas dinâmicas (JSONB)
           renderizarLista('indicacoes', 5, dados.indicacoes_clientes || []);

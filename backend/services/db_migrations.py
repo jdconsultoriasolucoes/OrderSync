@@ -145,3 +145,51 @@ def run_migrations():
                 logger.error(f"Falha ao adicionar colunas de histórico em tb_cargas: {e}")
 
     logger.info("Migrações concluídas.")
+
+    # 10. CadastroCliente: elaboracao_gerente_insumos, elaboracao_gerente_pet
+    with SessionLocal() as db:
+        for col in ["elaboracao_gerente_insumos", "elaboracao_gerente_pet"]:
+            try:
+                db.execute(text(f"SELECT {col} FROM t_cadastro_cliente_v2 LIMIT 1"))
+            except Exception:
+                db.rollback()
+                logger.info(f"Adicionando coluna {col} em t_cadastro_cliente_v2...")
+                try:
+                    db.execute(text(f"ALTER TABLE t_cadastro_cliente_v2 ADD COLUMN {col} VARCHAR"))
+                    db.commit()
+                    logger.info(f"Coluna {col} adicionada com sucesso.")
+                except Exception as e:
+                    db.rollback()
+                    logger.error(f"Falha ao adicionar coluna {col}: {e}")
+
+        # 11. Tabela t_profile_config (configuracao global do representante)
+        try:
+            db.execute(text("SELECT 1 FROM t_profile_config LIMIT 1"))
+        except Exception:
+            db.rollback()
+            logger.info("Criando tabela t_profile_config...")
+            try:
+                db.execute(text("""
+                    CREATE TABLE IF NOT EXISTS t_profile_config (
+                        id BIGSERIAL PRIMARY KEY,
+                        codigo_representante VARCHAR,
+                        cnpj VARCHAR,
+                        razao_social VARCHAR,
+                        endereco VARCHAR,
+                        data_criacao TIMESTAMP DEFAULT NOW(),
+                        data_atualizacao TIMESTAMP DEFAULT NOW()
+                    )
+                """))
+                # Insere registro default (singleton)
+                db.execute(text("""
+                    INSERT INTO t_profile_config (codigo_representante, cnpj, razao_social, endereco)
+                    SELECT '', '', '', ''
+                    WHERE NOT EXISTS (SELECT 1 FROM t_profile_config)
+                """))
+                db.commit()
+                logger.info("Tabela t_profile_config criada com sucesso.")
+            except Exception as e:
+                db.rollback()
+                logger.error(f"Falha ao criar t_profile_config: {e}")
+
+    logger.info("Todas as migrações concluídas.")

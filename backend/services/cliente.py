@@ -1,8 +1,12 @@
 from typing import List, Optional
 from sqlalchemy.orm import Session
+from sqlalchemy import text
 from database import SessionLocal
 from models.cliente_v2 import ClienteModelV2
-from datetime import datetime
+from datetime import datetime, timedelta
+import logging
+
+logger = logging.getLogger("ordersync.services.cliente")
 
 def get_db():
     db = SessionLocal()
@@ -121,6 +125,8 @@ def _flat_to_nested(model: ClienteModelV2) -> dict:
             "limite_credito_ElaboracaoCadastro": model.elaboracao_limite_credito,
             "data_vencimento_ElaboracaoCadastro": model.elaboracao_data_vencimento,
             "vendedor_ElaboracaoCadastro": model.elaboracao_vendedor,
+            "gerente_insumos_ElaboracaoCadastro": model.elaboracao_gerente_insumos,
+            "gerente_pet_ElaboracaoCadastro": model.elaboracao_gerente_pet,
         },
         # Listas dinâmicas (JSONB)
         "grupos_economicos": model.grupos_economicos or [],
@@ -282,6 +288,8 @@ def _nested_to_flat(data: dict) -> ClienteModelV2:
     model.elaboracao_limite_credito = dec.get("limite_credito_ElaboracaoCadastro")
     model.elaboracao_data_vencimento = dec.get("data_vencimento_ElaboracaoCadastro")
     model.elaboracao_vendedor = dec.get("vendedor_ElaboracaoCadastro")
+    model.elaboracao_gerente_insumos = dec.get("gerente_insumos_ElaboracaoCadastro")
+    model.elaboracao_gerente_pet = dec.get("gerente_pet_ElaboracaoCadastro")
 
     # 12-17. Listas dinâmicas (JSONB)
     model.grupos_economicos = data.get("grupos_economicos") or []
@@ -482,5 +490,62 @@ def deletar_cliente(cliente_id: int) -> bool:
     except Exception as e:
         db.rollback()
         raise e
+    finally:
+        db.close()
+
+
+def verificar_inatividade_clientes():
+    """
+    Regra automática: Se o intervalo desde a última compra for > 180 dias,
+    setar cadastro_ativo = FALSE.
+    Consulta a tabela tb_pedidos baseada no codigo_cliente.
+    """
+    logger.info("Iniciando verificação de inatividade de clientes (> 180 dias)...")
+    db = SessionLocal()
+    try:
+        # Busca clientes ativos que possuem código de empresa
+        clientes_ativos = db.query(ClienteModelV2).filter(
+            ClienteModelV2.cadastro_ativo == True,
+            ClienteModelV2.cadastro_codigo_da_empresa != None,
+            ClienteModelV2.cadastro_codigo_da_empresa != ""
+        ).all()
+
+        if not clientes_ativos:
+            logger.info("Nenhum cliente ativo com código encontrado.")
+            return 0
+
+        inativos_count = 0
+        limite = datetime.now() - timedelta(days=180)
+
+        for cliente in clientes_ativos:
+            codigo = cliente.cadastro_codigo_da_empresa
+            if not codigo or not str(codigo).strip():
+                continue
+
+            # Busca a data do último pedido para este cliente
+            result = db.execute(text("""
+                SELECT MAX(created_at) as ultima_compra
+                FROM tb_pedidos
+                WHERE codigo_cliente = :codigo
+                  AND status != 'CANCELADO'
+            """), {"codigo": codigo}).fetchone()
+
+            if result and result[0]:
+                ultima_compra = result[0]
+                if ultima_compra < limite:
+                    cliente.cadastro_ativo = False
+                    cliente.data_atualizacao = datetime.now()
+                    inativos_count += 1
+                    logger.info(f"Cliente {codigo} marcado como inativo (última compra: {ultima_compra.strftime('%d/%m/%Y')})")
+
+        if inativos_count > 0:
+            db.commit()
+
+        logger.info(f"Verificação concluída. {inativos_count} cliente(s) marcado(s) como inativo(s).")
+        return inativos_count
+    except Exception as e:
+        db.rollback()
+        logger.error(f"Erro na verificação de inatividade: {e}")
+        return 0
     finally:
         db.close()

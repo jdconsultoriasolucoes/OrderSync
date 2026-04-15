@@ -120,6 +120,13 @@ def startup_ensure_admin():
     # --- MIGRAÇOES DE SCHEMA (Colunas novas) ---
     from services.db_migrations import run_migrations
     run_migrations()
+
+    # --- VERIFICAÇÃO DE INATIVIDADE (>180 dias) ---
+    from services.cliente import verificar_inatividade_clientes
+    try:
+        verificar_inatividade_clientes()
+    except Exception as e:
+        logger.error(f"Erro na verificação de inatividade: {e}")
     
     db = SessionLocal()
     try:
@@ -258,6 +265,9 @@ app.include_router(captacao_pedidos.router, prefix="/captacao-pedidos", tags=["C
 app.include_router(vendedores.router, prefix="/vendedores", tags=["Vendedores"])
 app.include_router(automation.router)
 app.include_router(catalogo_referencias.router)
+
+from routers import profile_config
+app.include_router(profile_config.router)
 
 # ---- Static (se precisar servir arquivos públicos do front) ----
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))

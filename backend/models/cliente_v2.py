@@ -109,6 +109,8 @@ class ClienteModelV2(Base):
     elaboracao_limite_credito = Column(Float)
     elaboracao_data_vencimento = Column(String)
     elaboracao_vendedor = Column(String)
+    elaboracao_gerente_insumos = Column(String)
+    elaboracao_gerente_pet = Column(String)
 
     # 12. GrupoEconomico — JSONB: lista com até 3 grupos. Ex: [{"codigo": "G1", "nome": "Grupo X"}]
     grupos_economicos = Column(JSONB, default=list)

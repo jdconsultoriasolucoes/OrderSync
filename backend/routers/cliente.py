@@ -98,17 +98,18 @@ def exportar_supra(
             logger.warning(f"Tentativa de exportação Supra para cliente inexistente ID: {id}")
             raise HTTPException(status_code=404, detail="Cliente não encontrado no banco de dados.")
 
-        codigo = cli.cadastro_codigo_da_empresa or "S_COD"
-        nome_arquivo = f"ficha_supra_{codigo}"
-
         if format.lower() == "xlsx":
-            from services.excel_supra_service import gerar_excel_cliente_supra
+            from services.excel_supra_service import gerar_excel_cliente_supra, gerar_nome_arquivo
             conteudo = gerar_excel_cliente_supra(cli)
+            nome_arquivo = gerar_nome_arquivo(cli)
             media_type = "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
             ext = "xlsx"
         else:
             from services.pdf_supra_service import gerar_pdf_cliente_supra
             conteudo = gerar_pdf_cliente_supra(cli)
+            cidade = (cli.faturamento_municipio or "SemCidade").replace(" ", "_")
+            nome_cli = (cli.cadastro_nome_cliente or "SemNome").replace(" ", "_")
+            nome_arquivo = f"{cidade}_{nome_cli}"
             media_type = "application/pdf"
             ext = "pdf"
 

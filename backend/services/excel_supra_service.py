@@ -6,6 +6,7 @@ Refatoração Sênior: Tratamento de exceções, formatação padronizada e logs
 import io
 import os
 import logging
+import unicodedata
 from datetime import datetime
 from pathlib import Path
 import openpyxl
@@ -17,6 +18,14 @@ logger = logging.getLogger("ordersync.excel_supra")
 # Tenta carregar do ENV ou usa o caminho relativo ao projeto (Seguro para o Render)
 TEMPLATE_PATH_DEFAULT = Path(__file__).resolve().parent.parent / "assets" / "template_supra.xlsx"
 TEMPLATE_PATH = Path(os.getenv("SUPRA_TEMPLATE_PATH", str(TEMPLATE_PATH_DEFAULT)))
+
+# Mapeamento de Finalidade por Tipo de Cliente (Linha 42)
+FINALIDADE_MAP = {
+    "produtor rural": "Produtor Rural = (Vai Usar na Pecuaria ou Consumo Proprio)",
+    "revenda": "Lojista = (Produto para Comercializar / Revender)",
+    "consumidor final pf": "Consumidor Final - Pessoa Fisica = (Consumo Proprio)",
+    "consumidor final pj": "Consumidor Final - Pessoa Juridica = (Consumo Proprio)",
+}
 
 
 def _br_number(value, decimals=2) -> str:
@@ -35,6 +44,25 @@ def _s(value, default="") -> str:
     if value is None:
         return default
     return str(value).strip()
+
+
+def _normalize(text: str) -> str:
+    """Remove acentos e converte para lowercase."""
+    normalized = unicodedata.normalize('NFD', text)
+    return ''.join(c for c in normalized if unicodedata.category(c) != 'Mn').lower().strip()
+
+
+def gerar_nome_arquivo(cliente) -> str:
+    """
+    Gera o nome do arquivo no padrão: Cidade_NomeDoCliente
+    Sem extensão (adicionada pelo router).
+    """
+    cidade = _s(getattr(cliente, 'faturamento_municipio', '')) or "SemCidade"
+    nome = _s(getattr(cliente, 'cadastro_nome_cliente', '')) or "SemNome"
+    # Limpa caracteres especiais para nome de arquivo
+    cidade_safe = cidade.replace(" ", "_").replace("/", "-")
+    nome_safe = nome.replace(" ", "_").replace("/", "-")
+    return f"{cidade_safe}_{nome_safe}"
 
 
 def gerar_excel_cliente_supra(cliente) -> bytes:
@@ -90,10 +118,7 @@ def gerar_excel_cliente_supra(cliente) -> bytes:
         ws1["E13"] = f"INSCR.  ESTADUAL:  {_s(cliente.cadastro_inscricao_estadual)}"
 
         # Lógica de Checkboxes (Tipo de Cliente)
-        tipo = _s(cliente.cadastro_tipo_cliente).lower()
-        import unicodedata
-        # Remover acentos caso existam na string do banco
-        tipo = ''.join(c for c in unicodedata.normalize('NFD', tipo) if unicodedata.category(c) != 'Mn')
+        tipo = _normalize(_s(cliente.cadastro_tipo_cliente))
         
         tipo_map = [
             (["revendedor", "revenda"], "C17"),
@@ -152,6 +177,8 @@ def gerar_excel_cliente_supra(cliente) -> bytes:
             for i, bem_i in enumerate(cliente.bens_imoveis[:3]):
                 row = 46 + i
                 ws1[f"A{row}"] = _s(bem_i.get("imovel"))
+                ws1[f"C{row}"] = _s(bem_i.get("localizacao"))
+                ws1[f"E{row}"] = _s(bem_i.get("area"))
                 ws1[f"H{row}"] = bem_i.get("valor") or 0
                 ws1[f"J{row}"] = _s(bem_i.get("hipotecado"))
 
@@ -181,10 +208,9 @@ def gerar_excel_cliente_supra(cliente) -> bytes:
                 ws1[f"H{row}"] = plantel.get("consumo_diario") or 0
                 ws1[f"J{row}"] = plantel.get("consumo_mensal") or 0
 
-        # --- Local e Data (Auditoria de Geração) ---
-        cidade_fat = _s(cliente.faturamento_municipio) or "SÃO ROQUE"
-        estado_fat = _s(cliente.faturamento_estado) or "SP"
-        ws1["C61"] = f"{cidade_fat}/{estado_fat}, {datetime.now().strftime('%d/%m/%Y')}"
+        # --- Local e Data (Cidade do Cliente + Data Atual) ---
+        cidade_cliente = _s(cliente.faturamento_municipio)
+        ws1["C61"] = f"{cidade_cliente}, {datetime.now().strftime('%d/%m/%Y')}"
 
         # =========================================================
         # ABA 2: Uso Interno
@@ -213,10 +239,39 @@ def gerar_excel_cliente_supra(cliente) -> bytes:
         ws2["E26"] = _s(getattr(cliente, 'supervisor_codigo_pet', ''))
         ws2["H26"] = _s(getattr(cliente, 'supervisor_codigo_insumo', ''))
 
+        # Gerentes — Insumos e Pet (novas linhas no template)
+        ws2["E27"] = _s(getattr(cliente, 'elaboracao_gerente_pet', ''))
+        ws2["H27"] = _s(getattr(cliente, 'elaboracao_gerente_insumos', ''))
+
         # Financeiro e Recomendações
         ws2["D35"] = cliente.elaboracao_limite_credito or 0
-        ws2["A41"] = _s(cliente.elaboracao_classificacao) or "CLIENTE NOVO"
-        ws2["A43"] = _s(cliente.elaboracao_tipo_venda) or "Venda a Prazo"
+
+        # --- LINHA 41: Status do Cliente (Lógica de Classificação) ---
+        codigo_empresa = _s(cliente.cadastro_codigo_da_empresa)
+        cliente_inativo = not cliente.cadastro_ativo if cliente.cadastro_ativo is not None else False
+
+        if not codigo_empresa:
+            status_text = "Cliente Novo"
+        elif cliente_inativo:
+            status_text = f"Recadastro do Cliente Código => {codigo_empresa}"
+        else:
+            status_text = _s(cliente.elaboracao_classificacao) or "CLIENTE NOVO"
+        ws2["A41"] = status_text
+
+        # --- LINHA 42: Mapeamento de Finalidade por Tipo de Cliente ---
+        tipo_raw = _normalize(_s(cliente.cadastro_tipo_cliente))
+        finalidade = FINALIDADE_MAP.get(tipo_raw, "")
+        ws2["A42"] = finalidade
+
+        # --- LINHA 43: Tipo de Venda (mapeamento de pagamento) ---
+        tipo_venda_raw = _normalize(_s(cliente.elaboracao_tipo_venda))
+        if "vista" in tipo_venda_raw:
+            tipo_venda_excel = "Venda à vista"
+        elif "prazo" in tipo_venda_raw:
+            tipo_venda_excel = "Venda antecipada"
+        else:
+            tipo_venda_excel = _s(cliente.elaboracao_tipo_venda) or "Venda a Prazo"
+        ws2["A43"] = tipo_venda_excel
 
         # Garante que abra na primeira guia por padrão
         wb.active = 0
