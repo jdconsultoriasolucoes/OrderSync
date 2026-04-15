@@ -790,9 +790,9 @@
           <h2 class="subtitulo">Comissão Dispet</h2>
           <div class="form-grid-2col">
             <div><label for="insumos_ElaboracaoCadastro">Insumos:</label><input type="text"
-                id="insumos_ElaboracaoCadastro" name="insumos_ElaboracaoCadastro" /></div>
+                id="insumos_ElaboracaoCadastro" name="insumos_ElaboracaoCadastro" readonly /></div>
             <div><label for="pet_ElaboracaoCadastro">Pet:</label><input type="text" id="pet_ElaboracaoCadastro"
-                name="pet_ElaboracaoCadastro" /></div>
+                name="pet_ElaboracaoCadastro" readonly /></div>
             <div style="grid-column: span 2;">
               <label for="observacoes_ElaboracaoCadastro">Observações:</label>
               <textarea id="observacoes_ElaboracaoCadastro" name="observacoes_ElaboracaoCadastro" rows="3" maxlength="1000" oninput="updateCharCounter('observacoes_ElaboracaoCadastro', 'counter-observacoes_ElaboracaoCadastro')"></textarea>
@@ -913,8 +913,8 @@
           renderizarLista('bens_imoveis', 3, []);
           renderizarLista('bens_moveis', 3, []);
           renderizarLista('planteis_animais', 3, []);
-          // Auto-preencher campos de Comissão Dispet com valor padrão
-          const DISPET_DEFAULT = "DISPET REPRESENTAÇÕES COMERCIAIS - CÓDIGO 178799";
+          // Auto-preencher campos de Comissão Dispet dinamicamente via profile
+          const DISPET_DEFAULT = window._dispetDefault || "";
           const insumosFld = document.getElementById('insumos_ElaboracaoCadastro');
           const petFld     = document.getElementById('pet_ElaboracaoCadastro');
           if (insumosFld && !insumosFld.value) insumosFld.value = DISPET_DEFAULT;
@@ -1073,36 +1073,60 @@
 
         // On load event: Carrega canais e verifica cliente selecionado vindo da listagem
         document.addEventListener('DOMContentLoaded', () => {
-          // 1. Sempre carrega as opções do select de Canal de Venda
-          carregarOpcoesCanal().then(() => {
-            // 2. Depois verifica se há cliente selecionado para preencher
-            const selectedClientId = localStorage.getItem('Ordersync_ClienteSelecionadoIdListar');
-            if (selectedClientId) {
-              localStorage.removeItem('Ordersync_ClienteSelecionadoIdListar');
-              const api = window.API_BASE || "http://127.0.0.1:8000";
-              const token = window.Auth ? window.Auth.getToken() : localStorage.getItem('ordersync_token');
-              if (token) {
-                axios.get(`${api}/cliente/${selectedClientId}`, {
-                  headers: { 'Authorization': `Bearer ${token}` }
-                })
-                  .then(res => {
-                    if (res.data) {
-                      if (typeof preencherFormularioCliente === "function") {
-                        preencherFormularioCliente(res.data);
-                      } else if (typeof window.preencherFormulario === "function") {
-                        window.preencherFormulario(res.data);
-                      } else {
-                        console.warn("Função de preenchimento não encontrada, dados obtidos:", res.data);
-                      }
-                    }
+          const api = window.API_BASE || "http://127.0.0.1:8000";
+          const token = window.Auth ? window.Auth.getToken() : localStorage.getItem('ordersync_token');
+
+          const carregarTela = () => {
+            // 1. Sempre carrega as opções do select de Canal de Venda
+            carregarOpcoesCanal().then(() => {
+              // 2. Depois verifica se há cliente selecionado para preencher
+              const selectedClientId = localStorage.getItem('Ordersync_ClienteSelecionadoIdListar');
+              if (selectedClientId) {
+                localStorage.removeItem('Ordersync_ClienteSelecionadoIdListar');
+                if (token) {
+                  axios.get(`${api}/cliente/${selectedClientId}`, {
+                    headers: { 'Authorization': `Bearer ${token}` }
                   })
-                  .catch(err => console.error("Erro ao carregar cliente selecionado:", err));
+                    .then(res => {
+                      if (res.data) {
+                        if (typeof preencherFormularioCliente === "function") {
+                          preencherFormularioCliente(res.data);
+                        } else if (typeof window.preencherFormulario === "function") {
+                          window.preencherFormulario(res.data);
+                        } else {
+                          console.warn("Função de preenchimento não encontrada, dados obtidos:", res.data);
+                        }
+                      }
+                    })
+                    .catch(err => console.error("Erro ao carregar cliente selecionado:", err));
+                }
+              } else {
+                // Se não há cliente para carregar, inicializa as listas vazias (abre 1 bloco padrão)
+                inicializarListasVazias();
               }
-            } else {
-              // Se não há cliente para carregar, inicializa as listas vazias (abre 1 bloco padrão)
-              inicializarListasVazias();
-            }
-          });
+            });
+          };
+
+          if (token) {
+            axios.get(`${api}/profile-config/`, { headers: { 'Authorization': `Bearer ${token}` } })
+              .then(res => {
+                const conf = res.data;
+                let text = "";
+                if (conf.razao_social) text += conf.razao_social.toUpperCase();
+                if (conf.codigo_representante) {
+                    text += (text ? " - CÓDIGO " : "CÓDIGO ") + conf.codigo_representante;
+                }
+                window._dispetDefault = text;
+              })
+              .catch(err => {
+                console.error("Erro ao carregar profile config:", err);
+              })
+              .finally(() => {
+                carregarTela();
+              });
+          } else {
+            carregarTela();
+          }
         });
 
         // ---- Automação de Canal de Venda por Tipo de Cliente ----
