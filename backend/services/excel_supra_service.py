@@ -182,7 +182,7 @@ def gerar_excel_cliente_supra(cliente) -> bytes:
             row = 46 + i
             ws1[f"A{row}"] = _s(bem_i.get("imovel"))
             ws1[f"C{row}"] = _s(bem_i.get("localizacao"))
-            ws1[f"E{row}"] = _s(bem_i.get("area"))
+            ws1[f"F{row}"] = _s(bem_i.get("area"))
             ws1[f"H{row}"] = bem_i.get("valor") or 0
             ws1[f"J{row}"] = _s(bem_i.get("hipotecado"))
 
