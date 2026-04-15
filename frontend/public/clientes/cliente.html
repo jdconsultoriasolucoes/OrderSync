@@ -1498,7 +1498,18 @@
             }
             
             input.dataset.key = campo.key;
-            input.value = dados[campo.key] ?? '';
+            const savedVal = dados[campo.key] ?? '';
+            
+            if (input.tagName === 'SELECT' && savedVal) {
+                let exists = Array.from(input.options).some(opt => opt.value === String(savedVal));
+                if (!exists) {
+                    const opt = document.createElement('option');
+                    opt.value = savedVal;
+                    opt.textContent = savedVal;
+                    input.appendChild(opt);
+                }
+            }
+            input.value = savedVal;
             
             wrapper.appendChild(label);
             wrapper.appendChild(input);

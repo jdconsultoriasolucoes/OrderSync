@@ -245,8 +245,8 @@ def gerar_excel_cliente_supra(cliente) -> bytes:
         ws2["H26"] = _s(getattr(cliente, 'supervisor_codigo_insumo', ''))
 
         # Gerentes — Insumos e Pet (novas linhas no template)
-        ws2["E27"] = _s(getattr(cliente, 'elaboracao_gerente_pet', ''))
-        ws2["H27"] = _s(getattr(cliente, 'elaboracao_gerente_insumos', ''))
+        ws2["E28"] = _s(getattr(cliente, 'elaboracao_gerente_pet', ''))
+        ws2["H28"] = _s(getattr(cliente, 'elaboracao_gerente_insumos', ''))
 
         # Financeiro e Recomendações
         ws2["D35"] = cliente.elaboracao_limite_credito or 0
