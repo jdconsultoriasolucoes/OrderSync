@@ -125,10 +125,11 @@ def exportar_supra(
         raise HTTPException(status_code=500, detail=str(e))
     except RuntimeError as e:
         logger.error(f"Erro técnico na geração da exportação Supra: {e}")
-        raise HTTPException(status_code=500, detail="Erro técnico ao gerar o arquivo. Contate o suporte.")
+        raise HTTPException(status_code=500, detail=str(e))
     except Exception as e:
+        import traceback
         logger.critical(f"Erro inesperado na exportação Supra: {e}", exc_info=True)
-        raise HTTPException(status_code=500, detail="Erro interno inesperado no servidor.")
+        raise HTTPException(status_code=500, detail=f"Erro interno: {traceback.format_exc()}")
 
 
 @router.get("/lookup")
