@@ -18,6 +18,8 @@ class CidadeSupervisorModel(Base):
     nome_supervisor_insumos = Column("nome_supervisor_insumos", String)
     cidades = Column("cidades", String)
     uf = Column("uf", String)
+    gerente_insumos = Column("gerente_insumos", String)
+    gerente_pet = Column("gerente_pet", String)
 
 class MunicipioRotaModel(Base):
     __tablename__ = "tb_municipio_rota"

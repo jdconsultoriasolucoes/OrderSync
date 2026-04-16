@@ -290,6 +290,7 @@
         }
     </style>
 
+    <script src="https://unpkg.com/imask"></script>
     <script src="../js/config.js"></script>
     <script src="../js/auth.js"></script>
     <script src="../js/sidebar_control.js"></script>
@@ -565,6 +566,10 @@
                 <input id="cs-cidade" type="text" required />
                 <label>UF</label>
                 <input id="cs-uf" type="text" maxlength="2" />
+                <label>Gerente Insumos</label>
+                <input id="cs-gerente-insumos" type="text" placeholder="Nome do Gerente Insumos" />
+                <label>Gerente Pet</label>
+                <input id="cs-gerente-pet" type="text" placeholder="Nome do Gerente Pet" />
                 <div class="modal-footer">
                     <button type="button" class="btn" onclick="closeModals()">Cancelar</button>
                     <button type="submit" class="btn btn-primary">Salvar</button>
@@ -656,18 +661,23 @@
 
     <script src="gerenciar_tabelas.js"></script>
 
-    <script>
-        // Highlight active module nav button
-        const originalSelectModule = window.selectModule;
-        if (originalSelectModule) {
-            const navBtns = document.querySelectorAll('.module-nav-btn');
-            document.querySelectorAll('.module-nav-btn').forEach(btn => {
-                btn.addEventListener('click', function () {
-                    navBtns.forEach(b => b.classList.remove('active'));
-                    this.classList.add('active');
-                });
-            });
-        }
+        // Inicialização de Máscaras
+        window.addEventListener('DOMContentLoaded', () => {
+            if (window.IMask) {
+                const phoneOptions = {
+                    mask: [
+                        { mask: '(00) 0000-0000' },
+                        { mask: '(00) 00000-0000' }
+                    ]
+                };
+                
+                const refTel = document.getElementById('ref-telefone');
+                if (refTel) IMask(refTel, phoneOptions);
+                
+                const supTel = document.getElementById('sup-telefone');
+                if (supTel) IMask(supTel, phoneOptions);
+            }
+        });
     </script>
 </body>
 

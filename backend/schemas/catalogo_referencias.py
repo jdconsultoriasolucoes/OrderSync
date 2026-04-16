@@ -26,6 +26,8 @@ class CidadeSupervisorBase(BaseModel):
     nome_supervisor_insumos: Optional[str] = None
     cidades: Optional[str] = None
     uf: Optional[str] = None
+    gerente_insumos: Optional[str] = None
+    gerente_pet: Optional[str] = None
 
 class CidadeSupervisorCreate(CidadeSupervisorBase):
     pass

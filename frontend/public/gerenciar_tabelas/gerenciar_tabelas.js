@@ -256,7 +256,9 @@ const CONFIG = {
             { key: 'cidades', label: 'Cidade' },
             { key: 'uf', label: 'UF' },
             { key: 'nome_supervisor_insumos', label: 'Sup. Insumos' },
-            { key: 'nome_supervisor_pet', label: 'Sup. Pet' }
+            { key: 'gerente_insumos', label: 'Ger. Insumos' },
+            { key: 'nome_supervisor_pet', label: 'Sup. Pet' },
+            { key: 'gerente_pet', label: 'Ger. Pet' }
         ],
         modalId: 'modal-cidade_supervisor',
         fillForm: (item) => {
@@ -267,6 +269,13 @@ const CONFIG = {
             document.getElementById('cs-nome-pet').value = item.nome_supervisor_pet || '';
             document.getElementById('cs-cidade').value = item.cidades || '';
             document.getElementById('cs-uf').value = item.uf || '';
+            document.getElementById('cs-gerente-insumos').value = item.gerente_insumos || '';
+            document.getElementById('cs-gerente-pet').value = item.gerente_pet || '';
+
+            // Trigger masks if any
+            ['cs-num-insumos', 'cs-num-pet'].forEach(id => {
+               document.getElementById(id).dispatchEvent(new Event('input'));
+            });
         },
         clearForm: () => {
             document.getElementById('cs-codigo').value = '';
@@ -276,6 +285,8 @@ const CONFIG = {
             document.getElementById('cs-nome-pet').value = '';
             document.getElementById('cs-cidade').value = '';
             document.getElementById('cs-uf').value = '';
+            document.getElementById('cs-gerente-insumos').value = '';
+            document.getElementById('cs-gerente-pet').value = '';
         }
     },
     municipio_rota: {
@@ -318,6 +329,8 @@ const CONFIG = {
             document.getElementById('ref-cidade').value = item.cidade || '';
             document.getElementById('ref-telefone').value = item.telefone || '';
             document.getElementById('ref-contato').value = item.contato || '';
+
+            document.getElementById('ref-telefone').dispatchEvent(new Event('input'));
         },
         clearForm: () => {
             document.getElementById('ref-codigo').value = '';
@@ -345,6 +358,8 @@ const CONFIG = {
             document.getElementById('sup-tipo').value = item.tipo || '';
             document.getElementById('sup-telefone').value = item.telefone || '';
             document.getElementById('sup-email').value = item.email || '';
+
+            document.getElementById('sup-telefone').dispatchEvent(new Event('input'));
         },
         clearForm: () => {
             document.getElementById('sup-id').value = '';
@@ -711,7 +726,9 @@ async function saveCidadeSupervisor(e) {
         nome_supervisor_insumos: document.getElementById('cs-nome-insumos').value || null,
         nome_supervisor_pet: document.getElementById('cs-nome-pet').value || null,
         cidades: document.getElementById('cs-cidade').value || null,
-        uf: document.getElementById('cs-uf').value || null
+        uf: document.getElementById('cs-uf').value || null,
+        gerente_insumos: document.getElementById('cs-gerente-insumos').value || null,
+        gerente_pet: document.getElementById('cs-gerente-pet').value || null
     };
     await saveGeneric(payload, !!currentItem, id);
 }

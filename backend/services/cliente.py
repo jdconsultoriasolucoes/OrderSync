@@ -4,7 +4,10 @@ from sqlalchemy import text
 from database import SessionLocal
 from models.cliente_v2 import ClienteModelV2
 from datetime import datetime, timedelta
+from zoneinfo import ZoneInfo
 import logging
+
+TZ = ZoneInfo("America/Sao_Paulo")
 
 logger = logging.getLogger("ordersync.services.cliente")
 
@@ -499,6 +502,7 @@ def verificar_inatividade_clientes():
     Regra automática: Se o intervalo desde a última compra for > 180 dias,
     setar cadastro_ativo = FALSE.
     Consulta a tabela tb_pedidos baseada no codigo_cliente.
+    Trabalhando no fuso horário de São Paulo (America/Sao_Paulo).
     """
     logger.info("Iniciando verificação de inatividade de clientes (> 180 dias)...")
     db = SessionLocal()
@@ -515,28 +519,37 @@ def verificar_inatividade_clientes():
             return 0
 
         inativos_count = 0
-        limite = datetime.now() - timedelta(days=180)
+        agora_sp = datetime.now(TZ)
+        limite = agora_sp - timedelta(days=180)
 
         for cliente in clientes_ativos:
             codigo = cliente.cadastro_codigo_da_empresa
             if not codigo or not str(codigo).strip():
                 continue
 
-            # Busca a data do último pedido para este cliente
+            # Busca a data do último pedido para este cliente ignorando maiúsculas e minúsculas no status
             result = db.execute(text("""
                 SELECT MAX(created_at) as ultima_compra
                 FROM tb_pedidos
                 WHERE codigo_cliente = :codigo
-                  AND status != 'CANCELADO'
+                  AND LOWER(status) != 'cancelado'
             """), {"codigo": codigo}).fetchone()
 
             if result and result[0]:
                 ultima_compra = result[0]
-                if ultima_compra < limite:
+                
+                # Se a data vier sem timezone (naive), assumimos que está em UTC, pois é o padrão usual de db-render
+                if not ultima_compra.tzinfo:
+                    ultima_compra = ultima_compra.replace(tzinfo=ZoneInfo("UTC"))
+                
+                # Converte para SP de forma segura
+                ultima_compra_sp = ultima_compra.astimezone(TZ)
+
+                if ultima_compra_sp < limite:
                     cliente.cadastro_ativo = False
-                    cliente.data_atualizacao = datetime.now()
+                    cliente.data_atualizacao = datetime.now(TZ)
                     inativos_count += 1
-                    logger.info(f"Cliente {codigo} marcado como inativo (última compra: {ultima_compra.strftime('%d/%m/%Y')})")
+                    logger.info(f"Cliente {codigo} marcado como inativo (última compra: {ultima_compra_sp.strftime('%d/%m/%Y %H:%M:%S')})")
 
         if inativos_count > 0:
             db.commit()

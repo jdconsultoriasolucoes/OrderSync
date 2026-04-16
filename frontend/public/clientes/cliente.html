@@ -1551,7 +1551,27 @@
 
           bloco.appendChild(grid);
           bloco.appendChild(btnRemover);
+
+          // Aplicar máscaras aos novos campos se necessário
+          setTimeout(() => {
+            const telInput = bloco.querySelector('input[data-key="telefone"]');
+            if (telInput) applyPhoneMask(telInput);
+            
+            const contatoInput = bloco.querySelector('input[data-key="contato_gerente"]');
+            if (contatoInput) applyPhoneMask(contatoInput);
+          }, 0);
+
           return bloco;
+        }
+
+        function applyPhoneMask(el) {
+          if (!el || !window.IMask) return;
+          IMask(el, {
+            mask: [
+              { mask: '(00) 0000-0000' },
+              { mask: '(00) 00000-0000' }
+            ]
+          });
         }
 
         function adicionarItem(secao, limite) {
@@ -1857,7 +1877,12 @@
             setVal('bairro', data.neighborhood);
             setVal('municipio', data.city);
             setVal('estado', data.state);
-            // 'localizacao' is not provided by data directly (often used for complements or ref), leaving as is.
+            
+            // Disparar evento para as máscaras atualizarem (ex: se houver máscara no campo preenchido)
+            ['endereco', 'bairro', 'municipio', 'estado'].forEach(f => {
+                const el = document.getElementById(`${f}${suffix}`);
+                if (el) el.dispatchEvent(new Event('input'));
+            });
 
             if (tipo === 'faturamento') {
               buscarSupervisorPetEInsumos();
@@ -1953,7 +1978,12 @@
 
             // Contact
             setVal('email_resposavel', data.email);
-            // setVal('telefone', data.ddd_telefone_1); // If we had a generic phone field
+            
+            // Disparar evento para as máscaras atualizarem
+            ['nome_cliente', 'nome_fantasia', 'cep_faturamento', 'endereco_faturamento', 'bairro_faturamento', 'municipio_faturamento', 'estado_faturamento'].forEach(id => {
+                const el = document.getElementById(id);
+                if (el) el.dispatchEvent(new Event('input'));
+            });
 
             // Nota sobre Inscrição Estadual:
             // A API pública de CNPJ (Receita Federal) NÃO retorna Inscrição Estadual (dado estadual).
@@ -2181,6 +2211,34 @@
         // Disponibiliza para o modal chamar
         window.preencherFormulario = preencherFormularioCliente;
         window.buscarSupervisorPetEInsumos = buscarSupervisorPetEInsumos;
+
+        // Inicialização de Máscaras Globais
+        function initGlobalMasks() {
+          if (!window.IMask) return;
+
+          // CPF / CNPJ
+          const cpfEl = document.getElementById('cpf');
+          if (cpfEl) IMask(cpfEl, { mask: '000.000.000-00' });
+          
+          const cnpjEl = document.getElementById('cnpj');
+          if (cnpjEl) IMask(cnpjEl, { mask: '00.000.000/0000-00' });
+
+          // CEPs
+          ['cep_faturamento', 'cep_EnderecoEntrega', 'cep_EnderecoCobranca'].forEach(id => {
+            const el = document.getElementById(id);
+            if (el) IMask(el, { mask: '00000-000' });
+          });
+
+          // Telefones/Celulares Estáticos
+          [
+            'celular_responsavel', 'telefone_fixo_responsavel',
+            'celular_RepresentanteLegal', 'celular_ResponsavelRecebimento',
+            'celular_ResponsavelCobranca'
+          ].forEach(id => {
+            const el = document.getElementById(id);
+            if (el) applyPhoneMask(el);
+          });
+        }
       </script>
 
       <!--  <script src="/js/script.js"></script>-->
@@ -2257,6 +2315,7 @@
           carregarVendedores();
           carregarOpcoesReferencia();
           carregarOpcoesPlantel();
+          initGlobalMasks();
 
           setViewState('INITIAL');
         };

@@ -144,6 +144,52 @@ def run_migrations():
                 db.rollback()
                 logger.error(f"Falha ao adicionar colunas de histórico em tb_cargas: {e}")
 
+
+        # 12. Correção Global de Autoincremento (Catálogo)
+        tables_to_fix = [
+            ('tb_referencias', 'codigo'),
+            ('tb_cidade_supervisor', 'codigo'),
+            ('tb_canal_venda', 'Id'),
+            ('tb_municipio_rota', 'id'),
+            ('tb_supervisores', 'id')
+        ]
+        
+        for table, pk in tables_to_fix:
+            try:
+                # Verifica se já tem default (autoincrement)
+                res = db.execute(text(f"""
+                    SELECT column_default 
+                    FROM information_schema.columns 
+                    WHERE table_name = '{table}' AND column_name = '{pk}'
+                """)).scalar()
+                
+                if not res or 'nextval' not in str(res):
+                    logger.info(f"Configurando autoincremento para {table}.{pk}...")
+                    seq_name = f"{table}_{pk.lower()}_seq"
+                    db.execute(text(f'CREATE SEQUENCE IF NOT EXISTS "{seq_name}"'))
+                    db.execute(text(f'ALTER TABLE "{table}" ALTER COLUMN "{pk}" SET DEFAULT nextval(\'{seq_name}\')'))
+                    db.execute(text(f'ALTER SEQUENCE "{seq_name}" OWNED BY "{table}"."{pk}"'))
+                    db.execute(text(f'SELECT setval(\'{seq_name}\', COALESCE((SELECT MAX("{pk}") FROM "{table}"), 0) + 1, false)'))
+                    db.commit()
+                    logger.info(f"Autoincremento configurado para {table}.")
+            except Exception as e:
+                db.rollback()
+                logger.error(f"Erro ao configurar autoincremento em {table}: {e}")
+
+        # 13. CidadeSupervisor: gerente_insumos, gerente_pet
+        for col in ["gerente_insumos", "gerente_pet"]:
+            try:
+                db.execute(text(f"SELECT {col} FROM tb_cidade_supervisor LIMIT 1"))
+            except Exception:
+                db.rollback()
+                logger.info(f"Adicionando coluna {col} em tb_cidade_supervisor...")
+                try:
+                    db.execute(text(f"ALTER TABLE tb_cidade_supervisor ADD COLUMN {col} VARCHAR"))
+                    db.commit()
+                except Exception as e:
+                    db.rollback()
+                    logger.error(f"Falha ao adicionar {col} em tb_cidade_supervisor: {e}")
+
     logger.info("Migrações concluídas.")
 
     # 10. CadastroCliente: elaboracao_gerente_insumos, elaboracao_gerente_pet
