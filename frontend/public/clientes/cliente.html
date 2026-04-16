@@ -387,7 +387,7 @@
             </div>
             <div>
               <label for="municipio_faturamento">Município:</label>
-              <input type="text" id="municipio_faturamento" name="municipio_faturamento" onblur="buscarSupervisorPetEInsumos()" />
+              <input type="text" id="municipio_faturamento" name="municipio_faturamento" onblur="buscarSupervisorPetEInsumos()" onchange="buscarSupervisorPetEInsumos()" />
             </div>
             <div>
               <label for="estado_faturamento">Estado:</label>
@@ -687,6 +687,7 @@
                 btnCompras.addEventListener('click', function() {
                   carregarAbaCompras();
                 });
+              }
             });
           </script>
         </div>
@@ -746,14 +747,14 @@
 
           <h2 class="subtitulo">Supervisores</h2>
           <div class="form-grid-2col">
-            <div><label for="codigo_insumo_ElaboracaoCadastro">Código do Insumo:</label><input type="text"
-                id="codigo_insumo_ElaboracaoCadastro" name="codigo_insumo_ElaboracaoCadastro" /></div>
+            <div><label for="codigo_insumo_ElaboracaoCadastro">Código Insumo:</label><input type="text"
+                id="codigo_insumo_ElaboracaoCadastro" name="codigo_insumo_ElaboracaoCadastro" readonly /></div>
             <div><label for="nome_insumos_ElaboracaoCadastro">Nome do Insumo:</label><input type="text"
-                id="nome_insumos_ElaboracaoCadastro" name="nome_insumos_ElaboracaoCadastro" /></div>
+                id="nome_insumos_ElaboracaoCadastro" name="nome_insumos_ElaboracaoCadastro" readonly /></div>
             <div><label for="codigo_pet_ElaboracaoCadastro">Código Pet:</label><input type="text"
-                id="codigo_pet_ElaboracaoCadastro" name="codigo_pet_ElaboracaoCadastro" /></div>
+                id="codigo_pet_ElaboracaoCadastro" name="codigo_pet_ElaboracaoCadastro" readonly /></div>
             <div><label for="nome_pet_ElaboracaoCadastro">Nome Pet:</label><input type="text"
-                id="nome_pet_ElaboracaoCadastro" name="nome_pet_ElaboracaoCadastro" /></div>
+                id="nome_pet_ElaboracaoCadastro" name="nome_pet_ElaboracaoCadastro" readonly /></div>
             <div>
               <label for="gerente_insumos_ElaboracaoCadastro">Gerente Insumos:</label>
               <input type="text" id="gerente_insumos_ElaboracaoCadastro" name="gerente_insumos_ElaboracaoCadastro" readonly />
@@ -2029,6 +2030,10 @@
               document.getElementById("nome_pet_ElaboracaoCadastro").value = data.nome_pet || "";
               document.getElementById("gerente_insumos_ElaboracaoCadastro").value = data.gerente_insumos || "";
               document.getElementById("gerente_pet_ElaboracaoCadastro").value = data.gerente_pet || "";
+              
+              const dispetDef = window._dispetDefault || "";
+              document.getElementById("insumos_ElaboracaoCadastro").value = dispetDef;
+              document.getElementById("pet_ElaboracaoCadastro").value = dispetDef;
             }
           } catch (e) {
             console.error(e);
