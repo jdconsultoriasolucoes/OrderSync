@@ -809,26 +809,6 @@
       <!-- <div class="mt-4 d-flex gap-2"> ... </div> -->
 
 
-      <script>
-        // Máscaras
-        const cpfEl = document.getElementById('cpf');
-        if (cpfEl) IMask(cpfEl, { mask: '000.000.000-00' });
-
-        const cnpjEl = document.getElementById('cnpj');
-        if (cnpjEl) IMask(cnpjEl, { mask: '00.000.000/0000-00' });
-
-        const telEl = document.getElementById('telefone'); // Verify if this ID exists or remove
-        if (telEl) IMask(telEl, { mask: '(00) 0000-0000' });
-
-        const celEl = document.getElementById('celular'); // Verify if this ID exists or remove
-        if (celEl) IMask(celEl, { mask: '(00) 00000-0000' });
-
-        // Add masks for actual fields if needed, e.g.
-        const celResp = document.getElementById('celular_responsavel');
-        if (celResp) IMask(celResp, { mask: '(00) 00000-0000' });
-
-        const fixoResp = document.getElementById('telefone_fixo_responsavel');
-        if (fixoResp) IMask(fixoResp, { mask: '(00) 0000-0000' });
 
         // --- State Management ---
         // Modes: 'INITIAL', 'SELECTED', 'EDITING'
@@ -2230,8 +2210,7 @@
           });
 
           // Telefones/Celulares Estáticos
-          [
-            'celular_responsavel', 'telefone_fixo_responsavel',
+          ['celular_responsavel', 'telefone_fixo_responsavel',
             'celular_RepresentanteLegal', 'celular_ResponsavelRecebimento',
             'celular_ResponsavelCobranca'
           ].forEach(id => {
@@ -2239,6 +2218,24 @@
             if (el) applyPhoneMask(el);
           });
         }
+
+        // --- Execução Inicial ---
+        document.addEventListener('DOMContentLoaded', () => {
+          // Inicializa máscaras globais (estáticas)
+          initGlobalMasks();
+          
+          // Carrega lista de referências e plantel para preencher selects dinâmicos
+          carregarOpcoesReferencia();
+          carregarOpcoesPlantel();
+          
+          // Adiciona listener para campos de busca de CEP para formatar após preenchimento automático
+          document.querySelectorAll('input[id*="cep"]').forEach(el => {
+              el.addEventListener('input', (e) => {
+                  // Se o valor for colado ou preenchido auto, o IMask cuida da formatação se já inicializado
+                  // mas garantimos um dispatchEvent(new Event('input')) dentro das funções buscarCep e buscarCnpj
+              });
+          });
+        });
       </script>
 
       <!--  <script src="/js/script.js"></script>-->
