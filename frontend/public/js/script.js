@@ -323,6 +323,17 @@ function preencherFormularioCliente(cliente) {
   document.getElementById("insumos_ElaboracaoCadastro").value = com.insumos_ElaboracaoCadastro || "";
   document.getElementById("pet_ElaboracaoCadastro").value = com.pet_ElaboracaoCadastro || "";
   document.getElementById("observacoes_ElaboracaoCadastro").value = com.observacoes_ElaboracaoCadastro || "";
+
+  // Auto-fill e Sincronização Forçada:
+  // Garante que, ao abrir um cliente existente, ele sempre puxe os dados mais recentes de gerentes/supervisores.
+  setTimeout(() => {
+    if (window.buscarSupervisorPetEInsumos) {
+      const municipio = document.getElementById("municipio_faturamento")?.value;
+      if (municipio) {
+        window.buscarSupervisorPetEInsumos();
+      }
+    }
+  }, 300);
 }
 
 function novoCliente() {

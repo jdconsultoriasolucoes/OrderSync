@@ -9,6 +9,7 @@ from database import SessionLocal
 from models.profile_config import ProfileConfigModel
 from models.usuario import UsuarioModel
 from core.deps import get_current_user
+from services.sync_service import sync_profile_comissao
 import logging
 
 logger = logging.getLogger("ordersync.routers.profile_config")
@@ -73,6 +74,9 @@ def update_profile_config(
         
         db.commit()
         db.refresh(config)
+        
+        # Sincroniza essa mudança com as strings de Comissão ("Razão Social - Código") para todos os clientes
+        sync_profile_comissao(db)
         
         return ProfileConfigSchema(
             codigo_representante=config.codigo_representante or "",

@@ -39,12 +39,23 @@ def get_db():
         db.close()
 
 # --- Helpers ---
+from services.sync_service import sync_cidade_supervisor, sync_municipio_rota, sync_referencia_comercial
+
+def trigger_cascade(db: Session, model_class, db_item):
+    if model_class == CidadeSupervisorModel:
+        sync_cidade_supervisor(db, getattr(db_item, 'cidades', ''), db_item)
+    elif model_class == MunicipioRotaModel:
+        sync_municipio_rota(db, getattr(db_item, 'municipio', ''), getattr(db_item, 'rota', ''))
+    elif model_class == ReferenciasModel:
+        sync_referencia_comercial(db, getattr(db_item, 'empresa', ''), db_item)
+
 def create_item(db: Session, model_class, item_data):
     db_item = model_class(**item_data.dict(exclude_unset=True))
     db.add(db_item)
     try:
         db.commit()
         db.refresh(db_item)
+        trigger_cascade(db, model_class, db_item)
         return db_item
     except Exception as e:
         db.rollback()
@@ -64,6 +75,7 @@ def update_item(db: Session, model_class, pk_field: str, item_id: int, item_data
     try:
         db.commit()
         db.refresh(db_item)
+        trigger_cascade(db, model_class, db_item)
         return db_item
     except Exception as e:
         db.rollback()
