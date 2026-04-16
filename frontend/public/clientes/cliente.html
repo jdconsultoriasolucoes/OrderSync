@@ -689,7 +689,6 @@
                 });
               }
             });
-          </script>
         </div>
 
         <!-- Aba 6 - Elaboração do Cadastro -->
@@ -757,11 +756,11 @@
                 id="nome_pet_ElaboracaoCadastro" name="nome_pet_ElaboracaoCadastro" /></div>
             <div>
               <label for="gerente_insumos_ElaboracaoCadastro">Gerente Insumos:</label>
-              <input type="text" id="gerente_insumos_ElaboracaoCadastro" name="gerente_insumos_ElaboracaoCadastro" />
+              <input type="text" id="gerente_insumos_ElaboracaoCadastro" name="gerente_insumos_ElaboracaoCadastro" readonly />
             </div>
             <div>
               <label for="gerente_pet_ElaboracaoCadastro">Gerente Pet:</label>
-              <input type="text" id="gerente_pet_ElaboracaoCadastro" name="gerente_pet_ElaboracaoCadastro" />
+              <input type="text" id="gerente_pet_ElaboracaoCadastro" name="gerente_pet_ElaboracaoCadastro" readonly />
             </div>
           </div>
 
@@ -810,6 +809,7 @@
 
 
 
+      <script>
         // --- State Management ---
         // Modes: 'INITIAL', 'SELECTED', 'EDITING'
         function setViewState(mode) {
@@ -2027,6 +2027,8 @@
               document.getElementById("nome_insumos_ElaboracaoCadastro").value = data.nome_insumos || "";
               document.getElementById("codigo_pet_ElaboracaoCadastro").value = data.codigo_pet || "";
               document.getElementById("nome_pet_ElaboracaoCadastro").value = data.nome_pet || "";
+              document.getElementById("gerente_insumos_ElaboracaoCadastro").value = data.gerente_insumos || "";
+              document.getElementById("gerente_pet_ElaboracaoCadastro").value = data.gerente_pet || "";
             }
           } catch (e) {
             console.error(e);

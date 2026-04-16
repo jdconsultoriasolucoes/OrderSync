@@ -153,7 +153,9 @@ def buscar_supervisor_por_municipio(municipio: str = Query(..., min_length=1), d
         "codigo_insumo": str(item.numero_supervisor_insumos) if item.numero_supervisor_insumos else "",
         "nome_insumos": item.nome_supervisor_insumos or "",
         "codigo_pet": str(item.numero_supervisor_pet) if item.numero_supervisor_pet else "",
-        "nome_pet": item.nome_supervisor_pet or ""
+        "nome_pet": item.nome_supervisor_pet or "",
+        "gerente_insumos": item.gerente_insumos or "",
+        "gerente_pet": item.gerente_pet or ""
     }
 
 @router.post("/cidade-supervisor", response_model=CidadeSupervisorResponse)
