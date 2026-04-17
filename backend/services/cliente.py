@@ -535,6 +535,9 @@ def verificar_inatividade_clientes():
                   AND LOWER(status) != 'cancelado'
             """), {"codigo": codigo}).fetchone()
 
+            data_referencia = None
+            origem_data = "Nenhuma"
+
             if result and result[0]:
                 ultima_compra = result[0]
                 
@@ -543,13 +546,42 @@ def verificar_inatividade_clientes():
                     ultima_compra = ultima_compra.replace(tzinfo=ZoneInfo("UTC"))
                 
                 # Converte para SP de forma segura
-                ultima_compra_sp = ultima_compra.astimezone(TZ)
+                data_referencia = ultima_compra.astimezone(TZ)
+                origem_data = "Pedido ERP Novo"
 
-                if ultima_compra_sp < limite:
+            # Fallback 1: Data de emissão da última compra legada
+            if not data_referencia and cliente.ultimas_compras_emissao:
+                dt_str = str(cliente.ultimas_compras_emissao).strip()
+                parsed_dt = None
+                for fmt in ("%d/%m/%Y", "%Y-%m-%d", "%Y-%m-%dT%H:%M:%S", "%d/%m/%Y %H:%M:%S", "%Y-%m-%dT%H:%M:%S.%fZ"):
+                    try:
+                        parsed_dt = datetime.strptime(dt_str, fmt)
+                        break
+                    except ValueError:
+                        pass
+                
+                if parsed_dt:
+                    data_referencia = parsed_dt.replace(tzinfo=TZ)
+                    origem_data = "Histórico ERP (Legado)"
+                else:
+                    logger.debug(f"Falha ao interpretar data legada '{dt_str}' para o cliente {codigo}")
+
+            # Fallback 2: Data de criação do cadastro (Cliente nunca comprou)
+            if not data_referencia and cliente.data_criacao:
+                dc = cliente.data_criacao
+                if not dc.tzinfo:
+                    dc = dc.replace(tzinfo=ZoneInfo("UTC"))
+                data_referencia = dc.astimezone(TZ)
+                origem_data = "Data de Cadastro"
+
+            if data_referencia:
+                if data_referencia < limite:
                     cliente.cadastro_ativo = False
-                    cliente.data_atualizacao = datetime.now(TZ)
+                    cliente.data_atualizacao = agora_sp
                     inativos_count += 1
-                    logger.info(f"Cliente {codigo} marcado como inativo (última compra: {ultima_compra_sp.strftime('%d/%m/%Y %H:%M:%S')})")
+                    logger.info(f"Cliente {codigo} inativado. Motivo: >180 dias. Ref: {origem_data} ({data_referencia.strftime('%d/%m/%Y')})")
+            else:
+                logger.warning(f"Cliente {codigo} ignorado na inativação: Impossível determinar data de referência.")
 
         if inativos_count > 0:
             db.commit()

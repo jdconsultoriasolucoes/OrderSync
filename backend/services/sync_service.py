@@ -1,6 +1,6 @@
 import logging
 from sqlalchemy.orm import Session
-from sqlalchemy import func
+from sqlalchemy import func, or_
 from typing import Dict, Any
 from copy import deepcopy
 
@@ -110,21 +110,42 @@ def sync_supervisores_base(db: Session, supervisor: Any):
     Se o nome/código do supervisor mudar, atualizamos todos os clientes que referenciam o CÓDIGO desse supervisor.
     """
     if not supervisor.codigo:
+        logger.warning("Sincronização de supervisor ignorada: Código ausente.")
         return
         
-    cod_str = str(int(supervisor.codigo))
+    # Tentamos ser o mais resilientes possível no match do código
+    try:
+        cod_int = int(float(supervisor.codigo))
+        cod_str_clean = str(cod_int)
+    except:
+        cod_str_clean = str(supervisor.codigo).strip()
+
+    logger.info(f"Sincronizando Supervisor Base (Código: {cod_str_clean}) -> Novo Nome: {supervisor.supervisores}")
     
-    # Atualiza as strings de quem tem ESSE código
-    rows_insumo = db.query(ClienteModelV2).filter(ClienteModelV2.supervisor_codigo_insumo == cod_str).update({
-        ClienteModelV2.supervisor_nome_insumo: supervisor.supervisores or ""
+    # Busca clientes que tenham esse código exato, com .0 ou com espaços
+    # Usamos or_ para cobrir variações comuns de exportação de Excel/CSV
+    filter_cond = or_(
+        func.trim(ClienteModelV2.supervisor_codigo_insumo) == cod_str_clean,
+        func.trim(ClienteModelV2.supervisor_codigo_insumo) == f"{cod_str_clean}.0"
+    )
+    
+    rows_insumo = db.query(ClienteModelV2).filter(filter_cond).update({
+        ClienteModelV2.supervisor_nome_insumo: supervisor.supervisores or "",
+        ClienteModelV2.supervisor_codigo_insumo: cod_str_clean  # Auto-correção para inteiro
     }, synchronize_session=False)
     
-    rows_pet = db.query(ClienteModelV2).filter(ClienteModelV2.supervisor_codigo_pet == cod_str).update({
-        ClienteModelV2.supervisor_nome_pet: supervisor.supervisores or ""
+    filter_cond_pet = or_(
+        func.trim(ClienteModelV2.supervisor_codigo_pet) == cod_str_clean,
+        func.trim(ClienteModelV2.supervisor_codigo_pet) == f"{cod_str_clean}.0"
+    )
+
+    rows_pet = db.query(ClienteModelV2).filter(filter_cond_pet).update({
+        ClienteModelV2.supervisor_nome_pet: supervisor.supervisores or "",
+        ClienteModelV2.supervisor_codigo_pet: cod_str_clean  # Auto-correção para inteiro
     }, synchronize_session=False)
 
     db.commit()
-    logger.info(f"Supervisor Base Sincronizado: {rows_insumo} insumos e {rows_pet} pet afetados.")
+    logger.info(f"Supervisor Base Sincronizado para {cod_str_clean}: {rows_insumo} insumos e {rows_pet} pet afetados.")
 
 def sync_canal_venda(db: Session, canal: Any):
     """
