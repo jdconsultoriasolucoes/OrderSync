@@ -14,6 +14,17 @@ def _normalize_string(s: str) -> str:
     """Helper simples para normalização primária (remoção de espaços) para evitar falhas silenciosas"""
     return s.strip() if s else ""
 
+def safe_int_str(val) -> str:
+    if val is None:
+        return ""
+    try:
+        import math
+        if isinstance(val, float) and math.isnan(val):
+            return ""
+        return str(int(val))
+    except (ValueError, TypeError):
+        return str(val) if val else ""
+
 def sync_cidade_supervisor(db: Session, municipio: str, data: CidadeSupervisorModel):
     """
     Quando o catálogo for atualizado, propague para os clientes daquela cidade.
@@ -29,9 +40,9 @@ def sync_cidade_supervisor(db: Session, municipio: str, data: CidadeSupervisorMo
     rows_updated = query.update({
         ClienteModelV2.elaboracao_gerente_insumos: data.gerente_insumos or "",
         ClienteModelV2.elaboracao_gerente_pet: data.gerente_pet or "",
-        ClienteModelV2.supervisor_codigo_insumo: str(int(data.numero_supervisor_insumos)) if data.numero_supervisor_insumos else "",
+        ClienteModelV2.supervisor_codigo_insumo: safe_int_str(data.numero_supervisor_insumos),
         ClienteModelV2.supervisor_nome_insumo: data.nome_supervisor_insumos or "",
-        ClienteModelV2.supervisor_codigo_pet: str(int(data.numero_supervisor_pet)) if data.numero_supervisor_pet else "",
+        ClienteModelV2.supervisor_codigo_pet: safe_int_str(data.numero_supervisor_pet),
         ClienteModelV2.supervisor_nome_pet: data.nome_supervisor_pet or ""
     }, synchronize_session=False)
 
@@ -92,6 +103,34 @@ def sync_referencia_comercial(db: Session, empresa: str, ref_data: ReferenciasMo
             
     db.commit()
     logger.info(f"{updated_count} clientes atualizados (Referências Comerciais).")
+
+def sync_supervisores_base(db: Session, supervisor: Any):
+    """
+    Sincroniza quando a tabela MESTRA (tb_supervisores) for alterada.
+    Se o nome/código do supervisor mudar, atualizamos todos os clientes que referenciam o CÓDIGO desse supervisor.
+    """
+    if not supervisor.codigo:
+        return
+        
+    cod_str = str(int(supervisor.codigo))
+    
+    # Atualiza as strings de quem tem ESSE código
+    rows_insumo = db.query(ClienteModelV2).filter(ClienteModelV2.supervisor_codigo_insumo == cod_str).update({
+        ClienteModelV2.supervisor_nome_insumo: supervisor.supervisores or ""
+    }, synchronize_session=False)
+    
+    rows_pet = db.query(ClienteModelV2).filter(ClienteModelV2.supervisor_codigo_pet == cod_str).update({
+        ClienteModelV2.supervisor_nome_pet: supervisor.supervisores or ""
+    }, synchronize_session=False)
+
+    db.commit()
+    logger.info(f"Supervisor Base Sincronizado: {rows_insumo} insumos e {rows_pet} pet afetados.")
+
+def sync_canal_venda(db: Session, canal: Any):
+    """
+    Sincroniza os canais de venda quando seus nomes base mudarem, se houver impacto direto.
+    """
+    pass # Espaço reservado, atualmente Canais não salvam ID relacional no cliente, apenas texto solto.
 
 def sync_profile_comissao(db: Session):
     """

@@ -39,7 +39,13 @@ def get_db():
         db.close()
 
 # --- Helpers ---
-from services.sync_service import sync_cidade_supervisor, sync_municipio_rota, sync_referencia_comercial
+from services.sync_service import (
+    sync_cidade_supervisor, 
+    sync_municipio_rota, 
+    sync_referencia_comercial,
+    sync_supervisores_base,
+    sync_canal_venda
+)
 
 def trigger_cascade(db: Session, model_class, db_item):
     if model_class == CidadeSupervisorModel:
@@ -48,6 +54,10 @@ def trigger_cascade(db: Session, model_class, db_item):
         sync_municipio_rota(db, getattr(db_item, 'municipio', ''), getattr(db_item, 'rota', ''))
     elif model_class == ReferenciasModel:
         sync_referencia_comercial(db, getattr(db_item, 'empresa', ''), db_item)
+    elif model_class == SupervisoresModel:
+        sync_supervisores_base(db, db_item)
+    elif model_class == CanalVendaModel:
+        sync_canal_venda(db, db_item)
 
 def create_item(db: Session, model_class, item_data):
     db_item = model_class(**item_data.dict(exclude_unset=True))
