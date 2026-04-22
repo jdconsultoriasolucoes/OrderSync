@@ -117,26 +117,27 @@ def gerar_excel_cliente_supra(cliente) -> bytes:
         ws1["A13"] = f"CPF:    {_s(cliente.cadastro_cpf)}"
         ws1["E13"] = f"INSCR.  ESTADUAL:  {_s(cliente.cadastro_inscricao_estadual)}"
 
-        # Lógica de Checkboxes (Tipo de Cliente)
-        tipo = _normalize(_s(cliente.cadastro_tipo_cliente))
-        
-        tipo_map = [
-            (["revendedor", "revenda"], "C17"),
-            (["atacado", "atacadista"], "E18"),
-            (["direto"], "E17"),
-            (["pequeno"], "G18"),
-            (["redes", "rede"], "G17"),
-            (["pet shop", "petshop", "pet"], "I18"),
-            (["clinica", "vet"], "I17"),
-            (["lojista", "loja"], "C18")
-        ]
-        
-        for chaves, coord in tipo_map:
-            if any(k in tipo for k in chaves):
-                orig = ws1[coord].value or ""
-                if "(XX)" not in str(orig):
-                    ws1[coord] = f"{str(orig).split(':')[0]}:  (XX)"
-                break
+        # Lógica de Checkboxes (Tipo de Cliente) - Regra Atualizada
+        # Produtor rural, Pessoa fisica/juridica, Canil -> Cli Direto: E17
+        # Revenda -> Logista: C18
+        if any(k in tipo for k in ["produtor rural", "pessoa fisica", "pessoa juridica", "canil"]):
+            ws1["E17"] = f"Cli Direto:  (X)"
+        elif "revenda" in tipo:
+            ws1["C18"] = f"Logista:  (X)"
+        else:
+            # Fallback para outros tipos se existirem no template
+            tipo_map = [
+                (["atacado", "atacadista"], "E18"),
+                (["pequeno"], "G18"),
+                (["redes", "rede"], "G17"),
+                (["pet shop", "petshop", "pet"], "I18"),
+                (["clinica", "vet"], "I17")
+            ]
+            for chaves, coord in tipo_map:
+                if any(k in tipo for k in chaves):
+                    orig = ws1[coord].value or ""
+                    ws1[coord] = f"{str(orig).split(':')[0]}:  (X)"
+                    break
 
         # --- Endereços (Entrega e Cobrança) ---
         ws1["A21"] = f"Av./Rua/Nro:  {_s(cliente.entrega_endereco)}"
@@ -229,6 +230,15 @@ def gerar_excel_cliente_supra(cliente) -> bytes:
         ws2["C15"] = _s(cliente.canal_frost)
         ws2["C16"] = _s(cliente.canal_insumos)
 
+        # Utilização do Produto (Linha 9 - A9:K9)
+        # Produtor rural, PF/PJ, Canil -> Consumo Próprio
+        # Revenda -> Comercializar/Revender
+        tipo_util = _normalize(_s(cliente.cadastro_tipo_cliente))
+        if any(k in tipo_util for k in ["produtor rural", "pessoa fisica", "pessoa juridica", "canil"]):
+            ws2["A9"] = "Finalidade: Consumo Próprio (X)"
+        elif "revenda" in tipo_util:
+            ws2["A9"] = "Finalidade: Comercializar/Revender (X)"
+
         # Comissões — texto padrão em vermelho
         _DISPET_RED = Font(color="FF0000")
         cell_pet    = ws2["C20"]
@@ -253,11 +263,12 @@ def gerar_excel_cliente_supra(cliente) -> bytes:
 
         # --- LINHA 41: Status do Cliente (Lógica de Classificação) ---
         codigo_empresa = _s(cliente.cadastro_codigo_da_empresa)
-        cliente_inativo = not cliente.cadastro_ativo if cliente.cadastro_ativo is not None else False
+        data_inativacao = getattr(cliente, 'data_inativacao', None)
 
         if not codigo_empresa:
             status_text = "Cliente Novo"
-        elif cliente_inativo:
+        elif data_inativacao:
+            # Se já teve uma data de inativação, é considerado Recadastro
             status_text = f"Recadastro do Cliente Código => {codigo_empresa}"
         else:
             status_text = _s(cliente.elaboracao_classificacao) or "CLIENTE NOVO"
@@ -270,12 +281,14 @@ def gerar_excel_cliente_supra(cliente) -> bytes:
 
         # --- LINHA 43: Tipo de Venda (mapeamento de pagamento) ---
         tipo_venda_raw = _normalize(_s(cliente.elaboracao_tipo_venda))
-        if "vista" in tipo_venda_raw:
+        if not tipo_venda_raw:
+            tipo_venda_excel = ""
+        elif "vista" in tipo_venda_raw:
             tipo_venda_excel = "Venda à vista"
         elif "prazo" in tipo_venda_raw:
             tipo_venda_excel = "Venda antecipada"
         else:
-            tipo_venda_excel = _s(cliente.elaboracao_tipo_venda) or "Venda a Prazo"
+            tipo_venda_excel = _s(cliente.elaboracao_tipo_venda)
         ws2["A43"] = tipo_venda_excel
 
         # Garante que abra na primeira guia por padrão

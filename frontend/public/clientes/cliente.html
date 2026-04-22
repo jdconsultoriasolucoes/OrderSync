@@ -719,6 +719,10 @@
                   <option value="">Selecione</option>
                 </select>
             </div>
+            <div>
+              <label for="pre_posto_ElaboracaoCadastro">Pre Posto:</label>
+              <input type="text" id="pre_posto_ElaboracaoCadastro" name="pre_posto_ElaboracaoCadastro" />
+            </div>
           </div>
 
           <h2 class="subtitulo">Grupo Econômico Amarrado ao Cliente</h2>
@@ -1329,7 +1333,8 @@
               data_vencimento_ElaboracaoCadastro: document.getElementById("data_vencimento_ElaboracaoCadastro")?.value || "",
               vendedor_ElaboracaoCadastro: document.getElementById("vendedor_ElaboracaoCadastro")?.value || "",
               gerente_insumos_ElaboracaoCadastro: document.getElementById("gerente_insumos_ElaboracaoCadastro")?.value || "",
-              gerente_pet_ElaboracaoCadastro: document.getElementById("gerente_pet_ElaboracaoCadastro")?.value || ""
+              gerente_pet_ElaboracaoCadastro: document.getElementById("gerente_pet_ElaboracaoCadastro")?.value || "",
+              pre_posto_ElaboracaoCadastro: document.getElementById("pre_posto_ElaboracaoCadastro")?.value || ""
             },
             // Listas dinâmicas (JSONB)
             indicacoes_clientes: coletarLista('indicacoes'),
@@ -1778,6 +1783,7 @@
           setVal("vendedor_ElaboracaoCadastro", ed.vendedor_ElaboracaoCadastro || "");
           setVal("gerente_insumos_ElaboracaoCadastro", ed.gerente_insumos_ElaboracaoCadastro || "");
           setVal("gerente_pet_ElaboracaoCadastro", ed.gerente_pet_ElaboracaoCadastro || "");
+          setVal("pre_posto_ElaboracaoCadastro", ed.pre_posto_ElaboracaoCadastro || "");
 
           // Listas dinâmicas (JSONB)
           renderizarLista('indicacoes', 5, dados.indicacoes_clientes || []);
@@ -1965,6 +1971,11 @@
                 const el = document.getElementById(id);
                 if (el) el.dispatchEvent(new Event('input'));
             });
+
+            // [NEW] Após preencher o CEP e Município via CNPJ, busca os supervisores
+            if (data.municipio) {
+               buscarSupervisorPetEInsumos();
+            }
 
             // Nota sobre Inscrição Estadual:
             // A API pública de CNPJ (Receita Federal) NÃO retorna Inscrição Estadual (dado estadual).

@@ -38,10 +38,9 @@ def _flat_to_nested(model: ClienteModelV2) -> dict:
             "limite_credito": model.cadastro_limite_credito,
             "nome_cliente": model.cadastro_nome_cliente,
             "nome_fantasia": model.cadastro_nome_fantasia,
-            "cnpj": model.cadastro_cnpj,
-            "inscricao_estadual": model.cadastro_inscricao_estadual,
             "cpf": model.cadastro_cpf,
             "situacao": model.cadastro_situacao,
+            "data_inativacao": model.data_inativacao.strftime('%Y-%m-%d') if model.data_inativacao else None,
             "indicacao_cliente": None,  # legado mantido; usar indicacoes_clientes
             "ramo_de_atividade": model.cadastro_ramo_de_atividade,
             "atividade_principal": model.cadastro_atividade_principal,
@@ -130,6 +129,7 @@ def _flat_to_nested(model: ClienteModelV2) -> dict:
             "vendedor_ElaboracaoCadastro": model.elaboracao_vendedor,
             "gerente_insumos_ElaboracaoCadastro": model.elaboracao_gerente_insumos,
             "gerente_pet_ElaboracaoCadastro": model.elaboracao_gerente_pet,
+            "pre_posto_ElaboracaoCadastro": model.elaboracao_pre_posto,
         },
         # Listas dinâmicas (JSONB)
         "grupos_economicos": model.grupos_economicos or [],
@@ -207,6 +207,11 @@ def _nested_to_flat(data: dict) -> ClienteModelV2:
     model.cadastro_cpf = c.get("cpf")
     model.cadastro_situacao = c.get("situacao")
     model.cadastro_indicacao_cliente = c.get("indicacao_cliente")
+    if c.get("data_inativacao"):
+        try:
+            model.data_inativacao = datetime.strptime(c["data_inativacao"], '%Y-%m-%d')
+        except:
+            model.data_inativacao = None
     model.cadastro_ramo_de_atividade = c.get("ramo_de_atividade")
     model.cadastro_atividade_principal = c.get("atividade_principal")
     model.cadastro_periodo_de_compra = c.get("periodo_de_compra")
@@ -293,6 +298,7 @@ def _nested_to_flat(data: dict) -> ClienteModelV2:
     model.elaboracao_vendedor = dec.get("vendedor_ElaboracaoCadastro")
     model.elaboracao_gerente_insumos = dec.get("gerente_insumos_ElaboracaoCadastro")
     model.elaboracao_gerente_pet = dec.get("gerente_pet_ElaboracaoCadastro")
+    model.elaboracao_pre_posto = dec.get("pre_posto_ElaboracaoCadastro")
 
     # 12-17. Listas dinâmicas (JSONB)
     model.grupos_economicos = data.get("grupos_economicos") or []
@@ -469,6 +475,10 @@ def atualizar_cliente(cliente_id: int, cliente_data: dict) -> dict:
             
             new_val = getattr(novos_dados, key)
             if new_val is not None:
+                # [NEW] Se estiver inativando manualmente (era True e se tornou False)
+                if key == "cadastro_ativo" and getattr(cliente, "cadastro_ativo") is True and new_val is False:
+                    cliente.data_inativacao = datetime.now()
+                
                 setattr(cliente, key, new_val)
         
         cliente.data_atualizacao = datetime.now()
@@ -578,6 +588,7 @@ def verificar_inatividade_clientes():
                 if data_referencia < limite:
                     cliente.cadastro_ativo = False
                     cliente.data_atualizacao = agora_sp
+                    cliente.data_inativacao = agora_sp  # [NEW] Registra data de inativação
                     inativos_count += 1
                     logger.info(f"Cliente {codigo} inativado. Motivo: >180 dias. Ref: {origem_data} ({data_referencia.strftime('%d/%m/%Y')})")
             else:
