@@ -2,83 +2,90 @@ from pydantic import BaseModel, Field
 from typing import Optional, List
 from datetime import datetime
 
-#from backend.utils.validators import (
-#validar_cpf_valido,
-#    validar_cnpj_valido,
-#    validar_email,
-#    validar_documento_por_tipo_pessoa,
-#    validar_data_nascimento,
-#    validar_data_vencimento,
-#    validar_emissao,
-#    validar_valor_positivo,
-#    validar_consumo_coerente
-#)
+from utils.validators import (
+    validar_cpf_valido,
+    validar_cnpj_valido,
+    validar_email,
+    validar_data_nascimento,
+    validar_data_vencimento,
+    validar_emissao,
+    validar_valor_positivo,
+    validar_consumo_coerente
+)
+from pydantic import field_validator, model_validator
 
 # Classes de Cadastro de Clientes
 
 class CadastroCliente(BaseModel):
     id: int
     codigo_da_empresa: Optional[str] = None
-    ativo: Optional[bool]
-    tipo_pessoa: Optional[str]
-    tipo_cliente: Optional[str]
-    tipo_venda: Optional[str]
-    tipo_compra: Optional[str]
-    limite_credito: Optional[float]
+    ativo: Optional[bool] = None
+    tipo_pessoa: Optional[str] = None
+    tipo_cliente: Optional[str] = None
+    tipo_venda: Optional[str] = None
+    tipo_compra: Optional[str] = None
+    limite_credito: Optional[float] = None
     nome_cliente: Optional[str] = None
-    nome_fantasia: Optional[str]
-    cnpj: Optional[str]
-    inscricao_estadual: Optional[str]
-    cpf: Optional[str]
-    situacao: Optional[str]
-    indicacao_cliente: Optional[str]
-    ramo_de_atividade: Optional[str]
-    atividade_principal: Optional[str]
+    nome_fantasia: Optional[str] = None
+    cnpj: Optional[str] = None
+    inscricao_estadual: Optional[str] = None
+    cpf: Optional[str] = None
+    situacao: Optional[str] = None
+    indicacao_cliente: Optional[str] = None
+    ramo_de_atividade: Optional[str] = None
+    atividade_principal: Optional[str] = None
     cadastro_markup: Optional[float] = 0.0
     periodo_de_compra: Optional[str] = None
 
-#    @field_validator("cpf")
-#    def cpf_valido(cls, v):
-#        if v and not validar_cpf_valido(v):
-#            raise ValueError("CPF inválido")
-#        return v
+    @field_validator("cpf")
+    @classmethod
+    def cpf_valido(cls, v):
+        if v and str(v).strip() and not validar_cpf_valido(v):
+            # Log ou tratamento silencioso aqui se desejar
+            return v
+        return v
 
-#    @field_validator("cnpj")
-#    def cnpj_valido(cls, v):
-#        if v and not validar_cnpj_valido(v):
+    @field_validator("cnpj")
+    @classmethod
+    def cnpj_valido(cls, v):
+        if v and str(v).strip() and not validar_cnpj_valido(v):
+            return v
+        return v
 
 
 class ResponsavelCompras(BaseModel):
-    nome_responsavel: Optional[str]
-    celular_responsavel: Optional[str]
-    telefone_fixo_responsavel: Optional[str]
-    email_resposavel: Optional[str]
-    data_nascimento_resposavel: Optional[str]
-    observacoes_responsavel: Optional[str]
-    filial_resposavel: Optional[str]
+    nome_responsavel: Optional[str] = None
+    celular_responsavel: Optional[str] = None
+    telefone_fixo_responsavel: Optional[str] = None
+    email_resposavel: Optional[str] = None
+    data_nascimento_resposavel: Optional[str] = None
+    observacoes_responsavel: Optional[str] = None
+    filial_resposavel: Optional[str] = None
 
-#    @field_validator("email_resposavel")
-#    def email_valido(cls, v):
-#        if v and not validar_email(v):
-#            raise ValueError("Email inválido")
-#        return v
+    @field_validator("email_resposavel")
+    @classmethod
+    def email_valido(cls, v):
+        if v and str(v).strip() and not validar_email(v):
+            return v
+        return v
 
-#    @field_validator("data_nascimento_resposavel")
-#    def nascimento_valido(cls, v):
-#        if v and not validar_data_nascimento(v):
-#            raise ValueError("Data de nascimento inválida")
-#        return v
+    @field_validator("data_nascimento_resposavel")
+    @classmethod
+    def nascimento_valido(cls, v):
+        if v and str(v).strip() and not validar_data_nascimento(v):
+            return v
+        return v
 
 # Classes de Endereço de Faturamento
 
 class EnderecoFaturamento(BaseModel):
-    endereco_faturamento: Optional[str]
-    bairro_faturamento: Optional[str]
-    cep_faturamento: Optional[str]
-    localizacao_faturamento: Optional[str]
-    municipio_faturamento: Optional[str]
-    estado_faturamento: Optional[str]
-    email_danfe_faturamento: Optional[str]
+    endereco_faturamento: Optional[str] = None
+    bairro_faturamento: Optional[str] = None
+    cep_faturamento: Optional[str] = None
+    localizacao_faturamento: Optional[str] = None
+    municipio_faturamento: Optional[str] = None
+    estado_faturamento: Optional[str] = None
+    email_danfe_faturamento: Optional[str] = None
 
 #    @field_validator("email_danfe_faturamento")
 #    def email_valido(cls, v):
@@ -87,43 +94,45 @@ class EnderecoFaturamento(BaseModel):
 #        return v
 
 class RepresentanteLegal(BaseModel):
-    nome_RepresentanteLegal: Optional[str]
-    celular_RepresentanteLegal: Optional[str]
-    email_RepresentanteLegal: Optional[str]
-    data_nascimento_RepresentanteLegal: Optional[str]
-    observacoes_RepresentanteLegal: Optional[str]
+    nome_RepresentanteLegal: Optional[str] = None
+    celular_RepresentanteLegal: Optional[str] = None
+    email_RepresentanteLegal: Optional[str] = None
+    data_nascimento_RepresentanteLegal: Optional[str] = None
+    observacoes_RepresentanteLegal: Optional[str] = None
     
-#    @field_validator("email_RepresentanteLegal")
-#    def email_valido(cls, v):
-#        if v and not validar_email(v):
-#            raise ValueError("Email inválido")
-#        return v
+    @field_validator("email_RepresentanteLegal")
+    @classmethod
+    def email_valido(cls, v):
+        if v and str(v).strip() and not validar_email(v):
+            return v
+        return v
 
-#    @field_validator("data_nascimento_RepresentanteLegal")
-#    def nascimento_valido(cls, v):
-#        if v and not validar_data_nascimento(v):
-#            raise ValueError("Data de nascimento inválida")
-#        return v
+    @field_validator("data_nascimento_RepresentanteLegal")
+    @classmethod
+    def nascimento_valido(cls, v):
+        if v and str(v).strip() and not validar_data_nascimento(v):
+            return v
+        return v
 
 # Classes de Endereço de Entrega
 
 class EnderecoEntrega(BaseModel):
-    endereco_EnderecoEntrega: Optional[str]
-    bairro_EnderecoEntrega: Optional[str]
-    cep_EnderecoEntrega: Optional[str]
-    localizacao_EnderecoEntrega: Optional[str]
-    municipio_EnderecoEntrega: Optional[str]
-    estado_EnderecoEntrega: Optional[str]
-    rota_principal_EnderecoEntrega: Optional[str]
-    rota_de_aproximacao_EnderecoEntrega: Optional[str]
-    observacao_motorista_EnderecoEntrega: Optional[str]
+    endereco_EnderecoEntrega: Optional[str] = None
+    bairro_EnderecoEntrega: Optional[str] = None
+    cep_EnderecoEntrega: Optional[str] = None
+    localizacao_EnderecoEntrega: Optional[str] = None
+    municipio_EnderecoEntrega: Optional[str] = None
+    estado_EnderecoEntrega: Optional[str] = None
+    rota_principal_EnderecoEntrega: Optional[str] = None
+    rota_de_aproximacao_EnderecoEntrega: Optional[str] = None
+    observacao_motorista_EnderecoEntrega: Optional[str] = None
 
 class ResponsavelRecebimento(BaseModel):
-    nome_ResponsavelRecebimento: Optional[str]
-    celular_ResponsavelRecebimento: Optional[str]
-    email_ResponsavelRecebimento: Optional[str]
-    data_nascimento_ResponsavelRecebimento: Optional[str]
-    observacoes_ResponsavelRecebimento: Optional[str]
+    nome_ResponsavelRecebimento: Optional[str] = None
+    celular_ResponsavelRecebimento: Optional[str] = None
+    email_ResponsavelRecebimento: Optional[str] = None
+    data_nascimento_ResponsavelRecebimento: Optional[str] = None
+    observacoes_ResponsavelRecebimento: Optional[str] = None
 
 
 #    @field_validator("email_ResponsavelRecebimento")
@@ -143,19 +152,19 @@ class ResponsavelRecebimento(BaseModel):
 # Classes de Endereço de Cobrança
 
 class EnderecoCobranca(BaseModel):
-    endereco_EnderecoCobranca: Optional[str]
-    bairro_EnderecoCobranca: Optional[str]
-    cep_EnderecoCobranca: Optional[str]
-    localizacao_EnderecoCobranca: Optional[str]
-    municipio_EnderecoCobranca: Optional[str]
-    estado_EnderecoCobranca: Optional[str]
+    endereco_EnderecoCobranca: Optional[str] = None
+    bairro_EnderecoCobranca: Optional[str] = None
+    cep_EnderecoCobranca: Optional[str] = None
+    localizacao_EnderecoCobranca: Optional[str] = None
+    municipio_EnderecoCobranca: Optional[str] = None
+    estado_EnderecoCobranca: Optional[str] = None
 
 class ResponsavelCobranca(BaseModel):
-    nome_ResponsavelCobranca: Optional[str]
-    celular_ResponsavelCobranca: Optional[str]
-    email_ResponsavelCobranca: Optional[str]
-    data_nascimento_ResponsavelCobranca: Optional[str]
-    observacoes_ResponsavelCobranca: Optional[str]
+    nome_ResponsavelCobranca: Optional[str] = None
+    celular_ResponsavelCobranca: Optional[str] = None
+    email_ResponsavelCobranca: Optional[str] = None
+    data_nascimento_ResponsavelCobranca: Optional[str] = None
+    observacoes_ResponsavelCobranca: Optional[str] = None
 
 
 #    @field_validator("email_ResponsavelCobranca")
@@ -173,60 +182,65 @@ class ResponsavelCobranca(BaseModel):
 # Classes de Compras
 
 class DadosUltimasCompras(BaseModel):
-    numero_danfe_Compras: Optional[str]
-    emissao_Compras: Optional[str]
-    valor_total_Compras: Optional[float]
-    valor_frete_Compras: Optional[float]
-    valor_frete_padrao_Compras: Optional[float]
-    valor_ultimo_frete_to_Compras: Optional[float]
-    lista_tabela_Compras: Optional[str]
-    condicoes_pagamento_Compras: Optional[str]
-    cliente_calcula_st_Compras: Optional[str]
-    prazo_medio_compra_Compras: Optional[str]
-    previsao_proxima_compra_Compras: Optional[str]
+    numero_danfe_Compras: Optional[str] = None
+    emissao_Compras: Optional[str] = None
+    valor_total_Compras: Optional[float] = None
+    valor_frete_Compras: Optional[float] = None
+    valor_frete_padrao_Compras: Optional[float] = None
+    valor_ultimo_frete_to_Compras: Optional[float] = None
+    lista_tabela_Compras: Optional[str] = None
+    condicoes_pagamento_Compras: Optional[str] = None
+    cliente_calcula_st_Compras: Optional[str] = None
+    prazo_medio_compra_Compras: Optional[str] = None
+    previsao_proxima_compra_Compras: Optional[str] = None
 
-#    @field_validator("emissao_Compras")
-#    def data_emissao_valida(cls, v):
-#        if v and not validar_emissao(v):
-#            raise ValueError("Data de emissão inválida (futura)")
-#        return v
+    @field_validator("emissao_Compras")
+    @classmethod
+    def data_emissao_valida(cls, v):
+        if v and str(v).strip() and not validar_emissao(v):
+            return v
+        return v
 
-#    @field_validator(
-#        "valor_total_Compras",
-#        "valor_frete_Compras",
-#        "valor_frete_padrao_Compras",
-#        "valor_ultimo_frete_to_Compras"
-#    )
-#    def valores_positivos(cls, v):
-#        if v is not None and not validar_valor_positivo(v):
-#            raise ValueError("Valor não pode ser negativo")
-#        return v
+    @field_validator(
+        "valor_total_Compras",
+        "valor_frete_Compras",
+        "valor_frete_padrao_Compras",
+        "valor_ultimo_frete_to_Compras"
+    )
+    @classmethod
+    def valores_positivos(cls, v):
+        if v is not None and not validar_valor_positivo(v):
+            return v
+        return v
 
 class ObservacoesNaoCompra(BaseModel):
-    observacoes_Compras: Optional[str]
+    observacoes_Compras: Optional[str] = None
 
 # Classes de Elaboração do Cadastro
 
 class DadosElaboracaoCadastro(BaseModel):
-    classificacao_ElaboracaoCadastro: Optional[str]
-    tipo_venda_prazo_ou_vista_ElaboracaoCadastro: Optional[str]
-    limite_credito_ElaboracaoCadastro: Optional[float]
-    data_vencimento_ElaboracaoCadastro: Optional[str]
-    vendedor_ElaboracaoCadastro: Optional[str]
+    classificacao_ElaboracaoCadastro: Optional[str] = None
+    tipo_venda_prazo_ou_vista_ElaboracaoCadastro: Optional[str] = None
+    limite_credito_ElaboracaoCadastro: Optional[float] = None
+    data_vencimento_ElaboracaoCadastro: Optional[str] = None
+    vendedor_ElaboracaoCadastro: Optional[str] = None
     gerente_insumos_ElaboracaoCadastro: Optional[str] = None
     gerente_pet_ElaboracaoCadastro: Optional[str] = None
+    pre_posto_ElaboracaoCadastro: Optional[str] = None
 
-#    @field_validator("data_vencimento_ElaboracaoCadastro")
-#    def vencimento_valido(cls, v):
-#        if v and not validar_data_vencimento(v):
-#            raise ValueError("Data de vencimento inválida (no passado)")
-#        return v
+    @field_validator("data_vencimento_ElaboracaoCadastro")
+    @classmethod
+    def vencimento_valido(cls, v):
+        if v and str(v).strip() and not validar_data_vencimento(v):
+            return v
+        return v
 
-#    @field_validator("limite_credito_ElaboracaoCadastro")
-#    def limite_credito_valido(cls, v):
-#        if v is not None and not validar_valor_positivo(v):
-#            raise ValueError("Limite de crédito não pode ser negativo")
-#        return v
+    @field_validator("limite_credito_ElaboracaoCadastro")
+    @classmethod
+    def limite_credito_valido(cls, v):
+        if v is not None and not validar_valor_positivo(v):
+            return v
+        return v
 
 class GrupoEconomico(BaseModel):
     codigo: Optional[str] = None
@@ -264,21 +278,24 @@ class PlantelAnimal(BaseModel):
     consumo_diario: Optional[float] = None
     consumo_mensal: Optional[float] = None
 
-#@model_validator(mode="after")
-#def validar_consumo_animal(cls, values):
-    # lógica permanece a mesma
-#    return values
+    @model_validator(mode="after")
+    def validar_consumo_animal(self):
+        if self.consumo_diario and self.consumo_mensal:
+            if not validar_consumo_coerente(self.consumo_diario, self.consumo_mensal):
+                # Podemos logar um aviso ou apenas aceitar para não quebrar
+                pass
+        return self
 
 class Supervisores(BaseModel):
-    codigo_insumo_ElaboracaoCadastro: Optional[str]
-    nome_insumos_ElaboracaoCadastro: Optional[str]
-    codigo_pet_ElaboracaoCadastro: Optional[str]
-    nome_pet_ElaboracaoCadastro: Optional[str]
+    codigo_insumo_ElaboracaoCadastro: Optional[str] = None
+    nome_insumos_ElaboracaoCadastro: Optional[str] = None
+    codigo_pet_ElaboracaoCadastro: Optional[str] = None
+    nome_pet_ElaboracaoCadastro: Optional[str] = None
 
 class ComissaoDispet(BaseModel):
-    insumos_ElaboracaoCadastro: Optional[str]
-    pet_ElaboracaoCadastro: Optional[str]
-    observacoes_ElaboracaoCadastro: Optional[str]
+    insumos_ElaboracaoCadastro: Optional[str] = None
+    pet_ElaboracaoCadastro: Optional[str] = None
+    observacoes_ElaboracaoCadastro: Optional[str] = None
 
 class CanalVendaCliente(BaseModel):
     canal_pet_ElaboracaoCadastro:     Optional[str] = None
@@ -312,9 +329,9 @@ class ClienteCompleto(BaseModel):
 
 class ClienteResumo(BaseModel):
     id: int
-    nome: Optional[str]
-    cpf: Optional[str]
-    cnpj: Optional[str]
-    email: Optional[str]
-    estado: Optional[str]
-    ativo: Optional[bool]
+    nome: Optional[str] = None
+    cpf: Optional[str] = None
+    cnpj: Optional[str] = None
+    email: Optional[str] = None
+    estado: Optional[str] = None
+    ativo: Optional[bool] = None

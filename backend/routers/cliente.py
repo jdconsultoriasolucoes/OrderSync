@@ -24,7 +24,13 @@ router = APIRouter()
 
 @router.get("/", response_model=List[ClienteCompleto])
 def get_clientes():
-    return listar_clientes()
+    try:
+        return listar_clientes()
+    except Exception as e:
+        import traceback
+        logger.error(f"Erro ao listar clientes: {e}")
+        logger.error(traceback.format_exc())
+        raise HTTPException(status_code=500, detail=f"Erro interno ao listar clientes: {str(e)}")
 
 @router.get("/{codigo_da_empresa}/ultimas_compras")
 def get_ultimas_compras(codigo_da_empresa: str):
