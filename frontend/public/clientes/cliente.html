@@ -1782,6 +1782,11 @@
                 }
               }
               el.value = val;
+              if (el.tagName === 'INPUT' || el.tagName === 'TEXTAREA') {
+                el.dispatchEvent(new Event('input', { bubbles: true }));
+              } else if (el.tagName === 'SELECT') {
+                el.dispatchEvent(new Event('change', { bubbles: true }));
+              }
             }
           };
           const setCheck = (id, val) => {
@@ -2348,17 +2353,19 @@
         function initGlobalMasks() {
           if (!window.IMask) return;
 
+          const applyMask = (el, maskOptions) => {
+            if (el && !el.maskInstance) {
+              el.maskInstance = IMask(el, maskOptions);
+            }
+          };
+
           // CPF / CNPJ
-          const cpfEl = document.getElementById('cpf');
-          if (cpfEl) IMask(cpfEl, { mask: '000.000.000-00' });
-          
-          const cnpjEl = document.getElementById('cnpj');
-          if (cnpjEl) IMask(cnpjEl, { mask: '00.000.000/0000-00' });
+          applyMask(document.getElementById('cpf'), { mask: '000.000.000-00' });
+          applyMask(document.getElementById('cnpj'), { mask: '00.000.000/0000-00' });
 
           // CEPs
           ['cep_faturamento', 'cep_EnderecoEntrega', 'cep_EnderecoCobranca'].forEach(id => {
-            const el = document.getElementById(id);
-            if (el) IMask(el, { mask: '00000-000' });
+            applyMask(document.getElementById(id), { mask: '00000-000' });
           });
 
           // Telefones/Celulares Estáticos
@@ -2367,7 +2374,10 @@
             'celular_ResponsavelCobranca'
           ].forEach(id => {
             const el = document.getElementById(id);
-            if (el) applyPhoneMask(el);
+            if (el && !el.phoneMaskApplied) {
+              applyPhoneMask(el);
+              el.phoneMaskApplied = true;
+            }
           });
         }
 
@@ -2464,7 +2474,6 @@
           carregarVendedores();
           carregarOpcoesReferencia();
           carregarOpcoesPlantel();
-          initGlobalMasks();
 
           setViewState('INITIAL');
         };

@@ -38,6 +38,8 @@ def _flat_to_nested(model: ClienteModelV2) -> dict:
             "limite_credito": model.cadastro_limite_credito,
             "nome_cliente": model.cadastro_nome_cliente,
             "nome_fantasia": model.cadastro_nome_fantasia,
+            "cnpj": model.cadastro_cnpj,
+            "inscricao_estadual": model.cadastro_inscricao_estadual,
             "cpf": model.cadastro_cpf,
             "situacao": model.cadastro_situacao,
             "data_inativacao": model.data_inativacao.strftime('%Y-%m-%d') if model.data_inativacao else None,
