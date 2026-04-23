@@ -120,6 +120,7 @@ def gerar_excel_cliente_supra(cliente) -> bytes:
         # Lógica de Checkboxes (Tipo de Cliente) - Regra Atualizada
         # Produtor rural, Pessoa fisica/juridica, Canil -> Cli Direto: E17
         # Revenda -> Logista: C18
+        tipo = _normalize(_s(cliente.cadastro_tipo_cliente))
         if any(k in tipo for k in ["produtor rural", "pessoa fisica", "pessoa juridica", "canil"]):
             ws1["E17"] = f"Cli Direto:  (X)"
         elif "revenda" in tipo:
