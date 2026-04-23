@@ -235,6 +235,13 @@
     const btnToggleFilters = document.getElementById('btnToggleFilters');
     const filtersArea = document.getElementById('filtersArea');
     if (btnToggleFilters && filtersArea) {
+      
+      // Esconder filtros por padrão no mobile
+      if (window.innerWidth <= 768) {
+        filtersArea.style.display = 'none';
+        btnToggleFilters.innerHTML = '&#x1F50D; Mostrar Filtros';
+      }
+
       btnToggleFilters.addEventListener('click', () => {
         if (filtersArea.style.display === 'none') {
           filtersArea.style.display = 'block';

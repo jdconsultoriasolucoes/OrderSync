@@ -509,21 +509,41 @@ header {
   .desktop-only { display: none !important; }
   .mobile-only { display: flex !important; }
 
+  /* Ajustes gerais de layout para Mobile (Liberar Scroll) */
+  html, body {
+    height: auto;
+    overflow-x: hidden;
+  }
+  
+  .orc-card {
+    height: auto !important;
+    overflow-y: visible !important;
+    min-height: 100vh;
+  }
+
+  .mobile-card-list {
+    overflow-y: visible !important;
+    padding-bottom: 80px; /* espaço para não ficar atrás da paginação */
+  }
+
   .drawer {
     width: 100vw;
   }
   
-  /* Ajustes na paginação para Mobile */
+  /* Paginação fixada no rodapé da tela */
   .pagination {
     padding: 1rem;
-    position: sticky;
+    position: fixed;
     bottom: 0;
-    box-shadow: 0 -2px 10px rgba(0,0,0,0.05);
-    z-index: 100;
+    left: 0;
+    width: 100%;
+    box-shadow: 0 -4px 12px rgba(0,0,0,0.08);
+    z-index: 1000;
   }
   
   .pagination button {
     flex: 1;
     max-width: 120px;
   }
-}
+}
+
