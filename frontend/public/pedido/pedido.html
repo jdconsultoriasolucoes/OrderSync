@@ -186,7 +186,7 @@
       </div>
     </div>
 
-    <div class="table-wrap">
+    <div class="table-wrap desktop-only">
       <table class="orc-table" id="tblPedidos">
         <thead>
           <tr>
@@ -204,13 +204,21 @@
         </thead>
         <tbody id="tblBody"></tbody>
       </table>
-      <div class="pagination">
-        <button id="prevPage">&#x276E;</button>
-        <span id="pageInfo">1</span>
-        <button id="nextPage">&#x276F;</button>
-      </div>
+    </div>
+
+    <!-- Container de Cards (Visível Apenas no Mobile) -->
+    <div id="mobile-card-container" class="mobile-only mobile-card-list">
+      <!-- Cards serão injetados aqui via JS -->
+    </div>
+
+    <!-- Paginação Global -->
+    <div class="pagination">
+      <button id="prevPage" class="os-btn os-btn-secondary">&#x276E; Ant</button>
+      <span id="pageInfo" style="font-weight: 600; font-size: 0.9rem;">1</span>
+      <button id="nextPage" class="os-btn os-btn-secondary">Próx &#x276F;</button>
     </div>
   </div>
+
 
   <!-- Drawer -->
   <aside id="drawer" class="drawer hidden">

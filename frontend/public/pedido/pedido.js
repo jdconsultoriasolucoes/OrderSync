@@ -171,6 +171,7 @@ function getFilters() {
 
 async function loadList(page = 1) {
   state.page = page;
+  state.pageSize = window.innerWidth <= 768 ? 10 : 25;
 
   const { fFrom, fTo, fTabela, fCliente, fFornecedor, selStatus, fPedido } = getFilters();
   let fromISO = toISO(fFrom);
@@ -240,6 +241,7 @@ async function loadList(page = 1) {
     }
 
     renderTable(state.rows);
+    renderCards(state.rows);
     renderPager();
   } catch (e) {
     console.error("Erro em loadList:", e);
@@ -318,6 +320,68 @@ function renderTable(rows) {
     }
   });
 }
+
+function renderCards(rows) {
+  const container = document.getElementById("mobile-card-container");
+  if (!container) return;
+  container.innerHTML = "";
+
+  if (!rows || !rows.length) {
+    container.innerHTML = `<div style="text-align: center; color: #6b7280; padding: 2rem;">Nenhum pedido encontrado.</div>`;
+    return;
+  }
+
+  rows.forEach(row => {
+    try {
+      const id = row.numero_pedido ?? row.id_pedido ?? row.pedido_id ?? row.id ?? row.numero;
+      const dataPedido = row.data_pedido || row.created_at || row.data || row.dt;
+      const cliente = row.cliente_nome || row.cliente || "---";
+      const valor = row.valor_total ?? row.total_pedido ?? row.total ?? 0;
+      const status = row.status_codigo ?? row.status ?? "---";
+      const fornecedor = row.fornecedor ?? row.fornecedor_nome ?? "---";
+      const link = row.link_url ?? row.link ?? null;
+
+      const card = document.createElement("div");
+      card.className = "order-card";
+      card.dataset.id = id;
+
+      card.innerHTML = `
+        <div class="order-card-header">
+          <span class="order-card-title">Pedido #${id}</span>
+          <span class="order-card-date">${fmtDate(dataPedido)}</span>
+        </div>
+        <div class="order-card-body">
+          <span class="order-card-client">${cliente}</span>
+          <div class="order-card-details">
+            <span><b>Fornec:</b> ${fornecedor}</span>
+          </div>
+        </div>
+        <div class="order-card-footer">
+          <span class="order-card-price">${fmtMoney(valor)}</span>
+          <div class="td-status" id="td-status-mobile-${id}">${getStatusBadge(status)}</div>
+        </div>
+        <div class="order-card-actions td-actions" id="td-actions-mobile-${id}">
+           ${link ? `<a href="${link}" target="_blank" class="btn btn-outline" style="padding: 4px 8px; font-size: 0.8rem; text-decoration: none;">Link</a>` : ''}
+           <button class="btn btn-outline-secondary btn-edit-status" data-id="${id}" data-status="${status}" data-is-mobile="true" style="padding: 4px 8px; font-size: 0.8rem;">Editar Status</button>
+           <button class="btn btn-primary" onclick="openResumo('${id}')" style="padding: 4px 12px; font-size: 0.8rem;">Detalhes</button>
+        </div>
+
+      `;
+
+      container.appendChild(card);
+      
+      // Card clicável (exceto botões/links)
+      card.addEventListener("click", (e) => {
+        if (e.target.closest("button") || e.target.closest("a") || e.target.closest("select")) return;
+        openResumo(id);
+      });
+
+    } catch (err) {
+      console.error("Erro renderizando card:", row, err);
+    }
+  });
+}
+
 
 function renderPager() {
   const pageInfo = document.getElementById("pageInfo");
@@ -532,13 +596,14 @@ async function exportarCSV() {
 }
 
 // ---------------------- Edit Status Logic ----------------------
-function startEditStatus(id, currentStatus) {
-  const tdStatus = document.getElementById(`td-status-${id}`);
-  const tdActions = document.getElementById(`td-actions-${id}`);
+function startEditStatus(id, currentStatus, isMobile = false) {
+  const suffix = isMobile ? `-mobile-${id}` : `-${id}`;
+  const tdStatus = document.getElementById(`td-status${suffix}`);
+  const tdActions = document.getElementById(`td-actions${suffix}`);
   if (!tdStatus || !tdActions) return;
 
   const options = state.statusList || [];
-  let selectHtml = `<select id="sel-status-${id}" class="form-select form-select-sm">`;
+  let selectHtml = `<select id="sel-status${suffix}" class="form-select form-select-sm">`;
   options.forEach(opt => {
     const selected = (opt.codigo === currentStatus || opt.rotulo === currentStatus) ? "selected" : "";
     selectHtml += `<option value="${opt.codigo}" ${selected}>${opt.rotulo}</option>`;
@@ -548,36 +613,49 @@ function startEditStatus(id, currentStatus) {
 
   tdActions.innerHTML = `
         <div style="display: flex; gap: 5px; justify-content: flex-end;">
-          <button class="btn-icon btn-save-status" data-id="${id}" title="Salvar" style="color: green;">✔️</button>
-          <button class="btn-icon btn-cancel-status" data-id="${id}" data-original-status="${currentStatus}" title="Cancelar" style="color: red;">❌</button>
+          <button class="btn-icon btn-save-status" data-id="${id}" data-is-mobile="${isMobile}" title="Salvar" style="color: green;">✔️</button>
+          <button class="btn-icon btn-cancel-status" data-id="${id}" data-original-status="${currentStatus}" data-is-mobile="${isMobile}" title="Cancelar" style="color: red;">❌</button>
         </div>
       `;
-  const tr = tdStatus.closest("tr");
+  const tr = tdStatus.closest(isMobile ? ".order-card" : "tr");
   if (tr) tr.classList.add("editing");
 }
 
-function cancelEditStatus(id, originalStatus) {
-  const tdStatus = document.getElementById(`td-status-${id}`);
-  const tdActions = document.getElementById(`td-actions-${id}`);
+function cancelEditStatus(id, originalStatus, isMobile = false) {
+  const suffix = isMobile ? `-mobile-${id}` : `-${id}`;
+  const tdStatus = document.getElementById(`td-status${suffix}`);
+  const tdActions = document.getElementById(`td-actions${suffix}`);
+  
   if (tdStatus) {
     tdStatus.innerHTML = getStatusBadge(originalStatus);
-    const tr = tdStatus.closest("tr");
+    const tr = tdStatus.closest(isMobile ? ".order-card" : "tr");
     if (tr) tr.classList.remove("editing");
   }
   if (tdActions) {
-    tdActions.innerHTML = `
+    if (isMobile) {
+       const row = state.rows.find(r => String(r.numero_pedido || r.id_pedido || r.id) === String(id));
+       const link = row && (row.link_url || row.link) ? row.link_url || row.link : null;
+       tdActions.innerHTML = `
+           ${link ? `<a href="${link}" target="_blank" class="btn btn-outline" style="padding: 4px 8px; font-size: 0.8rem; text-decoration: none;">Link</a>` : ''}
+           <button class="btn btn-outline-secondary btn-edit-status" data-id="${id}" data-status="${originalStatus}" data-is-mobile="true" style="padding: 4px 8px; font-size: 0.8rem;">Editar Status</button>
+           <button class="btn btn-primary" onclick="openResumo('${id}')" style="padding: 4px 12px; font-size: 0.8rem;">Detalhes</button>
+       `;
+    } else {
+       tdActions.innerHTML = `
           <button class="btn-sm btn-outline-secondary btn-edit-status" data-id="${id}" data-status="${originalStatus}">
              Editar
           </button>
         `;
+    }
   }
 }
 
-async function saveStatus(id) {
-  const sel = document.getElementById(`sel-status-${id}`);
+async function saveStatus(id, isMobile = false) {
+  const suffix = isMobile ? `-mobile-${id}` : `-${id}`;
+  const sel = document.getElementById(`sel-status${suffix}`);
   if (!sel) return;
   const newStatus = sel.value;
-  const tdActions = document.getElementById(`td-actions-${id}`);
+  const tdActions = document.getElementById(`td-actions${suffix}`);
   const orgHtml = tdActions.innerHTML;
   tdActions.innerHTML = `<span class="muted">💾...</span>`;
 
@@ -615,16 +693,25 @@ async function saveStatus(id) {
       row.status = newStatus;
       row.status_codigo = newStatus;
     }
-    const tdStatus = document.getElementById(`td-status-${id}`);
+    const tdStatus = document.getElementById(`td-status${suffix}`);
     if (tdStatus) tdStatus.innerHTML = getStatusBadge(newStatus);
 
     // Restore Actions
-    tdActions.innerHTML = `
-        <button class="btn-sm btn-outline-secondary btn-edit-status" data-id="${id}" data-status="${newStatus}">
-           Editar
-        </button>
-      `;
-    const tr = tdActions.closest("tr");
+    if (isMobile) {
+       const link = row && (row.link_url || row.link) ? row.link_url || row.link : null;
+       tdActions.innerHTML = `
+           ${link ? `<a href="${link}" target="_blank" class="btn btn-outline" style="padding: 4px 8px; font-size: 0.8rem; text-decoration: none;">Link</a>` : ''}
+           <button class="btn btn-outline-secondary btn-edit-status" data-id="${id}" data-status="${newStatus}" data-is-mobile="true" style="padding: 4px 8px; font-size: 0.8rem;">Editar Status</button>
+           <button class="btn btn-primary" onclick="openResumo('${id}')" style="padding: 4px 12px; font-size: 0.8rem;">Detalhes</button>
+       `;
+    } else {
+       tdActions.innerHTML = `
+          <button class="btn-sm btn-outline-secondary btn-edit-status" data-id="${id}" data-status="${newStatus}">
+             Editar
+          </button>
+        `;
+    }
+    const tr = tdActions.closest(isMobile ? ".order-card" : "tr");
     if (tr) tr.classList.remove("editing");
 
   } catch (e) {
@@ -633,6 +720,7 @@ async function saveStatus(id) {
     tdActions.innerHTML = orgHtml;
   }
 }
+
 
 // ---------------------- Alerta Visual Premium ----------------------
 function showPremiumAlert(message, type = "warning") {
@@ -748,20 +836,35 @@ function bindUI() {
     });
   });
   // delegation buttons
-  // ... ja esta no renderTable o click do row, mas para botoes que surgem (save/cancel) precisa delegate ou bind direto
-  // A logica antiga usava delegation. Vamos usar delegation no Tbody para Edit/Save/Cancel
-  tb.addEventListener("click", async (ev) => {
+  // A logica antiga usava delegation. Vamos usar delegation no Tbody e no MobileContainer para Edit/Save/Cancel
+  const actionClickHandler = async (ev) => {
     const t = ev.target;
     // Edit
     const btnEdit = t.closest(".btn-edit-status");
-    if (btnEdit) { startEditStatus(btnEdit.dataset.id, btnEdit.dataset.status); return; }
+    if (btnEdit) { 
+       const isMobile = btnEdit.dataset.isMobile === "true";
+       startEditStatus(btnEdit.dataset.id, btnEdit.dataset.status, isMobile); 
+       return; 
+    }
     // Save
     const btnSave = t.closest(".btn-save-status");
-    if (btnSave) { await saveStatus(btnSave.dataset.id); return; }
+    if (btnSave) { 
+       const isMobile = btnSave.dataset.isMobile === "true";
+       await saveStatus(btnSave.dataset.id, isMobile); 
+       return; 
+    }
     // Cancel
     const btnCancel = t.closest(".btn-cancel-status");
-    if (btnCancel) { cancelEditStatus(btnCancel.dataset.id, btnCancel.dataset.originalStatus); return; }
-  });
+    if (btnCancel) { 
+       const isMobile = btnCancel.dataset.isMobile === "true";
+       cancelEditStatus(btnCancel.dataset.id, btnCancel.dataset.originalStatus, isMobile); 
+       return; 
+    }
+  };
+
+  tb.addEventListener("click", actionClickHandler);
+  const mobileContainer = document.getElementById("mobile-card-container");
+  if (mobileContainer) mobileContainer.addEventListener("click", actionClickHandler);
 }
 
 function limparFiltros() {

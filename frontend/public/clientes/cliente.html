@@ -35,6 +35,32 @@
       .lookup-item:hover {
           background-color: #f8fafc;
       }
+
+      /* Estilos para Validação de Campos */
+      .field-error {
+        border-color: #ef4444 !important;
+        background-color: #fef2f2 !important;
+        box-shadow: 0 0 0 1px #ef4444 !important;
+      }
+      .error-message {
+        color: #ef4444;
+        font-size: 11px;
+        margin-top: 2px;
+        display: block;
+        font-weight: 500;
+      }
+      .form-section-error {
+        border: 1px solid #fecaca;
+        background-color: #fef2f2;
+        padding: 12px;
+        border-radius: 8px;
+        margin-bottom: 20px;
+        color: #991b1b;
+        font-size: 14px;
+        display: none;
+        align-items: center;
+        gap: 10px;
+      }
   </style>
 
   <!-- Fonts -->
@@ -203,6 +229,13 @@
       </div>
       <form id="formCliente">
         <input type="hidden" id="id" name="id" />
+        
+        <div id="global-error-container" class="form-section-error">
+          <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+          </svg>
+          <span id="global-error-message"></span>
+        </div>
         <div class="tab-content active" id="cadastro">
           <!-- Cadastro de Clientes -->
           <h2 class="subtitulo">Cliente</h2>
@@ -876,6 +909,7 @@
         }
 
         function novoCliente() {
+          limparErros();
           document.getElementById("formCliente").reset();
           document.getElementById("id").value = "";
           document.getElementById("ativo").checked = true;
@@ -884,6 +918,7 @@
         }
 
         function voltarEstadoInicial() {
+          limparErros();
           document.getElementById("formCliente").reset();
           document.getElementById("id").value = "";
           setViewState('INITIAL');
@@ -906,8 +941,70 @@
           if (petFld     && !petFld.value)     petFld.value     = DISPET_DEFAULT;
         }
 
+        function limparErros() {
+          document.querySelectorAll('.field-error').forEach(el => el.classList.remove('field-error'));
+          document.querySelectorAll('.error-message').forEach(el => el.remove());
+          const globalError = document.getElementById('global-error-container');
+          if (globalError) globalError.style.display = 'none';
+        }
+
+        function marcarErro(campoId, mensagem) {
+          const el = document.getElementById(campoId);
+          if (el) {
+            el.classList.add('field-error');
+            const msg = document.createElement('span');
+            msg.className = 'error-message';
+            msg.textContent = mensagem;
+            el.parentNode.appendChild(msg);
+          }
+        }
+
+        function validarFormulario() {
+          limparErros();
+          let valido = true;
+          let mensagens = [];
+
+          // 1. Nome do Cliente
+          const nome = document.getElementById('nome_cliente');
+          if (!nome || !nome.value.trim()) {
+            marcarErro('nome_cliente', 'O nome do cliente é obrigatório.');
+            valido = false;
+            mensagens.push("Preencha o nome do cliente.");
+          }
+
+          // 2. CPF ou CNPJ (Regra: exatamente um)
+          const cpf = document.getElementById('cpf').value.trim();
+          const cnpj = document.getElementById('cnpj').value.trim();
+          
+          if (!cpf && !cnpj) {
+            marcarErro('cpf', 'Preencha o CPF ou o CNPJ.');
+            marcarErro('cnpj', 'Preencha o CPF ou o CNPJ.');
+            valido = false;
+            mensagens.push("É necessário informar o CPF ou o CNPJ.");
+          } else if (cpf && cnpj) {
+            marcarErro('cpf', 'Preencha apenas um: CPF ou CNPJ.');
+            marcarErro('cnpj', 'Preencha apenas um: CPF ou CNPJ.');
+            valido = false;
+            mensagens.push("Preencha apenas um documento: ou o CPF ou o CNPJ (nunca ambos).");
+          }
+
+          if (!valido) {
+            const container = document.getElementById('global-error-container');
+            const msgEl = document.getElementById('global-error-message');
+            if (container && msgEl) {
+              msgEl.textContent = mensagens[0]; // Mostra a primeira mensagem no topo
+              container.style.display = 'flex';
+              container.scrollIntoView({ behavior: 'smooth', block: 'start' });
+            }
+          }
+
+          return valido;
+        }
+
 
         function salvarCliente() {
+          if (!validarFormulario()) return;
+
           const id = document.getElementById("id").value;
           const cliente = obterDadosFormulario();
 
@@ -943,15 +1040,39 @@
             })
             .catch(erro => {
               console.error("Erro ao salvar:", erro);
+              limparErros();
+              
               if (erro.response && erro.response.status === 401) {
                 alert("Sessão inválida ou expirada. Redirecionando para login.");
                 window.Auth.logout();
-              } else {
-                let msg = erro.response?.data?.error?.message || erro.response?.data?.detail || erro.message;
+              } else if (erro.response && erro.response.status === 400) {
+                // Erro de Negocio ou Validação Customizada
+                const msg = erro.response?.data?.error?.message || erro.response?.data?.detail;
+                
                 if (Array.isArray(msg)) {
-                  msg = msg.map(m => `${m.loc.join('.')}: ${m.msg}`).join('\n');
+                  // Erro do Pydantic (Lista)
+                  msg.forEach(m => {
+                    const campo = m.loc[m.loc.length - 1]; // pega o último item da loc (ex: 'cnpj')
+                    marcarErro(campo, m.msg);
+                  });
+                  const container = document.getElementById('global-error-container');
+                  const msgEl = document.getElementById('global-error-message');
+                  if (container && msgEl) {
+                    msgEl.textContent = "Existem erros de preenchimento nos campos destacados abaixo.";
+                    container.style.display = 'flex';
+                  }
+                } else {
+                   // Erro de texto simples
+                   const container = document.getElementById('global-error-container');
+                   const msgEl = document.getElementById('global-error-message');
+                   if (container && msgEl) {
+                     msgEl.textContent = msg || "Erro ao salvar cliente.";
+                     container.style.display = 'flex';
+                     container.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                   }
                 }
-                alert("Erro ao salvar cliente: " + msg);
+              } else {
+                alert("Erro inesperado ao salvar cliente: " + erro.message);
               }
             });
         }
@@ -1059,6 +1180,15 @@
             alert("Erro ao exportar: " + error.message);
           }
         }
+
+        // Limpar erro visual quando o usuário volta a digitar no campo
+        document.addEventListener('input', (e) => {
+          if (e.target.classList.contains('field-error')) {
+            e.target.classList.remove('field-error');
+            const msg = e.target.parentNode.querySelector('.error-message');
+            if (msg) msg.remove();
+          }
+        });
 
         // On load event: Carrega canais e verifica cliente selecionado vindo da listagem
         document.addEventListener('DOMContentLoaded', () => {
