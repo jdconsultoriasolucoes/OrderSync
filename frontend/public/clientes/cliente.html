@@ -947,7 +947,11 @@
                 alert("Sessão inválida ou expirada. Redirecionando para login.");
                 window.Auth.logout();
               } else {
-                alert("Erro ao salvar cliente: " + (erro.response?.data?.detail || erro.message));
+                let msg = erro.response?.data?.error?.message || erro.response?.data?.detail || erro.message;
+                if (Array.isArray(msg)) {
+                  msg = msg.map(m => `${m.loc.join('.')}: ${m.msg}`).join('\n');
+                }
+                alert("Erro ao salvar cliente: " + msg);
               }
             });
         }

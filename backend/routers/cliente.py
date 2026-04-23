@@ -180,9 +180,21 @@ def post_cliente(cliente: ClienteCompleto, current_user: UsuarioModel = Depends(
 
 @router.put("/{codigo_da_empresa}", response_model=ClienteCompleto)
 def put_cliente(codigo_da_empresa: str, cliente: ClienteCompleto, current_user: UsuarioModel = Depends(get_current_user)):
-    data = cliente.model_dump()
-    data["atualizado_por"] = current_user.email
-    atualizado = atualizar_cliente(codigo_da_empresa, data)
-    if not atualizado:
-        raise HTTPException(status_code=404, detail="Cliente não encontrado")
-    return atualizado
+    try:
+        data = cliente.model_dump()
+        data["atualizado_por"] = current_user.email
+        
+        # O service espera um int, mas a URL manda string.
+        try:
+            cid = int(codigo_da_empresa)
+        except:
+            cid = codigo_da_empresa
+            
+        atualizado = atualizar_cliente(cid, data)
+        if not atualizado:
+            raise HTTPException(status_code=404, detail="Cliente não encontrado")
+        return atualizado
+    except Exception as e:
+        import traceback
+        logging.error(f"Erro no PUT /cliente/{codigo_da_empresa}: {str(e)}\n{traceback.format_exc()}")
+        raise e
