@@ -1784,13 +1784,14 @@
               }
               
               // Campos monetários e numéricos usam typedValue para evitar parsing problemático
+              let hasMask = !!el.maskInstance;
               if (id === 'limite_credito' || id === 'limite_credito_ElaboracaoCadastro' || id === 'cadastro_markup' || id.includes('valor_')) {
-                if (el.maskInstance) {
+                if (hasMask) {
                     el.maskInstance.typedValue = parseFloat(val) || 0;
                 } else {
                     el.value = val ?? "";
                 }
-              } else if (el.maskInstance) {
+              } else if (hasMask) {
                 // Outros campos (como CEP, CPF) usam value string
                 el.maskInstance.value = String(val ?? "");
               } else {
@@ -1798,7 +1799,11 @@
               }
 
               if (el.tagName === 'INPUT' || el.tagName === 'TEXTAREA') {
-                el.dispatchEvent(new Event('input', { bubbles: true }));
+                // SÓ dispara o evento input se NÃO tiver máscara, senão o IMask lê o valor formatado 
+                // e aplica o mapToRadix novamente, destruindo o número (ex: "5.000,00" -> "5,000,00" -> "5,00")
+                if (!hasMask) {
+                    el.dispatchEvent(new Event('input', { bubbles: true }));
+                }
               } else if (el.tagName === 'SELECT') {
                 el.dispatchEvent(new Event('change', { bubbles: true }));
               }
