@@ -1291,8 +1291,14 @@
             max: 999999999.99
           };
 
-          if (limCadastro) window.maskCadastro = IMask(limCadastro, maskOpts);
-          if (limElab) window.maskElabor = IMask(limElab, maskOpts);
+          if (limCadastro) {
+              window.maskCadastro = IMask(limCadastro, maskOpts);
+              limCadastro.maskInstance = window.maskCadastro;
+          }
+          if (limElab) {
+              window.maskElabor = IMask(limElab, maskOpts);
+              limElab.maskInstance = window.maskElabor;
+          }
 
           // Sincronização bidirecional
           if (limCadastro && limElab) {
@@ -1776,7 +1782,14 @@
                   el.appendChild(opt);
                 }
               }
-              el.value = val;
+              
+              // Prioriza o uso do IMask se a instância existir no elemento
+              if (el.maskInstance) {
+                el.maskInstance.value = String(val ?? "");
+              } else {
+                el.value = val ?? "";
+              }
+
               if (el.tagName === 'INPUT' || el.tagName === 'TEXTAREA') {
                 el.dispatchEvent(new Event('input', { bubbles: true }));
               } else if (el.tagName === 'SELECT') {
@@ -1798,14 +1811,8 @@
           setVal("tipo_cliente", c.tipo_cliente || "");
           setVal("tipo_venda", c.tipo_venda || "");
           setVal("tipo_compra", c.tipo_compra || "");
-          // Limite de crédito: formata como moeda BR
-          const limCred = c.limite_credito;
-          if (limCred) {
-            const limFmt = parseFloat(limCred).toFixed(2).replace('.', ',').replace(/\B(?=(\d{3})+(?!\d))/g, '.');
-            setVal("limite_credito", limFmt);
-          } else {
-            setVal("limite_credito", "");
-          }
+          // Limite de crédito: passa o valor bruto, a máscara formata
+          setVal("limite_credito", c.limite_credito || "");
           setVal("nome_cliente", c.nome_cliente || "");
           setVal("nome_fantasia", c.nome_fantasia || "");
           setVal("cnpj", c.cnpj || "");
@@ -1905,14 +1912,8 @@
           const ed = dados.dados_elaboracao_cadastro || {};
           setVal("classificacao_ElaboracaoCadastro", ed.classificacao_ElaboracaoCadastro || "");
           setVal("tipo_venda_prazo_ou_vista_ElaboracaoCadastro", ed.tipo_venda_prazo_ou_vista_ElaboracaoCadastro || "");
-          // Limite de crédito: formata como moeda BR
-          const limElab = ed.limite_credito_ElaboracaoCadastro;
-          if (limElab) {
-            const limFormatado = parseFloat(limElab).toFixed(2).replace('.', ',').replace(/\B(?=(\d{3})+(?!\d))/g, '.');
-            setVal("limite_credito_ElaboracaoCadastro", limFormatado);
-          } else {
-            setVal("limite_credito_ElaboracaoCadastro", "");
-          }
+          // Limite de crédito: passa o valor bruto, a máscara formata
+          setVal("limite_credito_ElaboracaoCadastro", ed.limite_credito_ElaboracaoCadastro || "");
           setVal("data_vencimento_ElaboracaoCadastro", ed.data_vencimento_ElaboracaoCadastro || "");
           setVal("vendedor_ElaboracaoCadastro", ed.vendedor_ElaboracaoCadastro || "");
           setVal("gerente_insumos_ElaboracaoCadastro", ed.gerente_insumos_ElaboracaoCadastro || "");
