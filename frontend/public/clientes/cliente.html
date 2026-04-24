@@ -1291,24 +1291,19 @@
             max: 999999999.99
           };
 
-          let maskCadastro = null;
-          let maskElabor = null;
-
-          if (limCadastro) maskCadastro = IMask(limCadastro, maskOpts);
-          if (limElab) maskElabor = IMask(limElab, maskOpts);
+          if (limCadastro) window.maskCadastro = IMask(limCadastro, maskOpts);
+          if (limElab) window.maskElabor = IMask(limElab, maskOpts);
 
           // Sincronização bidirecional
-          if (limCadastro && maskElabor) {
+          if (limCadastro && limElab) {
             limCadastro.addEventListener('input', () => {
-              if (maskCadastro && maskElabor) {
-                maskElabor.unmaskedValue = maskCadastro.unmaskedValue;
+              if (window.maskCadastro && window.maskElabor) {
+                window.maskElabor.unmaskedValue = window.maskCadastro.unmaskedValue;
               }
             });
-          }
-          if (limElab && maskCadastro) {
             limElab.addEventListener('input', () => {
-              if (maskElabor && maskCadastro) {
-                maskCadastro.unmaskedValue = maskElabor.unmaskedValue;
+              if (window.maskElabor && window.maskCadastro) {
+                window.maskCadastro.unmaskedValue = window.maskElabor.unmaskedValue;
               }
             });
           }
@@ -1372,7 +1367,7 @@
               tipo_cliente: document.getElementById("tipo_cliente")?.value || "",
               tipo_venda: document.getElementById("tipo_venda")?.value || "",
               tipo_compra: document.getElementById("tipo_compra")?.value || "",
-              limite_credito: parseFloat((document.getElementById("limite_credito")?.value || "0").replace(/\./g, '').replace(',', '.')) || 0,
+              limite_credito: parseFloat(window.maskCadastro?.unmaskedValue || "0") || 0,
               nome_cliente: document.getElementById("nome_cliente")?.value || "",
               nome_fantasia: document.getElementById("nome_fantasia")?.value || "",
               cnpj: document.getElementById("cnpj")?.value || "",
@@ -1463,7 +1458,7 @@
             dados_elaboracao_cadastro: {
               classificacao_ElaboracaoCadastro: document.getElementById("classificacao_ElaboracaoCadastro")?.value || "",
               tipo_venda_prazo_ou_vista_ElaboracaoCadastro: document.getElementById("tipo_venda_prazo_ou_vista_ElaboracaoCadastro")?.value || "",
-              limite_credito_ElaboracaoCadastro: parseFloat((document.getElementById("limite_credito_ElaboracaoCadastro")?.value || "0").replace(/\./g, '').replace(',', '.')) || 0,
+              limite_credito_ElaboracaoCadastro: parseFloat(window.maskElabor?.unmaskedValue || "0") || 0,
               data_vencimento_ElaboracaoCadastro: document.getElementById("data_vencimento_ElaboracaoCadastro")?.value || "",
               vendedor_ElaboracaoCadastro: document.getElementById("vendedor_ElaboracaoCadastro")?.value || "",
               gerente_insumos_ElaboracaoCadastro: document.getElementById("gerente_insumos_ElaboracaoCadastro")?.value || "",
@@ -2095,18 +2090,32 @@
             setSelect('atividade_principal', atividade);
             setSelect('ramo_de_atividade', atividade);
 
-            // Address Info -> Mapped to Faturamento (Standard behavior)
+            // Address Info -> Mapped to Faturamento and Entrega
+            const enderecoFull = `${data.logradouro}, ${data.numero}${data.complemento ? ' - ' + data.complemento : ''}`;
+            
+            // Faturamento
             setVal('cep_faturamento', data.cep);
-            setVal('endereco_faturamento', `${data.logradouro}, ${data.numero}${data.complemento ? ' - ' + data.complemento : ''}`);
+            setVal('endereco_faturamento', enderecoFull);
             setVal('bairro_faturamento', data.bairro);
             setVal('municipio_faturamento', data.municipio);
             setVal('estado_faturamento', data.uf);
+
+            // Entrega
+            setVal('cep_EnderecoEntrega', data.cep);
+            setVal('endereco_EnderecoEntrega', enderecoFull);
+            setVal('bairro_EnderecoEntrega', data.bairro);
+            setVal('municipio_EnderecoEntrega', data.municipio);
+            setVal('estado_EnderecoEntrega', data.uf);
 
             // Contact
             setVal('email_resposavel', data.email);
             
             // Disparar evento para as máscaras atualizarem
-            ['nome_cliente', 'nome_fantasia', 'cep_faturamento', 'endereco_faturamento', 'bairro_faturamento', 'municipio_faturamento', 'estado_faturamento'].forEach(id => {
+            [
+              'nome_cliente', 'nome_fantasia', 
+              'cep_faturamento', 'endereco_faturamento', 'bairro_faturamento', 'municipio_faturamento', 'estado_faturamento',
+              'cep_EnderecoEntrega', 'endereco_EnderecoEntrega', 'bairro_EnderecoEntrega', 'municipio_EnderecoEntrega', 'estado_EnderecoEntrega'
+            ].forEach(id => {
                 const el = document.getElementById(id);
                 if (el) el.dispatchEvent(new Event('input'));
             });

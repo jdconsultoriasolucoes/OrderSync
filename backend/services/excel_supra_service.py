@@ -268,8 +268,8 @@ def gerar_excel_cliente_supra(cliente) -> bytes:
 
         if not codigo_empresa:
             status_text = "Cliente Novo"
-        elif data_inativacao:
-            # Se já teve uma data de inativação, é considerado Recadastro
+        elif data_inativacao or (codigo_empresa.isdigit() and int(codigo_empresa) > 5000):
+            # Se já teve uma data de inativação ou código > 5000, é considerado Recadastro
             status_text = f"Recadastro do Cliente Código => {codigo_empresa}"
         else:
             status_text = _s(cliente.elaboracao_classificacao) or "CLIENTE NOVO"
@@ -287,7 +287,7 @@ def gerar_excel_cliente_supra(cliente) -> bytes:
         elif "vista" in tipo_venda_raw:
             tipo_venda_excel = "Venda à vista"
         elif "prazo" in tipo_venda_raw:
-            tipo_venda_excel = "Venda antecipada"
+            tipo_venda_excel = "Venda a prazo"
         else:
             tipo_venda_excel = _s(cliente.elaboracao_tipo_venda)
         ws2["A43"] = tipo_venda_excel
