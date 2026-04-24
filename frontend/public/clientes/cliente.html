@@ -1373,7 +1373,7 @@
               tipo_cliente: document.getElementById("tipo_cliente")?.value || "",
               tipo_venda: document.getElementById("tipo_venda")?.value || "",
               tipo_compra: document.getElementById("tipo_compra")?.value || "",
-              limite_credito: parseFloat(window.maskCadastro?.unmaskedValue || "0") || 0,
+              limite_credito: window.maskCadastro && !isNaN(window.maskCadastro.typedValue) ? Number(window.maskCadastro.typedValue) : (parseFloat((document.getElementById("limite_credito")?.value || "0").replace(/\./g, '').replace(',', '.')) || 0),
               nome_cliente: document.getElementById("nome_cliente")?.value || "",
               nome_fantasia: document.getElementById("nome_fantasia")?.value || "",
               cnpj: document.getElementById("cnpj")?.value || "",
@@ -1464,7 +1464,7 @@
             dados_elaboracao_cadastro: {
               classificacao_ElaboracaoCadastro: document.getElementById("classificacao_ElaboracaoCadastro")?.value || "",
               tipo_venda_prazo_ou_vista_ElaboracaoCadastro: document.getElementById("tipo_venda_prazo_ou_vista_ElaboracaoCadastro")?.value || "",
-              limite_credito_ElaboracaoCadastro: parseFloat(window.maskElabor?.unmaskedValue || "0") || 0,
+              limite_credito_ElaboracaoCadastro: window.maskElabor && !isNaN(window.maskElabor.typedValue) ? Number(window.maskElabor.typedValue) : (parseFloat((document.getElementById("limite_credito_ElaboracaoCadastro")?.value || "0").replace(/\./g, '').replace(',', '.')) || 0),
               data_vencimento_ElaboracaoCadastro: document.getElementById("data_vencimento_ElaboracaoCadastro")?.value || "",
               vendedor_ElaboracaoCadastro: document.getElementById("vendedor_ElaboracaoCadastro")?.value || "",
               gerente_insumos_ElaboracaoCadastro: document.getElementById("gerente_insumos_ElaboracaoCadastro")?.value || "",
@@ -1783,8 +1783,15 @@
                 }
               }
               
-              // Prioriza o uso do IMask se a instância existir no elemento
-              if (el.maskInstance) {
+              // Campos monetários e numéricos usam typedValue para evitar parsing problemático
+              if (id === 'limite_credito' || id === 'limite_credito_ElaboracaoCadastro' || id === 'cadastro_markup' || id.includes('valor_')) {
+                if (el.maskInstance) {
+                    el.maskInstance.typedValue = parseFloat(val) || 0;
+                } else {
+                    el.value = val ?? "";
+                }
+              } else if (el.maskInstance) {
+                // Outros campos (como CEP, CPF) usam value string
                 el.maskInstance.value = String(val ?? "");
               } else {
                 el.value = val ?? "";
