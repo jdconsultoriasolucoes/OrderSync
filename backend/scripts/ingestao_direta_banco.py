@@ -20,6 +20,23 @@ def importar_para_staging():
         conn = psycopg2.connect(DB_URL)
         cur = conn.cursor()
         
+        print("Limpando profundamente o sistema (Pedidos, Itens, Links, Cargas e Históricos)...")
+        # Tabelas de Ingestão (Staging)
+        cur.execute("TRUNCATE TABLE tb_pedidos_itens_ingestao RESTART IDENTITY CASCADE;")
+        cur.execute("TRUNCATE TABLE tb_pedidos_ingestao RESTART IDENTITY CASCADE;")
+        
+        # Tabelas de Produção (Limpeza Geral conforme solicitado)
+        cur.execute("TRUNCATE TABLE tb_pedidos_itens RESTART IDENTITY CASCADE;")
+        cur.execute("TRUNCATE TABLE tb_pedidos RESTART IDENTITY CASCADE;")
+        cur.execute("TRUNCATE TABLE tb_pedido_link RESTART IDENTITY CASCADE;")
+        cur.execute("TRUNCATE TABLE tb_idempotency_keys RESTART IDENTITY CASCADE;")
+        cur.execute("TRUNCATE TABLE tb_cliente_historico RESTART IDENTITY CASCADE;")
+        cur.execute("TRUNCATE TABLE tb_cargas_pedidos RESTART IDENTITY CASCADE;")
+        cur.execute("TRUNCATE TABLE tb_cargas RESTART IDENTITY CASCADE;")
+        
+        conn.commit()
+        print("Sistema limpo e IDs zerados com sucesso!")
+        
         # 1. tb_pedidos_ingestao
         print(f"Lendo dados de pedidos: {FILE_PEDIDOS}")
         if not os.path.exists(FILE_PEDIDOS):

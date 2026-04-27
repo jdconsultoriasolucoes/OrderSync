@@ -83,8 +83,8 @@ def processar_historico():
     itens_lista = []
     
     map_pedido_id = {}
-    next_pedido_id = 20000
-    next_item_id = 200000
+    next_pedido_id = 1
+    next_item_id = 1
     
     grupos = df.groupby('Pedido')
     

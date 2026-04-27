@@ -99,6 +99,22 @@ class StatusChangeBody(BaseModel):
     motivo: Optional[str] = None
     user_id: Optional[str] = None
 
+class PedidoUpdateItem(BaseModel):
+    codigo: str
+    descricao: Optional[str] = None
+    embalagem: Optional[str] = None
+    condicao_pagamento: Optional[str] = None
+    tabela_comissao: Optional[str] = None
+    quantidade: float
+    preco_unit: Optional[float] = None
+    preco_unit_com_frete: Optional[float] = None
+    peso_kg: Optional[float] = None
+
+class PedidoUpdateRequest(BaseModel):
+    usar_valor_com_frete: bool = True
+    produtos: List[PedidoUpdateItem]
+    observacoes: Optional[str] = None
+
 # ---------- Routes ----------
 def to_iso_or_none(v):
     if v is None:
@@ -298,6 +314,124 @@ def resumo_pedido(id_pedido: int, db: Session = Depends(get_db)):
     head_dict["peso_bruto_calculado"] = pdf_data.total_peso_bruto
 
     return PedidoResumo(**head_dict)
+
+@router.put("/{id_pedido}")
+def atualizar_pedido(
+    id_pedido: int,
+    body: PedidoUpdateRequest,
+    db: Session = Depends(get_db),
+    user_id: Optional[str] = Query(None)
+):
+    from models.pedido import PedidoModel
+    import json
+    
+    # 1. Busca pedido e trava a linha (lock)
+    pedido = db.query(PedidoModel).filter(PedidoModel.id == id_pedido).with_for_update().first()
+    if not pedido:
+        raise HTTPException(status_code=404, detail="Pedido não encontrado")
+
+    # 2. Verifica se o status permite edição
+    if str(pedido.status).strip().upper() != "ORCAMENTO":
+        raise HTTPException(status_code=400, detail="Apenas pedidos com status 'Orçamento' podem ser editados.")
+
+    # 3. Recalcular os totais
+    peso_total_kg = 0.0
+    total_sem_frete = 0.0
+    total_com_frete = 0.0
+
+    for it in body.produtos:
+        qtd = float(it.quantidade or 0)
+        peso_total_kg += float(it.peso_kg or 0) * qtd
+        total_sem_frete += float(it.preco_unit or 0) * qtd
+        total_com_frete += float((it.preco_unit_com_frete if it.preco_unit_com_frete is not None else it.preco_unit) or 0) * qtd
+
+    frete_total = max(0.0, total_com_frete - total_sem_frete)
+    total_pedido = total_com_frete if body.usar_valor_com_frete else total_sem_frete
+
+    # 4. Atualizar o cabeçalho do pedido
+    pedido.usar_valor_com_frete = body.usar_valor_com_frete
+    pedido.observacoes = body.observacoes
+    pedido.peso_total_kg = round(peso_total_kg, 3)
+    pedido.frete_total = round(frete_total, 2)
+    # A base original de creation salvava o json dos itens no campo "itens", mas o model nao tinha?
+    # O model nao declara `itens`, mas o insert cru usou. Como SQLAlchemy model não tem, ignoramos o JSON cru no model e só atualizamos os outros campos
+    pedido.total_pedido = round(total_pedido, 2)
+    pedido.atualizado_em = datetime.now()
+
+    # 5. Deletar os itens antigos da tabela tb_pedidos_itens
+    db.execute(text("DELETE FROM public.tb_pedidos_itens WHERE id_pedido = :id_pedido"), {"id_pedido": id_pedido})
+
+    # 6. Inserir os novos itens
+    insert_item_sql = text("""
+        INSERT INTO tb_pedidos_itens (
+            id_pedido, codigo, nome, embalagem, peso_kg,
+            condicao_pagamento, tabela_comissao,
+            preco_unit, preco_unit_frt, quantidade,
+            subtotal_sem_f, subtotal_com_f
+        ) VALUES (
+            :id_pedido, :codigo, :nome, :embalagem, :peso_kg,
+            :condicao_pagamento, :tabela_comissao,
+            :preco_unit, :preco_unit_frt, :quantidade,
+            :subtotal_sem_f, :subtotal_com_f
+        )
+    """)
+
+    for it in body.produtos:
+        qtd = float(it.quantidade or 0)
+        p_sem = float(it.preco_unit or 0)
+        p_com = float((it.preco_unit_com_frete if it.preco_unit_com_frete is not None else it.preco_unit) or 0)
+
+        db.execute(insert_item_sql, {
+            "id_pedido": id_pedido,
+            "codigo": (it.codigo or "")[:80],
+            "nome": (it.descricao or "")[:255] or None,
+            "embalagem": getattr(it, "embalagem", None),
+            "peso_kg": float(it.peso_kg or 0),
+            "condicao_pagamento": it.condicao_pagamento,
+            "tabela_comissao": it.tabela_comissao,
+            "preco_unit": round(p_sem, 2),
+            "preco_unit_frt": round(p_com, 2),
+            "quantidade": qtd,
+            "subtotal_sem_f": round(p_sem * qtd, 2),
+            "subtotal_com_f": round(p_com * qtd, 2),
+        })
+
+    # 7. Logar evento de edição (usando a tabela de status_event como log geral)
+    try:
+        with db.begin_nested():
+            db.execute(STATUS_EVENT_INSERT_SQL, {
+                "pedido_id": id_pedido,
+                "de_status": "ORCAMENTO",
+                "para_status": "ORCAMENTO",
+                "user_id": user_id or "sistema",
+                "motivo": "Edição de itens do orçamento",
+                "metadata": "{}"
+            })
+    except Exception:
+        pass
+
+    db.commit()
+
+    # Retorna o PDF base64 do cliente para download imediato, igual na criação
+    from services.pedido_pdf_data import carregar_pedido_pdf
+    from services.pdf_service import gerar_pdf_pedido
+    import base64
+    
+    try:
+        obj_pdf_cliente = carregar_pedido_pdf(db, id_pedido)
+        # Por padrão a criação envia "sem_validade=False"
+        pdf_bytes_cliente = gerar_pdf_pedido(obj_pdf_cliente, sem_validade=False)
+        pdf_b64 = base64.b64encode(pdf_bytes_cliente).decode('utf-8')
+    except Exception as e:
+        import logging
+        logging.getLogger(__name__).error(f"Erro ao gerar PDF atualizado: {e}")
+        pdf_b64 = None
+
+    return {
+        "ok": True,
+        "id": id_pedido,
+        "pdf_base64": pdf_b64
+    }
 
 def verificar_e_historico_carga(db: Session, id_pedido: int, user_id: Optional[str]):
     try:

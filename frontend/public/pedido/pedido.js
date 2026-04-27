@@ -243,6 +243,16 @@ async function loadList(page = 1) {
     renderTable(state.rows);
     renderCards(state.rows);
     renderPager();
+
+  // Open edit page
+  document.querySelectorAll(".btn-edit-orcamento").forEach(btn => {
+      btn.addEventListener("click", (e) => {
+          e.stopPropagation();
+          const id = e.target.dataset.id;
+          window.location.href = `/pedido/editar_pedido.html?id=${id}`;
+      });
+  });
+
   } catch (e) {
     console.error("Erro em loadList:", e);
     const tb = document.getElementById("tblBody");
@@ -299,9 +309,12 @@ function renderTable(rows) {
             ${link ? `<a href="${link}" target="_blank" class="btn-copy">Copiar Link</a>` : '<span class="muted">---</span>'}
           </td>
           <td class="tar td-actions" id="td-actions-${id}">
+            
             <button class="btn-sm btn-outline-secondary btn-edit-status" data-id="${id}" data-status="${status}">
-               Editar
+               Status
             </button>
+            ${(status || '').toUpperCase() === 'ORCAMENTO' ? `<button class="btn-sm btn-outline-primary btn-edit-orcamento" data-id="${id}" style="margin-left: 5px;">Editar Pedido</button>` : ''}
+
           </td>
         `;
 
@@ -362,7 +375,10 @@ function renderCards(rows) {
         </div>
         <div class="order-card-actions td-actions" id="td-actions-mobile-${id}">
            ${link ? `<a href="${link}" target="_blank" class="btn btn-outline" style="padding: 4px 8px; font-size: 0.8rem; text-decoration: none;">Link</a>` : ''}
-           <button class="btn btn-outline-secondary btn-edit-status" data-id="${id}" data-status="${status}" data-is-mobile="true" style="padding: 4px 8px; font-size: 0.8rem;">Editar Status</button>
+           
+           <button class="btn btn-outline-secondary btn-edit-status" data-id="${id}" data-status="${status}" data-is-mobile="true" style="padding: 4px 8px; font-size: 0.8rem;">Status</button>
+           ${(status || '').toUpperCase() === 'ORCAMENTO' ? `<button class="btn btn-outline-primary btn-edit-orcamento" data-id="${id}" style="padding: 4px 8px; font-size: 0.8rem;">Editar Pedido</button>` : ''}
+
            <button class="btn btn-primary" onclick="openResumo('${id}')" style="padding: 4px 12px; font-size: 0.8rem;">Detalhes</button>
         </div>
 
