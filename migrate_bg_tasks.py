@@ -8,9 +8,15 @@ def migrate():
     cursor = conn.cursor()
     
     commands = [
+        "ALTER TABLE tb_background_tasks ADD COLUMN IF NOT EXISTS task_id VARCHAR(255) UNIQUE;",
         "ALTER TABLE tb_background_tasks ADD COLUMN IF NOT EXISTS progresso INTEGER DEFAULT 0;",
         "ALTER TABLE tb_background_tasks ADD COLUMN IF NOT EXISTS total_passos INTEGER DEFAULT 0;",
-        "ALTER TABLE tb_background_tasks ADD COLUMN IF NOT EXISTS mensagem_status TEXT;"
+        "ALTER TABLE tb_background_tasks ADD COLUMN IF NOT EXISTS concluido_em TIMESTAMP;",
+        "ALTER TABLE tb_background_tasks ADD COLUMN IF NOT EXISTS resultado JSONB;",
+        "ALTER TABLE tb_background_tasks ADD COLUMN IF NOT EXISTS erro TEXT;",
+        "ALTER TABLE tb_background_tasks ADD COLUMN IF NOT EXISTS atualizado_em TIMESTAMP DEFAULT CURRENT_TIMESTAMP;",
+        "-- Índice único para permitir ON CONFLICT na importação de produtos",
+        "CREATE UNIQUE INDEX IF NOT EXISTS idx_produto_v2_upsert ON t_cadastro_produto_v2 (fornecedor, tipo, codigo_supra);"
     ]
     
     for cmd in commands:

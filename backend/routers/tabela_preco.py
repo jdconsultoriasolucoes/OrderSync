@@ -219,7 +219,7 @@ def salvar_tabela_preco(
 
 
 
-@router.delete("/{id_tabela}")
+@router.delete("/{id_tabela:int}")
 def desativar_tabela(id_tabela: int):
     with SessionLocal() as db:
         linhas = db.query(TabelaPrecoModel).filter_by(id_tabela=id_tabela, ativo=True).all()
@@ -378,7 +378,7 @@ def busca_cliente(
         db.close()
 
 
-@router.get("/{id_tabela}")
+@router.get("/{id_tabela:int}")
 def obter_tabela(id_tabela: int):
     with SessionLocal() as db:
         cab = db.query(TabelaPrecoModel).filter_by(id_tabela=id_tabela, ativo=True).first()
@@ -497,7 +497,7 @@ class ConfirmarPedidoReq(BaseModel):
     usar_valor_com_frete: bool
     produtos: List[ItemReq]
 
-@router.post("/{tabela_id}/confirmar_pedido")
+@router.post("/{tabela_id:int}/confirmar_pedido")
 def confirmar_pedido(tabela_id: int, body: ConfirmarPedidoReq):
     with SessionLocal() as db:
         # 1. Buscar dados da Tabela (Header + Itens)
@@ -662,7 +662,7 @@ def only_code(v):
     if v is None: return ""
     return str(v).strip().split(" - ", 1)[0]
 
-@router.put("/{id_tabela}")
+@router.put("/{id_tabela:int}")
 def atualizar_tabela(
     id_tabela: int, 
     body: TabelaSalvar, 
