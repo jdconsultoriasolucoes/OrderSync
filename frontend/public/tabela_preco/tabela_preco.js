@@ -5,6 +5,22 @@ let pageSize = 25;
 let totalPages = null;
 let preSelecionadosCodigos = new Set(); // para prÃ©-marcar checkboxes (enviado pelo pai)
 
+
+/* ========================
+   Contexto Global
+======================== */
+function getCtxId() {
+  return sessionStorage.getItem('TP_CTX_ID') || 'new';
+}
+
+function loadPreselectionFromParent() {
+  const ctx = getCtxId();
+  try {
+    const arr = JSON.parse(sessionStorage.getItem(`TP_ATUAL:${ctx}`) || '[]');
+    preSelecionadosCodigos = new Set((arr || []).map(p => p.codigo_tabela || p.codigo));
+  } catch { preSelecionadosCodigos = new Set(); }
+}
+
 /* ========================
    Bootstrap
 ======================== */
@@ -21,17 +37,7 @@ document.addEventListener("DOMContentLoaded", () => {
   const ps = document.getElementById("page_size");
   const inpPalavra = document.getElementById("filtro-palavra");
 
-  // === Contexto com o Pai ===
-  function getCtxId() {
-    return sessionStorage.getItem('TP_CTX_ID') || 'new';
-  }
-  function loadPreselectionFromParent() {
-    const ctx = getCtxId();
-    try {
-      const arr = JSON.parse(sessionStorage.getItem(`TP_ATUAL:${ctx}`) || '[]');
-      preSelecionadosCodigos = new Set((arr || []).map(p => p.codigo_tabela || p.codigo));
-    } catch { preSelecionadosCodigos = new Set(); }
-  }
+
   // (sendBufferBackToParent original removida; usada versÃ£o shim abaixo)
 
 
@@ -502,7 +508,7 @@ window.onload = async function () {
 };
 
 
-// === SELEÇÃO EM MASSA ===
+// === SELEï¿½ï¿½O EM MASSA ===
 async function selecionarTodosMassivo() {
   const btn = document.getElementById('btn-selecionar-todos-massivo');
   btn.disabled = true;
@@ -552,14 +558,14 @@ async function selecionarTodosMassivo() {
     // Atualiza estado local para refletir nos checkboxes
     loadPreselectionFromParent();
     
-    // Força re-render da tabela atual para mostrar checkboxes marcados
+    // Forï¿½a re-render da tabela atual para mostrar checkboxes marcados
     carregarProdutos();
 
-    toast(novosAdicionados + ' produto(s) adicionado(s) à sua seleção! Total: ' + arr.length);
+    toast(novosAdicionados + ' produto(s) adicionado(s) ï¿½ sua seleï¿½ï¿½o! Total: ' + arr.length);
     
   } catch (err) {
     console.error(err);
-    toast('Erro na seleção massiva: ' + err.message);
+    toast('Erro na seleï¿½ï¿½o massiva: ' + err.message);
   } finally {
     btn.disabled = false;
     btn.innerHTML = textoOriginal;
