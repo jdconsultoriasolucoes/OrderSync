@@ -15,6 +15,7 @@ def migrate():
         "ALTER TABLE tb_background_tasks ADD COLUMN IF NOT EXISTS resultado JSONB;",
         "ALTER TABLE tb_background_tasks ADD COLUMN IF NOT EXISTS erro TEXT;",
         "ALTER TABLE tb_background_tasks ADD COLUMN IF NOT EXISTS atualizado_em TIMESTAMP DEFAULT CURRENT_TIMESTAMP;",
+        "ALTER TABLE tb_background_tasks ALTER COLUMN referencia_id DROP NOT NULL;",
         "-- Índice único para permitir ON CONFLICT na importação de produtos",
         "CREATE UNIQUE INDEX IF NOT EXISTS idx_produto_v2_upsert ON t_cadastro_produto_v2 (fornecedor, tipo, codigo_supra);"
     ]
