@@ -578,7 +578,20 @@ async function selecionarTodosMassivo() {
     // For�a re-render da tabela atual para mostrar checkboxes marcados
     carregarProdutos();
 
-    toast(novosAdicionados + ' produto(s) adicionado(s) � sua sele��o! Total: ' + arr.length);
+    
+    // Construir mensagem com filtros
+    let filtrosMsg = [];
+    if (grupo) filtrosMsg.push("Grupo: " + grupo);
+    if (tipo) filtrosMsg.push("Tipo: " + tipo);
+    if (fornecedor) filtrosMsg.push("Fornecedor: " + fornecedor);
+    if (termo) filtrosMsg.push('Busca: "' + termo + '"');
+
+    let msg = novosAdicionados + ' produto(s) adicionado(s) à sua seleção!';
+    if (filtrosMsg.length > 0) {
+      msg += ' (Filtros: ' + filtrosMsg.join(', ') + ')';
+    }
+    msg += ' Total: ' + arr.length;
+    toast(msg);
     
   } catch (err) {
     console.error(err);
