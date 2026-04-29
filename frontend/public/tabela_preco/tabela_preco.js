@@ -8,20 +8,24 @@ let preSelecionadosCodigos = new Set(); // para pré-marcar checkboxes (enviado 
 
 const $ = (id) => document.getElementById(id);
 
-function toast(msg) {
+function toast(msg, type = 'success') {
   const t = $("toast");
   if (!t) {
     alert(msg);
     return;
   }
   t.textContent = msg;
+  // Limpa classes anteriores de tipo
+  t.classList.remove('success', 'error', 'warning');
+  if (type) t.classList.add(type);
+  
   t.classList.add("show");
-  t.style.display = "block";
+  
   setTimeout(() => {
     t.classList.remove("show");
-    t.style.display = "none";
-  }, 3000);
+  }, 4000);
 }
+
 
 /* ========================
    Contexto Global
@@ -591,7 +595,7 @@ async function selecionarTodosMassivo() {
       msg += ' (Filtros: ' + filtrosMsg.join(', ') + ')';
     }
     msg += ' Total: ' + arr.length;
-    toast(msg);
+    await showOsModal({ title: 'Seleção Concluída', message: msg, type: 'alert' });
     
   } catch (err) {
     console.error(err);
