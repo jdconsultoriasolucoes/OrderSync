@@ -426,7 +426,9 @@ function showOsModal(options) {
 
     const dialog = document.createElement('div');
     dialog.className = 'os-modal-dialog';
-    dialog.style.maxWidth = '400px';
+    dialog.style.width = 'fit-content';
+    dialog.style.minWidth = '350px';
+    dialog.style.maxWidth = '90vw';
 
     const header = document.createElement('div');
     header.className = 'os-modal-header';
@@ -584,17 +586,12 @@ async function selecionarTodosMassivo() {
 
     
     // Construir mensagem com filtros
-    let filtrosMsg = [];
-    if (grupo) filtrosMsg.push("Grupo: " + grupo);
-    if (tipo) filtrosMsg.push("Tipo: " + tipo);
-    if (fornecedor) filtrosMsg.push("Fornecedor: " + fornecedor);
-    if (termo) filtrosMsg.push('Busca: "' + termo + '"');
-
-    let msg = novosAdicionados + ' produto(s) adicionado(s) à sua seleção!';
-    if (filtrosMsg.length > 0) {
-      msg += ' (Filtros: ' + filtrosMsg.join(', ') + ')';
-    }
-    msg += ' Total: ' + arr.length;
+    let msg = `<strong>${novosAdicionados} produto(s) adicionados à sua seleção!</strong><br><br>`;
+    msg += `Grupo: ${grupo || "Todos"}<br>`;
+    msg += `Tipo: ${tipo || "Todos"}<br>`;
+    msg += `Fornecedor: ${fornecedor || "Todos"}<br>`;
+    msg += `Busca: ${termo || "Nenhuma"}<br><br>`;
+    msg += `<strong>Total de produtos na seleção: ${arr.length}</strong>`;
     await showOsModal({ title: 'Seleção Concluída', message: msg, type: 'alert' });
     
   } catch (err) {
