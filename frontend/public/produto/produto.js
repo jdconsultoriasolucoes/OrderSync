@@ -749,6 +749,7 @@ async function uploadListaPdf(file) {
       fornecedor,
       validade_tabela,
       sync,
+      task_id
     } = data;
 
     // Compatibilidade com API nova (sync) e antiga (inseridos/atualizados na raiz)
@@ -757,42 +758,36 @@ async function uploadListaPdf(file) {
     let inativados = 0;
 
     if (sync && Array.isArray(sync.grupos)) {
-      inseridos = sync.grupos.reduce(
-        (acc, g) => acc + (g.inseridos || 0),
-        0
-      );
-      atualizados = sync.grupos.reduce(
-        (acc, g) => acc + (g.atualizados || 0),
-        0
-      );
-      inativados = sync.grupos.reduce(
-        (acc, g) => acc + (g.inativados || 0),
-        0
-      );
+      inseridos = sync.grupos.reduce((acc, g) => acc + (g.inseridos || 0), 0);
+      atualizados = sync.grupos.reduce((acc, g) => acc + (g.atualizados || 0), 0);
+      inativados = sync.grupos.reduce((acc, g) => acc + (g.inativados || 0), 0);
+    }
+
+    // Se a importação gerou um recálculo massivo em background, inicie o polling
+    if (task_id) {
+      showModal("progress-modal");
+      closeModal("import-modal"); // Fecha o de importação
+      await pollTaskStatus(importBase, task_id);
     }
 
     // --- mensagem no frontend ---
     const totalLinhas = total_linhas_pdf ?? 0;
-    toast(
-      `Ingestão realizada com sucesso: ${totalLinhas} linhas (${inseridos} novos / ${atualizados} atualizados / ${inativados} inativados).`
-    );
+    toast(`Ingestão realizada com sucesso: ${totalLinhas} linhas (${inseridos} novos / ${atualizados} atualizados / ${inativados} inativados).`);
 
     // --- opção de baixar o relatório em PDF ---
     const listaFinal = lista || tipo;
     const fornecedorFinal = fornecedor || "";
 
     if (listaFinal && fornecedorFinal) {
-      const relatorioUrl = `${importBase}/relatorio-lista?fornecedor=${encodeURIComponent(
-        fornecedorFinal
-      )}&lista=${encodeURIComponent(listaFinal)}`;
-
-      const querPdf = confirm(
-        "Ingestão realizada com sucesso.\n\nDeseja baixar o relatório em PDF desta lista?"
-      );
-
+      const relatorioUrl = `${importBase}/relatorio-lista?fornecedor=${encodeURIComponent(fornecedorFinal)}&lista=${encodeURIComponent(listaFinal)}`;
+      const querPdf = confirm("Ingestão realizada com sucesso.\n\nDeseja baixar o relatório em PDF desta lista?");
       if (querPdf) {
         window.open(relatorioUrl, "_blank");
       }
+    }
+
+    if (!task_id) {
+      closeModal("import-modal");
     }
 
   } catch (e) {
@@ -800,6 +795,46 @@ async function uploadListaPdf(file) {
     toast(e.message || "Erro ao importar PDF.");
   }
 }
+
+// ---------- Lógica de Polling do Recálculo Massivo ----------
+async function pollTaskStatus(basePath, taskId) {
+  return new Promise((resolve, reject) => {
+    const interval = setInterval(async () => {
+      try {
+        const res = await fetch(`${basePath}/task-status/${taskId}`);
+        if (!res.ok) throw new Error("Falha ao consultar status.");
+        
+        const data = await res.json();
+        const prog = data.progresso || 0;
+        
+        const fill = document.getElementById("progress-bar-fill");
+        const pct = document.getElementById("progress-percentage");
+        const msg = document.getElementById("progress-status-msg");
+        
+        if (fill) fill.style.width = `${prog}%`;
+        if (pct) pct.textContent = `${prog}%`;
+        if (msg) msg.textContent = data.mensagem_status || "Processando...";
+
+        if (data.status === "CONCLUIDO" || data.status === "ERRO") {
+          clearInterval(interval);
+          setTimeout(() => {
+            closeModal("progress-modal");
+            if (data.status === "ERRO") {
+              alert("O recálculo massivo apresentou um erro: " + (data.erro || "Desconhecido"));
+            } else {
+              toast("Recálculo massivo de tabelas finalizado com sucesso!");
+            }
+            resolve();
+          }, 1000); // aguarda 1s para o usuario ver o 100%
+        }
+      } catch (err) {
+        console.error("Erro no polling:", err);
+        // Não cancela o intervalo num primeiro erro de rede, tenta de novo
+      }
+    }, 2000); // 2 segundos
+  });
+}
+
 
 // ---------- Carregar Fornecedores ----------
 async function loadFornecedores() {

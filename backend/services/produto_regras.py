@@ -30,6 +30,7 @@ def _sincronizar_um_grupo(
         "atualizados": 0,
         "inativados": 0,
         "inseridos": 0,
+        "codigos_alterados": [],
     }
 
     # Identificar famílias distintas NA LISTA ATIVA
@@ -165,6 +166,7 @@ def _sincronizar_um_grupo(
     # Capturar códigos ativados/atualizados
     codigos_ativados = [row[0] for row in res.fetchall()]
     stats["atualizados"] = len(codigos_ativados)
+    stats["codigos_alterados"].extend(codigos_ativados)
     
     if codigos_ativados:
         print(f"=== [Sincronizacao PDF] Produtos ATIVADOS/ATUALIZADOS ({len(codigos_ativados)}) para {fornecedor}/{lista}: ===")
@@ -269,6 +271,10 @@ def _sincronizar_um_grupo(
     
     # Execute and fetch returned IDs
     res = db.execute(inserir_sql, full_params)
+    
+    # Inserir também retorna ID, mas vamos tentar pegar o codigo_supra para recalculá-lo
+    # Mas a query de insert retorna id. Precisamos do codigo. 
+    # Actually, if it's a NEW product, it wasn't in any tb_tabela_preco yet, so no need to recalculate existing tables.
     new_ids = [row[0] for row in res.fetchall()]
     stats["inseridos"] = len(new_ids)
 

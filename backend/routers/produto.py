@@ -1,4 +1,4 @@
-from fastapi import APIRouter, UploadFile, File, Form, HTTPException, Request, Query
+from fastapi import APIRouter, UploadFile, File, Form, HTTPException, Request, Query, BackgroundTasks
 from typing import Optional
 from datetime import date
 from pydantic import BaseModel
@@ -27,6 +27,15 @@ from services.produto_pdf import (
 from fastapi import Depends
 from core.deps import get_current_user, get_db
 from models.usuario import UsuarioModel
+from models.background_task import BackgroundTaskModel
+from services.worker_recalculo import processar_recalculo_massivo
+import uuid
+
+def trigger_recalculo(task_id: str, codigos_alterados: list):
+    with SessionLocal() as db_bg:
+        task = db_bg.query(BackgroundTaskModel).filter_by(task_id=task_id).first()
+        if task:
+            processar_recalculo_massivo(db_bg, task, codigos_alterados)
 
 
 # deixa a tag mais limpa no Swagger
@@ -198,6 +207,7 @@ def excluir_produto_endpoint(produto_id: int):
 )
 async def importar_lista(
     request: Request,
+    background_tasks: BackgroundTasks,
     tipo_lista: str = Form(..., description="Tipo de lista: INSUMOS ou PET"),
     fornecedor: Optional[str] = Form(None, description="Nome do fornecedor (opcional, sobrescreve detecção)"),
     validade_tabela: Optional[str] = Form(None),
@@ -266,6 +276,24 @@ async def importar_lista(
 
     sync = resumo.get("sync", {})
 
+    codigos_alterados = []
+    for g in sync.get("grupos", []):
+        codigos_alterados.extend(g.get("codigos_alterados", []))
+        
+    task_id = None
+    if codigos_alterados:
+        task_id = str(uuid.uuid4())
+        nova_tarefa = BackgroundTaskModel(
+            task_id=task_id,
+            tipo_tarefa="RECALCULO_MASSIVO",
+            status="PENDENTE",
+            mensagem_status="Aguardando início do recálculo...",
+        )
+        db.add(nova_tarefa)
+        db.commit()
+        
+        background_tasks.add_task(trigger_recalculo, task_id, codigos_alterados)
+
     return {
         "arquivo": file.filename,
         "tipo_lista": tipo,
@@ -276,6 +304,22 @@ async def importar_lista(
         "fornecedor": resumo.get("fornecedor"),
         # detalhamento da sincronização
         "sync": sync,
+        "task_id": task_id,
+    }
+
+@router.get("/task-status/{task_id}")
+def obter_status_tarefa(task_id: str, db: Session = Depends(get_db)):
+    task = db.query(BackgroundTaskModel).filter_by(task_id=task_id).first()
+    if not task:
+        raise HTTPException(status_code=404, detail="Tarefa não encontrada")
+    
+    return {
+        "task_id": task.task_id,
+        "status": task.status,
+        "progresso": task.progresso,
+        "mensagem_status": task.mensagem_status,
+        "tipo_tarefa": task.tipo_tarefa,
+        "erro": task.erro
     }
 
 class RenovarValidadeReq(BaseModel):

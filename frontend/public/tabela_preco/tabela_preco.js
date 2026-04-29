@@ -11,6 +11,7 @@ let preSelecionadosCodigos = new Set(); // para prÃ©-marcar checkboxes (enviado 
 
 document.addEventListener("DOMContentLoaded", () => {
   const selGrupo = document.getElementById("grupo");
+  const selTipo = document.getElementById("tipo");
   const selFornecedor = document.getElementById("filtro-fornecedor");
   // ðŸ›¡ï¸ Force "Votorantim" default if available. 
   // O usuÃ¡rio solicitou explicitamente "VOTORANTIM" e retirar o Todos.
@@ -36,6 +37,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
   // Filtros
   selGrupo?.addEventListener("change", () => { currentPage = 1; carregarProdutos(); });
+  selTipo?.addEventListener("change", () => { currentPage = 1; carregarProdutos(); });
   selFornecedor?.addEventListener("change", () => { currentPage = 1; carregarProdutos(); });
 
   // BotÃµes da toolbar
@@ -82,6 +84,10 @@ document.addEventListener("DOMContentLoaded", () => {
     ?.addEventListener("click", enviarSelecionados);
   document.getElementById("btn-cancelar")
     ?.addEventListener("click", () => window.location.href = 'criacao_tabela_preco.html');
+
+  // FAB SeleÃ§Ã£o Massiva
+  document.getElementById("btn-selecionar-todos-massivo")
+    ?.addEventListener("click", selecionarTodosMassivo);
 
   // Toggle do cabeÃ§alho de filtros
   const headerToggle = document.getElementById("header-toggle-filtros");
@@ -251,12 +257,14 @@ function carregarProdutos(page = currentPage) {
   currentPage = page;
 
   const grupo = document.getElementById("grupo")?.value || "";
+  const tipo = document.getElementById("tipo")?.value || "";
   const fornecedor = document.getElementById("filtro-fornecedor")?.value || "";
   const termo = document.getElementById("filtro-palavra")?.value?.trim() || "";
   const termoN = normText(termo);
 
   const url = new URL(`${API_BASE}/tabela_preco/produtos_filtro`);
   if (grupo) url.searchParams.append("grupo", grupo);
+  if (tipo) url.searchParams.append("tipo", tipo);
   if (fornecedor) url.searchParams.append("fornecedor", fornecedor);
   if (termo) url.searchParams.append("q", termo);
   url.searchParams.append("page", currentPage);
@@ -492,3 +500,69 @@ window.onload = async function () {
   await carregarGrupos();
   await carregarProdutos();
 };
+
+
+// === SELEÇÃO EM MASSA ===
+async function selecionarTodosMassivo() {
+  const btn = document.getElementById('btn-selecionar-todos-massivo');
+  btn.disabled = true;
+  const textoOriginal = btn.innerHTML;
+  btn.innerHTML = 'Buscando produtos...';
+
+  try {
+    const grupo = document.getElementById('grupo')?.value || '';
+    const tipo = document.getElementById('tipo')?.value || '';
+    const fornecedor = document.getElementById('filtro-fornecedor')?.value || '';
+    const termo = document.getElementById('filtro-palavra')?.value?.trim() || '';
+
+    const url = new URL(API_BASE + '/tabela_preco/ids_filtro');
+    if (grupo) url.searchParams.append('grupo', grupo);
+    if (tipo) url.searchParams.append('tipo', tipo);
+    if (fornecedor) url.searchParams.append('fornecedor', fornecedor);
+    if (termo) url.searchParams.append('q', termo);
+
+    const r = await fetch(url);
+    if (!r.ok) throw new Error('Falha ao buscar IDs');
+    const todosProdutos = await r.json();
+
+    if (todosProdutos.length === 0) {
+      toast('Nenhum produto encontrado com estes filtros.');
+      return;
+    }
+
+    // Adiciona todos ao Buffer Pai
+    const ctx = getCtxId();
+    let arr = [];
+    try {
+      arr = JSON.parse(sessionStorage.getItem('TP_ATUAL:' + ctx) || '[]');
+    } catch { }
+
+    let novosAdicionados = 0;
+    const codigosExistentes = new Set(arr.map(p => p.codigo_tabela || p.codigo));
+
+    for (const prod of todosProdutos) {
+      if (!codigosExistentes.has(prod.codigo_tabela)) {
+        arr.push(prod);
+        novosAdicionados++;
+      }
+    }
+
+    sessionStorage.setItem('TP_ATUAL:' + ctx, JSON.stringify(arr));
+    
+    // Atualiza estado local para refletir nos checkboxes
+    loadPreselectionFromParent();
+    
+    // Força re-render da tabela atual para mostrar checkboxes marcados
+    carregarProdutos();
+
+    toast(novosAdicionados + ' produto(s) adicionado(s) à sua seleção! Total: ' + arr.length);
+    
+  } catch (err) {
+    console.error(err);
+    toast('Erro na seleção massiva: ' + err.message);
+  } finally {
+    btn.disabled = false;
+    btn.innerHTML = textoOriginal;
+  }
+}
+

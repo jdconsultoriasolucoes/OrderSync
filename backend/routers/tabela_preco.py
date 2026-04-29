@@ -38,6 +38,7 @@ tabelas_de_preco_db: List[TabelaPreco] = []
 @router.get("/produtos_filtro")
 def filtrar_produtos_para_tabela_preco(
     grupo: Optional[str] = Query(None),
+    tipo: Optional[str] = Query(None, description="Filtra por INSUMOS ou PET"),
     fornecedor: Optional[str] = Query(None),
     q: Optional[str] = Query(None, description="Busca em código, descrição, grupo/marca, unidade/tipo"),
     page: int = Query(1, ge=1),
@@ -72,6 +73,7 @@ def filtrar_produtos_para_tabela_preco(
             FROM v_produto_v2_preco p
             WHERE p.status_produto = 'ATIVO'
               AND (:grupo IS NULL OR p.marca = :grupo)
+              AND (:tipo IS NULL OR UPPER(p.tipo) = UPPER(:tipo))
               AND (:fornecedor IS NULL OR p.fornecedor = :fornecedor)
               AND (
                     :q IS NULL
@@ -85,6 +87,7 @@ def filtrar_produtos_para_tabela_preco(
 
         params = {
             "grupo": grupo or None,
+            "tipo": tipo or None,
             "fornecedor": fornecedor or None,
             "q": q or None,
             "like": f"%{q}%" if q else None,
@@ -106,6 +109,68 @@ def filtrar_produtos_para_tabela_preco(
         return {"items": rows, "total": total, "page": page, "page_size": page_size}
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Erro ao buscar produtos: {str(e)}")
+
+@router.get("/ids_filtro")
+def obter_ids_filtro(
+    grupo: Optional[str] = Query(None),
+    tipo: Optional[str] = Query(None),
+    fornecedor: Optional[str] = Query(None),
+    q: Optional[str] = Query(None)
+):
+    try:
+        base_sql = """
+            SELECT 
+                p.codigo_supra AS codigo_tabela,
+                p.nome_produto AS descricao,
+                CASE 
+                    WHEN UPPER(p.embalagem_venda) IN ('SC', 'SACO') THEN 'SACO'
+                    WHEN UPPER(p.embalagem_venda) IN ('CX', 'CAIXA') THEN 'CAIXA'
+                    WHEN UPPER(p.embalagem_venda) IN ('FD', 'FARDO') THEN 'FARDO'
+                    WHEN UPPER(p.embalagem_venda) IN ('PC', 'PACOTE') THEN 'PACOTE'
+                    WHEN UPPER(p.embalagem_venda) IN ('UN', 'UNIDADE', 'UNI') THEN 'UNIDADE'
+                    ELSE COALESCE(p.embalagem_venda, 'UN')
+                END AS embalagem,
+                p.peso AS peso_liquido,
+                p.peso_bruto,
+                p.preco AS valor,
+                p.ipi,
+                p.iva_st,
+                p.marca AS grupo,
+                p.familia AS departamento,
+                p.id_familia,
+                p.fornecedor,
+                p.tipo,
+                p.icms,
+                p.validade_tabela
+            FROM v_produto_v2_preco p
+            WHERE p.status_produto = 'ATIVO'
+              AND (:grupo IS NULL OR p.marca = :grupo)
+              AND (:tipo IS NULL OR UPPER(p.tipo) = UPPER(:tipo))
+              AND (:fornecedor IS NULL OR p.fornecedor = :fornecedor)
+              AND (
+                    :q IS NULL
+                 OR  p.codigo_supra::text ILIKE :like
+                 OR  p.nome_produto       ILIKE :like
+                 OR  COALESCE(p.marca,'')   ILIKE :like
+                 OR  COALESCE(p.unidade,'') ILIKE :like
+                 OR  COALESCE(p.tipo,'')  ILIKE :like
+              )
+            ORDER BY p.nome_produto ASC
+        """
+        params = {
+            "grupo": grupo or None,
+            "tipo": tipo or None,
+            "fornecedor": fornecedor or None,
+            "q": q or None,
+            "like": f"%{q}%" if q else None,
+        }
+
+        with SessionLocal() as db:
+            rows = db.execute(text(base_sql), params).mappings().all()
+
+        return [dict(r) for r in rows]
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Erro ao buscar produtos massivos: {str(e)}")
 
 @router.get("/descontos")
 def listar_descontos():

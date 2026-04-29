@@ -502,6 +502,26 @@
   <div id="toast" class="toast"></div>
 
   <script src="./produto.js"></script>
+  <!-- Modal de Progresso do Recálculo -->
+  <div id="progress-modal" class="custom-modal hidden">
+    <div class="custom-modal-dialog" style="max-width: 500px;">
+      <div class="custom-modal-header" style="background: #3b82f6; color: white;">
+        <div class="custom-modal-title">Processando Recálculo Massivo...</div>
+      </div>
+      <div class="custom-modal-body" style="text-align: center; padding: 2rem;">
+        <p id="progress-status-msg" style="margin-bottom: 1rem; font-weight: 500;">Aguardando início do recálculo...</p>
+        <div style="width: 100%; background: #e5e7eb; border-radius: 999px; height: 20px; overflow: hidden; margin-bottom: 1rem;">
+          <div id="progress-bar-fill" style="width: 0%; height: 100%; background: #2563eb; transition: width 0.3s ease;"></div>
+        </div>
+        <p style="font-size: 0.875rem; color: #6b7280;">
+          <span id="progress-percentage">0%</span> concluído
+        </p>
+        <p style="font-size: 0.75rem; color: #ef4444; margin-top: 1rem;">
+          Não feche esta janela. Esta operação pode demorar dependendo da quantidade de tabelas de preços afetadas.
+        </p>
+      </div>
+    </div>
+  </div>
 
 
 </body>
