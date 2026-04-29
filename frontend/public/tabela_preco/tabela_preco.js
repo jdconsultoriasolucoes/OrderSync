@@ -115,6 +115,17 @@ document.addEventListener("DOMContentLoaded", () => {
   // FAB Seleção Massiva
   document.getElementById("btn-selecionar-todos-massivo")
     ?.addEventListener("click", selecionarTodosMassivo);
+  
+  // Checkbox Selecionar Todos na Página
+  document.getElementById("chk-selecionar-todos-pagina")
+    ?.addEventListener("change", (e) => {
+      const isChecked = e.target.checked;
+      document.querySelectorAll("#tabela-produtos-body .produto-checkbox").forEach(chk => {
+        if (!chk.disabled) {
+          chk.checked = isChecked;
+        }
+      });
+    });
 
   // Toggle do cabeçalho de filtros
   const headerToggle = document.getElementById("header-toggle-filtros");
@@ -331,6 +342,10 @@ function carregarProdutos(page = currentPage) {
       preencherTabela(items);
       atualizarPaginacaoUI(total);
       if (typeof marcarPreSelecionados === "function") marcarPreSelecionados();
+
+      // Reset do checkbox "Selecionar Todos na Página"
+      const chkAll = document.getElementById("chk-selecionar-todos-pagina");
+      if (chkAll) chkAll.checked = false;
     })
     .catch(e => console.error("Erro em carregarProdutos:", e));
 }
