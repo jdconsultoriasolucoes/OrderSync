@@ -6,6 +6,23 @@ let totalPages = null;
 let preSelecionadosCodigos = new Set(); // para pré-marcar checkboxes (enviado pelo pai)
 
 
+const $ = (id) => document.getElementById(id);
+
+function toast(msg) {
+  const t = $("toast");
+  if (!t) {
+    alert(msg);
+    return;
+  }
+  t.textContent = msg;
+  t.classList.add("show");
+  t.style.display = "block";
+  setTimeout(() => {
+    t.classList.remove("show");
+    t.style.display = "none";
+  }, 3000);
+}
+
 /* ========================
    Contexto Global
 ======================== */
