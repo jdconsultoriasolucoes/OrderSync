@@ -2,44 +2,35 @@ import psycopg2
 
 DB_URL = "postgresql://jd_user:UsjVKivz7R6MlJFSxdNi9zfA8LNPJnIZ@dpg-d7nncm9j2pic73cmdor0-a.oregon-postgres.render.com/db_ordersync_work_gngo"
 
-def check():
+def fix():
     conn = psycopg2.connect(DB_URL)
     conn.autocommit = True
     cursor = conn.cursor()
     
-    print("--- Verificando Duplicatas em tb_background_tasks ---")
-    cursor.execute("SELECT id, COUNT(*) FROM tb_background_tasks GROUP BY id HAVING COUNT(*) > 1;")
-    dups = cursor.fetchall()
+    print("1. Removendo duplicatas físicas...")
+    cursor.execute("""
+        DELETE FROM tb_background_tasks a
+        USING tb_background_tasks b
+        WHERE a.id = b.id AND a.ctid < b.ctid;
+    """)
     
-    if dups:
-        print(f"ATENÇÃO: Encontrados {len(dups)} IDs duplicados!")
-        for row in dups:
-            print(f"ID {row[0]} aparece {row[1]} vezes.")
-            
-        print("Limpando duplicatas (mantendo apenas a mais recente)...")
-        # Deleta duplicatas mantendo a com maior task_id ou criado_em
-        cursor.execute("""
-            DELETE FROM tb_background_tasks a
-            USING tb_background_tasks b
-            WHERE a.id = b.id AND a.ctid < b.ctid;
-        """)
-        print("Limpeza concluída.")
-    else:
-        print("Nenhum ID duplicado encontrado por chave primária.")
-
-    print("\n--- Verificando Restrição de Unicidade em task_id ---")
+    print("2. Resetando a sequência de IDs...")
     try:
-        cursor.execute("ALTER TABLE tb_background_tasks ADD CONSTRAINT unique_task_id UNIQUE (task_id);")
-        print("Constraint UNIQUE adicionada ao task_id.")
+        # Tenta descobrir o nome da sequência ou usa o padrão do Postgres para SERIAL
+        cursor.execute("SELECT pg_get_serial_sequence('tb_background_tasks', 'id');")
+        seq_name = cursor.fetchone()[0]
+        if seq_name:
+            cursor.execute(f"SELECT setval('{seq_name}', (SELECT MAX(id) FROM tb_background_tasks));")
+            print(f"Sequência {seq_name} sincronizada com o valor máximo.")
     except Exception as e:
-        print(f"Nota: {e}")
+        print(f"Erro ao sincronizar sequência: {e}")
 
-    print("\n--- Limpando Tarefas Travadas (PENDENTE/PROCESSANDO antigas) ---")
+    print("3. Limpando tarefas pendentes para reiniciar...")
     cursor.execute("DELETE FROM tb_background_tasks WHERE status IN ('PENDENTE', 'PROCESSANDO');")
-    print("Tarefas pendentes limpas para reiniciar o worker do zero.")
-
+    
+    print("--- Operação concluída com sucesso ---")
     cursor.close()
     conn.close()
 
 if __name__ == "__main__":
-    check()
+    fix()

@@ -19,15 +19,15 @@ class TabelaPreco(Base):
     peso_liquido = Column(Numeric(9, 3), nullable=False)
 
     valor_produto = Column(Numeric(14, 2), nullable=False)
-    comissao_aplicada = Column(Numeric(9, 4), nullable=False, default=0)
+    comissao_aplicada = Column(Numeric(18, 4), nullable=False, default=0)
     ajuste_pagamento = Column(Numeric(14, 2), nullable=False, default=0)
     descricao_fator_comissao = Column(Text, nullable=False)
     codigo_plano_pagamento = Column(Text, nullable=False)
-    markup = Column(Numeric(9, 3), nullable=False, default=0) # Markup %
+    markup = Column(Numeric(18, 4), nullable=False, default=0) # Markup %
     valor_final_markup = Column(Numeric(14, 2), nullable=False, default=0) # Valor Final com Markup
     valor_s_frete_markup = Column(Numeric(14, 2), nullable=False, default=0) # Valor s/ Frete com Markup
-    valor_frete_aplicado = Column(Numeric(14, 2), nullable=False, default=0)  # R$
-    frete_kg = Column(Numeric(9, 3), nullable=False, default=0)
+    valor_frete_aplicado = Column(Numeric(18, 4), nullable=False, default=0)  # R$
+    frete_kg = Column(Numeric(18, 4), nullable=False, default=0)
 
     # valor_liquido: NÃO persistir (a pedido)
 
@@ -37,9 +37,9 @@ class TabelaPreco(Base):
     grupo = Column(Text, nullable=False)
     departamento = Column(Text, nullable=False)
 
-    ipi = Column(Numeric(14, 2), nullable=False)      # R$
-    icms_st = Column(Numeric(14, 2), nullable=False)  # R$
-    iva_st = Column(Numeric(14, 2), nullable=False)   # R$
+    ipi = Column(Numeric(18, 4), nullable=False)      # R$
+    icms_st = Column(Numeric(18, 4), nullable=False)  # R$
+    iva_st = Column(Numeric(18, 4), nullable=False)   # R$
 
     calcula_st = Column(Boolean, nullable=False, default=False)
     
