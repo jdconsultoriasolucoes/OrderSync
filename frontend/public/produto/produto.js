@@ -28,6 +28,16 @@ let CURRENT_MODE = "IDLE"; // IDLE, VIEW, EDIT, NEW
 // === Helpers básicos ===
 const $ = (id) => document.getElementById(id);
 
+function showModal(id) {
+  const el = $(id);
+  if (el) el.classList.remove("hidden");
+}
+
+function closeModal(id) {
+  const el = $(id);
+  if (el) el.classList.add("hidden");
+}
+
 function toast(msg) {
   const t = $("toast");
   if (!t) {
