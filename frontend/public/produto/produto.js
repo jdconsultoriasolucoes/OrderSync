@@ -1477,9 +1477,50 @@ function setupRenovarValidade() {
 
 // Inicializa a lógica extra
 
+function setupRecalcularMassivo() {
+  const btn = document.getElementById("btn-recalcular-massivo");
+  if (!btn) return;
+
+  btn.addEventListener("click", async () => {
+    const proceed = confirm("Deseja iniciar o recálculo de TODAS as tabelas de preço com base nos custos atuais? Isso pode levar alguns minutos.");
+    if (!proceed) return;
+
+    try {
+      const url = `${API_BASE}/tabela_preco/recalcular_massivo`;
+      const token = localStorage.getItem("ordersync_token");
+
+      const res = await fetch(url, {
+        method: "POST",
+        headers: {
+          "Authorization": `Bearer ${token}`,
+          "Content-Type": "application/json"
+        }
+      });
+
+      if (!res.ok) {
+        const err = await res.json();
+        throw new Error(err.detail || "Erro ao iniciar recálculo.");
+      }
+
+      const data = await res.json();
+      if (data.task_id) {
+        showModal("progress-modal");
+        const basePath = `${API_BASE}/api/produto`;
+        await pollTaskStatus(basePath, data.task_id);
+      } else {
+        toast("Recálculo iniciado com sucesso.");
+      }
+    } catch (e) {
+      console.error(e);
+      toast("Erro: " + e.message);
+    }
+  });
+}
+
 document.addEventListener("DOMContentLoaded", () => {
   setupRenovarValidade();
   setupSearchModal();
+  setupRecalcularMassivo();
 });
 
 

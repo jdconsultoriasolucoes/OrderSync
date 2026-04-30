@@ -24,6 +24,9 @@ from fastapi import Depends
 from core.deps import get_current_user, get_db
 from models.usuario import UsuarioModel
 from models.produto import ProdutoV2
+from models.background_task import BackgroundTaskModel
+from fastapi import BackgroundTasks
+import uuid
 
 logger = logging.getLogger("tabela_preco")
 
@@ -496,6 +499,41 @@ class ItemReq(BaseModel):
 class ConfirmarPedidoReq(BaseModel):
     usar_valor_com_frete: bool
     produtos: List[ItemReq]
+
+@router.post("/recalcular_massivo")
+async def recalcular_massivo(
+    background_tasks: BackgroundTasks,
+    db: Session = Depends(get_db),
+    current_user: UsuarioModel = Depends(get_current_user)
+):
+    """
+    Dispara o recálculo de todas as tabelas de preço para todos os produtos ativos.
+    """
+    try:
+        produtos = db.query(ProdutoV2.codigo_supra).filter(ProdutoV2.status_produto == 'ATIVO').all()
+        codigos = [p[0] for p in produtos]
+        if not codigos:
+            return {"tabelas_afetadas": 0, "linhas_atualizadas": 0, "message": "Nenhum produto ativo encontrado."}
+        task_id = str(uuid.uuid4())
+        nova_tarefa = BackgroundTaskModel(
+            task_id=task_id,
+            tipo_tarefa="RECALCULO_MASSIVO",
+            status="PENDENTE",
+            mensagem_status="Aguardando início do recálculo manual...",
+        )
+        db.add(nova_tarefa)
+        db.commit()
+        from routers.produto import trigger_recalculo
+        background_tasks.add_task(trigger_recalculo, task_id, codigos)
+        return {
+            "task_id": task_id,
+            "message": "Recálculo massivo iniciado com sucesso.",
+            "tabelas_afetadas": "Analisando...",
+            "linhas_atualizadas": len(codigos)
+        }
+    except Exception as e:
+        logger.error(f"Erro ao disparar recálculo massivo: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
 
 @router.post("/{tabela_id:int}/confirmar_pedido")
 def confirmar_pedido(tabela_id: int, body: ConfirmarPedidoReq):

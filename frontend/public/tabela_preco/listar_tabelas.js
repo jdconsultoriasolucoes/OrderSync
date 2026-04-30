@@ -73,6 +73,7 @@ document.addEventListener("DOMContentLoaded", () => {
   setupPagination();
   setupSearch();
   carregarTabelas();
+  setupUpdatePrices();
 });
 
 function setupMenu() {
