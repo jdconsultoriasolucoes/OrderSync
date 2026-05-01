@@ -2132,8 +2132,13 @@ async function salvarTabela() {
         : (item.plano_pagamento || codCond || '');
 
       const taxaCond = mapaCondicoes[codCond] || 0;
-      const { acrescimoCond, freteValor, descontoValor } =
+      let { acrescimoCond, freteValor, descontoValor } =
         calcularLinha(item, fator, taxaCond, frete_kg /* ivaStAtivo é ignorado aqui */);
+
+      // OVERRIDE: Se o frete for manual, ignora o calculado para o payload
+      if (item.manual_freight) {
+        freteValor = Number(item.valor_frete_aplicado || 0);
+      }
 
       // On mobile, build fatorLabel from the saved code
       const fatorLabel = selPct
