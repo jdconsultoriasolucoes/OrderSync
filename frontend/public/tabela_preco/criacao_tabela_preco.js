@@ -1524,12 +1524,23 @@ function criarLinha(item, idx) {
   });
 
   lockIcon.addEventListener('click', () => {
+      if (currentMode === MODE.VIEW) return; // Prevent clicking in view mode
       if (item.manual_freight) {
           item.manual_freight = false;
           inpFrete.value = '';
           lockIcon.innerHTML = '🔓';
           lockIcon.title = 'Frete automático';
           recalcTudo();
+      } else {
+          // Lock to the current value
+          item.manual_freight = true;
+          const freteKg = Number(document.getElementById('frete_kg')?.value || 0);
+          const peso = Number(item.peso_liquido ?? item.peso ?? item.peso_kg ?? item.pesoLiquido ?? 0);
+          item.valor_frete_aplicado = item._freteValor !== undefined ? item._freteValor : (peso * freteKg);
+          inpFrete.value = item.valor_frete_aplicado.toFixed(2);
+          lockIcon.innerHTML = '🔒';
+          lockIcon.title = 'Frete manual (travado)';
+          recalcLinha(tr);
       }
   });
 
