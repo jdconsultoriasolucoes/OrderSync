@@ -1132,6 +1132,13 @@ async function carregarItens() {
         freteInput.value = String(freteVal);
       }
 
+      const mkInput = document.getElementById('markup_global');
+      if (mkInput) {
+        const mkVal = first?.markup ?? 0;
+        mkInput.value = Number(mkVal).toFixed(2);
+        window.currentClientMarkup = Number(mkVal);
+      }
+
       itens = (t.produtos || []).map(p => ({
         // chaves que a grade espera:
         id_linha: p.id_linha ?? p.idLinha ?? null,
@@ -1164,7 +1171,9 @@ async function carregarItens() {
         __descricao_fator_label: p.descricao_fator_comissao || null,
         __plano_pagto_label: p.codigo_plano_pagamento || null, // já vem "COD - desc" às vezes
         fornecedor: t.fornecedor || '',
-        status_atual: p.status_atual ?? 'ATIVO' // <--- Mapeia status
+        status_atual: p.status_atual ?? 'ATIVO', // <--- Mapeia status
+        manual_freight: !!p.manual_freight,
+        valor_frete_aplicado: Number(p.valor_frete_aplicado ?? 0)
       }));
 
       itens = itens.map(p => ({
