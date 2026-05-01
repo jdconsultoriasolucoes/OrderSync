@@ -547,6 +547,7 @@ function mapBackendItemToFrontend(p, t) {
     valor_s_frete_markup: Number(p.valor_s_frete_markup ?? 0),
 
     manual_freight: parseBool(p.manual_freight ?? false), // ✅ Restore manual freight flag
+    valor_frete_aplicado: Number(p.valor_frete_aplicado ?? 0),
 
     // guarda para reaproveitar na hora do POST
     __descricao_fator_label: p.descricao_fator_comissao || null,
@@ -1057,11 +1058,25 @@ function obterItensDaSessao() {
 
 async function carregarItens() {
   const urlParams = new URLSearchParams(window.location.search);
-  let id = urlParams.get('id'); // ← troque const por let
+  let id = urlParams.get('id'); 
+  const ctx = sessionStorage.getItem('TP_CTX_ID');
+
+  // 1) Tenta recuperar da memória local (TP_ATUAL)
+  const memoria = sessionStorage.getItem(`TP_ATUAL:${ctx}`);
+  if (memoria) {
+    try {
+      const saved = JSON.parse(memoria);
+      if (Array.isArray(saved) && saved.length > 0) {
+        console.log("carregarItens: Usando memória local (TP_ATUAL)", saved.length, "itens.");
+        itens = saved;
+        renderTabela();
+        return;
+      }
+    } catch (e) { console.warn("Erro ao ler TP_ATUAL", e); }
+  }
 
   // Fallback quando você voltou do "Buscar produto" sem ?id= na URL
   if (!id) {
-    const ctx = sessionStorage.getItem('TP_CTX_ID');
     // Só usa o ctx se ele parecer um id real e se o modo anterior era edit/view/duplicate
     const retMode = sessionStorage.getItem(`TP_RETURN_MODE:${ctx || 'new'}`);
     if (ctx && ctx !== 'new' && (retMode === 'edit' || retMode === 'view' || retMode === 'duplicate')) {
@@ -2533,94 +2548,6 @@ async function atualizarValidadeCabecalhoGlobal() {
   }
 }
 
-// Carrega itens: da memória (prioridade) ou do backend
-async function carregarItens() {
-  const ctx = getCtxId();
-
-  // 1) Tenta recuperar da memória local (TP_ATUAL)
-  // Isso garante que, ao voltar do "Adicionar Produto", não perderemos o que já estava na tela.
-  const memoria = sessionStorage.getItem(`TP_ATUAL:${ctx}`);
-  if (memoria) {
-    try {
-      const saved = JSON.parse(memoria);
-      if (Array.isArray(saved) && saved.length > 0) {
-        console.log("carregarItens: Usando memória local (TP_ATUAL)", saved.length, "itens.");
-        itens = saved;
-        renderTabela();
-        return;
-      }
-    } catch (e) { console.warn("Erro ao ler TP_ATUAL", e); }
-  }
-
-  // 2) Se não tiver memória, busca do banco (Apenas se tiver ID e não for DUP "limpo")
-  if (!currentTabelaId) {
-    itens = [];
-    renderTabela();
-    return;
-  }
-
-  try {
-    const r = await fetch(`${API_BASE}/tabela_preco/${currentTabelaId}`, { cache: 'no-store' });
-    if (!r.ok) {
-      if (r.status === 404) {
-        console.warn("Tabela não encontrada no banco (404). Iniciando vazia.");
-        itens = [];
-        renderTabela();
-        return;
-      }
-      throw new Error(`Erro ${r.status}`);
-    }
-    const t = await r.json();
-
-    // --- RESTORE HEADER FIELDS ---
-    // Recupera os dados do cabeçalho que vieram do backend
-    const nomeEl = document.getElementById('nome_tabela');
-    const cliEl = document.getElementById('cliente_nome');
-    const codEl = document.getElementById('codigo_cliente');
-    const ramoEl = document.getElementById('ramo_juridico');
-    const freteEl = document.getElementById('frete_kg');
-    const validadeEl = document.getElementById('validade_tabela');
-    const diasEl = document.getElementById('dias_restantes');
-
-    if (nomeEl) nomeEl.value = t.nome_tabela || '';
-    if (cliEl) cliEl.value = t.cliente_nome || t.cliente || '';
-    if (codEl) codEl.value = t.codigo_cliente || '';
-    if (ramoEl) ramoEl.value = t.ramo_juridico || '';
-
-    // Frete: se tiver no header da resposta ou inferir do primeiro item?
-    // Geralmente vem nos itens, mas se tiver 'frete_kg' no T, usa.
-    // Se não, tenta pegar do primeiro item.
-    if (freteEl) {
-      if (t.frete_kg != null) freteEl.value = Number(t.frete_kg);
-      else if (t.produtos && t.produtos.length > 0) freteEl.value = Number(t.produtos[0].frete_kg || 0);
-    }
-
-    // Configurações globais (IVA, Markup) se disponíveis no objeto T
-    const ivaChk = document.getElementById('iva_st_toggle');
-    if (ivaChk) {
-      ivaChk.checked = !!(t.calcula_st ?? t.iva_st ?? false);
-      window.ivaStAtivo = ivaChk.checked;
-      // Se é edição, geralmente o IVA vem travado conforme cadastro do cliente?
-      // Vamos manter a lógica de 'enforceIvaLockByCliente' depois se necessário.
-    }
-
-    // Map backend -> frontend
-    itens = (t.produtos || []).map(p => mapBackendItemToFrontend(p, t));
-
-    // Se for modo DUP, talvez queiramos reprocessar IDs?
-    // mapBackendItemToFrontend já lida bem.
-
-    renderTabela();
-
-    // Atualiza UI baseada no cabeçalho carregado
-    if (typeof refreshToolbarEnablement === 'function') refreshToolbarEnablement();
-    if (typeof enforceIvaLockByCliente === 'function') enforceIvaLockByCliente();
-
-  } catch (err) {
-    console.error("Falha ao carregar itens do backend:", err);
-    showOsModal({ title: 'Aviso', message: "Não foi possível carregar os itens da tabela. Verifique a conexão.", type: 'alert' });
-  }
-}
 
 // === Bootstrap ===
 document.addEventListener('DOMContentLoaded', () => {
