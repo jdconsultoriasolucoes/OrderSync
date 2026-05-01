@@ -132,6 +132,7 @@ class ProdutoSalvar(BaseModel):
     ipi: Optional[float] = 0.0
     icms_st: Optional[float] = 0.0
     iva_st: Optional[float] = 0.0
+    manual_freight: Optional[bool] = False
 
     class Config:
         extra = "ignore"
@@ -147,6 +148,7 @@ class TabelaSalvar(BaseModel):
     codigo_cliente: Optional[str] = None
     criacao_usuario: Optional[str] = None
     alteracao_usuario: Optional[str] = None
+    observacao: Optional[str] = None
 
     # Se o frete/kg vier no header e você replicar nos itens
     frete_kg: Optional[float] = None

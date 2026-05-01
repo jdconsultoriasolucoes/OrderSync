@@ -37,6 +37,8 @@ class PedidoListItem(BaseModel):
     peso_total: Optional[float] = 0.0
     municipio: Optional[str] = None
     rota_principal: Optional[str] = None
+    pedido_supra: Optional[str] = None
+    nota_fiscal: Optional[str] = None
 
 class ListagemResponse(BaseModel):
     data: List[PedidoListItem]
@@ -81,6 +83,8 @@ class PedidoResumo(BaseModel):
     link_primeiro_acesso_em: Optional[datetime] = None
     link_status: Optional[str] = None
     numero_carga: Optional[int] = None
+    pedido_supra: Optional[str] = None
+    nota_fiscal: Optional[str] = None
     created_at: datetime
     itens: List[PedidoItemResumo] = Field(default_factory=list)
 
@@ -136,6 +140,8 @@ def listar_pedidos(
     cliente: Optional[str] = Query(None, description="busca em nome ou código"),
     fornecedor: Optional[str] = None,
     id_pedido: Optional[int] = Query(None, description="Filtrar por número exato do pedido"),
+    pedido_supra: Optional[str] = None,
+    nota_fiscal: Optional[str] = None,
     page: int = 1,
     pageSize: int = 25,
     limit: Optional[int] = None,
@@ -217,6 +223,14 @@ def listar_pedidos(
         filtros_sql.append("a.id_pedido = :id_pedido_filtro")
         params["id_pedido_filtro"] = id_pedido
 
+    if pedido_supra:
+        filtros_sql.append("a.pedido_supra ILIKE :pedido_supra_busca")
+        params["pedido_supra_busca"] = f"%{pedido_supra}%"
+
+    if nota_fiscal:
+        filtros_sql.append("a.nota_fiscal ILIKE :nota_fiscal_busca")
+        params["nota_fiscal_busca"] = f"%{nota_fiscal}%"
+
     where_clause = " AND ".join(filtros_sql)
 
     # 6. montar SQL COUNT e LISTAGEM de forma segura
@@ -229,7 +243,7 @@ def listar_pedidos(
     listagem_sql = text(f"""
         SELECT
           a.id_pedido                               AS numero_pedido,
-          a.created_at                              AS data_pedido,
+          COALESCE(a.confirmado_em, a.created_at)   AS data_pedido,
           COALESCE(c.cadastro_nome_cliente, a.cliente) AS cliente_nome,
           a.codigo_cliente                          AS cliente_codigo,
           CASE WHEN a.usar_valor_com_frete THEN 'ENTREGA' ELSE 'RETIRADA' END AS modalidade,
@@ -243,11 +257,13 @@ def listar_pedidos(
           (a.link_enviado_em IS NOT NULL)           AS link_enviado,
           COALESCE(a.peso_total_kg, 0)              AS peso_total,
           c.entrega_municipio                       AS municipio,
-          c.entrega_rota_principal                 AS rota_principal
+          c.entrega_rota_principal                 AS rota_principal,
+          a.pedido_supra,
+          a.nota_fiscal
         FROM public.tb_pedidos a
         LEFT JOIN public.t_cadastro_cliente_v2 c ON c.cadastro_codigo_da_empresa::text = a.codigo_cliente
         WHERE {where_clause}
-        ORDER BY a.created_at DESC, a.id_pedido DESC
+        ORDER BY a.id_pedido DESC
         LIMIT :limit OFFSET :offset
     """)
 
@@ -281,7 +297,9 @@ def listar_pedidos(
             link_enviado       = r["link_enviado"],
             peso_total         = float(r["peso_total"] or 0),
             municipio          = r.get("municipio"),
-            rota_principal     = r.get("rota_principal")
+            rota_principal     = r.get("rota_principal"),
+            pedido_supra       = r.get("pedido_supra"),
+            nota_fiscal        = r.get("nota_fiscal")
         )
         for r in rows_raw
     ]

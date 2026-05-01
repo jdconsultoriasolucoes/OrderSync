@@ -54,3 +54,6 @@ class PedidoModel(Base):
     link_url = Column(String)
     link_primeiro_acesso_em = Column(DateTime)
     link_status = Column(String)
+
+    nota_fiscal = Column(String)
+    pedido_supra = Column(String)

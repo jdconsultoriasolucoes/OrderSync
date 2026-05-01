@@ -51,6 +51,9 @@ class TabelaPreco(Base):
 
     criacao_usuario = Column(Text, nullable=True)
     alteracao_usuario = Column(Text, nullable=True)
+    
+    observacao = Column(String(100), nullable=True)
+    manual_freight = Column(Boolean, nullable=False, default=False)
 
     __table_args__ = (
         UniqueConstraint("id_tabela", "codigo_produto_supra", name="uq_tabela_produto"),

@@ -75,6 +75,8 @@ SELECT
   a.link_url,
   a.link_primeiro_acesso_em,
   a.link_status,
+  a.pedido_supra,
+  a.nota_fiscal,
   a.created_at,
   cg.numero_carga AS numero_carga
 FROM public.tb_pedidos a

@@ -173,6 +173,7 @@ async function carregarTabelas() {
       <td>${tabela.nome_tabela || '-'}</td>
       <td>${tabela.cliente || '-'}</td>
       <td>${tabela.fornecedor || '-'}</td>
+      <td>${tabela.observacao || '-'}</td>
       <td>
         <div style="display: flex; gap: var(--os-space-2);">
           <button class="os-btn os-btn-secondary os-btn-sm" 

@@ -1,4 +1,4 @@
-﻿<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="pt-br">
 
 <head>
@@ -235,6 +235,12 @@
             <input id="frete_kg" class="os-input" style="width: 140px;" type="text" inputmode="decimal"
               pattern="[0-9]+([.,][0-9]*)?" placeholder="0.00" value="0"
               oninput="this.value = this.value.replace(',', '.')" />
+          </div>
+
+          <!-- Observação: Novo -->
+          <div class="os-form-group area-obs" style="flex: 1; min-width: 200px;">
+            <label class="os-label" for="observacao">Observação</label>
+            <input id="observacao" class="os-input" type="text" maxlength="100" placeholder="Observação da tabela (máx 100 caracteres)" />
           </div>
 
         </div>

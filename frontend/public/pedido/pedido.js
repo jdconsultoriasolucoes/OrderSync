@@ -16,8 +16,8 @@ let state = {
   pageSize: 25,
   total: 0,
   rows: [], // armazena linhas atuais p/ ordenação
-  sortCol: null,
-  sortAsc: true,
+  sortCol: 'numero_pedido',
+  sortAsc: false,
   statusList: [] // Cache de status
 };
 
@@ -40,6 +40,12 @@ function fmtDate(s) {
   const dt = d.toLocaleDateString("pt-BR");
   const hr = d.toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" });
   return `${dt} ${hr}`;
+}
+
+function fmtDateOnly(s) {
+  if (!s) return "---";
+  const d = new Date(s);
+  return d.toLocaleDateString("pt-BR");
 }
 
 function getStatusBadge(status) {
@@ -159,6 +165,8 @@ function getFilters() {
   const fCliente = document.getElementById("fCliente").value || null;
   const fFornecedor = document.getElementById("fFornecedor").value || null;
   const fPedido = document.getElementById("fPedido")?.value || null;
+  const fPedidoSupra = document.getElementById("fPedidoSupra")?.value || null;
+  const fNotaFiscal = document.getElementById("fNotaFiscal")?.value || null;
 
   // mesmo que seja um <select> simples, selectedOptions ainda funciona
   const selStatusEl = document.getElementById("fStatus");
@@ -166,14 +174,14 @@ function getFilters() {
     selStatusEl.selectedOptions
   ).map((o) => o.value) : [];
 
-  return { fFrom, fTo, fTabela, fCliente, fFornecedor, selStatus, fPedido };
+  return { fFrom, fTo, fTabela, fCliente, fFornecedor, selStatus, fPedido, fPedidoSupra, fNotaFiscal };
 }
 
 async function loadList(page = 1) {
   state.page = page;
   state.pageSize = window.innerWidth <= 768 ? 10 : 25;
 
-  const { fFrom, fTo, fTabela, fCliente, fFornecedor, selStatus, fPedido } = getFilters();
+  const { fFrom, fTo, fTabela, fCliente, fFornecedor, selStatus, fPedido, fPedidoSupra, fNotaFiscal } = getFilters();
   let fromISO = toISO(fFrom);
   let toISO_ = toISO(fTo);
 
@@ -205,6 +213,8 @@ async function loadList(page = 1) {
   if (fCliente) params.set("cliente", fCliente);
   if (fFornecedor) params.set("fornecedor", fFornecedor);
   if (fPedido) params.set("id_pedido", fPedido);
+  if (fPedidoSupra) params.set("pedido_supra", fPedidoSupra);
+  if (fNotaFiscal) params.set("nota_fiscal", fNotaFiscal);
 
   params.set("page", state.page);
   params.set("pageSize", state.pageSize);
@@ -273,7 +283,7 @@ function renderTable(rows) {
 
   if (!rows || !rows.length) {
     const tr = document.createElement("tr");
-    tr.innerHTML = `<td colspan="10" class="muted">Nenhum pedido encontrado.</td>`;
+    tr.innerHTML = `<td colspan="11" class="muted">Nenhum pedido encontrado.</td>`;
     tb.appendChild(tr);
     return;
   }
@@ -297,8 +307,9 @@ function renderTable(rows) {
       const statusHtml = getStatusBadge(status);
 
       tr.innerHTML = `
-          <td>${fmtDate(dataPedido)}</td>
+          <td>${fmtDateOnly(dataPedido)}</td>
           <td><a href="#" class="lnk-resumo" data-id="${id}">${id}</a></td>
+          <td>${row.pedido_supra || '---'}</td>
           <td>${cliente}</td>
           <td><span class="badge badge-gray">${modalidade}</span></td>
           <td class="tar">${fmtMoney(valor)}</td>
@@ -306,7 +317,7 @@ function renderTable(rows) {
           <td>${tabela}</td>
           <td>${fornecedor}</td>
           <td>
-            ${link ? `<a href="${link}" target="_blank" class="btn-copy">Copiar Link</a>` : '<span class="muted">---</span>'}
+            ${link ? `<a href="${link}" target="_blank" class="btn-copy">Link</a>` : '<span class="muted">---</span>'}
           </td>
           <td class="tar td-actions" id="td-actions-${id}">
             
@@ -361,12 +372,14 @@ function renderCards(rows) {
       card.innerHTML = `
         <div class="order-card-header">
           <span class="order-card-title">Pedido #${id}</span>
-          <span class="order-card-date">${fmtDate(dataPedido)}</span>
+          <span class="order-card-date">${fmtDateOnly(dataPedido)}</span>
         </div>
         <div class="order-card-body">
           <span class="order-card-client">${cliente}</span>
           <div class="order-card-details">
             <span><b>Fornec:</b> ${fornecedor}</span>
+            <span><b>Ped. Supra:</b> ${row.pedido_supra || '-'}</span>
+            <span><b>Nota Fiscal:</b> ${row.nota_fiscal || '-'}</span>
           </div>
         </div>
         <div class="order-card-footer">
@@ -422,12 +435,18 @@ async function openResumo(id) {
   el.innerHTML = `
       <div class="stack">
         <div class="kv">
-          <div><b>Pedido:</b> ${p.id_pedido}</div>
-          <div>${getStatusBadge(p.status)}</div>
+          <div>
+            <b>Pedido:</b> ${p.id_pedido}<br>
+            <b>Ped. Supra:</b> ${p.pedido_supra || "---"}<br>
+            <b>Nota Fiscal:</b> ${p.nota_fiscal || "---"}
+          </div>
+          <div>
+            ${getStatusBadge(p.status)}<br>
+            <div style="margin-top: 8px;"><b>Aceite em:</b><br>${fmtDate(p.confirmado_em || p.created_at)}</div>
+          </div>
         </div>
         <div class="kv">
           <div><b>Cliente:</b> ${p.cliente} (${p.codigo_cliente ?? "-"})</div>
-          <div><b>Data:</b> ${fmtDate(p.created_at)}</div>
         </div>
         <div class="kv">
           <div style="grid-column: 1 / -1;"><b>Nome Fantasia:</b> ${p.nome_fantasia ?? "-"}</div>

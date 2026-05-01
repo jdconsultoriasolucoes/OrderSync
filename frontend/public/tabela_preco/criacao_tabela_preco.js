@@ -191,7 +191,7 @@ function getHeaderSnapshot() {
     plano_pagamento: val("plano_pagamento"),
     desconto_global: val("desconto_global"),
     markup_global: val("markup_global"), // ✅ Persist Markup Global Field
-    cliente_livre: !!window.isClienteLivreSelecionado,
+    observacao: val("observacao"),       // ✅ Persist Observação
     cliente_livre: !!window.isClienteLivreSelecionado,
     iva_enabled: !$("iva_st_toggle")?.disabled,
     currentClientMarkup: window.currentClientMarkup || 0 // ✅ Persist Markup
@@ -230,6 +230,7 @@ function restoreHeaderSnapshotIfNew(force = false) {
     set('plano_pagamento', snap.plano_pagamento || '');
     set('desconto_global', snap.desconto_global || '');
     set('markup_global', snap.markup_global || ''); // ✅ Restore Markup Global
+    set('observacao', snap.observacao || '');       // ✅ Restore Observação
 
     // ---- IVA_ST e flags do cliente livre
     const ivaChk = document.getElementById('iva_st_toggle');
@@ -544,6 +545,8 @@ function mapBackendItemToFrontend(p, t) {
     markup: Number(p.markup ?? 0),
     valor_final_markup: Number(p.valor_final_markup ?? 0),
     valor_s_frete_markup: Number(p.valor_s_frete_markup ?? 0),
+
+    manual_freight: parseBool(p.manual_freight ?? false), // ✅ Restore manual freight flag
 
     // guarda para reaproveitar na hora do POST
     __descricao_fator_label: p.descricao_fator_comissao || null,
@@ -1072,6 +1075,7 @@ async function carregarItens() {
       document.getElementById('nome_tabela').value = t.nome_tabela || '';
       document.getElementById('cliente_nome').value = t.cliente_nome || t.cliente || '';
       document.getElementById('ramo_juridico').value = t.ramo_juridico || '';
+      document.getElementById('observacao').value = t.observacao || ''; // ✅ Restore Observação
 
       // --- ROBUST SAFETY NET (GLOBAL VAULT) ---
       window.__clientState = {
@@ -1457,7 +1461,57 @@ function criarLinha(item, idx) {
   tdSemFreteMarkup.className = 'num col-mk-derived';
   tdSemFreteMarkup.textContent = '0,00';
 
-  const tdFrete = document.createElement('td'); tdFrete.className = 'num'; tdFrete.textContent = '0,00';
+  const tdFrete = document.createElement('td'); 
+  tdFrete.className = 'num'; 
+  tdFrete.style.whiteSpace = 'nowrap';
+  
+  const inpFrete = document.createElement('input');
+  inpFrete.type = 'text';
+  inpFrete.className = 'field-frete-manual num';
+  inpFrete.style.width = '80px';
+  inpFrete.style.display = 'inline-block';
+  inpFrete.value = item.manual_freight ? (item.valor_frete_aplicado || 0).toFixed(2) : '';
+  inpFrete.placeholder = 'Auto';
+  
+  const lockIcon = document.createElement('span');
+  lockIcon.className = 'lock-icon';
+  lockIcon.style.marginLeft = '4px';
+  lockIcon.style.cursor = 'pointer';
+  lockIcon.innerHTML = item.manual_freight ? '🔒' : '🔓';
+  lockIcon.title = item.manual_freight ? 'Frete manual (travado)' : 'Frete automático';
+
+  inpFrete.addEventListener('input', (e) => {
+      let val = e.target.value.replace(',', '.');
+      if (val === '') {
+          item.manual_freight = false;
+          lockIcon.innerHTML = '🔓';
+          lockIcon.title = 'Frete automático';
+          recalcTudo();
+      } else {
+          let num = parseFloat(val);
+          if (!isNaN(num)) {
+              item.manual_freight = true;
+              item.valor_frete_aplicado = num;
+              lockIcon.innerHTML = '🔒';
+              lockIcon.title = 'Frete manual (travado)';
+              recalcLinha(tr);
+          }
+      }
+  });
+
+  lockIcon.addEventListener('click', () => {
+      if (item.manual_freight) {
+          item.manual_freight = false;
+          inpFrete.value = '';
+          lockIcon.innerHTML = '🔓';
+          lockIcon.title = 'Frete automático';
+          recalcTudo();
+      }
+  });
+
+  tdFrete.appendChild(inpFrete);
+  tdFrete.appendChild(lockIcon);
+
 
 
   // IPI e IVA_ST (%) — Inicializar com o valor salvo no item, se houver
@@ -1637,13 +1691,23 @@ async function recalcLinha(tr) {
   const taxaCond = mapaCondicoes[codCond] ?? 0;
 
   // base comercial (sem imposto)
-  const { acrescimoCond, freteValor, descontoValor, precoBase, liquido } =
-    calcularLinha(item, fator, taxaCond, freteKg);
+  const results = calcularLinha(item, fator, taxaCond, freteKg);
+  let { acrescimoCond, freteValor, descontoValor, precoBase, liquido } = results;
+
+  // ✅ OVERRIDE: Se o frete for manual, ignora o calculado
+  if (item.manual_freight) {
+    freteValor = Number(item.valor_frete_aplicado || 0);
+  }
 
   // pinta colunas comerciais
   tr.querySelector('td:nth-child(9)').textContent = fmtMoney(descontoValor); // Desc. aplicado
   tr.querySelector('td:nth-child(11)').textContent = fmtMoney(acrescimoCond); // Cond. (R$)
-  tr.querySelector('td:nth-child(12)').textContent = fmtMoney(freteValor);    // Frete (R$)
+  
+  // Atualiza campo de frete se não for manual
+  const inpFrete = tr.querySelector('.field-frete-manual');
+  if (inpFrete && !item.manual_freight) {
+      inpFrete.value = freteValor.toFixed(2);
+  }
 
 
 
@@ -1864,15 +1928,24 @@ async function recalcTudo() {
 
         const taxaCond = window.mapaCondicoes ? (window.mapaCondicoes[codCond] ?? 0) : 0;
 
-        const { acrescimoCond, freteValor, descontoValor, precoBase } =
-          calcularLinha(item, fator, taxaCond, freteKg);
+        const results = calcularLinha(item, fator, taxaCond, freteKg);
+        let { acrescimoCond, freteValor, descontoValor, precoBase } = results;
+
+        // ✅ OVERRIDE: Manual Freight
+        if (item.manual_freight) {
+            freteValor = Number(item.valor_frete_aplicado || 0);
+        }
 
         // Atualiza DOM Comercial
         if (tr) {
           const setTxt = (nth, v) => { const cel = tr.querySelector(`td:nth-child(${nth})`); if (cel) cel.textContent = fmtMoney(v); };
           setTxt(9, descontoValor);
           setTxt(11, acrescimoCond);
-          setTxt(12, freteValor);
+          
+          const inpF = tr.querySelector('.field-frete-manual');
+          if (inpF && !item.manual_freight) {
+              inpF.value = freteValor.toFixed(2);
+          }
         }
 
         // Build Payload
@@ -2039,6 +2112,7 @@ async function salvarTabela() {
   const cliente = document.getElementById('cliente_nome').value.trim();
   const frete_kg = Number(document.getElementById('frete_kg').value || 0);
   const ramo_juridico = document.getElementById('ramo_juridico').value || null;
+  const observacao = document.getElementById('observacao').value.trim() || null;
 
   const produtos = Array.from(document.querySelectorAll('#tbody-itens tr'))
     .map(tr => {
@@ -2101,7 +2175,8 @@ async function salvarTabela() {
         departamento: item.departamento || null,
         ipi: Number(item.ipi || 0),
         icms_st: Number(item.icms_st || 0),
-        iva_st: Number(item.iva_st || 0)
+        iva_st: Number(item.iva_st || 0),
+        manual_freight: !!item.manual_freight
       };
 
       // id_linha: DOM primeiro; fallback pro array
@@ -2138,7 +2213,7 @@ async function salvarTabela() {
 
   const calcula_st = !!document.getElementById('iva_st_toggle')?.checked;
   // Se codigo_cliente for nulo, mande null (não grave "Não cadastrado" string)
-  const payload = { nome_tabela, cliente, codigo_cliente, ramo_juridico, fornecedor: fornecedorHeader, calcula_st, produtos };
+  const payload = { nome_tabela, cliente, codigo_cliente, ramo_juridico, fornecedor: fornecedorHeader, calcula_st, observacao, produtos };
 
   // --- SAFETY CHECK FOR EMAIL ---
   // Se tem nome mas não tem código, o e-mail não vai funcionar.
@@ -2205,6 +2280,7 @@ function limparFormularioCabecalho() {
   document.getElementById('nome_tabela').value = '';
   document.getElementById('cliente_nome').value = '';
   document.getElementById('codigo_cliente').value = '';
+  document.getElementById('observacao').value = '';
 
   // Parâmetros globais
   const frete = document.getElementById('frete_kg');
