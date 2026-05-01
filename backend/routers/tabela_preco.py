@@ -286,7 +286,8 @@ def listar_tabelas(
               fornecedor,
               MAX(frete_kg) AS frete_kg,
               BOOL_OR(calcula_st) AS calcula_st,
-              MAX(criado_em) AS criado_em
+              MAX(criado_em) AS criado_em,
+              MAX(observacao) AS observacao
             FROM tb_tabela_preco
             {where_clause}
             GROUP BY id_tabela, nome_tabela, cliente, fornecedor
@@ -304,6 +305,7 @@ def listar_tabelas(
                 "fornecedor": r["fornecedor"],
                 "frete_kg": float(r["frete_kg"] or 0),
                 "calcula_st": bool(r["calcula_st"]),
+                "observacao": r.get("observacao") or "",
             }
             for r in rows
         ]
@@ -428,6 +430,7 @@ def obter_tabela(id_tabela: int):
             "codigo_cliente": getattr(cab, "codigo_cliente", None) or getattr(cab, "cliente_codigo", None),
             "fornecedor": cab.fornecedor,
             "calcula_st": calcula_st,
+            "observacao": getattr(cab, "observacao", ""),
             "produtos": [
                 {
                 "codigo_produto_supra": p.codigo_produto_supra,     
@@ -451,6 +454,7 @@ def obter_tabela(id_tabela: int):
                 "markup": p.markup,
                 "valor_final_markup": p.valor_final_markup,
                 "valor_s_frete_markup": p.valor_s_frete_markup,
+                "manual_freight": getattr(p, "manual_freight", False),
                 "status_atual": status_map.get(p.codigo_produto_supra, "DESCONHECIDO"), # <--- NOVO
                 } for p in itens
             ]
