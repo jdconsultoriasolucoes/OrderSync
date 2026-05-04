@@ -66,6 +66,7 @@ SELECT
   a.usar_valor_com_frete,
   a.peso_total_kg,
   a.frete_total,
+  a.frete_kg,
   a.total_pedido,
   a.observacoes,
   a.status,
@@ -98,10 +99,14 @@ SELECT COALESCE(
       'nome',               c.nome,
       'embalagem',          c.embalagem,
       'quantidade',         c.quantidade,
-      'preco_unit',         CASE WHEN a.usar_valor_com_frete THEN c.preco_unit_frt ELSE c.preco_unit END,
-      'subtotal',           CASE WHEN a.usar_valor_com_frete THEN c.subtotal_com_f ELSE c.subtotal_sem_f END,
-      'peso_liquido_unit',  COALESCE(prod.peso, 0),
-      'peso_liquido_total', ROUND(COALESCE(prod.peso, 0) * c.quantidade, 3)
+      'preco_unit',         c.preco_unit,
+      'preco_unit_frt',     c.preco_unit_frt,
+      'subtotal_sem_f',     c.subtotal_sem_f,
+      'subtotal_com_f',     c.subtotal_com_f,
+      'condicao_pagamento', c.condicao_pagamento,
+      'tabela_comissao',    c.tabela_comissao,
+      'peso_liquido_unit',  COALESCE(c.peso_kg, prod.peso, 0),
+      'peso_liquido_total', ROUND(COALESCE(c.peso_kg, prod.peso, 0) * c.quantidade, 3)
     )
     ORDER BY c.id_item
   ),

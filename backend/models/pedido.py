@@ -28,6 +28,7 @@ class PedidoModel(Base):
     # Values
     total_pedido = Column(Float)
     frete_total = Column(Float)
+    frete_kg = Column(Float, default=0.0)
     peso_total_kg = Column(Float)
     
     # Status

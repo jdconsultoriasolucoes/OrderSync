@@ -21,7 +21,7 @@ def carregar_pedido_pdf(db, pedido_id: int) -> PedidoPdf:
                 ELSE c.cadastro_nome_fantasia
             END AS nome_fantasia,
 
-            t.frete_kg AS frete_kg,
+            p.frete_kg AS frete_kg,
 
             p.confirmado_em AT TIME ZONE 'America/Sao_Paulo' AS confirmado_em,
             p.data_retirada,
@@ -52,19 +52,8 @@ def carregar_pedido_pdf(db, pedido_id: int) -> PedidoPdf:
             tp.valor_s_frete_markup   AS item_valor_s_frete_markup
 
         FROM tb_pedidos p
-        -- JOIN para pegar dados V2, inclusive o código real se existir
         LEFT JOIN public.t_cadastro_cliente_v2 c
             ON c.cadastro_codigo_da_empresa::text = p.codigo_cliente
-
-        -- AQUI o pulo do gato: "condensa" a tabela de preço em 1 linha por tabela
-        LEFT JOIN (
-            SELECT
-                id_tabela,
-                MAX(frete_kg) AS frete_kg
-            FROM tb_tabela_preco
-            GROUP BY id_tabela
-        ) t
-            ON t.id_tabela = p.tabela_preco_id
 
         JOIN tb_pedidos_itens i
             ON i.id_pedido = p.id_pedido

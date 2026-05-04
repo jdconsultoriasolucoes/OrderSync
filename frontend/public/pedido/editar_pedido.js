@@ -89,10 +89,10 @@ const __IS_RELOAD = (() => {
 
 if (__IS_RELOAD) {
   try { sessionStorage.removeItem('criacao_tabela_preco_produtos'); } catch { }
-  // limpe também snapshots/ponte por contexto, se usar TP_CTX_ID
+  // limpe também snapshots/ponte por contexto do namespace PED
   Object.keys(sessionStorage).forEach(k => {
-    if (k.startsWith('TP_HEADER_SNAPSHOT:')) sessionStorage.removeItem(k);
-    if (k.startsWith('TP_ATUAL:')) sessionStorage.removeItem(k);
+    if (k.startsWith('PED_HEADER_SNAPSHOT:')) sessionStorage.removeItem(k);
+    if (k.startsWith('PED_ATUAL:')) sessionStorage.removeItem(k);
     if (k.startsWith('TP_BUFFER:')) sessionStorage.removeItem(k);
   });
 }
@@ -200,7 +200,7 @@ function getHeaderSnapshot() {
 
 function saveHeaderSnapshot() {
   const ctx = getCtxId();
-  sessionStorage.setItem(`TP_HEADER_SNAPSHOT:${ctx}`, JSON.stringify(getHeaderSnapshot()));
+  sessionStorage.setItem(`PED_HEADER_SNAPSHOT:${ctx}`, JSON.stringify(getHeaderSnapshot()));
 }
 
 function restoreHeaderSnapshotIfNew(force = false) {
@@ -209,7 +209,7 @@ function restoreHeaderSnapshotIfNew(force = false) {
   if (currentTabelaId && !force) return;
 
   const ctx = getCtxId();
-  const raw = sessionStorage.getItem(`TP_HEADER_SNAPSHOT:${ctx}`);
+  const raw = sessionStorage.getItem(`PED_HEADER_SNAPSHOT:${ctx}`);
   if (!raw) return;
 
   try {
@@ -257,26 +257,28 @@ function restoreHeaderSnapshotIfNew(force = false) {
 
 // === Ponte Pai–Filho (contexto de itens) ===
 function clearPickerBridgeFor(ctx) {
-  try { sessionStorage.removeItem(`TP_ATUAL:${ctx}`); } catch { }
+  try { sessionStorage.removeItem(`PED_ATUAL:${ctx}`); } catch { }
   try { sessionStorage.removeItem(`TP_BUFFER:${ctx}`); } catch { }
 }
 
 function clearFullSnapshot() {
   const ctx = getCtxId();
-  try { sessionStorage.removeItem(`TP_HEADER_SNAPSHOT:${ctx}`); } catch { }
-  try { sessionStorage.removeItem(`TP_RETURN_MODE:${ctx}`); } catch { }
+  try { sessionStorage.removeItem(`PED_HEADER_SNAPSHOT:${ctx}`); } catch { }
+  try { sessionStorage.removeItem(`PED_RETURN_MODE:${ctx}`); } catch { }
   clearPickerBridgeFor(ctx);
 }
 
 function preparePickerBridgeBeforeNavigate() {
   const ctx = getCtxId();
+  sessionStorage.setItem('PED_CTX_ID', ctx);
+  sessionStorage.setItem(`PED_RETURN_MODE:${ctx}`, currentMode);
+  // Para o picker compartilhado (tabela_preco.js): ainda usa TP_ para compatibilidade
   sessionStorage.setItem('TP_CTX_ID', ctx);
-  sessionStorage.setItem(`TP_RETURN_MODE:${ctx}`, currentMode);
   try { sessionStorage.removeItem(`TP_BUFFER:${ctx}`); } catch { }
-  // salva itens atuais do pai para pré‑marcação no picker
-  sessionStorage.setItem(`TP_ATUAL:${ctx}`, JSON.stringify(itens || []));
+  sessionStorage.setItem(`PED_ATUAL:${ctx}`, JSON.stringify(itens || []));
+  sessionStorage.setItem('TP_RETURN_URL', window.location.href);
   if (currentMode === MODE.DUP && sourceTabelaId) {
-    sessionStorage.setItem('TP_SOURCE_ID', String(sourceTabelaId));
+    sessionStorage.setItem('PED_SOURCE_ID', String(sourceTabelaId));
   }
 }
 
@@ -286,8 +288,7 @@ async function mergeBufferFromPickerIfAny() {
   if (!raw) return;
 
   try {
-    // descarte só se estiver em VIEW e NÃO houver intenção de editar/duplicar
-    const retMode = sessionStorage.getItem(`TP_RETURN_MODE:${ctx || 'new'}`);
+    const retMode = sessionStorage.getItem(`PED_RETURN_MODE:${ctx || 'new'}`);
     const pretendEdit = (retMode === MODE.EDIT || retMode === MODE.DUP || retMode === MODE.NEW);
     if (currentMode === MODE.VIEW && !pretendEdit) {
       sessionStorage.removeItem(`TP_BUFFER:${ctx}`);
@@ -327,9 +328,14 @@ async function mergeBufferFromPickerIfAny() {
     itens = Array.from(map.values());
     renderTabela();
 
-    await atualizarPrecosAtuais();
+    try {
+      await atualizarPrecosAtuais();
+    } catch (e) { console.warn("Erro ao atualizar preços após picker:", e); }
+
     queueMicrotask(() => Promise.resolve(recalcTudo()).catch(() => { }));
-  } catch { }
+  } catch (err) {
+    console.error("Erro no merge do picker:", err);
+  }
   finally {
     try { sessionStorage.removeItem(`TP_BUFFER:${ctx}`); } catch { }
   }
@@ -517,24 +523,29 @@ function setFormDisabled(disabled) {
 
 // Função auxiliar para mapear item do backend para o formato do frontend
 function mapBackendItemToFrontend(p, t) {
+  const codFator = p.tabela_comissao || '';
+  const fracFator = (mapaDescontos && mapaDescontos[codFator] != null) ? Number(mapaDescontos[codFator]) : 0;
+
   return {
     codigo_tabela: p.codigo || '',
     descricao: p.nome || '',
     embalagem: p.embalagem || '',
     peso_liquido: Number(p.peso_liquido_unit || 0),
     valor: Number(p.preco_unit || 0),
+    preco_unit_frt: Number(p.preco_unit_frt || p.preco_unit || 0),
     desconto: 0,
     acrescimo: 0,
     plano_pagamento: p.condicao_pagamento || null,
+    plano_pagamento_cod: p.condicao_pagamento ? String(p.condicao_pagamento).split(' - ')[0].trim() : null,
     __plano_pagto_label: p.condicao_pagamento || null,
     __descricao_fator_label: p.tabela_comissao || null,
-    __fator_codigo: p.tabela_comissao || '',
-    fator_comissao: 0,
-    frete_kg: Number(t.frete_total || 0),
+    __fator_codigo: codFator,
+    fator_comissao: fracFator,
+    frete_kg: Number(t.frete_total || 0), // Este é o global do pedido
     ipi: 0, icms_st: 0, iva_st: 0, grupo: '', departamento: '',
-    markup: 0,
+    markup: Number(p.markup || 0),
     quantidade: Number(p.quantidade || 0),
-    subtotal: Number(p.subtotal || 0),
+    subtotal: Number(p.subtotal_com_f || p.subtotal_sem_f || 0),
     status_atual: 'ATIVO',
     peso_bruto: 0,
     tipo: null
@@ -544,7 +555,7 @@ function mapBackendItemToFrontend(p, t) {
 function onDuplicar() {
   // guarda a tabela de ORIGEM para poder voltar na hora do Cancelar
   sourceTabelaId = currentTabelaId ? String(currentTabelaId) : null;
-  if (sourceTabelaId) sessionStorage.setItem('TP_SOURCE_ID', sourceTabelaId);
+  if (sourceTabelaId) sessionStorage.setItem('PED_SOURCE_ID', sourceTabelaId);
 
   // entra em duplicação: libera campos e garante que será POST
   setMode(MODE.DUP);
@@ -627,7 +638,7 @@ function toggleToolbarByMode() {
 
 // AÇÕES DE BOTÃO
 function onEditar() {
-  if (currentTabelaId) sessionStorage.setItem('TP_LAST_VIEW_ID', String(currentTabelaId));
+  if (currentTabelaId) sessionStorage.setItem('PED_LAST_VIEW_ID', String(currentTabelaId));
   setMode(MODE.EDIT);
   // Atualiza preços ao entrar no modo edição
   atualizarPrecosAtuais()
@@ -1126,10 +1137,14 @@ function criarLinha(item, idx) {
   });
   tdQtd.appendChild(inpQtd);
 
-  // Subtotal
+  // Subtotal: exibe com ou sem frete conforme a opção do pedido
   const tdSub = document.createElement('td');
   tdSub.className = 'num col-subtotal';
-  tdSub.textContent = fmtMoney(item.subtotal || 0);
+  const usarFrete = window.usarValorComFrete ?? true;
+  const subtotalVal = usarFrete
+    ? (item.subtotal_com_f || item.subtotal || 0)
+    : (item.subtotal_sem_f || item.total_sem_frete || item.subtotal || 0);
+  tdSub.textContent = fmtMoney(subtotalVal);
   tr._tdSub = tdSub; // Store reference
 
 
@@ -1953,7 +1968,15 @@ async function salvarTabela() {
   }
 
   const calcula_st = !!document.getElementById('iva_st_toggle')?.checked;
-  const payload = { observacoes, cliente, codigo_cliente, ramo_juridico, fornecedor: fornecedorHeader, calcula_st, produtos };
+  const frete_kg = Number(document.getElementById('frete_kg')?.value || 0);
+  const usar_valor_com_frete = !!(window.usarValorComFrete ?? true);
+
+  const payload = { 
+    observacoes, cliente, codigo_cliente, ramo_juridico, 
+    fornecedor: fornecedorHeader, calcula_st, 
+    frete_kg, usar_valor_com_frete,
+    produtos 
+  };
 
   // --- SAFETY CHECK FOR EMAIL ---
   // Se tem nome mas não tem código, o e-mail não vai funcionar.
@@ -2017,9 +2040,9 @@ function refreshToolbarEnablement() {
 function limparFormularioCabecalho() {
   clearFullSnapshot();
   // Campos principais
-  document.getElementById('observacoes').value = '';
-  document.getElementById('cliente_nome').value = '';
-  document.getElementById('codigo_cliente').value = '';
+  const obs = document.getElementById('observacoes'); if (obs) obs.value = '';
+  const cli = document.getElementById('cliente_nome'); if (cli) cli.value = '';
+  const cod = document.getElementById('codigo_cliente'); if (cod) cod.value = '';
 
   // Parâmetros globais
   const frete = document.getElementById('frete_kg');
@@ -2086,8 +2109,8 @@ async function onCancelar(e) {
   if (currentMode === MODE.EDIT) {
     if (!currentTabelaId) {
       const idUrl = getIdFromUrl();
-      const mem = sessionStorage.getItem('TP_LAST_VIEW_ID');
-      const ctx = sessionStorage.getItem('TP_CTX_ID');
+      const mem = sessionStorage.getItem('PED_LAST_VIEW_ID');
+      const ctx = sessionStorage.getItem('PED_CTX_ID');
       const cand = idUrl || (mem && mem !== 'new' ? mem : null) || (ctx && ctx !== 'new' ? ctx : null);
       if (cand) currentTabelaId = String(cand);
     }
@@ -2175,17 +2198,17 @@ async function onCancelar(e) {
     }
 
     if (!currentTabelaId) {
-      const srcMem = sessionStorage.getItem('TP_SOURCE_ID');
-      const last = sessionStorage.getItem('TP_LAST_VIEW_ID');
+      const srcMem = sessionStorage.getItem('PED_SOURCE_ID');
+      const last = sessionStorage.getItem('PED_LAST_VIEW_ID');
       const url = getIdFromUrl();
-      const ctx = sessionStorage.getItem('TP_CTX_ID');
+      const ctx = sessionStorage.getItem('PED_CTX_ID');
       const cand = sourceTabelaId || (srcMem && srcMem !== 'new' ? srcMem : null)
         || (last && last !== 'new' ? last : null)
         || url || (ctx && ctx !== 'new' ? ctx : null);
       if (cand) currentTabelaId = String(cand);
     }
     sourceTabelaId = null;
-    sessionStorage.removeItem('TP_SOURCE_ID');
+    sessionStorage.removeItem('PED_SOURCE_ID');
 
 
     // trava e mostra botões de decisão (Editar/Duplicar)
@@ -2256,19 +2279,19 @@ async function atualizarValidadeCabecalhoGlobal() {
 async function carregarItens() {
   const ctx = getCtxId();
 
-  // 1) Tenta recuperar da memória local (TP_ATUAL)
+  // 1) Tenta recuperar da memória local (PED_ATUAL)
   // Isso garante que, ao voltar do "Adicionar Produto", não perderemos o que já estava na tela.
-  const memoria = sessionStorage.getItem(`TP_ATUAL:${ctx}`);
+  const memoria = sessionStorage.getItem(`PED_ATUAL:${ctx}`);
   if (memoria) {
     try {
       const saved = JSON.parse(memoria);
       if (Array.isArray(saved) && saved.length > 0) {
-        console.log("carregarItens: Usando memória local (TP_ATUAL)", saved.length, "itens.");
+        console.log("carregarItens: Usando memória local (PED_ATUAL)", saved.length, "itens.");
         itens = saved;
         renderTabela();
         return;
       }
-    } catch (e) { console.warn("Erro ao ler TP_ATUAL", e); }
+    } catch (e) { console.warn("Erro ao ler PED_ATUAL", e); }
   }
 
   // 2) Se não tiver memória, busca do banco (Apenas se tiver ID e não for DUP "limpo")
@@ -2306,12 +2329,18 @@ async function carregarItens() {
     if (codEl) codEl.value = t.codigo_cliente || '';
     if (ramoEl) ramoEl.value = t.ramo_juridico || '';
 
-    // Frete: se tiver no header da resposta ou inferir do primeiro item?
-    // Geralmente vem nos itens, mas se tiver 'frete_kg' no T, usa.
-    // Se não, tenta pegar do primeiro item.
+    // Frete: agora vem direto do banco (campo frete_kg gravado ao salvar).
+    // Fallback: calcula a partir do frete_total / peso se o campo ainda não existir
+    // (para pedidos criados antes da migration).
     if (freteEl) {
-      if (t.frete_kg != null) freteEl.value = Number(t.frete_kg);
-      else if (t.produtos && t.produtos.length > 0) freteEl.value = Number(t.produtos[0].frete_kg || 0);
+      if (t.frete_kg != null && Number(t.frete_kg) > 0) {
+        freteEl.value = Number(t.frete_kg).toFixed(4);
+      } else if (t.frete_total != null && t.peso_total_kg > 0) {
+        const fKg = Number(t.frete_total) / Number(t.peso_total_kg);
+        freteEl.value = fKg.toFixed(4);
+      } else {
+        freteEl.value = "0.00";
+      }
     }
 
     // Configurações globais (IVA, Markup) se disponíveis no objeto T
@@ -2330,6 +2359,28 @@ async function carregarItens() {
     // mapBackendItemToFrontend já lida bem.
 
     renderTabela();
+
+    // --- INFERIR CABEÇALHO DOS ITENS ---
+    // Se todos os itens têm a mesma condição/fator, marcamos no cabeçalho
+    try {
+      const distinctCond = new Set(itens.map(it => it.plano_pagamento_cod).filter(Boolean));
+      if (distinctCond.size === 1) {
+        const selCond = document.getElementById('plano_pagamento');
+        if (selCond) {
+          selCond.value = [...distinctCond][0];
+          atualizarPillTaxa?.();
+        }
+      }
+
+      const distinctFator = new Set(itens.map(it => it.__fator_codigo).filter(Boolean));
+      if (distinctFator.size === 1) {
+        const selFator = document.getElementById('desconto_global');
+        if (selFator) {
+          selFator.value = [...distinctFator][0];
+          atualizarPillDesconto?.();
+        }
+      }
+    } catch (e) { console.warn("Erro ao inferir cabeçalho:", e); }
 
     // Atualiza UI baseada no cabeçalho carregado
     if (typeof refreshToolbarEnablement === 'function') refreshToolbarEnablement();
@@ -2585,11 +2636,11 @@ document.addEventListener('DOMContentLoaded', () => {
     } else {
       // Se não veio na URL, verifica se estamos voltando de uma operação (Picker)
       // Recupera o contexto salvo
-      const pendingCtx = sessionStorage.getItem('TP_CTX_ID');
+      const pendingCtx = sessionStorage.getItem('PED_CTX_ID');
       if (pendingCtx && pendingCtx !== 'new') {
         // Só restaura o ID se tivermos um 'Modo de Retorno' setado,
         // indicando que saímos intencionalmente desta tela e estamos voltando.
-        const retMode = sessionStorage.getItem(`TP_RETURN_MODE:${pendingCtx}`);
+        const retMode = sessionStorage.getItem(`PED_RETURN_MODE:${pendingCtx}`);
         if (retMode) {
           console.log("Restaurando contexto pendente (voltou do picker):", pendingCtx);
           setTabelaIds(pendingCtx);
@@ -2599,18 +2650,18 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // 2. Verifica se estamos "Voltando" do Picker (agora com ID correto setado se aplicável)
     const ctx = getCtxId();
-    const returnMode = sessionStorage.getItem(`TP_RETURN_MODE:${ctx}`);
+    const returnMode = sessionStorage.getItem(`PED_RETURN_MODE:${ctx}`);
 
     // Se NÃO estivermos voltando do picker (e não for Reload), é uma entrada fresca (ex: vindo da lista)
     // Então limpamos qualquer memória "curta" antiga para não carregar lixo.
     // Isso atende ao pedido: "não carregue cache desnecessário".
     if (!returnMode && !__IS_RELOAD) {
       console.log("Entrada fresca. Limpando cache de sessão para:", ctx);
-      sessionStorage.removeItem(`TP_ATUAL:${ctx}`);
+      sessionStorage.removeItem(`PED_ATUAL:${ctx}`);
       sessionStorage.removeItem(`TP_BUFFER:${ctx}`);
       // Se for contexto 'new', limpa snapshots também para garantir limpeza
       if (ctx === 'new') {
-        sessionStorage.removeItem(`TP_HEADER_SNAPSHOT:${ctx}`);
+        sessionStorage.removeItem(`PED_HEADER_SNAPSHOT:${ctx}`);
       }
     }
 
@@ -2643,13 +2694,13 @@ document.addEventListener('DOMContentLoaded', () => {
     const action = q.get('action') || q.get('mode') || q.get('modo');
     let modeRestored = false;
     if (!action) {
-      const ctx = sessionStorage.getItem('TP_CTX_ID') || getCtxId();
-      const ret = sessionStorage.getItem(`TP_RETURN_MODE:${ctx}`);
+      const ctx = sessionStorage.getItem('PED_CTX_ID') || getCtxId();
+      const ret = sessionStorage.getItem(`PED_RETURN_MODE:${ctx}`);
       if (ret) {
         if (ret === MODE.EDIT) setMode(MODE.EDIT);
         else if (ret === MODE.DUP) setMode(MODE.DUP);
         else if (ret === MODE.NEW) setMode(MODE.NEW);
-        sessionStorage.removeItem(`TP_RETURN_MODE:${ctx}`);
+        sessionStorage.removeItem(`PED_RETURN_MODE:${ctx}`);
         modeRestored = true;
       }
     }
@@ -2805,8 +2856,9 @@ async function salvarPedido(payload) {
   
   // Convert payload to PedidoUpdateRequest
   let pedidoPayload = {
-      usar_valor_com_frete: true,
+      usar_valor_com_frete: payload.usar_valor_com_frete ?? true,
       observacoes: payload.observacoes || '',
+      frete_kg: payload.frete_kg || 0,
       produtos: (payload.produtos || []).map(p => ({
           codigo: p.codigo_produto_supra || p.codigo,
           descricao: p.descricao_produto || p.descricao,

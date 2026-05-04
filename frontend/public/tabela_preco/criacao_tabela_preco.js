@@ -2807,9 +2807,6 @@ document.addEventListener('DOMContentLoaded', () => {
     const ctx = getCtxId();
     const returnMode = sessionStorage.getItem(`TP_RETURN_MODE:${ctx}`);
 
-    // Se NÃO estivermos voltando do picker (e não for Reload), é uma entrada fresca (ex: vindo da lista)
-    // Então limpamos qualquer memória "curta" antiga para não carregar lixo.
-    // Isso atende ao pedido: "não carregue cache desnecessário".
     if (!returnMode && !__IS_RELOAD) {
       console.log("Entrada fresca. Limpando cache de sessão para:", ctx);
       sessionStorage.removeItem(`TP_ATUAL:${ctx}`);
