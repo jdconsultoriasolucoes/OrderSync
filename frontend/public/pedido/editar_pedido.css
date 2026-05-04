@@ -229,9 +229,9 @@
 
 /* --- Colapse das colunas ST (Visualização Detalhada) --- */
 /* Índices: BaseST=14 -> Colunas filhas: 15, 16, 17 */
-#tabela-itens:has(#st-toggle:not(:checked)) tr> :nth-child(15),
-#tabela-itens:has(#st-toggle:not(:checked)) tr> :nth-child(16),
-#tabela-itens:has(#st-toggle:not(:checked)) tr> :nth-child(17) {
+#tabela-itens:has(#st-toggle:not(:checked)) tr> :nth-child(17),
+#tabela-itens:has(#st-toggle:not(:checked)) tr> :nth-child(18),
+#tabela-itens:has(#st-toggle:not(:checked)) tr> :nth-child(19) {
   display: none;
 }
 
@@ -251,7 +251,7 @@
 
 /* --- Toggle DESCONTO (Fator %) --- */
 /* Esconde: Desc. Aplicado R$ (9) */
-#tabela-itens:has(#desc-toggle:not(:checked)) tr> :nth-child(9) {
+#tabela-itens:has(#desc-toggle:not(:checked)) tr> :nth-child(11) {
   display: none;
 }
 
@@ -263,7 +263,7 @@
 
 /* --- Toggle CONDIÇÃO (Código) --- */
 /* Esconde: Cond. Pagto R$ (11) */
-#tabela-itens:has(#cond-toggle:not(:checked)) tr> :nth-child(11) {
+#tabela-itens:has(#cond-toggle:not(:checked)) tr> :nth-child(13) {
   display: none;
 }
 
@@ -275,8 +275,8 @@
 
 /* --- Colapse das colunas MARKUP --- */
 /* Índices: Markup%(Inp)=20, Final(Mk)=21, SemFrete(Mk)=22 */
-#tabela-itens:has(#markup-cols-toggle:not(:checked)) tr> :nth-child(21),
-#tabela-itens:has(#markup-cols-toggle:not(:checked)) tr> :nth-child(22) {
+#tabela-itens:has(#markup-cols-toggle:not(:checked)) tr> :nth-child(23),
+#tabela-itens:has(#markup-cols-toggle:not(:checked)) tr> :nth-child(24) {
   display: none;
 }
 

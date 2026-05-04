@@ -136,8 +136,8 @@ const RequiredValidator = (() => {
   const REQUIRED_FIELDS = {
     '#observacoes': 'Informe as observações do pedido.',
     '#cliente_nome': 'Informe/selecione o cliente.',
-    '#tbody-itens tr td:nth-child(8) select': 'Selecione a classificação para todos os itens.',
-    '#tbody-itens tr td:nth-child(10) select': 'Selecione a condição de pagamento para todos os itens.'
+    '#tbody-itens tr td:nth-child(10) select': 'Selecione a classificação para todos os itens.',
+    '#tbody-itens tr td:nth-child(12) select': 'Selecione a condição de pagamento para todos os itens.'
   };
 
   function check(config = REQUIRED_FIELDS, root = document) {
@@ -673,9 +673,9 @@ function calcularLinha(item, fator, taxaCond, freteKg) {
 
 async function previewFiscalLinha(payload) {
   const r = await fetch(`${API_BASE}/fiscal/preview-linha`, {
-    method: currentTabelaId ? 'PUT' : 'POST',
+    method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(pedidoPayload),
+    body: JSON.stringify(payload),
   });
   if (!r.ok) {
     const txt = await r.text().catch(() => '');
@@ -1162,7 +1162,7 @@ function criarLinha(item, idx) {
     recalcLinha(tr);
 
     try {
-      const selsPct = Array.from(document.querySelectorAll('#tbody-itens tr td:nth-child(8) select'));
+      const selsPct = Array.from(document.querySelectorAll('#tbody-itens tr td:nth-child(10) select'));
       const vals = new Set(selsPct.map(s => (s.value || '').trim()).filter(v => v !== ''));
       const hdr = document.getElementById('desconto_global');
       if (hdr && hdr.dataset.userEdited !== '1') {
@@ -1230,7 +1230,7 @@ function criarLinha(item, idx) {
     recalcLinha(tr);
 
     try {
-      const sels = Array.from(document.querySelectorAll('#tbody-itens tr td:nth-child(10) select'));
+      const sels = Array.from(document.querySelectorAll('#tbody-itens tr td:nth-child(12) select'));
       const vals = new Set(sels.map(s => (s.value || '').trim()).filter(v => v !== ''));
       const hdr = document.getElementById('plano_pagamento');
       if (hdr && hdr.dataset.userEdited !== '1') {
@@ -1289,13 +1289,13 @@ function criarLinha(item, idx) {
   const tdTotalSemFrete = document.createElement('td'); tdTotalSemFrete.className = 'num col-total-sem-frete'; tdTotalSemFrete.textContent = '0,00'; tr.appendChild(tdTotalSemFrete);
 
   tr.append(
-    tdSel, tdCod, tdDesc, tdEmb, tdGrupo,
-    tdPeso, tdValor, tdPercent, tdDescAplic,
+    tdSel, tdCod, tdDesc, tdEmb, tdGrupo, tdPeso, tdValor, tdQtd, tdSub,
+    tdPercent, tdDescAplic,
     tdCondCod, tdCondVal,
-    tdFrete,
-    tdIpiR$, tdBaseStR$, tdIcmsProp$, tdIcmsCheio$, tdIcmsReter$, tdFinal, tdTotalSemFrete,
-    tdMarkup, // <--- MOVED TO END
-    tdFinalMarkup, tdSemFreteMarkup // <--- ALREADY AT END
+    tdFrete, tdIpiR$,
+    tdBaseStR$, tdIcmsProp$, tdIcmsCheio$, tdIcmsReter$,
+    tdFinal, tdTotalSemFrete,
+    tdMarkup, tdFinalMarkup, tdSemFreteMarkup
   );
   return tr;
 }
@@ -1316,7 +1316,7 @@ async function recalcularLinhaComFiscal(item, codigo_cliente, forcarST, frete_li
   const r = await fetch(`${API_BASE}/fiscal/preview-linha`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify(pedidoPayload),
+    body: JSON.stringify(payload),
   });
   const out = await r.json();
 
@@ -1333,8 +1333,8 @@ function buildFiscalInputsFromRow(tr, fallbackItem = null, idx = -1) {
   let fatorPct = 0;
   let codCond = '';
   if (tr) {
-    fatorPct = Number(tr.querySelector('td:nth-child(8) select')?.value || 0);
-    codCond = tr.querySelector('td:nth-child(10) select')?.value || '';
+    fatorPct = Number(tr.querySelector('td:nth-child(10) select')?.value || 0);
+    codCond = tr.querySelector('td:nth-child(12) select')?.value || '';
   } else {
     // Mobile writes to item.__fator_codigo and item.plano_pagamento_cod
     const cPct = item.__fator_codigo || '';
@@ -1398,8 +1398,8 @@ function renderTabela() {
 
   // === Inferir cabeçalho a partir da grade (uniformidade) ===
   try {
-    const selsPct = Array.from(document.querySelectorAll('#tbody-itens tr td:nth-child(8) select'));
-    const selsCond = Array.from(document.querySelectorAll('#tbody-itens tr td:nth-child(10) select'));
+    const selsPct = Array.from(document.querySelectorAll('#tbody-itens tr td:nth-child(10) select'));
+    const selsCond = Array.from(document.querySelectorAll('#tbody-itens tr td:nth-child(12) select'));
 
     // Fator (%)
     const valsPct = new Set(selsPct.map(s => (s.value || '').trim()).filter(v => v !== ''));
@@ -1430,7 +1430,7 @@ async function recalcLinha(tr) {
   tr.dataset.reqId = String(nextId);
   const myId = String(nextId);
 
-  const selPct = tr.querySelector('td:nth-child(8) select');
+  const selPct = tr.querySelector('td:nth-child(10) select');
   let codePct = selPct ? (selPct.value || '') : '';
 
   // Fallback: se DOM vazio, tenta pegar do item
@@ -1442,7 +1442,7 @@ async function recalcLinha(tr) {
   const freteKg = Number(document.getElementById('frete_kg').value || 0);
 
   // Condição por linha → taxa
-  const selCond = tr.querySelector('td:nth-child(10) select');
+  const selCond = tr.querySelector('td:nth-child(12) select');
   let codCond = selCond ? selCond.value : '';
 
   // Fallback
@@ -1457,9 +1457,9 @@ async function recalcLinha(tr) {
     calcularLinha(item, fator, taxaCond, freteKg);
 
   // pinta colunas comerciais
-  tr.querySelector('td:nth-child(9)').textContent = fmtMoney(descontoValor); // Desc. aplicado
-  tr.querySelector('td:nth-child(11)').textContent = fmtMoney(acrescimoCond); // Cond. (R$)
-  tr.querySelector('td:nth-child(12)').textContent = fmtMoney(freteValor);    // Frete (R$)
+  tr.querySelector('td:nth-child(11)').textContent = fmtMoney(descontoValor); // Desc. aplicado
+  tr.querySelector('td:nth-child(13)').textContent = fmtMoney(acrescimoCond); // Cond. (R$)
+  tr.querySelector('td:nth-child(14)').textContent = fmtMoney(freteValor);    // Frete (R$)
 
 
 
@@ -1546,9 +1546,9 @@ async function recalcLinha(tr) {
 
 async function previewFiscalBatch(payload) {
   const r = await fetch(`${API_BASE}/fiscal/preview-batch`, {
-    method: currentTabelaId ? 'PUT' : 'POST',
+    method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(pedidoPayload),
+    body: JSON.stringify(payload),
   });
   if (!r.ok) {
     const txt = await r.text().catch(() => '');
@@ -1656,7 +1656,7 @@ async function recalcTudo() {
         // --- Lógica Comercial (Adapted to fallback to the item object for mobile) ---
         let codePct = '';
         if (tr) {
-          const selPct = tr.querySelector('td:nth-child(8) select');
+          const selPct = tr.querySelector('td:nth-child(10) select');
           if (selPct) codePct = selPct.value || '';
         }
         if (!codePct && item.__fator_codigo) codePct = item.__fator_codigo;
@@ -1668,7 +1668,7 @@ async function recalcTudo() {
 
         let codCond = '';
         if (tr) {
-          const selCond = tr.querySelector('td:nth-child(10) select');
+          const selCond = tr.querySelector('td:nth-child(12) select');
           if (selCond) codCond = selCond.value;
         }
         if (!codCond && item.plano_pagamento) {
@@ -1761,7 +1761,7 @@ async function aplicarFatorGlobal() {
 
   // Aplica em cada linha sem storm de eventos
   document.querySelectorAll('#tbody-itens tr').forEach(tr => {
-    const sel = tr.querySelector('td:nth-child(8) select');
+    const sel = tr.querySelector('td:nth-child(10) select');
     const idx = Number(tr.dataset.idx);
     if (!sel || isNaN(idx) || !itens[idx]) return;
 
@@ -1842,8 +1842,8 @@ async function salvarTabela() {
     const fieldNames = missing.map(m => {
       if (m.selector.includes('observacoes')) return '  Observações';
       if (m.selector.includes('cliente_nome')) return '• Cliente';
-      if (m.selector.includes('nth-child(8)')) return '• Classificação/Fator (algum item)';
-      if (m.selector.includes('nth-child(10)')) return '• Condição de pagamento (algum item)';
+      if (m.selector.includes('nth-child(10)')) return '• Classificação/Fator (algum item)';
+      if (m.selector.includes('nth-child(12)')) return '• Condição de pagamento (algum item)';
       return '• Campo obrigatório';
     }).join('<br>');
     await showOsModal({ title: 'Aviso', message: `Preencha os campos obrigatórios:<br><br>${fieldNames}`, type: 'alert' });
@@ -1861,12 +1861,12 @@ async function salvarTabela() {
       const idx = Number(tr.dataset.idx);
       const item = itens[idx];
 
-      const selPct = tr.querySelector('td:nth-child(8) select');
+      const selPct = tr.querySelector('td:nth-child(10) select');
       // On mobile, selects don't exist in the table — fall back to saved values in itens[]
       const codePct = selPct ? selPct.value : (item.__fator_codigo || '');
       const fator = (mapaDescontos[codePct] != null) ? Number(mapaDescontos[codePct]) : Number(item.fator_comissao || 0);
 
-      const selCond = tr.querySelector('td:nth-child(10) select');
+      const selCond = tr.querySelector('td:nth-child(12) select');
       // On mobile, fall back to plano_pagamento_cod saved by mobile card event handler
       const codCond = selCond ? (selCond.value || '') : (item.plano_pagamento_cod || String(item.plano_pagamento || '').split(' - ')[0].trim());
       const condLabel = selCond
@@ -2428,6 +2428,16 @@ document.addEventListener('DOMContentLoaded', () => {
 
   atualizarValidadeCabecalhoGlobal();
 
+  // --- Toggles de Colunas (ST, Desc, Cond, Prod, Markup) ---
+  ['st-toggle', 'desc-toggle', 'cond-toggle', 'prod-toggle', 'markup-cols-toggle'].forEach(id => {
+    document.getElementById(id)?.addEventListener('change', () => {
+      // O CSS :has já cuida do display, mas se precisar de lógica extra (ex: salvar preferência), coloque aqui.
+      if (id === 'markup-cols-toggle') {
+        // Se expandir markup, talvez queira recalcular? recalcTudo já deve estar em dia.
+      }
+    });
+  });
+
   (function bindChkAll() {
     const chkAll = document.getElementById('chk-all');
     if (!chkAll) return;
@@ -2683,7 +2693,7 @@ document.getElementById('btn-aplicar-condicao-todos')?.addEventListener('click',
     txt = selHdr.options[selHdr.selectedIndex].textContent;
   }
   document.querySelectorAll('#tbody-itens tr').forEach(tr => {
-    const sel = tr.querySelector('td:nth-child(10) select');
+    const sel = tr.querySelector('td:nth-child(12) select');
     const idx = Number(tr.dataset.idx);
     if (!sel || isNaN(idx)) return;
     sel.value = cod;
@@ -3191,7 +3201,7 @@ function renderMobileCards() {
         // Sync back to hidden desktop row
         const desktopTr = document.querySelector(`#tbody-itens tr[data-idx="${idx}"]`);
         if (desktopTr) {
-          const selPct = desktopTr.querySelector('td:nth-child(8) select');
+          const selPct = desktopTr.querySelector('td:nth-child(10) select');
           if (selPct) selPct.value = code;
         }
 
@@ -3215,7 +3225,7 @@ function renderMobileCards() {
         // Sync back to hidden desktop row
         const desktopTr = document.querySelector(`#tbody-itens tr[data-idx="${idx}"]`);
         if (desktopTr) {
-          const selTrCond = desktopTr.querySelector('td:nth-child(10) select');
+          const selTrCond = desktopTr.querySelector('td:nth-child(12) select');
           if (selTrCond) selTrCond.value = val;
         }
 
