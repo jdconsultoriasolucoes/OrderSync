@@ -39,6 +39,14 @@ def criar_pedido_confirmado(db: Session, tabela_id: int, body: ConfirmarPedidoRe
         fornecedor = None
         tabela_nome_snapshot = None
 
+    # Busca o frete_kg configurado na tabela de preço (primeiro item ativo)
+    res_frete = db.execute(text("""
+        SELECT frete_kg FROM public.tb_tabela_preco
+        WHERE id_tabela = :tid AND ativo IS TRUE
+        LIMIT 1
+    """), {"tid": tabela_id}).mappings().first()
+    frete_kg_tabela = float(res_frete["frete_kg"] or 0) if res_frete else 0.0
+
     # ... (rest of logic) ...
 
     # 2) Get Link info
@@ -130,7 +138,7 @@ def criar_pedido_confirmado(db: Session, tabela_id: int, body: ConfirmarPedidoRe
             codigo_cliente, cliente, tabela_preco_id, tabela_preco_nome,
             validade_ate, validade_dias, data_retirada,
             usar_valor_com_frete, itens,
-            peso_total_kg, frete_total, total_sem_frete, total_com_frete, total_pedido,
+            peso_total_kg, frete_total, frete_kg, total_sem_frete, total_com_frete, total_pedido,
             observacoes, status, confirmado_em,
             link_token, link_url, link_enviado_em, link_expira_em, link_status,
             link_primeiro_acesso_em, link_ultimo_acesso_em, link_qtd_acessos,
@@ -141,7 +149,7 @@ def criar_pedido_confirmado(db: Session, tabela_id: int, body: ConfirmarPedidoRe
             :codigo_cliente, :cliente, :tabela_preco_id, :tabela_preco_nome,
             :validade_ate, :validade_dias, :data_retirada,
             :usar_valor_com_frete, CAST(:itens AS jsonb),
-            :peso_total_kg, :frete_total, :total_sem_frete, :total_com_frete, :total_pedido,
+            :peso_total_kg, :frete_total, :frete_kg, :total_sem_frete, :total_com_frete, :total_pedido,
             :observacoes, 'Orçamento', :confirmado_em,
             :link_token, :link_url, :link_enviado_em, :link_expira_em, 'ABERTO',
             :link_primeiro_acesso_em, :link_ultimo_acesso_em, :link_qtd_acessos,
@@ -163,6 +171,7 @@ def criar_pedido_confirmado(db: Session, tabela_id: int, body: ConfirmarPedidoRe
         "itens": json.dumps([i.dict() for i in body.produtos]),
         "peso_total_kg": round(peso_total_kg, 3),
         "frete_total": round(frete_total, 2),
+        "frete_kg": round(frete_kg_tabela, 4),
         "total_sem_frete": round(total_sem_frete, 2),
         "total_com_frete": round(total_com_frete, 2),
         "total_pedido": round(total_pedido, 2),
