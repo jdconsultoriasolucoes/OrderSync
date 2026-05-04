@@ -322,7 +322,7 @@ function renderTable(rows) {
           <td class="tar td-actions" id="td-actions-${id}">
             
             <button class="btn-sm btn-outline-secondary btn-edit-status" data-id="${id}" data-status="${status}">
-               Status
+               Mudar Status
             </button>
             ${(status || '').toUpperCase() === 'ORCAMENTO' ? `<button class="btn-sm btn-outline-primary btn-edit-orcamento" data-id="${id}" style="margin-left: 5px;">Editar Pedido</button>` : ''}
 
@@ -389,7 +389,7 @@ function renderCards(rows) {
         <div class="order-card-actions td-actions" id="td-actions-mobile-${id}">
            ${link ? `<a href="${link}" target="_blank" class="btn btn-outline" style="padding: 4px 8px; font-size: 0.8rem; text-decoration: none;">Link</a>` : ''}
            
-           <button class="btn btn-outline-secondary btn-edit-status" data-id="${id}" data-status="${status}" data-is-mobile="true" style="padding: 4px 8px; font-size: 0.8rem;">Status</button>
+           <button class="btn btn-outline-secondary btn-edit-status" data-id="${id}" data-status="${status}" data-is-mobile="true" style="padding: 4px 8px; font-size: 0.8rem;">Mudar Status</button>
            ${(status || '').toUpperCase() === 'ORCAMENTO' ? `<button class="btn btn-outline-primary btn-edit-orcamento" data-id="${id}" style="padding: 4px 8px; font-size: 0.8rem;">Editar Pedido</button>` : ''}
 
            <button class="btn btn-primary" onclick="openResumo('${id}')" style="padding: 4px 12px; font-size: 0.8rem;">Detalhes</button>
@@ -672,14 +672,16 @@ function cancelEditStatus(id, originalStatus, isMobile = false) {
        const link = row && (row.link_url || row.link) ? row.link_url || row.link : null;
        tdActions.innerHTML = `
            ${link ? `<a href="${link}" target="_blank" class="btn btn-outline" style="padding: 4px 8px; font-size: 0.8rem; text-decoration: none;">Link</a>` : ''}
-           <button class="btn btn-outline-secondary btn-edit-status" data-id="${id}" data-status="${originalStatus}" data-is-mobile="true" style="padding: 4px 8px; font-size: 0.8rem;">Editar Status</button>
+           <button class="btn btn-outline-secondary btn-edit-status" data-id="${id}" data-status="${originalStatus}" data-is-mobile="true" style="padding: 4px 8px; font-size: 0.8rem;">Mudar Status</button>
+           ${(originalStatus || '').toUpperCase() === 'ORCAMENTO' ? `<button class="btn btn-outline-primary btn-edit-orcamento" data-id="${id}" style="padding: 4px 8px; font-size: 0.8rem;">Editar Pedido</button>` : ''}
            <button class="btn btn-primary" onclick="openResumo('${id}')" style="padding: 4px 12px; font-size: 0.8rem;">Detalhes</button>
        `;
     } else {
        tdActions.innerHTML = `
           <button class="btn-sm btn-outline-secondary btn-edit-status" data-id="${id}" data-status="${originalStatus}">
-             Editar
+             Mudar Status
           </button>
+          ${(originalStatus || '').toUpperCase() === 'ORCAMENTO' ? `<button class="btn-sm btn-outline-primary btn-edit-orcamento" data-id="${id}" style="margin-left: 5px;">Editar Pedido</button>` : ''}
         `;
     }
   }
@@ -736,14 +738,16 @@ async function saveStatus(id, isMobile = false) {
        const link = row && (row.link_url || row.link) ? row.link_url || row.link : null;
        tdActions.innerHTML = `
            ${link ? `<a href="${link}" target="_blank" class="btn btn-outline" style="padding: 4px 8px; font-size: 0.8rem; text-decoration: none;">Link</a>` : ''}
-           <button class="btn btn-outline-secondary btn-edit-status" data-id="${id}" data-status="${newStatus}" data-is-mobile="true" style="padding: 4px 8px; font-size: 0.8rem;">Editar Status</button>
+           <button class="btn btn-outline-secondary btn-edit-status" data-id="${id}" data-status="${newStatus}" data-is-mobile="true" style="padding: 4px 8px; font-size: 0.8rem;">Mudar Status</button>
+           ${(newStatus || '').toUpperCase() === 'ORCAMENTO' ? `<button class="btn btn-outline-primary btn-edit-orcamento" data-id="${id}" style="padding: 4px 8px; font-size: 0.8rem;">Editar Pedido</button>` : ''}
            <button class="btn btn-primary" onclick="openResumo('${id}')" style="padding: 4px 12px; font-size: 0.8rem;">Detalhes</button>
        `;
     } else {
        tdActions.innerHTML = `
           <button class="btn-sm btn-outline-secondary btn-edit-status" data-id="${id}" data-status="${newStatus}">
-             Editar
+             Mudar Status
           </button>
+          ${(newStatus || '').toUpperCase() === 'ORCAMENTO' ? `<button class="btn-sm btn-outline-primary btn-edit-orcamento" data-id="${id}" style="margin-left: 5px;">Editar Pedido</button>` : ''}
         `;
     }
     const tr = tdActions.closest(isMobile ? ".order-card" : "tr");
@@ -894,6 +898,12 @@ function bindUI() {
        const isMobile = btnCancel.dataset.isMobile === "true";
        cancelEditStatus(btnCancel.dataset.id, btnCancel.dataset.originalStatus, isMobile); 
        return; 
+    }
+    // Edit Pedido
+    const btnEditOrcamento = t.closest(".btn-edit-orcamento");
+    if (btnEditOrcamento) {
+      window.location.href = `/pedido/editar_pedido.html?id=${btnEditOrcamento.dataset.id}`;
+      return;
     }
   };
 
