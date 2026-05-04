@@ -134,7 +134,7 @@ const RequiredValidator = (() => {
 
   // 👇 aqui é CONST interna (não use RequiredValidator.* aqui)
   const REQUIRED_FIELDS = {
-    '#nome_tabela': 'Informe o nome da tabela.',
+    '#observacoes': 'Informe as observações do pedido.',
     '#cliente_nome': 'Informe/selecione o cliente.',
     '#tbody-itens tr td:nth-child(8) select': 'Selecione a classificação para todos os itens.',
     '#tbody-itens tr td:nth-child(10) select': 'Selecione a condição de pagamento para todos os itens.'
@@ -179,7 +179,7 @@ function getHeaderSnapshot() {
 
   return {
     // visuais
-    nome_tabela: val("nome_tabela"),
+    nome_tabela: val("observacoes"),
     cliente: val("cliente_nome"),   // texto mostrado no input
     // ocultos/importantes
     codigo_cliente: val("codigo_cliente"),
@@ -220,7 +220,7 @@ function restoreHeaderSnapshotIfNew(force = false) {
     };
 
     // ---- Cabeçalho básico
-    set('nome_tabela', snap.nome_tabela);
+    set('observacoes', snap.nome_tabela);
     set('cliente_nome', snap.cliente);
     set('codigo_cliente', snap.codigo_cliente);
     set('ramo_juridico', snap.ramo_juridico);
@@ -551,7 +551,7 @@ function onDuplicar() {
   currentTabelaId = null;      // POST
 
   // 🧽 Limpa TODO o cabeçalho (nome e cliente)
-  const nome = document.getElementById('nome_tabela');
+  const nome = document.getElementById('observacoes');
   const cli = document.getElementById('cliente_nome');
   const cod = document.getElementById('codigo_cliente');
   const ramo = document.getElementById('ramo_juridico');
@@ -1818,21 +1818,21 @@ async function salvarTabela() {
   if (linhas.length === 0) {
     await showOsModal({ title: 'Aviso', message: 'Adicione pelo menos 1 produto à tabela antes de salvar.', type: 'alert' });
     // foca em algo útil da sua UI (ajuste se tiver um botão/field específico)
-    document.querySelector('#busca_produto, #nome_tabela')?.focus();
+    document.querySelector('#busca_produto, #observacoes')?.focus();
     return;
   }
 
   // On mobile the desktop row selects don't exist — only validate header fields
   const isMobile = window.innerWidth <= 768;
   const fieldsToCheck = isMobile
-    ? { '#nome_tabela': 'Informe o nome da tabela.', '#cliente_nome': 'Informe/selecione o cliente.' }
+    ? { '#observacoes': 'Informe as observações do pedido.', '#cliente_nome': 'Informe/selecione o cliente.' }
     : RequiredValidator.REQUIRED_FIELDS;
 
   const { ok, missing } = RequiredValidator.check(fieldsToCheck, document);
   if (!ok) {
     // If a header field failed and the header is collapsed, expand it first so the user can see
     const headerArea = document.getElementById('header-collapsible-area');
-    const headerHasInvalid = missing.some(m => ['#nome_tabela', '#cliente_nome'].some(s => m.el === document.querySelector(s)));
+    const headerHasInvalid = missing.some(m => ['#observacoes', '#cliente_nome'].some(s => m.el === document.querySelector(s)));
     if (headerHasInvalid && headerArea?.classList.contains('collapsed')) {
       headerArea.classList.remove('collapsed');
       const btn = document.getElementById('btn-toggle-header');
@@ -1840,7 +1840,7 @@ async function salvarTabela() {
     }
     // Build a helpful list of missing field names
     const fieldNames = missing.map(m => {
-      if (m.selector.includes('nome_tabela')) return '• Nome da tabela';
+      if (m.selector.includes('observacoes')) return '  Observações';
       if (m.selector.includes('cliente_nome')) return '• Cliente';
       if (m.selector.includes('nth-child(8)')) return '• Classificação/Fator (algum item)';
       if (m.selector.includes('nth-child(10)')) return '• Condição de pagamento (algum item)';
@@ -1982,7 +1982,7 @@ async function salvarTabela() {
 
 
 function validarCabecalhoMinimo() {
-  const nome = document.getElementById('nome_tabela')?.value?.trim();
+  const nome = document.getElementById('observacoes')?.value?.trim();
   const cliente = document.getElementById('cliente_nome')?.value?.trim();
 
   if (!nome || !cliente) return false;
@@ -2017,7 +2017,7 @@ function refreshToolbarEnablement() {
 function limparFormularioCabecalho() {
   clearFullSnapshot();
   // Campos principais
-  document.getElementById('nome_tabela').value = '';
+  document.getElementById('observacoes').value = '';
   document.getElementById('cliente_nome').value = '';
   document.getElementById('codigo_cliente').value = '';
 
@@ -2092,10 +2092,7 @@ async function onCancelar(e) {
       if (cand) currentTabelaId = String(cand);
     }
     setMode(MODE.VIEW);
-    if (typeof setFormDisabled === 'function') setFormDisabled(true);
-    if (typeof toggleToolbarByMode === 'function') toggleToolbarByMode();
-    if (typeof refreshToolbarEnablement === 'function') refreshToolbarEnablement();
-    sessionStorage.removeItem('TP_LAST_VIEW_ID');
+    goToConsultarPedidos();
     return;
   }
 
@@ -2108,7 +2105,7 @@ async function onCancelar(e) {
           const t = await r.json();
 
           // repõe cabeçalho
-          document.getElementById('nome_tabela').value = t.nome_tabela || '';
+          document.getElementById('observacoes').value = t.observacoes || '';
           document.getElementById('cliente_nome').value = t.cliente_nome || t.cliente || '';
           document.getElementById('codigo_cliente').value = t.codigo_cliente || '';
           document.getElementById('ramo_juridico').value = t.ramo_juridico || '';
@@ -2203,7 +2200,7 @@ async function onCancelar(e) {
     if (currentTabelaId) {
       currentTabelaId = null; sourceTabelaId = null;
       limparFormularioCabecalho?.(); limparGradeProdutos?.();
-      return setMode(MODE.NEW);
+      return goToConsultarPedidos();
     }
 
     // Sem id (tela em branco) → aí sim limpa para NEW
@@ -2213,10 +2210,7 @@ async function onCancelar(e) {
     sourceTabelaId = null;
 
 
-    setMode(MODE.NEW);
-    if (typeof setFormDisabled === 'function') setFormDisabled(false);
-    if (typeof toggleToolbarByMode === 'function') toggleToolbarByMode();
-    if (typeof refreshToolbarEnablement === 'function') refreshToolbarEnablement();
+    goToConsultarPedidos();
     return;
   }
 }
@@ -2330,7 +2324,7 @@ async function carregarItens() {
     }
 
     // Map backend -> frontend
-    itens = (t.produtos || []).map(p => mapBackendItemToFrontend(p, t));
+    itens = (t.itens || t.produtos || []).map(p => mapBackendItemToFrontend(p, t));
 
     // Se for modo DUP, talvez queiramos reprocessar IDs?
     // mapBackendItemToFrontend já lida bem.
@@ -2450,7 +2444,9 @@ document.addEventListener('DOMContentLoaded', () => {
     saveHeaderSnapshot();
     preparePickerBridgeBeforeNavigate();
     snapshotSelecionadosParaPicker();
-    window.location.href = 'tabela_preco.html';
+    // Guarda o URL de retorno para o picker saber voltar
+    sessionStorage.setItem('TP_RETURN_URL', window.location.href);
+    window.location.href = '../tabela_preco/tabela_preco.html';
   });
 
   document.getElementById('btn-remover-selecionados')?.addEventListener('click', () => {
@@ -3276,7 +3272,7 @@ toggleToolbarByMode = function () {
         // Toggle Summary
         if (summary) {
           if (isCollapsed) {
-            const nome = document.getElementById('nome_tabela')?.value || 'Sem Nome';
+            const nome = document.getElementById('observacoes')?.value || 'Sem Observações';
             const cli = document.getElementById('cliente_nome')?.value || 'Sem Cliente';
             if (lblNome) lblNome.textContent = nome;
             if (lblCli) lblCli.textContent = cli;

@@ -110,7 +110,15 @@ document.addEventListener("DOMContentLoaded", () => {
   document.getElementById("btn-adicionar-selecionados")
     ?.addEventListener("click", enviarSelecionados);
   document.getElementById("btn-cancelar")
-    ?.addEventListener("click", () => window.location.href = 'criacao_tabela_preco.html');
+    ?.addEventListener("click", () => {
+      const returnUrl = sessionStorage.getItem('TP_RETURN_URL');
+      if (returnUrl) {
+        sessionStorage.removeItem('TP_RETURN_URL');
+        window.location.href = returnUrl;
+      } else {
+        window.location.href = 'criacao_tabela_preco.html';
+      }
+    });
 
   // FAB Seleção Massiva
   document.getElementById("btn-selecionar-todos-massivo")
@@ -523,7 +531,13 @@ async function enviarSelecionados() {
   sendBufferBackToParent(selecionados);
 
   // volta para o pai
-  window.location.href = 'criacao_tabela_preco.html';
+  const returnUrl = sessionStorage.getItem('TP_RETURN_URL');
+  if (returnUrl) {
+    sessionStorage.removeItem('TP_RETURN_URL');
+    window.location.href = returnUrl;
+  } else {
+    window.location.href = 'criacao_tabela_preco.html';
+  }
 }
 
 function carregarPreSelecionadosDaSessao() {
