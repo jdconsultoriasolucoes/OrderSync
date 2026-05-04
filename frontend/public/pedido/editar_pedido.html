@@ -54,7 +54,7 @@
                         <line x1="9" y1="21" x2="9" y2="9"></line>
                     </svg> Dashboards
                 </a></li>
-            <li><a href="/tabela_preco/criacao_tabela_preco.html" class="active">
+            <li><a href="/tabela_preco/criacao_tabela_preco.html">
                     <svg class="os-nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                         <path d="M20.59 13.41l-7.17 7.17a2 2 0 0 1-2.83 0L2 12V2h10l8.59 8.59a2 2 0 0 1 0 2.82z"></path>
                         <line x1="7" y1="7" x2="7.01" y2="7"></line>
@@ -74,7 +74,7 @@
                         <path d="M16 3.13a4 4 0 0 1 0 7.75" />
                     </svg> Clientes
                 </a></li>
-            <li><a href="/pedido/pedido.html">
+            <li><a href="/pedido/pedido.html" class="active">
                     <svg class="os-nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                         <path d="M6 2L3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z" />
                     </svg> Consultar Pedidos
@@ -180,8 +180,8 @@
 
           <!-- Nome da Tabela (Second - right) -->
           <div class="os-form-group area-nome">
-            <label class="os-label" for="nome_tabela">Nome da Tabela</label>
-            <input id="nome_tabela" class="os-input" type="text" readonly placeholder="Ex.: Tabela Promocional Set/25" />
+            <label class="os-label" for="observacoes">Observações</label>
+            <input id="observacoes" class="os-input" type="text" placeholder="Observações internas..." />
           </div>
 
           <!-- Markup (Third, auto width - far right) -->
@@ -249,10 +249,8 @@
         Produtos selecionados</h2>
 
       <div class="toolbar desktop-only" id="toolbar-acoes">
-        <button id="btn-listar" class="os-btn os-btn-secondary">Listar Tabelas</button>
+        <button id="btn-listar" class="os-btn os-btn-secondary">Consultar Pedidos</button>
         <button id="btn-buscar" class="os-btn os-btn-primary">Buscar Produtos</button>
-        <button id="btn-editar" class="os-btn os-btn-secondary hidden">Editar</button>
-        <button id="btn-duplicar" class="os-btn os-btn-secondary hidden">Duplicar</button>
         <button id="btn-remover-selecionados" class="os-btn os-btn-danger">Remover selecionados</button>
         <button id="btn-salvar" class="os-btn os-btn-primary"
           style="background-color: var(--os-success); border-color: var(--os-success);">Salvar Pedido</button>
@@ -346,16 +344,12 @@
           <span id="mobile-total-valor">R$ 0,00</span>
         </div>
         <div class="mobile-toolbar-actions">
-          <button id="btn-mobile-list" class="btn-icon-mobile" title="Listar Tabelas" style="margin-right:auto"><i
+          <button id="btn-mobile-list" class="btn-icon-mobile" title="Consultar Pedidos" style="margin-right:auto"><i
               class="bi bi-list-task"></i></button>
 
           <!-- Actions Grouped -->
           <button id="btn-mobile-add" class="btn-icon-mobile hidden" title="Adicionar Produto"><i
               class="bi bi-plus-circle"></i></button>
-          <button id="btn-mobile-edit" class="btn-icon-mobile hidden" title="Editar"><i
-              class="bi bi-pencil"></i></button>
-          <button id="btn-mobile-dup" class="btn-icon-mobile hidden" title="Duplicar"><i
-              class="bi bi-files"></i></button>
           <button id="btn-mobile-save" class="btn-primary-mobile"><i class="bi bi-floppy"></i> Salvar</button>
 
           <!-- Cancel Moved to End -->

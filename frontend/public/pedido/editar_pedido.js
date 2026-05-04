@@ -2039,7 +2039,7 @@ async function salvarTabela() {
     return;
   }
 
-  const nome_tabela = document.getElementById('nome_tabela').value.trim();
+  const observacoes = document.getElementById('observacoes')?.value.trim() || '';
   const cliente = document.getElementById('cliente_nome').value.trim();
   const frete_kg = Number(document.getElementById('frete_kg').value || 0);
   const ramo_juridico = document.getElementById('ramo_juridico').value || null;
@@ -2141,8 +2141,7 @@ async function salvarTabela() {
   }
 
   const calcula_st = !!document.getElementById('iva_st_toggle')?.checked;
-  // Se codigo_cliente for nulo, mande null (não grave "Não cadastrado" string)
-  const payload = { nome_tabela, cliente, codigo_cliente, ramo_juridico, fornecedor: fornecedorHeader, calcula_st, produtos };
+  const payload = { observacoes, cliente, codigo_cliente, ramo_juridico, fornecedor: fornecedorHeader, calcula_st, produtos };
 
   // --- SAFETY CHECK FOR EMAIL ---
   // Se tem nome mas não tem código, o e-mail não vai funcionar.
@@ -2159,8 +2158,8 @@ async function salvarTabela() {
     }
   }
   try {
-    console.log("Payload enviando para salvarTabelaPreco:", JSON.stringify(payload, null, 2));
-    const resp = await salvarTabelaPreco(payload);
+    console.log("Payload enviando para salvarPedido:", JSON.stringify(payload, null, 2));
+    const resp = await salvarPedido(payload);
     return resp;
   } catch (e) {
     console.error(e);
@@ -2410,10 +2409,10 @@ async function onCancelar(e) {
   }
 }
 
-function goToListarTabelas() {
+function goToConsultarPedidos() {
   const ctx = getCtxId();
   clearPickerBridgeFor(ctx);
-  window.location.href = 'listar_tabelas.html';
+  window.location.href = 'pedido.html';
 }
 
 
@@ -2474,10 +2473,10 @@ async function carregarItens() {
   }
 
   try {
-    const r = await fetch(`${API_BASE}/pedidos/${currentTabelaId}/resumo`, { cache: 'no-store' });
+    const r = await fetch(`${API_BASE}/api/pedidos/${currentTabelaId}/resumo`, { cache: 'no-store' });
     if (!r.ok) {
       if (r.status === 404) {
-        console.warn("Tabela não encontrada no banco (404). Iniciando vazia.");
+        console.warn("Pedido não encontrado no banco (404). Iniciando vazio.");
         itens = [];
         renderTabela();
         return;
@@ -2488,7 +2487,7 @@ async function carregarItens() {
 
     // --- RESTORE HEADER FIELDS ---
     // Recupera os dados do cabeçalho que vieram do backend
-    const nomeEl = document.getElementById('nome_tabela');
+    const nomeEl = document.getElementById('observacoes');
     const cliEl = document.getElementById('cliente_nome');
     const codEl = document.getElementById('codigo_cliente');
     const ramoEl = document.getElementById('ramo_juridico');
@@ -2496,7 +2495,7 @@ async function carregarItens() {
     const validadeEl = document.getElementById('validade_tabela');
     const diasEl = document.getElementById('dias_restantes');
 
-    if (nomeEl) nomeEl.value = t.nome_tabela || '';
+    if (nomeEl) nomeEl.value = t.observacoes || '';
     if (cliEl) cliEl.value = t.cliente_nome || t.cliente || '';
     if (codEl) codEl.value = t.codigo_cliente || '';
     if (ramoEl) ramoEl.value = t.ramo_juridico || '';
@@ -2543,10 +2542,11 @@ document.addEventListener('DOMContentLoaded', () => {
 
   // Eventos globais
   setMode(MODE.NEW);
-  document.getElementById('btn-listar')?.addEventListener('click', () => { goToListarTabelas(); });
+  document.getElementById('btn-listar')?.addEventListener('click', () => { goToConsultarPedidos(); });
+  document.getElementById('btn-mobile-list')?.addEventListener('click', () => { goToConsultarPedidos(); });
 
   // Disparar validação do botão salvar ao digitar nos campos obrigatórios
-  ['nome_tabela', 'cliente_nome'].forEach(id => {
+  ['observacoes', 'cliente_nome'].forEach(id => {
     document.getElementById(id)?.addEventListener('input', () => {
       if (typeof refreshToolbarEnablement === 'function') refreshToolbarEnablement();
     });
@@ -2975,27 +2975,15 @@ document.addEventListener('change', handleFieldChange, true);
 // =========================================================
 // FUNÇÃO DE SALVAR UNIFICADA (CRIAÇÃO E EDIÇÃO)
 // =========================================================
-async function salvarTabelaPreco(payload) {
+async function salvarPedido(payload) {
   const token = localStorage.getItem("ordersync_token");
 
-  // A lógica de "Edição" depende se temos um ID de tabela carregado E se o modo é compatível (não DUP/NEW)
-  // Mas se tivermos ID e o usuário clicou em salvar, assumimos que é update daquele ID,
-  // exceto se mode for DUP (nesse caso ID é null).
-  const idParaSalvar = (currentMode !== MODE.DUP && currentMode !== MODE.NEW) ? currentTabelaId : null;
-  // Fallback: se window.currentTabelaId existir e não for DUP, usa ele.
-  // (Pode ocorrer se o modo visual não atualizou, mas temos ID no contexto)
-  const finalId = idParaSalvar || ((currentMode !== MODE.DUP && currentMode !== MODE.NEW) ? window.currentTabelaId : null);
-
-  let url, method;
-
-  if (finalId) {
-    // UPDATE
-    url = `${API_BASE}/pedidos/${finalId}`;
-    method = "PUT";
-  } else {
-    url = `${API_BASE}/pedidos/${currentTabelaId}`;
-    method = "PUT";
+  if (!currentTabelaId) {
+    throw new Error("ID do pedido não encontrado para atualização.");
   }
+
+  const url = `${API_BASE}/api/pedidos/${currentTabelaId}`;
+  const method = "PUT";
   
   // Convert payload to PedidoUpdateRequest
   let pedidoPayload = {
