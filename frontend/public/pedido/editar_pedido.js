@@ -1899,12 +1899,17 @@ async function salvarTabela() {
     return;
   }
 
-  const observacoes   = document.getElementById('observacoes')?.value.trim() || '';
-  const cliente       = document.getElementById('cliente_nome')?.value.trim() || '';
+  const elObs = document.getElementById('observacoes');
+  const elCli = document.getElementById('cliente_nome');
+  const elFrt = document.getElementById('frete_kg');
+  const elRam = document.getElementById('ramo_juridico');
+
+  const observacoes   = (elObs?.value || '').trim();
+  const cliente       = (elCli?.value || '').trim();
   const pedido_supra  = document.getElementById('pedido_supra')?.value.trim() || '';
   const nota_fiscal   = document.getElementById('nota_fiscal')?.value.trim() || '';
-  const frete_kg      = Number(document.getElementById('frete_kg')?.value || 0);
-  const ramo_juridico = document.getElementById('ramo_juridico')?.value || null;
+  const frete_kg      = Number(elFrt?.value || 0);
+  const ramo_juridico = elRam?.value || null;
 
   const produtos = Array.from(document.querySelectorAll('#tbody-itens tr'))
     .map(tr => {
@@ -2383,13 +2388,23 @@ async function carregarItens() {
               const stEl = document.getElementById('display-status-pedido');
               if (numPedEl) numPedEl.textContent = th.id_pedido || '—';
               if (stEl) {
-                stEl.textContent = th.status || '—';
+                const statusNormal = (th.status || '').trim().toUpperCase();
+                stEl.textContent = statusNormal || '—';
                 stEl.className = 'os-badge ' + (
-                  th.status === 'ORCAMENTO' ? 'os-badge-warning' :
-                  th.status === 'CONFIRMADO' ? 'os-badge-success' :
-                  th.status === 'CANCELADO' ? 'os-badge-danger' : 'os-badge-default'
+                  statusNormal === 'ORCAMENTO' ? 'os-badge-warning' :
+                  statusNormal === 'CONFIRMADO' ? 'os-badge-success' :
+                  statusNormal === 'CANCELADO' ? 'os-badge-danger' : 'os-badge-default'
                 );
+                
+                // Se o status não for ORCAMENTO, força modo VIEW para evitar erros de salvamento
+                if (statusNormal !== 'ORCAMENTO' && (currentMode === MODE.EDIT)) {
+                  console.warn("Pedido não é mais ORCAMENTO. Forçando modo VIEW.");
+                  setMode(MODE.VIEW);
+                  showOsModal({ title: 'Aviso', message: 'Este pedido não pode mais ser editado pois seu status foi alterado para ' + statusNormal + '.', type: 'alert' });
+                }
               }
+              // Restaura flag de frete global
+              window.usarValorComFrete = !!th.usar_valor_com_frete;
               const nomeEl = document.getElementById('observacoes');
               const cliEl2 = document.getElementById('cliente_nome');
               const codEl2 = document.getElementById('codigo_cliente');
@@ -2450,14 +2465,24 @@ async function carregarItens() {
     const statusPedidoEl = document.getElementById('display-status-pedido');
     if (numPedidoEl) numPedidoEl.textContent = t.id_pedido || '—';
     if (statusPedidoEl) {
-      statusPedidoEl.textContent = t.status || '—';
+      const statusNormal = (t.status || '').trim().toUpperCase();
+      statusPedidoEl.textContent = statusNormal || '—';
       // Aplica cor por status
       statusPedidoEl.className = 'os-badge ' + (
-        t.status === 'ORCAMENTO' ? 'os-badge-warning' :
-        t.status === 'CONFIRMADO' ? 'os-badge-success' :
-        t.status === 'CANCELADO' ? 'os-badge-danger' : 'os-badge-default'
+        statusNormal === 'ORCAMENTO' ? 'os-badge-warning' :
+        statusNormal === 'CONFIRMADO' ? 'os-badge-success' :
+        statusNormal === 'CANCELADO' ? 'os-badge-danger' : 'os-badge-default'
       );
+
+      // Se o status não for ORCAMENTO, força modo VIEW para evitar erros de salvamento
+      if (statusNormal !== 'ORCAMENTO' && (currentMode === MODE.EDIT)) {
+        console.warn("Pedido não é mais ORCAMENTO. Forçando modo VIEW.");
+        setMode(MODE.VIEW);
+        showOsModal({ title: 'Aviso', message: 'Este pedido não pode mais ser editado pois seu status foi alterado para ' + statusNormal + '.', type: 'alert' });
+      }
     }
+    // Restaura flag de frete global
+    window.usarValorComFrete = !!t.usar_valor_com_frete;
 
     // Frete/KG: leitura exata do campo frete_kg do banco, sem cálculo
     if (freteEl) {

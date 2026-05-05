@@ -73,6 +73,7 @@ class PedidoResumo(BaseModel):
     validade_ate: Optional[str] = None
     validade_dias: Optional[int] = None
     usar_valor_com_frete: bool
+    frete_kg: Optional[float] = 0.0
     peso_total_kg: float
     frete_total: float
     total_pedido: float
