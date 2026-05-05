@@ -279,6 +279,8 @@ function preparePickerBridgeBeforeNavigate() {
 
   // Salva snapshot do cabeçalho para restaurar ao retornar
   const headerSnap = {
+    id_pedido:      document.getElementById('display-num-pedido')?.textContent || '',
+    status:         document.getElementById('display-status-pedido')?.textContent || '',
     frete_kg:       document.getElementById('frete_kg')?.value || '0',
     cliente_nome:   document.getElementById('cliente_nome')?.value || '',
     codigo_cliente: document.getElementById('codigo_cliente')?.value || '',
@@ -2005,7 +2007,10 @@ async function salvarTabela() {
   const usar_valor_com_frete = !!(window.usarValorComFrete ?? true);
 
   const payload = { 
-    observacoes, cliente, codigo_cliente, ramo_juridico, 
+    observacoes: observacoes || '', 
+    cliente: cliente || '', 
+    codigo_cliente, 
+    ramo_juridico, 
     pedido_supra, nota_fiscal,
     fornecedor: fornecedorHeader, calcula_st, 
     frete_kg, usar_valor_com_frete,
@@ -2345,6 +2350,19 @@ async function carregarItens() {
             if (supraEl && h.pedido_supra) supraEl.value = h.pedido_supra;
             const nfEl = document.getElementById('nota_fiscal');
             if (nfEl && h.nota_fiscal) nfEl.value = h.nota_fiscal;
+            
+            const numPedEl = document.getElementById('display-num-pedido');
+            const stEl = document.getElementById('display-status-pedido');
+            if (numPedEl && h.id_pedido) numPedEl.textContent = h.id_pedido;
+            if (stEl && h.status) {
+              stEl.textContent = h.status;
+              stEl.className = 'os-badge ' + (
+                h.status === 'ORCAMENTO' ? 'os-badge-warning' :
+                h.status === 'CONFIRMADO' ? 'os-badge-success' :
+                h.status === 'CANCELADO' ? 'os-badge-danger' : 'os-badge-default'
+              );
+            }
+
             const planoEl = document.getElementById('plano_pagamento');
             if (planoEl && h.plano_pagamento) { planoEl.value = h.plano_pagamento; atualizarPillTaxa?.(); }
             const descEl = document.getElementById('desconto_global');
