@@ -533,7 +533,8 @@ function mapBackendItemToFrontend(p, t) {
     codigo_tabela: String(p.codigo || '').trim(),
     descricao: p.nome || '',
     embalagem: p.embalagem || '',
-    peso_liquido: Number(p.peso_liquido_unit || 0),
+    // Fallback chain: tenta todas as variantes que o backend pode retornar
+    peso_liquido: Number(p.peso_liquido_unit || p.peso_liquido || p.peso_liq || p.peso || 0),
     valor: Number(p.preco_unit || 0),
     preco_unit_frt: Number(p.preco_unit_frt || p.preco_unit || 0),
     desconto: 0,
@@ -544,7 +545,7 @@ function mapBackendItemToFrontend(p, t) {
     __descricao_fator_label: p.tabela_comissao || null,
     __fator_codigo: codFator,
     fator_comissao: fracFator,
-    frete_kg: Number(t.frete_total || 0), // Este é o global do pedido
+    // NÃO mapear frete_kg aqui: o frete é lido do campo global do cabeçalho
     ipi: 0, icms_st: 0, iva_st: 0, grupo: '', departamento: '',
     markup: Number(p.markup || 0),
     quantidade: Number(p.quantidade || 0),
@@ -2326,17 +2327,17 @@ async function carregarItens() {
     if (document.getElementById('pedido_supra')) document.getElementById('pedido_supra').value = t.pedido_supra || '';
     if (document.getElementById('nota_fiscal')) document.getElementById('nota_fiscal').value = t.nota_fiscal || '';
 
-    // Frete: agora vem direto do banco (campo frete_kg gravado ao salvar).
-    // Fallback: calcula a partir do frete_total / peso se o campo ainda não existir
-    // (para pedidos criados antes da migration).
+    // Frete/KG: vem do campo dedicado no banco.
+    // Fallback APENAS se frete_kg for nulo/zero E tivermos frete_total e peso.
     if (freteEl) {
-      if (t.frete_kg != null && Number(t.frete_kg) > 0) {
-        freteEl.value = Number(t.frete_kg).toFixed(4);
-      } else if (t.frete_total != null && t.peso_total_kg > 0) {
-        const fKg = Number(t.frete_total) / Number(t.peso_total_kg);
-        freteEl.value = fKg.toFixed(4);
+      const fKgBanco = Number(t.frete_kg ?? 0);
+      if (fKgBanco > 0) {
+        freteEl.value = fKgBanco.toFixed(4);
+      } else if (Number(t.frete_total) > 0 && Number(t.peso_total_kg) > 0) {
+        const calculado = Number(t.frete_total) / Number(t.peso_total_kg);
+        freteEl.value = calculado.toFixed(4);
       } else {
-        freteEl.value = "0.00";
+        freteEl.value = '0.00';
       }
     }
 
@@ -2711,8 +2712,11 @@ document.addEventListener('DOMContentLoaded', () => {
       }
     }
 
-    // ✅ agora sim, com o modo correto, mescla o buffer do picker
-    if (!__IS_RELOAD) await mergeBufferFromPickerIfAny?.();
+    // ✅ mescla o buffer do picker SOMENTE se houver um buffer salvo
+    const ctxForBuffer = getCtxId();
+    if (!__IS_RELOAD && sessionStorage.getItem(`TP_BUFFER:${ctxForBuffer}`)) {
+      await mergeBufferFromPickerIfAny?.();
+    }
 
     // SE for modo Edição ou Duplicação, atualiza preços com o cadastro atual
     // (mas não bloqueia a UI totalmente, deixa rodar)
