@@ -190,6 +190,38 @@ def run_migrations():
                     db.rollback()
                     logger.error(f"Falha ao adicionar {col} em tb_cidade_supervisor: {e}")
 
+        # 14. Limpeza de Duplicados em tb_pedidos (Resolução de erro de salvamento)
+        try:
+            logger.info("Verificando duplicados em tb_pedidos...")
+            # Query para identificar se existem duplicados
+            dup_count = db.execute(text("SELECT COUNT(*) FROM (SELECT id_pedido FROM public.tb_pedidos GROUP BY id_pedido HAVING COUNT(*) > 1) sub")).scalar()
+            if dup_count and dup_count > 0:
+                logger.warning(f"Detectados {dup_count} IDs duplicados em tb_pedidos. Iniciando limpeza...")
+                # Mantém apenas a versão mais recente de cada ID
+                db.execute(text("""
+                    DELETE FROM public.tb_pedidos
+                    WHERE ctid NOT IN (
+                        SELECT MAX(ctid)
+                        FROM public.tb_pedidos
+                        GROUP BY id_pedido
+                    )
+                """))
+                db.commit()
+                logger.info("Limpeza de duplicados concluída com sucesso.")
+        except Exception as e:
+            db.rollback()
+            logger.error(f"Erro ao limpar duplicados em tb_pedidos: {e}")
+
+        # 15. Garantir Constraint Unique em id_pedido
+        try:
+            db.execute(text("ALTER TABLE public.tb_pedidos ADD CONSTRAINT unique_id_pedido UNIQUE (id_pedido)"))
+            db.commit()
+            logger.info("Constraint UNIQUE adicionada em tb_pedidos.id_pedido.")
+        except Exception:
+            db.rollback()
+            # Se já existir, ignoramos
+            pass
+
     logger.info("Migrações concluídas.")
 
     # 10. CadastroCliente: elaboracao_gerente_insumos, elaboracao_gerente_pet
