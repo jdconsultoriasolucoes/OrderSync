@@ -1866,8 +1866,8 @@ async function salvarTabela() {
     return;
   }
 
-  const observacoes = document.getElementById('observacoes')?.value.trim() || '';
-  const cliente = document.getElementById('cliente_nome').value.trim();
+  const pedido_supra = document.getElementById('pedido_supra')?.value.trim() || '';
+  const nota_fiscal = document.getElementById('nota_fiscal')?.value.trim() || '';
   const frete_kg = Number(document.getElementById('frete_kg').value || 0);
   const ramo_juridico = document.getElementById('ramo_juridico').value || null;
 
@@ -1968,11 +1968,12 @@ async function salvarTabela() {
   }
 
   const calcula_st = !!document.getElementById('iva_st_toggle')?.checked;
-  const frete_kg = Number(document.getElementById('frete_kg')?.value || 0);
+  // frete_kg já foi declarado acima no início da função
   const usar_valor_com_frete = !!(window.usarValorComFrete ?? true);
 
   const payload = { 
     observacoes, cliente, codigo_cliente, ramo_juridico, 
+    pedido_supra, nota_fiscal,
     fornecedor: fornecedorHeader, calcula_st, 
     frete_kg, usar_valor_com_frete,
     produtos 
@@ -2132,6 +2133,8 @@ async function onCancelar(e) {
           document.getElementById('cliente_nome').value = t.cliente_nome || t.cliente || '';
           document.getElementById('codigo_cliente').value = t.codigo_cliente || '';
           document.getElementById('ramo_juridico').value = t.ramo_juridico || '';
+          if (document.getElementById('pedido_supra')) document.getElementById('pedido_supra').value = t.pedido_supra || '';
+          if (document.getElementById('nota_fiscal')) document.getElementById('nota_fiscal').value = t.nota_fiscal || '';
 
           // RESTORE GLOBAL FIELDS
           const first = (Array.isArray(t.produtos) && t.produtos.length) ? t.produtos[0] : null;
@@ -2328,6 +2331,8 @@ async function carregarItens() {
     if (cliEl) cliEl.value = t.cliente_nome || t.cliente || '';
     if (codEl) codEl.value = t.codigo_cliente || '';
     if (ramoEl) ramoEl.value = t.ramo_juridico || '';
+    if (document.getElementById('pedido_supra')) document.getElementById('pedido_supra').value = t.pedido_supra || '';
+    if (document.getElementById('nota_fiscal')) document.getElementById('nota_fiscal').value = t.nota_fiscal || '';
 
     // Frete: agora vem direto do banco (campo frete_kg gravado ao salvar).
     // Fallback: calcula a partir do frete_total / peso se o campo ainda não existir

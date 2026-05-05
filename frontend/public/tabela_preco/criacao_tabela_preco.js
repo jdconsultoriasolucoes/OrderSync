@@ -1084,9 +1084,10 @@ async function carregarItens() {
     }
   }
   if (id) {
-    const r = await fetch(`${API_BASE}/tabela_preco/${id}`);
-    if (r.ok) {
-      const t = await r.json();
+    try {
+      const r = await fetch(`${API_BASE}/tabela_preco/${id}`);
+      if (r.ok) {
+        const t = await r.json();
       document.getElementById('nome_tabela').value = t.nome_tabela || '';
       document.getElementById('cliente_nome').value = t.cliente_nome || t.cliente || '';
       document.getElementById('ramo_juridico').value = t.ramo_juridico || '';
@@ -1254,6 +1255,13 @@ async function carregarItens() {
         setMode('view');
       }
       return;
+      } else {
+        console.warn(`Erro ao carregar tabela: status ${r.status}`);
+        showOsModal({ title: 'Aviso', message: `Não foi possível carregar a tabela (ID: ${id}). Código: ${r.status}`, type: 'alert' });
+      }
+    } catch (e) {
+      console.error("Erro no fetch carregarItens:", e);
+      showOsModal({ title: 'Erro de Conexão', message: "Ocorreu um erro ao tentar buscar os dados da tabela. Verifique sua conexão ou extensões do navegador.", type: 'alert' });
     }
   }
 
