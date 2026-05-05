@@ -2416,12 +2416,9 @@ async function carregarItens() {
                 document.getElementById('pedido_supra').value = th.pedido_supra || '';
               if (document.getElementById('nota_fiscal') && !document.getElementById('nota_fiscal').value)
                 document.getElementById('nota_fiscal').value = th.nota_fiscal || '';
-              
-              const freteEl = document.getElementById('frete_kg');
-              if (freteEl) {
-                const fKg = (th.frete_kg !== null && th.frete_kg !== undefined) ? Number(th.frete_kg) : 0;
-                freteEl.value = fKg > 0 ? fKg.toFixed(2) : '0.00';
-              }
+            }
+          } catch(eh) { console.warn('Falha ao restaurar cabeçalho do banco:', eh); }
+        }
         return;
       }
     } catch (e) { console.warn("Erro ao ler PED_ATUAL", e); }
