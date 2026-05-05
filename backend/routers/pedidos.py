@@ -354,8 +354,9 @@ def atualizar_pedido(
     if not pedido:
         raise HTTPException(status_code=404, detail="Pedido não encontrado")
 
-    # 2. Verifica se o status permite edição
-    if str(pedido.status).strip().upper() != "ORCAMENTO":
+    # 2. Verifica se o status permite edição (Aceita 'ORCAMENTO' ou 'ORÇAMENTO')
+    status_atual = str(pedido.status).strip().upper()
+    if status_atual not in ["ORCAMENTO", "ORÇAMENTO"]:
         raise HTTPException(status_code=400, detail="Apenas pedidos com status 'Orçamento' podem ser editados.")
 
     # 3. Recalcular os totais

@@ -2382,23 +2382,24 @@ async function carregarItens() {
               const freteEl = document.getElementById('frete_kg');
               if (freteEl) {
                 const fKg = (th.frete_kg !== null && th.frete_kg !== undefined) ? Number(th.frete_kg) : 0;
-                freteEl.value = fKg > 0 ? fKg.toFixed(4) : '0.00';
+                freteEl.value = fKg > 0 ? fKg.toFixed(2) : '0.00';
               }
               const numPedEl = document.getElementById('display-num-pedido');
               const stEl = document.getElementById('display-status-pedido');
               if (numPedEl) numPedEl.textContent = th.id_pedido || '—';
               if (stEl) {
                 const statusNormal = (th.status || '').trim().toUpperCase();
+                const isOrcamento = statusNormal === 'ORCAMENTO' || statusNormal === 'ORÇAMENTO';
                 stEl.textContent = statusNormal || '—';
                 stEl.className = 'os-badge ' + (
-                  statusNormal === 'ORCAMENTO' ? 'os-badge-warning' :
+                  isOrcamento ? 'os-badge-warning' :
                   statusNormal === 'CONFIRMADO' ? 'os-badge-success' :
                   statusNormal === 'CANCELADO' ? 'os-badge-danger' : 'os-badge-default'
                 );
                 
                 // Se o status não for ORCAMENTO, força modo VIEW para evitar erros de salvamento
-                if (statusNormal !== 'ORCAMENTO' && (currentMode === MODE.EDIT)) {
-                  console.warn("Pedido não é mais ORCAMENTO. Forçando modo VIEW.");
+                if (!isOrcamento && (currentMode === MODE.EDIT)) {
+                  console.warn("Pedido não é mais ORÇAMENTO. Forçando modo VIEW.");
                   setMode(MODE.VIEW);
                   showOsModal({ title: 'Aviso', message: 'Este pedido não pode mais ser editado pois seu status foi alterado para ' + statusNormal + '.', type: 'alert' });
                 }
@@ -2415,9 +2416,12 @@ async function carregarItens() {
                 document.getElementById('pedido_supra').value = th.pedido_supra || '';
               if (document.getElementById('nota_fiscal') && !document.getElementById('nota_fiscal').value)
                 document.getElementById('nota_fiscal').value = th.nota_fiscal || '';
-            }
-          } catch(eh) { console.warn('Falha ao restaurar cabeçalho do banco:', eh); }
-        }
+              
+              const freteEl = document.getElementById('frete_kg');
+              if (freteEl) {
+                const fKg = (th.frete_kg !== null && th.frete_kg !== undefined) ? Number(th.frete_kg) : 0;
+                freteEl.value = fKg > 0 ? fKg.toFixed(2) : '0.00';
+              }
         return;
       }
     } catch (e) { console.warn("Erro ao ler PED_ATUAL", e); }
@@ -2466,17 +2470,18 @@ async function carregarItens() {
     if (numPedidoEl) numPedidoEl.textContent = t.id_pedido || '—';
     if (statusPedidoEl) {
       const statusNormal = (t.status || '').trim().toUpperCase();
+      const isOrcamento = statusNormal === 'ORCAMENTO' || statusNormal === 'ORÇAMENTO';
       statusPedidoEl.textContent = statusNormal || '—';
       // Aplica cor por status
       statusPedidoEl.className = 'os-badge ' + (
-        statusNormal === 'ORCAMENTO' ? 'os-badge-warning' :
+        isOrcamento ? 'os-badge-warning' :
         statusNormal === 'CONFIRMADO' ? 'os-badge-success' :
         statusNormal === 'CANCELADO' ? 'os-badge-danger' : 'os-badge-default'
       );
 
       // Se o status não for ORCAMENTO, força modo VIEW para evitar erros de salvamento
-      if (statusNormal !== 'ORCAMENTO' && (currentMode === MODE.EDIT)) {
-        console.warn("Pedido não é mais ORCAMENTO. Forçando modo VIEW.");
+      if (!isOrcamento && (currentMode === MODE.EDIT)) {
+        console.warn("Pedido não é mais ORÇAMENTO. Forçando modo VIEW.");
         setMode(MODE.VIEW);
         showOsModal({ title: 'Aviso', message: 'Este pedido não pode mais ser editado pois seu status foi alterado para ' + statusNormal + '.', type: 'alert' });
       }
@@ -2489,7 +2494,7 @@ async function carregarItens() {
       const fKgBanco = (t.frete_kg !== null && t.frete_kg !== undefined)
         ? Number(t.frete_kg)
         : 0;
-      freteEl.value = fKgBanco > 0 ? fKgBanco.toFixed(4) : '0.00';
+      freteEl.value = fKgBanco > 0 ? fKgBanco.toFixed(2) : '0.00';
     }
 
     // Configurações globais (IVA, Markup) se disponíveis no objeto T
