@@ -1124,8 +1124,9 @@ function criarLinha(item, idx) {
     tdDesc.textContent = item.descricao || '';
   }
 
-  const tdEmb = document.createElement('td'); tdEmb.textContent = item.embalagem || '';
-  const tdPeso = document.createElement('td'); tdPeso.className = 'num'; tdPeso.textContent = fmt4(item.peso_liquido || 0);
+  const tdEmb = document.createElement('td'); tdEmb.className = 'col-emb'; tdEmb.textContent = item.embalagem || '';
+  const tdGrupo = document.createElement('td'); tdGrupo.className = 'col-grupo'; tdGrupo.textContent = [item.grupo, item.departamento].filter(Boolean).join(' / ');
+  const tdPeso = document.createElement('td'); tdPeso.className = 'num col-peso'; tdPeso.textContent = fmt4(item.peso_liquido || 0);
   const tdValor = document.createElement('td'); tdValor.className = 'num col-valor'; tdValor.textContent = fmtMoney(item.valor || 0);
 
   // QTD
@@ -1290,9 +1291,8 @@ function criarLinha(item, idx) {
   const tdIcmsReter$ = document.createElement('td'); tdIcmsReter$.className = 'num col-icms-st-reter'; tdIcmsReter$.textContent = '0,00';
 
 
-  const tdGrupo = document.createElement('td'); tdGrupo.textContent = [item.grupo, item.departamento].filter(Boolean).join(' / ');
-  const tdFinal = document.createElement('td'); tdFinal.className = 'num col-total'; tdFinal.textContent = fmtMoney(item.valor || 0); tr.appendChild(tdFinal);
-  const tdTotalSemFrete = document.createElement('td'); tdTotalSemFrete.className = 'num col-total-sem-frete'; tdTotalSemFrete.textContent = '0,00'; tr.appendChild(tdTotalSemFrete);
+  const tdFinal = document.createElement('td'); tdFinal.className = 'num col-total'; tdFinal.textContent = fmtMoney(item.valor || 0);
+  const tdTotalSemFrete = document.createElement('td'); tdTotalSemFrete.className = 'num col-total-sem-frete'; tdTotalSemFrete.textContent = '0,00';
 
   tr.append(
     tdSel, tdCod, tdDesc, tdEmb, tdGrupo, tdPeso, tdValor,
