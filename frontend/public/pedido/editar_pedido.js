@@ -136,8 +136,8 @@ const RequiredValidator = (() => {
   const REQUIRED_FIELDS = {
     '#observacoes': 'Informe as observações do pedido.',
     '#cliente_nome': 'Informe/selecione o cliente.',
-    '#tbody-itens tr td:nth-child(10) select': 'Selecione a classificação para todos os itens.',
-    '#tbody-itens tr td:nth-child(12) select': 'Selecione a condição de pagamento para todos os itens.'
+    '.col-fator-select select': 'Selecione a classificação para todos os itens.',
+    '.col-cond-select select': 'Selecione a condição de pagamento para todos os itens.'
   };
 
   function check(config = REQUIRED_FIELDS, root = document) {
@@ -304,8 +304,11 @@ async function mergeBufferFromPickerIfAny() {
     const condCode = document.getElementById('plano_pagamento')?.value || '';
     const fatorGlobal = (descCode && mapaDescontos[descCode] != null) ? Number(mapaDescontos[descCode]) : null;
 
-    const map = new Map((itens || []).map(x => [x.codigo_tabela, x]));
+    const map = new Map((itens || []).map(x => [String(x.codigo_tabela || '').trim(), x]));
     for (const p of recebidos) {
+      const key = String(p.codigo_tabela || '').trim();
+      if (!key) continue;
+
       // 1) Apply Markup
       if (mkGlobal > 0) {
         p.markup = mkGlobal;
@@ -323,7 +326,7 @@ async function mergeBufferFromPickerIfAny() {
         p.plano_pagamento = condCode;
       }
 
-      map.set(p.codigo_tabela, { ...(map.get(p.codigo_tabela) || {}), ...p });
+      map.set(key, { ...(map.get(key) || {}), ...p });
     }
     itens = Array.from(map.values());
     renderTabela();
@@ -497,7 +500,7 @@ async function atualizarPrecosAtuais() {
   // Atualiza a coluna de valor na grade (7ª coluna) e recalcula totais
   const rows = Array.from(document.querySelectorAll("#tbody-itens tr"));
   rows.forEach((tr, i) => {
-    const tdValor = tr.querySelector("td:nth-child(7)");
+    const tdValor = tr.querySelector(".num.col-valor"); // Ajuste conforme classe se existir ou seletor robusto
     if (!tdValor) return;
     const v = itens[i] ? (itens[i].valor || 0) : 0;
     tdValor.textContent = fmtMoney(v);
@@ -527,7 +530,7 @@ function mapBackendItemToFrontend(p, t) {
   const fracFator = (mapaDescontos && mapaDescontos[codFator] != null) ? Number(mapaDescontos[codFator]) : 0;
 
   return {
-    codigo_tabela: p.codigo || '',
+    codigo_tabela: String(p.codigo || '').trim(),
     descricao: p.nome || '',
     embalagem: p.embalagem || '',
     peso_liquido: Number(p.peso_liquido_unit || 0),
@@ -1108,7 +1111,9 @@ function criarLinha(item, idx) {
   const chk = document.createElement('input'); chk.type = 'checkbox'; chk.className = 'chk-linha';
   tdSel.appendChild(chk);
 
-  const tdCod = document.createElement('td'); tdCod.textContent = item.codigo_tabela || '';
+  const tdCod = document.createElement('td'); 
+  tdCod.className = 'col-codigo';
+  tdCod.textContent = (item.codigo_tabela || '').trim();
   const tdDesc = document.createElement('td');
 
   if (item.status_atual && item.status_atual !== 'ATIVO') {
@@ -1121,7 +1126,7 @@ function criarLinha(item, idx) {
 
   const tdEmb = document.createElement('td'); tdEmb.textContent = item.embalagem || '';
   const tdPeso = document.createElement('td'); tdPeso.className = 'num'; tdPeso.textContent = fmt4(item.peso_liquido || 0);
-  const tdValor = document.createElement('td'); tdValor.className = 'num'; tdValor.textContent = fmtMoney(item.valor || 0);
+  const tdValor = document.createElement('td'); tdValor.className = 'num col-valor'; tdValor.textContent = fmtMoney(item.valor || 0);
 
   // QTD
   const tdQtd = document.createElement('td');
@@ -1177,7 +1182,7 @@ function criarLinha(item, idx) {
     recalcLinha(tr);
 
     try {
-      const selsPct = Array.from(document.querySelectorAll('#tbody-itens tr td:nth-child(10) select'));
+      const selsPct = Array.from(document.querySelectorAll('.col-fator-select select'));
       const vals = new Set(selsPct.map(s => (s.value || '').trim()).filter(v => v !== ''));
       const hdr = document.getElementById('desconto_global');
       if (hdr && hdr.dataset.userEdited !== '1') {
@@ -1189,8 +1194,9 @@ function criarLinha(item, idx) {
   });
 
   tdPercent.appendChild(selPercent);
+  tdPercent.className = 'col-fator-select';
 
-  const tdDescAplic = document.createElement('td'); tdDescAplic.className = 'num'; tdDescAplic.textContent = '0,00';
+  const tdDescAplic = document.createElement('td'); tdDescAplic.className = 'num col-desc-aplicado'; tdDescAplic.textContent = '0,00';
 
   // Condição por linha (código) — NOVO
   const tdCondCod = document.createElement('td');
@@ -1202,22 +1208,6 @@ function criarLinha(item, idx) {
   Array.from(selHdr?.options || []).forEach(o => {
     if (o.value) selCond.appendChild(option(o.textContent, o.value));
   });
-
-  //só a descrição-----------
-  //  const selHdr = document.getElementById('plano_pagamento');
-  //  Array.from(selHdr?.options || []).forEach(o => {
-  //  if (!o.value) return; // pula "Selecione…"
-  //  const partes = (o.textContent || '').split(' - ');
-  //  const desc   = partes.slice(1).join(' - ') || o.textContent; // robusto
-  //  selCond.appendChild(option(desc, o.value));
-  //  });
-
-
-  //Só o codigo ----------
-  //Object.keys(mapaCondicoes).forEach(cod => {
-  //selCond.appendChild(option(cod, cod));
-  //});
-
 
   // 1) Fallback: Text matching or code extraction
   if (!selCond.value) {
@@ -1235,6 +1225,7 @@ function criarLinha(item, idx) {
   }
 
   tdCondCod.appendChild(selCond);
+  tdCondCod.className = 'col-cond-select';
 
   selCond.addEventListener('change', () => {
     itens[idx].plano_pagamento_cod = selCond.value || null; // Persist Code
@@ -1245,7 +1236,7 @@ function criarLinha(item, idx) {
     recalcLinha(tr);
 
     try {
-      const sels = Array.from(document.querySelectorAll('#tbody-itens tr td:nth-child(12) select'));
+      const sels = Array.from(document.querySelectorAll('.col-cond-select select'));
       const vals = new Set(sels.map(s => (s.value || '').trim()).filter(v => v !== ''));
       const hdr = document.getElementById('plano_pagamento');
       if (hdr && hdr.dataset.userEdited !== '1') {
@@ -1256,7 +1247,7 @@ function criarLinha(item, idx) {
     } catch { }
   });
 
-  const tdCondVal = document.createElement('td'); tdCondVal.className = 'num'; tdCondVal.textContent = '0,00';
+  const tdCondVal = document.createElement('td'); tdCondVal.className = 'num col-cond-valor'; tdCondVal.textContent = '0,00';
 
   // MARKUP Input
   const tdMarkup = document.createElement('td');
@@ -1288,7 +1279,7 @@ function criarLinha(item, idx) {
   tdSemFreteMarkup.className = 'num col-mk-derived';
   tdSemFreteMarkup.textContent = '0,00';
 
-  const tdFrete = document.createElement('td'); tdFrete.className = 'num'; tdFrete.textContent = '0,00';
+  const tdFrete = document.createElement('td'); tdFrete.className = 'num col-frete'; tdFrete.textContent = '0,00';
 
 
   // IPI e IVA_ST (%) — Inicializar com o valor salvo no item, se houver
@@ -1304,12 +1295,13 @@ function criarLinha(item, idx) {
   const tdTotalSemFrete = document.createElement('td'); tdTotalSemFrete.className = 'num col-total-sem-frete'; tdTotalSemFrete.textContent = '0,00'; tr.appendChild(tdTotalSemFrete);
 
   tr.append(
-    tdSel, tdCod, tdDesc, tdEmb, tdGrupo, tdPeso, tdValor, tdQtd, tdSub,
+    tdSel, tdCod, tdDesc, tdEmb, tdGrupo, tdPeso, tdValor,
     tdPercent, tdDescAplic,
     tdCondCod, tdCondVal,
     tdFrete, tdIpiR$,
     tdBaseStR$, tdIcmsProp$, tdIcmsCheio$, tdIcmsReter$,
     tdFinal, tdTotalSemFrete,
+    tdQtd, tdSub,
     tdMarkup, tdFinalMarkup, tdSemFreteMarkup
   );
   return tr;
@@ -1348,8 +1340,8 @@ function buildFiscalInputsFromRow(tr, fallbackItem = null, idx = -1) {
   let fatorPct = 0;
   let codCond = '';
   if (tr) {
-    fatorPct = Number(tr.querySelector('td:nth-child(10) select')?.value || 0);
-    codCond = tr.querySelector('td:nth-child(12) select')?.value || '';
+    fatorPct = Number(tr.querySelector('.col-fator-select select')?.value || 0);
+    codCond = tr.querySelector('.col-cond-select select')?.value || '';
   } else {
     // Mobile writes to item.__fator_codigo and item.plano_pagamento_cod
     const cPct = item.__fator_codigo || '';
@@ -1366,7 +1358,7 @@ function buildFiscalInputsFromRow(tr, fallbackItem = null, idx = -1) {
   const forcarST = !!document.getElementById('iva_st_toggle')?.checked;
 
   // Item básico
-  const produtoId = tr ? (tr.querySelector('td:nth-child(2)')?.textContent || '').trim() : (item.codigo || item.codigo_tabela || '').trim();
+  const produtoId = tr ? (tr.querySelector('.col-codigo')?.textContent || '').trim() : (item.codigo || item.codigo_tabela || '').trim();
   const tipo = String(item?.tipo || item?.grupo || item?.departamento || '').trim();
   const peso_bruto = Number(item?.peso_bruto || 0);
   const peso_liq = Number(item?.peso_liquido ?? item?.peso ?? item?.peso_kg ?? item?.pesoLiquido ?? 0);
@@ -1413,8 +1405,8 @@ function renderTabela() {
 
   // === Inferir cabeçalho a partir da grade (uniformidade) ===
   try {
-    const selsPct = Array.from(document.querySelectorAll('#tbody-itens tr td:nth-child(10) select'));
-    const selsCond = Array.from(document.querySelectorAll('#tbody-itens tr td:nth-child(12) select'));
+    const selsPct = Array.from(document.querySelectorAll('.col-fator-select select'));
+    const selsCond = Array.from(document.querySelectorAll('.col-cond-select select'));
 
     // Fator (%)
     const valsPct = new Set(selsPct.map(s => (s.value || '').trim()).filter(v => v !== ''));
@@ -1445,7 +1437,7 @@ async function recalcLinha(tr) {
   tr.dataset.reqId = String(nextId);
   const myId = String(nextId);
 
-  const selPct = tr.querySelector('td:nth-child(10) select');
+  const selPct = tr.querySelector('.col-fator-select select');
   let codePct = selPct ? (selPct.value || '') : '';
 
   // Fallback: se DOM vazio, tenta pegar do item
@@ -1457,7 +1449,7 @@ async function recalcLinha(tr) {
   const freteKg = Number(document.getElementById('frete_kg').value || 0);
 
   // Condição por linha → taxa
-  const selCond = tr.querySelector('td:nth-child(12) select');
+  const selCond = tr.querySelector('.col-cond-select select');
   let codCond = selCond ? selCond.value : '';
 
   // Fallback
@@ -1472,9 +1464,9 @@ async function recalcLinha(tr) {
     calcularLinha(item, fator, taxaCond, freteKg);
 
   // pinta colunas comerciais
-  tr.querySelector('td:nth-child(11)').textContent = fmtMoney(descontoValor); // Desc. aplicado
-  tr.querySelector('td:nth-child(13)').textContent = fmtMoney(acrescimoCond); // Cond. (R$)
-  tr.querySelector('td:nth-child(14)').textContent = fmtMoney(freteValor);    // Frete (R$)
+  tr.querySelector('.col-desc-aplicado').textContent = fmtMoney(descontoValor); // Desc. aplicado
+  tr.querySelector('.col-cond-valor').textContent = fmtMoney(acrescimoCond); // Cond. (R$)
+  tr.querySelector('.col-frete').textContent = fmtMoney(freteValor);    // Frete (R$)
 
 
 
@@ -1671,7 +1663,7 @@ async function recalcTudo() {
         // --- Lógica Comercial (Adapted to fallback to the item object for mobile) ---
         let codePct = '';
         if (tr) {
-          const selPct = tr.querySelector('td:nth-child(10) select');
+          const selPct = tr.querySelector('.col-fator-select select');
           if (selPct) codePct = selPct.value || '';
         }
         if (!codePct && item.__fator_codigo) codePct = item.__fator_codigo;
@@ -1683,7 +1675,7 @@ async function recalcTudo() {
 
         let codCond = '';
         if (tr) {
-          const selCond = tr.querySelector('td:nth-child(12) select');
+          const selCond = tr.querySelector('.col-cond-select select');
           if (selCond) codCond = selCond.value;
         }
         if (!codCond && item.plano_pagamento) {
@@ -1700,10 +1692,10 @@ async function recalcTudo() {
 
         // Atualiza DOM Comercial
         if (tr) {
-          const setTxt = (nth, v) => { const cel = tr.querySelector(`td:nth-child(${nth})`); if (cel) cel.textContent = fmtMoney(v); };
-          setTxt(9, descontoValor);
-          setTxt(11, acrescimoCond);
-          setTxt(12, freteValor);
+          const setTxt = (sel, v) => { const cel = tr.querySelector(sel); if (cel) cel.textContent = fmtMoney(v); };
+          setTxt('.col-desc-aplicado', descontoValor);
+          setTxt('.col-cond-valor', acrescimoCond);
+          setTxt('.col-frete', freteValor);
         }
 
         // Build Payload
@@ -1776,7 +1768,7 @@ async function aplicarFatorGlobal() {
 
   // Aplica em cada linha sem storm de eventos
   document.querySelectorAll('#tbody-itens tr').forEach(tr => {
-    const sel = tr.querySelector('td:nth-child(10) select');
+    const sel = tr.querySelector('.col-fator-select select');
     const idx = Number(tr.dataset.idx);
     if (!sel || isNaN(idx) || !itens[idx]) return;
 
@@ -1857,8 +1849,8 @@ async function salvarTabela() {
     const fieldNames = missing.map(m => {
       if (m.selector.includes('observacoes')) return '  Observações';
       if (m.selector.includes('cliente_nome')) return '• Cliente';
-      if (m.selector.includes('nth-child(10)')) return '• Classificação/Fator (algum item)';
-      if (m.selector.includes('nth-child(12)')) return '• Condição de pagamento (algum item)';
+      if (m.selector.includes('.col-fator-select')) return '• Classificação/Fator (algum item)';
+      if (m.selector.includes('.col-cond-select')) return '• Condição de pagamento (algum item)';
       return '• Campo obrigatório';
     }).join('<br>');
     await showOsModal({ title: 'Aviso', message: `Preencha os campos obrigatórios:<br><br>${fieldNames}`, type: 'alert' });
@@ -1876,12 +1868,12 @@ async function salvarTabela() {
       const idx = Number(tr.dataset.idx);
       const item = itens[idx];
 
-      const selPct = tr.querySelector('td:nth-child(10) select');
+      const selPct = tr.querySelector('.col-fator-select select');
       // On mobile, selects don't exist in the table — fall back to saved values in itens[]
       const codePct = selPct ? selPct.value : (item.__fator_codigo || '');
       const fator = (mapaDescontos[codePct] != null) ? Number(mapaDescontos[codePct]) : Number(item.fator_comissao || 0);
 
-      const selCond = tr.querySelector('td:nth-child(12) select');
+      const selCond = tr.querySelector('.col-cond-select select');
       // On mobile, fall back to plano_pagamento_cod saved by mobile card event handler
       const codCond = selCond ? (selCond.value || '') : (item.plano_pagamento_cod || String(item.plano_pagamento || '').split(' - ')[0].trim());
       const condLabel = selCond
@@ -2749,7 +2741,7 @@ document.getElementById('btn-aplicar-condicao-todos')?.addEventListener('click',
     txt = selHdr.options[selHdr.selectedIndex].textContent;
   }
   document.querySelectorAll('#tbody-itens tr').forEach(tr => {
-    const sel = tr.querySelector('td:nth-child(12) select');
+    const sel = tr.querySelector('.col-cond-select select');
     const idx = Number(tr.dataset.idx);
     if (!sel || isNaN(idx)) return;
     sel.value = cod;
@@ -3258,7 +3250,7 @@ function renderMobileCards() {
         // Sync back to hidden desktop row
         const desktopTr = document.querySelector(`#tbody-itens tr[data-idx="${idx}"]`);
         if (desktopTr) {
-          const selPct = desktopTr.querySelector('td:nth-child(10) select');
+          const selPct = desktopTr.querySelector('.col-fator-select select');
           if (selPct) selPct.value = code;
         }
 
@@ -3282,7 +3274,7 @@ function renderMobileCards() {
         // Sync back to hidden desktop row
         const desktopTr = document.querySelector(`#tbody-itens tr[data-idx="${idx}"]`);
         if (desktopTr) {
-          const selTrCond = desktopTr.querySelector('td:nth-child(12) select');
+          const selTrCond = desktopTr.querySelector('.col-cond-select select');
           if (selTrCond) selTrCond.value = val;
         }
 
