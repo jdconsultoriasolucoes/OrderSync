@@ -134,7 +134,6 @@ const RequiredValidator = (() => {
 
   // 👇 aqui é CONST interna (não use RequiredValidator.* aqui)
   const REQUIRED_FIELDS = {
-    '#observacoes': 'Informe as observações do pedido.',
     '#cliente_nome': 'Informe/selecione o cliente.',
     '.col-fator-select select': 'Selecione a classificação para todos os itens.',
     '.col-cond-select select': 'Selecione a condição de pagamento para todos os itens.'
@@ -277,6 +276,21 @@ function preparePickerBridgeBeforeNavigate() {
   try { sessionStorage.removeItem(`TP_BUFFER:${ctx}`); } catch { }
   sessionStorage.setItem(`PED_ATUAL:${ctx}`, JSON.stringify(itens || []));
   sessionStorage.setItem('TP_RETURN_URL', window.location.href);
+
+  // Salva snapshot do cabeçalho para restaurar ao retornar
+  const headerSnap = {
+    frete_kg:       document.getElementById('frete_kg')?.value || '0',
+    cliente_nome:   document.getElementById('cliente_nome')?.value || '',
+    codigo_cliente: document.getElementById('codigo_cliente')?.value || '',
+    ramo_juridico:  document.getElementById('ramo_juridico')?.value || '',
+    observacoes:    document.getElementById('observacoes')?.value || '',
+    pedido_supra:   document.getElementById('pedido_supra')?.value || '',
+    nota_fiscal:    document.getElementById('nota_fiscal')?.value || '',
+    plano_pagamento:document.getElementById('plano_pagamento')?.value || '',
+    desconto_global:document.getElementById('desconto_global')?.value || '',
+  };
+  sessionStorage.setItem(`PED_HEADER:${ctx}`, JSON.stringify(headerSnap));
+
   if (currentMode === MODE.DUP && sourceTabelaId) {
     sessionStorage.setItem('PED_SOURCE_ID', String(sourceTabelaId));
   }
@@ -1855,10 +1869,9 @@ async function salvarTabela() {
     return;
   }
 
-  // On mobile the desktop row selects don't exist — only validate header fields
   const isMobile = window.innerWidth <= 768;
   const fieldsToCheck = isMobile
-    ? { '#observacoes': 'Informe as observações do pedido.', '#cliente_nome': 'Informe/selecione o cliente.' }
+    ? { '#cliente_nome': 'Informe/selecione o cliente.' }
     : RequiredValidator.REQUIRED_FIELDS;
 
   const { ok, missing } = RequiredValidator.check(fieldsToCheck, document);
@@ -1884,10 +1897,12 @@ async function salvarTabela() {
     return;
   }
 
-  const pedido_supra = document.getElementById('pedido_supra')?.value.trim() || '';
-  const nota_fiscal = document.getElementById('nota_fiscal')?.value.trim() || '';
-  const frete_kg = Number(document.getElementById('frete_kg').value || 0);
-  const ramo_juridico = document.getElementById('ramo_juridico').value || null;
+  const observacoes   = document.getElementById('observacoes')?.value.trim() || '';
+  const cliente       = document.getElementById('cliente_nome')?.value.trim() || '';
+  const pedido_supra  = document.getElementById('pedido_supra')?.value.trim() || '';
+  const nota_fiscal   = document.getElementById('nota_fiscal')?.value.trim() || '';
+  const frete_kg      = Number(document.getElementById('frete_kg')?.value || 0);
+  const ramo_juridico = document.getElementById('ramo_juridico')?.value || null;
 
   const produtos = Array.from(document.querySelectorAll('#tbody-itens tr'))
     .map(tr => {
@@ -2310,8 +2325,33 @@ async function carregarItens() {
         console.log("carregarItens: Usando memória local (PED_ATUAL)", saved.length, "itens.");
         itens = saved;
         renderTabela();
-        // Ainda busca o cabeçalho do backend para restaurar frete_kg, status, cliente etc.
-        if (currentTabelaId) {
+
+        // Restaura o snapshot de cabeçalho salvo antes de ir para o picker
+        const headerRaw = sessionStorage.getItem(`PED_HEADER:${ctx}`);
+        if (headerRaw) {
+          try {
+            const h = JSON.parse(headerRaw);
+            const freteEl = document.getElementById('frete_kg');
+            if (freteEl) freteEl.value = h.frete_kg || '0';
+            const cliEl = document.getElementById('cliente_nome');
+            if (cliEl && h.cliente_nome) cliEl.value = h.cliente_nome;
+            const codEl = document.getElementById('codigo_cliente');
+            if (codEl && h.codigo_cliente) codEl.value = h.codigo_cliente;
+            const ramoEl = document.getElementById('ramo_juridico');
+            if (ramoEl && h.ramo_juridico) ramoEl.value = h.ramo_juridico;
+            const obsEl = document.getElementById('observacoes');
+            if (obsEl && h.observacoes) obsEl.value = h.observacoes;
+            const supraEl = document.getElementById('pedido_supra');
+            if (supraEl && h.pedido_supra) supraEl.value = h.pedido_supra;
+            const nfEl = document.getElementById('nota_fiscal');
+            if (nfEl && h.nota_fiscal) nfEl.value = h.nota_fiscal;
+            const planoEl = document.getElementById('plano_pagamento');
+            if (planoEl && h.plano_pagamento) { planoEl.value = h.plano_pagamento; atualizarPillTaxa?.(); }
+            const descEl = document.getElementById('desconto_global');
+            if (descEl && h.desconto_global) { descEl.value = h.desconto_global; atualizarPillDesconto?.(); }
+          } catch(eh) { console.warn('Falha ao restaurar header snapshot:', eh); }
+        } else if (currentTabelaId) {
+          // Fallback: busca do banco se não tiver snapshot
           try {
             const rh = await fetch(`${API_BASE}/api/pedidos/${currentTabelaId}/resumo`, { cache: 'no-store' });
             if (rh.ok) {
@@ -2332,13 +2372,12 @@ async function carregarItens() {
                   th.status === 'CANCELADO' ? 'os-badge-danger' : 'os-badge-default'
                 );
               }
-              // Restaura cliente, observações e campos extras se estiverem em branco
               const nomeEl = document.getElementById('observacoes');
-              const cliEl = document.getElementById('cliente_nome');
-              const codEl = document.getElementById('codigo_cliente');
+              const cliEl2 = document.getElementById('cliente_nome');
+              const codEl2 = document.getElementById('codigo_cliente');
               if (nomeEl && !nomeEl.value) nomeEl.value = th.observacoes || '';
-              if (cliEl && !cliEl.value) cliEl.value = th.cliente_nome || th.cliente || '';
-              if (codEl && !codEl.value) codEl.value = th.codigo_cliente || '';
+              if (cliEl2 && !cliEl2.value) cliEl2.value = th.cliente_nome || th.cliente || '';
+              if (codEl2 && !codEl2.value) codEl2.value = th.codigo_cliente || '';
               if (document.getElementById('pedido_supra') && !document.getElementById('pedido_supra').value)
                 document.getElementById('pedido_supra').value = th.pedido_supra || '';
               if (document.getElementById('nota_fiscal') && !document.getElementById('nota_fiscal').value)
