@@ -1539,6 +1539,17 @@ async function recalcLinha(tr) {
     const td = tr.querySelector('.col-total-sem-frete');
     if (td) td.textContent = fmtMoney(item.total_sem_frete || 0);
 
+    // --- SUBTOTAIS (valor unitário × quantidade) ---
+    const qtdL = Number(item.quantidade || 0);
+    const subFreteL    = Number((totalComercial * qtdL).toFixed(2));
+    const subSemFreteL = Number((item.total_sem_frete * qtdL).toFixed(2));
+    item.subtotal_com_f = subFreteL;
+    item.subtotal_sem_f = subSemFreteL;
+    const tdSFL  = tr.querySelector('.col-subtotal-frete');
+    const tdSSFL = tr.querySelector('.col-subtotal-semfrete');
+    if (tdSFL)  tdSFL.textContent  = fmtMoney(subFreteL);
+    if (tdSSFL) tdSSFL.textContent = fmtMoney(subSemFreteL);
+
   } catch (e) {
     if (tr.dataset.reqId === myId && tr.isConnected) {
       const msg = String(e && (e.name || e.message || e));
@@ -1633,7 +1644,20 @@ function applyFiscalToRow(tr, f, fallbackItem = null) {
   // Sync missing fields
   item.valor_liquido = f.total_linha; // Compatibilidade
   item._motivos_iva = f.motivos_iva_st;
-}
+
+  // --- SUBTOTAIS (valor unitário × quantidade) ---
+  const qtd = Number(item.quantidade || 0);
+  const subFrete    = Number((totalComercial * qtd).toFixed(2));
+  const subSemFrete = Number((Math.max(0, totalSemFrete) * qtd).toFixed(2));
+  item.subtotal_com_f  = subFrete;
+  item.subtotal_sem_f  = subSemFrete;
+  if (tr) {
+    const tdSF  = tr.querySelector('.col-subtotal-frete');
+    const tdSSF = tr.querySelector('.col-subtotal-semfrete');
+    if (tdSF)  tdSF.textContent  = fmtMoney(subFrete);
+    if (tdSSF) tdSSF.textContent = fmtMoney(subSemFrete);
+  }
+} // fim applyFiscalToRow
 
 async function recalcTudo() {
   if (__recalcRunning) {
@@ -2286,6 +2310,42 @@ async function carregarItens() {
         console.log("carregarItens: Usando memória local (PED_ATUAL)", saved.length, "itens.");
         itens = saved;
         renderTabela();
+        // Ainda busca o cabeçalho do backend para restaurar frete_kg, status, cliente etc.
+        if (currentTabelaId) {
+          try {
+            const rh = await fetch(`${API_BASE}/api/pedidos/${currentTabelaId}/resumo`, { cache: 'no-store' });
+            if (rh.ok) {
+              const th = await rh.json();
+              const freteEl = document.getElementById('frete_kg');
+              if (freteEl) {
+                const fKg = (th.frete_kg !== null && th.frete_kg !== undefined) ? Number(th.frete_kg) : 0;
+                freteEl.value = fKg > 0 ? fKg.toFixed(4) : '0.00';
+              }
+              const numPedEl = document.getElementById('display-num-pedido');
+              const stEl = document.getElementById('display-status-pedido');
+              if (numPedEl) numPedEl.textContent = th.id_pedido || '—';
+              if (stEl) {
+                stEl.textContent = th.status || '—';
+                stEl.className = 'os-badge ' + (
+                  th.status === 'ORCAMENTO' ? 'os-badge-warning' :
+                  th.status === 'CONFIRMADO' ? 'os-badge-success' :
+                  th.status === 'CANCELADO' ? 'os-badge-danger' : 'os-badge-default'
+                );
+              }
+              // Restaura cliente, observações e campos extras se estiverem em branco
+              const nomeEl = document.getElementById('observacoes');
+              const cliEl = document.getElementById('cliente_nome');
+              const codEl = document.getElementById('codigo_cliente');
+              if (nomeEl && !nomeEl.value) nomeEl.value = th.observacoes || '';
+              if (cliEl && !cliEl.value) cliEl.value = th.cliente_nome || th.cliente || '';
+              if (codEl && !codEl.value) codEl.value = th.codigo_cliente || '';
+              if (document.getElementById('pedido_supra') && !document.getElementById('pedido_supra').value)
+                document.getElementById('pedido_supra').value = th.pedido_supra || '';
+              if (document.getElementById('nota_fiscal') && !document.getElementById('nota_fiscal').value)
+                document.getElementById('nota_fiscal').value = th.nota_fiscal || '';
+            }
+          } catch(eh) { console.warn('Falha ao restaurar cabeçalho do banco:', eh); }
+        }
         return;
       }
     } catch (e) { console.warn("Erro ao ler PED_ATUAL", e); }
