@@ -145,6 +145,14 @@
 
         <div class="header-info-group">
           <div class="info-item">
+            <span class="info-label">Nº Pedido:</span>
+            <span id="display-num-pedido" style="font-weight:600; color: var(--os-primary);">—</span>
+          </div>
+          <div class="info-item">
+            <span class="info-label">Status:</span>
+            <span id="display-status-pedido" class="os-badge os-badge-default" style="font-size:0.75rem;">—</span>
+          </div>
+          <div class="info-item">
             <span class="info-label">Validade:</span>
             <input id="validade_tabela" class="os-input" type="text" readonly tabindex="-1"
               style="border: none; background: transparent; width: auto; max-width: 120px; padding: 0;" />
@@ -320,7 +328,8 @@
               <th class="right">Valor Final (R$)</th>
               <th class="right">Valor s/ Frete (R$)</th>
               <th class="right">Qtd</th>
-              <th class="right">Subtotal</th>
+              <th class="right col-subtotal-frete">Subtotal (c/ frete)</th>
+              <th class="right col-subtotal-semfrete">Subtotal (s/ frete)</th>
               <th class="right th-markup">
                 <label class="st-toggle-in-th" title="Mostrar/ocultar colunas de Markup">
                   <input id="markup-cols-toggle" type="checkbox" />

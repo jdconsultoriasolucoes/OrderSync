@@ -1144,16 +1144,17 @@ function criarLinha(item, idx) {
   });
   tdQtd.appendChild(inpQtd);
 
-  // Subtotal: exibe com ou sem frete conforme a opção do pedido
-  const tdSub = document.createElement('td');
-  tdSub.className = 'num col-subtotal';
-  const usarFrete = window.usarValorComFrete ?? true;
-  const subtotalVal = usarFrete
-    ? (item.subtotal_com_f || item.subtotal || 0)
-    : (item.subtotal_sem_f || item.total_sem_frete || item.subtotal || 0);
-  tdSub.textContent = fmtMoney(subtotalVal);
-  tr._tdSub = tdSub; // Store reference
+  // Subtotal c/ frete
+  const tdSubFrete = document.createElement('td');
+  tdSubFrete.className = 'num col-subtotal-frete';
+  tdSubFrete.textContent = fmtMoney(item.subtotal_com_f || item.subtotal || 0);
+  tr._tdSubFrete = tdSubFrete;
 
+  // Subtotal s/ frete
+  const tdSubSemFrete = document.createElement('td');
+  tdSubSemFrete.className = 'num col-subtotal-semfrete';
+  tdSubSemFrete.textContent = fmtMoney(item.subtotal_sem_f || 0);
+  tr._tdSubSemFrete = tdSubSemFrete;
 
   // % (Fator/Desconto) — COLUNA ÚNICA por linha (override quando alterado)
   const tdPercent = document.createElement('td');
@@ -1302,7 +1303,7 @@ function criarLinha(item, idx) {
     tdFrete, tdIpiR$,
     tdBaseStR$, tdIcmsProp$, tdIcmsCheio$, tdIcmsReter$,
     tdFinal, tdTotalSemFrete,
-    tdQtd, tdSub,
+    tdQtd, tdSubFrete, tdSubSemFrete,
     tdMarkup, tdFinalMarkup, tdSemFreteMarkup
   );
   return tr;
@@ -2327,18 +2328,26 @@ async function carregarItens() {
     if (document.getElementById('pedido_supra')) document.getElementById('pedido_supra').value = t.pedido_supra || '';
     if (document.getElementById('nota_fiscal')) document.getElementById('nota_fiscal').value = t.nota_fiscal || '';
 
-    // Frete/KG: vem do campo dedicado no banco.
-    // Fallback APENAS se frete_kg for nulo/zero E tivermos frete_total e peso.
+    // Nº Pedido e Status no cabeçalho
+    const numPedidoEl = document.getElementById('display-num-pedido');
+    const statusPedidoEl = document.getElementById('display-status-pedido');
+    if (numPedidoEl) numPedidoEl.textContent = t.id_pedido || '—';
+    if (statusPedidoEl) {
+      statusPedidoEl.textContent = t.status || '—';
+      // Aplica cor por status
+      statusPedidoEl.className = 'os-badge ' + (
+        t.status === 'ORCAMENTO' ? 'os-badge-warning' :
+        t.status === 'CONFIRMADO' ? 'os-badge-success' :
+        t.status === 'CANCELADO' ? 'os-badge-danger' : 'os-badge-default'
+      );
+    }
+
+    // Frete/KG: leitura exata do campo frete_kg do banco, sem cálculo
     if (freteEl) {
-      const fKgBanco = Number(t.frete_kg ?? 0);
-      if (fKgBanco > 0) {
-        freteEl.value = fKgBanco.toFixed(4);
-      } else if (Number(t.frete_total) > 0 && Number(t.peso_total_kg) > 0) {
-        const calculado = Number(t.frete_total) / Number(t.peso_total_kg);
-        freteEl.value = calculado.toFixed(4);
-      } else {
-        freteEl.value = '0.00';
-      }
+      const fKgBanco = (t.frete_kg !== null && t.frete_kg !== undefined)
+        ? Number(t.frete_kg)
+        : 0;
+      freteEl.value = fKgBanco > 0 ? fKgBanco.toFixed(4) : '0.00';
     }
 
     // Configurações globais (IVA, Markup) se disponíveis no objeto T
@@ -2350,8 +2359,17 @@ async function carregarItens() {
       // Vamos manter a lógica de 'enforceIvaLockByCliente' depois se necessário.
     }
 
-    // Map backend -> frontend
-    itens = (t.itens || t.produtos || []).map(p => mapBackendItemToFrontend(p, t));
+    // Map backend -> frontend e deduplica por codigo (remove duplicatas do banco)
+    const rawItens = (t.itens || t.produtos || []).map(p => mapBackendItemToFrontend(p, t));
+    const mapaItens = new Map();
+    for (const it of rawItens) {
+      const key = String(it.codigo_tabela || '').trim();
+      if (!key) continue;
+      if (!mapaItens.has(key)) mapaItens.set(key, it);
+      // Se o mesmo produto aparecer mais de uma vez, acumula a quantidade
+      else mapaItens.get(key).quantidade += it.quantidade || 0;
+    }
+    itens = Array.from(mapaItens.values());
 
     // Se for modo DUP, talvez queiramos reprocessar IDs?
     // mapBackendItemToFrontend já lida bem.
