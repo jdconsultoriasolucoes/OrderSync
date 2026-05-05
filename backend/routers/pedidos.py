@@ -55,6 +55,7 @@ class PedidoItemResumo(BaseModel):
     preco_unit_frt: Optional[float] = None
     subtotal_sem_f: Optional[float] = None
     subtotal_com_f: Optional[float] = None
+    manual_freight: Optional[bool] = False
     condicao_pagamento: Optional[str] = None
     tabela_comissao: Optional[str] = None
     peso_liquido_unit: Optional[float] = 0.0
@@ -118,6 +119,7 @@ class PedidoUpdateItem(BaseModel):
     preco_unit: Optional[float] = None
     preco_unit_com_frete: Optional[float] = None
     peso_kg: Optional[float] = None
+    manual_freight: Optional[bool] = False
 
 class PedidoUpdateRequest(BaseModel):
     usar_valor_com_frete: bool = True
@@ -393,12 +395,12 @@ def atualizar_pedido(
             id_pedido, codigo, nome, embalagem, peso_kg,
             condicao_pagamento, tabela_comissao,
             preco_unit, preco_unit_frt, quantidade,
-            subtotal_sem_f, subtotal_com_f
+            subtotal_sem_f, subtotal_com_f, manual_freight
         ) VALUES (
             :id_pedido, :codigo, :nome, :embalagem, :peso_kg,
             :condicao_pagamento, :tabela_comissao,
             :preco_unit, :preco_unit_frt, :quantidade,
-            :subtotal_sem_f, :subtotal_com_f
+            :subtotal_sem_f, :subtotal_com_f, :manual_freight
         )
     """)
 
@@ -420,6 +422,7 @@ def atualizar_pedido(
             "quantidade": qtd,
             "subtotal_sem_f": round(p_sem * qtd, 2),
             "subtotal_com_f": round(p_com * qtd, 2),
+            "manual_freight": bool(getattr(it, "manual_freight", False)),
         })
 
     # 7. Logar evento de edição (usando a tabela de status_event como log geral)

@@ -44,7 +44,21 @@ function showOsModal(options) {
     const footer = document.createElement('div');
     footer.className = 'os-modal-footer';
 
-    if (options.type === 'confirm') {
+    if (options.type === 'freight_choice') {
+      const btnSem = document.createElement('button');
+      btnSem.className = 'os-btn os-btn-secondary';
+      btnSem.textContent = 'Sem Frete';
+
+      const btnCom = document.createElement('button');
+      btnCom.className = 'os-btn os-btn-primary';
+      btnCom.textContent = 'Com Frete';
+
+      footer.appendChild(btnSem);
+      footer.appendChild(btnCom);
+
+      btnSem.onclick = () => { document.body.removeChild(backdrop); resolve('sem'); };
+      btnCom.onclick = () => { document.body.removeChild(backdrop); resolve('com'); };
+    } else if (options.type === 'confirm') {
       const btnCancel = document.createElement('button');
       btnCancel.className = 'os-btn os-btn-secondary';
       btnCancel.textContent = 'Cancelar';
@@ -68,7 +82,8 @@ function showOsModal(options) {
 
     header.querySelector('.os-modal-close').onclick = () => {
       document.body.removeChild(backdrop);
-      resolve(options.type === 'confirm' ? false : true);
+      if (options.type === 'freight_choice') resolve(null);
+      else resolve(options.type === 'confirm' ? false : true);
     };
 
     dialog.appendChild(header);
@@ -1298,7 +1313,68 @@ function criarLinha(item, idx) {
   tdSemFreteMarkup.className = 'num col-mk-derived';
   tdSemFreteMarkup.textContent = '0,00';
 
-  const tdFrete = document.createElement('td'); tdFrete.className = 'num col-frete'; tdFrete.textContent = '0,00';
+  const tdFrete = document.createElement('td');
+  tdFrete.className = 'num col-frete';
+  
+  const inpFrete = document.createElement('input');
+  inpFrete.type = 'text';
+  inpFrete.className = 'field-frete-manual num';
+  inpFrete.style.width = '60px';
+  inpFrete.style.display = 'inline-block';
+  // Calcula o frete unitário salvo (diferença entre total com frete e unitário simples)
+  const freteUnitarioSalvo = (item.preco_unit_frt && item.preco_unit) ? (item.preco_unit_frt - item.preco_unit) : 0;
+  inpFrete.value = item.manual_freight ? freteUnitarioSalvo.toFixed(2) : '';
+  inpFrete.placeholder = 'Auto';
+  
+  const lockIcon = document.createElement('span');
+  lockIcon.className = 'lock-icon';
+  lockIcon.style.marginLeft = '4px';
+  lockIcon.style.cursor = 'pointer';
+  lockIcon.innerHTML = item.manual_freight ? '🔒' : '🔓';
+  lockIcon.title = item.manual_freight ? 'Frete manual (travado)' : 'Frete automático';
+
+  inpFrete.addEventListener('input', (e) => {
+    let val = e.target.value.replace(',', '.');
+    if (val === '') {
+      item.manual_freight = false;
+      lockIcon.innerHTML = '🔓';
+      lockIcon.title = 'Frete automático';
+      recalcLinha(tr);
+    } else {
+      let num = parseFloat(val);
+      if (!isNaN(num)) {
+        item.manual_freight = true;
+        item._manualFreteVal = num; 
+        lockIcon.innerHTML = '🔒';
+        lockIcon.title = 'Frete manual (travado)';
+        recalcLinha(tr);
+      }
+    }
+  });
+
+  lockIcon.addEventListener('click', () => {
+    if (currentMode === MODE.VIEW) return;
+    if (item.manual_freight) {
+      item.manual_freight = false;
+      inpFrete.value = '';
+      lockIcon.innerHTML = '🔓';
+      lockIcon.title = 'Frete automático';
+      recalcLinha(tr);
+    } else {
+      item.manual_freight = true;
+      const fKg = Number(document.getElementById('frete_kg')?.value || 0);
+      const peso = Number(item.peso_liquido_unit ?? item.peso_kg ?? 0);
+      const currentVal = (fKg / 1000) * peso;
+      item._manualFreteVal = currentVal;
+      inpFrete.value = currentVal.toFixed(2);
+      lockIcon.innerHTML = '🔒';
+      lockIcon.title = 'Frete manual (travado)';
+      recalcLinha(tr);
+    }
+  });
+
+  tdFrete.appendChild(inpFrete);
+  tdFrete.appendChild(lockIcon);
 
 
   // IPI e IVA_ST (%) — Inicializar com o valor salvo no item, se houver
@@ -1478,13 +1554,31 @@ async function recalcLinha(tr) {
   const taxaCond = mapaCondicoes[codCond] ?? 0;
 
   // base comercial (sem imposto)
-  const { acrescimoCond, freteValor, descontoValor, precoBase, liquido } =
-    calcularLinha(item, fator, taxaCond, freteKg);
+  let calcRes = calcularLinha(item, fator, taxaCond, freteKg);
+  let { acrescimoCond, freteValor, descontoValor, precoBase, liquido } = calcRes;
+
+  // OVERRIDE MANUAL
+  if (item.manual_freight) {
+      // Se tiver valor digitado agora, usa ele. Senão usa o que veio do banco (calculado no criarLinha)
+      const inputVal = tr.querySelector('.field-frete-manual')?.value;
+      if (inputVal && inputVal !== '') {
+          freteValor = parseFloat(inputVal.replace(',', '.'));
+      } else if (item.preco_unit_frt && item.preco_unit) {
+          freteValor = item.preco_unit_frt - item.preco_unit;
+      }
+      item._manualFreteVal = freteValor;
+      precoBase = Number(item.valor || 0) + acrescimoCond - descontoValor + freteValor;
+  }
 
   // pinta colunas comerciais
   tr.querySelector('.col-desc-aplicado').textContent = fmtMoney(descontoValor); // Desc. aplicado
   tr.querySelector('.col-cond-valor').textContent = fmtMoney(acrescimoCond); // Cond. (R$)
-  tr.querySelector('.col-frete').textContent = fmtMoney(freteValor);    // Frete (R$)
+  
+  // Atualiza o input de frete se não for manual (para refletir o cálculo automático)
+  const inpF = tr.querySelector('.field-frete-manual');
+  if (inpF && !item.manual_freight) {
+      inpF.placeholder = freteValor.toFixed(2);
+  }
 
 
 
@@ -1959,6 +2053,7 @@ async function salvarTabela() {
         codigo_plano_pagamento: planoToSave,
 
         valor_frete_aplicado: Number(freteValor.toFixed(2)),
+        manual_freight: !!item.manual_freight,
         frete_kg: Number(frete_kg || 0),
         valor_frete: Number((item._totalComercial || 0).toFixed(2)),
         valor_s_frete: Number((item.total_sem_frete || 0).toFixed(2)),
@@ -2702,6 +2797,21 @@ document.addEventListener('DOMContentLoaded', () => {
 
         // Desabilita todos os botões de salvar
         btnsSalvar.forEach(b => b.disabled = true);
+        
+        // Pergunta se é com ou sem frete ANTES de salvar
+        const freightChoice = await showOsModal({
+            title: 'Opções de Frete',
+            message: 'Como este pedido deve ser gravado?',
+            type: 'freight_choice'
+        });
+
+        if (freightChoice === null) { // Cancelou no X
+            saving = false;
+            btnsSalvar.forEach(b => b.disabled = false);
+            return;
+        }
+
+        window.usarValorComFrete = (freightChoice === 'com');
 
         try {
           const resp = await salvarTabela(); // agora retorna JSON
@@ -2724,16 +2834,6 @@ document.addEventListener('DOMContentLoaded', () => {
           // Sucesso absoluto: limpa snapshot para não voltar sujeira se recarregar
           clearFullSnapshot();
 
-          // pergunta de decisão
-          const querEnviar = await showOsModal({
-            title: 'ordersync-y7kg.onrender.com diz',
-            message: `Deseja mandar o link do orçamento?`,
-            type: 'confirm'
-          });
-
-          // CAPTURA ESTADO ANTES DO RESET
-          const freteKgParaModal = Number(document.getElementById('frete_kg')?.value || 0);
-
           // RESET COMPLETO (VOLTAR A TELA ZERADA)
           currentTabelaId = '';
           sourceTabelaId = '';
@@ -2750,18 +2850,6 @@ document.addEventListener('DOMContentLoaded', () => {
           if (typeof setFormDisabled === 'function') setFormDisabled(false);
           if (typeof toggleToolbarByMode === 'function') toggleToolbarByMode();
           if (typeof refreshToolbarEnablement === 'function') refreshToolbarEnablement();
-
-          if (querEnviar) {
-            if (typeof window.__showGerarLinkModal === "function") {
-              window.__showGerarLinkModal({
-                tabelaId,
-                freteKg: freteKgParaModal, // Passa o frete capturado
-                pedidoClientePath: "/tabela_preco/pedido_cliente.html",
-              });
-            } else {
-              await showOsModal({ title: 'Erro', message: "Módulo de gerar link não carregado (../js/gerar_link_pedido.js).", type: 'alert' });
-            }
-          }
 
           // Se NÃO quiser enviar, já está resetado.
 
@@ -3031,7 +3119,8 @@ async function salvarPedido(payload) {
           quantidade: p.quantidade || 0,
           preco_unit: p.valor_produto || p.valor,
           preco_unit_com_frete: p.valor_final_markup || p.valor_final || p.valor_produto || p.valor,
-          peso_kg: p.peso_liquido
+          peso_kg: p.peso_liquido,
+          manual_freight: !!p.manual_freight
       }))
   };
 
