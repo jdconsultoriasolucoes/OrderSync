@@ -429,6 +429,7 @@ async function openResumo(id) {
   if (!r.ok) return;
 
   const p = await r.json();
+  console.log("[DEBUG] Dados recebidos para Resumo:", p);
   const el = document.getElementById("drawerContent");
   const modalidade = p.usar_valor_com_frete ? "ENTREGA" : "RETIRADA";
 

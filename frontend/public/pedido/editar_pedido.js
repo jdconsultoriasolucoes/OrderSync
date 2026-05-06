@@ -2045,6 +2045,7 @@ async function salvarTabela() {
         embalagem: item.embalagem || '',
         peso_liquido: Number(item.peso_liquido ?? 0),
         peso_bruto: Number(item.peso_bruto ?? 0),
+        quantidade: Number(item.quantidade || 0),
 
         valor_produto: Number(item.valor || 0),
         comissao_aplicada: Number(descontoValor.toFixed(2)),
