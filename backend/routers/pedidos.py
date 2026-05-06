@@ -385,10 +385,13 @@ def atualizar_pedido(
     pedido.nota_fiscal = body.nota_fiscal
     pedido.peso_total_kg = round(peso_total_kg, 3)
     pedido.frete_total = round(frete_total, 2)
-    # A base original de creation salvava o json dos itens no campo "itens", mas o model nao tinha?
-    # O model nao declara `itens`, mas o insert cru usou. Como SQLAlchemy model não tem, ignoramos o JSON cru no model e só atualizamos os outros campos
+    pedido.total_sem_frete = round(total_sem_frete, 2)
+    pedido.total_com_frete = round(total_com_frete, 2)
     pedido.total_pedido = round(total_pedido, 2)
     pedido.atualizado_em = datetime.now()
+    
+    db.add(pedido)
+    print(f"[DEBUG] Atualizando pedido {id_pedido}: Peso={pedido.peso_total_kg}, Frete={pedido.frete_total}, Total={pedido.total_pedido}")
 
     # 5. Deletar os itens antigos da tabela tb_pedidos_itens
     db.execute(text("DELETE FROM public.tb_pedidos_itens WHERE id_pedido = :id_pedido"), {"id_pedido": id_pedido})

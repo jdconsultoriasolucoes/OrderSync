@@ -546,6 +546,11 @@ function setFormDisabled(disabled) {
     // não travar o botão, só inputs/selects
     if (['BUTTON', 'A'].includes(el.tagName)) return;
     if (el.id === 'iva_st_toggle' && !disabled) return;
+    // Forçar frete_kg a seguir o modo atual, evitando bloqueios por scripts externos
+    if (el.id === 'frete_kg') {
+      el.disabled = (currentMode === 'view');
+      return;
+    }
     el.disabled = disabled;
   });
 
@@ -3128,6 +3133,7 @@ async function salvarPedido(payload) {
   };
 
 
+  console.log("[DEBUG] Enviando pedidoPayload para a API:", pedidoPayload);
   const r = await fetch(url, {
     method,
     headers: {
