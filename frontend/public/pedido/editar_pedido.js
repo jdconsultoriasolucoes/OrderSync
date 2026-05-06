@@ -2040,7 +2040,7 @@ async function salvarTabela() {
       }
       // objeto do item (NÃO coloque nome_tabela/cliente/fornecedor aqui)
       const produto = {
-        codigo_produto_supra: item.codigo_tabela,
+        codigo_produto_supra: item.codigo_tabela || item.codigo,
         descricao_produto: item.descricao,
         embalagem: item.embalagem || '',
         peso_liquido: Number(item.peso_liquido ?? 0),
@@ -3110,6 +3110,8 @@ async function salvarPedido(payload) {
       usar_valor_com_frete: payload.usar_valor_com_frete ?? true,
       observacoes: payload.observacoes || '',
       frete_kg: payload.frete_kg || 0,
+      pedido_supra: payload.pedido_supra || null,
+      nota_fiscal: payload.nota_fiscal || null,
       produtos: (payload.produtos || []).map(p => ({
           codigo: p.codigo_produto_supra || p.codigo,
           descricao: p.descricao_produto || p.descricao,

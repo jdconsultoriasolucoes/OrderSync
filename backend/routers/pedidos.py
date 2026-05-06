@@ -126,6 +126,8 @@ class PedidoUpdateRequest(BaseModel):
     produtos: List[PedidoUpdateItem]
     observacoes: Optional[str] = None
     frete_kg: Optional[float] = 0.0
+    pedido_supra: Optional[str] = None
+    nota_fiscal: Optional[str] = None
 
 # ---------- Routes ----------
 def to_iso_or_none(v):
@@ -379,6 +381,8 @@ def atualizar_pedido(
     pedido.usar_valor_com_frete = body.usar_valor_com_frete
     pedido.observacoes = body.observacoes
     pedido.frete_kg = round(body.frete_kg or 0, 4)
+    pedido.pedido_supra = body.pedido_supra
+    pedido.nota_fiscal = body.nota_fiscal
     pedido.peso_total_kg = round(peso_total_kg, 3)
     pedido.frete_total = round(frete_total, 2)
     # A base original de creation salvava o json dos itens no campo "itens", mas o model nao tinha?
