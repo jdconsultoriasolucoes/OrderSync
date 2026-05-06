@@ -2575,24 +2575,24 @@ async function carregarItens() {
     const numPedidoEl = document.getElementById('display-num-pedido');
     const statusPedidoEl = document.getElementById('display-status-pedido');
     if (numPedidoEl) numPedidoEl.textContent = t.id_pedido || '—';
-    if (statusPedidoEl) {
-      const statusNormal = (t.status || '').trim().toUpperCase();
-      const isOrcamento = statusNormal === 'ORCAMENTO' || statusNormal === 'ORÇAMENTO';
-      statusPedidoEl.textContent = statusNormal || '—';
-      // Aplica cor por status
-      statusPedidoEl.className = 'os-badge ' + (
-        isOrcamento ? 'os-badge-warning' :
-        statusNormal === 'CONFIRMADO' ? 'os-badge-success' :
-        statusNormal === 'CANCELADO' ? 'os-badge-danger' : 'os-badge-default'
-      );
-
-      // Se o status não for ORCAMENTO, força modo VIEW para evitar erros de salvamento
-      if (!isOrcamento && (currentMode === MODE.EDIT)) {
-        console.warn("Pedido não é mais ORÇAMENTO. Forçando modo VIEW.");
-        setMode(MODE.VIEW);
-        showOsModal({ title: 'Aviso', message: 'Este pedido não pode mais ser editado pois seu status foi alterado para ' + statusNormal + '.', type: 'alert' });
+      if (statusPedidoEl) {
+        const statusNormal = normalizeStatus(t.status);
+        const isOrcamento = statusNormal === 'ORCAMENTO';
+        statusPedidoEl.textContent = t.status || '—';
+        // Aplica cor por status
+        statusPedidoEl.className = 'os-badge ' + (
+          isOrcamento ? 'os-badge-warning' :
+          statusNormal === 'CONFIRMADO' ? 'os-badge-success' :
+          statusNormal === 'CANCELADO' ? 'os-badge-danger' : 'os-badge-default'
+        );
+  
+        // Se o status não for ORCAMENTO, força modo VIEW para evitar erros de salvamento
+        if (!isOrcamento && (currentMode === MODE.EDIT)) {
+          console.warn("Pedido não é mais ORÇAMENTO (Backend). Status real:", t.status, "Normalizado:", statusNormal);
+          setMode(MODE.VIEW);
+          showOsModal({ title: 'Aviso', message: 'Este pedido não pode mais ser editado pois seu status foi alterado para ' + (t.status || statusNormal) + '.', type: 'alert' });
+        }
       }
-    }
     // Restaura flag de frete global
     window.usarValorComFrete = !!t.usar_valor_com_frete;
 
@@ -3437,8 +3437,12 @@ function renderMobileCards() {
 
             <!-- Row 3: Frete (Full width) -->
             <div class="card-field" style="margin-bottom: 16px;">
-                 <label>Frete (R$)</label>
-                 <input type="text" class="mob-card-frete-val" value="${fmtMoney(freteVal)}" disabled style="background: #f8fafc;">
+                 <label>Frete Unitário (R$)</label>
+                 <div style="display: flex; gap: 8px; align-items: center;">
+                    <input type="text" class="mob-card-frete-val" value="${fmtMoney(freteVal)}" 
+                           ${markupDisabled ? 'disabled style="background: #f8fafc;"' : 'style="background: #fff;"'}>
+                    ${!markupDisabled ? `<span class="mob-lock-icon" style="cursor:pointer; font-size:1.2rem;">${item.manual_freight ? '🔒' : '🔓'}</span>` : ''}
+                 </div>
             </div>
 
             <!-- Row 4: Fiscal Details (Styled Block) -->
@@ -3554,6 +3558,49 @@ function renderMobileCards() {
         recalcTudo();
       });
       selCond.addEventListener('click', (e) => e.stopPropagation());
+    }
+
+    // Event: Mobile Freight Manual
+    const mobInpFrete = card.querySelector('.mob-card-frete-val');
+    const mobLockIcon = card.querySelector('.mob-lock-icon');
+    if (mobInpFrete && !markupDisabled) {
+      mobInpFrete.addEventListener('input', (e) => {
+        let val = e.target.value.replace(',', '.');
+        if (val === '') {
+          item.manual_freight = false;
+          if (mobLockIcon) mobLockIcon.innerHTML = '🔓';
+          recalcTudo();
+        } else {
+          let num = parseFloat(val);
+          if (!isNaN(num)) {
+            item.manual_freight = true;
+            item._manualFreteVal = num;
+            if (mobLockIcon) mobLockIcon.innerHTML = '🔒';
+            recalcTudo();
+          }
+        }
+      });
+      mobInpFrete.addEventListener('click', (e) => e.stopPropagation());
+    }
+    if (mobLockIcon && !markupDisabled) {
+      mobLockIcon.addEventListener('click', (e) => {
+        e.stopPropagation();
+        if (item.manual_freight) {
+          item.manual_freight = false;
+          mobInpFrete.value = '';
+          mobLockIcon.innerHTML = '🔓';
+          recalcTudo();
+        } else {
+          item.manual_freight = true;
+          const fKg = Number(document.getElementById('frete_kg')?.value || 0);
+          const peso = Number(item.peso_liquido_unit ?? item.peso_kg ?? 0);
+          const currentVal = (fKg / 1000) * peso;
+          item._manualFreteVal = currentVal;
+          mobInpFrete.value = currentVal.toFixed(2);
+          mobLockIcon.innerHTML = '🔒';
+          recalcTudo();
+        }
+      });
     }
 
     container.appendChild(card);
