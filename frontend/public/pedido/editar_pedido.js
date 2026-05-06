@@ -557,8 +557,12 @@ function setFormDisabled(disabled) {
     el.readOnly = disabled;
   });
 
-  // grade
-  document.querySelectorAll('#tbody-itens input, #tbody-itens select').forEach(el => el.disabled = disabled);
+  // grade — bloqueia tudo exceto inputs de frete manual no modo edição
+  document.querySelectorAll('#tbody-itens input, #tbody-itens select').forEach(el => {
+    // Em modo EDIT/DUP/NEW, preserva os inputs de frete manual e os cadeados
+    if (!disabled && (el.classList.contains('field-frete-manual'))) return;
+    el.disabled = disabled;
+  });
   const chkAll = document.getElementById('chk-all');
   if (chkAll) chkAll.disabled = disabled;
 }
@@ -1842,7 +1846,21 @@ async function recalcTudo() {
           const setTxt = (sel, v) => { const cel = tr.querySelector(sel); if (cel) cel.textContent = fmtMoney(v); };
           setTxt('.col-desc-aplicado', descontoValor);
           setTxt('.col-cond-valor', acrescimoCond);
-          setTxt('.col-frete', freteValor);
+          
+          // Especial para Frete: não sobrescrever o input/cadeado
+          const tdFrt = tr.querySelector('.col-frete');
+          if (tdFrt) {
+            const inp = tdFrt.querySelector('.field-frete-manual');
+            if (inp) {
+              if (!item.manual_freight) {
+                inp.value = ''; // Mostra o placeholder "Auto"
+              }
+              // O valor real calculado (freteValor) fica apenas no objeto item._freteValor
+            } else {
+              // Fallback se não for modo edição (não tem input)
+              tdFrt.textContent = fmtMoney(freteValor);
+            }
+          }
         }
 
         // Build Payload
