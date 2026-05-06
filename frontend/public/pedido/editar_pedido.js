@@ -548,10 +548,13 @@ function setFormDisabled(disabled) {
     if (el.id === 'iva_st_toggle' && !disabled) return;
     // Forçar frete_kg a seguir o modo atual, evitando bloqueios por scripts externos
     if (el.id === 'frete_kg') {
-      el.disabled = (currentMode === 'view');
+      const isView = (currentMode === 'view');
+      el.disabled = isView;
+      el.readOnly = isView;
       return;
     }
     el.disabled = disabled;
+    el.readOnly = disabled;
   });
 
   // grade
@@ -686,12 +689,15 @@ function onEditar() {
     .catch(err => console.error("Erro ao atualizar preços em onEditar:", err));
 }
 
-// Atalhos
 function setMode(mode) {
   currentMode = mode;
   setFormDisabled(mode === 'view');
   toggleToolbarByMode();
   enforceIvaLockByCliente?.();
+}
+
+function normalizeStatus(str) {
+  return String(str || '').normalize("NFD").replace(/[\u0300-\u036f]/g, "").toUpperCase();
 }
 
 // === Utils ===
@@ -2484,14 +2490,17 @@ async function carregarItens() {
               if (freteEl) {
                 const fKg = (th.frete_kg !== null && th.frete_kg !== undefined) ? Number(th.frete_kg) : 0;
                 freteEl.value = fKg > 0 ? fKg.toFixed(2) : '0.00';
+                // Garante estado correto pós-carregamento
+                freteEl.disabled = (currentMode === 'view');
+                freteEl.readOnly = (currentMode === 'view');
               }
               const numPedEl = document.getElementById('display-num-pedido');
               const stEl = document.getElementById('display-status-pedido');
               if (numPedEl) numPedEl.textContent = th.id_pedido || '—';
               if (stEl) {
-                const statusNormal = (th.status || '').trim().toUpperCase();
-                const isOrcamento = statusNormal === 'ORCAMENTO' || statusNormal === 'ORÇAMENTO';
-                stEl.textContent = statusNormal || '—';
+                const statusNormal = normalizeStatus(th.status);
+                const isOrcamento = statusNormal === 'ORCAMENTO';
+                stEl.textContent = th.status || '—';
                 stEl.className = 'os-badge ' + (
                   isOrcamento ? 'os-badge-warning' :
                   statusNormal === 'CONFIRMADO' ? 'os-badge-success' :
@@ -2500,9 +2509,9 @@ async function carregarItens() {
                 
                 // Se o status não for ORCAMENTO, força modo VIEW para evitar erros de salvamento
                 if (!isOrcamento && (currentMode === MODE.EDIT)) {
-                  console.warn("Pedido não é mais ORÇAMENTO. Forçando modo VIEW.");
+                  console.warn("Pedido não é mais ORÇAMENTO. Status real:", th.status, "Normalizado:", statusNormal);
                   setMode(MODE.VIEW);
-                  showOsModal({ title: 'Aviso', message: 'Este pedido não pode mais ser editado pois seu status foi alterado para ' + statusNormal + '.', type: 'alert' });
+                  showOsModal({ title: 'Aviso', message: 'Este pedido não pode mais ser editado pois seu status foi alterado para ' + (th.status || statusNormal) + '.', type: 'alert' });
                 }
               }
               // Restaura flag de frete global
