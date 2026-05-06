@@ -728,7 +728,9 @@ async function confirmarPedido() {
             // Envia o EFETIVO para o backend registrar o valor correto do pedido
             preco_unit: pSem,
             preco_unit_com_frete: pCom,
-            peso_kg: x.peso ?? x.peso_kg ?? null
+            peso_kg: x.peso ?? x.peso_kg ?? null,
+            valor_frete_unitario: x.valor_frete_unitario || 0,
+            manual_freight: !!x.manual_freight
           };
         }),
         observacao,

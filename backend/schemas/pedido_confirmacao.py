@@ -11,6 +11,8 @@ class ConfirmarItem(BaseModel):
     preco_unit: float | None = None
     preco_unit_com_frete: float | None = None
     peso_kg: float | None = None
+    valor_frete_unitario: float | None = 0.0
+    manual_freight: bool | None = False
 
 class ConfirmarPedidoRequest(BaseModel):
     origin_code: str | None = None              

@@ -196,12 +196,12 @@ def criar_pedido_confirmado(db: Session, tabela_id: int, body: ConfirmarPedidoRe
         INSERT INTO tb_pedidos_itens (
             id_pedido, codigo, nome, embalagem, peso_kg,
             condicao_pagamento, tabela_comissao,
-            preco_unit, preco_unit_frt, quantidade,
+            preco_unit, preco_unit_frt, valor_frete_unitario, quantidade,
             subtotal_sem_f, subtotal_com_f
         ) VALUES (
             :id_pedido, :codigo, :nome, :embalagem, :peso_kg,
             :condicao_pagamento, :tabela_comissao,
-            :preco_unit, :preco_unit_frt, :quantidade,
+            :preco_unit, :preco_unit_frt, :valor_frete_unitario, :quantidade,
             :subtotal_sem_f, :subtotal_com_f
         )
     """)
@@ -212,6 +212,12 @@ def criar_pedido_confirmado(db: Session, tabela_id: int, body: ConfirmarPedidoRe
         p_com = float((it.preco_unit_com_frete 
                         if it.preco_unit_com_frete is not None 
                         else it.preco_unit) or 0)
+        
+        # Prioriza o valor_frete_unitario vindo do payload (vindo da tabela de preço)
+        if it.valor_frete_unitario is not None:
+            v_frete = float(it.valor_frete_unitario)
+        else:
+            v_frete = round(p_com - p_sem, 2)
 
         db.execute(insert_item_sql, {
             "id_pedido": new_id,
@@ -223,9 +229,11 @@ def criar_pedido_confirmado(db: Session, tabela_id: int, body: ConfirmarPedidoRe
             "tabela_comissao": it.tabela_comissao,
             "preco_unit": round(p_sem, 2),
             "preco_unit_frt": round(p_com, 2),
+            "valor_frete_unitario": v_frete,
             "quantidade": qtd,
             "subtotal_sem_f": round(p_sem * qtd, 2),
             "subtotal_com_f": round(p_com * qtd, 2),
+            "manual_freight": bool(it.manual_freight or False)
         })
 
     db.commit()

@@ -106,6 +106,7 @@ SELECT COALESCE(
       'condicao_pagamento', c.condicao_pagamento,
       'tabela_comissao',    c.tabela_comissao,
       'manual_freight',     COALESCE(c.manual_freight, FALSE),
+      'valor_frete_unitario', COALESCE(c.valor_frete_unitario, 0),
       'peso_liquido_unit',  COALESCE(c.peso_kg, prod.peso, 0),
       'peso_liquido_total', ROUND(COALESCE(c.peso_kg, prod.peso, 0) * c.quantidade, 3)
     )

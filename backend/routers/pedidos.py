@@ -56,6 +56,7 @@ class PedidoItemResumo(BaseModel):
     subtotal_sem_f: Optional[float] = None
     subtotal_com_f: Optional[float] = None
     manual_freight: Optional[bool] = False
+    valor_frete_unitario: Optional[float] = 0.0
     condicao_pagamento: Optional[str] = None
     tabela_comissao: Optional[str] = None
     peso_liquido_unit: Optional[float] = 0.0
@@ -401,12 +402,12 @@ def atualizar_pedido(
         INSERT INTO tb_pedidos_itens (
             id_pedido, codigo, nome, embalagem, peso_kg,
             condicao_pagamento, tabela_comissao,
-            preco_unit, preco_unit_frt, quantidade,
+            preco_unit, preco_unit_frt, valor_frete_unitario, quantidade,
             subtotal_sem_f, subtotal_com_f, manual_freight
         ) VALUES (
             :id_pedido, :codigo, :nome, :embalagem, :peso_kg,
             :condicao_pagamento, :tabela_comissao,
-            :preco_unit, :preco_unit_frt, :quantidade,
+            :preco_unit, :preco_unit_frt, :valor_frete_unitario, :quantidade,
             :subtotal_sem_f, :subtotal_com_f, :manual_freight
         )
     """)
@@ -415,6 +416,7 @@ def atualizar_pedido(
         qtd = float(it.quantidade or 0)
         p_sem = float(it.preco_unit or 0)
         p_com = float((it.preco_unit_com_frete if it.preco_unit_com_frete is not None else it.preco_unit) or 0)
+        v_frete = round(p_com - p_sem, 2)
 
         db.execute(insert_item_sql, {
             "id_pedido": id_pedido,
@@ -426,6 +428,7 @@ def atualizar_pedido(
             "tabela_comissao": it.tabela_comissao,
             "preco_unit": round(p_sem, 2),
             "preco_unit_frt": round(p_com, 2),
+            "valor_frete_unitario": v_frete,
             "quantidade": qtd,
             "subtotal_sem_f": round(p_sem * qtd, 2),
             "subtotal_com_f": round(p_com * qtd, 2),

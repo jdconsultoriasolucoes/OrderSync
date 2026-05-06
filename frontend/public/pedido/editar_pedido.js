@@ -1336,8 +1336,10 @@ function criarLinha(item, idx) {
   inpFrete.className = 'field-frete-manual num';
   inpFrete.style.width = '60px';
   inpFrete.style.display = 'inline-block';
-  // Calcula o frete unitário salvo (diferença entre total com frete e unitário simples)
-  const freteUnitarioSalvo = (item.preco_unit_frt && item.preco_unit) ? (item.preco_unit_frt - item.preco_unit) : 0;
+  // Usa o valor_frete_unitario salvo no banco, ou calcula a diferença como fallback
+  const freteUnitarioSalvo = (item.valor_frete_unitario != null) 
+    ? Number(item.valor_frete_unitario)
+    : ((item.preco_unit_frt && item.preco_unit) ? (item.preco_unit_frt - item.preco_unit) : 0);
   inpFrete.value = item.manual_freight ? freteUnitarioSalvo.toFixed(2) : '';
   inpFrete.placeholder = 'Auto';
   

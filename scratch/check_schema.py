@@ -1,25 +1,17 @@
 import os
-import sys
-from sqlalchemy import create_engine, inspect
+from sqlalchemy import create_engine, text
 from dotenv import load_dotenv
 
 load_dotenv()
+engine = create_engine(os.getenv("DATABASE_URL"))
 
-DATABASE_URL = os.getenv("DATABASE_URL")
-if not DATABASE_URL:
-    print("DATABASE_URL not found")
-    sys.exit(1)
+with engine.connect() as conn:
+    print("Columns for tb_pedidos_itens:")
+    cols = conn.execute(text("SELECT column_name FROM information_schema.columns WHERE table_name = 'tb_pedidos_itens'")).fetchall()
+    for c in cols:
+        print(c[0])
 
-engine = create_engine(DATABASE_URL)
-inspector = inspect(engine)
-
-table = "tb_pedidos"
-pk = inspector.get_pk_constraint(table)
-print(f"PK Constraint for {table}: {pk}")
-
-indexes = inspector.get_indexes(table)
-print(f"Indexes for {table}: {indexes}")
-
-cols = inspector.get_columns(table)
-for c in cols:
-    print(f"Col: {c['name']}, Type: {c['type']}")
+    print("\nColumns for tb_tabela_preco:")
+    cols = conn.execute(text("SELECT column_name FROM information_schema.columns WHERE table_name = 'tb_tabela_preco'")).fetchall()
+    for c in cols:
+        print(c[0])

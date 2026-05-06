@@ -33,7 +33,9 @@ class ProdutoPedidoPreview(BaseModel):
     valor_sem_frete_markup: Optional[float] = 0.0
     valor_com_frete_markup: Optional[float] = 0.0
     quantidade: int = 0
-    markup: Optional[float] = 0.0 # NOVO
+    markup: Optional[float] = 0.0
+    valor_frete_unitario: Optional[float] = 0.0
+    manual_freight: Optional[bool] = False
 
 class PedidoPreviewResp(BaseModel):
     tabela_id: int
@@ -73,7 +75,9 @@ async def pedido_preview(
                 COALESCE(valor_s_frete, 0) AS valor_sem_frete,
                 COALESCE(markup, 0)        AS markup,
                 COALESCE(valor_final_markup, 0)   AS valor_final_markup,
-                COALESCE(valor_s_frete_markup, 0) AS valor_s_frete_markup
+                COALESCE(valor_s_frete_markup, 0) AS valor_s_frete_markup,
+                COALESCE(valor_frete_aplicado, 0) AS valor_frete_unitario,
+                COALESCE(manual_freight, FALSE)   AS manual_freight
             FROM tb_tabela_preco
             WHERE id_tabela = :tid AND ativo IS TRUE
             ORDER BY descricao_produto
@@ -120,7 +124,9 @@ async def pedido_preview(
                 valor_sem_frete_markup=round(v_sem_mk, 2),
                 valor_com_frete_markup=round(v_com_mk, 2),
                 quantidade=0,
-                markup=mk_pct
+                markup=mk_pct,
+                valor_frete_unitario=float(r.get("valor_frete_unitario") or 0.0),
+                manual_freight=bool(r.get("manual_freight") or False)
             ))
 
         return PedidoPreviewResp(
