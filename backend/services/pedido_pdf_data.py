@@ -42,14 +42,15 @@ def carregar_pedido_pdf(db, pedido_id: int) -> PedidoPdf:
             i.tabela_comissao     AS item_tabela_comissao,
             i.preco_unit          AS item_preco_retira,
             i.preco_unit_frt      AS item_preco_entrega,
+            i.valor_frete_unitario AS item_frete_unitario,
             
             prod.peso             AS item_peso_liquido_cad,
             prod.peso_bruto       AS item_peso_bruto_cad,
-            tp.fornecedor         AS item_fornecedor,
+            prod.fornecedor       AS item_fornecedor,
 
-            tp.markup                 AS item_markup,
-            tp.valor_final_markup     AS item_valor_final_markup,
-            tp.valor_s_frete_markup   AS item_valor_s_frete_markup
+            i.markup                 AS item_markup,
+            i.valor_final_markup     AS item_valor_final_markup,
+            i.valor_s_frete_markup   AS item_valor_s_frete_markup
 
         FROM tb_pedidos p
         LEFT JOIN public.t_cadastro_cliente_v2 c
@@ -58,18 +59,13 @@ def carregar_pedido_pdf(db, pedido_id: int) -> PedidoPdf:
         JOIN tb_pedidos_itens i
             ON i.id_pedido = p.id_pedido
             
-        -- Join para pegar dados de markup originais da tabela de preço
-        LEFT JOIN tb_tabela_preco tp
-            ON tp.id_tabela = p.tabela_preco_id 
-            AND tp.codigo_produto_supra = i.codigo
-            AND tp.ativo = TRUE
-
-        -- Busca produto usando o fornecedor da tabela de preço para evitar duplicidade
+        -- Busca produto para pegar peso e fornecedor atualizados
         LEFT JOIN (
             SELECT 
                 codigo_supra, 
                 MAX(peso) as peso, 
-                MAX(peso_bruto) as peso_bruto 
+                MAX(peso_bruto) as peso_bruto,
+                MAX(fornecedor) as fornecedor
             FROM t_cadastro_produto_v2 
             GROUP BY codigo_supra
         ) prod
@@ -147,6 +143,7 @@ def carregar_pedido_pdf(db, pedido_id: int) -> PedidoPdf:
             tabela_comissao=r.get("item_tabela_comissao"),
             valor_retira=_safe_float(r["item_preco_retira"]),
             valor_entrega=_safe_float(r["item_preco_entrega"]),
+            valor_frete_unitario=_safe_float(r["item_frete_unitario"]),
             markup=_safe_float(r["item_markup"]),
             valor_final_markup=_safe_float(r["item_valor_final_markup"]),
             valor_s_frete_markup=_safe_float(r["item_valor_s_frete_markup"]),

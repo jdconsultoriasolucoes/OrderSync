@@ -168,17 +168,18 @@ def gerar_pdf_cliente_simplificado(pedido: PedidoPdf) -> bytes:
         else:
             valor_unitario = item.valor_retira
         
-        # Markup - só mostrar se houver diferença real
+        # Markup - só mostrar se houver markup configurado (> 0)
         markup_display = "-"
         valor_markup_display = "-"
         
-        # Verificar se há markup aplicado (valor final diferente do valor base)
-        if item.valor_final_markup and item.valor_final_markup > 0:
-            # Comparar com o valor que está sendo usado
-            if abs(item.valor_final_markup - valor_unitario) > 0.01:  # Diferença maior que 1 centavo
-                if item.markup and item.markup > 0:
-                    markup_display = f"{_br_number(item.markup, 2)}%"
+        if item.markup and item.markup > 0:
+            markup_display = f"{_br_number(item.markup, 2)}%"
+            if item.valor_final_markup and item.valor_final_markup > 0:
                 valor_markup_display = f"R$ {_br_number(item.valor_final_markup, 2)}"
+            else:
+                # Fallback: calcula valor com markup se estiver zerado mas tiver %
+                v_calc = valor_unitario * (1 + item.markup/100)
+                valor_markup_display = f"R$ {_br_number(v_calc, 2)}"
         
         # WRAPPING: Usar Paragraph para Produto e Condição Pagamento
         p_produto = Paragraph(item.produto or "", style_normal)

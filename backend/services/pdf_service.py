@@ -336,6 +336,7 @@ def _desenhar_pdf(pedido: PedidoPdf, buffer: io.BytesIO, sem_validade: bool = Fa
         "Cond. Pgto",
         "Comissão",
         "Valor Retira",
+        "Vl. Frete",
         "Valor Entrega",
     ]
 
@@ -356,8 +357,9 @@ def _desenhar_pdf(pedido: PedidoPdf, buffer: io.BytesIO, sem_validade: bool = Fa
         1.5,  # Qtd
         5.5,  # Cond. Pgto
         2.0,  # Comissão
-        2.5,  # Valor Retira
-        2.5,  # Valor Entrega
+        2.2,  # Valor Retira
+        1.8,  # Vl. Frete
+        2.2,  # Valor Entrega
     ]
 
     total_base = sum(base_widths_cm)
@@ -388,6 +390,7 @@ def _desenhar_pdf(pedido: PedidoPdf, buffer: io.BytesIO, sem_validade: bool = Fa
             p_condicao,   # Agora é um Flowable
             it.tabela_comissao or "",
             "R$ " + _br_number(float(it.valor_retira or 0)),
+            "R$ " + _br_number(float(it.valor_frete_unitario or 0)),
             "R$ " + _br_number(float(it.valor_entrega or 0)),
         ])
 

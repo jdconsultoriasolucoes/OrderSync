@@ -2187,6 +2187,9 @@ async function salvarTabela() {
     codigo_cliente, 
     ramo_juridico, 
     pedido_supra, nota_fiscal,
+    contato_nome: document.getElementById('contato_nome')?.value || '',
+    contato_email: document.getElementById('contato_email')?.value || '',
+    contato_fone: document.getElementById('contato_fone')?.value || '',
     fornecedor: fornecedorHeader, calcula_st, 
     frete_kg, usar_valor_com_frete,
     produtos 
@@ -2633,6 +2636,9 @@ async function carregarItens() {
     if (ramoEl) ramoEl.value = t.ramo_juridico || '';
     if (document.getElementById('pedido_supra')) document.getElementById('pedido_supra').value = t.pedido_supra || '';
     if (document.getElementById('nota_fiscal')) document.getElementById('nota_fiscal').value = t.nota_fiscal || '';
+    if (document.getElementById('contato_nome')) document.getElementById('contato_nome').value = t.contato_nome || '';
+    if (document.getElementById('contato_email')) document.getElementById('contato_email').value = t.contato_email || '';
+    if (document.getElementById('contato_fone')) document.getElementById('contato_fone').value = t.contato_fone || '';
 
     // Nº Pedido e Status no cabeçalho
     const numPedidoEl = document.getElementById('display-num-pedido');
@@ -3197,6 +3203,9 @@ async function salvarPedido(payload) {
       frete_kg: payload.frete_kg || 0,
       pedido_supra: payload.pedido_supra || null,
       nota_fiscal: payload.nota_fiscal || null,
+      contato_nome: payload.contato_nome || null,
+      contato_email: payload.contato_email || null,
+      contato_fone: payload.contato_fone || null,
       produtos: (payload.produtos || []).map(p => ({
           codigo: p.codigo_produto_supra || p.codigo,
           descricao: p.descricao_produto || p.descricao,
