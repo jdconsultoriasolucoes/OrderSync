@@ -1581,16 +1581,20 @@ async function recalcLinha(tr) {
 
   // OVERRIDE MANUAL
   if (item.manual_freight) {
-      // Se tiver valor digitado agora, usa ele. Senão usa o que veio do banco (calculado no criarLinha)
+      // Se tiver valor digitado agora, usa ele. Senão usa o que veio do banco
       const inputVal = tr.querySelector('.field-frete-manual')?.value;
       if (inputVal && inputVal !== '') {
           freteValor = parseFloat(inputVal.replace(',', '.'));
+      } else if (item.valor_frete_unitario) {
+          freteValor = Number(item.valor_frete_unitario);
       } else if (item.preco_unit_frt && item.preco_unit) {
           freteValor = item.preco_unit_frt - item.preco_unit;
       }
       item._manualFreteVal = freteValor;
-      precoBase = Number(item.valor || 0) + acrescimoCond - descontoValor + freteValor;
+      // precoBase aqui deve continuar sendo SEM frete para o fiscal
+      precoBase = Number(item.valor || 0) + acrescimoCond - descontoValor;
   }
+  item._freteValor = freteValor;
 
   // pinta colunas comerciais
   tr.querySelector('.col-desc-aplicado').textContent = fmtMoney(descontoValor); // Desc. aplicado
@@ -1608,8 +1612,8 @@ async function recalcLinha(tr) {
     const built = buildFiscalInputsFromRow(tr);
 
     // usa exatamente o que JÁ calculamos nesta função
-    built.payload.preco_unit = precoBase;   // já calculado acima
-    built.payload.frete_linha = freteValor;  // já calculado acima
+    built.payload.preco_unit = precoBase;   // SEM frete
+    built.payload.frete_linha = freteValor;  // separado
 
     const f = await previewFiscalLinha(built.payload);
     item.ipi = Number((f.ipi ?? 0).toFixed(2));
@@ -1859,10 +1863,11 @@ async function recalcTudo() {
                 freteValor = item.preco_unit_frt - item.preco_unit;
             }
             item._manualFreteVal = freteValor;
-            precoBase = Number(item.valor || 0) + acrescimoCond - descontoValor + freteValor;
+            // precoBase deve ser SEM frete para o fiscal
+            precoBase = Number(item.valor || 0) + acrescimoCond - descontoValor;
         }
         item._freteValor = freteValor; // Store for fiscal part
-        item._precoBaseComercial = precoBase; // Store for batch payload
+        item._precoBaseSemFrete = precoBase; // Store for batch payload
 
         // Atualiza DOM Comercial
         if (tr) {
@@ -1892,8 +1897,8 @@ async function recalcTudo() {
 
         // Build Payload
         const built = buildFiscalInputsFromRow(tr, item, idx);
-        built.payload.preco_unit = precoBase;
-        built.payload.frete_linha = freteValor;
+        built.payload.preco_unit = precoBase; // SEM frete
+        built.payload.frete_linha = freteValor; // separado
 
         // Save state for update step
         item._freteValor = Number(freteValor || 0);
@@ -2079,8 +2084,19 @@ async function salvarTabela() {
         : (item.plano_pagamento || codCond || '');
 
       const taxaCond = mapaCondicoes[codCond] || 0;
-      const { acrescimoCond, freteValor, descontoValor } =
-        calcularLinha(item, fator, taxaCond, frete_kg /* ivaStAtivo é ignorado aqui */);
+      let { acrescimoCond, freteValor, descontoValor } =
+        calcularLinha(item, fator, taxaCond, frete_kg);
+
+      // MANUAL OVERRIDE check also during saving
+      if (item.manual_freight) {
+        if (item._manualFreteVal != null) {
+          freteValor = item._manualFreteVal;
+        } else if (item.valor_frete_unitario) {
+          freteValor = Number(item.valor_frete_unitario);
+        } else if (item.preco_unit_frt && item.preco_unit) {
+          freteValor = item.preco_unit_frt - item.preco_unit;
+        }
+      }
 
       // On mobile, build fatorLabel from the saved code
       const fatorLabel = selPct
@@ -2111,6 +2127,8 @@ async function salvarTabela() {
 
         valor_frete_aplicado: Number(freteValor.toFixed(2)),
         manual_freight: !!item.manual_freight,
+        _freteValor: freteValor,
+        valor_frete_unitario: freteValor,
         frete_kg: Number(frete_kg || 0),
         valor_frete: Number((item._totalComercial || 0).toFixed(2)),
         valor_s_frete: Number((item.total_sem_frete || 0).toFixed(2)),
@@ -3186,10 +3204,10 @@ async function salvarPedido(payload) {
           condicao_pagamento: p.codigo_plano_pagamento || p.plano_pagamento,
           tabela_comissao: p.descricao_fator_comissao || p.tabela_comissao,
           quantidade: p.quantidade || 0,
-          preco_unit: p.valor,
-          preco_unit_com_frete: p._totalComercial || p.preco_unit_frt || p.valor,
+          preco_unit: p.valor_produto || p.valor || 0,
+          preco_unit_com_frete: Number((p.valor_produto || p.valor || 0) + (p._freteValor || p.valor_frete_unitario || 0)),
           valor_frete_unitario: p._freteValor || p.valor_frete_unitario || 0,
-          peso_kg: p.peso_liquido,
+          peso_kg: p.peso_bruto || p.peso_liquido || p.peso_kg || 0,
           manual_freight: !!p.manual_freight,
           markup: p.markup || 0,
           valor_final_markup: p.valor_final_markup || 0,
