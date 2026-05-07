@@ -730,7 +730,10 @@ async function confirmarPedido() {
             preco_unit_com_frete: pCom,
             peso_kg: x.peso ?? x.peso_kg ?? null,
             valor_frete_unitario: x.valor_frete_unitario || 0,
-            manual_freight: !!x.manual_freight
+            manual_freight: !!x.manual_freight,
+            markup: x.markup || 0,
+            valor_final_markup: vMkCom,
+            valor_s_frete_markup: vMkSem
           };
         }),
         observacao,

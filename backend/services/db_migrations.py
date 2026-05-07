@@ -86,8 +86,8 @@ def run_migrations():
                     db.rollback()
                     logger.error(f"Falha ao adicionar {col} em tb_pedidos: {e}")
 
-        # 6. tb_pedidos_itens: preco_unit_frt, subtotal_com_f, subtotal_sem_f, peso_kg, valor_frete_unitario
-        for col, col_type in [("preco_unit_frt", "NUMERIC"), ("subtotal_com_f", "NUMERIC"), ("subtotal_sem_f", "NUMERIC"), ("peso_kg", "NUMERIC"), ("valor_frete_unitario", "NUMERIC")]:
+        # 6. tb_pedidos_itens: preco_unit_frt, subtotal_com_f, subtotal_sem_f, peso_kg, valor_frete_unitario, markup, valor_final_markup, valor_s_frete_markup
+        for col, col_type in [("preco_unit_frt", "NUMERIC"), ("subtotal_com_f", "NUMERIC"), ("subtotal_sem_f", "NUMERIC"), ("peso_kg", "NUMERIC"), ("valor_frete_unitario", "NUMERIC"), ("markup", "NUMERIC"), ("valor_final_markup", "NUMERIC"), ("valor_s_frete_markup", "NUMERIC")]:
             try:
                 db.execute(text(f"SELECT {col} FROM tb_pedidos_itens LIMIT 1"))
             except Exception:

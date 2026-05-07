@@ -593,6 +593,11 @@ function mapBackendItemToFrontend(p, t) {
     markup: Number(p.markup || 0),
     quantidade: Number(p.quantidade || 0),
     subtotal: Number(p.subtotal_com_f || p.subtotal_sem_f || 0),
+    manual_freight: !!p.manual_freight,
+    valor_frete_unitario: Number(p.valor_frete_unitario || 0),
+    markup: Number(p.markup || 0),
+    valor_final_markup: Number(p.valor_final_markup || 0),
+    valor_s_frete_markup: Number(p.valor_s_frete_markup || 0),
     status_atual: 'ATIVO',
     peso_bruto: 0,
     tipo: null
@@ -1840,8 +1845,24 @@ async function recalcTudo() {
 
         const taxaCond = window.mapaCondicoes ? (window.mapaCondicoes[codCond] ?? 0) : 0;
 
-        const { acrescimoCond, freteValor, descontoValor, precoBase } =
+        let { acrescimoCond, freteValor, descontoValor, precoBase } =
           calcularLinha(item, fator, taxaCond, freteKg);
+
+        // MANUAL FREIGHT OVERRIDE in batch
+        if (item.manual_freight) {
+            const inputVal = tr ? tr.querySelector('.field-frete-manual')?.value : null;
+            if (inputVal && inputVal !== '') {
+                freteValor = parseFloat(inputVal.replace(',', '.'));
+            } else if (item.valor_frete_unitario) {
+                freteValor = Number(item.valor_frete_unitario);
+            } else if (item.preco_unit_frt && item.preco_unit) {
+                freteValor = item.preco_unit_frt - item.preco_unit;
+            }
+            item._manualFreteVal = freteValor;
+            precoBase = Number(item.valor || 0) + acrescimoCond - descontoValor + freteValor;
+        }
+        item._freteValor = freteValor; // Store for fiscal part
+        item._precoBaseComercial = precoBase; // Store for batch payload
 
         // Atualiza DOM Comercial
         if (tr) {
@@ -1856,6 +1877,10 @@ async function recalcTudo() {
             if (inp) {
               if (!item.manual_freight) {
                 inp.value = ''; // Mostra o placeholder "Auto"
+                inp.placeholder = freteValor.toFixed(2);
+              } else {
+                // Se for manual, o placeholder pode mostrar o que seria o auto pra referência
+                inp.placeholder = freteValor.toFixed(2);
               }
               // O valor real calculado (freteValor) fica apenas no objeto item._freteValor
             } else {
@@ -2624,6 +2649,13 @@ async function carregarItens() {
       freteEl.value = fKgBanco > 0 ? fKgBanco.toFixed(2) : '0.00';
     }
 
+    // Markup Global: Inferir do primeiro item se houver
+    const mkGlobalEl = document.getElementById('markup_global');
+    if (mkGlobalEl && t.itens && t.itens.length > 0) {
+      const firstMk = t.itens[0].markup ?? 0;
+      mkGlobalEl.value = Number(firstMk).toFixed(2);
+    }
+
     // Configurações globais (IVA, Markup) se disponíveis no objeto T
     const ivaChk = document.getElementById('iva_st_toggle');
     if (ivaChk) {
@@ -3154,10 +3186,14 @@ async function salvarPedido(payload) {
           condicao_pagamento: p.codigo_plano_pagamento || p.plano_pagamento,
           tabela_comissao: p.descricao_fator_comissao || p.tabela_comissao,
           quantidade: p.quantidade || 0,
-          preco_unit: p.valor_produto || p.valor,
-          preco_unit_com_frete: p.valor_final_markup || p.valor_final || p.valor_produto || p.valor,
+          preco_unit: p.valor,
+          preco_unit_com_frete: p._totalComercial || p.preco_unit_frt || p.valor,
+          valor_frete_unitario: p._freteValor || p.valor_frete_unitario || 0,
           peso_kg: p.peso_liquido,
-          manual_freight: !!p.manual_freight
+          manual_freight: !!p.manual_freight,
+          markup: p.markup || 0,
+          valor_final_markup: p.valor_final_markup || 0,
+          valor_s_frete_markup: p.valor_s_frete_markup || 0
       }))
   };
 

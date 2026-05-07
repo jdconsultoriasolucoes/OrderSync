@@ -197,12 +197,14 @@ def criar_pedido_confirmado(db: Session, tabela_id: int, body: ConfirmarPedidoRe
             id_pedido, codigo, nome, embalagem, peso_kg,
             condicao_pagamento, tabela_comissao,
             preco_unit, preco_unit_frt, valor_frete_unitario, quantidade,
-            subtotal_sem_f, subtotal_com_f
+            subtotal_sem_f, subtotal_com_f, manual_freight,
+            markup, valor_final_markup, valor_s_frete_markup
         ) VALUES (
             :id_pedido, :codigo, :nome, :embalagem, :peso_kg,
             :condicao_pagamento, :tabela_comissao,
             :preco_unit, :preco_unit_frt, :valor_frete_unitario, :quantidade,
-            :subtotal_sem_f, :subtotal_com_f
+            :subtotal_sem_f, :subtotal_com_f, :manual_freight,
+            :markup, :valor_final_markup, :valor_s_frete_markup
         )
     """)
 
@@ -233,7 +235,10 @@ def criar_pedido_confirmado(db: Session, tabela_id: int, body: ConfirmarPedidoRe
             "quantidade": qtd,
             "subtotal_sem_f": round(p_sem * qtd, 2),
             "subtotal_com_f": round(p_com * qtd, 2),
-            "manual_freight": bool(it.manual_freight or False)
+            "manual_freight": bool(it.manual_freight or False),
+            "markup": float(it.markup or 0.0),
+            "valor_final_markup": float(it.valor_final_markup or 0.0),
+            "valor_s_frete_markup": float(it.valor_s_frete_markup or 0.0)
         })
 
     db.commit()

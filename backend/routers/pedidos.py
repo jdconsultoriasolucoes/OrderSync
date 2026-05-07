@@ -57,6 +57,9 @@ class PedidoItemResumo(BaseModel):
     subtotal_com_f: Optional[float] = None
     manual_freight: Optional[bool] = False
     valor_frete_unitario: Optional[float] = 0.0
+    markup: Optional[float] = 0.0
+    valor_final_markup: Optional[float] = 0.0
+    valor_s_frete_markup: Optional[float] = 0.0
     condicao_pagamento: Optional[str] = None
     tabela_comissao: Optional[str] = None
     peso_liquido_unit: Optional[float] = 0.0
@@ -121,6 +124,10 @@ class PedidoUpdateItem(BaseModel):
     preco_unit_com_frete: Optional[float] = None
     peso_kg: Optional[float] = None
     manual_freight: Optional[bool] = False
+    valor_frete_unitario: Optional[float] = 0.0
+    markup: Optional[float] = 0.0
+    valor_final_markup: Optional[float] = 0.0
+    valor_s_frete_markup: Optional[float] = 0.0
 
 class PedidoUpdateRequest(BaseModel):
     usar_valor_com_frete: bool = True
@@ -403,12 +410,14 @@ def atualizar_pedido(
             id_pedido, codigo, nome, embalagem, peso_kg,
             condicao_pagamento, tabela_comissao,
             preco_unit, preco_unit_frt, valor_frete_unitario, quantidade,
-            subtotal_sem_f, subtotal_com_f, manual_freight
+            subtotal_sem_f, subtotal_com_f, manual_freight,
+            markup, valor_final_markup, valor_s_frete_markup
         ) VALUES (
             :id_pedido, :codigo, :nome, :embalagem, :peso_kg,
             :condicao_pagamento, :tabela_comissao,
             :preco_unit, :preco_unit_frt, :valor_frete_unitario, :quantidade,
-            :subtotal_sem_f, :subtotal_com_f, :manual_freight
+            :subtotal_sem_f, :subtotal_com_f, :manual_freight,
+            :markup, :valor_final_markup, :valor_s_frete_markup
         )
     """)
 
@@ -416,7 +425,12 @@ def atualizar_pedido(
         qtd = float(it.quantidade or 0)
         p_sem = float(it.preco_unit or 0)
         p_com = float((it.preco_unit_com_frete if it.preco_unit_com_frete is not None else it.preco_unit) or 0)
-        v_frete = round(p_com - p_sem, 2)
+        
+        # Prioriza o valor_frete_unitario enviado (especialmente para manual_freight)
+        if it.valor_frete_unitario is not None:
+            v_frete = float(it.valor_frete_unitario)
+        else:
+            v_frete = round(p_com - p_sem, 2)
 
         db.execute(insert_item_sql, {
             "id_pedido": id_pedido,
@@ -433,6 +447,9 @@ def atualizar_pedido(
             "subtotal_sem_f": round(p_sem * qtd, 2),
             "subtotal_com_f": round(p_com * qtd, 2),
             "manual_freight": bool(getattr(it, "manual_freight", False)),
+            "markup": float(getattr(it, "markup", 0.0) or 0.0),
+            "valor_final_markup": float(getattr(it, "valor_final_markup", 0.0) or 0.0),
+            "valor_s_frete_markup": float(getattr(it, "valor_s_frete_markup", 0.0) or 0.0),
         })
 
     # 7. Logar evento de edição (usando a tabela de status_event como log geral)
