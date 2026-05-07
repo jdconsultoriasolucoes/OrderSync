@@ -324,7 +324,7 @@ function renderTable(rows) {
             <button class="btn-sm btn-outline-secondary btn-edit-status" data-id="${id}" data-status="${status}">
                Mudar Status
             </button>
-            ${String(status || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toUpperCase() === 'ORCAMENTO' ? `<a href="/pedido/editar_pedido.html?id=${id}&action=edit" class="btn-sm btn-outline-secondary" style="margin-left: 5px; text-decoration: none;">✏️ Editar Orçamento</a>` : ''}
+            ${String(status || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toUpperCase() === 'ORCAMENTO' ? `<a href="/pedido/editar_pedido.html?id=${id}&action=edit" class="btn-sm btn-outline-secondary" style="margin-left: 5px; text-decoration: none;">Mudar Status / Editar Orçamento</a>` : ''}
 
           </td>
         `;
@@ -390,7 +390,7 @@ function renderCards(rows) {
            ${link ? `<a href="${link}" target="_blank" class="btn btn-outline" style="padding: 4px 8px; font-size: 0.8rem; text-decoration: none;">Link</a>` : ''}
            
            <button class="btn btn-outline-secondary btn-edit-status" data-id="${id}" data-status="${status}" data-is-mobile="true" style="padding: 4px 8px; font-size: 0.8rem;">Mudar Status</button>
-           ${String(status || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toUpperCase() === 'ORCAMENTO' ? `<a href="/pedido/editar_pedido.html?id=${id}&action=edit" class="btn-sm btn-outline-secondary" style="text-decoration: none;">✏️ Editar Orçamento</a>` : ''}
+           ${String(status || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toUpperCase() === 'ORCAMENTO' ? `<a href="/pedido/editar_pedido.html?id=${id}&action=edit" class="btn btn-outline-secondary" style="padding: 4px 8px; font-size: 0.8rem; text-decoration: none;">Mudar Status / Editar Orçamento</a>` : ''}
 
            <button class="btn btn-primary" onclick="openResumo('${id}')" style="padding: 4px 12px; font-size: 0.8rem;">Detalhes</button>
         </div>
@@ -465,7 +465,10 @@ async function openResumo(id) {
           <div><b>Total:</b> ${fmtMoney(p.total_pedido)}</div>
         </div>
         <div class="kv">
-          <div style="grid-column: 1 / -1;"><b>Contato:</b> ${p.contato_nome ?? "-"} • ${p.contato_email ?? "-"}</div>
+          <div style="grid-column: 1 / -1;">
+            <b>Contato:</b> ${p.contato_nome ?? "-"} • ${p.contato_email ?? "-"}
+            ${p.cliente_telefone || p.cliente_celular ? `<br><b>Telefones Cliente:</b> ${p.cliente_telefone ?? ""} ${p.cliente_celular ?? ""}` : ""}
+          </div>
         </div>
         <div class="block">
           <b>Itens</b>
@@ -745,10 +748,10 @@ async function saveStatus(id, isMobile = false) {
        `;
     } else {
        tdActions.innerHTML = `
-          <button class="btn-sm btn-outline-secondary btn-edit-status" data-id="${id}" data-status="${newStatus}">
-             Mudar Status
-          </button>
-          ${String(newStatus || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toUpperCase() === 'ORCAMENTO' ? `<a href="/pedido/editar_pedido.html?id=${id}&action=edit" class="btn btn-outline btn-edit-orcamento" style="margin-left: 5px; padding: 4px 8px; font-size: 0.8rem;">Editar Orçamento</a>` : ''}
+           <button class="btn-sm btn-outline-secondary btn-edit-status" data-id="${id}" data-status="${newStatus}">
+              Mudar Status
+           </button>
+           ${String(newStatus || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toUpperCase() === 'ORCAMENTO' ? `<a href="/pedido/editar_pedido.html?id=${id}&action=edit" class="btn-sm btn-outline-secondary" style="margin-left: 5px; padding: 4px 8px; text-decoration: none;">Mudar Status / Editar Orçamento</a>` : ''}
         `;
     }
     const tr = tdActions.closest(isMobile ? ".order-card" : "tr");

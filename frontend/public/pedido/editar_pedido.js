@@ -2187,9 +2187,6 @@ async function salvarTabela() {
     codigo_cliente, 
     ramo_juridico, 
     pedido_supra, nota_fiscal,
-    contato_nome: document.getElementById('contato_nome')?.value || '',
-    contato_email: document.getElementById('contato_email')?.value || '',
-    contato_fone: document.getElementById('contato_fone')?.value || '',
     fornecedor: fornecedorHeader, calcula_st, 
     frete_kg, usar_valor_com_frete,
     produtos 

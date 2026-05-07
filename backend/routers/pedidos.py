@@ -73,6 +73,8 @@ class PedidoResumo(BaseModel):
     contato_nome: Optional[str] = None
     contato_email: Optional[str] = None
     contato_fone: Optional[str] = None
+    cliente_telefone: Optional[str] = None
+    cliente_celular: Optional[str] = None
     tabela_preco_nome: Optional[str] = None
     fornecedor: Optional[str] = None
     validade_ate: Optional[str] = None
@@ -394,9 +396,9 @@ def atualizar_pedido(
     pedido.frete_kg = round(body.frete_kg or 0, 4)
     pedido.pedido_supra = body.pedido_supra
     pedido.nota_fiscal = body.nota_fiscal
-    pedido.contato_nome = body.contato_nome
-    pedido.contato_email = body.contato_email
-    pedido.contato_fone = body.contato_fone
+    if body.contato_nome is not None: pedido.contato_nome = body.contato_nome
+    if body.contato_email is not None: pedido.contato_email = body.contato_email
+    if body.contato_fone is not None: pedido.contato_fone = body.contato_fone
     pedido.peso_total_kg = round(peso_total_kg, 3)
     pedido.frete_total = round(frete_total, 2)
     pedido.total_sem_frete = round(total_sem_frete, 2)

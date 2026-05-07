@@ -52,6 +52,8 @@ SELECT
   a.contato_nome,
   a.contato_email,
   a.contato_fone,
+  c.compras_telefone_fixo_responsavel AS cliente_telefone,
+  c.compras_celular_responsavel AS cliente_celular,
   COALESCE(a.tabela_preco_nome, b.nome_tabela) AS tabela_preco_nome,
   COALESCE(
     CASE
