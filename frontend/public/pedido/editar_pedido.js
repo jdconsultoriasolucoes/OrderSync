@@ -1623,8 +1623,8 @@ async function recalcLinha(tr) {
           lockI.title = 'Frete automático';
       }
   } else if (inpF && item.manual_freight && lockI) {
-      lockI.className = 'bi bi-lock-fill lock-icon';
-      lockI.style.color = '#e11d48';
+      lockI.className = 'bi bi-lock lock-icon';
+      lockI.style.color = '#2563eb';
       lockI.title = 'Frete manual (travado)';
   }
 
