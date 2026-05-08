@@ -321,10 +321,10 @@ function renderTable(rows) {
           </td>
           <td class="tar td-actions" id="td-actions-${id}">
             
-            <button class="btn-sm btn-outline-secondary btn-edit-status" data-id="${id}" data-status="${status}">
+            <button class="os-btn os-btn-secondary os-btn-sm btn-edit-status" data-id="${id}" data-status="${status}">
                Mudar Status
             </button>
-            ${String(status || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toUpperCase() === 'ORCAMENTO' ? `<a href="/pedido/editar_pedido.html?id=${id}&action=edit" class="btn-sm btn-outline-secondary" style="margin-left: 5px; text-decoration: none;">Mudar Status / Editar Orçamento</a>` : ''}
+            ${String(status || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toUpperCase() === 'ORCAMENTO' ? `<a href="/pedido/editar_pedido.html?id=${id}&action=edit" class="os-btn os-btn-secondary os-btn-sm" style="margin-left: 5px; text-decoration: none;">Editar Orçamento</a>` : ''}
 
           </td>
         `;
@@ -387,12 +387,12 @@ function renderCards(rows) {
           <div class="td-status" id="td-status-mobile-${id}">${getStatusBadge(status)}</div>
         </div>
         <div class="order-card-actions td-actions" id="td-actions-mobile-${id}">
-           ${link ? `<a href="${link}" target="_blank" class="btn btn-outline" style="padding: 4px 8px; font-size: 0.8rem; text-decoration: none;">Link</a>` : ''}
+           ${link ? `<a href="${link}" target="_blank" class="os-btn os-btn-secondary os-btn-sm" style="text-decoration: none;">Link</a>` : ''}
            
-           <button class="btn btn-outline-secondary btn-edit-status" data-id="${id}" data-status="${status}" data-is-mobile="true" style="padding: 4px 8px; font-size: 0.8rem;">Mudar Status</button>
-           ${String(status || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toUpperCase() === 'ORCAMENTO' ? `<a href="/pedido/editar_pedido.html?id=${id}&action=edit" class="btn btn-outline-secondary" style="padding: 4px 8px; font-size: 0.8rem; text-decoration: none;">Mudar Status / Editar Orçamento</a>` : ''}
+           <button class="os-btn os-btn-secondary os-btn-sm btn-edit-status" data-id="${id}" data-status="${status}" data-is-mobile="true">Mudar Status</button>
+           ${String(status || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toUpperCase() === 'ORCAMENTO' ? `<a href="/pedido/editar_pedido.html?id=${id}&action=edit" class="os-btn os-btn-secondary os-btn-sm" style="text-decoration: none;">Editar Orçamento</a>` : ''}
 
-           <button class="btn btn-primary" onclick="openResumo('${id}')" style="padding: 4px 12px; font-size: 0.8rem;">Detalhes</button>
+           <button class="os-btn os-btn-primary os-btn-sm" onclick="openResumo('${id}')">Detalhes</button>
         </div>
 
       `;
@@ -741,17 +741,17 @@ async function saveStatus(id, isMobile = false) {
     if (isMobile) {
        const link = row && (row.link_url || row.link) ? row.link_url || row.link : null;
        tdActions.innerHTML = `
-           ${link ? `<a href="${link}" target="_blank" class="btn btn-outline" style="padding: 4px 8px; font-size: 0.8rem; text-decoration: none;">Link</a>` : ''}
-           <button class="btn btn-outline-secondary btn-edit-status" data-id="${id}" data-status="${newStatus}" data-is-mobile="true" style="padding: 4px 8px; font-size: 0.8rem;">Mudar Status</button>
-           ${String(newStatus || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toUpperCase() === 'ORCAMENTO' ? `<a href="/pedido/editar_pedido.html?id=${id}&action=edit" class="btn btn-outline btn-edit-orcamento" style="padding: 4px 8px; font-size: 0.8rem;">Editar Orçamento</a>` : ''}
-           <button class="btn btn-primary" onclick="openResumo('${id}')" style="padding: 4px 12px; font-size: 0.8rem;">Detalhes</button>
+           ${link ? `<a href="${link}" target="_blank" class="os-btn os-btn-secondary os-btn-sm" style="text-decoration: none;">Link</a>` : ''}
+           <button class="os-btn os-btn-secondary os-btn-sm btn-edit-status" data-id="${id}" data-status="${newStatus}" data-is-mobile="true">Mudar Status</button>
+           ${String(newStatus || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toUpperCase() === 'ORCAMENTO' ? `<a href="/pedido/editar_pedido.html?id=${id}&action=edit" class="os-btn os-btn-secondary os-btn-sm" style="text-decoration: none;">Editar Orçamento</a>` : ''}
+           <button class="os-btn os-btn-primary os-btn-sm" onclick="openResumo('${id}')">Detalhes</button>
        `;
     } else {
        tdActions.innerHTML = `
-           <button class="btn-sm btn-outline-secondary btn-edit-status" data-id="${id}" data-status="${newStatus}">
+           <button class="os-btn os-btn-secondary os-btn-sm btn-edit-status" data-id="${id}" data-status="${newStatus}">
               Mudar Status
            </button>
-           ${String(newStatus || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toUpperCase() === 'ORCAMENTO' ? `<a href="/pedido/editar_pedido.html?id=${id}&action=edit" class="btn-sm btn-outline-secondary" style="margin-left: 5px; padding: 4px 8px; text-decoration: none;">Mudar Status / Editar Orçamento</a>` : ''}
+           ${String(newStatus || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toUpperCase() === 'ORCAMENTO' ? `<a href="/pedido/editar_pedido.html?id=${id}&action=edit" class="os-btn os-btn-secondary os-btn-sm" style="margin-left: 5px; text-decoration: none;">Editar Orçamento</a>` : ''}
         `;
     }
     const tr = tdActions.closest(isMobile ? ".order-card" : "tr");
