@@ -470,7 +470,8 @@ async function openResumo(id) {
           <div style="grid-column: 1 / -1;">
             <b>Contato:</b> ${p.contato_nome || "Não informado"}
             ${p.contato_email ? ` • ${p.contato_email}` : ""}
-            ${p.contato_fone ? `<br><b>Telefone/Celular:</b> ${p.contato_fone}` : ""}
+            <br>
+            <b>Telefones Cliente:</b> ${[p.cliente_telefone, p.cliente_celular, p.contato_fone].filter(f => f && f !== 'null').filter((v, i, a) => a.indexOf(v) === i).join(" / ") || "Não informado"}
           </div>
         </div>
         <div class="block">

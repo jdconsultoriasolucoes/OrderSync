@@ -1502,15 +1502,18 @@ function criarLinha(item, idx) {
   inpFrete.className = 'field-frete-manual num';
   inpFrete.style.width = '80px';
   inpFrete.style.display = 'inline-block';
+  // Store the initial/last manual value for "memory"
+  item._manualFreteVal = item.valor_frete_aplicado;
+  
   inpFrete.value = item.manual_freight ? (item.valor_frete_aplicado || 0).toFixed(2) : '';
   inpFrete.placeholder = 'Auto';
   
   const lockIcon = document.createElement('i');
-  lockIcon.className = item.manual_freight ? 'bi bi-lock-fill lock-icon' : 'bi bi-unlock lock-icon';
+  lockIcon.className = item.manual_freight ? 'bi bi-lock lock-icon' : 'bi bi-unlock lock-icon';
   lockIcon.style.marginLeft = '8px';
   lockIcon.style.cursor = 'pointer';
   lockIcon.style.fontSize = '1.1rem';
-  lockIcon.style.color = item.manual_freight ? '#e11d48' : '#64748b'; // Red if locked, slate if unlocked
+  lockIcon.style.color = item.manual_freight ? '#2563eb' : '#64748b'; 
   lockIcon.title = item.manual_freight ? 'Frete manual (travado)' : 'Frete automático';
 
   inpFrete.addEventListener('input', (e) => {
@@ -1526,8 +1529,9 @@ function criarLinha(item, idx) {
           if (!isNaN(num)) {
               item.manual_freight = true;
               item.valor_frete_aplicado = num;
-              lockIcon.className = 'bi bi-lock-fill lock-icon';
-              lockIcon.style.color = '#e11d48';
+              item._manualFreteVal = num; // Update memory
+              lockIcon.className = 'bi bi-lock lock-icon';
+              lockIcon.style.color = '#2563eb';
               lockIcon.title = 'Frete manual (travado)';
               recalcLinha(tr);
           }
@@ -1544,14 +1548,18 @@ function criarLinha(item, idx) {
           lockIcon.title = 'Frete automático';
           recalcTudo();
       } else {
-          // Lock to the current value
           item.manual_freight = true;
           const freteKg = Number(document.getElementById('frete_kg')?.value || 0);
           const peso = Number(item.peso_liquido ?? item.peso ?? item.peso_kg ?? item.pesoLiquido ?? 0);
-          item.valor_frete_aplicado = item._freteValor !== undefined ? item._freteValor : (peso * freteKg);
+          const calculatedAuto = item._freteValor !== undefined ? item._freteValor : (peso * (freteKg / 1000));
+          
+          // Memory feature: use last manual value if exists and is not zero, otherwise use current auto
+          const valToSet = (item._manualFreteVal && item._manualFreteVal > 0) ? item._manualFreteVal : calculatedAuto;
+          
+          item.valor_frete_aplicado = valToSet;
           inpFrete.value = item.valor_frete_aplicado.toFixed(2);
-          lockIcon.className = 'bi bi-lock-fill lock-icon';
-          lockIcon.style.color = '#e11d48';
+          lockIcon.className = 'bi bi-lock lock-icon';
+          lockIcon.style.color = '#2563eb';
           lockIcon.title = 'Frete manual (travado)';
           recalcLinha(tr);
       }
@@ -1763,8 +1771,8 @@ async function recalcLinha(tr) {
           lockI.title = 'Frete automático';
       }
   } else if (inpF && item.manual_freight && lockI) {
-      lockI.className = 'bi bi-lock-fill lock-icon';
-      lockI.style.color = '#e11d48';
+      lockI.className = 'bi bi-lock lock-icon';
+      lockI.style.color = '#2563eb';
       lockI.title = 'Frete manual (travado)';
   }
 

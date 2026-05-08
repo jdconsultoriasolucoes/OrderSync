@@ -1345,15 +1345,19 @@ function criarLinha(item, idx) {
   const freteUnitarioSalvo = (item.valor_frete_unitario != null) 
     ? Number(item.valor_frete_unitario)
     : ((item.preco_unit_frt && item.preco_unit) ? (item.preco_unit_frt - item.preco_unit) : 0);
+  
+  // Store the initial/last manual value for "memory"
+  item._manualFreteVal = freteUnitarioSalvo;
+  
   inpFrete.value = item.manual_freight ? freteUnitarioSalvo.toFixed(2) : '';
   inpFrete.placeholder = 'Auto';
   
   const lockIcon = document.createElement('i');
-  lockIcon.className = item.manual_freight ? 'bi bi-lock-fill lock-icon' : 'bi bi-unlock lock-icon';
+  lockIcon.className = item.manual_freight ? 'bi bi-lock lock-icon' : 'bi bi-unlock lock-icon';
   lockIcon.style.marginLeft = '8px';
   lockIcon.style.cursor = 'pointer';
   lockIcon.style.fontSize = '1.1rem';
-  lockIcon.style.color = item.manual_freight ? '#e11d48' : '#64748b'; // Red if locked, slate if unlocked
+  lockIcon.style.color = item.manual_freight ? '#2563eb' : '#64748b'; 
   lockIcon.title = item.manual_freight ? 'Frete manual (travado)' : 'Frete automático';
 
   inpFrete.addEventListener('input', (e) => {
@@ -1368,9 +1372,9 @@ function criarLinha(item, idx) {
       let num = parseFloat(val);
       if (!isNaN(num)) {
         item.manual_freight = true;
-        item._manualFreteVal = num; 
-        lockIcon.className = 'bi bi-lock-fill lock-icon';
-        lockIcon.style.color = '#e11d48';
+        item._manualFreteVal = num; // Update memory
+        lockIcon.className = 'bi bi-lock lock-icon';
+        lockIcon.style.color = '#2563eb';
         lockIcon.title = 'Frete manual (travado)';
         recalcLinha(tr);
       }
@@ -1390,11 +1394,14 @@ function criarLinha(item, idx) {
       item.manual_freight = true;
       const fKg = Number(document.getElementById('frete_kg')?.value || 0);
       const peso = Number(item.peso_liquido_unit ?? item.peso_kg ?? 0);
-      const currentVal = (fKg / 1000) * peso;
-      item._manualFreteVal = currentVal;
-      inpFrete.value = currentVal.toFixed(2);
-      lockIcon.className = 'bi bi-lock-fill lock-icon';
-      lockIcon.style.color = '#e11d48';
+      const calculatedAuto = (fKg / 1000) * peso;
+      
+      // Memory feature: use last manual value if exists and is not zero, otherwise use current auto
+      const valToSet = (item._manualFreteVal && item._manualFreteVal > 0) ? item._manualFreteVal : calculatedAuto;
+      
+      inpFrete.value = valToSet.toFixed(2);
+      lockIcon.className = 'bi bi-lock lock-icon';
+      lockIcon.style.color = '#2563eb';
       lockIcon.title = 'Frete manual (travado)';
       recalcLinha(tr);
     }
