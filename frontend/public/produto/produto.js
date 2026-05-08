@@ -975,13 +975,13 @@ function setupImportarPdf() {
           fornecedorFinal
         )}&lista=${encodeURIComponent(listaFinal)}`;
 
-        // CHAMA NOVA UI DE SUCESSO
+        // CHAMA NOVA UI DE SUCESSO - Passando taskId para o próximo passo
         handleSuccessModal({
           total: totalLinhas,
           novos: inseridos,
           atualizados: atualizados,
           inativados: inativados
-        }, relatorioUrl);
+        }, relatorioUrl, data.task_id, importBase);
       }
 
       return true;
@@ -1371,7 +1371,7 @@ document.addEventListener("DOMContentLoaded", async () => {
 });
 
 // ---------- FUNÇÃO AUXILIAR: MODAL DE SUCESSO ----------
-function handleSuccessModal(stats, relatorioUrl) {
+function handleSuccessModal(stats, relatorioUrl, taskId, importBase) {
   const successModal = document.getElementById("import-success-modal");
   if (!successModal) return;
 
@@ -1380,13 +1380,26 @@ function handleSuccessModal(stats, relatorioUrl) {
   if (document.getElementById("resumo-atualizados")) document.getElementById("resumo-atualizados").innerText = stats.atualizados;
   if (document.getElementById("resumo-inativados")) document.getElementById("resumo-inativados").innerText = stats.inativados;
 
+  // Exibe ou oculta o aviso de recálculo dependendo se há um taskId
+  const aviso = document.getElementById("recalculo-aviso");
+  if (aviso) {
+    aviso.style.display = taskId ? "flex" : "none";
+  }
+
   successModal.classList.remove("hidden");
 
   const btnClose = document.getElementById("import-success-close");
   const btnCancel = document.getElementById("import-success-cancel"); // botão "Fechar"
   const btnDownload = document.getElementById("import-success-download");
 
-  const closeAction = () => successModal.classList.add("hidden");
+  const closeAction = () => {
+    successModal.classList.add("hidden");
+    // Se houver recálculo pendente, inicia o polling agora
+    if (taskId) {
+      showModal("progress-modal");
+      pollTaskStatus(importBase, taskId);
+    }
+  };
 
   // Limpa ouvintes antigos (clones) para não acumular
   if (btnClose) {
@@ -1405,15 +1418,8 @@ function handleSuccessModal(stats, relatorioUrl) {
     btnDownload.parentNode.replaceChild(newBtn, btnDownload);
 
     newBtn.addEventListener("click", () => {
-      // Link temporário para download
-      const a = document.createElement('a');
-      a.href = relatorioUrl;
-      a.download = `relatorio_importacao_${new Date().getTime()}.pdf`;
-      a.target = '_blank';
-      document.body.appendChild(a);
-      a.click();
-      document.body.removeChild(a);
-      // Não fecha, deixa o usuário fechar
+      window.open(relatorioUrl, "_blank");
+      // Não fecha, deixa o usuário fechar no botão apropriado
     });
   }
 }
