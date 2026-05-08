@@ -387,11 +387,11 @@ function renderCards(rows) {
           <div class="td-status" id="td-status-mobile-${id}">${getStatusBadge(status)}</div>
         </div>
         <div class="order-card-actions td-actions" id="td-actions-mobile-${id}">
-           ${link ? `<a href="${link}" target="_blank" class="os-btn os-btn-secondary os-btn-sm" style="text-decoration: none;">Link</a>` : ''}
-           
-           <button class="os-btn os-btn-secondary os-btn-sm btn-edit-status" data-id="${id}" data-status="${status}" data-is-mobile="true">Mudar Status</button>
-           ${String(status || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toUpperCase() === 'ORCAMENTO' ? `<a href="/pedido/editar_pedido.html?id=${id}&action=edit" class="os-btn os-btn-secondary os-btn-sm" style="text-decoration: none;">Editar Orçamento</a>` : ''}
-
+           <div class="os-btn-group">
+             ${link ? `<a href="${link}" target="_blank" class="os-btn os-btn-secondary os-btn-sm" style="text-decoration: none;">Link</a>` : ''}
+             <button class="os-btn os-btn-secondary os-btn-sm btn-edit-status" data-id="${id}" data-status="${status}" data-is-mobile="true">Mudar Status</button>
+             ${String(status || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toUpperCase() === 'ORCAMENTO' ? `<a href="/pedido/editar_pedido.html?id=${id}&action=edit" class="os-btn os-btn-secondary os-btn-sm" style="text-decoration: none;">Editar Orçamento</a>` : ''}
+           </div>
            <button class="os-btn os-btn-primary os-btn-sm" onclick="openResumo('${id}')">Detalhes</button>
         </div>
 
@@ -741,9 +741,11 @@ async function saveStatus(id, isMobile = false) {
     if (isMobile) {
        const link = row && (row.link_url || row.link) ? row.link_url || row.link : null;
        tdActions.innerHTML = `
-           ${link ? `<a href="${link}" target="_blank" class="os-btn os-btn-secondary os-btn-sm" style="text-decoration: none;">Link</a>` : ''}
-           <button class="os-btn os-btn-secondary os-btn-sm btn-edit-status" data-id="${id}" data-status="${newStatus}" data-is-mobile="true">Mudar Status</button>
-           ${String(newStatus || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toUpperCase() === 'ORCAMENTO' ? `<a href="/pedido/editar_pedido.html?id=${id}&action=edit" class="os-btn os-btn-secondary os-btn-sm" style="text-decoration: none;">Editar Orçamento</a>` : ''}
+           <div class="os-btn-group">
+             ${link ? `<a href="${link}" target="_blank" class="os-btn os-btn-secondary os-btn-sm" style="text-decoration: none;">Link</a>` : ''}
+             <button class="os-btn os-btn-secondary os-btn-sm btn-edit-status" data-id="${id}" data-status="${newStatus}" data-is-mobile="true">Mudar Status</button>
+             ${String(newStatus || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toUpperCase() === 'ORCAMENTO' ? `<a href="/pedido/editar_pedido.html?id=${id}&action=edit" class="os-btn os-btn-secondary os-btn-sm" style="text-decoration: none;">Editar Orçamento</a>` : ''}
+           </div>
            <button class="os-btn os-btn-primary os-btn-sm" onclick="openResumo('${id}')">Detalhes</button>
        `;
     } else {
@@ -841,7 +843,7 @@ function bindUI() {
   // Busca dinâmica (Debounced)
   const doSearch = debounce(() => loadList(1), 500);
 
-  const inputs = ["fTabela", "fCliente", "fFornecedor", "fPedido"];
+  const inputs = ["fTabela", "fCliente", "fFornecedor", "fPedido", "fPedidoSupra", "fNotaFiscal"];
   inputs.forEach(id => {
     document.getElementById(id)?.addEventListener("input", doSearch);
   });
@@ -915,6 +917,8 @@ function limparFiltros() {
   document.getElementById("fCliente").value = "";
   document.getElementById("fFornecedor").value = "";
   const fped = document.getElementById("fPedido"); if (fped) fped.value = "";
+  const fsupra = document.getElementById("fPedidoSupra"); if (fsupra) fsupra.value = "";
+  const fnf = document.getElementById("fNotaFiscal"); if (fnf) fnf.value = "";
   const fs = document.getElementById("fStatus"); if (fs) fs.value = "";
   const fp = document.getElementById("fPeriodoRapido"); if (fp) fp.value = "30";
 

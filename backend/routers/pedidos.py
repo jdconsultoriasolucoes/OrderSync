@@ -171,51 +171,44 @@ def listar_pedidos(
     offset: Optional[int] = None,
     db: Session = Depends(get_db)
 ):
-    # 1. período padrão = últimos 30 dias
-    if not from_ or not to_:
-        hoje = datetime.now()
-        inicio = hoje - timedelta(days=30)
-        from_ = inicio.strftime("%Y-%m-%d")
-        to_   = hoje.strftime("%Y-%m-%d")
-
-    # 2. parse datas
-    try:
-        from_dt = datetime.strptime(from_, "%Y-%m-%d").replace(
-            hour=0, minute=0, second=0, microsecond=0
-        )
-        # nosso WHERE usa "< :to", então :to = dia seguinte 00:00
-        limite_to = datetime.strptime(to_, "%Y-%m-%d").replace(
-            hour=0, minute=0, second=0, microsecond=0
-        ) + timedelta(days=1)
-    except ValueError:
-        return {
-            "data": [],
-            "page": page,
-            "pageSize": pageSize,
-            "total": 0,
-        }
-
-    # 3. paginação
+    # 1. Paginação
     limit = pageSize
     offset = (page - 1) * pageSize
     if offset < 0:
         offset = 0
 
-    # 4. quebra status em lista (se veio)
-    if status:
-        status_list = [s.strip() for s in status.split(",") if s.strip()]
-    else:
-        status_list = None  # <- agora realmente None é permitido, MAS só no Python
+    # 2. Montar dinamicamente os filtros
+    # quebra status em lista (se veio)
+    status_list = [s.strip() for s in status.split(",") if s.strip()] if status else None
+    
+    filtros_sql = []
+    params = {}
 
-    # 5. montar dinamicamente os filtros
-    filtros_sql = [
-        "a.created_at >= :from",
-        "a.created_at <  :to",
-    ]
-    params = {
-        "from": from_dt,
-        "to": limite_to,
-    }
+    # Só aplica filtro de data se fornecido OU se não houver filtros específicos de busca direta
+    # Se id_pedido, pedido_supra ou nota_fiscal estiverem presentes, ignoramos as datas padrão
+    tem_busca_direta = bool(id_pedido or pedido_supra or nota_fiscal)
+    
+    if from_ or to_ or not tem_busca_direta:
+        # Se não veio nada e não tem busca direta, aplica o padrão de 30 dias
+        if not from_ or not to_:
+            hoje = datetime.now()
+            inicio = hoje - timedelta(days=30)
+            from_str = inicio.strftime("%Y-%m-%d")
+            to_str   = hoje.strftime("%Y-%m-%d")
+        else:
+            from_str = from_
+            to_str = to_
+
+        try:
+            from_dt = datetime.strptime(from_str, "%Y-%m-%d").replace(hour=0, minute=0, second=0)
+            limite_to = datetime.strptime(to_str, "%Y-%m-%d").replace(hour=0, minute=0, second=0) + timedelta(days=1)
+            
+            filtros_sql.append("a.created_at >= :from")
+            filtros_sql.append("a.created_at <  :to")
+            params["from"] = from_dt
+            params["to"] = limite_to
+        except ValueError:
+            pass # Ignora erro de formato de data se estiver buscando por outros campos
 
     if status_list:
         placeholders = ", ".join([f":st_{i}" for i in range(len(status_list))])

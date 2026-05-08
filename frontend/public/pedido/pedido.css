@@ -500,9 +500,21 @@ header {
 
 .order-card-actions {
   display: flex;
+  flex-direction: column;
+  gap: 0.8rem;
+  margin-top: 1rem;
+}
+
+.os-btn-group {
+  display: flex;
+  flex-wrap: wrap;
   gap: 0.5rem;
-  margin-top: 0.5rem;
-  justify-content: flex-end;
+  width: 100%;
+}
+
+.order-card-actions .os-btn-primary {
+  align-self: flex-end;
+  min-width: 120px;
 }
 
 @media (max-width: 768px) {
