@@ -49,11 +49,11 @@ SELECT
   a.id_pedido,
   a.codigo_cliente,
   COALESCE(c.cadastro_nome_cliente, a.cliente) AS cliente,
-  a.contato_nome,
-  a.contato_email,
-  a.contato_fone,
-  c.compras_telefone_fixo_responsavel AS cliente_telefone,
+  COALESCE(a.contato_nome, c.compras_nome_responsavel) AS contato_nome,
+  COALESCE(a.contato_email, c.compras_email_resposavel) AS contato_email,
+  COALESCE(a.contato_fone, c.compras_celular_responsavel) AS contato_fone,
   c.compras_celular_responsavel AS cliente_celular,
+  NULL AS cliente_telefone,
   COALESCE(a.tabela_preco_nome, b.nome_tabela) AS tabela_preco_nome,
   COALESCE(
     CASE

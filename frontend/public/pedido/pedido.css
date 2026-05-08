@@ -510,6 +510,7 @@ header {
   flex-wrap: wrap;
   gap: 0.5rem;
   width: 100%;
+  justify-content: flex-end;
 }
 
 .order-card-actions .os-btn-primary {

@@ -392,7 +392,9 @@ function renderCards(rows) {
              <button class="os-btn os-btn-secondary os-btn-sm btn-edit-status" data-id="${id}" data-status="${status}" data-is-mobile="true">Mudar Status</button>
              ${String(status || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toUpperCase() === 'ORCAMENTO' ? `<a href="/pedido/editar_pedido.html?id=${id}&action=edit" class="os-btn os-btn-secondary os-btn-sm" style="text-decoration: none;">Editar Orçamento</a>` : ''}
            </div>
-           <button class="os-btn os-btn-primary os-btn-sm" onclick="openResumo('${id}')">Detalhes</button>
+           <div class="os-btn-group">
+             <button class="os-btn os-btn-primary os-btn-sm" onclick="openResumo('${id}')" style="min-width: 120px;">Detalhes</button>
+           </div>
         </div>
 
       `;
@@ -466,8 +468,9 @@ async function openResumo(id) {
         </div>
         <div class="kv">
           <div style="grid-column: 1 / -1;">
-            <b>Contato:</b> ${p.contato_nome ?? "-"} • ${p.contato_email ?? "-"}
-            ${p.cliente_telefone || p.cliente_celular ? `<br><b>Telefones Cliente:</b> ${p.cliente_telefone ?? ""} ${p.cliente_celular ?? ""}` : ""}
+            <b>Contato:</b> ${p.contato_nome || "Não informado"}
+            ${p.contato_email ? ` • ${p.contato_email}` : ""}
+            ${p.contato_fone ? `<br><b>Telefone/Celular:</b> ${p.contato_fone}` : ""}
           </div>
         </div>
         <div class="block">
@@ -746,7 +749,9 @@ async function saveStatus(id, isMobile = false) {
              <button class="os-btn os-btn-secondary os-btn-sm btn-edit-status" data-id="${id}" data-status="${newStatus}" data-is-mobile="true">Mudar Status</button>
              ${String(newStatus || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toUpperCase() === 'ORCAMENTO' ? `<a href="/pedido/editar_pedido.html?id=${id}&action=edit" class="os-btn os-btn-secondary os-btn-sm" style="text-decoration: none;">Editar Orçamento</a>` : ''}
            </div>
-           <button class="os-btn os-btn-primary os-btn-sm" onclick="openResumo('${id}')">Detalhes</button>
+           <div class="os-btn-group">
+             <button class="os-btn os-btn-primary os-btn-sm" onclick="openResumo('${id}')" style="min-width: 120px;">Detalhes</button>
+           </div>
        `;
     } else {
        tdActions.innerHTML = `

@@ -188,7 +188,14 @@ def listar_pedidos(
     # Se id_pedido, pedido_supra ou nota_fiscal estiverem presentes, ignoramos as datas padrão
     tem_busca_direta = bool(id_pedido or pedido_supra or nota_fiscal)
     
-    if from_ or to_ or not tem_busca_direta:
+    # Decisão: Só aplicamos datas se:
+    # 1. Não há busca direta (ID, Supra, NF)
+    # 2. OU se o usuário alterou as datas manualmente (comparar com o que seria o padrão no front?)
+    # Na verdade, o mais seguro é: Se tem busca direta, ignoramos datas A MENOS que tenham sido passadas.
+    # Mas como o front sempre passa, vamos ver se o front passou datas que NÃO são o padrão de 30 dias?
+    # Melhor: Se tem busca direta, ignoramos datas por padrão.
+    
+    if (from_ or to_) and not tem_busca_direta:
         # Se não veio nada e não tem busca direta, aplica o padrão de 30 dias
         if not from_ or not to_:
             hoje = datetime.now()
@@ -208,7 +215,12 @@ def listar_pedidos(
             params["from"] = from_dt
             params["to"] = limite_to
         except ValueError:
-            pass # Ignora erro de formato de data se estiver buscando por outros campos
+            pass # Ignora erro de formato de data
+    elif (from_ and to_) and tem_busca_direta:
+        # Se tem busca direta E o usuário passou datas, talvez ele queira filtrar por data TAMBÉM?
+        # Por enquanto, se tem busca direta, vamos priorizar a busca global. 
+        # Se quisermos ser super precisos, teríamos que saber se as datas são "padrão".
+        pass
 
     if status_list:
         placeholders = ", ".join([f":st_{i}" for i in range(len(status_list))])
