@@ -1405,8 +1405,30 @@ function criarLinha(item, idx) {
     }
   });
 
-  tdFrete.appendChild(inpFrete);
-  tdFrete.appendChild(lockIcon);
+  const container = document.createElement('div');
+  container.style.display = 'flex';
+  container.style.flexDirection = 'column';
+  container.style.alignItems = 'flex-end';
+
+  const inputRow = document.createElement('div');
+  inputRow.style.display = 'flex';
+  inputRow.style.alignItems = 'center';
+  inputRow.style.gap = '4px';
+
+  inputRow.appendChild(inpFrete);
+  inputRow.appendChild(lockIcon);
+
+  const resultLabel = document.createElement('div');
+  resultLabel.className = 'col-frete-resultado';
+  resultLabel.style.fontSize = '10px';
+  resultLabel.style.color = '#64748b';
+  resultLabel.style.marginTop = '2px';
+  resultLabel.style.fontWeight = '500';
+  resultLabel.textContent = '—';
+
+  container.appendChild(inputRow);
+  container.appendChild(resultLabel);
+  tdFrete.appendChild(container);
 
 
   // IPI e IVA_ST (%) — Inicializar com o valor salvo no item, se houver
@@ -1614,6 +1636,12 @@ async function recalcLinha(tr) {
   // pinta colunas comerciais
   tr.querySelector('.col-desc-aplicado').textContent = fmtMoney(descontoValor); // Desc. aplicado
   tr.querySelector('.col-cond-valor').textContent = fmtMoney(acrescimoCond); // Cond. (R$)
+  
+  // Atualiza label de resultado do frete (R$ unitário)
+  const lblRes = tr.querySelector('.col-frete-resultado');
+  if (lblRes) {
+    lblRes.textContent = `R$ ${fmtMoney(freteValor)}`;
+  }
   
   // Atualiza o input de frete se não for manual (para refletir o cálculo automático)
   const inpF = tr.querySelector('.field-frete-manual');
