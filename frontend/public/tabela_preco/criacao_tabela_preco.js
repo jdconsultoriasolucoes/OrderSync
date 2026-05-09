@@ -1189,7 +1189,8 @@ async function carregarItens() {
         fornecedor: t.fornecedor || '',
         status_atual: p.status_atual ?? 'ATIVO', // <--- Mapeia status
         manual_freight: !!p.manual_freight,
-        valor_frete_aplicado: Number(p.valor_frete_aplicado ?? 0)
+        valor_frete_aplicado: Number(p.valor_frete_aplicado ?? 0),
+        frete_base_ton: Number(p.frete_base_ton ?? 0)
       }));
 
       itens = itens.map(p => ({
@@ -1502,12 +1503,35 @@ function criarLinha(item, idx) {
   inpFrete.className = 'field-frete-manual num';
   inpFrete.style.width = '80px';
   inpFrete.style.display = 'inline-block';
-  // Store the initial/last manual value for "memory"
-  item._manualFreteVal = item.valor_frete_aplicado;
-  
-  inpFrete.value = item.manual_freight ? (item.valor_frete_aplicado || 0).toFixed(2) : '';
-  inpFrete.placeholder = 'Auto';
-  
+  const containerFrete = document.createElement('div');
+  containerFrete.style.display = 'flex';
+  containerFrete.style.flexDirection = 'column';
+  containerFrete.style.alignItems = 'flex-end';
+
+  const inputRow = document.createElement('div');
+  inputRow.style.display = 'flex';
+  inputRow.style.alignItems = 'center';
+  inputRow.style.gap = '4px';
+
+  inputRow.appendChild(inpFrete);
+  inputRow.appendChild(lockIcon);
+
+  const resultLabel = document.createElement('div');
+  resultLabel.className = 'col-frete-resultado';
+  resultLabel.style.fontSize = '10px';
+  resultLabel.style.color = '#64748b';
+  resultLabel.style.marginTop = '2px';
+  resultLabel.style.fontWeight = '500';
+  resultLabel.textContent = '—';
+
+  containerFrete.appendChild(inputRow);
+  containerFrete.appendChild(resultLabel);
+  tdFrete.appendChild(containerFrete);
+
+  // Sync placeholder
+  inpFrete.placeholder = 'R$/Ton';
+  inpFrete.value = item.manual_freight ? (item.frete_base_ton || 0).toFixed(2) : '';
+
   const lockIcon = document.createElement('i');
   lockIcon.className = item.manual_freight ? 'bi bi-lock lock-icon' : 'bi bi-unlock lock-icon';
   lockIcon.style.marginLeft = '8px';
@@ -1528,7 +1552,7 @@ function criarLinha(item, idx) {
           let num = parseFloat(val);
           if (!isNaN(num)) {
               item.manual_freight = true;
-              item.valor_frete_aplicado = num;
+              item.frete_base_ton = num;
               item._manualFreteVal = num; // Update memory
               lockIcon.className = 'bi bi-lock lock-icon';
               lockIcon.style.color = '#2563eb';
@@ -1539,7 +1563,7 @@ function criarLinha(item, idx) {
   });
 
   lockIcon.addEventListener('click', () => {
-      if (currentMode === MODE.VIEW) return; // Prevent clicking in view mode
+      if (currentMode === MODE.VIEW) return;
       if (item.manual_freight) {
           item.manual_freight = false;
           inpFrete.value = '';
@@ -1550,14 +1574,12 @@ function criarLinha(item, idx) {
       } else {
           item.manual_freight = true;
           const freteKg = Number(document.getElementById('frete_kg')?.value || 0);
-          const peso = Number(item.peso_liquido ?? item.peso ?? item.peso_kg ?? item.pesoLiquido ?? 0);
-          const calculatedAuto = item._freteValor !== undefined ? item._freteValor : (peso * (freteKg / 1000));
           
-          // Memory feature: use last manual value if exists and is not zero, otherwise use current auto
-          const valToSet = (item._manualFreteVal && item._manualFreteVal > 0) ? item._manualFreteVal : calculatedAuto;
+          // Memory feature: use last manual value if exists, otherwise use current global fKg
+          const valToSet = (item._manualFreteVal && item._manualFreteVal > 0) ? item._manualFreteVal : freteKg;
           
-          item.valor_frete_aplicado = valToSet;
-          inpFrete.value = item.valor_frete_aplicado.toFixed(2);
+          item.frete_base_ton = valToSet;
+          inpFrete.value = item.frete_base_ton.toFixed(2);
           lockIcon.className = 'bi bi-lock lock-icon';
           lockIcon.style.color = '#2563eb';
           lockIcon.title = 'Frete manual (travado)';
@@ -1565,8 +1587,8 @@ function criarLinha(item, idx) {
       }
   });
 
-  tdFrete.appendChild(inpFrete);
-  tdFrete.appendChild(lockIcon);
+  inputRow.appendChild(inpFrete);
+  inputRow.appendChild(lockIcon);
 
 
 
@@ -1750,14 +1772,33 @@ async function recalcLinha(tr) {
   const results = calcularLinha(item, fator, taxaCond, freteKg);
   let { acrescimoCond, freteValor, descontoValor, precoBase, liquido } = results;
 
-  // ✅ OVERRIDE: Se o frete for manual, ignora o calculado
+  // ✅ OVERRIDE: Se o frete for manual, calcula baseado no R$/Ton (Base)
   if (item.manual_freight) {
-    freteValor = Number(item.valor_frete_aplicado || 0);
+    const inputVal = tr.querySelector('.field-frete-manual')?.value;
+    let baseTon = 0;
+    if (inputVal && inputVal !== '') {
+        baseTon = parseFloat(inputVal.replace(',', '.'));
+    } else if (item.frete_base_ton) {
+        baseTon = Number(item.frete_base_ton);
+    }
+    
+    const pesoParaFrete = (Number(item.peso_bruto || 0) > 0) ? Number(item.peso_bruto) : Number(item.peso_liquido || 0);
+    freteValor = (baseTon / 1000) * pesoParaFrete;
+    
+    item.frete_base_ton = baseTon;
+    item._manualFreteVal = baseTon;
+    item.valor_frete_aplicado = freteValor; // Store result
   }
 
   // pinta colunas comerciais
   tr.querySelector('td:nth-child(9)').textContent = fmtMoney(descontoValor); // Desc. aplicado
   tr.querySelector('td:nth-child(11)').textContent = fmtMoney(acrescimoCond); // Cond. (R$)
+
+  // Atualiza label de resultado do frete (R$ unitário)
+  const lblRes = tr.querySelector('.col-frete-resultado');
+  if (lblRes) {
+    lblRes.textContent = `R$ ${fmtMoney(freteValor)}`;
+  }
   
   // Atualiza campo de frete se não for manual
   const inpF = tr.querySelector('.field-frete-manual');
@@ -2215,9 +2256,12 @@ async function salvarTabela() {
       let { acrescimoCond, freteValor, descontoValor } =
         calcularLinha(item, fator, taxaCond, frete_kg /* ivaStAtivo é ignorado aqui */);
 
-      // OVERRIDE: Se o frete for manual, ignora o calculado para o payload
+      // OVERRIDE: Se o frete for manual, calcula baseado no R$/Ton (Base)
       if (item.manual_freight) {
-        freteValor = Number(item.valor_frete_aplicado || 0);
+        const pesoParaFrete = (Number(item.peso_bruto || 0) > 0) ? Number(item.peso_bruto) : Number(item.peso_liquido || 0);
+        const baseTon = (item._manualFreteVal != null) ? item._manualFreteVal : Number(item.frete_base_ton || 0);
+        freteValor = (baseTon / 1000) * pesoParaFrete;
+        item.frete_base_ton = baseTon;
       }
 
       // On mobile, build fatorLabel from the saved code
@@ -2248,6 +2292,7 @@ async function salvarTabela() {
 
         valor_frete_aplicado: Number(freteValor.toFixed(2)),
         frete_kg: Number(frete_kg || 0),
+        frete_base_ton: Number(item.frete_base_ton || 0),
         valor_frete: Number((item._totalComercial || 0).toFixed(2)),
         valor_s_frete: Number((item.total_sem_frete || 0).toFixed(2)),
 

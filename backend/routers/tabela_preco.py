@@ -455,6 +455,7 @@ def obter_tabela(id_tabela: int):
                 "valor_final_markup": p.valor_final_markup,
                 "valor_s_frete_markup": p.valor_s_frete_markup,
                 "manual_freight": getattr(p, "manual_freight", False),
+                "frete_base_ton": getattr(p, "frete_base_ton", 0),
                 "status_atual": status_map.get(p.codigo_produto_supra, "DESCONHECIDO"), # <--- NOVO
                 } for p in itens
             ]

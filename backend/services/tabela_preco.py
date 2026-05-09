@@ -62,14 +62,14 @@ def create_tabela(db: Session, body: TabelaSalvar, usuario_email: str) -> Dict[s
               comissao_aplicada, ajuste_pagamento, descricao_fator_comissao, codigo_plano_pagamento,
               valor_frete_aplicado, frete_kg, valor_frete, valor_s_frete, grupo, departamento,
               ipi, icms_st, iva_st, calcula_st, criacao_usuario, alteracao_usuario, markup,
-              valor_final_markup, valor_s_frete_markup, observacao, manual_freight
+              valor_final_markup, valor_s_frete_markup, observacao, manual_freight, frete_base_ton
             ) VALUES (
               :id_tabela, :nome_tabela, :fornecedor, :codigo_cliente, :cliente,
               :codigo_produto_supra, :descricao_produto, :embalagem, :peso_liquido, :valor_produto,
               :comissao_aplicada, :ajuste_pagamento, :descricao_fator_comissao, :codigo_plano_pagamento,
               :valor_frete_aplicado, :frete_kg, :valor_frete, :valor_s_frete, :grupo, :departamento,
               :ipi, :icms_st, :iva_st, :calcula_st, :criacao_usuario, :alteracao_usuario, :markup,
-              :valor_final_markup, :valor_s_frete_markup, :observacao, :manual_freight
+              :valor_final_markup, :valor_s_frete_markup, :observacao, :manual_freight, :frete_base_ton
             )
             RETURNING id_linha
         """)
@@ -127,6 +127,7 @@ def create_tabela(db: Session, body: TabelaSalvar, usuario_email: str) -> Dict[s
                 "valor_s_frete_markup": float(getattr(produto, "valor_s_frete_markup", 0) or 0),
                 "observacao": getattr(body, "observacao", None),
                 "manual_freight": bool(getattr(produto, "manual_freight", False)),
+                "frete_base_ton": float(getattr(produto, "frete_base_ton", 0) or 0),
             }
 
             try:
@@ -239,6 +240,7 @@ def update_tabela(db: Session, id_tabela: int, body: TabelaSalvar, usuario_email
                 target.valor_final_markup       = (p.valor_final_markup or 0)
                 target.valor_s_frete_markup     = (p.valor_s_frete_markup or 0)
                 target.manual_freight           = bool(getattr(p, "manual_freight", False))
+                target.frete_base_ton           = float(getattr(p, "frete_base_ton", 0) or 0)
                 
                 if not target.ativo:
                     target.ativo = True
@@ -279,6 +281,7 @@ def update_tabela(db: Session, id_tabela: int, body: TabelaSalvar, usuario_email
                     valor_final_markup   = (p.valor_final_markup or 0),
                     valor_s_frete_markup = (p.valor_s_frete_markup or 0),
                     manual_freight       = bool(getattr(p, "manual_freight", False)),
+                    frete_base_ton       = float(getattr(p, "frete_base_ton", 0) or 0),
                     observacao           = getattr(body, "observacao", None),
                     ativo                = True,
                     deletado_em          = None,

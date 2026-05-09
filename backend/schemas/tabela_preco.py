@@ -31,6 +31,7 @@ class TabelaPreco(BaseModel):
     # Frete
     valor_frete_aplicado: Optional[float] = None
     frete_kg: Optional[float] = None
+    frete_base_ton: Optional[float] = 0.0
 
     # Totais (podem vir prontos do front)
     valor_liquido: Optional[float] = None
@@ -133,6 +134,7 @@ class ProdutoSalvar(BaseModel):
     icms_st: Optional[float] = 0.0
     iva_st: Optional[float] = 0.0
     manual_freight: Optional[bool] = False
+    frete_base_ton: Optional[float] = 0.0
 
     class Config:
         extra = "ignore"
