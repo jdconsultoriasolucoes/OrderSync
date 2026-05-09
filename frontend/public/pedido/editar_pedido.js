@@ -1600,6 +1600,7 @@ async function recalcLinha(tr) {
       }
       
       // Frete unitário = (Base R$/Ton / 1000) * Peso
+      const pesoParaFrete = (Number(item.peso_bruto || 0) > 0) ? Number(item.peso_bruto) : Number(item.peso_liquido || 0);
       freteValor = (baseTon / 1000) * pesoParaFrete;
       
       item.frete_base_ton = baseTon;      // Persiste a BASE (R$/Ton) na nova propriedade
