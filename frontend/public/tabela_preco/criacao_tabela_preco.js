@@ -1513,6 +1513,14 @@ function criarLinha(item, idx) {
   inputRow.style.alignItems = 'center';
   inputRow.style.gap = '4px';
 
+  const lockIcon = document.createElement('i');
+  lockIcon.className = item.manual_freight ? 'bi bi-lock lock-icon' : 'bi bi-unlock lock-icon';
+  lockIcon.style.marginLeft = '8px';
+  lockIcon.style.cursor = 'pointer';
+  lockIcon.style.fontSize = '1.1rem';
+  lockIcon.style.color = item.manual_freight ? '#2563eb' : '#64748b'; 
+  lockIcon.title = item.manual_freight ? 'Frete manual (travado)' : 'Frete automático';
+
   inputRow.appendChild(inpFrete);
   inputRow.appendChild(lockIcon);
 
@@ -1531,14 +1539,6 @@ function criarLinha(item, idx) {
   // Sync placeholder
   inpFrete.placeholder = 'R$/Ton';
   inpFrete.value = item.manual_freight ? (item.frete_base_ton || 0).toFixed(2) : '';
-
-  const lockIcon = document.createElement('i');
-  lockIcon.className = item.manual_freight ? 'bi bi-lock lock-icon' : 'bi bi-unlock lock-icon';
-  lockIcon.style.marginLeft = '8px';
-  lockIcon.style.cursor = 'pointer';
-  lockIcon.style.fontSize = '1.1rem';
-  lockIcon.style.color = item.manual_freight ? '#2563eb' : '#64748b'; 
-  lockIcon.title = item.manual_freight ? 'Frete manual (travado)' : 'Frete automático';
 
   inpFrete.addEventListener('input', (e) => {
       let val = e.target.value.replace(',', '.');
@@ -1586,9 +1586,6 @@ function criarLinha(item, idx) {
           recalcLinha(tr);
       }
   });
-
-  inputRow.appendChild(inpFrete);
-  inputRow.appendChild(lockIcon);
 
 
 
