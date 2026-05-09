@@ -595,6 +595,7 @@ function mapBackendItemToFrontend(p, t) {
     subtotal: Number(p.subtotal_com_f || p.subtotal_sem_f || 0),
     manual_freight: !!p.manual_freight,
     valor_frete_unitario: Number(p.valor_frete_unitario || 0),
+    frete_base_ton: Number(p.frete_base_ton || 0),
     markup: Number(p.markup || 0),
     valor_final_markup: Number(p.valor_final_markup || 0),
     valor_s_frete_markup: Number(p.valor_s_frete_markup || 0),
@@ -1349,8 +1350,8 @@ function criarLinha(item, idx) {
   // Store the initial/last manual value for "memory"
   item._manualFreteVal = freteUnitarioSalvo;
   
-  inpFrete.value = item.manual_freight ? freteUnitarioSalvo.toFixed(2) : '';
-  inpFrete.placeholder = 'Auto';
+  inpFrete.value = item.manual_freight ? (freteUnitarioSalvo || 0).toFixed(2) : '';
+  inpFrete.placeholder = 'R$/Ton';
   
   const lockIcon = document.createElement('i');
   lockIcon.className = item.manual_freight ? 'bi bi-lock lock-icon' : 'bi bi-unlock lock-icon';
@@ -1393,11 +1394,8 @@ function criarLinha(item, idx) {
     } else {
       item.manual_freight = true;
       const fKg = Number(document.getElementById('frete_kg')?.value || 0);
-      const peso = Number(item.peso_liquido_unit ?? item.peso_kg ?? 0);
-      const calculatedAuto = (fKg / 1000) * peso;
-      
-      // Memory feature: use last manual value if exists and is not zero, otherwise use current auto
-      const valToSet = (item._manualFreteVal && item._manualFreteVal > 0) ? item._manualFreteVal : calculatedAuto;
+      // Memory feature: use last manual value if exists, otherwise use current global fKg
+      const valToSet = (item._manualFreteVal && item._manualFreteVal > 0) ? item._manualFreteVal : fKg;
       
       inpFrete.value = valToSet.toFixed(2);
       lockIcon.className = 'bi bi-lock lock-icon';
@@ -1591,19 +1589,23 @@ async function recalcLinha(tr) {
   let calcRes = calcularLinha(item, fator, taxaCond, freteKg);
   let { acrescimoCond, freteValor, descontoValor, precoBase, liquido } = calcRes;
 
-  // OVERRIDE MANUAL
+  // OVERRIDE MANUAL (Agora interpretado como R$/Ton)
   if (item.manual_freight) {
-      // Se tiver valor digitado agora, usa ele. Senão usa o que veio do banco
       const inputVal = tr.querySelector('.field-frete-manual')?.value;
+      let baseTon = 0;
       if (inputVal && inputVal !== '') {
-          freteValor = parseFloat(inputVal.replace(',', '.'));
-      } else if (item.valor_frete_unitario) {
-          freteValor = Number(item.valor_frete_unitario);
-      } else if (item.preco_unit_frt && item.preco_unit) {
-          freteValor = item.preco_unit_frt - item.preco_unit;
+          baseTon = parseFloat(inputVal.replace(',', '.'));
+      } else if (item.frete_base_ton) {
+          baseTon = Number(item.frete_base_ton);
       }
-      item._manualFreteVal = freteValor;
-      // precoBase aqui deve continuar sendo SEM frete para o fiscal
+      
+      // Frete unitário = (Base R$/Ton / 1000) * Peso
+      freteValor = (baseTon / 1000) * pesoParaFrete;
+      
+      item.frete_base_ton = baseTon;      // Persiste a BASE (R$/Ton) na nova propriedade
+      item._manualFreteVal = baseTon;      // Memória da BASE
+      
+      // precoBase continua sendo SEM frete
       precoBase = Number(item.valor || 0) + acrescimoCond - descontoValor;
   }
   item._freteValor = freteValor;
@@ -2109,15 +2111,11 @@ async function salvarTabela() {
       let { acrescimoCond, freteValor, descontoValor } =
         calcularLinha(item, fator, taxaCond, frete_kg);
 
-      // MANUAL OVERRIDE check also during saving
+      // MANUAL OVERRIDE check also during saving (Agora como R$/Ton)
       if (item.manual_freight) {
-        if (item._manualFreteVal != null) {
-          freteValor = item._manualFreteVal;
-        } else if (item.valor_frete_unitario) {
-          freteValor = Number(item.valor_frete_unitario);
-        } else if (item.preco_unit_frt && item.preco_unit) {
-          freteValor = item.preco_unit_frt - item.preco_unit;
-        }
+        const pesoParaFrete = (Number(item.peso_bruto || 0) > 0) ? Number(item.peso_bruto) : Number(item.peso_liquido || 0);
+        const baseTon = (item._manualFreteVal != null) ? item._manualFreteVal : Number(item.frete_base_ton || 0);
+        freteValor = (baseTon / 1000) * pesoParaFrete;
       }
 
       // On mobile, build fatorLabel from the saved code
@@ -2141,7 +2139,10 @@ async function salvarTabela() {
         peso_bruto: Number(item.peso_bruto ?? 0),
         quantidade: Number(item.quantidade || 0),
 
-        valor_produto: Number(item.valor || 0),
+        preco_unit: Number(precoBase.toFixed(2)),
+        preco_unit_com_frete: Number((precoBase + freteValor).toFixed(2)),
+        frete_base_ton: Number(item.frete_base_ton || 0),
+        manual_freight: !!item.manual_freight,
         comissao_aplicada: Number(descontoValor.toFixed(2)),
         ajuste_pagamento: Number(acrescimoCond.toFixed(2)),
         descricao_fator_comissao: fatorLabel,

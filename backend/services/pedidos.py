@@ -112,6 +112,7 @@ SELECT COALESCE(
       'markup',             COALESCE(c.markup, 0),
       'valor_final_markup',  COALESCE(c.valor_final_markup, 0),
       'valor_s_frete_markup', COALESCE(c.valor_s_frete_markup, 0),
+      'frete_base_ton',      COALESCE(c.frete_base_ton, 0),
       'peso_liquido_unit',  COALESCE(c.peso_kg, prod.peso, 0),
       'peso_liquido_total', ROUND(COALESCE(c.peso_kg, prod.peso, 0) * c.quantidade, 3)
     )

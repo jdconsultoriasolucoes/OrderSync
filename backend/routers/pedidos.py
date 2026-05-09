@@ -127,6 +127,7 @@ class PedidoUpdateItem(BaseModel):
     peso_kg: Optional[float] = None
     manual_freight: Optional[bool] = False
     valor_frete_unitario: Optional[float] = 0.0
+    frete_base_ton: Optional[float] = 0.0
     markup: Optional[float] = 0.0
     valor_final_markup: Optional[float] = 0.0
     valor_s_frete_markup: Optional[float] = 0.0
@@ -422,13 +423,13 @@ def atualizar_pedido(
         INSERT INTO tb_pedidos_itens (
             id_pedido, codigo, nome, embalagem, peso_kg,
             condicao_pagamento, tabela_comissao,
-            preco_unit, preco_unit_frt, valor_frete_unitario, quantidade,
+            preco_unit, preco_unit_frt, valor_frete_unitario, frete_base_ton, quantidade,
             subtotal_sem_f, subtotal_com_f, manual_freight,
             markup, valor_final_markup, valor_s_frete_markup
         ) VALUES (
             :id_pedido, :codigo, :nome, :embalagem, :peso_kg,
             :condicao_pagamento, :tabela_comissao,
-            :preco_unit, :preco_unit_frt, :valor_frete_unitario, :quantidade,
+            :preco_unit, :preco_unit_frt, :valor_frete_unitario, :frete_base_ton, :quantidade,
             :subtotal_sem_f, :subtotal_com_f, :manual_freight,
             :markup, :valor_final_markup, :valor_s_frete_markup
         )
@@ -439,11 +440,14 @@ def atualizar_pedido(
         p_sem = float(it.preco_unit or 0)
         p_com = float((it.preco_unit_com_frete if it.preco_unit_com_frete is not None else it.preco_unit) or 0)
         
-        # Prioriza o valor_frete_unitario enviado (especialmente para manual_freight)
-        if it.valor_frete_unitario is not None:
-            v_frete = float(it.valor_frete_unitario)
+        # Se manual_freight for verdadeiro, usa frete_base_ton para calcular o frete unitário
+        if bool(getattr(it, "manual_freight", False)):
+            base_ton = float(it.frete_base_ton or 0)
+            v_frete = round((base_ton / 1000.0) * float(it.peso_kg or 0), 2)
+            v_frete_unitario_final = v_frete # No item, guardamos o resultado unitário
         else:
             v_frete = round(p_com - p_sem, 2)
+            v_frete_unitario_final = v_frete
 
         db.execute(insert_item_sql, {
             "id_pedido": id_pedido,
@@ -454,8 +458,9 @@ def atualizar_pedido(
             "condicao_pagamento": it.condicao_pagamento,
             "tabela_comissao": it.tabela_comissao,
             "preco_unit": round(p_sem, 2),
-            "preco_unit_frt": round(p_com, 2),
-            "valor_frete_unitario": v_frete,
+            "preco_unit_frt": round(p_sem + v_frete, 2),
+            "valor_frete_unitario": v_frete_unitario_final,
+            "frete_base_ton": float(it.frete_base_ton or 0),
             "quantidade": qtd,
             "subtotal_sem_f": round(p_sem * qtd, 2),
             "subtotal_com_f": round(p_com * qtd, 2),
