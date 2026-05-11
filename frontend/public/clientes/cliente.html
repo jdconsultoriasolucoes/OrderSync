@@ -1250,22 +1250,6 @@
           } else {
             carregarTela();
           }
-
-          // Listener para atualizar nomes das rotas no select quando o município mudar (Visual apenas)
-          const munEntrega = document.getElementById("municipio_EnderecoEntrega");
-          if (munEntrega) {
-            munEntrega.addEventListener("input", function() {
-              const mun = this.value.trim();
-              const selectRota = document.getElementById("rota_principal_EnderecoEntrega");
-              if (selectRota) {
-                Array.from(selectRota.options).forEach(opt => {
-                  if (opt.value) {
-                    opt.text = mun ? `${opt.value} - ${mun}` : opt.value;
-                  }
-                });
-              }
-            });
-          }
         });
 
         // ---- Automação de Canal de Venda por Tipo de Cliente ----
@@ -2460,14 +2444,14 @@
 
               data.forEach((item) => {
                 const option = document.createElement("option");
-                option.value = item;
                 
-                // Concatenação dinâmica apenas para visualização na rota
                 if (endpoint === "rota") {
-                  const munInput = document.getElementById("municipio_EnderecoEntrega");
-                  const mun = munInput ? munInput.value.trim() : "";
-                  option.text = mun ? `${item} - ${mun}` : item;
+                  // Se o backend retornou "2 - SÃO PAULO", valor é "2" e texto é "2 - SÃO PAULO"
+                  const parts = item.split(" - ");
+                  option.value = parts[0].trim();
+                  option.text = item;
                 } else {
+                  option.value = item;
                   option.text = item;
                 }
 

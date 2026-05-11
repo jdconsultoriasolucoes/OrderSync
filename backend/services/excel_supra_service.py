@@ -146,7 +146,22 @@ def gerar_excel_cliente_supra(cliente) -> bytes:
         ws1["A22"] = f"Bairro:  {_s(cliente.entrega_bairro)}"
         ws1["F22"] = f"Cidade:  {_s(cliente.entrega_municipio)}"
         ws1["I22"] = f"Estado:  {_s(cliente.entrega_estado)}"
-        ws1["A23"] = f"Rota Principal:  {_s(cliente.entrega_rota_principal)}"
+        # Rota Principal (Busca município na tabela de referência)
+        rota_val = _s(cliente.entrega_rota_principal)
+        if rota_val and rota_val.isdigit():
+            try:
+                from database import SessionLocal
+                from sqlalchemy import text
+                with SessionLocal() as db:
+                    mun_rota = db.execute(
+                        text("SELECT municipio FROM tb_municipio_rota WHERE rota = :r LIMIT 1"),
+                        {"r": int(rota_val)}
+                    ).scalar()
+                    if mun_rota:
+                        rota_val = f"{rota_val} - {mun_rota}"
+            except:
+                pass
+        ws1["A23"] = f"Rota Principal:  {rota_val}"
 
         ws1["A25"] = f"Av./Rua/Nro:  {_s(cliente.cobranca_endereco)}"
         ws1["I25"] = f"CEP:  {_s(cliente.cobranca_cep)}"
@@ -268,10 +283,6 @@ def gerar_excel_cliente_supra(cliente) -> bytes:
         ws2["E28"] = _s(getattr(cliente, 'elaboracao_gerente_pet', ''))
         ws2["H28"] = _s(getattr(cliente, 'elaboracao_gerente_insumos', ''))
 
-        # Financeiro e Recomendações
-        ws2["A34"] = f"Forma de Pagamento: {tipo_venda_excel}" if 'tipo_venda_excel' in locals() else ""
-        ws2["D35"] = cliente.elaboracao_limite_credito or 0
-
         # --- LINHA 41: Status do Cliente (Lógica de Classificação) ---
         codigo_empresa = _s(cliente.cadastro_codigo_da_empresa)
         data_inativacao = getattr(cliente, 'data_inativacao', None)
@@ -286,8 +297,8 @@ def gerar_excel_cliente_supra(cliente) -> bytes:
         ws2["A41"] = status_text
 
         # --- LINHA 42: Mapeamento de Finalidade por Tipo de Cliente ---
-        tipo_raw = _normalize(_s(cliente.cadastro_tipo_cliente))
-        finalidade = FINALIDADE_MAP.get(tipo_raw, "")
+        tipo_raw_fin = _normalize(_s(cliente.cadastro_tipo_cliente))
+        finalidade = FINALIDADE_MAP.get(tipo_raw_fin, "")
         ws2["A42"] = finalidade
 
         # --- LINHA 43: Tipo de Venda (mapeamento de pagamento) ---
@@ -296,11 +307,20 @@ def gerar_excel_cliente_supra(cliente) -> bytes:
             tipo_venda_excel = ""
         elif "vista" in tipo_venda_raw:
             tipo_venda_excel = "Venda à vista"
+            ws2["D34"] = "( X ) Vendor"
+            ws2["H34"] = "(   ) Cobrança"
         elif "prazo" in tipo_venda_raw:
             tipo_venda_excel = "Venda a prazo"
+            ws2["H34"] = "( X ) Cobrança"
+            ws2["D34"] = "(   ) Vendor"
         else:
             tipo_venda_excel = _s(cliente.elaboracao_tipo_venda)
+        
         ws2["A43"] = tipo_venda_excel
+
+        # Financeiro e Recomendações
+        ws2["A34"] = f"Forma de Pagamento: {tipo_venda_excel}"
+        ws2["D35"] = cliente.elaboracao_limite_credito or 0
 
         # Garante que abra na primeira guia por padrão
         wb.active = 0
