@@ -104,42 +104,46 @@ app = FastAPI()
 app.state.limiter = limiter
 app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
 
-# --- STARTUP: Garantir usuario Admin ---
+# --- STARTUP: Inicialização do Sistema ---
 @app.on_event("startup")
-def startup_ensure_admin():
-    from database import SessionLocal
-    from models.usuario import UsuarioModel
-    from core.security import get_password_hash
-    # --- FIX CRITICO: Criar tabelas antes de consultar ---
-    from database import Base, engine
-    from models.idempotency import IdempotencyKeyModel
-    from models.background_task import BackgroundTaskModel
-    from models.automation_config import AutomationConfigModel
-    Base.metadata.create_all(bind=engine)
-
-    # --- MIGRAÇOES DE SCHEMA (Colunas novas) ---
-    from services.db_migrations import run_migrations
-    run_migrations()
-
-    # --- VERIFICAÇÃO DE INATIVIDADE (>180 dias) ---
-    from services.cliente import verificar_inatividade_clientes
-    try:
-        verificar_inatividade_clientes()
-    except Exception as e:
-        logger.error(f"Erro na verificação de inatividade: {e}")
+def startup_event():
+    logger.info("[STARTUP] Iniciando OrderSync...")
     
-    db = SessionLocal()
+    # 1. Tabelas e Migrações (Essencial para funcionamento)
+    try:
+        from database import Base, engine
+        from models.idempotency import IdempotencyKeyModel
+        from models.background_task import BackgroundTaskModel
+        from models.automation_config import AutomationConfigModel
+        Base.metadata.create_all(bind=engine)
+        
+        from services.db_migrations import run_migrations
+        run_migrations()
+    except Exception as e:
+        logger.error(f"[STARTUP] Falha crítica em Migrações: {e}")
+
+    # 2. Iniciar Worker de Background (Fila de E-mails)
     try:
         from core.worker import start_background_worker
         start_background_worker()
-        
+    except Exception as e:
+        logger.error(f"[STARTUP] Falha ao iniciar Worker: {e}")
+
+    # 3. Iniciar Agendador de Rotinas (Scheduler)
+    try:
+        from core.scheduler import start_scheduler
+        start_scheduler()
+    except Exception as e:
+        logger.error(f"[STARTUP] Falha ao iniciar Scheduler: {e}")
+
+    # 4. Garantir Usuário Admin
+    db = SessionLocal()
+    try:
+        from models.usuario import UsuarioModel
+        from core.security import get_password_hash
         email = "admin@ordersync.com"
-        # Reset force
         user = db.query(UsuarioModel).filter(UsuarioModel.email == email).first()
-        if user:
-            # Se já existe, NÃO reseta a senha. Apenas loga que encontrou.
-            logger.info("Admin user found. Skipping password reset.")
-        else:
+        if not user:
             new_user = UsuarioModel(
                 email=email, 
                 nome="Admin", 
@@ -148,13 +152,14 @@ def startup_ensure_admin():
                 ativo=True
             )
             db.add(new_user)
+            db.commit()
             logger.info("ADMIN USER CREATED: admin123")
-            
-        db.commit()
     except Exception as e:
-        logger.error(f"Startup Admin Reset Failed: {e}")
+        logger.error(f"[STARTUP] Falha ao criar Admin: {e}")
     finally:
         db.close()
+
+    logger.info("[STARTUP] Servidor pronto para receber conexões.")
 
 
 # Root route handled by StaticFiles
