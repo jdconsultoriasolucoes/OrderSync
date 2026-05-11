@@ -134,14 +134,12 @@ def _flat_to_nested(model: ClienteModelV2) -> dict:
             "pre_posto_ElaboracaoCadastro": model.elaboracao_pre_posto,
             "local_carregamento_ElaboracaoCadastro": model.elaboracao_local_carregamento
         },
-        # Listas dinâmicas (JSONB)
         "grupos_economicos": model.grupos_economicos or [],
         "referencias_comerciais": model.referencias_comerciais or [],
         "referencias_bancarias": model.referencias_bancarias or [],
         "bens_imoveis": model.bens_imoveis or [],
         "bens_moveis": model.bens_moveis or [],
         "planteis_animais": model.planteis_animais or [],
-        # Indicações (JSONB - lista de strings)
         "indicacoes_clientes": model.cadastro_indicacao_cliente or [],
         "supervisores": {
             "codigo_insumo_ElaboracaoCadastro": model.supervisor_codigo_insumo,
@@ -177,24 +175,15 @@ def _nested_to_flat(data: dict) -> ClienteModelV2:
     uc = data.get("dados_ultimas_compras", {})
     onc = data.get("observacoes_nao_compra", {})
     dec = data.get("dados_elaboracao_cadastro", {})
-    ge = data.get("grupo_economico", {})
-    rcom = data.get("referencia_comercial", {})
-    rb = data.get("referencia_bancaria", {})
-    bi = data.get("bem_imovel", {})
-    bm = data.get("bem_movel", {})
-    pa = data.get("plantel_animal", {})
     sup = data.get("supervisores", {})
     cd = data.get("comissao_dispet", {})
     cv = data.get("canal_venda_cliente", {})
 
     model = ClienteModelV2()
     
-    # ID
     if c.get("id"):
         model.id = c.get("id")
-    # If not present, we do NOT set model.id, so it remains unset/default (Sequence trigger)
 
-    # 1. Cadastro
     model.cadastro_codigo_da_empresa = c.get("codigo_da_empresa")
     model.cadastro_ativo = c.get("ativo")
     model.tipo_pessoa = c.get("tipo_pessoa")
@@ -219,7 +208,6 @@ def _nested_to_flat(data: dict) -> ClienteModelV2:
     model.cadastro_atividade_principal = c.get("atividade_principal")
     model.cadastro_periodo_de_compra = c.get("periodo_de_compra")
 
-    # 2. Responsavel Compras
     model.compras_nome_responsavel = rc.get("nome_responsavel")
     model.compras_celular_responsavel = rc.get("celular_responsavel")
     model.compras_telefone_fixo_responsavel = rc.get("telefone_fixo_responsavel")
@@ -228,7 +216,6 @@ def _nested_to_flat(data: dict) -> ClienteModelV2:
     model.compras_observacoes_responsavel = rc.get("observacoes_responsavel")
     model.compras_filial_resposavel = rc.get("filial_resposavel")
 
-    # 3. Faturamento
     model.faturamento_endereco = ef.get("endereco_faturamento")
     model.faturamento_bairro = ef.get("bairro_faturamento")
     model.faturamento_cep = ef.get("cep_faturamento")
@@ -237,14 +224,12 @@ def _nested_to_flat(data: dict) -> ClienteModelV2:
     model.faturamento_estado = ef.get("estado_faturamento")
     model.faturamento_email_danfe = ef.get("email_danfe_faturamento")
 
-    # 4. Representante Legal
     model.legal_nome = rl.get("nome_RepresentanteLegal")
     model.legal_celular = rl.get("celular_RepresentanteLegal")
     model.legal_email = rl.get("email_RepresentanteLegal")
     model.legal_data_nascimento = rl.get("data_nascimento_RepresentanteLegal")
     model.legal_observacoes = rl.get("observacoes_RepresentanteLegal")
 
-    # 5. Entrega
     model.entrega_endereco = ee.get("endereco_EnderecoEntrega")
     model.entrega_bairro = ee.get("bairro_EnderecoEntrega")
     model.entrega_cep = ee.get("cep_EnderecoEntrega")
@@ -255,14 +240,12 @@ def _nested_to_flat(data: dict) -> ClienteModelV2:
     model.entrega_rota_aproximacao = ee.get("rota_de_aproximacao_EnderecoEntrega")
     model.entrega_observacao_motorista = ee.get("observacao_motorista_EnderecoEntrega")
 
-    # 6. Recebimento
     model.recebimento_nome = rr.get("nome_ResponsavelRecebimento")
     model.recebimento_celular = rr.get("celular_ResponsavelRecebimento")
     model.recebimento_email = rr.get("email_ResponsavelRecebimento")
     model.recebimento_data_nascimento = rr.get("data_nascimento_ResponsavelRecebimento")
     model.recebimento_observacoes = rr.get("observacoes_ResponsavelRecebimento")
 
-    # 7. Cobranca
     model.cobranca_endereco = ec.get("endereco_EnderecoCobranca")
     model.cobranca_bairro = ec.get("bairro_EnderecoCobranca")
     model.cobranca_cep = ec.get("cep_EnderecoCobranca")
@@ -270,14 +253,12 @@ def _nested_to_flat(data: dict) -> ClienteModelV2:
     model.cobranca_municipio = ec.get("municipio_EnderecoCobranca")
     model.cobranca_estado = ec.get("estado_EnderecoCobranca")
 
-    # 8. Resp Cobranca
     model.cobranca_resp_nome = r_cob.get("nome_ResponsavelCobranca")
     model.cobranca_resp_celular = r_cob.get("celular_ResponsavelCobranca")
     model.cobranca_resp_email = r_cob.get("email_ResponsavelCobranca")
     model.cobranca_resp_data_nascimento = r_cob.get("data_nascimento_ResponsavelCobranca")
     model.cobranca_resp_observacoes = r_cob.get("observacoes_ResponsavelCobranca")
 
-    # 9. Ultimas Compras
     model.ultimas_compras_numero_danfe = uc.get("numero_danfe_Compras")
     model.ultimas_compras_emissao = uc.get("emissao_Compras")
     model.ultimas_compras_valor_total = uc.get("valor_total_Compras")
@@ -290,10 +271,8 @@ def _nested_to_flat(data: dict) -> ClienteModelV2:
     model.ultimas_compras_prazo_medio = uc.get("prazo_medio_compra_Compras")
     model.ultimas_compras_previsao_proxima = uc.get("previsao_proxima_compra_Compras")
 
-    # 10. Obs Nao Compra
     model.obs_nao_compra_observacoes = onc.get("observacoes_Compras")
 
-    # 11. Elaboracao
     model.elaboracao_classificacao = dec.get("classificacao_ElaboracaoCadastro")
     model.elaboracao_tipo_venda = dec.get("tipo_venda_prazo_ou_vista_ElaboracaoCadastro")
     model.elaboracao_limite_credito = dec.get("limite_credito_ElaboracaoCadastro")
@@ -304,14 +283,12 @@ def _nested_to_flat(data: dict) -> ClienteModelV2:
     model.elaboracao_pre_posto = dec.get("pre_posto_ElaboracaoCadastro")
     model.elaboracao_local_carregamento = dec.get("local_carregamento_ElaboracaoCadastro")
 
-    # 12-17. Listas dinâmicas (JSONB)
     model.grupos_economicos = data.get("grupos_economicos") or []
     model.referencias_comerciais = data.get("referencias_comerciais") or []
     model.referencias_bancarias = data.get("referencias_bancarias") or []
     model.bens_imoveis = data.get("bens_imoveis") or []
     model.bens_moveis = data.get("bens_moveis") or []
     
-    # Auto-calcula consumo_mensal baseado no consumo_diario
     plantel = data.get("planteis_animais") or []
     for p in plantel:
         try:
@@ -321,28 +298,23 @@ def _nested_to_flat(data: dict) -> ClienteModelV2:
             p["consumo_mensal"] = "0"
     model.planteis_animais = plantel
 
-    # Indicações do cliente (JSONB - lista de strings)
     model.cadastro_indicacao_cliente = data.get("indicacoes_clientes") or []
 
-    # 18. Supervisor
     model.supervisor_codigo_insumo = sup.get("codigo_insumo_ElaboracaoCadastro")
     model.supervisor_nome_insumo = sup.get("nome_insumos_ElaboracaoCadastro")
     model.supervisor_codigo_pet = sup.get("codigo_pet_ElaboracaoCadastro")
     model.supervisor_nome_pet = sup.get("nome_pet_ElaboracaoCadastro")
 
-    # 19. Comissao
     model.comissao_insumos = cd.get("insumos_ElaboracaoCadastro")
     model.comissao_pet = cd.get("pet_ElaboracaoCadastro")
     model.comissao_observacoes = cd.get("observacoes_ElaboracaoCadastro")
 
-    # 20. Canal Venda
     model.canal_pet     = cv.get("canal_pet_ElaboracaoCadastro")
     model.canal_frost   = cv.get("canal_frost_ElaboracaoCadastro")
     model.canal_insumos = cv.get("canal_insumos_ElaboracaoCadastro")
 
-    # Meta
     model.data_atualizacao = datetime.now()
-    model.data_criacao = datetime.now() # We are creating a new object effectively
+    model.data_criacao = datetime.now()
     
     return model
 
@@ -368,10 +340,8 @@ def obter_cliente(cliente_id: int) -> dict:
 def criar_cliente(cliente_data: dict) -> dict:
     db = SessionLocal()
     try:
-        # Validacao: Apenas CPF OU CNPJ, nunca os dois ou nenhum
         from core.exceptions import BusinessRuleException
         _c = cliente_data.get("cadastrocliente", {})
-        # Validacao: Nome Cliente Nao Pode Ser Vazio
         _nome = str(_c.get("nome_cliente") or "").strip()
         if not _nome:
             raise BusinessRuleException("Obrigatório preencher o Nome do Cliente.")
@@ -383,7 +353,6 @@ def criar_cliente(cliente_data: dict) -> dict:
             
         novo_cliente = _nested_to_flat(cliente_data)
         
-        # Validacao de duplicidade (CNPJ, CPF e Codigo do Cliente)
         from sqlalchemy import or_
         
         condicoes = []
@@ -422,10 +391,8 @@ def criar_cliente(cliente_data: dict) -> dict:
 def atualizar_cliente(cliente_id: int, cliente_data: dict) -> dict:
     db = SessionLocal()
     try:
-        # Validacao: Apenas CPF OU CNPJ, nunca os dois ou nenhum
         from core.exceptions import BusinessRuleException
         _c = cliente_data.get("cadastrocliente", {})
-        # Validacao: Nome Cliente Nao Pode Ser Vazio
         _nome = str(_c.get("nome_cliente") or "").strip()
         if not _nome:
             raise BusinessRuleException("Obrigatório preencher o Nome do Cliente.")
@@ -439,10 +406,8 @@ def atualizar_cliente(cliente_id: int, cliente_data: dict) -> dict:
         if not cliente:
             return None
         
-        # Create a transient object with new data
         novos_dados = _nested_to_flat(cliente_data)
         
-        # Validacao de duplicidade (CNPJ, CPF e Codigo do Cliente) no Update
         from sqlalchemy import or_
         
         condicoes = []
@@ -471,7 +436,6 @@ def atualizar_cliente(cliente_id: int, cliente_data: dict) -> dict:
                 if _cpf and existente.cadastro_cpf == _cpf:
                     raise BusinessRuleException(f"Já existe outro cliente usando o CPF {_cpf}")
         
-        # Update attributes on the persistent object
         for col in ClienteModelV2.__table__.columns:
             key = col.name
             if key == 'id' or key == 'data_criacao':
@@ -479,7 +443,6 @@ def atualizar_cliente(cliente_id: int, cliente_data: dict) -> dict:
             
             new_val = getattr(novos_dados, key)
             if new_val is not None:
-                # [NEW] Se estiver inativando manualmente (era True e se tornou False)
                 if key == "cadastro_ativo" and getattr(cliente, "cadastro_ativo") is True and new_val is False:
                     cliente.data_inativacao = datetime.now()
                 
@@ -521,7 +484,6 @@ def verificar_inatividade_clientes():
     logger.info("Iniciando verificação de inatividade de clientes (> 180 dias)...")
     db = SessionLocal()
     try:
-        # Busca clientes ativos que possuem código de empresa
         clientes_ativos = db.query(ClienteModelV2).filter(
             ClienteModelV2.cadastro_ativo == True,
             ClienteModelV2.cadastro_codigo_da_empresa != None,
@@ -541,7 +503,6 @@ def verificar_inatividade_clientes():
             if not codigo or not str(codigo).strip():
                 continue
 
-            # Busca a data do último pedido para este cliente ignorando maiúsculas e minúsculas no status
             result = db.execute(text("""
                 SELECT MAX(created_at) as ultima_compra
                 FROM tb_pedidos
@@ -555,15 +516,12 @@ def verificar_inatividade_clientes():
             if result and result[0]:
                 ultima_compra = result[0]
                 
-                # Se a data vier sem timezone (naive), assumimos que está em UTC, pois é o padrão usual de db-render
                 if not ultima_compra.tzinfo:
                     ultima_compra = ultima_compra.replace(tzinfo=ZoneInfo("UTC"))
                 
-                # Converte para SP de forma segura
                 data_referencia = ultima_compra.astimezone(TZ)
                 origem_data = "Pedido ERP Novo"
 
-            # Fallback 1: Data de emissão da última compra legada
             if not data_referencia and cliente.ultimas_compras_emissao:
                 dt_str = str(cliente.ultimas_compras_emissao).strip()
                 parsed_dt = None

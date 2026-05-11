@@ -146,7 +146,7 @@ def gerar_excel_cliente_supra(cliente) -> bytes:
         ws1["A22"] = f"Bairro:  {_s(cliente.entrega_bairro)}"
         ws1["F22"] = f"Cidade:  {_s(cliente.entrega_municipio)}"
         ws1["I22"] = f"Estado:  {_s(cliente.entrega_estado)}"
-        ws1["A23"] = f"Rota Principal:  {_s(cliente.entrega_rota_principal)} - {_s(cliente.entrega_municipio)}"
+        ws1["A23"] = f"Rota Principal:  {_s(cliente.entrega_rota_principal)}"
 
         ws1["A25"] = f"Av./Rua/Nro:  {_s(cliente.cobranca_endereco)}"
         ws1["I25"] = f"CEP:  {_s(cliente.cobranca_cep)}"
