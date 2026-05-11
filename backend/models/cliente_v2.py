@@ -112,6 +112,7 @@ class ClienteModelV2(Base):
     elaboracao_gerente_insumos = Column(String)
     elaboracao_gerente_pet = Column(String)
     elaboracao_pre_posto = Column(String)
+    elaboracao_local_carregamento = Column(String)
 
     # 12. GrupoEconomico — JSONB: lista com até 3 grupos. Ex: [{"codigo": "G1", "nome": "Grupo X"}]
     grupos_economicos = Column(JSONB, default=list)

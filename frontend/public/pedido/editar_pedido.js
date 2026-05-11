@@ -2137,7 +2137,7 @@ async function salvarTabela() {
         : (item.plano_pagamento || codCond || '');
 
       const taxaCond = mapaCondicoes[codCond] || 0;
-      let { acrescimoCond, freteValor, descontoValor } =
+      let { acrescimoCond, freteValor, descontoValor, precoBase } =
         calcularLinha(item, fator, taxaCond, frete_kg);
 
       // MANUAL OVERRIDE check also during saving (Agora como R$/Ton)

@@ -146,6 +146,7 @@ def gerar_excel_cliente_supra(cliente) -> bytes:
         ws1["A22"] = f"Bairro:  {_s(cliente.entrega_bairro)}"
         ws1["F22"] = f"Cidade:  {_s(cliente.entrega_municipio)}"
         ws1["I22"] = f"Estado:  {_s(cliente.entrega_estado)}"
+        ws1["A23"] = f"Rota Principal:  {_s(cliente.entrega_rota_principal)} - {_s(cliente.entrega_municipio)}"
 
         ws1["A25"] = f"Av./Rua/Nro:  {_s(cliente.cobranca_endereco)}"
         ws1["I25"] = f"CEP:  {_s(cliente.cobranca_cep)}"
@@ -239,6 +240,9 @@ def gerar_excel_cliente_supra(cliente) -> bytes:
             ws2["A9"] = "Finalidade: Consumo Próprio (X)"
         elif "revenda" in tipo_util:
             ws2["A9"] = "Finalidade: Comercializar/Revender (X)"
+        
+        # Local de Carregamento (Linha 10)
+        ws2["A10"] = f"Local de Carregamento: {_s(cliente.elaboracao_local_carregamento)}"
 
         # Comissões — texto padrão em vermelho
         _DISPET_RED = Font(color="FF0000")
@@ -248,6 +252,11 @@ def gerar_excel_cliente_supra(cliente) -> bytes:
         cell_ins.value = _s(cliente.comissao_insumos)
         cell_pet.font  = _DISPET_RED
         cell_ins.font  = _DISPET_RED
+
+        # Linha 22 - Insumos (Replicando informação da comissão)
+        ws2["A22"] = "INSUMOS"
+        ws2["C22"] = _s(cliente.comissao_insumos)
+        ws2["C22"].font = _DISPET_RED
 
         # Supervisores — Nome (linha 25) e Código (linha 26)
         ws2["E25"] = _s(cliente.supervisor_nome_pet)
@@ -260,6 +269,7 @@ def gerar_excel_cliente_supra(cliente) -> bytes:
         ws2["H28"] = _s(getattr(cliente, 'elaboracao_gerente_insumos', ''))
 
         # Financeiro e Recomendações
+        ws2["A34"] = f"Forma de Pagamento: {tipo_venda_excel}" if 'tipo_venda_excel' in locals() else ""
         ws2["D35"] = cliente.elaboracao_limite_credito or 0
 
         # --- LINHA 41: Status do Cliente (Lógica de Classificação) ---

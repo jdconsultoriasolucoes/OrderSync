@@ -76,7 +76,8 @@ def _get_page1_config():
     # Alturas reais extraidas via script (points converted to points/row)
     row_h = [13.5]*65
     for i in range(7, 13): row_h[i] = 23.25 # Area de dados cadastrais maior
-    for i in [4, 18, 22, 26, 30, 36, 42, 47, 53, 59]: row_h[i] = 4.0 # Espaçadores finos
+    for i in [4, 18, 26, 30, 36, 42, 47, 53, 59]: row_h[i] = 4.0 # Espaçadores finos (Removido 22 da lista)
+    row_h[22] = 20 # Espaço para Rota Principal
 
     # Todos os Spans (Gerados automaticamente via generate_spans.py)
     spans = [
@@ -165,6 +166,7 @@ def gerar_pdf_cliente_supra(cli) -> bytes:
         matrix[21][0] = f"Bairro: {_s(cli.entrega_bairro)}"
         matrix[21][5] = f"Cidade: {_s(cli.entrega_municipio)}"
         matrix[21][8] = f"Estado: {_s(cli.entrega_estado)}"
+        matrix[22][0] = f"Rota Principal: {_s(cli.entrega_rota_principal)} - {_s(cli.entrega_municipio)}"
 
         # Financeiro (Caixa Direita)
         matrix[7][8] = f"R$ {_br_number(cli.elaboracao_limite_credito)}"
@@ -265,6 +267,9 @@ def gerar_pdf_cliente_supra(cli) -> bytes:
         matrix2[6][4] = f"Razão Social: {_s(cli.cadastro_nome_cliente)}"
         matrix2[7][4] = f"Fantasia: {_s(cli.cadastro_nome_fantasia)}"
         
+        # Local de Carregamento (Row 9 = Line 10)
+        matrix2[9][0] = f"Local de Carregamento: {_s(cli.elaboracao_local_carregamento)}"
+        
         # Canais (C14-16) -> Rows 13, 14, 15
         matrix2[13][2] = _s(cli.canal_pet)
         matrix2[14][2] = _s(cli.canal_frost)
@@ -273,13 +278,23 @@ def gerar_pdf_cliente_supra(cli) -> bytes:
         # Comissões (C20-21) -> Rows 19, 20
         matrix2[19][2] = _s(cli.comissao_pet)
         matrix2[20][2] = _s(cli.comissao_insumos)
+        
+        # Insumos (Row 21 = Line 22)
+        matrix2[21][0] = "INSUMOS"
+        matrix2[21][2] = _s(cli.comissao_insumos)
 
         # Supervisores (E25, H25) -> Row 24
         matrix2[24][4] = _s(cli.supervisor_nome_pet)
         matrix2[24][7] = _s(cli.supervisor_nome_insumo)
 
         # Análise Financeira (D34, D35) -> Rows 33, 34
-        matrix2[33][3] = _s(cli.cadastro_tipo_compra)
+        # Mapeamento Tipo Venda (repetindo lógica do excel para consistência)
+        tipo_venda_raw = str(cli.elaboracao_tipo_venda or "").lower()
+        if "vista" in tipo_venda_raw: tipo_venda_excel = "Venda à vista"
+        elif "prazo" in tipo_venda_raw: tipo_venda_excel = "Venda a prazo"
+        else: tipo_venda_excel = str(cli.elaboracao_tipo_venda or "")
+        
+        matrix2[33][0] = f"Forma de Pagamento: {tipo_venda_excel}"
         matrix2[34][3] = _br_number(cli.elaboracao_limite_credito, 2, " R$")
 
         # Títulos Pág 2 (Marrom)

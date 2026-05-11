@@ -756,6 +756,10 @@
               <label for="pre_posto_ElaboracaoCadastro">Pre Posto:</label>
               <input type="text" id="pre_posto_ElaboracaoCadastro" name="pre_posto_ElaboracaoCadastro" />
             </div>
+            <div>
+              <label for="local_carregamento_ElaboracaoCadastro">Local de Carregamento:</label>
+              <input type="text" id="local_carregamento_ElaboracaoCadastro" name="local_carregamento_ElaboracaoCadastro" />
+            </div>
           </div>
 
           <h2 class="subtitulo">Grupo Econômico Amarrado ao Cliente</h2>
@@ -892,7 +896,7 @@
             hide(btnSalvar);
             hide(btnCancelar);
             show(btnExpExcel);
-            hide(btnExpPdf); // Oculto temporariamente ate ajustar layout
+            show(btnExpPdf); 
             disableForm(true);
           } else if (mode === 'EDITING' || mode === 'CREATING') {
             hide(btnListar);
@@ -1469,7 +1473,8 @@
               vendedor_ElaboracaoCadastro: document.getElementById("vendedor_ElaboracaoCadastro")?.value || "",
               gerente_insumos_ElaboracaoCadastro: document.getElementById("gerente_insumos_ElaboracaoCadastro")?.value || "",
               gerente_pet_ElaboracaoCadastro: document.getElementById("gerente_pet_ElaboracaoCadastro")?.value || "",
-              pre_posto_ElaboracaoCadastro: document.getElementById("pre_posto_ElaboracaoCadastro")?.value || ""
+              pre_posto_ElaboracaoCadastro: document.getElementById("pre_posto_ElaboracaoCadastro")?.value || "",
+              local_carregamento_ElaboracaoCadastro: document.getElementById("local_carregamento_ElaboracaoCadastro")?.value || ""
             },
             // Listas dinâmicas (JSONB)
             indicacoes_clientes: coletarLista('indicacoes'),
@@ -1931,6 +1936,7 @@
           setVal("gerente_insumos_ElaboracaoCadastro", ed.gerente_insumos_ElaboracaoCadastro || "");
           setVal("gerente_pet_ElaboracaoCadastro", ed.gerente_pet_ElaboracaoCadastro || "");
           setVal("pre_posto_ElaboracaoCadastro", ed.pre_posto_ElaboracaoCadastro || "");
+          setVal("local_carregamento_ElaboracaoCadastro", ed.local_carregamento_ElaboracaoCadastro || "");
 
           // Listas dinâmicas (JSONB)
           renderizarLista('indicacoes', 5, dados.indicacoes_clientes || []);

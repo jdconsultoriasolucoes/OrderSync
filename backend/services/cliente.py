@@ -132,6 +132,7 @@ def _flat_to_nested(model: ClienteModelV2) -> dict:
             "gerente_insumos_ElaboracaoCadastro": model.elaboracao_gerente_insumos,
             "gerente_pet_ElaboracaoCadastro": model.elaboracao_gerente_pet,
             "pre_posto_ElaboracaoCadastro": model.elaboracao_pre_posto,
+            "local_carregamento_ElaboracaoCadastro": model.elaboracao_local_carregamento
         },
         # Listas dinâmicas (JSONB)
         "grupos_economicos": model.grupos_economicos or [],
@@ -301,6 +302,7 @@ def _nested_to_flat(data: dict) -> ClienteModelV2:
     model.elaboracao_gerente_insumos = dec.get("gerente_insumos_ElaboracaoCadastro")
     model.elaboracao_gerente_pet = dec.get("gerente_pet_ElaboracaoCadastro")
     model.elaboracao_pre_posto = dec.get("pre_posto_ElaboracaoCadastro")
+    model.elaboracao_local_carregamento = dec.get("local_carregamento_ElaboracaoCadastro")
 
     # 12-17. Listas dinâmicas (JSONB)
     model.grupos_economicos = data.get("grupos_economicos") or []

@@ -227,6 +227,7 @@ class DadosElaboracaoCadastro(BaseModel):
     gerente_insumos_ElaboracaoCadastro: Optional[str] = None
     gerente_pet_ElaboracaoCadastro: Optional[str] = None
     pre_posto_ElaboracaoCadastro: Optional[str] = None
+    local_carregamento_ElaboracaoCadastro: Optional[str] = None
 
     @field_validator("data_vencimento_ElaboracaoCadastro")
     @classmethod
