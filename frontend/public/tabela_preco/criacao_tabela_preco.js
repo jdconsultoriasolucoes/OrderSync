@@ -2038,7 +2038,21 @@ async function recalcTudo() {
 
         // ✅ OVERRIDE: Manual Freight
         if (item.manual_freight) {
-            freteValor = Number(item.valor_frete_aplicado || 0);
+            const inputVal = tr ? tr.querySelector('.field-frete-manual')?.value : null;
+            let baseTon = 0;
+            if (inputVal && inputVal !== '') {
+                baseTon = parseFloat(inputVal.replace(',', '.'));
+            } else if (item.frete_base_ton) {
+                baseTon = Number(item.frete_base_ton);
+            } else if (item._manualFreteVal) {
+                baseTon = Number(item._manualFreteVal);
+            }
+            const pesoParaFrete = (Number(item.peso_bruto || 0) > 0) ? Number(item.peso_bruto) : Number(item.peso_liquido || 0);
+            freteValor = (baseTon / 1000) * pesoParaFrete;
+            
+            item.frete_base_ton = baseTon;
+            item._manualFreteVal = baseTon;
+            item.valor_frete_aplicado = freteValor;
         }
 
         // Atualiza DOM Comercial
@@ -3235,7 +3249,21 @@ function renderMobileCards() {
       if (elSFrete) elSFrete.textContent = fmtMoney(semFrete);
 
       const elFreteInput = card.querySelector('.mob-card-frete-val');
-      if (elFreteInput) elFreteInput.value = fmtMoney(freteVal);
+      if (elFreteInput && document.activeElement !== elFreteInput) {
+          if (item.manual_freight) {
+              const baseFrete = item._manualFreteVal || item.frete_base_ton || 0;
+              elFreteInput.value = Number(baseFrete).toFixed(2).replace('.', ',');
+              elFreteInput.placeholder = '';
+          } else {
+              elFreteInput.value = '';
+              elFreteInput.placeholder = (item._freteValor || 0).toFixed(2);
+          }
+      }
+      
+      const elFreteResult = card.querySelector('.mob-frete-resultado');
+      if (elFreteResult) {
+          elFreteResult.textContent = `R$ ${fmtMoney(item._freteValor || 0)}`;
+      }
 
       const elIPI = card.querySelector('.mob-card-ipi');
       if (elIPI) elIPI.textContent = fmtMoney(item.ipi || 0);
@@ -3402,8 +3430,15 @@ function renderMobileCards() {
 
             <!-- Row 3: Frete (Full width) -->
             <div class="card-field" style="margin-bottom: 16px;">
-                 <label>Frete (R$)</label>
-                 <input type="text" class="mob-card-frete-val" value="${fmtMoney(freteVal)}" disabled style="background: #f8fafc;">
+                 <label>Frete Unitário (R$)</label>
+                 <div style="display: flex; gap: 8px; align-items: center;">
+                    <input type="text" class="mob-card-frete-val" value="${item.manual_freight ? Number(item._manualFreteVal || item.frete_base_ton || 0).toFixed(2).replace('.', ',') : ''}" 
+                           placeholder="${!item.manual_freight ? (item._freteValor || 0).toFixed(2) : ''}"
+                           style="width: 100px; ${markupDisabled ? 'background: #f8fafc;' : 'background: #fff;'}"
+                           ${markupDisabled ? 'disabled' : ''}>
+                    ${!markupDisabled ? `<span class="mob-lock-icon" style="cursor:pointer; font-size:1.2rem;">${item.manual_freight ? '🔒' : '🔓'}</span>` : ''}
+                    <div class="mob-frete-resultado" style="font-size: 11px; color: #64748b; margin-left: 4px;">R$ ${fmtMoney(item._freteValor || 0)}</div>
+                 </div>
             </div>
 
             <!-- Row 4: Fiscal Details (Styled Block) -->
@@ -3519,6 +3554,69 @@ function renderMobileCards() {
         recalcTudo();
       });
       selCond.addEventListener('click', (e) => e.stopPropagation());
+    }
+
+    // Event: Mobile Freight Manual
+    const mobInpFrete = card.querySelector('.mob-card-frete-val');
+    const mobLockIcon = card.querySelector('.mob-lock-icon');
+    if (mobInpFrete && !markupDisabled) {
+      mobInpFrete.addEventListener('focus', (e) => {
+        const v = e.target.value.trim();
+        if (v === '0,00' || v === '0.00' || v === '0') {
+          e.target.value = '';
+        } else {
+          e.target.select();
+        }
+      });
+      mobInpFrete.addEventListener('input', (e) => {
+        let val = e.target.value.replace(',', '.');
+        const desktopTr = document.querySelector(`#tbody-itens tr[data-idx="${idx}"]`);
+        const desktopInp = desktopTr ? desktopTr.querySelector('.field-frete-manual') : null;
+
+        if (val === '') {
+          item.manual_freight = false;
+          if (mobLockIcon) mobLockIcon.innerHTML = '🔓';
+          if (desktopInp) desktopInp.value = '';
+          recalcTudo();
+        } else {
+          let num = parseFloat(val);
+          if (!isNaN(num)) {
+            item.manual_freight = true;
+            item._manualFreteVal = num;
+            item.frete_base_ton = num;
+            if (mobLockIcon) mobLockIcon.innerHTML = '🔒';
+            if (desktopInp) desktopInp.value = val;
+            recalcTudo();
+          }
+        }
+      });
+      mobInpFrete.addEventListener('click', (e) => e.stopPropagation());
+    }
+    if (mobLockIcon && !markupDisabled) {
+      mobLockIcon.addEventListener('click', (e) => {
+        e.stopPropagation();
+        const desktopTr = document.querySelector(`#tbody-itens tr[data-idx="${idx}"]`);
+        const desktopInp = desktopTr ? desktopTr.querySelector('.field-frete-manual') : null;
+
+        if (item.manual_freight) {
+          item.manual_freight = false;
+          mobInpFrete.value = '';
+          mobLockIcon.innerHTML = '🔓';
+          if (desktopInp) desktopInp.value = '';
+          recalcTudo();
+        } else {
+          item.manual_freight = true;
+          const fKg = Number(document.getElementById('frete_kg')?.value || 0);
+          const valToSet = (item._manualFreteVal && item._manualFreteVal > 0) ? item._manualFreteVal : fKg;
+          
+          item._manualFreteVal = valToSet;
+          item.frete_base_ton = valToSet;
+          mobInpFrete.value = valToSet === 0 ? '' : valToSet.toFixed(2).replace('.', ',');
+          mobLockIcon.innerHTML = '🔒';
+          if (desktopInp) desktopInp.value = valToSet === 0 ? '' : valToSet.toFixed(2).replace('.', ',');
+          recalcTudo();
+        }
+      });
     }
 
     container.appendChild(card);
