@@ -3747,6 +3747,14 @@ function renderMobileCards() {
     const mobInpFrete = card.querySelector('.mob-card-frete-val');
     const mobLockIcon = card.querySelector('.mob-lock-icon');
     if (mobInpFrete && !markupDisabled) {
+      mobInpFrete.addEventListener('focus', (e) => {
+        const v = e.target.value.trim();
+        if (v === '0,00' || v === '0.00' || v === '0') {
+          e.target.value = '';
+        } else {
+          e.target.select();
+        }
+      });
       mobInpFrete.addEventListener('input', (e) => {
         let val = e.target.value.replace(',', '.');
         
@@ -3793,9 +3801,9 @@ function renderMobileCards() {
           
           item._manualFreteVal = valToSet;
           item.frete_base_ton = valToSet;
-          mobInpFrete.value = valToSet.toFixed(2);
+          mobInpFrete.value = valToSet === 0 ? '' : valToSet.toFixed(2).replace('.', ',');
           mobLockIcon.innerHTML = '🔒';
-          if (desktopInp) desktopInp.value = valToSet.toFixed(2);
+          if (desktopInp) desktopInp.value = valToSet === 0 ? '' : valToSet.toFixed(2).replace('.', ',');
           recalcTudo();
         }
       });
