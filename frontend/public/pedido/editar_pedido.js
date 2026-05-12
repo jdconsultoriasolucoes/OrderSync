@@ -3727,16 +3727,24 @@ function renderMobileCards() {
     if (mobInpFrete && !markupDisabled) {
       mobInpFrete.addEventListener('input', (e) => {
         let val = e.target.value.replace(',', '.');
+        
+        // Sync back to hidden desktop row so recalcLinha can read it
+        const desktopTr = document.querySelector(`#tbody-itens tr[data-idx="${idx}"]`);
+        const desktopInp = desktopTr ? desktopTr.querySelector('.field-frete-manual') : null;
+
         if (val === '') {
           item.manual_freight = false;
           if (mobLockIcon) mobLockIcon.innerHTML = '🔓';
+          if (desktopInp) desktopInp.value = '';
           recalcTudo();
         } else {
           let num = parseFloat(val);
           if (!isNaN(num)) {
             item.manual_freight = true;
             item._manualFreteVal = num;
+            item.frete_base_ton = num;
             if (mobLockIcon) mobLockIcon.innerHTML = '🔒';
+            if (desktopInp) desktopInp.value = val;
             recalcTudo();
           }
         }
@@ -3746,19 +3754,26 @@ function renderMobileCards() {
     if (mobLockIcon && !markupDisabled) {
       mobLockIcon.addEventListener('click', (e) => {
         e.stopPropagation();
+
+        const desktopTr = document.querySelector(`#tbody-itens tr[data-idx="${idx}"]`);
+        const desktopInp = desktopTr ? desktopTr.querySelector('.field-frete-manual') : null;
+
         if (item.manual_freight) {
           item.manual_freight = false;
           mobInpFrete.value = '';
           mobLockIcon.innerHTML = '🔓';
+          if (desktopInp) desktopInp.value = '';
           recalcTudo();
         } else {
           item.manual_freight = true;
           const fKg = Number(document.getElementById('frete_kg')?.value || 0);
-          const peso = Number(item.peso_liquido_unit ?? item.peso_kg ?? 0);
-          const currentVal = (fKg / 1000) * peso;
-          item._manualFreteVal = currentVal;
-          mobInpFrete.value = currentVal.toFixed(2);
+          const valToSet = (item._manualFreteVal && item._manualFreteVal > 0) ? item._manualFreteVal : fKg;
+          
+          item._manualFreteVal = valToSet;
+          item.frete_base_ton = valToSet;
+          mobInpFrete.value = valToSet.toFixed(2);
           mobLockIcon.innerHTML = '🔒';
+          if (desktopInp) desktopInp.value = valToSet.toFixed(2);
           recalcTudo();
         }
       });
