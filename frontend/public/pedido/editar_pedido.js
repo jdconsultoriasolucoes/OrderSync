@@ -3418,6 +3418,11 @@ function renderMobileCards() {
               elFreteInput.placeholder = (item._freteValor || 0).toFixed(2);
           }
       }
+      
+      const elFreteResult = card.querySelector('.mob-frete-resultado');
+      if (elFreteResult) {
+          elFreteResult.textContent = `R$ ${fmtMoney(item._freteValor || 0)}`;
+      }
 
       const elIPI = card.querySelector('.mob-card-ipi');
       if (elIPI) elIPI.textContent = fmtMoney(item.ipi || 0);
@@ -3597,8 +3602,10 @@ function renderMobileCards() {
                  <div style="display: flex; gap: 8px; align-items: center;">
                     <input type="text" class="mob-card-frete-val" value="${item.manual_freight ? Number(item._manualFreteVal || item.frete_base_ton || 0).toFixed(2).replace('.', ',') : ''}" 
                            placeholder="${!item.manual_freight ? (item._freteValor || 0).toFixed(2) : ''}"
-                           ${markupDisabled ? 'disabled style="background: #f8fafc;"' : 'style="background: #fff;"'}>
+                           style="width: 100px; ${markupDisabled ? 'background: #f8fafc;' : 'background: #fff;'}"
+                           ${markupDisabled ? 'disabled' : ''}>
                     ${!markupDisabled ? `<span class="mob-lock-icon" style="cursor:pointer; font-size:1.2rem;">${item.manual_freight ? '🔒' : '🔓'}</span>` : ''}
+                    <div class="mob-frete-resultado" style="font-size: 11px; color: #64748b; margin-left: 4px;">R$ ${fmtMoney(item._freteValor || 0)}</div>
                  </div>
             </div>
 
