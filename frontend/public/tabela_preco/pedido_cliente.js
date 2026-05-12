@@ -671,6 +671,20 @@ async function confirmarPedido() {
     if (btnConfirmar) btnConfirmar.disabled = true;
     setMensagem("Enviando pedido...", true);
 
+    const totalCalculado = itens.reduce((acc, x) => acc + (Number(x.valor_sem_frete || 0) * Number(x.quantidade || 0)), 0);
+    if (totalCalculado <= 0) {
+      const prosseguir = await showOsModal({ 
+        title: 'Aviso Financeiro', 
+        message: "Atenção: O valor dos produtos deste pedido está aparecendo como R$ 0,00. Isso pode ser um erro de carregamento. Deseja confirmar o pedido assim mesmo?", 
+        type: 'confirm' 
+      });
+      if (!prosseguir) {
+        if (btnConfirmar) btnConfirmar.disabled = false;
+        setMensagem("", true);
+        return;
+      }
+    }
+
     // token do link curto (/p/{code})
     const pathParts = location.pathname.split('/').filter(Boolean);
     originCode = pathParts.length > 0 ? pathParts[pathParts.length - 1] : null;

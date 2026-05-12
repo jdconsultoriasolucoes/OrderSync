@@ -2264,7 +2264,7 @@ async function salvarTabela() {
         : (item.plano_pagamento || codCond || '');
 
       const taxaCond = mapaCondicoes[codCond] || 0;
-      let { acrescimoCond, freteValor, descontoValor } =
+      let { acrescimoCond, freteValor, descontoValor, precoBase } =
         calcularLinha(item, fator, taxaCond, frete_kg /* ivaStAtivo é ignorado aqui */);
 
       // OVERRIDE: Se o frete for manual, calcula baseado no R$/Ton (Base)
@@ -2304,8 +2304,8 @@ async function salvarTabela() {
         valor_frete_aplicado: Number(freteValor.toFixed(2)),
         frete_kg: Number(frete_kg || 0),
         frete_base_ton: Number(item.frete_base_ton || 0),
-        valor_frete: Number((item._totalComercial || 0).toFixed(2)),
-        valor_s_frete: Number((item.total_sem_frete || 0).toFixed(2)),
+        valor_frete: Number((item._totalComercial || 0).toFixed(2)) || Number((precoBase + freteValor).toFixed(2)),
+        valor_s_frete: Number((item.total_sem_frete || 0).toFixed(2)) || Number(precoBase.toFixed(2)),
 
         // Novos campos de Markup
         markup: Number(item.markup || 0),

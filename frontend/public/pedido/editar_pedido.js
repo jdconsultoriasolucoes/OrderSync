@@ -572,13 +572,22 @@ function mapBackendItemToFrontend(p, t) {
   const codFator = p.tabela_comissao || '';
   const fracFator = (mapaDescontos && mapaDescontos[codFator] != null) ? Number(mapaDescontos[codFator]) : 0;
 
+  const codCond = p.condicao_pagamento ? String(p.condicao_pagamento).split(' - ')[0].trim() : '';
+  const taxaCond = (mapaCondicoes && mapaCondicoes[codCond] != null) ? Number(mapaCondicoes[codCond]) : 0;
+
+  // Tentativa de reverter para o valor base para evitar o erro de "desconto duplo"
+  // preco_unit = valor_base * (1 - fator) * (1 + cond)
+  // valor_base = preco_unit / ((1 - fator) * (1 + cond))
+  const divisor = (1 - fracFator) * (1 + taxaCond);
+  const valorBase = (divisor > 0) ? (Number(p.preco_unit || 0) / divisor) : Number(p.preco_unit || 0);
+
   return {
     codigo_tabela: String(p.codigo || '').trim(),
     descricao: p.nome || '',
     embalagem: p.embalagem || '',
     // Fallback chain: tenta todas as variantes que o backend pode retornar
     peso_liquido: Number(p.peso_liquido_unit || p.peso_liquido || p.peso_liq || p.peso || 0),
-    valor: Number(p.preco_unit || 0),
+    valor: Number(valorBase.toFixed(4)),
     preco_unit_frt: Number(p.preco_unit_frt || p.preco_unit || 0),
     desconto: 0,
     acrescimo: 0,
@@ -2981,22 +2990,8 @@ document.addEventListener('DOMContentLoaded', () => {
           // Sucesso absoluto: limpa snapshot para não voltar sujeira se recarregar
           clearFullSnapshot();
 
-          // RESET COMPLETO (VOLTAR A TELA ZERADA)
-          currentTabelaId = '';
-          sourceTabelaId = '';
-          window.currentTabelaId = '';
-          window.sourceTabelaId = '';
-
-          try { history.replaceState(null, '', location.pathname); } catch { }
-
-          // limpa cabeçalho + grade e volta pro modo original (inputs habilitados)
-          if (typeof limparFormularioCabecalho === 'function') limparFormularioCabecalho();
-          if (typeof limparGradeProdutos === 'function') limparGradeProdutos();
-
-          if (typeof setMode === 'function') setMode(MODE.NEW);
-          if (typeof setFormDisabled === 'function') setFormDisabled(false);
-          if (typeof toggleToolbarByMode === 'function') toggleToolbarByMode();
-          if (typeof refreshToolbarEnablement === 'function') refreshToolbarEnablement();
+          // Redireciona para a tela de consulta de pedidos
+          window.location.href = 'pedido.html';
 
           // Se NÃO quiser enviar, já está resetado.
 
@@ -3262,22 +3257,29 @@ async function salvarPedido(payload) {
       contato_nome: payload.contato_nome || null,
       contato_email: payload.contato_email || null,
       contato_fone: payload.contato_fone || null,
-      produtos: (payload.produtos || []).map(p => ({
-          codigo: p.codigo_produto_supra || p.codigo,
-          descricao: p.descricao_produto || p.descricao,
-          embalagem: p.embalagem,
-          condicao_pagamento: p.codigo_plano_pagamento || p.plano_pagamento,
-          tabela_comissao: p.descricao_fator_comissao || p.tabela_comissao,
-          quantidade: p.quantidade || 0,
-          preco_unit: p.valor_produto || p.valor || 0,
-          preco_unit_com_frete: Number((p.valor_produto || p.valor || 0) + (p._freteValor || p.valor_frete_unitario || 0)),
-          valor_frete_unitario: p._freteValor || p.valor_frete_unitario || 0,
-          peso_kg: p.peso_bruto || p.peso_liquido || p.peso_kg || 0,
-          manual_freight: !!p.manual_freight,
-          markup: p.markup || 0,
-          valor_final_markup: p.valor_final_markup || 0,
-          valor_s_frete_markup: p.valor_s_frete_markup || 0
-      }))
+      produtos: (payload.produtos || []).map(p => {
+          const unitPrice = p.preco_unit || p.valor_produto || p.valor || 0;
+          const freightPrice = p._freteValor || p.valor_frete_unitario || 0;
+          const unitWithFreight = p.preco_unit_com_frete || Number((unitPrice + freightPrice).toFixed(2));
+
+          return {
+              codigo: p.codigo_produto_supra || p.codigo,
+              descricao: p.descricao_produto || p.descricao,
+              embalagem: p.embalagem,
+              condicao_pagamento: p.codigo_plano_pagamento || p.plano_pagamento,
+              tabela_comissao: p.descricao_fator_comissao || p.tabela_comissao,
+              quantidade: p.quantidade || 0,
+              preco_unit: unitPrice,
+              preco_unit_com_frete: unitWithFreight,
+              valor_frete_unitario: freightPrice,
+              peso_kg: p.peso_bruto || p.peso_liquido || p.peso_kg || 0,
+              manual_freight: !!p.manual_freight,
+              frete_base_ton: p.frete_base_ton || 0,
+              markup: p.markup || 0,
+              valor_final_markup: p.valor_final_markup || 0,
+              valor_s_frete_markup: p.valor_s_frete_markup || 0
+          };
+      })
   };
 
 
