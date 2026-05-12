@@ -1177,7 +1177,16 @@
                     <style>
                       @media print {
                          @page { margin: 0.5cm; size: A4 portrait; }
-                         body { -webkit-print-color-adjust: exact; print-color-adjust: exact; margin: 0; padding: 0; }
+                         body { 
+                             -webkit-print-color-adjust: exact; 
+                             print-color-adjust: exact; 
+                             margin: 0; 
+                             padding: 0; 
+                             zoom: 0.65; 
+                         }
+                         table {
+                             max-width: 100% !important;
+                         }
                       }
                     </style>
                   </head>
