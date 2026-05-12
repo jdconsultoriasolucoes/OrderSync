@@ -3365,7 +3365,6 @@ function renderMobileCards() {
   const elValor = document.getElementById('mobile-total-valor');
   if (elValor) elValor.textContent = fmtMoney(totalValor);
 
-  // If empty
   if (itens.length === 0) {
     container.innerHTML = `
         <div class="empty-state-mobile">
@@ -3402,7 +3401,9 @@ function renderMobileCards() {
       if (elSFrete) elSFrete.textContent = fmtMoney(semFrete);
 
       const elFreteInput = card.querySelector('.mob-card-frete-val');
-      if (elFreteInput) elFreteInput.value = fmtMoney(freteVal);
+      if (elFreteInput && document.activeElement !== elFreteInput) {
+          elFreteInput.value = item.manual_freight ? fmtMoney(freteVal) : '';
+      }
 
       const elIPI = card.querySelector('.mob-card-ipi');
       if (elIPI) elIPI.textContent = fmtMoney(item.ipi || 0);
@@ -3425,9 +3426,14 @@ function renderMobileCards() {
           if (code && selCond.value !== code) selCond.value = code;
         }
         const inpMark = card.querySelector('.mobile-input-markup');
-        if (inpMark) {
+        if (inpMark && document.activeElement !== inpMark) {
           const mark = item.markup || 0;
           if (parseFloat(inpMark.value) !== mark) inpMark.value = mark.toFixed(2);
+        }
+        const inpQtd = card.querySelector('.mobile-input-qtd');
+        if (inpQtd && document.activeElement !== inpQtd) {
+          const qtd = item.quantidade || 0;
+          if (parseFloat(inpQtd.value) !== qtd) inpQtd.value = qtd;
         }
       }
     });
@@ -3532,15 +3538,19 @@ function renderMobileCards() {
 
         <div class="header-content ${expandedSet.has(String(idx)) ? 'expanded' : 'collapsed'}">
          <div style="padding-top: 12px;">
-            <!-- Row 1: Vlr Unit | Markup % -->
-            <div class="mobile-grid-2col" style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 12px;">
+            <!-- Row 1: Vlr Unit | Qtd | Markup % -->
+            <div class="mobile-grid-3col" style="display: grid; grid-template-columns: 1.2fr 0.8fr 1fr; gap: 8px; margin-bottom: 12px;">
                 <div class="card-field">
                     <label>Valor Unit.</label>
-                    <input type="text" value="${fmtMoney(item.valor)}" disabled style="background: #f8fafc;">
+                    <input type="text" value="${fmtMoney(item.valor)}" disabled style="background: #f8fafc; font-size: 0.85rem;">
+                </div>
+                <div class="card-field">
+                    <label>Qtd</label>
+                    <input type="number" class="mobile-input-qtd" value="${item.quantidade || 0}" min="0" ${markupDisabled ? 'disabled style="background: #f8fafc;"' : ''} style="font-size: 0.85rem;">
                 </div>
                 <div class="card-field">
                     <label>Markup %</label>
-                    <input type="number" class="mobile-input-markup" value="${item.markup || 0}" step="0.01" ${markupDisabled ? 'disabled' : ''}>
+                    <input type="number" class="mobile-input-markup" value="${item.markup || 0}" step="0.01" ${markupDisabled ? 'disabled style="background: #f8fafc;"' : ''} style="font-size: 0.85rem;">
                 </div>
             </div>
 
@@ -3631,7 +3641,7 @@ function renderMobileCards() {
 
     // Markup Change
     const mkInput = card.querySelector('.mobile-input-markup');
-    if (!markupDisabled) {
+    if (!markupDisabled && mkInput) {
       mkInput.addEventListener('change', (e) => {
         e.stopPropagation();
         const val = parseFloat(e.target.value);
@@ -3643,6 +3653,25 @@ function renderMobileCards() {
         }
       });
       mkInput.addEventListener('click', (e) => e.stopPropagation());
+    }
+
+    // Qtd Change
+    const qtdInput = card.querySelector('.mobile-input-qtd');
+    if (!markupDisabled && qtdInput) {
+      qtdInput.addEventListener('input', (e) => {
+        e.stopPropagation();
+        const val = parseFloat(e.target.value);
+        if (!isNaN(val)) {
+          item.quantidade = val;
+          // Não re-renderiza a tabela toda no 'input' de qtd, senão perde o foco.
+          // Só chama o recálculo que atualiza via DOM
+          recalcTudo();
+        } else if (e.target.value === '') {
+          item.quantidade = 0;
+          recalcTudo();
+        }
+      });
+      qtdInput.addEventListener('click', (e) => e.stopPropagation());
     }
 
     // Event: Fator Change

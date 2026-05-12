@@ -111,13 +111,20 @@ def exportar_supra(
             media_type = "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
             ext = "xlsx"
         else:
-            from services.pdf_supra_service import gerar_pdf_cliente_supra
-            conteudo = gerar_pdf_cliente_supra(cli)
-            cidade = (cli.faturamento_municipio or "SemCidade").replace(" ", "_")
-            nome_cli = (cli.cadastro_nome_cliente or "SemNome").replace(" ", "_")
-            nome_arquivo = f"{cidade}_{nome_cli}"
-            media_type = "application/pdf"
-            ext = "pdf"
+            from services.excel_supra_service import gerar_excel_cliente_supra
+            from xlsx2html import xlsx2html
+            import io
+            
+            excel_bytes = gerar_excel_cliente_supra(cli)
+            in_stream = io.BytesIO(excel_bytes)
+            out_stream = io.StringIO()
+            
+            xlsx2html(in_stream, out_stream)
+            conteudo = out_stream.getvalue().encode('utf-8')
+            
+            nome_arquivo = "print_template"
+            media_type = "text/html"
+            ext = "html"
 
         headers = {
             "Content-Disposition": f'attachment; filename="{nome_arquivo}.{ext}"',

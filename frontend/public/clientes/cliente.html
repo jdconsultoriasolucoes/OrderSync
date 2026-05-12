@@ -1163,22 +1163,64 @@
               throw new Error(errorData.detail || "Erro ao gerar exportação.");
             }
 
-            const blob = await response.blob();
-            const url = window.URL.createObjectURL(blob);
-            const a = document.createElement('a');
-            a.href = url;
-            // Extrair nome do arquivo do header Content-Disposition do servidor
-            const disposition = response.headers.get('Content-Disposition');
-            let filename = `cliente_${id}.${format === 'xlsx' ? 'xlsx' : 'pdf'}`;
-            if (disposition) {
-              const match = disposition.match(/filename="?(.+?)"?$/);
-              if (match && match[1]) filename = match[1];
+            if (format === 'pdf') {
+              // Impressão nativa silenciosa (Client-Side)
+              const htmlStr = await response.text();
+              const iframe = document.createElement('iframe');
+              iframe.style.display = 'none';
+              document.body.appendChild(iframe);
+              
+              iframe.contentDocument.open();
+              iframe.contentDocument.write(`
+                <html>
+                  <head>
+                    <style>
+                      @media print {
+                         @page { margin: 0.5cm; size: A4 portrait; }
+                         body { -webkit-print-color-adjust: exact; print-color-adjust: exact; margin: 0; padding: 0; }
+                      }
+                    </style>
+                  </head>
+                  <body>
+                    ${htmlStr}
+                    <script>
+                      window.onload = function() {
+                          setTimeout(function() {
+                              window.print();
+                          }, 500);
+                      };
+                    </script>
+                  </body>
+                </html>
+              `);
+              iframe.contentDocument.close();
+
+              // Remove o iframe da memória após a ação
+              setTimeout(() => {
+                  if (document.body.contains(iframe)) {
+                      document.body.removeChild(iframe);
+                  }
+              }, 60000); 
+
+            } else {
+              // Download normal de arquivo para Excel
+              const blob = await response.blob();
+              const url = window.URL.createObjectURL(blob);
+              const a = document.createElement('a');
+              a.href = url;
+              // Extrair nome do arquivo do header Content-Disposition do servidor
+              const disposition = response.headers.get('Content-Disposition');
+              let filename = `cliente_${id}.xlsx`;
+              if (disposition) {
+                const match = disposition.match(/filename="?(.+?)"?$/);
+                if (match && match[1]) filename = match[1];
+              }
+              a.download = filename;
+              document.body.appendChild(a);
+              a.click();
+              window.URL.revokeObjectURL(url);
+              a.remove();
             }
-            a.download = filename;
-            document.body.appendChild(a);
-            a.click();
-            window.URL.revokeObjectURL(url);
-            a.remove();
           } catch (error) {
             console.error("Erro na exportação:", error);
             alert("Erro ao exportar: " + error.message);
