@@ -1266,8 +1266,9 @@
                     .catch(err => console.error("Erro ao carregar cliente selecionado:", err));
                 }
               } else {
-                // Se não há cliente para carregar, inicializa as listas vazias (abre 1 bloco padrão)
+                // Se não há cliente para carregar, inicializa as listas vazias e define a tela como INITIAL
                 inicializarListasVazias();
+                setViewState('INITIAL');
               }
             });
           };
@@ -2553,8 +2554,6 @@
           carregarVendedores();
           carregarOpcoesReferencia();
           carregarOpcoesPlantel();
-
-          setViewState('INITIAL');
         };
 
       </script>

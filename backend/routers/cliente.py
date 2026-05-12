@@ -113,9 +113,8 @@ def exportar_supra(
         else:
             from services.excel_supra_service import gerar_excel_cliente_supra
             from xlsx2html import xlsx2html
-            import io
             
-            excel_bytes = gerar_excel_cliente_supra(cli)
+            excel_bytes = gerar_excel_cliente_supra(cli, apenas_primeira_aba=True)
             in_stream = io.BytesIO(excel_bytes)
             out_stream = io.StringIO()
             

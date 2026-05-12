@@ -65,7 +65,7 @@ def gerar_nome_arquivo(cliente) -> str:
     return f"{cidade_safe}_{nome_safe}"
 
 
-def gerar_excel_cliente_supra(cliente) -> bytes:
+def gerar_excel_cliente_supra(cliente, apenas_primeira_aba: bool = False) -> bytes:
     """
     Recebe o objeto ClienteModelV2 e gera o xlsx preenchido.
     Lança exceção amigável em caso de falha no template ou IO.
@@ -321,6 +321,13 @@ def gerar_excel_cliente_supra(cliente) -> bytes:
         # Financeiro e Recomendações
         ws2["A34"] = f"Forma de Pagamento: {tipo_venda_excel}"
         ws2["D35"] = cliente.elaboracao_limite_credito or 0
+
+        # Remover todas as abas excedentes (mantendo apenas a primeira) se for PDF
+        if apenas_primeira_aba:
+            primeira_aba = wb.sheetnames[0]
+            for sheet_name in wb.sheetnames:
+                if sheet_name != primeira_aba:
+                    del wb[sheet_name]
 
         # Garante que abra na primeira guia por padrão
         wb.active = 0

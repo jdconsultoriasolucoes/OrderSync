@@ -3402,7 +3402,7 @@ function renderMobileCards() {
 
       const elFreteInput = card.querySelector('.mob-card-frete-val');
       if (elFreteInput && document.activeElement !== elFreteInput) {
-          elFreteInput.value = item.manual_freight ? fmtMoney(freteVal) : '';
+          elFreteInput.value = item.manual_freight ? fmtMoney(item._manualFreteVal || item.frete_base_ton || 0) : '';
       }
 
       const elIPI = card.querySelector('.mob-card-ipi');
@@ -3581,7 +3581,7 @@ function renderMobileCards() {
             <div class="card-field" style="margin-bottom: 16px;">
                  <label>Frete Unitário (R$)</label>
                  <div style="display: flex; gap: 8px; align-items: center;">
-                    <input type="text" class="mob-card-frete-val" value="${fmtMoney(freteVal)}" 
+                    <input type="text" class="mob-card-frete-val" value="${item.manual_freight ? fmtMoney(item._manualFreteVal || item.frete_base_ton || 0) : ''}" 
                            ${markupDisabled ? 'disabled style="background: #f8fafc;"' : 'style="background: #fff;"'}>
                     ${!markupDisabled ? `<span class="mob-lock-icon" style="cursor:pointer; font-size:1.2rem;">${item.manual_freight ? '🔒' : '🔓'}</span>` : ''}
                  </div>
