@@ -1908,14 +1908,21 @@ async function recalcTudo() {
         // MANUAL FREIGHT OVERRIDE in batch
         if (item.manual_freight) {
             const inputVal = tr ? tr.querySelector('.field-frete-manual')?.value : null;
+            let baseTon = 0;
             if (inputVal && inputVal !== '') {
-                freteValor = parseFloat(inputVal.replace(',', '.'));
-            } else if (item.valor_frete_unitario) {
-                freteValor = Number(item.valor_frete_unitario);
-            } else if (item.preco_unit_frt && item.preco_unit) {
-                freteValor = item.preco_unit_frt - item.preco_unit;
+                baseTon = parseFloat(inputVal.replace(',', '.'));
+            } else if (item.frete_base_ton) {
+                baseTon = Number(item.frete_base_ton);
+            } else if (item._manualFreteVal) {
+                baseTon = Number(item._manualFreteVal);
             }
-            item._manualFreteVal = freteValor;
+            
+            // Frete unitário = (Base R$/Ton / 1000) * Peso
+            const pesoParaFrete = (Number(item.peso_bruto || 0) > 0) ? Number(item.peso_bruto) : Number(item.peso_liquido || 0);
+            freteValor = (baseTon / 1000) * pesoParaFrete;
+            
+            item.frete_base_ton = baseTon;
+            item._manualFreteVal = baseTon;
             // precoBase deve ser SEM frete para o fiscal
             precoBase = Number(item.valor || 0) + acrescimoCond - descontoValor;
         }
@@ -3402,7 +3409,14 @@ function renderMobileCards() {
 
       const elFreteInput = card.querySelector('.mob-card-frete-val');
       if (elFreteInput && document.activeElement !== elFreteInput) {
-          elFreteInput.value = item.manual_freight ? fmtMoney(item._manualFreteVal || item.frete_base_ton || 0) : '';
+          if (item.manual_freight) {
+              const baseFrete = item._manualFreteVal || item.frete_base_ton || 0;
+              elFreteInput.value = Number(baseFrete).toFixed(2).replace('.', ',');
+              elFreteInput.placeholder = '';
+          } else {
+              elFreteInput.value = '';
+              elFreteInput.placeholder = (item._freteValor || 0).toFixed(2);
+          }
       }
 
       const elIPI = card.querySelector('.mob-card-ipi');
@@ -3581,7 +3595,8 @@ function renderMobileCards() {
             <div class="card-field" style="margin-bottom: 16px;">
                  <label>Frete Unitário (R$)</label>
                  <div style="display: flex; gap: 8px; align-items: center;">
-                    <input type="text" class="mob-card-frete-val" value="${item.manual_freight ? fmtMoney(item._manualFreteVal || item.frete_base_ton || 0) : ''}" 
+                    <input type="text" class="mob-card-frete-val" value="${item.manual_freight ? Number(item._manualFreteVal || item.frete_base_ton || 0).toFixed(2).replace('.', ',') : ''}" 
+                           placeholder="${!item.manual_freight ? (item._freteValor || 0).toFixed(2) : ''}"
                            ${markupDisabled ? 'disabled style="background: #f8fafc;"' : 'style="background: #fff;"'}>
                     ${!markupDisabled ? `<span class="mob-lock-icon" style="cursor:pointer; font-size:1.2rem;">${item.manual_freight ? '🔒' : '🔓'}</span>` : ''}
                  </div>
