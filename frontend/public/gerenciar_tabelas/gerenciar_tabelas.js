@@ -429,6 +429,16 @@ function selectModule(mod) {
         }
     }
 
+    const searchInput = document.getElementById('searchInput');
+    if (searchInput) {
+        searchInput.value = ''; // limpa a busca ao trocar de guia
+        if (mod === 'automacao') {
+            searchInput.style.display = 'none';
+        } else {
+            searchInput.style.display = 'inline-block';
+        }
+    }
+
     loadData();
 }
 
@@ -803,4 +813,14 @@ window.editItem = function (pk) {
 };
 window.deleteItem = deleteItem;
 
+window.filterGrid = function () {
+    const input = document.getElementById('searchInput');
+    if (!input) return;
+    const filter = input.value.toLowerCase();
+    const rows = document.querySelectorAll('#grid .data-table tbody tr');
 
+    rows.forEach(row => {
+        const text = row.textContent.toLowerCase();
+        row.style.display = text.includes(filter) ? '' : 'none';
+    });
+};

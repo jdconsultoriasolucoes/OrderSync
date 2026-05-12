@@ -417,7 +417,10 @@
 
             <div class="toolbar">
                 <div class="module-section-title" id="sectionTitle">Condições de Pagamento</div>
-                <button id="btn-novo" class="os-btn os-btn-primary os-btn-sm" onclick="openModal()">+ Novo</button>
+                <div style="display: flex; gap: 10px; align-items: center;">
+                    <input type="text" id="searchInput" placeholder="Buscar..." style="padding: 6px 12px; border: 1px solid var(--os-border); border-radius: var(--os-radius); font-size: var(--os-text-sm); font-family: var(--os-font); outline: none;" onkeyup="filterGrid()">
+                    <button id="btn-novo" class="os-btn os-btn-primary os-btn-sm" onclick="openModal()">+ Novo</button>
+                </div>
             </div>
 
             <div id="loading" style="display: none;">Carregando...</div>
