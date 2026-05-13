@@ -319,7 +319,6 @@ def gerar_excel_cliente_supra(cliente, apenas_primeira_aba: bool = False) -> byt
         ws2["A43"] = tipo_venda_excel
 
         # Financeiro e Recomendações
-        ws2["A34"] = f"Forma de Pagamento: {tipo_venda_excel}"
         ws2["D35"] = cliente.elaboracao_limite_credito or 0
 
         # Remover todas as abas excedentes (mantendo apenas a primeira) se for PDF

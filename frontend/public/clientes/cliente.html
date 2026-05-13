@@ -1649,7 +1649,10 @@
               
               let listOptions = campo.options || [];
               if (campo.type === 'select_referencia' && window._listaReferencias) {
-                  listOptions = window._listaReferencias.map(r => r.empresa);
+                  listOptions = window._listaReferencias.map(r => ({
+                      value: r.empresa,
+                      label: `${r.empresa}${r.contato ? ' - ' + r.contato : ''}`
+                  }));
               } else if (campo.type === 'select_plantel' && window._listaPlantel) {
                   listOptions = window._listaPlantel.map(p => p.plantel_animais);
               }
@@ -1662,8 +1665,13 @@
               listOptions.forEach(optVal => {
                 if(!optVal) return;
                 const opt = document.createElement('option');
-                opt.value = optVal;
-                opt.textContent = optVal;
+                if (typeof optVal === 'object') {
+                    opt.value = optVal.value;
+                    opt.textContent = optVal.label;
+                } else {
+                    opt.value = optVal;
+                    opt.textContent = optVal;
+                }
                 input.appendChild(opt);
               });
               
@@ -2349,7 +2357,7 @@
                     res.data.forEach(ref => {
                         const opt = document.createElement('option');
                         opt.value = ref.empresa;
-                        opt.textContent = ref.empresa;
+                        opt.textContent = `${ref.empresa}${ref.contato ? ' - ' + ref.contato : ''}`;
                         select.appendChild(opt);
                     });
                     if (valAtual) select.value = valAtual;

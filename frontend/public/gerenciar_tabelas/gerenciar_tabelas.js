@@ -439,6 +439,16 @@ function selectModule(mod) {
         }
     }
 
+    const btnExport = document.getElementById('btn-export-excel');
+    if (btnExport) {
+        // Habilita exportação apenas para Referências (conforme pedido)
+        if (mod === 'referencias') {
+            btnExport.style.display = 'inline-block';
+        } else {
+            btnExport.style.display = 'none';
+        }
+    }
+
     loadData();
 }
 
@@ -458,6 +468,14 @@ async function loadData() {
         if (cfg.customRender) {
             cfg.customRender(data, container);
         } else {
+            // Ordenação por Rota (Pedido do Usuário)
+            if (currentModule === 'municipio_rota') {
+                data.sort((a, b) => {
+                    const rA = parseInt(a.rota) || 0;
+                    const rB = parseInt(b.rota) || 0;
+                    return rA - rB;
+                });
+            }
             renderGrid(data);
         }
     } catch (e) {
@@ -789,6 +807,7 @@ async function savePlantel(e) {
 }
 
 // --- Delete Handler ---
+
 async function deleteItem(pkVal) {
     if (!confirm("Tem certeza que deseja remover (inativar) este item?")) return;
 
@@ -800,11 +819,41 @@ async function deleteItem(pkVal) {
             method: 'DELETE',
             headers: { "Authorization": `Bearer ${token}` }
         });
+
         if (!res.ok) throw new Error(await res.text());
+        alert("Excluído com sucesso!");
         loadData();
     } catch (e) {
-        alert("Erro ao remover: " + e.message);
+        alert("Erro ao excluir: " + e.message);
     }
+}
+
+function exportCurrentModuleToExcel() {
+    if (!window._currentData || window._currentData.length === 0) {
+        alert("Não há dados para exportar.");
+        return;
+    }
+
+    const cfg = CONFIG[currentModule];
+    
+    // Preparar os dados (apenas as colunas visíveis)
+    const dataToExport = window._currentData.map(item => {
+        const row = {};
+        cfg.cols.forEach(col => {
+            let val = item[col.key];
+            if (col.fmt) val = col.fmt(val);
+            row[col.label] = val;
+        });
+        return row;
+    });
+
+    const worksheet = XLSX.utils.json_to_sheet(dataToExport);
+    const workbook = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(workbook, worksheet, "Dados");
+
+    // Gerar download
+    const filename = `${currentModule}_${new Date().toISOString().split('T')[0]}.xlsx`;
+    XLSX.writeFile(workbook, filename);
 }
 
 // Global hook for edit
