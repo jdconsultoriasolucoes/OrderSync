@@ -733,16 +733,25 @@ def gerar_pdf_lista_preco(pedido: PedidoPdf, modo_frete: str = "ambos") -> bytes
         cols_def.append({"name": "R$ C/ Frete", "width": 1.8, "align": "CENTER"})
         cols_def.append({"name": "R$ S/Frete", "width": 1.8, "align": "CENTER"})
 
-    cols_def.append({"name": "MKP %", "width": 1.2, "align": "CENTER"})
+    # Determinar se tem algum markup configurado
+    has_markup = any(float(it.markup or 0) > 0 for it in pedido.itens)
 
-    # Injeta Markup Valor
-    if modo_frete == "com":
-        cols_def.append({"name": "MKP C/Frete", "width": 2.2, "align": "CENTER"})
-    elif modo_frete == "sem":
-        cols_def.append({"name": "MKP S/Frete", "width": 2.2, "align": "CENTER"})
-    else: # ambos
-        cols_def.append({"name": "MKP C/Frete", "width": 2.0, "align": "CENTER"})
-        cols_def.append({"name": "MKP S/Frete", "width": 2.0, "align": "CENTER"})
+    if has_markup:
+        cols_def.append({"name": "MKP %", "width": 1.2, "align": "CENTER"})
+
+        # Injeta Markup Valor
+        if modo_frete == "com":
+            cols_def.append({"name": "MKP C/Frete", "width": 2.2, "align": "CENTER"})
+        elif modo_frete == "sem":
+            cols_def.append({"name": "MKP S/Frete", "width": 2.2, "align": "CENTER"})
+        else: # ambos
+            cols_def.append({"name": "MKP C/Frete", "width": 2.0, "align": "CENTER"})
+            cols_def.append({"name": "MKP S/Frete", "width": 2.0, "align": "CENTER"})
+    else:
+        # Se não tem markup, aumenta Produto e Condição proporcionalmente
+        for col in cols_def:
+            if col["name"] == "Produto": col["width"] += 2.0
+            if col["name"] == "Condição": col["width"] += 1.4
 
     # Extrai headers e widths
     header = [c["name"] for c in cols_def]
@@ -805,17 +814,17 @@ def gerar_pdf_lista_preco(pedido: PedidoPdf, modo_frete: str = "ambos") -> bytes
             row.append(_br_number(custo_cf))
             row.append(_br_number(custo_sf))
 
-        # 2. Markup %
-        row.append(mk_str)
+        # 2. Markup % e Preço Venda (opcional)
+        if has_markup:
+            row.append(mk_str)
 
-        # 3. Preço Venda
-        if modo_frete == "com":
-            row.append(_br_number(venda_cf))
-        elif modo_frete == "sem":
-            row.append(_br_number(venda_sf))
-        else:
-            row.append(_br_number(venda_cf))
-            row.append(_br_number(venda_sf))
+            if modo_frete == "com":
+                row.append(_br_number(venda_cf))
+            elif modo_frete == "sem":
+                row.append(_br_number(venda_sf))
+            else:
+                row.append(_br_number(venda_cf))
+                row.append(_br_number(venda_sf))
 
         data_rows.append(row)
     

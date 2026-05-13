@@ -126,6 +126,9 @@ def gerar_pdf_cliente_simplificado(pedido: PedidoPdf) -> bytes:
     else:
         header_valor = "Valor s/ Frete"
     
+    # Determinar se deve mostrar markup (apenas se algum item tiver > 0)
+    has_markup = any(float(it.markup or 0) > 0 for it in itens_validos)
+    
     # Cabeçalho da tabela (com abreviações)
     table_header = [
         "#",
@@ -134,10 +137,10 @@ def gerar_pdf_cliente_simplificado(pedido: PedidoPdf) -> bytes:
         "Embal.",
         "Qtd",
         header_valor,
-        "Cond. de\nPagamento",
-        "Markup\n%",
-        "VL. C\nMarkup"
+        "Cond. de\nPagamento"
     ]
+    if has_markup:
+        table_header.extend(["Markup\n%", "VL. C\nMarkup"])
     
     # Imports necessários para Paragraph
     from reportlab.lib.styles import getSampleStyleSheet
@@ -168,24 +171,11 @@ def gerar_pdf_cliente_simplificado(pedido: PedidoPdf) -> bytes:
         else:
             valor_unitario = item.valor_retira
         
-        # Markup - só mostrar se houver markup configurado (> 0)
-        markup_display = "-"
-        valor_markup_display = "-"
-        
-        if item.markup and item.markup > 0:
-            markup_display = f"{_br_number(item.markup, 2)}%"
-            if item.valor_final_markup and item.valor_final_markup > 0:
-                valor_markup_display = f"R$ {_br_number(item.valor_final_markup, 2)}"
-            else:
-                # Fallback: calcula valor com markup se estiver zerado mas tiver %
-                v_calc = valor_unitario * (1 + item.markup/100)
-                valor_markup_display = f"R$ {_br_number(v_calc, 2)}"
-        
         # WRAPPING: Usar Paragraph para Produto e Condição Pagamento
         p_produto = Paragraph(item.produto or "", style_normal)
         p_condicao = Paragraph(item.condicao_pagamento or "", style_normal)
 
-        all_rows.append([
+        row = [
             str(idx),
             item.codigo or "",
             p_produto,    # Paragraph
@@ -193,18 +183,36 @@ def gerar_pdf_cliente_simplificado(pedido: PedidoPdf) -> bytes:
             str(int(item.quantidade)) if item.quantidade else "0",
             f"R$ {_br_number(valor_unitario, 2)}",
             p_condicao,   # Paragraph
-            markup_display,
-            valor_markup_display
-        ])
+        ]
+
+        if has_markup:
+            # Markup - só mostrar se houver markup configurado (> 0)
+            markup_display = "-"
+            valor_markup_display = "-"
+            
+            if item.markup and item.markup > 0:
+                markup_display = f"{_br_number(item.markup, 2)}%"
+                if item.valor_final_markup and item.valor_final_markup > 0:
+                    valor_markup_display = f"R$ {_br_number(item.valor_final_markup, 2)}"
+                else:
+                    # Fallback: calcula valor com markup se estiver zerado mas tiver %
+                    v_calc = valor_unitario * (1 + item.markup/100)
+                    valor_markup_display = f"R$ {_br_number(v_calc, 2)}"
+            
+            row.extend([markup_display, valor_markup_display])
+
+        all_rows.append(row)
     
     # ==================== PAGINAÇÃO ====================
     
     # Larguras das colunas (ajustadas para retrato com margens menores)
-    # Total disponível: ~19cm (21cm - 2cm de margens)
-    # Maior largura total (19cm) - ajustar outras colunas para caber a nova
-    # # (0.8cm), Cod(1.6), Prod(4.5), Emb(1.1), Qtd(0.9), Val(2.0), Cond(5.2), Mk(1.2), VMk(2.0) = 19.3 (Muito largo)
-    # Ajustando: #:0.8, Cod:1.5, Prod:4.2, Emb:1.1, Qtd:0.9, Val:1.9, Cond:4.8, Mk:1.1, VMk:1.9 = 18.2 (OK)
-    col_widths = [0.8*cm, 1.5*cm, 4.2*cm, 1.1*cm, 0.9*cm, 1.9*cm, 4.8*cm, 1.1*cm, 1.9*cm]
+    if has_markup:
+        # #:0.8, Cod:1.5, Prod:4.2, Emb:1.1, Qtd:0.9, Val:1.9, Cond:4.8, Mk:1.1, VMk:1.9 = 18.2cm
+        col_widths = [0.8*cm, 1.5*cm, 4.2*cm, 1.1*cm, 0.9*cm, 1.9*cm, 4.8*cm, 1.1*cm, 1.9*cm]
+    else:
+        # Sem markup, distribuímos os 3.0cm (1.1+1.9) para Produto (+1.5) e Condição (+1.5)
+        # #:0.8, Cod:1.5, Prod:5.7, Emb:1.1, Qtd:0.9, Val:1.9, Cond:6.3 = 18.2cm
+        col_widths = [0.8*cm, 1.5*cm, 5.7*cm, 1.1*cm, 0.9*cm, 1.9*cm, 6.3*cm]
     # Total: 19cm
     # Produto: 5.0cm, Cond. Pagamento: 5.2cm (+0.7cm), VL. C Markup: 2.0cm
     

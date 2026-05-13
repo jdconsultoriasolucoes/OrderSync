@@ -217,6 +217,12 @@ function renderTabela() {
 
   tbody.appendChild(fragment);
 
+  // Ocultar colunas de markup se todos os itens forem zero
+  const temMarkup = produtos.some(p => Number(p.markup || 0) > 0);
+  document.querySelectorAll('.col-markup').forEach(el => {
+    el.style.display = temMarkup ? '' : 'none';
+  });
+
   // Listeners de quantidade
   tbody.querySelectorAll("input.qtd").forEach((input) => {
     const handler = (e) => onQtdChange(e);
