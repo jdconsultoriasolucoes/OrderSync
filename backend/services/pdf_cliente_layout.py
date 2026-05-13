@@ -207,12 +207,12 @@ def gerar_pdf_cliente_simplificado(pedido: PedidoPdf) -> bytes:
     
     # Larguras das colunas (ajustadas para retrato com margens menores)
     if has_markup:
-        # #:0.8, Cod:1.5, Prod:4.2, Emb:1.1, Qtd:0.9, Val:1.9, Cond:4.8, Mk:1.1, VMk:1.9 = 18.2cm
-        col_widths = [0.8*cm, 1.5*cm, 4.2*cm, 1.1*cm, 0.9*cm, 1.9*cm, 4.8*cm, 1.1*cm, 1.9*cm]
+        # #:0.8, Cod:1.5, Prod:4.6, Emb:1.1, Qtd:0.9, Val:1.9, Cond:5.2, Mk:1.1, VMk:1.9 = 19.0cm
+        col_widths = [0.8*cm, 1.5*cm, 4.6*cm, 1.1*cm, 0.9*cm, 1.9*cm, 5.2*cm, 1.1*cm, 1.9*cm]
     else:
-        # Sem markup, distribuímos os 3.0cm (1.1+1.9) para Produto (+1.5) e Condição (+1.5)
-        # #:0.8, Cod:1.5, Prod:5.7, Emb:1.1, Qtd:0.9, Val:1.9, Cond:6.3 = 18.2cm
-        col_widths = [0.8*cm, 1.5*cm, 5.7*cm, 1.1*cm, 0.9*cm, 1.9*cm, 6.3*cm]
+        # Sem markup (3.0cm extra), distribuímos proporcionalmente para Produto e Condição
+        # #:0.8, Cod:1.5, Prod:6.1, Emb:1.1, Qtd:0.9, Val:1.9, Cond:6.7 = 19.0cm
+        col_widths = [0.8*cm, 1.5*cm, 6.1*cm, 1.1*cm, 0.9*cm, 1.9*cm, 6.7*cm]
     # Total: 19cm
     # Produto: 5.0cm, Cond. Pagamento: 5.2cm (+0.7cm), VL. C Markup: 2.0cm
     
