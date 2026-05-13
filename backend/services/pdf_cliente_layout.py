@@ -126,6 +126,17 @@ def gerar_pdf_cliente_simplificado(pedido: PedidoPdf) -> bytes:
     else:
         header_valor = "Valor s/ Frete"
     
+    # Filtrar apenas itens com quantidade > 0
+    itens_validos = []
+    for item in pedido.itens:
+        try:
+            qtd = float(item.quantidade) if item.quantidade else 0.0
+        except (ValueError, TypeError):
+            qtd = 0.0
+            
+        if qtd > 0:
+            itens_validos.append(item)
+
     # Determinar se deve mostrar markup (apenas se algum item tiver > 0)
     has_markup = any(float(it.markup or 0) > 0 for it in itens_validos)
     
@@ -152,18 +163,7 @@ def gerar_pdf_cliente_simplificado(pedido: PedidoPdf) -> bytes:
 
     # Preparar todas as linhas de produtos
     all_rows = []
-    
-    # Filtrar apenas itens com quantidade > 0
-    itens_validos = []
-    for item in pedido.itens:
-        try:
-            qtd = float(item.quantidade) if item.quantidade else 0.0
-        except (ValueError, TypeError):
-            qtd = 0.0
-            
-        if qtd > 0:
-            itens_validos.append(item)
-            
+             
     for idx, item in enumerate(itens_validos, start=1):
         # Escolher valor correto
         if pedido.usar_valor_com_frete:
