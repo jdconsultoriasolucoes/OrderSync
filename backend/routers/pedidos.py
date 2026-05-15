@@ -573,7 +573,7 @@ def mudar_status(id_pedido: int, body: StatusChangeBody, db: Session = Depends(g
             text("""
                 SELECT c.cadastro_codigo_da_empresa
                 FROM public.tb_pedidos p
-                LEFT JOIN public.tb_clientes_v2 c ON c.id = p.cliente_id
+                LEFT JOIN public.t_cadastro_cliente_v2 c ON c.cadastro_codigo_da_empresa::text = p.codigo_cliente
                 WHERE p.id_pedido = :id
             """),
             {"id": id_pedido}
