@@ -458,10 +458,12 @@ async function openResumo(id) {
                        onfocus="this.style.borderColor='#2563eb'; this.style.background='#fff'; this.style.boxShadow='0 0 0 3px rgba(37,99,235,0.1)'"
                        onblur="this.style.borderColor='#e2e8f0'; this.style.background='#f8fafc'; this.style.boxShadow='none'">
               </div>
-              <button id="btnSaveFaturamento" class="os-btn os-btn-secondary os-btn-sm" 
-                      style="margin-top: 4px; border-radius: 8px; height: 36px; width: 100%; justify-content: center; font-weight: 600; border-style: dashed;">
-                💾 Atualizar Faturamento
-              </button>
+              <div style="display: flex; justify-content: flex-end; margin-top: 4px;">
+                <button id="btnSaveFaturamento" class="os-btn os-btn-primary os-btn-sm" 
+                        style="border-radius: 6px; height: 28px; padding: 0 15px; font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.03em;">
+                  Salvar
+                </button>
+              </div>
             </div>
           </div>
           <div style="min-width: 120px; text-align: right;">
