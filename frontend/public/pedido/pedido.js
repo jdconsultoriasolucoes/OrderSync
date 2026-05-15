@@ -439,27 +439,35 @@ async function openResumo(id) {
   el.innerHTML = `
       <div class="stack">
         <div class="kv" style="border-bottom: none; padding-bottom: 0;">
-          <div style="flex: 1; background: #fff; border: 1px solid #edf2f7; border-radius: 12px; padding: 16px; box-shadow: 0 2px 4px rgba(0,0,0,0.02); display: flex; justify-content: space-between; align-items: flex-start;">
-            <!-- Lado Esquerdo: ID e Inputs -->
-            <div>
-              <b>Pedido:</b> ${p.id_pedido}<br>
-              <div style="margin-top: 10px; display: flex; align-items: center; gap: 10px;">
-                <b style="min-width: 80px; font-size: 0.9rem;">Ped. Supra:</b> 
-                <input type="text" id="editSupra" value="${p.pedido_supra || ''}" class="form-select form-select-sm" style="width: 150px; height: 30px; padding: 2px 8px;">
+          <div style="flex: 1; background: #fff; border: 1px solid #edf2f7; border-radius: 12px; padding: 16px; box-shadow: 0 2px 4px rgba(0,0,0,0.02);">
+            <div style="display: flex; justify-content: space-between; align-items: flex-start;">
+              <!-- Lado Esquerdo: ID e Inputs -->
+              <div>
+                <b>Pedido:</b> ${p.id_pedido}<br>
+                <div style="margin-top: 10px; display: flex; align-items: center; gap: 8px;">
+                  <b style="min-width: 65px; font-size: 0.85rem;">Supra:</b> 
+                  <input type="text" id="editSupra" value="${p.pedido_supra || ''}" class="form-select form-select-sm" style="width: 140px; height: 28px; padding: 2px 8px;">
+                </div>
+                <div style="margin-top: 8px; display: flex; align-items: center; gap: 8px;">
+                  <b style="min-width: 65px; font-size: 0.85rem;">NF:</b> 
+                  <input type="text" id="editNF" value="${p.nota_fiscal || ''}" class="form-select form-select-sm" style="width: 140px; height: 28px; padding: 2px 8px;">
+                </div>
               </div>
-              <div style="margin-top: 10px; display: flex; align-items: center; gap: 10px;">
-                <b style="min-width: 80px; font-size: 0.9rem;">Nota Fiscal:</b> 
-                <input type="text" id="editNF" value="${p.nota_fiscal || ''}" class="form-select form-select-sm" style="width: 150px; height: 30px; padding: 2px 8px;">
+
+              <!-- Lado Direito: Status e Aceite -->
+              <div style="text-align: right; min-width: 120px;">
+                ${getStatusBadge(p.status)}<br>
+                <div style="margin-top: 10px; font-size: 0.8rem; color: #666;">
+                  <b>Aceite em:</b><br>${fmtDate(p.confirmado_em || p.created_at)}
+                </div>
               </div>
-              <button id="btnSaveFaturamento" class="btn btn-sm btn-primary" style="margin-top: 12px; height: 32px; padding: 0 15px;">💾 Salvar Campos</button>
             </div>
 
-            <!-- Lado Direito: Status e Aceite -->
-            <div style="text-align: right; min-width: 120px;">
-              ${getStatusBadge(p.status)}<br>
-              <div style="margin-top: 12px; font-size: 0.85rem;">
-                <b>Aceite em:</b><br>${fmtDate(p.confirmado_em || p.created_at)}
-              </div>
+            <!-- Botão Salvar na Direita -->
+            <div style="display: flex; justify-content: flex-end; margin-top: 12px; border-top: 1px solid #f8f9fa; padding-top: 10px;">
+              <button id="btnSaveFaturamento" class="btn btn-sm btn-primary" style="height: 30px; padding: 0 20px; font-weight: 600; text-transform: uppercase; font-size: 11px;">
+                Salvar
+              </button>
             </div>
           </div>
         </div>
