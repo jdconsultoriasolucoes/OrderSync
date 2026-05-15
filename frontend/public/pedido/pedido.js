@@ -9,6 +9,7 @@ const API = {
   reenviar: (id) => `${API_BASE}/api/pedidos/${id}/reenviar_email`,
   pdf: (id) => `${API_BASE}/api/pedido/${id}/pdf`, // endpoint de download direto padrão
   pdf_cliente: (id) => `${API_BASE}/api/pedido/${id}/pdf_cliente`, // endpoint de download cliente
+  camposFaturamento: (id) => `${API_BASE}/api/pedidos/${id}/campos_faturamento`,
 };
 
 let state = {
@@ -438,10 +439,17 @@ async function openResumo(id) {
   el.innerHTML = `
       <div class="stack">
         <div class="kv">
-          <div>
+          <div style="flex: 1;">
             <b>Pedido:</b> ${p.id_pedido}<br>
-            <b>Ped. Supra:</b> ${p.pedido_supra || "---"}<br>
-            <b>Nota Fiscal:</b> ${p.nota_fiscal || "---"}
+            <div style="margin-top: 10px; display: flex; align-items: center; gap: 10px;">
+              <b style="min-width: 80px;">Ped. Supra:</b> 
+              <input type="text" id="editSupra" value="${p.pedido_supra || ''}" class="form-select form-select-sm" style="flex: 1; max-width: 150px; height: 30px; padding: 2px 8px;">
+            </div>
+            <div style="margin-top: 10px; display: flex; align-items: center; gap: 10px;">
+              <b style="min-width: 80px;">Nota Fiscal:</b> 
+              <input type="text" id="editNF" value="${p.nota_fiscal || ''}" class="form-select form-select-sm" style="flex: 1; max-width: 150px; height: 30px; padding: 2px 8px;">
+            </div>
+            <button id="btnSaveFaturamento" class="btn btn-sm btn-primary" style="margin-top: 12px; width: 100%; height: 32px;">💾 Salvar Campos</button>
           </div>
           <div>
             ${getStatusBadge(p.status)}<br>
@@ -500,6 +508,16 @@ async function openResumo(id) {
       </div>
     `;
 
+  // Botão salvar campos faturamento
+  const btnSave = el.querySelector("#btnSaveFaturamento");
+  if (btnSave) {
+    btnSave.addEventListener("click", async () => {
+      const supra = document.getElementById("editSupra").value;
+      const nf = document.getElementById("editNF").value;
+      await saveCamposFaturamento(id, supra, nf, btnSave);
+    });
+  }
+
   // Botão copiar dentro do resumo
   const btnC = el.querySelector("#copyResumoBox");
   if (btnC && p.link_url) {
@@ -552,6 +570,51 @@ async function openResumo(id) {
 
   const d = document.getElementById("drawer");
   if (d) d.classList.remove("hidden");
+}
+
+async function saveCamposFaturamento(id, supra, nf, btn) {
+  const originalText = btn.innerText;
+  btn.innerText = "⏳...";
+  btn.disabled = true;
+
+  try {
+    const r = await fetch(API.camposFaturamento(id), {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ pedido_supra: supra, nota_fiscal: nf })
+    });
+
+    if (r.ok) {
+      btn.innerText = "✅ Salvo!";
+      btn.style.backgroundColor = "#16a34a";
+      
+      // Atualiza o estado local para refletir na tabela sem recarregar tudo
+      const row = state.rows.find(r => String(r.numero_pedido || r.id_pedido || r.id) === String(id));
+      if (row) {
+        row.pedido_supra = supra;
+        row.nota_fiscal = nf;
+      }
+      
+      // Opcional: recarrega a tabela para atualizar a coluna visualmente
+      renderTable(state.rows);
+      renderCards(state.rows);
+
+      setTimeout(() => {
+        btn.innerText = originalText;
+        btn.disabled = false;
+        btn.style.backgroundColor = "";
+      }, 2000);
+    } else {
+      const txt = await r.text();
+      alert("Erro ao salvar: " + txt);
+      btn.innerText = originalText;
+      btn.disabled = false;
+    }
+  } catch (e) {
+    alert("Erro de conexão: " + e.message);
+    btn.innerText = originalText;
+    btn.disabled = false;
+  }
 }
 
 async function doAction(url, successMsg, reload = false) {

@@ -115,6 +115,10 @@ class StatusChangeBody(BaseModel):
     motivo: Optional[str] = None
     user_id: Optional[str] = None
 
+class PedidoCamposFaturamento(BaseModel):
+    pedido_supra: Optional[str] = None
+    nota_fiscal: Optional[str] = None
+
 class PedidoUpdateItem(BaseModel):
     codigo: str
     descricao: Optional[str] = None
@@ -612,6 +616,22 @@ def mudar_status(id_pedido: int, body: StatusChangeBody, db: Session = Depends(g
 
     db.commit()
     return {"ok": True}
+
+@router.patch("/{id_pedido}/campos_faturamento")
+def atualizar_campos_faturamento(id_pedido: int, body: PedidoCamposFaturamento, db: Session = Depends(get_db)):
+    from models.pedido import PedidoModel
+    pedido = db.query(PedidoModel).filter(PedidoModel.id == id_pedido).first()
+    if not pedido:
+        raise HTTPException(status_code=404, detail="Pedido não encontrado")
+    
+    if body.pedido_supra is not None:
+        pedido.pedido_supra = body.pedido_supra
+    if body.nota_fiscal is not None:
+        pedido.nota_fiscal = body.nota_fiscal
+        
+    db.add(pedido)
+    db.commit()
+    return {"ok": True, "pedido_supra": pedido.pedido_supra, "nota_fiscal": pedido.nota_fiscal}
 
 # ---------- Ações Extras (Cancelamento / Reenvio) ----------
 
