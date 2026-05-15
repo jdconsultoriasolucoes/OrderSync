@@ -444,12 +444,12 @@ async function openResumo(id) {
               <!-- Lado Esquerdo: ID e Inputs -->
               <div>
                 <b>Pedido:</b> ${p.id_pedido}<br>
-                <div style="margin-top: 10px; display: flex; align-items: center; gap: 8px;">
-                  <b style="min-width: 65px; font-size: 0.85rem;">Supra:</b> 
+                <div style="margin-top: 10px; display: flex; align-items: center; gap: 10px;">
+                  <b style="min-width: 95px; font-size: 0.85rem;">Ped. Supra:</b> 
                   <input type="text" id="editSupra" value="${p.pedido_supra || ''}" class="form-select form-select-sm" style="width: 140px; height: 28px; padding: 2px 8px;">
                 </div>
-                <div style="margin-top: 8px; display: flex; align-items: center; gap: 8px;">
-                  <b style="min-width: 65px; font-size: 0.85rem;">NF:</b> 
+                <div style="margin-top: 8px; display: flex; align-items: center; gap: 10px;">
+                  <b style="min-width: 95px; font-size: 0.85rem;">Nota Fiscal:</b> 
                   <input type="text" id="editNF" value="${p.nota_fiscal || ''}" class="form-select form-select-sm" style="width: 140px; height: 28px; padding: 2px 8px;">
                 </div>
               </div>
