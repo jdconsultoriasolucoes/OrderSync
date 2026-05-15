@@ -439,39 +439,26 @@ async function openResumo(id) {
   el.innerHTML = `
       <div class="stack">
         <div class="kv" style="border-bottom: none; padding-bottom: 0;">
-          <div style="flex: 1; background: #fff; border: 1px solid #edf2f7; border-radius: 12px; padding: 20px; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.05);">
-            <!-- Topo: ID e Status -->
-            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
-              <h3 style="margin: 0; font-size: 18px; font-weight: 800; color: #1a202c; letter-spacing: -0.02em;">Pedido #${p.id_pedido}</h3>
-              ${getStatusBadge(p.status)}
+          <div style="flex: 1; background: #fff; border: 1px solid #edf2f7; border-radius: 12px; padding: 16px; box-shadow: 0 2px 4px rgba(0,0,0,0.02); display: flex; justify-content: space-between; align-items: flex-start;">
+            <!-- Lado Esquerdo: ID e Inputs -->
+            <div>
+              <b>Pedido:</b> ${p.id_pedido}<br>
+              <div style="margin-top: 10px; display: flex; align-items: center; gap: 10px;">
+                <b style="min-width: 80px; font-size: 0.9rem;">Ped. Supra:</b> 
+                <input type="text" id="editSupra" value="${p.pedido_supra || ''}" class="form-select form-select-sm" style="width: 150px; height: 30px; padding: 2px 8px;">
+              </div>
+              <div style="margin-top: 10px; display: flex; align-items: center; gap: 10px;">
+                <b style="min-width: 80px; font-size: 0.9rem;">Nota Fiscal:</b> 
+                <input type="text" id="editNF" value="${p.nota_fiscal || ''}" class="form-select form-select-sm" style="width: 150px; height: 30px; padding: 2px 8px;">
+              </div>
+              <button id="btnSaveFaturamento" class="btn btn-sm btn-primary" style="margin-top: 12px; height: 32px; padding: 0 15px;">💾 Salvar Campos</button>
             </div>
 
-            <!-- Meio: Campos -->
-            <div style="display: flex; flex-direction: column; gap: 16px;">
-              <div style="display: flex; flex-direction: column; gap: 6px;">
-                <label style="font-size: 11px; font-weight: 700; color: #718096; text-transform: uppercase; letter-spacing: 0.05em;">Ped. Supra</label>
-                <input type="text" id="editSupra" value="${p.pedido_supra || ''}" placeholder="Inserir código..." 
-                       style="width: 100%; border: 1px solid #e2e8f0; border-radius: 8px; padding: 10px 12px; font-size: 14px; outline: none; transition: all 0.2s; background: #f8fafc;"
-                       onfocus="this.style.borderColor='#2563eb'; this.style.background='#fff'; this.style.boxShadow='0 0 0 3px rgba(37,99,235,0.1)'"
-                       onblur="this.style.borderColor='#e2e8f0'; this.style.background='#f8fafc'; this.style.boxShadow='none'">
-              </div>
-              <div style="display: flex; flex-direction: column; gap: 6px;">
-                <label style="font-size: 11px; font-weight: 700; color: #718096; text-transform: uppercase; letter-spacing: 0.05em;">Nota Fiscal</label>
-                <input type="text" id="editNF" value="${p.nota_fiscal || ''}" placeholder="Número da NF..." 
-                       style="width: 100%; border: 1px solid #e2e8f0; border-radius: 8px; padding: 10px 12px; font-size: 14px; outline: none; transition: all 0.2s; background: #f8fafc;"
-                       onfocus="this.style.borderColor='#2563eb'; this.style.background='#fff'; this.style.boxShadow='0 0 0 3px rgba(37,99,235,0.1)'"
-                       onblur="this.style.borderColor='#e2e8f0'; this.style.background='#f8fafc'; this.style.boxShadow='none'">
-              </div>
-              
-              <!-- Rodapé: Aceite e Botão -->
-              <div style="display: flex; justify-content: space-between; align-items: flex-end; margin-top: 8px; border-top: 1px solid #f7fafc; padding-top: 16px;">
-                <div style="color: #718096; font-size: 10px; line-height: 1.4; text-transform: uppercase; letter-spacing: 0.02em;">
-                   <b>Aceite em:</b><br>${fmtDate(p.confirmado_em || p.created_at)}
-                </div>
-                <button id="btnSaveFaturamento" class="os-btn os-btn-primary os-btn-sm" 
-                        style="border-radius: 6px; height: 32px; padding: 0 20px; font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em;">
-                  Salvar
-                </button>
+            <!-- Lado Direito: Status e Aceite -->
+            <div style="text-align: right; min-width: 120px;">
+              ${getStatusBadge(p.status)}<br>
+              <div style="margin-top: 12px; font-size: 0.85rem;">
+                <b>Aceite em:</b><br>${fmtDate(p.confirmado_em || p.created_at)}
               </div>
             </div>
           </div>
