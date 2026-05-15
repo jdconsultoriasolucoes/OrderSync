@@ -438,22 +438,37 @@ async function openResumo(id) {
 
   el.innerHTML = `
       <div class="stack">
-        <div class="kv">
-          <div style="flex: 1;">
-            <b>Pedido:</b> ${p.id_pedido}<br>
-            <div style="margin-top: 10px; display: flex; align-items: center; gap: 10px;">
-              <b style="min-width: 80px;">Ped. Supra:</b> 
-              <input type="text" id="editSupra" value="${p.pedido_supra || ''}" class="form-select form-select-sm" style="flex: 1; max-width: 150px; height: 30px; padding: 2px 8px;">
+        <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: -10px;">
+          <h3 style="margin: 0; font-size: 18px; font-weight: 800; color: #1a202c; letter-spacing: -0.02em;">Pedido #${p.id_pedido}</h3>
+        </div>
+        <div class="kv" style="border-bottom: none; padding-bottom: 0;">
+          <div style="flex: 1; background: #fff; border: 1px solid #edf2f7; border-radius: 12px; padding: 16px; box-shadow: 0 2px 4px rgba(0,0,0,0.02);">
+            <div style="display: flex; flex-direction: column; gap: 12px;">
+              <div style="display: flex; flex-direction: column; gap: 4px;">
+                <label style="font-size: 11px; font-weight: 700; color: #718096; text-transform: uppercase; letter-spacing: 0.05em;">Ped. Supra</label>
+                <input type="text" id="editSupra" value="${p.pedido_supra || ''}" placeholder="Inserir código..." 
+                       style="width: 100%; border: 1px solid #e2e8f0; border-radius: 8px; padding: 8px 12px; font-size: 14px; outline: none; transition: all 0.2s; background: #f8fafc;"
+                       onfocus="this.style.borderColor='#2563eb'; this.style.background='#fff'; this.style.boxShadow='0 0 0 3px rgba(37,99,235,0.1)'"
+                       onblur="this.style.borderColor='#e2e8f0'; this.style.background='#f8fafc'; this.style.boxShadow='none'">
+              </div>
+              <div style="display: flex; flex-direction: column; gap: 4px;">
+                <label style="font-size: 11px; font-weight: 700; color: #718096; text-transform: uppercase; letter-spacing: 0.05em;">Nota Fiscal</label>
+                <input type="text" id="editNF" value="${p.nota_fiscal || ''}" placeholder="Número da NF..." 
+                       style="width: 100%; border: 1px solid #e2e8f0; border-radius: 8px; padding: 8px 12px; font-size: 14px; outline: none; transition: all 0.2s; background: #f8fafc;"
+                       onfocus="this.style.borderColor='#2563eb'; this.style.background='#fff'; this.style.boxShadow='0 0 0 3px rgba(37,99,235,0.1)'"
+                       onblur="this.style.borderColor='#e2e8f0'; this.style.background='#f8fafc'; this.style.boxShadow='none'">
+              </div>
+              <button id="btnSaveFaturamento" class="os-btn os-btn-secondary os-btn-sm" 
+                      style="margin-top: 4px; border-radius: 8px; height: 36px; width: 100%; justify-content: center; font-weight: 600; border-style: dashed;">
+                💾 Atualizar Faturamento
+              </button>
             </div>
-            <div style="margin-top: 10px; display: flex; align-items: center; gap: 10px;">
-              <b style="min-width: 80px;">Nota Fiscal:</b> 
-              <input type="text" id="editNF" value="${p.nota_fiscal || ''}" class="form-select form-select-sm" style="flex: 1; max-width: 150px; height: 30px; padding: 2px 8px;">
-            </div>
-            <button id="btnSaveFaturamento" class="btn btn-sm btn-primary" style="margin-top: 12px; width: 100%; height: 32px;">💾 Salvar Campos</button>
           </div>
-          <div>
+          <div style="min-width: 120px; text-align: right;">
             ${getStatusBadge(p.status)}<br>
-            <div style="margin-top: 8px;"><b>Aceite em:</b><br>${fmtDate(p.confirmado_em || p.created_at)}</div>
+            <div style="margin-top: 12px; color: #718096; font-size: 12px; line-height: 1.4;">
+               <b>Aceite em:</b><br>${fmtDate(p.confirmado_em || p.created_at)}
+            </div>
           </div>
         </div>
         <div class="kv">
