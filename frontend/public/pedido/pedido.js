@@ -1,5 +1,5 @@
 // base do backend FastAPI publicado no Render
-const API_BASE = window.API_BASE || "https://ordersync-backend-edjq.onrender.com"; // Restored & Safe
+const API_BASE = window.API_BASE || window.location.origin;
 
 const API = {
   list: `${API_BASE}/api/pedidos`,

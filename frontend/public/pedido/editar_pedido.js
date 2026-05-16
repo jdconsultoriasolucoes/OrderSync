@@ -1,6 +1,6 @@
 // === Config ===
 // Config is now imported via config.js
-const API_BASE = window.API_BASE || "https://ordersync-backend-edjq.onrender.com"; // Restored & Safe
+const API_BASE = window.API_BASE || window.location.origin;
 // window.API_BASE already set by config.js
 const ENDPOINT_VALIDADE = `${API_BASE}/tabela_preco/meta/validade_global`;
 

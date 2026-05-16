@@ -1,5 +1,5 @@
 
-const API_BASE = window.API_BASE || "https://ordersync-backend-edjq.onrender.com";
+const API_BASE = window.API_BASE || window.location.origin;
 
 let currentModule = null; // 'condicoes', 'descontos', 'familias'
 let currentItem = null;   // Item sendo editado (null se novo)
