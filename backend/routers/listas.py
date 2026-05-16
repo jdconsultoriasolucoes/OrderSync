@@ -61,3 +61,13 @@ def get_tipo_compra():
 @router.get("/ramo_de_atividade")
 def get_ramo_de_atividade():
     return RAMO_DE_ATIVIDADE
+
+@router.get("/fornecedores_produtos")
+def get_fornecedores_produtos(db: Session = Depends(get_db)):
+    from sqlalchemy import text
+    try:
+        query = text("SELECT DISTINCT fornecedor FROM t_cadastro_produto_v2 WHERE fornecedor IS NOT NULL AND fornecedor != '' ORDER BY fornecedor")
+        result = db.execute(query).scalars().all()
+        return list(result)
+    except Exception:
+        return []

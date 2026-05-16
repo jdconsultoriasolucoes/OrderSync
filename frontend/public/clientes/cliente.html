@@ -758,7 +758,9 @@
             </div>
             <div>
               <label for="local_carregamento_ElaboracaoCadastro">Local de Carregamento:</label>
-              <input type="text" id="local_carregamento_ElaboracaoCadastro" name="local_carregamento_ElaboracaoCadastro" />
+              <select id="local_carregamento_ElaboracaoCadastro" name="local_carregamento_ElaboracaoCadastro">
+                <option value="">Selecione</option>
+              </select>
             </div>
           </div>
 
@@ -1599,7 +1601,7 @@
               { key: 'imovel',      label: 'Imóvel',       type: 'text' },
               { key: 'localizacao', label: 'Localização',  type: 'text' },
               { key: 'area',        label: 'Área',          type: 'text' },
-              { key: 'valor',       label: 'Valor (R$)',    type: 'number' },
+              { key: 'valor',       label: 'Valor (R$)',    type: 'text', attributes: { placeholder: 'R$ 0,00' } },
               { key: 'hipotecado',  label: 'Hipotecado',   type: 'select', options: ['', 'Sim', 'Não'] }
             ]
           },
@@ -1608,7 +1610,7 @@
             fields: [
               { key: 'marca',    label: 'Marca',    type: 'text' },
               { key: 'modelo',   label: 'Modelo',   type: 'text' },
-              { key: 'valor',    label: 'Valor (R$)', type: 'number' },
+              { key: 'valor',    label: 'Valor (R$)', type: 'text', attributes: { placeholder: 'R$ 0,00' } },
               { key: 'alienado', label: 'Alienado', type: 'select', options: ['', 'Sim', 'Não'] }
             ]
           },
@@ -1745,6 +1747,23 @@
             
             const contatoInput = bloco.querySelector('input[data-key="contato_gerente"]');
             if (contatoInput) applyPhoneMask(contatoInput);
+
+            // Máscara de Moeda para campos de valor
+            const valorInput = bloco.querySelector('input[data-key="valor"]');
+            if (valorInput) {
+              valorInput.maskInstance = IMask(valorInput, {
+                mask: 'R$ num',
+                blocks: {
+                  num: {
+                    mask: Number,
+                    thousandsSeparator: '.',
+                    padFractionalZeros: true,
+                    radix: ',',
+                    mapToRadix: ['.']
+                  }
+                }
+              });
+            }
           }, 0);
 
           return bloco;
@@ -1799,7 +1818,14 @@
               let temValor = false;
               inputs.forEach(inp => {
                 const key = inp.dataset.key;
-                const val = (inp.type === 'number' || inp.tagName === 'SELECT') ? (inp.value || null) : (inp.value?.trim() || null);
+                let val;
+                
+                if (inp.maskInstance && (key === 'valor' || key.includes('limite'))) {
+                    val = inp.maskInstance.typedValue;
+                } else {
+                    val = (inp.type === 'number' || inp.tagName === 'SELECT') ? (inp.value || null) : (inp.value?.trim() || null);
+                }
+                
                 obj[key] = val;
                 if (val !== null && val !== '') temValor = true;
               });
@@ -2569,9 +2595,44 @@
           preencherSelect("tipo_venda", "tipo_venda_prazo_ou_vista_ElaboracaoCadastro");
           preencherSelect("tipos_cliente", "classificacao_ElaboracaoCadastro");
           carregarVendedores();
+          carregarFornecedoresProdutos();
           carregarOpcoesReferencia();
           carregarOpcoesPlantel();
         };
+
+        function carregarFornecedoresProdutos() {
+          const api = window.API_BASE || "http://127.0.0.1:8000";
+          const token = window.Auth ? window.Auth.getToken() : localStorage.getItem('ordersync_token');
+          const headers = token ? { 'Authorization': `Bearer ${token}` } : {};
+
+          fetch(`${api}/listas/fornecedores_produtos`, { headers })
+            .then(res => res.json())
+            .then(data => {
+              const select = document.getElementById("local_carregamento_ElaboracaoCadastro");
+              if (!select) return;
+              
+              const valAtual = select.value;
+              select.innerHTML = '<option value="">Selecione</option>';
+              data.forEach(f => {
+                const opt = document.createElement("option");
+                opt.value = f;
+                opt.text = f;
+                select.appendChild(opt);
+              });
+              
+              if (valAtual) {
+                let exists = Array.from(select.options).some(o => o.value === valAtual);
+                if (!exists) {
+                   const opt = document.createElement('option');
+                   opt.value = valAtual;
+                   opt.text = valAtual;
+                   select.appendChild(opt);
+                }
+                select.value = valAtual;
+              }
+            })
+            .catch(err => console.error("Erro ao carregar fornecedores de produtos:", err));
+        }
 
       </script>
 

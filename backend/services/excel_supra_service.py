@@ -21,10 +21,10 @@ TEMPLATE_PATH = Path(os.getenv("SUPRA_TEMPLATE_PATH", str(TEMPLATE_PATH_DEFAULT)
 
 # Mapeamento de Finalidade por Tipo de Cliente (Linha 42)
 FINALIDADE_MAP = {
-    "produtor rural": "Produtor Rural = (Vai Usar na Pecuaria ou Consumo Proprio)",
-    "revenda": "Lojista = (Produto para Comercializar / Revender)",
-    "consumidor final pf": "Consumidor Final - Pessoa Fisica = (Consumo Proprio)",
-    "consumidor final pj": "Consumidor Final - Pessoa Juridica = (Consumo Proprio)",
+    "produtor rural": "Usa - Insumos na pecuária",
+    "revenda": "Usa - Comercializar / Revender",
+    "consumidor final pf": "Usa - Consumo Próprio",
+    "consumidor final pj": "Usa - Consumo Próprio",
 }
 
 
