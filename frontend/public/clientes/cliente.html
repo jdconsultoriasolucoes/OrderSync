@@ -318,7 +318,7 @@
             </div>
 
             <div style="grid-column: span 2; margin-top: 15px;">
-              <label>Indicação do Cliente:</label>
+              <label>Indicação do Cliente <span id="contador-indicacoes" style="font-size: 0.8rem; font-weight: 500; color: #64748b; margin-left: 6px; vertical-align: middle;">(0/5)</span>:</label>
               <style>
                 /* Estilização específica para o grid de indicações: 2 por linha */
                 #container-indicacoes {
@@ -764,27 +764,27 @@
             </div>
           </div>
 
-          <h2 class="subtitulo">Grupo Econômico Amarrado ao Cliente</h2>
+          <h2 class="subtitulo">Grupo Econômico Amarrado ao Cliente <span id="contador-grupos_economicos" style="font-size: 0.8rem; font-weight: 500; color: #64748b; margin-left: 6px; vertical-align: middle;">(0/3)</span></h2>
           <div id="container-grupos_economicos" class="lista-dinamica-container"></div>
           <button type="button" class="btn-add-item" onclick="adicionarItem('grupos_economicos', 3)" id="btn-add-grupos_economicos">+ Adicionar Grupo Econômico</button>
 
-          <h2 class="subtitulo" style="margin-top:20px;">Referências Comerciais</h2>
+          <h2 class="subtitulo" style="margin-top:20px;">Referências Comerciais <span id="contador-referencias_comerciais" style="font-size: 0.8rem; font-weight: 500; color: #64748b; margin-left: 6px; vertical-align: middle;">(0/3)</span></h2>
           <div id="container-referencias_comerciais" class="lista-dinamica-container"></div>
           <button type="button" class="btn-add-item" onclick="abrirModalReferencia()" id="btn-add-referencias_comerciais">+ Adicionar Referência Comercial</button>
 
-          <h2 class="subtitulo" style="margin-top:20px;">Referências Bancárias</h2>
+          <h2 class="subtitulo" style="margin-top:20px;">Referências Bancárias <span id="contador-referencias_bancarias" style="font-size: 0.8rem; font-weight: 500; color: #64748b; margin-left: 6px; vertical-align: middle;">(0/3)</span></h2>
           <div id="container-referencias_bancarias" class="lista-dinamica-container"></div>
           <button type="button" class="btn-add-item" onclick="adicionarItem('referencias_bancarias', 3)" id="btn-add-referencias_bancarias">+ Adicionar Referência Bancária</button>
 
-          <h2 class="subtitulo" style="margin-top:20px;">Bens Imóveis</h2>
+          <h2 class="subtitulo" style="margin-top:20px;">Bens Imóveis <span id="contador-bens_imoveis" style="font-size: 0.8rem; font-weight: 500; color: #64748b; margin-left: 6px; vertical-align: middle;">(0/3)</span></h2>
           <div id="container-bens_imoveis" class="lista-dinamica-container"></div>
           <button type="button" class="btn-add-item" onclick="adicionarItem('bens_imoveis', 3)" id="btn-add-bens_imoveis">+ Adicionar Bem Imóvel</button>
 
-          <h2 class="subtitulo" style="margin-top:20px;">Bens Móveis</h2>
+          <h2 class="subtitulo" style="margin-top:20px;">Bens Móveis <span id="contador-bens_moveis" style="font-size: 0.8rem; font-weight: 500; color: #64748b; margin-left: 6px; vertical-align: middle;">(0/3)</span></h2>
           <div id="container-bens_moveis" class="lista-dinamica-container"></div>
           <button type="button" class="btn-add-item" onclick="adicionarItem('bens_moveis', 3)" id="btn-add-bens_moveis">+ Adicionar Bem Móvel</button>
 
-          <h2 class="subtitulo" style="margin-top:20px;">Plantel de Animais</h2>
+          <h2 class="subtitulo" style="margin-top:20px;">Plantel de Animais <span id="contador-planteis_animais" style="font-size: 0.8rem; font-weight: 500; color: #64748b; margin-left: 6px; vertical-align: middle;">(0/3)</span></h2>
           <div id="container-planteis_animais" class="lista-dinamica-container"></div>
           <button type="button" class="btn-add-item" onclick="adicionarItem('planteis_animais', 3)" id="btn-add-planteis_animais">+ Adicionar Plantel de Animais</button>
 
@@ -1779,6 +1779,15 @@
           });
         }
 
+        function atualizarContador(secao) {
+          const container = document.getElementById(`container-${secao}`);
+          const contador = document.getElementById(`contador-${secao}`);
+          if (!container || !contador) return;
+          const total = container.querySelectorAll('.item-dinamico-bloco').length;
+          const limite = (secao === 'indicacoes') ? 5 : 3;
+          contador.textContent = `(${total}/${limite})`;
+        }
+
         function adicionarItem(secao, limite) {
           const container = document.getElementById(`container-${secao}`);
           const btnAdd = document.getElementById(`btn-add-${secao}`);
@@ -1794,6 +1803,7 @@
           if (btnAdd && container.querySelectorAll('.item-dinamico-bloco').length >= limite) {
             btnAdd.style.opacity = '0.5';
           }
+          atualizarContador(secao);
         }
 
         function removerItem(secao, bloco) {
@@ -1801,6 +1811,7 @@
           const btnAdd = document.getElementById(`btn-add-${secao}`);
           bloco.remove();
           if (btnAdd) btnAdd.style.opacity = '1';
+          atualizarContador(secao);
         }
 
         function coletarLista(secao) {
@@ -1842,8 +1853,10 @@
           container.innerHTML = '';
           
           if (!dados || dados.length === 0) {
-            // Se não houver dados, abre 1 bloco vazio por padrão
-            adicionarItem(secao, limite);
+            // Se não houver dados, abre 1 bloco vazio por padrão (exceto referências comerciais)
+            if (secao !== 'referencias_comerciais') {
+              adicionarItem(secao, limite);
+            }
           } else {
             dados.forEach((item, i) => {
               const blocoData = (secao === 'indicacoes') ? { valor: item } : item;
@@ -1854,7 +1867,9 @@
           if (btnAdd) {
             btnAdd.style.opacity = container.querySelectorAll('.item-dinamico-bloco').length >= limite ? '0.5' : '1';
           }
+          atualizarContador(secao);
         }
+
 
 
         function preencherFormularioCliente(cliente) {
@@ -2784,8 +2799,10 @@
             btnAdd.style.opacity = '0.5';
           }
 
+          atualizarContador('referencias_comerciais');
           fecharModalReferencia();
         }
+
       </script>
 </body>
 
