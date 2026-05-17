@@ -857,6 +857,7 @@
         // --- State Management ---
         // Modes: 'INITIAL', 'SELECTED', 'EDITING'
         function setViewState(mode) {
+          window._currentViewState = mode;
           const btnListar = document.getElementById("btn-listar");
           const btnNovo = document.getElementById("btn-novo");
           const btnEditar = document.getElementById("btn-editar");
@@ -872,9 +873,15 @@
           const hide = (el) => el.style.display = "none";
 
           // Disable/Enable form
-          const formInputs = document.querySelectorAll("#formCliente input, #formCliente select");
           const disableForm = (disabled) => {
-            formInputs.forEach(input => input.disabled = disabled);
+            const formInputs = document.querySelectorAll("#formCliente input, #formCliente select, #formCliente textarea, #formCliente button.btn-add-item, #formCliente button.btn-remover-item");
+            formInputs.forEach(input => {
+              input.disabled = disabled;
+              if (input.tagName === 'BUTTON') {
+                input.style.pointerEvents = disabled ? 'none' : 'auto';
+                input.style.opacity = disabled ? '0.5' : '1';
+              }
+            });
           };
 
           if (mode === 'INITIAL') {
@@ -1905,6 +1912,17 @@
             btnAdd.style.opacity = container.querySelectorAll('.item-dinamico-bloco').length >= limite ? '0.5' : '1';
           }
           atualizarContador(secao);
+
+          // Sincroniza o estado de habilitação dos novos campos com o estado da tela
+          const isReadOnly = (window._currentViewState === 'INITIAL' || window._currentViewState === 'SELECTED' || !window._currentViewState);
+          const novosInputs = container.querySelectorAll("input, select, textarea, button.btn-remover-item");
+          novosInputs.forEach(input => {
+            input.disabled = isReadOnly;
+            if (input.tagName === 'BUTTON') {
+              input.style.pointerEvents = isReadOnly ? 'none' : 'auto';
+              input.style.opacity = isReadOnly ? '0.5' : '1';
+            }
+          });
         }
 
 
