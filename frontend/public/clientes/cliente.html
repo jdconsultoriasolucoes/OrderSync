@@ -1723,6 +1723,32 @@
             }
             input.value = savedVal;
             
+            if (secao === 'referencias_comerciais') {
+              input.style.cursor = 'pointer';
+              input.style.backgroundColor = '#fff';
+              input.placeholder = 'Clique para buscar...';
+              input.style.transition = 'border-color 0.15s, box-shadow 0.15s';
+              
+              input.addEventListener('mouseenter', function() {
+                if (!this.disabled) {
+                  this.style.borderColor = 'var(--os-primary, #2563eb)';
+                  this.style.boxShadow = '0 0 0 3px var(--os-primary-ring, rgba(37, 99, 235, 0.15))';
+                }
+              });
+              input.addEventListener('mouseleave', function() {
+                if (!this.disabled) {
+                  this.style.borderColor = '';
+                  this.style.boxShadow = '';
+                }
+              });
+              
+              input.addEventListener('click', function() {
+                if (!this.disabled) {
+                  abrirModalReferencia(this);
+                }
+              });
+            }
+            
             wrapper.appendChild(label);
             wrapper.appendChild(input);
             if (resultsDiv) wrapper.appendChild(resultsDiv);
@@ -1783,7 +1809,14 @@
           const container = document.getElementById(`container-${secao}`);
           const contador = document.getElementById(`contador-${secao}`);
           if (!container || !contador) return;
-          const total = container.querySelectorAll('.item-dinamico-bloco').length;
+          
+          let total = container.querySelectorAll('.item-dinamico-bloco').length;
+          if (secao === 'referencias_comerciais') {
+            // Conta apenas os blocos onde a empresa foi de fato preenchida
+            total = Array.from(container.querySelectorAll('.item-dinamico-bloco'))
+              .filter(b => b.querySelector('input[data-key="empresa"]')?.value?.trim()).length;
+          }
+          
           const limite = (secao === 'indicacoes') ? 5 : 3;
           contador.textContent = `(${total}/${limite})`;
         }
@@ -1810,6 +1843,12 @@
           const container = document.getElementById(`container-${secao}`);
           const btnAdd = document.getElementById(`btn-add-${secao}`);
           bloco.remove();
+          
+          // Se for referências comerciais e ficou sem nenhum bloco, restaura 1 bloco vazio padrão
+          if (secao === 'referencias_comerciais' && container.querySelectorAll('.item-dinamico-bloco').length === 0) {
+            adicionarItem('referencias_comerciais', 3);
+          }
+          
           if (btnAdd) btnAdd.style.opacity = '1';
           atualizarContador(secao);
         }
@@ -1853,10 +1892,8 @@
           container.innerHTML = '';
           
           if (!dados || dados.length === 0) {
-            // Se não houver dados, abre 1 bloco vazio por padrão (exceto referências comerciais)
-            if (secao !== 'referencias_comerciais') {
-              adicionarItem(secao, limite);
-            }
+            // Se não houver dados, abre 1 bloco vazio por padrão
+            adicionarItem(secao, limite);
           } else {
             dados.forEach((item, i) => {
               const blocoData = (secao === 'indicacoes') ? { valor: item } : item;
@@ -2686,11 +2723,28 @@
       </div>
 
       <script>
-        function abrirModalReferencia() {
+        let _blocoReferenciaAtivo = null;
+
+        function abrirModalReferencia(inputEl) {
           const container = document.getElementById('container-referencias_comerciais');
-          if (container && container.querySelectorAll('.item-dinamico-bloco').length >= 3) {
-            alert('Limite máximo de 3 referências comerciais atingido.');
-            return;
+          
+          if (inputEl) {
+            _blocoReferenciaAtivo = inputEl.closest('.item-dinamico-bloco');
+          } else {
+            _blocoReferenciaAtivo = null;
+            
+            // Se clicou no botão geral, verifica o limite de preenchidos
+            const blocos = container.querySelectorAll('.item-dinamico-bloco');
+            let preenchidos = 0;
+            blocos.forEach(b => {
+              const emp = b.querySelector('input[data-key="empresa"]')?.value;
+              if (emp) preenchidos++;
+            });
+            
+            if (preenchidos >= 3) {
+              alert('Limite máximo de 3 referências comerciais atingido.');
+              return;
+            }
           }
           
           document.getElementById('input-busca-ref').value = '';
@@ -2700,6 +2754,7 @@
 
         function fecharModalReferencia() {
           document.getElementById('modal-busca-referencia').classList.remove('active');
+          _blocoReferenciaAtivo = null;
         }
 
         function renderizarTabelaReferencias(lista) {
@@ -2743,9 +2798,6 @@
             return empresa.includes(termo) || cidade.includes(termo) || contato.includes(termo);
           });
 
-          // Hack para guardar o índice real filtrado ou vamos repassar o objeto todo.
-          // Para evitar problemas de índice com filter, vamos injetar o objeto como string base64 ou mapear melhor.
-          // Refazendo a lógica de clique:
           const tbody = document.getElementById('tbody-busca-referencia');
           const msgVazia = document.getElementById('msg-sem-referencia');
           tbody.innerHTML = '';
@@ -2776,27 +2828,58 @@
           const ref = window._listaReferencias[indexOriginal];
           if (!ref) return;
 
-          // Adiciona a caixinha padrão
           const container = document.getElementById('container-referencias_comerciais');
-          const atual = container.querySelectorAll('.item-dinamico-bloco').length;
-          if (atual >= 3) {
-            alert('Limite máximo de 3 referências atingido.');
-            fecharModalReferencia();
-            return;
+          
+          // Se tiver um bloco ativo (clicado diretamente), preenche ele
+          let blocoDestino = _blocoReferenciaAtivo;
+          
+          // Se não tiver bloco ativo (clicou no botão "+ Adicionar"), procura o primeiro bloco vazio
+          if (!blocoDestino) {
+            const blocos = container.querySelectorAll('.item-dinamico-bloco');
+            for (const b of blocos) {
+              const emp = b.querySelector('input[data-key="empresa"]')?.value;
+              if (!emp) {
+                blocoDestino = b;
+                break;
+              }
+            }
           }
 
-          const bloco = criarBlocoItem('referencias_comerciais', atual, {
-            empresa: ref.empresa || '',
-            cidade: ref.cidade || '',
-            telefone: ref.telefone || '',
-            contato: ref.contato || ''
-          });
-          
-          container.appendChild(bloco);
-          
+          if (blocoDestino) {
+            const inputs = blocoDestino.querySelectorAll('input');
+            inputs.forEach(inp => {
+              const key = inp.dataset.key;
+              if (key === 'empresa') inp.value = ref.empresa || '';
+              if (key === 'cidade') inp.value = ref.cidade || '';
+              if (key === 'telefone') inp.value = ref.telefone || '';
+              if (key === 'contato') inp.value = ref.contato || '';
+            });
+          } else {
+            // Se não houver bloco destino e nem vazio, cria um novo
+            const atual = container.querySelectorAll('.item-dinamico-bloco').length;
+            if (atual >= 3) {
+              alert('Limite máximo de 3 referências comerciais atingido.');
+              fecharModalReferencia();
+              return;
+            }
+            const bloco = criarBlocoItem('referencias_comerciais', atual, {
+              empresa: ref.empresa || '',
+              cidade: ref.cidade || '',
+              telefone: ref.telefone || '',
+              contato: ref.contato || ''
+            });
+            container.appendChild(bloco);
+          }
+
           const btnAdd = document.getElementById('btn-add-referencias_comerciais');
-          if (btnAdd && container.querySelectorAll('.item-dinamico-bloco').length >= 3) {
-            btnAdd.style.opacity = '0.5';
+          if (btnAdd) {
+            const totalPreenchidos = Array.from(container.querySelectorAll('.item-dinamico-bloco'))
+              .filter(b => b.querySelector('input[data-key="empresa"]')?.value).length;
+            if (totalPreenchidos >= 3) {
+              btnAdd.style.opacity = '0.5';
+            } else {
+              btnAdd.style.opacity = '1';
+            }
           }
 
           atualizarContador('referencias_comerciais');
