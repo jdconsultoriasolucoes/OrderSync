@@ -21,10 +21,10 @@ TEMPLATE_PATH = Path(os.getenv("SUPRA_TEMPLATE_PATH", str(TEMPLATE_PATH_DEFAULT)
 
 # Mapeamento de Finalidade por Tipo de Cliente (Linha 42)
 FINALIDADE_MAP = {
-    "produtor rural": "Usa - Insumos na pecuária",
-    "revenda": "Usa - Comercializar / Revender",
-    "consumidor final pf": "Usa - Consumo Próprio",
-    "consumidor final pj": "Usa - Consumo Próprio",
+    "produtor rural": "Produtor Rural = (Vai Usar na Pecuaria ou Consumo Proprio)",
+    "revenda": "Lojista = (Produto para Comercializar / Revender)",
+    "consumidor final pf": "Consumidor Final - Pessoa Fisica = (Consumo Proprio)",
+    "consumidor final pj": "Consumidor Final - Pessoa Juridica = (Consumo Proprio)",
 }
 
 
@@ -101,8 +101,8 @@ def gerar_excel_cliente_supra(cliente, apenas_primeira_aba: bool = False) -> byt
         ws1 = wb["Cadastro Parte 1"]
 
         # --- Identificação ---
-        ws1["A8"] = f"Nome do Cliente:  {_s(cliente.cadastro_nome_cliente)}"
-        ws1["A9"] = f"Denominação Comercial/Fantasia:   {_s(cliente.cadastro_nome_fantasia)}"
+        ws1["A8"] = f"Nome do Cliente: {_s(cliente.cadastro_nome_cliente)}"
+        ws1["A9"] = f"Denominação Comercial/Fantasia: {_s(cliente.cadastro_nome_fantasia)}"
 
         # Contatos Responsável
         celular = _s(getattr(cliente, 'compras_celular_responsavel', ''))
@@ -239,8 +239,8 @@ def gerar_excel_cliente_supra(cliente, apenas_primeira_aba: bool = False) -> byt
         # ABA 2: Uso Interno
         # =========================================================
         ws2 = wb["Cadastro Parte 2"]
-        ws2["E7"] = _s(cliente.cadastro_nome_cliente)
-        ws2["E8"] = _s(cliente.cadastro_nome_fantasia)
+        ws2["E7"] = f"Nome do Cliente: {_s(cliente.cadastro_nome_cliente)}"
+        ws2["E8"] = f"Nome Fantasia: {_s(cliente.cadastro_nome_fantasia)}"
 
         # Canais Segmentados
         ws2["C14"] = _s(cliente.canal_pet)
@@ -248,13 +248,13 @@ def gerar_excel_cliente_supra(cliente, apenas_primeira_aba: bool = False) -> byt
         ws2["C16"] = _s(cliente.canal_insumos)
 
         # Utilização do Produto (Linha 9 - A9:K9)
-        # Produtor rural, PF/PJ, Canil -> Consumo Próprio
-        # Revenda -> Comercializar/Revender
         tipo_util = _normalize(_s(cliente.cadastro_tipo_cliente))
-        if any(k in tipo_util for k in ["produtor rural", "pessoa fisica", "pessoa juridica", "canil"]):
+        if any(k in tipo_util for k in ["produtor rural", "canil"]):
+            ws2["A9"] = "Finalidade: Insumos na pecuária (X)"
+        elif any(k in tipo_util for k in ["pessoa fisica", "pessoa juridica", "consumidor final"]):
             ws2["A9"] = "Finalidade: Consumo Próprio (X)"
         elif "revenda" in tipo_util:
-            ws2["A9"] = "Finalidade: Comercializar/Revender (X)"
+            ws2["A9"] = "Finalidade: Comercializar / Revender (X)"
         
         # Local de Carregamento (Linha 10)
         ws2["A10"] = f"Local de Carregamento: {_s(cliente.elaboracao_local_carregamento)}"
