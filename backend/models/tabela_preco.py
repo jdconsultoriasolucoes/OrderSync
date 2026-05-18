@@ -54,6 +54,7 @@ class TabelaPreco(Base):
     
     observacao = Column(String(100), nullable=True)
     manual_freight = Column(Boolean, nullable=False, default=False)
+    frete_base_ton = Column(Float, nullable=True, default=0.0)
 
     __table_args__ = (
         UniqueConstraint("id_tabela", "codigo_produto_supra", name="uq_tabela_produto"),
