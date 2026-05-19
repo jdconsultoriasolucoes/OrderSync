@@ -59,7 +59,8 @@ document.addEventListener("DOMContentLoaded", () => {
 
         try {
             const token = localStorage.getItem("token") || "";
-            const response = await fetch("/api/importacao/pedidos", {
+            const API_BASE = window.API_BASE || window.location.origin;
+            const response = await fetch(`${API_BASE}/api/importacao/pedidos`, {
                 method: "POST",
                 headers: {
                     "Authorization": `Bearer ${token}`
