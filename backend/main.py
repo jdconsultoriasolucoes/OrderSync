@@ -271,6 +271,9 @@ app.include_router(vendedores.router, prefix="/vendedores", tags=["Vendedores"])
 app.include_router(automation.router)
 app.include_router(catalogo_referencias.router)
 
+from routers import importacao
+app.include_router(importacao.router)
+
 from routers import profile_config
 app.include_router(profile_config.router)
 

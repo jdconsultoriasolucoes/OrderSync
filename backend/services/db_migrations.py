@@ -283,4 +283,65 @@ def run_migrations():
                 db.rollback()
                 logger.error(f"Falha ao criar t_profile_config: {e}")
 
+        # 17. tb_pedidos: valor_ajuste, data_faturamento
+        for col, col_type in [("valor_ajuste", "NUMERIC DEFAULT 0.0"), ("data_faturamento", "TIMESTAMP WITHOUT TIME ZONE")]:
+            try:
+                db.execute(text(f"SELECT {col} FROM tb_pedidos LIMIT 1"))
+            except Exception:
+                db.rollback()
+                logger.info(f"Adicionando coluna {col} em tb_pedidos...")
+                try:
+                    db.execute(text(f"ALTER TABLE tb_pedidos ADD COLUMN {col} {col_type}"))
+                    db.commit()
+                    logger.info(f"Coluna {col} adicionada com sucesso em tb_pedidos.")
+                except Exception as e:
+                    db.rollback()
+                    logger.error(f"Falha ao adicionar {col} em tb_pedidos: {e}")
+
+        # 18. Tabela tb_pedidos_importados (Log de importação Excel)
+        try:
+            db.execute(text("SELECT 1 FROM tb_pedidos_importados LIMIT 1"))
+        except Exception:
+            db.rollback()
+            logger.info("Criando tabela tb_pedidos_importados...")
+            try:
+                db.execute(text("""
+                    CREATE TABLE IF NOT EXISTS public.tb_pedidos_importados (
+                        id BIGSERIAL PRIMARY KEY,
+                        pedido_supra VARCHAR,
+                        emissao TIMESTAMP WITHOUT TIME ZONE,
+                        cliente_retira VARCHAR,
+                        peso NUMERIC,
+                        valor_pedido NUMERIC,
+                        danfe VARCHAR,
+                        codigo_cliente VARCHAR,
+                        data_pedido TIMESTAMP WITHOUT TIME ZONE,
+                        status_pedido_excel VARCHAR,
+                        status_processamento VARCHAR,
+                        ajuste_gerado NUMERIC DEFAULT 0,
+                        detalhes_processamento TEXT,
+                        importado_em TIMESTAMP DEFAULT NOW()
+                    )
+                """))
+                db.commit()
+                logger.info("Tabela tb_pedidos_importados criada com sucesso.")
+            except Exception as e:
+                db.rollback()
+                logger.error(f"Falha ao criar tb_pedidos_importados: {e}")
+
+        # 19. Status de Pedido: PEDIDO_NAO_COMPLETO
+        try:
+            res = db.execute(text("SELECT 1 FROM pedido_status WHERE codigo = 'PEDIDO_NAO_COMPLETO'")).scalar()
+            if not res:
+                logger.info("Inserindo status PEDIDO_NAO_COMPLETO em pedido_status...")
+                db.execute(text("""
+                    INSERT INTO public.pedido_status (codigo, rotulo, cor_hex, ordem, ativo)
+                    VALUES ('PEDIDO_NAO_COMPLETO', 'Pedido Não Completo', '#EF4444', 6, TRUE)
+                """))
+                db.commit()
+                logger.info("Status PEDIDO_NAO_COMPLETO inserido com sucesso.")
+        except Exception as e:
+            db.rollback()
+            logger.error(f"Falha ao inserir status PEDIDO_NAO_COMPLETO: {e}")
+
     logger.info("Todas as migrações concluídas.")
