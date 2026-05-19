@@ -67,7 +67,13 @@ document.addEventListener("DOMContentLoaded", () => {
                 body: formData
             });
 
-            const data = await response.json();
+            const textData = await response.text();
+            let data;
+            try {
+                data = JSON.parse(textData);
+            } catch (err) {
+                throw new Error(`Falha ao ler resposta do servidor. Código HTTP: ${response.status}. Resposta crua: ${textData}`);
+            }
 
             if (!response.ok) {
                 throw new Error(data.detail || "Erro ao processar planilha.");
