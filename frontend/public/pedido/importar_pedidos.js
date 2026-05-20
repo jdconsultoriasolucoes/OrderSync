@@ -7,9 +7,14 @@ document.addEventListener("DOMContentLoaded", () => {
     // Elements for KPI
     const kpiLidos = document.getElementById("kpiLidos");
     const kpiSucesso = document.getElementById("kpiSucesso");
+    const kpiSemAlteracao = document.getElementById("kpiSemAlteracao");
     const kpiAjustados = document.getElementById("kpiAjustados");
     const kpiErros = document.getElementById("kpiErros");
     const kpiValorAjuste = document.getElementById("kpiValorAjuste");
+    
+    // Duplicate Alert Banner
+    const duplicateAlert = document.getElementById("duplicateAlert");
+    const duplicateAlertText = document.getElementById("duplicateAlertText");
     
     // Table Body
     const resultsBody = document.getElementById("resultsBody");
@@ -95,9 +100,22 @@ document.addEventListener("DOMContentLoaded", () => {
     function renderResults(data) {
         const { resumo, itens } = data;
         
+        // Exibir/Ocultar Banner de Aviso de Duplicidade Geral
+        if (duplicateAlert && duplicateAlertText) {
+            if (resumo.aviso) {
+                duplicateAlertText.innerText = resumo.aviso;
+                duplicateAlert.style.display = "flex";
+            } else {
+                duplicateAlert.style.display = "none";
+            }
+        }
+        
         // Update KPIs
         kpiLidos.innerText = resumo.lidos || 0;
         kpiSucesso.innerText = resumo.sucesso || 0;
+        if (kpiSemAlteracao) {
+            kpiSemAlteracao.innerText = resumo.sem_alteracao || 0;
+        }
         kpiAjustados.innerText = resumo.ajustados || 0;
         kpiErros.innerText = resumo.erros || 0;
         kpiValorAjuste.innerText = fmtMoney(resumo.valor_total_ajustes || 0);
@@ -120,6 +138,9 @@ document.addEventListener("DOMContentLoaded", () => {
                 } else if (item.status === "ERRO_NAO_ENCONTRADO") {
                     badgeClass = "badge-status error";
                     resultText = "Não Encontrado";
+                } else if (item.status === "SEM_ALTERACAO") {
+                    badgeClass = "badge-status neutral";
+                    resultText = "Sem Alterações";
                 }
 
                 // Build details list HTML
@@ -129,7 +150,11 @@ document.addEventListener("DOMContentLoaded", () => {
                         detalhesHtml += `<li style="color: var(--os-success);">Validado perfeitamente sem divergências.</li>`;
                     } else {
                         item.detalhes.forEach(d => {
-                            detalhesHtml += `<li>${d}</li>`;
+                            if (item.status === "SEM_ALTERACAO") {
+                                detalhesHtml += `<li style="color: var(--os-text-secondary);">${d}</li>`;
+                            } else {
+                                detalhesHtml += `<li>${d}</li>`;
+                            }
                         });
                     }
                 } else {

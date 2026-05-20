@@ -86,6 +86,12 @@
       <!-- Área de Resultados -->
       <div class="results-section" id="resultsSection">
         
+        <!-- Banner de Aviso Global -->
+        <div id="duplicateAlert" style="display: none; width: 100%; border-radius: var(--os-radius-lg); padding: 1.25rem; border: 1px solid #F59E0B; background-color: #FEF3C7; color: #92400E; font-weight: 500; align-items: center; gap: 0.75rem; box-shadow: var(--os-shadow-sm);">
+          <span style="font-size: 1.5rem; line-height: 1;">⚠️</span>
+          <span id="duplicateAlertText" style="font-size: var(--os-text-sm);">Aviso: Todos os pedidos deste arquivo já foram processados anteriormente.</span>
+        </div>
+        
         <div class="kpi-grid">
             <div class="kpi-card">
                 <span class="kpi-title">Linhas Lidas</span>
@@ -94,6 +100,10 @@
             <div class="kpi-card">
                 <span class="kpi-title">Sucesso</span>
                 <span class="kpi-value success" id="kpiSucesso">0</span>
+            </div>
+            <div class="kpi-card">
+                <span class="kpi-title">Sem Alterações</span>
+                <span class="kpi-value secondary" style="color: #6B7280;" id="kpiSemAlteracao">0</span>
             </div>
             <div class="kpi-card">
                 <span class="kpi-title">Divergências Encontradas</span>

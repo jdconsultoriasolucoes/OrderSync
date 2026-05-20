@@ -95,6 +95,7 @@ async def importar_pedidos_excel(file: UploadFile = File(...), db: Session = Dep
         col_danfe = find_column(df_bd, ["danfe"])
         col_codigo = find_column(df_bd, ["codigo"])
         col_data_pedido = find_column(df_bd, ["data", "pedido"])
+        col_data_danfe = find_column(df_bd, ["data", "danfe"])
         
         if not col_pedido:
             raise HTTPException(status_code=400, detail="Coluna de identificação do Pedido não encontrada na aba Banco_Dados.")
@@ -114,6 +115,7 @@ async def importar_pedidos_excel(file: UploadFile = File(...), db: Session = Dep
             "sucesso": 0,
             "ajustados": 0,
             "erros": 0,
+            "sem_alteracao": 0,
             "valor_total_ajustes": 0.0
         }
         itens_resposta = []
@@ -142,6 +144,9 @@ async def importar_pedidos_excel(file: UploadFile = File(...), db: Session = Dep
             data_pedido_val = row.get(col_data_pedido) if col_data_pedido else None
             data_pedido_dt = pd.to_datetime(data_pedido_val, errors='coerce') if pd.notna(data_pedido_val) else None
             
+            data_danfe_val = row.get(col_data_danfe) if col_data_danfe else None
+            data_danfe_dt = pd.to_datetime(data_danfe_val, errors='coerce') if pd.notna(data_danfe_val) else None
+            
             cliente_retira = str(row.get(col_retira)).strip() if col_retira and pd.notna(row.get(col_retira)) else ""
             
             # Cruzamento Danfes (Nº do pedido)
@@ -151,11 +156,9 @@ async def importar_pedidos_excel(file: UploadFile = File(...), db: Session = Dep
             detalhes = []
             status_proc = "SUCESSO"
             ajuste_gerado = 0.0
-            status_novo_pedido = None
-            
-            # 4. Validação e Persistência no Banco
+            status_novo_pe            # 4. Validação e Persistência no Banco
             check_exist = db.execute(text("""
-                SELECT id_pedido, nota_fiscal, total_pedido, peso_total_kg, codigo_cliente 
+                SELECT id_pedido, nota_fiscal, total_pedido, peso_total_kg, codigo_cliente, status, data_faturamento 
                 FROM public.tb_pedidos 
                 WHERE pedido_supra = :p
             """), {"p": pedido_supra}).fetchone()
@@ -165,49 +168,74 @@ async def importar_pedidos_excel(file: UploadFile = File(...), db: Session = Dep
                 detalhes.append("Pedido não encontrado no OrderSync.")
                 resumo["erros"] += 1
             else:
-                id_pedido, nf_db, total_db, peso_db, cod_cli_db = check_exist
+                id_pedido, nf_db, total_db, peso_db, cod_cli_db, status_db, data_fat_db = check_exist
                 total_db = float(total_db) if total_db is not None else 0.0
                 peso_db = float(peso_db) if peso_db is not None else 0.0
                 
-                # Validações Físicas e Comerciais
-                if cod_cli_db and clean_numeric_code(cod_cli_db) != codigo_cliente:
-                    detalhes.append(f"Divergência de Cliente (Planilha: {codigo_cliente}, Banco: {cod_cli_db}).")
-                
-                if abs(peso - peso_db) > 0.01:
-                    detalhes.append(f"Divergência de Peso (Planilha: {peso:.2f}kg, Banco: {peso_db:.2f}kg).")
-                    
-                diff_valor = valor_pedido - total_db
-                if abs(diff_valor) > 0.01:
-                    ajuste_gerado = diff_valor
-                    status_proc = "AJUSTADO"
-                    detalhes.append(f"Ajuste financeiro aplicado. (Planilha: {valor_pedido:.2f}, Banco: {total_db:.2f}).")
-                    resumo["ajustados"] += 1
-                    resumo["valor_total_ajustes"] += abs(ajuste_gerado)
-                else:
-                    resumo["sucesso"] += 1
-                    
-                # Regras de Status Dinâmicas
+                # Regras de Status Dinâmicas (Calculadas primeiro para verificar se houve alteração)
                 if normalize_text(status_excel) == "pedido nao completo":
                     status_novo_pedido = 'PEDIDO_NAO_COMPLETO'
                 elif danfe:
                     status_novo_pedido = 'FATURADO_SUPRA'
-                    
-                # Aplicando os ajustes à tb_pedidos
-                update_sql = "UPDATE public.tb_pedidos SET valor_ajuste = :ajuste, total_pedido = :total, atualizado_em = now()"
-                params = {"ajuste": ajuste_gerado, "total": valor_pedido, "id_pedido": id_pedido}
+                else:
+                    status_novo_pedido = None
                 
-                if danfe:
-                    update_sql += ", nota_fiscal = :danfe"
-                    params["danfe"] = danfe
-                if pd.notna(emissao_dt):
-                    update_sql += ", data_faturamento = :data_fat"
-                    params["data_fat"] = emissao_dt
-                if status_novo_pedido:
-                    update_sql += ", status = :novo_status"
-                    params["novo_status"] = status_novo_pedido
+                # Helper para comparar datas de faturamento de forma resiliente
+                def is_same_date(dt1, dt2):
+                    t1 = pd.to_datetime(dt1) if pd.notna(dt1) else None
+                    t2 = pd.to_datetime(dt2) if pd.notna(dt2) else None
+                    if t1 is None and t2 is None:
+                        return True
+                    if t1 is None or t2 is None:
+                        return False
+                    return t1.date() == t2.date()
+
+                # Verificar se o pedido já está 100% atualizado com os mesmos dados (SEM_ALTERACAO)
+                is_nf_same = (nf_db or "") == danfe
+                is_val_same = abs(valor_pedido - total_db) <= 0.01
+                is_peso_same = abs(peso - peso_db) <= 0.01
+                is_cli_same = clean_numeric_code(cod_cli_db) == codigo_cliente
+                is_status_same = (status_novo_pedido is None) or (status_db == status_novo_pedido)
+                is_date_same = is_same_date(data_danfe_dt, data_fat_db)
+
+                if is_nf_same and is_val_same and is_peso_same and is_cli_same and is_status_same and is_date_same:
+                    status_proc = "SEM_ALTERACAO"
+                    detalhes.append("Pedido já importado anteriormente (Sem alterações).")
+                    resumo["sem_alteracao"] += 1
+                else:
+                    # Validações Físicas e Comerciais se houver alguma divergência ou alteração
+                    if cod_cli_db and clean_numeric_code(cod_cli_db) != codigo_cliente:
+                        detalhes.append(f"Divergência de Cliente (Planilha: {codigo_cliente}, Banco: {cod_cli_db}).")
                     
-                update_sql += " WHERE id_pedido = :id_pedido"
-                db.execute(text(update_sql), params)
+                    if abs(peso - peso_db) > 0.01:
+                        detalhes.append(f"Divergência de Peso (Planilha: {peso:.2f}kg, Banco: {peso_db:.2f}kg).")
+                        
+                    diff_valor = valor_pedido - total_db
+                    if abs(diff_valor) > 0.01:
+                        ajuste_gerado = diff_valor
+                        status_proc = "AJUSTADO"
+                        detalhes.append(f"Ajuste financeiro aplicado. (Planilha: {valor_pedido:.2f}, Banco: {total_db:.2f}).")
+                        resumo["ajustados"] += 1
+                        resumo["valor_total_ajustes"] += abs(ajuste_gerado)
+                    else:
+                        resumo["sucesso"] += 1
+                        
+                    # Aplicando os ajustes à tb_pedidos
+                    update_sql = "UPDATE public.tb_pedidos SET valor_ajuste = :ajuste, total_pedido = :total, atualizado_em = now()"
+                    params = {"ajuste": ajuste_gerado, "total": valor_pedido, "id_pedido": id_pedido}
+                    
+                    if danfe:
+                        update_sql += ", nota_fiscal = :danfe"
+                        params["danfe"] = danfe
+                    if pd.notna(data_danfe_dt):
+                        update_sql += ", data_faturamento = :data_fat"
+                        params["data_fat"] = data_danfe_dt
+                    if status_novo_pedido:
+                        update_sql += ", status = :novo_status"
+                        params["novo_status"] = status_novo_pedido
+                        
+                    update_sql += " WHERE id_pedido = :id_pedido"
+                    db.execute(text(update_sql), params)
                 
             # Log Histórico Permanente
             db.execute(text("""
@@ -245,6 +273,11 @@ async def importar_pedidos_excel(file: UploadFile = File(...), db: Session = Dep
             })
 
         db.commit()
+        
+        # Verificar se todas as linhas lidas não tiveram alterações (Duplicidade do Arquivo)
+        if resumo["sem_alteracao"] == resumo["lidos"] and resumo["lidos"] > 0:
+            resumo["aviso"] = "Atenção: Todos os pedidos deste arquivo já foram processados anteriormente e não houve novas alterações."
+            
         return {
             "resumo": resumo,
             "itens": itens_resposta
