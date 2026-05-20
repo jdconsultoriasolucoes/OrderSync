@@ -156,7 +156,9 @@ async def importar_pedidos_excel(file: UploadFile = File(...), db: Session = Dep
             detalhes = []
             status_proc = "SUCESSO"
             ajuste_gerado = 0.0
-            status_novo_pe            # 4. Validação e Persistência no Banco
+            status_novo_pedido = None
+            
+            # 4. Validação e Persistência no Banco
             check_exist = db.execute(text("""
                 SELECT id_pedido, nota_fiscal, total_pedido, peso_total_kg, codigo_cliente, status, data_faturamento 
                 FROM public.tb_pedidos 
