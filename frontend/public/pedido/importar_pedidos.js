@@ -100,6 +100,12 @@ document.addEventListener("DOMContentLoaded", () => {
     function renderResults(data) {
         const { resumo, itens } = data;
         
+        // Limpar os campos de filtros ao renderizar uma nova carga
+        ["filterPedido", "filterCliente", "filterValor", "filterResultado", "filterStatus", "filterDetalhes"].forEach(id => {
+            const el = document.getElementById(id);
+            if (el) el.value = "";
+        });
+        
         // Exibir/Ocultar Banner de Aviso de Duplicidade Geral
         if (duplicateAlert && duplicateAlertText) {
             if (resumo.aviso) {
@@ -119,6 +125,19 @@ document.addEventListener("DOMContentLoaded", () => {
         kpiAjustados.innerText = resumo.ajustados || 0;
         kpiErros.innerText = resumo.erros || 0;
         kpiValorAjuste.innerText = fmtMoney(resumo.valor_total_ajustes || 0);
+
+        // Ordenação inteligente de status (Erros e Ajustados primeiro)
+        function getStatusPriority(status) {
+            if (status === "ERRO_NAO_ENCONTRADO") return 1;
+            if (status === "AJUSTADO") return 2;
+            if (status === "SUCESSO") return 3;
+            if (status === "SEM_ALTERACAO") return 4;
+            return 5;
+        }
+
+        if (itens && itens.length > 0) {
+            itens.sort((a, b) => getStatusPriority(a.status) - getStatusPriority(b.status));
+        }
 
         // Render Table Rows
         if (!itens || itens.length === 0) {
@@ -168,6 +187,20 @@ document.addEventListener("DOMContentLoaded", () => {
                         ? `<span style="color: var(--os-primary); font-weight: 600;">Faturado Supra</span>` 
                         : `<span style="color: var(--os-text-secondary);">-</span>`);
 
+                // Textos normalizados para facilitar busca rápida
+                const textoStatus = item.novo_status_pedido === "PEDIDO_NAO_COMPLETO" 
+                    ? "Pedido Não Completo" 
+                    : (item.novo_status_pedido === "FATURADO_SUPRA" ? "Faturado Supra" : "-");
+                const textoDetalhes = Array.isArray(item.detalhes) ? item.detalhes.join(" ") : (item.detalhes || "");
+
+                // Atributos de dados para filtragem ultra-rápida no client-side
+                tr.dataset.pedido = item.pedido_supra || "";
+                tr.dataset.cliente = item.cliente_codigo || "";
+                tr.dataset.valor = fmtMoney(item.valor_planilha);
+                tr.dataset.resultado = resultText;
+                tr.dataset.status = textoStatus;
+                tr.dataset.detalhes = textoDetalhes;
+
                 tr.innerHTML = `
                     <td><strong>${item.pedido_supra || "-"}</strong></td>
                     <td>${item.cliente_codigo || "-"}</td>
@@ -185,4 +218,44 @@ document.addEventListener("DOMContentLoaded", () => {
         resultsSection.style.display = "flex";
         resultsSection.style.animation = "fadeIn 0.5s ease-out forwards";
     }
+
+    // Lógica client-side para filtragem dinâmica instantânea
+    function applyFilters() {
+        const fPedido = document.getElementById("filterPedido").value.toLowerCase().trim();
+        const fCliente = document.getElementById("filterCliente").value.toLowerCase().trim();
+        const fValor = document.getElementById("filterValor").value.toLowerCase().trim();
+        const fResultado = document.getElementById("filterResultado").value.toLowerCase().trim();
+        const fStatus = document.getElementById("filterStatus").value.toLowerCase().trim();
+        const fDetalhes = document.getElementById("filterDetalhes").value.toLowerCase().trim();
+
+        const rows = resultsBody.querySelectorAll("tr");
+        rows.forEach(tr => {
+            // Se for o tr informativo de tabela vazia, ignora
+            if (tr.querySelector("td[colspan]")) return;
+
+            const matchPedido = !fPedido || String(tr.dataset.pedido).toLowerCase().includes(fPedido);
+            const matchCliente = !fCliente || String(tr.dataset.cliente).toLowerCase().includes(fCliente);
+            const matchValor = !fValor || String(tr.dataset.valor).toLowerCase().includes(fValor);
+            const matchResultado = !fResultado || String(tr.dataset.resultado).toLowerCase() === fResultado;
+            const matchStatus = !fStatus || String(tr.dataset.status).toLowerCase().includes(fStatus);
+            const matchDetalhes = !fDetalhes || String(tr.dataset.detalhes).toLowerCase().includes(fDetalhes);
+
+            if (matchPedido && matchCliente && matchValor && matchResultado && matchStatus && matchDetalhes) {
+                tr.style.display = "";
+            } else {
+                tr.style.display = "none";
+            }
+        });
+    }
+
+    // Vincular os inputs de filtros aos event listeners
+    ["filterPedido", "filterCliente", "filterValor", "filterResultado", "filterStatus", "filterDetalhes"].forEach(id => {
+        const el = document.getElementById(id);
+        if (el) {
+            el.addEventListener("input", applyFilters);
+            if (el.tagName === "SELECT") {
+                el.addEventListener("change", applyFilters);
+            }
+        }
+    });
 });

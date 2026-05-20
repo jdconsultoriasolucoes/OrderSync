@@ -190,3 +190,42 @@
   left: 0;
   color: var(--os-warning);
 }
+
+/* Filtros nas colunas (Premium & Clean styling) */
+.filters-row th {
+  padding: 0.5rem 0.75rem !important;
+  background-color: var(--os-bg) !important;
+  border-bottom: 2px solid var(--os-border) !important;
+}
+
+.filters-row input.os-input-sm,
+.filters-row select.os-input-sm {
+  width: 100%;
+  box-sizing: border-box;
+  padding: 6px 10px;
+  border-radius: var(--os-radius-md);
+  border: 1px solid var(--os-border);
+  font-size: 0.8rem;
+  background-color: var(--os-bg-white);
+  color: var(--os-text);
+  font-family: inherit;
+  transition: all 0.2s ease;
+}
+
+.filters-row input.os-input-sm:focus,
+.filters-row select.os-input-sm:focus {
+  outline: none;
+  border-color: var(--os-primary);
+  box-shadow: 0 0 0 2px rgba(66, 153, 225, 0.15);
+  background-color: var(--os-bg-white);
+}
+
+.filters-row select.os-input-sm {
+  cursor: pointer;
+  appearance: none;
+  background-image: url("data:image/svg+xml;charset=UTF-8,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%234a5568' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3e%3cpolyline points='6 9 12 15 18 9'%3e%3c/polyline%3e%3c/svg%3e");
+  background-repeat: no-repeat;
+  background-position: right 8px center;
+  background-size: 14px;
+  padding-right: 28px;
+}

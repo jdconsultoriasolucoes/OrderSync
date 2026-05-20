@@ -70,6 +70,7 @@ SELECT
   a.frete_total,
   a.frete_kg,
   a.total_pedido,
+  a.valor_ajuste,
   a.observacoes,
   a.status,
   a.confirmado_em,

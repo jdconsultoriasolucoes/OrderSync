@@ -489,6 +489,12 @@ async function openResumo(id) {
           <div><b>Fornecedor:</b> ${p.fornecedor ?? "-"}</div>
           <div><b>Total:</b> ${fmtMoney(p.total_pedido)}</div>
         </div>
+        ${p.valor_ajuste ? `
+        <div class="kv" style="background: #fffbeb; border: 1px dashed #f59e0b; padding: 10px; border-radius: 8px; margin-top: 5px; grid-column: 1 / -1; display: flex; justify-content: space-between; align-items: center;">
+          <span style="color: #b45309; font-weight: 600;">⚠️ Ajuste de Valor (Planilha):</span>
+          <span style="color: #b45309; font-weight: 700; font-size: 1.05rem;">${fmtMoney(p.valor_ajuste)}</span>
+        </div>
+        ` : ''}
         <div class="kv">
           <div style="grid-column: 1 / -1;">
             <b>Contato:</b> ${p.contato_nome || "Não informado"}

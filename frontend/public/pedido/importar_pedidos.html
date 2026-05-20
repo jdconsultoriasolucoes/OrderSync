@@ -130,6 +130,22 @@
                         <th>Status Atualizado (Banco)</th>
                         <th>Detalhes & Divergências</th>
                     </tr>
+                    <tr class="filters-row">
+                        <th><input type="text" id="filterPedido" placeholder="Filtrar..." class="os-input-sm"></th>
+                        <th><input type="text" id="filterCliente" placeholder="Filtrar..." class="os-input-sm"></th>
+                        <th><input type="text" id="filterValor" placeholder="Filtrar..." class="os-input-sm"></th>
+                        <th>
+                            <select id="filterResultado" class="os-input-sm" style="background: white;">
+                                <option value="">Todos</option>
+                                <option value="Sucesso">Sucesso</option>
+                                <option value="Divergência / Ajustado">Divergência / Ajustado</option>
+                                <option value="Sem Alterações">Sem Alterações</option>
+                                <option value="Não Encontrado">Não Encontrado</option>
+                            </select>
+                        </th>
+                        <th><input type="text" id="filterStatus" placeholder="Filtrar..." class="os-input-sm"></th>
+                        <th><input type="text" id="filterDetalhes" placeholder="Filtrar..." class="os-input-sm"></th>
+                    </tr>
                 </thead>
                 <tbody id="resultsBody">
                     <!-- Dinâmico -->
