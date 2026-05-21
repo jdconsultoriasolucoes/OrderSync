@@ -32,6 +32,49 @@ def clean_numeric_code(val):
     val_str = val_str.replace(".", "")
     return val_str
 
+def normalizar_pedido_supra(pedido_supra_str: str, data_referencia=None) -> str:
+    """
+    Garante que o pedido_supra seja gravado no banco sempre com 10 dígitos (YYYY + 6 dígitos com zero padding).
+    Ex: '2111' -> '2026002111' (usando o ano da data_referencia ou o ano atual do sistema).
+    Ex: '2026002111' -> '2026002111' (mantém intacto).
+    """
+    if not pedido_supra_str:
+        return ""
+    
+    # Remove qualquer caractere não numérico
+    digits = "".join(filter(str.isdigit, str(pedido_supra_str)))
+    if not digits:
+        return ""
+    
+    # Se já tem 10 dígitos, retorna direto
+    if len(digits) == 10:
+        return digits
+        
+    # Se tiver menos que 10 dígitos (ex: 2111), completa com o ano
+    # Determina o ano a partir da data de referência ou do ano atual do sistema local (2026)
+    ano = "2026"
+    if data_referencia:
+        try:
+            if hasattr(data_referencia, 'year'):
+                ano = str(data_referencia.year)
+            else:
+                match = str(data_referencia).strip()[:4]
+                if match.isdigit() and len(match) == 4:
+                    ano = match
+        except:
+            pass
+            
+    # Limpa zeros à esquerda do sufixo para fazer o lpad correto de 6 dígitos
+    sufixo = digits.lstrip('0')
+    if not sufixo:
+        sufixo = "0"
+    
+    # Trunca se passar de 6 dígitos
+    if len(sufixo) > 6:
+        sufixo = sufixo[-6:]
+        
+    return f"{ano}{sufixo.zfill(6)}"
+
 def clean_currency(val):
     """
     Processa valores monetários suportando vírgula como separador decimal.
@@ -105,7 +148,7 @@ async def importar_pedidos_excel(file: UploadFile = File(...), db: Session = Dep
             raise HTTPException(status_code=400, detail="Aba Danfes estruturalmente incorreta (não possui colunas I e K).")
             
         df_danfes_clean = pd.DataFrame({
-            'pedido_supra': df_danfes.iloc[:, 8].apply(clean_numeric_code),
+            'pedido_supra': df_danfes.iloc[:, 8].apply(lambda x: normalizar_pedido_supra(clean_numeric_code(x))),
             'status_excel': df_danfes.iloc[:, 10].apply(lambda x: str(x).strip() if pd.notna(x) else "")
         })
         df_danfes_clean = df_danfes_clean[df_danfes_clean['pedido_supra'] != ""]
@@ -123,9 +166,9 @@ async def importar_pedidos_excel(file: UploadFile = File(...), db: Session = Dep
         # 3. Processamento Linha a Linha
         for index, row in df_bd.iterrows():
             pedido_val = row.get(col_pedido) if col_pedido else None
-            pedido_supra = clean_numeric_code(pedido_val)
+            pedido_supra_raw = clean_numeric_code(pedido_val)
             
-            if not pedido_supra or str(pedido_supra).lower() == 'nan':
+            if not pedido_supra_raw or str(pedido_supra_raw).lower() == 'nan':
                 continue
                 
             resumo["lidos"] += 1
@@ -147,6 +190,9 @@ async def importar_pedidos_excel(file: UploadFile = File(...), db: Session = Dep
             data_danfe_val = row.get(col_data_danfe) if col_data_danfe else None
             data_danfe_dt = pd.to_datetime(data_danfe_val, errors='coerce') if pd.notna(data_danfe_val) else None
             
+            dt_ref = emissao_dt or data_pedido_dt or data_danfe_dt or datetime.now()
+            pedido_supra = normalizar_pedido_supra(pedido_supra_raw, dt_ref)
+            
             cliente_retira = str(row.get(col_retira)).strip() if col_retira and pd.notna(row.get(col_retira)) else ""
             
             # Cruzamento Danfes (Nº do pedido)
@@ -158,11 +204,18 @@ async def importar_pedidos_excel(file: UploadFile = File(...), db: Session = Dep
             ajuste_gerado = 0.0
             status_novo_pedido = None
             
-            # 4. Validação e Persistência no Banco
+            # 4. Validação e Persistência no Banco (Cruzamento Resiliente Temporal e Cura de Códigos Supra)
             check_exist = db.execute(text("""
-                SELECT id_pedido, nota_fiscal, total_pedido, peso_total_kg, codigo_cliente, status, data_faturamento 
+                SELECT id_pedido, nota_fiscal, total_pedido, peso_total_kg, codigo_cliente, status, data_faturamento, pedido_supra 
                 FROM public.tb_pedidos 
                 WHERE pedido_supra = :p
+                   OR (
+                      pedido_supra IS NOT NULL AND pedido_supra != '' AND
+                      CASE 
+                        WHEN length(pedido_supra) = 10 THEN pedido_supra
+                        ELSE to_char(COALESCE(created_at, confirmado_em, now()), 'YYYY') || lpad(ltrim(pedido_supra, '0'), 6, '0')
+                      END = :p
+                   )
             """), {"p": pedido_supra}).fetchone()
             
             if not check_exist:
@@ -170,7 +223,7 @@ async def importar_pedidos_excel(file: UploadFile = File(...), db: Session = Dep
                 detalhes.append("Pedido não encontrado no OrderSync.")
                 resumo["erros"] += 1
             else:
-                id_pedido, nf_db, total_db, peso_db, cod_cli_db, status_db, data_fat_db = check_exist
+                id_pedido, nf_db, total_db, peso_db, cod_cli_db, status_db, data_fat_db, supra_db = check_exist
                 total_db = float(total_db) if total_db is not None else 0.0
                 peso_db = float(peso_db) if peso_db is not None else 0.0
                 
@@ -199,8 +252,9 @@ async def importar_pedidos_excel(file: UploadFile = File(...), db: Session = Dep
                 is_cli_same = clean_numeric_code(cod_cli_db) == codigo_cliente
                 is_status_same = (status_novo_pedido is None) or (status_db == status_novo_pedido)
                 is_date_same = is_same_date(data_danfe_dt, data_fat_db)
+                is_supra_same = (supra_db or "") == pedido_supra
 
-                if is_nf_same and is_val_same and is_peso_same and is_cli_same and is_status_same and is_date_same:
+                if is_nf_same and is_val_same and is_peso_same and is_cli_same and is_status_same and is_date_same and is_supra_same:
                     status_proc = "SEM_ALTERACAO"
                     detalhes.append("Pedido já importado anteriormente (Sem alterações).")
                     resumo["sem_alteracao"] += 1
@@ -222,9 +276,9 @@ async def importar_pedidos_excel(file: UploadFile = File(...), db: Session = Dep
                     else:
                         resumo["sucesso"] += 1
                         
-                    # Aplicando os ajustes à tb_pedidos
-                    update_sql = "UPDATE public.tb_pedidos SET valor_ajuste = :ajuste, total_pedido = :total, atualizado_em = now()"
-                    params = {"ajuste": ajuste_gerado, "total": valor_pedido, "id_pedido": id_pedido}
+                    # Aplicando os ajustes e curando/salvando o pedido_supra no formato completo de 10 dígitos
+                    update_sql = "UPDATE public.tb_pedidos SET valor_ajuste = :ajuste, total_pedido = :total, pedido_supra = :ped_completo, atualizado_em = now()"
+                    params = {"ajuste": ajuste_gerado, "total": valor_pedido, "ped_completo": pedido_supra, "id_pedido": id_pedido}
                     
                     if danfe:
                         update_sql += ", nota_fiscal = :danfe"

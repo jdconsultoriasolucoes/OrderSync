@@ -20,6 +20,49 @@ def get_db():
     finally:
         db.close()
 
+def normalizar_pedido_supra(pedido_supra_str: str, data_referencia=None) -> str:
+    """
+    Garante que o pedido_supra seja gravado no banco sempre com 10 dígitos (YYYY + 6 dígitos com zero padding).
+    Ex: '2111' -> '2026002111' (usando o ano da data_referencia ou o ano atual do sistema).
+    Ex: '2026002111' -> '2026002111' (mantém intacto).
+    """
+    if not pedido_supra_str:
+        return ""
+    
+    # Remove qualquer caractere não numérico
+    digits = "".join(filter(str.isdigit, str(pedido_supra_str)))
+    if not digits:
+        return ""
+    
+    # Se já tem 10 dígitos, retorna direto
+    if len(digits) == 10:
+        return digits
+        
+    # Se tiver menos que 10 dígitos (ex: 2111), completa com o ano
+    # Determina o ano a partir da data de referência ou do ano atual do sistema local (2026)
+    ano = "2026"
+    if data_referencia:
+        try:
+            if hasattr(data_referencia, 'year'):
+                ano = str(data_referencia.year)
+            else:
+                match = str(data_referencia).strip()[:4]
+                if match.isdigit() and len(match) == 4:
+                    ano = match
+        except:
+            pass
+            
+    # Limpa zeros à esquerda do sufixo para fazer o lpad correto de 6 dígitos
+    sufixo = digits.lstrip('0')
+    if not sufixo:
+        sufixo = "0"
+    
+    # Trunca se passar de 6 dígitos
+    if len(sufixo) > 6:
+        sufixo = sufixo[-6:]
+        
+    return f"{ano}{sufixo.zfill(6)}"
+
 # ---------- Schemas ----------
 class PedidoListItem(BaseModel):
     numero_pedido: int
@@ -405,7 +448,9 @@ def atualizar_pedido(
     pedido.usar_valor_com_frete = body.usar_valor_com_frete
     pedido.observacoes = body.observacoes
     pedido.frete_kg = round(body.frete_kg or 0, 4)
-    pedido.pedido_supra = body.pedido_supra
+    if body.pedido_supra is not None:
+        dt_ref = pedido.confirmado_em or pedido.created_at or datetime.now()
+        pedido.pedido_supra = normalizar_pedido_supra(body.pedido_supra, dt_ref)
     pedido.nota_fiscal = body.nota_fiscal
     if body.contato_nome is not None: pedido.contato_nome = body.contato_nome
     if body.contato_email is not None: pedido.contato_email = body.contato_email
@@ -626,7 +671,8 @@ def atualizar_campos_faturamento(id_pedido: int, body: PedidoCamposFaturamento, 
         raise HTTPException(status_code=404, detail="Pedido não encontrado")
     
     if body.pedido_supra is not None:
-        pedido.pedido_supra = body.pedido_supra
+        dt_ref = pedido.confirmado_em or pedido.created_at or datetime.now()
+        pedido.pedido_supra = normalizar_pedido_supra(body.pedido_supra, dt_ref)
     if body.nota_fiscal is not None:
         pedido.nota_fiscal = body.nota_fiscal
         
