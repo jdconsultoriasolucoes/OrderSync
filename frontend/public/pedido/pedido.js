@@ -427,6 +427,33 @@ function renderPager() {
 }
 
 // ---------------------- Drawer / Resumo (MERGED) ----------------------
+function applySupraMask(input, year) {
+  const formatValue = () => {
+    let val = input.value;
+    let digits = val.replace(/\D/g, '');
+    if (digits.startsWith(year)) {
+      digits = digits.slice(year.length);
+    }
+    digits = digits.replace(/^0+/, '');
+    if (digits.length > 6) {
+      digits = digits.slice(-6);
+    }
+    const suffix = digits.padStart(6, '0');
+    input.value = year + suffix;
+  };
+
+  if (!input.value || !/^\d{10}$/.test(input.value)) {
+    formatValue();
+  }
+
+  input.addEventListener('input', formatValue);
+  input.addEventListener('focus', () => {
+    setTimeout(() => {
+      input.setSelectionRange(input.value.length, input.value.length);
+    }, 0);
+  });
+}
+
 async function openResumo(id) {
   const r = await fetch(API.resumo(id), { cache: "no-store" });
   if (!r.ok) return;
@@ -435,6 +462,14 @@ async function openResumo(id) {
   console.log("[DEBUG] Dados recebidos para Resumo:", p);
   const el = document.getElementById("drawerContent");
   const modalidade = p.usar_valor_com_frete ? "ENTREGA" : "RETIRADA";
+
+  const totalSupra = p.total_pedido || 0;
+  const valorSistema = (p.itens || []).reduce((acc, i) => {
+    const itemPreco = p.usar_valor_com_frete ? (i.preco_unit_frt ?? i.preco_unit) : i.preco_unit;
+    const itemSubtotal = p.usar_valor_com_frete ? (i.subtotal_com_f ?? (i.quantidade * itemPreco)) : (i.subtotal_sem_f ?? (i.quantidade * itemPreco));
+    return acc + (itemSubtotal || 0);
+  }, 0);
+  const valorAjuste = totalSupra - valorSistema;
 
   el.innerHTML = `
       <div class="stack">
@@ -487,8 +522,42 @@ async function openResumo(id) {
         </div>
         <div class="kv">
           <div><b>Fornecedor:</b> ${p.fornecedor ?? "-"}</div>
-          <div><b>Total:</b> ${fmtMoney(p.total_pedido)}</div>
+          <div><b>Total:</b> ${fmtMoney(valorSistema)}</div>
         </div>
+        ${Math.abs(valorAjuste) > 0.01 ? (() => {
+          const sinalAjuste = valorAjuste > 0.005 ? "+" : "";
+          const corAjuste = valorAjuste > 0.005 ? "#16a34a" : "#dc2626";
+          const bgAjuste = valorAjuste > 0.005 ? "#f0fdf4" : "#fef2f2";
+          const borderAjuste = valorAjuste > 0.005 ? "#bbf7d0" : "#fecaca";
+          return `
+          <div style="grid-column: 1 / -1; background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 12px; padding: 12px; margin-top: 10px; box-shadow: 0 1px 2px rgba(0,0,0,0.02);">
+            <div style="font-size: 0.72rem; text-transform: uppercase; color: #64748b; font-weight: 700; margin-bottom: 8px; letter-spacing: 0.05em; display: flex; align-items: center; gap: 4px;">
+              <span>📊 Conciliação de Valores (Planilha)</span>
+            </div>
+            <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; text-align: center;">
+              
+              <!-- Valor Sistema -->
+              <div style="background: #f1f5f9; border: 1px solid #e2e8f0; border-radius: 8px; padding: 8px;">
+                <div style="font-size: 0.65rem; font-weight: 600; color: #475569; margin-bottom: 4px; text-transform: uppercase;">Valor Sistema</div>
+                <div style="font-size: 0.85rem; font-weight: 700; color: #1e293b;">${fmtMoney(valorSistema)}</div>
+              </div>
+              
+              <!-- Ajuste -->
+              <div style="background: ${bgAjuste}; border: 1px solid ${borderAjuste}; border-radius: 8px; padding: 8px;">
+                <div style="font-size: 0.65rem; font-weight: 600; color: ${corAjuste}; margin-bottom: 4px; text-transform: uppercase;">Ajuste</div>
+                <div style="font-size: 0.85rem; font-weight: 700; color: ${corAjuste};">${sinalAjuste}${fmtMoney(valorAjuste)}</div>
+              </div>
+              
+              <!-- Total Supra -->
+              <div style="background: #fffbeb; border: 1px solid #fde68a; border-radius: 8px; padding: 8px;">
+                <div style="font-size: 0.65rem; font-weight: 600; color: #b45309; margin-bottom: 4px; text-transform: uppercase;">Total Supra</div>
+                <div style="font-size: 0.85rem; font-weight: 700; color: #d97706;">${fmtMoney(totalSupra)}</div>
+              </div>
+              
+            </div>
+          </div>
+          `;
+        })() : ''}
         <div class="kv">
           <div style="grid-column: 1 / -1;">
             <b>Contato:</b> ${p.contato_nome || "Não informado"}
@@ -500,13 +569,17 @@ async function openResumo(id) {
         <div class="block">
           <b>Itens</b>
           <div class="itens">
-            ${(p.itens || []).map(i => `
+            ${(p.itens || []).map(i => {
+              const itemPreco = p.usar_valor_com_frete ? (i.preco_unit_frt ?? i.preco_unit) : i.preco_unit;
+              const itemSubtotal = p.usar_valor_com_frete ? (i.subtotal_com_f ?? (i.quantidade * itemPreco)) : (i.subtotal_sem_f ?? (i.quantidade * itemPreco));
+              return `
               <div class="item">
                 <div><b>${i.codigo}</b> - ${i.nome}</div>
-                <div>${i.quantidade} x ${fmtMoney(i.preco_unit)} = <b>${fmtMoney(i.subtotal)}</b></div>
+                <div>${i.quantidade} x ${fmtMoney(itemPreco)} = <b>${fmtMoney(itemSubtotal)}</b></div>
                 ${(i.peso_liquido_unit > 0) ? `<div style="color:#888;font-size:0.82em;">${i.quantidade} x ${parseFloat(Number(i.peso_liquido_unit).toFixed(3))} kg = <b>${parseFloat(Number(i.peso_liquido_total).toFixed(3))} kg</b></div>` : ''}
               </div>
-            `).join("")}
+              `;
+            }).join("")}
           </div>
         </div>
         <div class="block">
@@ -531,6 +604,16 @@ async function openResumo(id) {
       const nf = document.getElementById("editNF").value;
       await saveCamposFaturamento(id, supra, nf, btnSave);
     });
+  }
+
+  // Ativar máscara do pedido Supra no input
+  const editSupraEl = document.getElementById("editSupra");
+  if (editSupraEl) {
+    let initialYear = new Date().getFullYear().toString();
+    if (p.pedido_supra && p.pedido_supra.length >= 4) {
+      initialYear = p.pedido_supra.substring(0, 4);
+    }
+    applySupraMask(editSupraEl, initialYear);
   }
 
   // Botão copiar dentro do resumo
@@ -948,6 +1031,28 @@ function bindUI() {
   document.getElementById("btnCloseDrawer")?.addEventListener("click", () => {
     document.getElementById("drawer").classList.add("hidden");
   });
+
+  // Fechar drawer ao clicar fora dele
+  document.addEventListener("click", (e) => {
+    const drawer = document.getElementById("drawer");
+    if (drawer && !drawer.classList.contains("hidden")) {
+      if (!drawer.contains(e.target)) {
+        const isTrigger = e.target.closest(".row-click") || 
+                          e.target.closest(".order-card") || 
+                          e.target.closest(".lnk-resumo") ||
+                          e.target.closest(".btn-edit-status") ||
+                          e.target.closest(".btn-save-status") ||
+                          e.target.closest(".btn-cancel-status") ||
+                          (e.target.tagName === "BUTTON" && e.target.textContent.includes("Detalhes")) ||
+                          e.target.closest("#os-premium-alert-backdrop");
+                          
+        if (!isTrigger) {
+          drawer.classList.add("hidden");
+        }
+      }
+    }
+  });
+
   document.getElementById("fPeriodoRapido")?.addEventListener("change", aplicarPeriodoRapido);
 
   // Event Delegation Tabela

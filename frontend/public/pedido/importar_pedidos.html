@@ -1,0 +1,163 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8" />
+  <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Importar Pedidos — OrderSync</title>
+
+  <!-- Design System -->
+  <link rel="stylesheet" href="../design-system.css" />
+  <link rel="stylesheet" href="importar_pedidos.css" />
+
+  <!-- Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
+
+  <script src="../js/config.js"></script>
+</head>
+<body>
+  <script src="../js/auth.js"></script>
+  <script src="../js/sidebar_control.js"></script>
+  <script>
+    if (window.Auth) { window.Auth.checkAuth(); }
+  </script>
+
+  <!-- ========== HEADER ========== -->
+  <header class="os-header">
+    <button class="os-menu-btn" id="menu-button" aria-label="Menu">&#9776;</button>
+    <img src="../logo.png" alt="Logo" class="os-logo" />
+    <span class="os-header-title">Importar Pedidos</span>
+  </header>
+
+  <!-- ========== SIDEBAR GLOBAL ========== -->
+  <nav class="os-sidebar" id="sidebar">
+    <div class="os-sidebar-section">Menu</div>
+    <ul>
+        <li><a href="/index.html"><svg class="os-nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z" /><polyline points="9 22 9 12 15 12 15 22" /></svg> Home</a></li>
+        <li><a href="/dashboards.html"><svg class="os-nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect><line x1="3" y1="9" x2="21" y2="9"></line><line x1="9" y1="21" x2="9" y2="9"></line></svg> Dashboards</a></li>
+        <li><a href="/tabela_preco/criacao_tabela_preco.html"><svg class="os-nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20.59 13.41l-7.17 7.17a2 2 0 0 1-2.83 0L2 12V2h10l8.59 8.59a2 2 0 0 1 0 2.82z"></path><line x1="7" y1="7" x2="7.01" y2="7"></line></svg> Tabela de Preço</a></li>
+        <li><a href="/produto/produto.html"><svg class="os-nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z" /></svg> Produtos</a></li>
+        <li><a href="/clientes/cliente.html"><svg class="os-nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" /><circle cx="9" cy="7" r="4" /><path d="M23 21v-2a4 4 0 0 0-3-3.87" /><path d="M16 3.13a4 4 0 0 1 0 7.75" /></svg> Clientes</a></li>
+        <li><a href="/pedido/pedido.html" class="active"><svg class="os-nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 2L3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z" /></svg> Consultar Pedidos</a></li>
+        <li><a href="/gerenciar_tabelas/gerenciar_tabelas.html"><svg class="os-nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7" /><rect x="14" y="3" width="7" height="7" /></svg> Atualizar Catálogo</a></li>
+        <li><a href="/relatorios/relatorios.html"><svg class="os-nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" /><polyline points="14 2 14 8 20 8" /><line x1="16" y1="13" x2="8" y2="13" /><line x1="16" y1="17" x2="8" y2="17" /><polyline points="10 9 9 9 8 9" /></svg> Exportar Relatórios</a></li>
+    </ul>
+    <div class="os-sidebar-section">Sistema</div>
+    <ul>
+        <li><a href="/config_email/config_email.html"><svg class="os-nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z" /></svg> Configuração E-mail</a></li>
+        <li><a href="/usuarios.html"><svg class="os-nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" /><circle cx="12" cy="7" r="4" /></svg> Usuários</a></li>
+        <li><a href="#" onclick="window.Auth.openChangePasswordModal()"><svg class="os-nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="11" width="18" height="11" rx="2" ry="2" /><path d="M7 11V7a5 5 0 0 1 10 0v4" /></svg> Trocar Senha</a></li>
+        <li><a href="#" onclick="window.Auth.logout()"><svg class="os-nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4" /><polyline points="16 17 21 12 16 7" /><line x1="21" y1="12" x2="9" y2="12" /></svg> Sair</a></li>
+    </ul>
+  </nav>
+  <div class="os-sidebar-overlay" id="overlay"></div>
+
+  <!-- ========== MAIN ========== -->
+  <div class="os-main" style="padding-top: var(--os-header-height); margin-left: 250px;">
+    <div class="import-container">
+        
+      <div style="display: flex; justify-content: space-between; align-items: flex-start; flex-wrap: wrap;">
+          <div>
+            <h2 style="margin: 0; font-size: var(--os-text-xl); font-weight: 600;">Importação de Pedidos via Planilha</h2>
+            <p style="color: var(--os-text-secondary); margin-top: 0.5rem;">Carregue sua planilha (.xlsm) com as abas "Banco_Dados" e "Danfes" para atualizar os status e conciliar divergências de valores e pesos.</p>
+          </div>
+          <a href="pedido.html" class="os-btn os-btn-secondary" style="text-decoration: none;">&larr; Voltar para Consulta</a>
+      </div>
+
+      <!-- Área de Upload -->
+      <div class="upload-card" id="uploadArea">
+        <div class="loading-overlay" id="loadingOverlay">
+            <div class="spinner"></div>
+            <p style="font-weight: 600; color: var(--os-text); font-size: 1.1rem; margin-top: 1rem;">Processando planilha e conciliando valores...</p>
+            <p style="color: var(--os-text-secondary); font-size: 0.9rem; margin-top: 0.5rem;">Isso pode levar alguns instantes.</p>
+        </div>
+        
+        <div id="uploadContent">
+            <div class="upload-icon">📊</div>
+            <div class="upload-title">Clique ou Arraste o arquivo Excel aqui</div>
+            <div class="upload-subtitle">Formatos suportados: .xlsm, .xlsx</div>
+            <button class="os-btn os-btn-primary" onclick="document.getElementById('fileInput').click()">Selecionar Arquivo</button>
+            <input type="file" id="fileInput" accept=".xlsm, .xlsx" />
+        </div>
+      </div>
+
+      <!-- Área de Resultados -->
+      <div class="results-section" id="resultsSection">
+        
+        <!-- Banner de Aviso Global -->
+        <div id="duplicateAlert" style="display: none; width: 100%; border-radius: var(--os-radius-lg); padding: 1.25rem; border: 1px solid #F59E0B; background-color: #FEF3C7; color: #92400E; font-weight: 500; align-items: center; gap: 0.75rem; box-shadow: var(--os-shadow-sm);">
+          <span style="font-size: 1.5rem; line-height: 1;">⚠️</span>
+          <span id="duplicateAlertText" style="font-size: var(--os-text-sm);">Aviso: Todos os pedidos deste arquivo já foram processados anteriormente.</span>
+        </div>
+        
+        <div class="kpi-grid">
+            <div class="kpi-card">
+                <span class="kpi-title">Linhas Lidas</span>
+                <span class="kpi-value primary" id="kpiLidos">0</span>
+            </div>
+            <div class="kpi-card">
+                <span class="kpi-title">Sucesso</span>
+                <span class="kpi-value success" id="kpiSucesso">0</span>
+            </div>
+            <div class="kpi-card">
+                <span class="kpi-title">Sem Alterações</span>
+                <span class="kpi-value secondary" style="color: #6B7280;" id="kpiSemAlteracao">0</span>
+            </div>
+            <div class="kpi-card">
+                <span class="kpi-title">Divergências Encontradas</span>
+                <span class="kpi-value warning" id="kpiAjustados">0</span>
+            </div>
+            <div class="kpi-card">
+                <span class="kpi-title">Erros</span>
+                <span class="kpi-value error" id="kpiErros">0</span>
+            </div>
+            <div class="kpi-card">
+                <span class="kpi-title">Total de Ajuste (R$)</span>
+                <span class="kpi-value warning" id="kpiValorAjuste">0,00</span>
+            </div>
+        </div>
+
+        <div class="details-table-wrap">
+            <table class="details-table" id="resultsTable">
+                <thead>
+                    <tr>
+                        <th>Nº Pedido</th>
+                        <th>Cód. Cliente</th>
+                        <th>Valor Planilha</th>
+                        <th>Resultado</th>
+                        <th>Status Atualizado (Banco)</th>
+                        <th>Detalhes & Divergências</th>
+                    </tr>
+                    <tr class="filters-row">
+                        <th><input type="text" id="filterPedido" placeholder="Filtrar..." class="os-input-sm"></th>
+                        <th><input type="text" id="filterCliente" placeholder="Filtrar..." class="os-input-sm"></th>
+                        <th><input type="text" id="filterValor" placeholder="Filtrar..." class="os-input-sm"></th>
+                        <th>
+                            <select id="filterResultado" class="os-input-sm" style="background: white;">
+                                <option value="">Todos</option>
+                                <option value="Sucesso">Sucesso</option>
+                                <option value="Divergência / Ajustado">Divergência / Ajustado</option>
+                                <option value="Sem Alterações">Sem Alterações</option>
+                                <option value="Não Encontrado">Não Encontrado</option>
+                            </select>
+                        </th>
+                        <th><input type="text" id="filterStatus" placeholder="Filtrar..." class="os-input-sm"></th>
+                        <th><input type="text" id="filterDetalhes" placeholder="Filtrar..." class="os-input-sm"></th>
+                    </tr>
+                </thead>
+                <tbody id="resultsBody">
+                    <!-- Dinâmico -->
+                </tbody>
+            </table>
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- Main logic -->
+  <script src="importar_pedidos.js?v=3"></script>
+</body>
+</html>

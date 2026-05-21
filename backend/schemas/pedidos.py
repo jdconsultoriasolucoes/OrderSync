@@ -48,6 +48,7 @@ class PedidoResumo(BaseModel):
     peso_liquido_calculado: Optional[float] = 0.0
     frete_total: float
     total_pedido: float
+    valor_ajuste: Optional[float] = 0.0
     observacoes: Optional[str] = None
     status: str
     confirmado_em: Optional[datetime] = None

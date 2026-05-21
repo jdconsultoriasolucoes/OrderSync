@@ -32,6 +32,7 @@ class PedidoPdf(BaseModel):
     frete_kg: Optional[float] = None
     validade_tabela: Optional[str] = "Não se aplica"
     usar_valor_com_frete: bool = True  # Indica se pedido usa preço com ou sem frete
+    pedido_supra: Optional[str] = None
 
     data_pedido: Optional[datetime]
     data_entrega_ou_retirada: Optional[datetime]
