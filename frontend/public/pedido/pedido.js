@@ -487,7 +487,7 @@ async function openResumo(id) {
         </div>
         <div class="kv">
           <div><b>Fornecedor:</b> ${p.fornecedor ?? "-"}</div>
-          <div><b>Total:</b> ${fmtMoney(p.total_pedido)}</div>
+          <div><b>Total:</b> ${fmtMoney(p.total_pedido - (p.valor_ajuste || 0))}</div>
         </div>
         ${p.valor_ajuste ? (() => {
           const valorSistema = p.total_pedido - (p.valor_ajuste || 0);
@@ -514,9 +514,9 @@ async function openResumo(id) {
                 <div style="font-size: 0.85rem; font-weight: 700; color: ${corAjuste};">${sinalAjuste}${fmtMoney(p.valor_ajuste)}</div>
               </div>
               
-              <!-- Total Planilha -->
+              <!-- Total Supra -->
               <div style="background: #fffbeb; border: 1px solid #fde68a; border-radius: 8px; padding: 8px;">
-                <div style="font-size: 0.65rem; font-weight: 600; color: #b45309; margin-bottom: 4px; text-transform: uppercase;">Total Planilha</div>
+                <div style="font-size: 0.65rem; font-weight: 600; color: #b45309; margin-bottom: 4px; text-transform: uppercase;">Total Supra</div>
                 <div style="font-size: 0.85rem; font-weight: 700; color: #d97706;">${fmtMoney(p.total_pedido)}</div>
               </div>
               
