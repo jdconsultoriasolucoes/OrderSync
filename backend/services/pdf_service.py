@@ -120,11 +120,19 @@ def _desenhar_pdf(pedido: PedidoPdf, buffer: io.BytesIO, sem_validade: bool = Fa
 
     # Texto na faixa
     c.setFillColor(colors.white)
-    c.setFont("Helvetica-Bold", 14)
+    c.setFont("Helvetica-Bold", 12)
     c.drawString(
         margin_x + 0.3 * cm,
-        faixa_y - faixa_h + 0.35 * cm,
+        faixa_y - faixa_h + 0.62 * cm,
         "DIGITAÇÃO DO ORÇAMENTO"
+    )
+    
+    c.setFont("Helvetica", 9)
+    ped_supra_val = pedido.pedido_supra or ""
+    c.drawString(
+        margin_x + 0.3 * cm,
+        faixa_y - faixa_h + 0.2 * cm,
+        f"Pedido Sistema: {pedido.id_pedido}   |   Ped. Supra: {ped_supra_val}"
     )
 
     # Data / Validade (Bloco direito do header)

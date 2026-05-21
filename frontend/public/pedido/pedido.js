@@ -1031,6 +1031,28 @@ function bindUI() {
   document.getElementById("btnCloseDrawer")?.addEventListener("click", () => {
     document.getElementById("drawer").classList.add("hidden");
   });
+
+  // Fechar drawer ao clicar fora dele
+  document.addEventListener("click", (e) => {
+    const drawer = document.getElementById("drawer");
+    if (drawer && !drawer.classList.contains("hidden")) {
+      if (!drawer.contains(e.target)) {
+        const isTrigger = e.target.closest(".row-click") || 
+                          e.target.closest(".order-card") || 
+                          e.target.closest(".lnk-resumo") ||
+                          e.target.closest(".btn-edit-status") ||
+                          e.target.closest(".btn-save-status") ||
+                          e.target.closest(".btn-cancel-status") ||
+                          (e.target.tagName === "BUTTON" && e.target.textContent.includes("Detalhes")) ||
+                          e.target.closest("#os-premium-alert-backdrop");
+                          
+        if (!isTrigger) {
+          drawer.classList.add("hidden");
+        }
+      }
+    }
+  });
+
   document.getElementById("fPeriodoRapido")?.addEventListener("change", aplicarPeriodoRapido);
 
   // Event Delegation Tabela

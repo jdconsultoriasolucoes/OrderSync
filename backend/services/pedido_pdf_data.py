@@ -32,6 +32,7 @@ def carregar_pedido_pdf(db, pedido_id: int) -> PedidoPdf:
             p.peso_total_kg, /* Este costuma ser o peso considerado para frete (agora bruto) */
             p.total_pedido,
             p.observacoes,
+            p.pedido_supra,
             
             i.id_item, /* REQUIRED FOR DEDUPLICATION */
             i.codigo              AS item_codigo,
@@ -194,5 +195,6 @@ def carregar_pedido_pdf(db, pedido_id: int) -> PedidoPdf:
         total_peso_liquido=sum_peso_liq,
         total_valor=float(head["total_pedido"] or 0),
         observacoes=(head.get("observacoes") or ""),
+        pedido_supra=head.get("pedido_supra"),
         itens=itens,
     )
