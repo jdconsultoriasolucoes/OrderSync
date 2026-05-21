@@ -266,6 +266,8 @@ async def importar_pedidos_excel(file: UploadFile = File(...), db: Session = Dep
             itens_resposta.append({
                 "pedido_supra": pedido_supra,
                 "cliente_codigo": codigo_cliente,
+                "data_pedido": data_pedido_dt.strftime('%d/%m/%Y') if pd.notna(data_pedido_dt) else (emissao_dt.strftime('%d/%m/%Y') if pd.notna(emissao_dt) else "-"),
+                "data_faturamento": data_danfe_dt.strftime('%d/%m/%Y') if pd.notna(data_danfe_dt) else "-",
                 "valor_planilha": valor_pedido,
                 "peso_planilha": peso,
                 "ajuste_gerado": ajuste_gerado,

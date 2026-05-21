@@ -524,11 +524,24 @@ async function openResumo(id) {
           <div><b>Fornecedor:</b> ${p.fornecedor ?? "-"}</div>
           <div><b>Total:</b> ${fmtMoney(valorSistema)}</div>
         </div>
-        ${Math.abs(valorAjuste) > 0.01 ? (() => {
-          const sinalAjuste = valorAjuste > 0.005 ? "+" : "";
-          const corAjuste = valorAjuste > 0.005 ? "#16a34a" : "#dc2626";
-          const bgAjuste = valorAjuste > 0.005 ? "#f0fdf4" : "#fef2f2";
-          const borderAjuste = valorAjuste > 0.005 ? "#bbf7d0" : "#fecaca";
+        ${(() => {
+          let sinalAjuste = "";
+          let corAjuste = "#475569";
+          let bgAjuste = "#f1f5f9";
+          let borderAjuste = "#e2e8f0";
+
+          if (valorAjuste > 0.005) {
+            sinalAjuste = "+";
+            corAjuste = "#16a34a";
+            bgAjuste = "#f0fdf4";
+            borderAjuste = "#bbf7d0";
+          } else if (valorAjuste < -0.005) {
+            sinalAjuste = "";
+            corAjuste = "#dc2626";
+            bgAjuste = "#fef2f2";
+            borderAjuste = "#fecaca";
+          }
+
           return `
           <div style="grid-column: 1 / -1; background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 12px; padding: 12px; margin-top: 10px; box-shadow: 0 1px 2px rgba(0,0,0,0.02);">
             <div style="font-size: 0.72rem; text-transform: uppercase; color: #64748b; font-weight: 700; margin-bottom: 8px; letter-spacing: 0.05em; display: flex; align-items: center; gap: 4px;">
@@ -557,7 +570,7 @@ async function openResumo(id) {
             </div>
           </div>
           `;
-        })() : ''}
+        })()}
         <div class="kv">
           <div style="grid-column: 1 / -1;">
             <b>Contato:</b> ${p.contato_nome || "Não informado"}

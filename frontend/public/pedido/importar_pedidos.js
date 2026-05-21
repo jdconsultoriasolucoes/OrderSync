@@ -85,6 +85,9 @@ document.addEventListener("DOMContentLoaded", () => {
                 throw new Error(data.detail || "Erro ao processar planilha.");
             }
 
+            // Salvar no cache do localStorage para persistir na tela
+            localStorage.setItem("lastImportData", JSON.stringify(data));
+
             renderResults(data);
 
         } catch (error) {
@@ -101,7 +104,7 @@ document.addEventListener("DOMContentLoaded", () => {
         const { resumo, itens } = data;
         
         // Limpar os campos de filtros ao renderizar uma nova carga
-        ["filterPedido", "filterCliente", "filterValor", "filterResultado", "filterStatus", "filterDetalhes"].forEach(id => {
+        ["filterPedido", "filterCliente", "filterDataPedido", "filterDataFat", "filterValor", "filterResultado", "filterStatus", "filterDetalhes"].forEach(id => {
             const el = document.getElementById(id);
             if (el) el.value = "";
         });
@@ -126,6 +129,12 @@ document.addEventListener("DOMContentLoaded", () => {
         kpiErros.innerText = resumo.erros || 0;
         kpiValorAjuste.innerText = fmtMoney(resumo.valor_total_ajustes || 0);
 
+        // Exibir botão premium de limpar resultados
+        const btnClear = document.getElementById("btnClearCache");
+        if (btnClear) {
+            btnClear.style.display = "inline-block";
+        }
+
         // Ordenação inteligente de status (Erros e Ajustados primeiro)
         function getStatusPriority(status) {
             if (status === "ERRO_NAO_ENCONTRADO") return 1;
@@ -142,7 +151,7 @@ document.addEventListener("DOMContentLoaded", () => {
         // Render Table Rows
         if (!itens || itens.length === 0) {
             const tr = document.createElement("tr");
-            tr.innerHTML = `<td colspan="6" style="text-align: center; color: var(--os-text-secondary);">Nenhum pedido processado.</td>`;
+            tr.innerHTML = `<td colspan="8" style="text-align: center; color: var(--os-text-secondary);">Nenhum pedido processado.</td>`;
             resultsBody.appendChild(tr);
         } else {
             itens.forEach(item => {
@@ -196,6 +205,8 @@ document.addEventListener("DOMContentLoaded", () => {
                 // Atributos de dados para filtragem ultra-rápida no client-side
                 tr.dataset.pedido = item.pedido_supra || "";
                 tr.dataset.cliente = item.cliente_codigo || "";
+                tr.dataset.data_pedido = item.data_pedido || "";
+                tr.dataset.data_fat = item.data_faturamento || "";
                 tr.dataset.valor = fmtMoney(item.valor_planilha);
                 tr.dataset.resultado = resultText;
                 tr.dataset.status = textoStatus;
@@ -204,6 +215,8 @@ document.addEventListener("DOMContentLoaded", () => {
                 tr.innerHTML = `
                     <td><strong>${item.pedido_supra || "-"}</strong></td>
                     <td>${item.cliente_codigo || "-"}</td>
+                    <td>${item.data_pedido || "-"}</td>
+                    <td>${item.data_faturamento || "-"}</td>
                     <td>R$ ${fmtMoney(item.valor_planilha)}</td>
                     <td><span class="${badgeClass}">${resultText}</span></td>
                     <td>${badgeNovoStatus}</td>
@@ -223,6 +236,8 @@ document.addEventListener("DOMContentLoaded", () => {
     function applyFilters() {
         const fPedido = document.getElementById("filterPedido").value.toLowerCase().trim();
         const fCliente = document.getElementById("filterCliente").value.toLowerCase().trim();
+        const fDataPedido = document.getElementById("filterDataPedido").value.toLowerCase().trim();
+        const fDataFat = document.getElementById("filterDataFat").value.toLowerCase().trim();
         const fValor = document.getElementById("filterValor").value.toLowerCase().trim();
         const fResultado = document.getElementById("filterResultado").value.toLowerCase().trim();
         const fStatus = document.getElementById("filterStatus").value.toLowerCase().trim();
@@ -235,12 +250,14 @@ document.addEventListener("DOMContentLoaded", () => {
 
             const matchPedido = !fPedido || String(tr.dataset.pedido).toLowerCase().includes(fPedido);
             const matchCliente = !fCliente || String(tr.dataset.cliente).toLowerCase().includes(fCliente);
+            const matchDataPedido = !fDataPedido || String(tr.dataset.data_pedido).toLowerCase().includes(fDataPedido);
+            const matchDataFat = !fDataFat || String(tr.dataset.data_fat).toLowerCase().includes(fDataFat);
             const matchValor = !fValor || String(tr.dataset.valor).toLowerCase().includes(fValor);
             const matchResultado = !fResultado || String(tr.dataset.resultado).toLowerCase() === fResultado;
             const matchStatus = !fStatus || String(tr.dataset.status).toLowerCase().includes(fStatus);
             const matchDetalhes = !fDetalhes || String(tr.dataset.detalhes).toLowerCase().includes(fDetalhes);
 
-            if (matchPedido && matchCliente && matchValor && matchResultado && matchStatus && matchDetalhes) {
+            if (matchPedido && matchCliente && matchDataPedido && matchDataFat && matchValor && matchResultado && matchStatus && matchDetalhes) {
                 tr.style.display = "";
             } else {
                 tr.style.display = "none";
@@ -249,7 +266,7 @@ document.addEventListener("DOMContentLoaded", () => {
     }
 
     // Vincular os inputs de filtros aos event listeners
-    ["filterPedido", "filterCliente", "filterValor", "filterResultado", "filterStatus", "filterDetalhes"].forEach(id => {
+    ["filterPedido", "filterCliente", "filterDataPedido", "filterDataFat", "filterValor", "filterResultado", "filterStatus", "filterDetalhes"].forEach(id => {
         const el = document.getElementById(id);
         if (el) {
             el.addEventListener("input", applyFilters);
@@ -258,4 +275,30 @@ document.addEventListener("DOMContentLoaded", () => {
             }
         }
     });
+
+    // Carregar dados salvos do localStorage se existirem
+    const savedData = localStorage.getItem("lastImportData");
+    if (savedData) {
+        try {
+            const data = JSON.parse(savedData);
+            renderResults(data);
+        } catch (e) {
+            console.error("Erro ao carregar dados salvos do localStorage:", e);
+            localStorage.removeItem("lastImportData");
+        }
+    }
+
+    // Ação do botão "Limpar Resultados"
+    const btnClearCache = document.getElementById("btnClearCache");
+    if (btnClearCache) {
+        btnClearCache.addEventListener("click", () => {
+            if (confirm("Deseja realmente limpar as informações da última importação da tela?")) {
+                localStorage.removeItem("lastImportData");
+                resultsBody.innerHTML = "";
+                resultsSection.style.display = "none";
+                btnClearCache.style.display = "none";
+                if (duplicateAlert) duplicateAlert.style.display = "none";
+            }
+        });
+    }
 });

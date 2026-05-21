@@ -63,8 +63,10 @@
             <h2 style="margin: 0; font-size: var(--os-text-xl); font-weight: 600;">Importação de Pedidos via Planilha</h2>
             <p style="color: var(--os-text-secondary); margin-top: 0.5rem;">Carregue sua planilha (.xlsm) com as abas "Banco_Dados" e "Danfes" para atualizar os status e conciliar divergências de valores e pesos.</p>
           </div>
-          <a href="pedido.html" class="os-btn os-btn-secondary" style="text-decoration: none;">&larr; Voltar para Consulta</a>
-      </div>
+          <div style="display: flex; gap: 10px;">
+            <button id="btnClearCache" class="os-btn os-btn-secondary" style="display: none; border-color: var(--os-border); color: var(--os-text);">🧹 Limpar Resultados</button>
+            <a href="pedido.html" class="os-btn os-btn-secondary" style="text-decoration: none;">&larr; Voltar para Consulta</a>
+          </div>
 
       <!-- Área de Upload -->
       <div class="upload-card" id="uploadArea">
@@ -125,6 +127,8 @@
                     <tr>
                         <th>Nº Pedido</th>
                         <th>Cód. Cliente</th>
+                        <th>Data Pedido</th>
+                        <th>Data Faturamento</th>
                         <th>Valor Planilha</th>
                         <th>Resultado</th>
                         <th>Status Atualizado (Banco)</th>
@@ -133,6 +137,8 @@
                     <tr class="filters-row">
                         <th><input type="text" id="filterPedido" placeholder="Filtrar..." class="os-input-sm"></th>
                         <th><input type="text" id="filterCliente" placeholder="Filtrar..." class="os-input-sm"></th>
+                        <th><input type="text" id="filterDataPedido" placeholder="Filtrar..." class="os-input-sm"></th>
+                        <th><input type="text" id="filterDataFat" placeholder="Filtrar..." class="os-input-sm"></th>
                         <th><input type="text" id="filterValor" placeholder="Filtrar..." class="os-input-sm"></th>
                         <th>
                             <select id="filterResultado" class="os-input-sm" style="background: white;">
