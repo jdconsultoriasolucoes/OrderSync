@@ -489,12 +489,41 @@ async function openResumo(id) {
           <div><b>Fornecedor:</b> ${p.fornecedor ?? "-"}</div>
           <div><b>Total:</b> ${fmtMoney(p.total_pedido)}</div>
         </div>
-        ${p.valor_ajuste ? `
-        <div class="kv" style="background: #fffbeb; border: 1px dashed #f59e0b; padding: 10px; border-radius: 8px; margin-top: 5px; grid-column: 1 / -1; display: flex; justify-content: space-between; align-items: center;">
-          <span style="color: #b45309; font-weight: 600;">⚠️ Ajuste de Valor (Planilha):</span>
-          <span style="color: #b45309; font-weight: 700; font-size: 1.05rem;">${fmtMoney(p.valor_ajuste)}</span>
-        </div>
-        ` : ''}
+        ${p.valor_ajuste ? (() => {
+          const valorSistema = p.total_pedido - (p.valor_ajuste || 0);
+          const sinalAjuste = p.valor_ajuste > 0 ? "+" : "";
+          const corAjuste = p.valor_ajuste > 0 ? "#16a34a" : "#dc2626";
+          const bgAjuste = p.valor_ajuste > 0 ? "#f0fdf4" : "#fef2f2";
+          const borderAjuste = p.valor_ajuste > 0 ? "#bbf7d0" : "#fecaca";
+          return `
+          <div style="grid-column: 1 / -1; background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 12px; padding: 12px; margin-top: 10px; box-shadow: 0 1px 2px rgba(0,0,0,0.02);">
+            <div style="font-size: 0.72rem; text-transform: uppercase; color: #64748b; font-weight: 700; margin-bottom: 8px; letter-spacing: 0.05em; display: flex; align-items: center; gap: 4px;">
+              <span>📊 Conciliação de Valores (Planilha)</span>
+            </div>
+            <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; text-align: center;">
+              
+              <!-- Valor Sistema -->
+              <div style="background: #f1f5f9; border: 1px solid #e2e8f0; border-radius: 8px; padding: 8px;">
+                <div style="font-size: 0.65rem; font-weight: 600; color: #475569; margin-bottom: 4px; text-transform: uppercase;">Valor Sistema</div>
+                <div style="font-size: 0.85rem; font-weight: 700; color: #1e293b;">${fmtMoney(valorSistema)}</div>
+              </div>
+              
+              <!-- Ajuste -->
+              <div style="background: ${bgAjuste}; border: 1px solid ${borderAjuste}; border-radius: 8px; padding: 8px;">
+                <div style="font-size: 0.65rem; font-weight: 600; color: ${corAjuste}; margin-bottom: 4px; text-transform: uppercase;">Ajuste</div>
+                <div style="font-size: 0.85rem; font-weight: 700; color: ${corAjuste};">${sinalAjuste}${fmtMoney(p.valor_ajuste)}</div>
+              </div>
+              
+              <!-- Total Planilha -->
+              <div style="background: #fffbeb; border: 1px solid #fde68a; border-radius: 8px; padding: 8px;">
+                <div style="font-size: 0.65rem; font-weight: 600; color: #b45309; margin-bottom: 4px; text-transform: uppercase;">Total Planilha</div>
+                <div style="font-size: 0.85rem; font-weight: 700; color: #d97706;">${fmtMoney(p.total_pedido)}</div>
+              </div>
+              
+            </div>
+          </div>
+          `;
+        })() : ''}
         <div class="kv">
           <div style="grid-column: 1 / -1;">
             <b>Contato:</b> ${p.contato_nome || "Não informado"}
