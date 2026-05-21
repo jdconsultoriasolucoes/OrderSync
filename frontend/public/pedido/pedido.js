@@ -623,7 +623,15 @@ async function openResumo(id) {
   const editSupraEl = document.getElementById("editSupra");
   if (editSupraEl) {
     let initialYear = new Date().getFullYear().toString();
-    if (p.pedido_supra && p.pedido_supra.length >= 4) {
+    const dateStr = p.confirmado_em || p.created_at || p.data_pedido;
+    if (dateStr) {
+      const match = dateStr.match(/^(\d{4})/);
+      if (match) {
+        initialYear = match[1];
+      }
+    }
+    // Se o pedido_supra já for um número completo de 10 dígitos, extrai o ano dele
+    if (p.pedido_supra && /^\d{10}$/.test(p.pedido_supra)) {
       initialYear = p.pedido_supra.substring(0, 4);
     }
     applySupraMask(editSupraEl, initialYear);
