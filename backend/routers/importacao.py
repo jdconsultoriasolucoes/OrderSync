@@ -223,6 +223,7 @@ async def importar_pedidos_excel(file: UploadFile = File(...), db: Session = Dep
                 status_proc = "ERRO_NAO_ENCONTRADO"
                 detalhes.append("Pedido não encontrado no OrderSync.")
                 resumo["erros"] += 1
+                peso_db = 0.0
             else:
                 id_pedido, nf_db, total_db, peso_db, cod_cli_db, status_db, data_fat_db, supra_db = check_exist
                 total_db = float(total_db) if total_db is not None else 0.0
@@ -325,6 +326,7 @@ async def importar_pedidos_excel(file: UploadFile = File(...), db: Session = Dep
                 "data_faturamento": data_danfe_dt.strftime('%d/%m/%Y') if pd.notna(data_danfe_dt) else "-",
                 "valor_planilha": valor_pedido,
                 "peso_planilha": peso,
+                "peso_sistema": peso_db,
                 "ajuste_gerado": ajuste_gerado,
                 "status": status_proc,
                 "novo_status_pedido": status_novo_pedido or "N/A",

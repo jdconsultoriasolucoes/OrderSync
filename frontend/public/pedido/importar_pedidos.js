@@ -168,7 +168,7 @@ document.addEventListener("DOMContentLoaded", () => {
         const maisRecenteIso = maisRecenteBr ? converterDataBrParaIso(maisRecenteBr) : obterDataAtualIso();
 
         // Limpar os campos de filtros ao renderizar uma nova carga (e definir a data mais recente do arquivo no faturamento)
-        ["filterPedido", "filterCliente", "filterDataPedido", "filterDataFat", "filterValor", "filterResultado", "filterStatus", "filterDetalhes"].forEach(id => {
+        ["filterPedido", "filterCliente", "filterDataPedido", "filterDataFat", "filterValor", "filterPeso", "filterResultado", "filterStatus", "filterDetalhes"].forEach(id => {
             const el = document.getElementById(id);
             if (el) {
                 if (id === "filterDataFat") {
@@ -266,6 +266,9 @@ document.addEventListener("DOMContentLoaded", () => {
                         ? `<span style="color: var(--os-primary); font-weight: 600;">Faturado Supra</span>` 
                         : `<span style="color: var(--os-text-secondary);">-</span>`);
 
+                const pesoPlanilhaStr = item.peso_planilha != null ? item.peso_planilha.toFixed(2) + " kg" : "-";
+                const pesoSistemaStr = item.peso_sistema != null ? item.peso_sistema.toFixed(2) + " kg" : "-";
+
                 // Textos normalizados para facilitar busca rápida
                 const textoStatus = item.novo_status_pedido === "PEDIDO_NAO_COMPLETO" 
                     ? "Pedido Não Completo" 
@@ -278,6 +281,7 @@ document.addEventListener("DOMContentLoaded", () => {
                 tr.dataset.data_pedido = item.data_pedido || "";
                 tr.dataset.data_fat = item.data_faturamento || "";
                 tr.dataset.valor = fmtMoney(item.valor_planilha);
+                tr.dataset.peso = `${pesoPlanilhaStr} / ${pesoSistemaStr}`;
                 tr.dataset.resultado = resultText;
                 tr.dataset.status = textoStatus;
                 tr.dataset.detalhes = textoDetalhes;
@@ -288,6 +292,7 @@ document.addEventListener("DOMContentLoaded", () => {
                     <td>${item.data_pedido || "-"}</td>
                     <td>${item.data_faturamento || "-"}</td>
                     <td>R$ ${fmtMoney(item.valor_planilha)}</td>
+                    <td>${pesoPlanilhaStr} / ${pesoSistemaStr}</td>
                     <td><span class="${badgeClass}">${resultText}</span></td>
                     <td>${badgeNovoStatus}</td>
                     <td>${detalhesHtml}</td>
@@ -317,6 +322,7 @@ document.addEventListener("DOMContentLoaded", () => {
         const fDataFat = converterDataIsoParaBr(fDataFatRaw).toLowerCase();
         
         const fValor = document.getElementById("filterValor").value.toLowerCase().trim();
+        const fPeso = document.getElementById("filterPeso").value.toLowerCase().trim();
         const fResultado = document.getElementById("filterResultado").value.toLowerCase().trim();
         const fStatus = document.getElementById("filterStatus").value.toLowerCase().trim();
         const fDetalhes = document.getElementById("filterDetalhes").value.toLowerCase().trim();
@@ -331,11 +337,12 @@ document.addEventListener("DOMContentLoaded", () => {
             const matchDataPedido = !fDataPedido || String(tr.dataset.data_pedido).toLowerCase().includes(fDataPedido);
             const matchDataFat = !fDataFat || String(tr.dataset.data_fat).toLowerCase().includes(fDataFat);
             const matchValor = !fValor || String(tr.dataset.valor).toLowerCase().includes(fValor);
+            const matchPeso = !fPeso || String(tr.dataset.peso).toLowerCase().includes(fPeso);
             const matchResultado = !fResultado || String(tr.dataset.resultado).toLowerCase() === fResultado;
             const matchStatus = !fStatus || String(tr.dataset.status).toLowerCase().includes(fStatus);
             const matchDetalhes = !fDetalhes || String(tr.dataset.detalhes).toLowerCase().includes(fDetalhes);
 
-            if (matchPedido && matchCliente && matchDataPedido && matchDataFat && matchValor && matchResultado && matchStatus && matchDetalhes) {
+            if (matchPedido && matchCliente && matchDataPedido && matchDataFat && matchValor && matchPeso && matchResultado && matchStatus && matchDetalhes) {
                 tr.style.display = "";
             } else {
                 tr.style.display = "none";
@@ -344,7 +351,7 @@ document.addEventListener("DOMContentLoaded", () => {
     }
 
     // Vincular os inputs de filtros aos event listeners
-    ["filterPedido", "filterCliente", "filterDataPedido", "filterDataFat", "filterValor", "filterResultado", "filterStatus", "filterDetalhes"].forEach(id => {
+    ["filterPedido", "filterCliente", "filterDataPedido", "filterDataFat", "filterValor", "filterPeso", "filterResultado", "filterStatus", "filterDetalhes"].forEach(id => {
         const el = document.getElementById(id);
         if (el) {
             el.addEventListener("input", applyFilters);

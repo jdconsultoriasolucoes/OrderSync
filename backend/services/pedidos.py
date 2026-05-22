@@ -82,6 +82,7 @@ SELECT
   a.pedido_supra,
   a.nota_fiscal,
   a.created_at,
+  a.calcula_st,
   cg.numero_carga AS numero_carga
 FROM public.tb_pedidos a
 LEFT JOIN public.tb_tabela_preco b ON a.tabela_preco_id = b.id_tabela

@@ -41,8 +41,8 @@ class PedidoModel(Base):
     cancelado_em = Column(DateTime)
     cancelado_motivo = Column(String)
 
-    # Flags
     usar_valor_com_frete = Column(Boolean)
+    calcula_st = Column(Boolean, nullable=False, default=False)
     link_enviado_em = Column(DateTime)
     
     # Fornecedor

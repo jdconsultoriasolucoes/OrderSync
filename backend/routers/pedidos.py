@@ -123,6 +123,7 @@ class PedidoResumo(BaseModel):
     validade_ate: Optional[str] = None
     validade_dias: Optional[int] = None
     usar_valor_com_frete: bool
+    calcula_st: Optional[bool] = False
     frete_kg: Optional[float] = 0.0
     peso_total_kg: float
     frete_total: float
@@ -190,6 +191,7 @@ class PedidoUpdateRequest(BaseModel):
     contato_nome: Optional[str] = None
     contato_email: Optional[str] = None
     contato_fone: Optional[str] = None
+    calcula_st: Optional[bool] = False
 
 # ---------- Routes ----------
 def to_iso_or_none(v):
@@ -446,6 +448,8 @@ def atualizar_pedido(
 
     # 4. Atualizar o cabeçalho do pedido
     pedido.usar_valor_com_frete = body.usar_valor_com_frete
+    if body.calcula_st is not None:
+        pedido.calcula_st = body.calcula_st
     pedido.observacoes = body.observacoes
     pedido.frete_kg = round(body.frete_kg or 0, 4)
     if body.pedido_supra is not None:

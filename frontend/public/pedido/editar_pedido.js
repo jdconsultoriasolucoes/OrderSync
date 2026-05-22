@@ -3247,7 +3247,6 @@ async function salvarPedido(payload) {
   const url = `${API_BASE}/api/pedidos/${currentTabelaId}`;
   const method = "PUT";
   
-  // Convert payload to PedidoUpdateRequest
   let pedidoPayload = {
       usar_valor_com_frete: payload.usar_valor_com_frete ?? true,
       observacoes: payload.observacoes || '',
@@ -3257,6 +3256,7 @@ async function salvarPedido(payload) {
       contato_nome: payload.contato_nome || null,
       contato_email: payload.contato_email || null,
       contato_fone: payload.contato_fone || null,
+      calcula_st: payload.calcula_st ?? false,
       produtos: (payload.produtos || []).map(p => {
           const unitPrice = p.preco_unit || p.valor_produto || p.valor || 0;
           const freightPrice = p._freteValor || p.valor_frete_unitario || 0;
