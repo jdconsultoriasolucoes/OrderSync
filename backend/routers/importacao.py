@@ -6,6 +6,7 @@ import pandas as pd
 import io
 import unicodedata
 import logging
+from datetime import datetime
 
 router = APIRouter(prefix="/api/importacao", tags=["Importacao"])
 logger = logging.getLogger("ordersync.importacao")
@@ -182,13 +183,13 @@ async def importar_pedidos_excel(file: UploadFile = File(...), db: Session = Dep
             if danfe.lower() == 'nan': danfe = ""
             
             emissao_val = row.get(col_emissao) if col_emissao else None
-            emissao_dt = pd.to_datetime(emissao_val, errors='coerce') if pd.notna(emissao_val) else None
+            emissao_dt = pd.to_datetime(emissao_val, errors='coerce', dayfirst=True) if pd.notna(emissao_val) else None
             
             data_pedido_val = row.get(col_data_pedido) if col_data_pedido else None
-            data_pedido_dt = pd.to_datetime(data_pedido_val, errors='coerce') if pd.notna(data_pedido_val) else None
+            data_pedido_dt = pd.to_datetime(data_pedido_val, errors='coerce', dayfirst=True) if pd.notna(data_pedido_val) else None
             
             data_danfe_val = row.get(col_data_danfe) if col_data_danfe else None
-            data_danfe_dt = pd.to_datetime(data_danfe_val, errors='coerce') if pd.notna(data_danfe_val) else None
+            data_danfe_dt = pd.to_datetime(data_danfe_val, errors='coerce', dayfirst=True) if pd.notna(data_danfe_val) else None
             
             dt_ref = emissao_dt or data_pedido_dt or data_danfe_dt or datetime.now()
             pedido_supra = normalizar_pedido_supra(pedido_supra_raw, dt_ref)

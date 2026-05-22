@@ -25,13 +25,64 @@ document.addEventListener("DOMContentLoaded", () => {
         return parseFloat(value).toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
     }
 
-    // Obter data atual no formato DD/MM/YYYY
-    function obterDataAtualFmt() {
+    // Obter data atual no formato YYYY-MM-DD para o input type="date"
+    function obterDataAtualIso() {
         const hoje = new Date();
         const dia = String(hoje.getDate()).padStart(2, '0');
         const mes = String(hoje.getMonth() + 1).padStart(2, '0');
         const ano = hoje.getFullYear();
-        return `${dia}/${mes}/${ano}`;
+        return `${ano}-${mes}-${dia}`;
+    }
+
+    // Converte data DD/MM/YYYY para YYYY-MM-DD
+    function converterDataBrParaIso(dataBrStr) {
+        if (!dataBrStr || dataBrStr === "-") return "";
+        const parts = dataBrStr.split('/');
+        if (parts.length === 3) {
+            const dia = parts[0].padStart(2, '0');
+            const mes = parts[1].padStart(2, '0');
+            const ano = parts[2];
+            return `${ano}-${mes}-${dia}`;
+        }
+        return "";
+    }
+
+    // Converte data YYYY-MM-DD para DD/MM/YYYY
+    function converterDataIsoParaBr(dataIsoStr) {
+        if (!dataIsoStr) return "";
+        const parts = dataIsoStr.split('-');
+        if (parts.length === 3) {
+            const ano = parts[0];
+            const mes = parts[1];
+            const dia = parts[2];
+            return `${dia}/${mes}/${ano}`;
+        }
+        return "";
+    }
+
+    // Encontra a data de faturamento mais recente/atual no formato DD/MM/YYYY
+    function obterDataMaisRecenteBr(itens) {
+        if (!itens || itens.length === 0) return "";
+        let maxDate = null;
+        let maxDateStr = "";
+        
+        itens.forEach(item => {
+            const fatDateStr = item.data_faturamento;
+            if (fatDateStr && fatDateStr !== "-") {
+                const parts = fatDateStr.split('/');
+                if (parts.length === 3) {
+                    const day = parseInt(parts[0], 10);
+                    const month = parseInt(parts[1], 10) - 1; // 0-indexed
+                    const year = parseInt(parts[2], 10);
+                    const dateObj = new Date(year, month, day);
+                    if (!maxDate || dateObj > maxDate) {
+                        maxDate = dateObj;
+                        maxDateStr = fatDateStr;
+                    }
+                }
+            }
+        });
+        return maxDateStr;
     }
 
     // Drag and Drop events
@@ -112,12 +163,16 @@ document.addEventListener("DOMContentLoaded", () => {
     function renderResults(data) {
         const { resumo, itens } = data;
         
-        // Limpar os campos de filtros ao renderizar uma nova carga (e definir data atual como default no de faturamento)
+        // Obter o dia mais recente presente no arquivo carregado (ou data de hoje como fallback)
+        const maisRecenteBr = obterDataMaisRecenteBr(itens);
+        const maisRecenteIso = maisRecenteBr ? converterDataBrParaIso(maisRecenteBr) : obterDataAtualIso();
+
+        // Limpar os campos de filtros ao renderizar uma nova carga (e definir a data mais recente do arquivo no faturamento)
         ["filterPedido", "filterCliente", "filterDataPedido", "filterDataFat", "filterValor", "filterResultado", "filterStatus", "filterDetalhes"].forEach(id => {
             const el = document.getElementById(id);
             if (el) {
                 if (id === "filterDataFat") {
-                    el.value = obterDataAtualFmt();
+                    el.value = maisRecenteIso;
                 } else {
                     el.value = "";
                 }
@@ -254,8 +309,13 @@ document.addEventListener("DOMContentLoaded", () => {
     function applyFilters() {
         const fPedido = document.getElementById("filterPedido").value.toLowerCase().trim();
         const fCliente = document.getElementById("filterCliente").value.toLowerCase().trim();
-        const fDataPedido = document.getElementById("filterDataPedido").value.toLowerCase().trim();
-        const fDataFat = document.getElementById("filterDataFat").value.toLowerCase().trim();
+        
+        // Converter data do calendário (ISO YYYY-MM-DD) para padrão brasileiro para filtrar na tabela
+        const fDataPedidoRaw = document.getElementById("filterDataPedido").value;
+        const fDataFatRaw = document.getElementById("filterDataFat").value;
+        const fDataPedido = converterDataIsoParaBr(fDataPedidoRaw).toLowerCase();
+        const fDataFat = converterDataIsoParaBr(fDataFatRaw).toLowerCase();
+        
         const fValor = document.getElementById("filterValor").value.toLowerCase().trim();
         const fResultado = document.getElementById("filterResultado").value.toLowerCase().trim();
         const fStatus = document.getElementById("filterStatus").value.toLowerCase().trim();
@@ -288,7 +348,7 @@ document.addEventListener("DOMContentLoaded", () => {
         const el = document.getElementById(id);
         if (el) {
             el.addEventListener("input", applyFilters);
-            if (el.tagName === "SELECT") {
+            if (el.tagName === "SELECT" || el.type === "date") {
                 el.addEventListener("change", applyFilters);
             }
         }
@@ -297,7 +357,7 @@ document.addEventListener("DOMContentLoaded", () => {
     // Definir data de faturamento padrão no carregamento inicial
     const inputFat = document.getElementById("filterDataFat");
     if (inputFat) {
-        inputFat.value = obterDataAtualFmt();
+        inputFat.value = obterDataAtualIso();
     }
 
     // Carregar dados salvos do localStorage se existirem
