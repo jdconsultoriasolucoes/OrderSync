@@ -25,6 +25,15 @@ document.addEventListener("DOMContentLoaded", () => {
         return parseFloat(value).toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
     }
 
+    // Obter data atual no formato DD/MM/YYYY
+    function obterDataAtualFmt() {
+        const hoje = new Date();
+        const dia = String(hoje.getDate()).padStart(2, '0');
+        const mes = String(hoje.getMonth() + 1).padStart(2, '0');
+        const ano = hoje.getFullYear();
+        return `${dia}/${mes}/${ano}`;
+    }
+
     // Drag and Drop events
     uploadArea.addEventListener("dragover", (e) => {
         e.preventDefault();
@@ -103,10 +112,16 @@ document.addEventListener("DOMContentLoaded", () => {
     function renderResults(data) {
         const { resumo, itens } = data;
         
-        // Limpar os campos de filtros ao renderizar uma nova carga
+        // Limpar os campos de filtros ao renderizar uma nova carga (e definir data atual como default no de faturamento)
         ["filterPedido", "filterCliente", "filterDataPedido", "filterDataFat", "filterValor", "filterResultado", "filterStatus", "filterDetalhes"].forEach(id => {
             const el = document.getElementById(id);
-            if (el) el.value = "";
+            if (el) {
+                if (id === "filterDataFat") {
+                    el.value = obterDataAtualFmt();
+                } else {
+                    el.value = "";
+                }
+            }
         });
         
         // Exibir/Ocultar Banner de Aviso de Duplicidade Geral
@@ -230,6 +245,9 @@ document.addEventListener("DOMContentLoaded", () => {
         // Show Results section with animation
         resultsSection.style.display = "flex";
         resultsSection.style.animation = "fadeIn 0.5s ease-out forwards";
+
+        // Aplicar filtros iniciais (como a data de faturamento padrão)
+        applyFilters();
     }
 
     // Lógica client-side para filtragem dinâmica instantânea
@@ -275,6 +293,12 @@ document.addEventListener("DOMContentLoaded", () => {
             }
         }
     });
+
+    // Definir data de faturamento padrão no carregamento inicial
+    const inputFat = document.getElementById("filterDataFat");
+    if (inputFat) {
+        inputFat.value = obterDataAtualFmt();
+    }
 
     // Carregar dados salvos do localStorage se existirem
     const savedData = localStorage.getItem("lastImportData");
