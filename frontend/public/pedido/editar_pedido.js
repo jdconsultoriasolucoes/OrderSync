@@ -3272,7 +3272,7 @@ async function salvarPedido(payload) {
               preco_unit: unitPrice,
               preco_unit_com_frete: unitWithFreight,
               valor_frete_unitario: freightPrice,
-              peso_kg: p.peso_bruto || p.peso_liquido || p.peso_kg || 0,
+              peso_kg: p.peso_bruto || p.peso_liquido || p.peso_kg || p.peso_liquido_unit || 0,
               manual_freight: !!p.manual_freight,
               frete_base_ton: p.frete_base_ton || 0,
               markup: p.markup || 0,

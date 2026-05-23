@@ -229,6 +229,23 @@ async def importar_pedidos_excel(file: UploadFile = File(...), db: Session = Dep
                 total_db = float(total_db) if total_db is not None else 0.0
                 peso_db = float(peso_db) if peso_db is not None else 0.0
                 
+                # Auto-cura: Se o peso no cabeçalho do banco for 0, mas os itens/cadastro de produtos tiverem peso, recalculamos
+                if peso_db <= 0.001:
+                    peso_calculado = db.execute(text("""
+                        SELECT SUM(c.quantidade * COALESCE(NULLIF(c.peso_kg, 0), prod.peso, 0))
+                        FROM public.tb_pedidos_itens c
+                        LEFT JOIN (
+                          SELECT codigo_supra, MAX(peso) as peso
+                          FROM public.t_cadastro_produto_v2
+                          GROUP BY codigo_supra
+                        ) prod ON prod.codigo_supra = c.codigo
+                        WHERE c.id_pedido = :id_pedido AND c.quantidade > 0
+                    """), {"id_pedido": id_pedido}).scalar()
+                    
+                    if peso_calculado and peso_calculado > 0:
+                        peso_db = float(peso_calculado)
+                        db.execute(text("UPDATE public.tb_pedidos SET peso_total_kg = :peso WHERE id_pedido = :id_pedido"), {"peso": peso_db, "id_pedido": id_pedido})
+                
                 # Regras de Status Dinâmicas (Calculadas primeiro para verificar se houve alteração)
                 if normalize_text(status_excel) == "pedido nao completo":
                     status_novo_pedido = 'PEDIDO_NAO_COMPLETO'
