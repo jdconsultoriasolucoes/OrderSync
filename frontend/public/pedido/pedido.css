@@ -150,7 +150,7 @@ header {
 .orc-table {
   width: 100%;
   border-collapse: collapse;
-  min-width: 1000px;
+  min-width: 1100px;
 }
 
 .orc-table thead {

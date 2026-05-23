@@ -55,7 +55,7 @@
   <div class="os-sidebar-overlay" id="overlay"></div>
 
   <!-- ========== MAIN ========== -->
-  <div class="os-main" style="padding-top: var(--os-header-height); margin-left: 250px;">
+  <div class="os-main" style="padding-top: var(--os-header-height); margin-left: 0; max-width: 100%; width: 100%;">
     <div class="import-container">
         
       <div style="display: flex; justify-content: space-between; align-items: flex-start; flex-wrap: wrap;">
@@ -64,6 +64,7 @@
             <p style="color: var(--os-text-secondary); margin-top: 0.5rem;">Carregue sua planilha (.xlsm) com as abas "Banco_Dados" e "Danfes" para atualizar os status e conciliar divergências de valores e pesos.</p>
           </div>
           <div style="display: flex; gap: 10px;">
+            <button id="btnExportValidation" class="os-btn os-btn-secondary" style="display: none; border-color: var(--os-border); color: var(--os-text);">📥 Exportar Relatório</button>
             <button id="btnClearCache" class="os-btn os-btn-secondary" style="display: none; border-color: var(--os-border); color: var(--os-text);">🧹 Limpar Resultados</button>
             <a href="pedido.html" class="os-btn os-btn-secondary" style="text-decoration: none;">&larr; Voltar para Consulta</a>
           </div>

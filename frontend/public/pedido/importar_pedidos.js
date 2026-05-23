@@ -204,6 +204,10 @@ document.addEventListener("DOMContentLoaded", () => {
         if (btnClear) {
             btnClear.style.display = "inline-block";
         }
+        const btnExportVal = document.getElementById("btnExportValidation");
+        if (btnExportVal) {
+            btnExportVal.style.display = "inline-block";
+        }
 
         // Ordenação inteligente de status (Erros e Ajustados primeiro)
         function getStatusPriority(status) {
@@ -388,8 +392,56 @@ document.addEventListener("DOMContentLoaded", () => {
                 resultsBody.innerHTML = "";
                 resultsSection.style.display = "none";
                 btnClearCache.style.display = "none";
+                const btnExportVal = document.getElementById("btnExportValidation");
+                if (btnExportVal) btnExportVal.style.display = "none";
                 if (duplicateAlert) duplicateAlert.style.display = "none";
             }
         });
+    }
+
+    // Exportação do Relatório de Validação para CSV
+    function exportValidationCSV() {
+        const rows = resultsBody.querySelectorAll("tr");
+        if (!rows.length || (rows.length === 1 && rows[0].querySelector("td[colspan]"))) {
+            alert("Não há dados para exportar.");
+            return;
+        }
+        
+        let csv = "Nº Pedido;Cód. Cliente;Data Pedido;Data Faturamento;Valor Planilha;Peso (Planilha / Sistema);Resultado;Status Atualizado (Banco);Detalhes & Divergências\n";
+        rows.forEach(tr => {
+            if (tr.querySelector("td[colspan]")) return;
+            // Se a linha estiver oculta por algum filtro ativo, não exporta
+            if (tr.style.display === "none") return;
+
+            const cells = tr.querySelectorAll("td");
+            if (cells.length < 9) return;
+            
+            const ped = cells[0].innerText.trim().replace(/;/g, ",");
+            const cli = cells[1].innerText.trim().replace(/;/g, ",");
+            const dtPed = cells[2].innerText.trim().replace(/;/g, ",");
+            const dtFat = cells[3].innerText.trim().replace(/;/g, ",");
+            const val = cells[4].innerText.trim().replace(/;/g, ",").replace("R$", "").trim();
+            const peso = cells[5].innerText.trim().replace(/;/g, ",");
+            const res = cells[6].innerText.trim().replace(/;/g, ",");
+            const status = cells[7].innerText.trim().replace(/;/g, ",");
+            
+            const detailsList = Array.from(cells[8].querySelectorAll("li")).map(li => li.innerText.trim());
+            const details = (detailsList.length ? detailsList.join(" | ") : cells[8].innerText.trim()).replace(/;/g, ",");
+            
+            csv += `"${ped}";"${cli}";"${dtPed}";"${dtFat}";"${val}";"${peso}";"${res}";"${status}";"${details}"\n`;
+        });
+        
+        const blob = new Blob(["\ufeff" + csv], { type: 'text/csv;charset=utf-8;' });
+        const link = document.createElement("a");
+        link.href = URL.createObjectURL(blob);
+        link.download = `relatorio_validacao_import_${new Date().toISOString().slice(0, 10)}.csv`;
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+    }
+
+    const btnExportVal = document.getElementById("btnExportValidation");
+    if (btnExportVal) {
+        btnExportVal.addEventListener("click", exportValidationCSV);
     }
 });

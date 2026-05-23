@@ -267,7 +267,7 @@ async function loadList(page = 1) {
   } catch (e) {
     console.error("Erro em loadList:", e);
     const tb = document.getElementById("tblBody");
-    if (tb) tb.innerHTML = `<tr><td colspan="10" class="error">Erro ao buscar dados: ${e.message}</td></tr>`;
+    if (tb) tb.innerHTML = `<tr><td colspan="12" class="error">Erro ao buscar dados: ${e.message}</td></tr>`;
   } finally {
     if (btn) {
       btn.disabled = false;
@@ -284,7 +284,7 @@ function renderTable(rows) {
 
   if (!rows || !rows.length) {
     const tr = document.createElement("tr");
-    tr.innerHTML = `<td colspan="11" class="muted">Nenhum pedido encontrado.</td>`;
+    tr.innerHTML = `<td colspan="12" class="muted">Nenhum pedido encontrado.</td>`;
     tb.appendChild(tr);
     return;
   }
@@ -309,6 +309,7 @@ function renderTable(rows) {
 
       tr.innerHTML = `
           <td>${fmtDateOnly(dataPedido)}</td>
+          <td>${fmtDateOnly(row.data_faturamento)}</td>
           <td><a href="#" class="lnk-resumo" data-id="${id}">${id}</a></td>
           <td>${row.pedido_supra || '---'}</td>
           <td>${cliente}</td>
@@ -381,6 +382,7 @@ function renderCards(rows) {
             <span><b>Fornec:</b> ${fornecedor}</span>
             <span><b>Ped. Supra:</b> ${row.pedido_supra || '-'}</span>
             <span><b>Nota Fiscal:</b> ${row.nota_fiscal || '-'}</span>
+            <span><b>Data Fat:</b> ${fmtDateOnly(row.data_faturamento)}</span>
           </div>
         </div>
         <div class="order-card-footer">
@@ -795,13 +797,14 @@ async function exportarCSV() {
     if (!data.length) { alert("Nadinha para exportar."); return; }
 
     const rows = groupByPedido(data);
-    let csv = "ID;Data;Cliente;Modalidade;Valor Total;Status;Tabela;Fornecedor;Link\n";
+    let csv = "ID;Data Pedido;Data Faturamento;Cliente;Modalidade;Valor Total;Status;Tabela;Fornecedor;Link\n";
     rows.forEach(row => {
       const id = row.numero_pedido ?? row.id_pedido ?? "";
       const dt = new Date(row.data_pedido || row.created_at).toLocaleDateString();
+      const dtFat = row.data_faturamento ? new Date(row.data_faturamento).toLocaleDateString() : "";
       const cli = (row.cliente_nome || "").replace(/;/g, ",");
       const val = (row.valor_total || 0).toString().replace(".", ",");
-      csv += `${id};${dt};${cli};${row.modalidade || ""};${val};${row.status_codigo || ""};${row.tabela_preco_nome || ""};${row.fornecedor || ""};${row.link_url || ""}\n`;
+      csv += `${id};${dt};${dtFat};${cli};${row.modalidade || ""};${val};${row.status_codigo || ""};${row.tabela_preco_nome || ""};${row.fornecedor || ""};${row.link_url || ""}\n`;
     });
 
     const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });

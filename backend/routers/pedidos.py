@@ -82,6 +82,7 @@ class PedidoListItem(BaseModel):
     rota_principal: Optional[str] = None
     pedido_supra: Optional[str] = None
     nota_fiscal: Optional[str] = None
+    data_faturamento: Optional[datetime] = None
 
 class ListagemResponse(BaseModel):
     data: List[PedidoListItem]
@@ -338,7 +339,8 @@ def listar_pedidos(
           c.entrega_municipio                       AS municipio,
           c.entrega_rota_principal                 AS rota_principal,
           a.pedido_supra,
-          a.nota_fiscal
+          a.nota_fiscal,
+          a.data_faturamento
         FROM public.tb_pedidos a
         LEFT JOIN public.t_cadastro_cliente_v2 c ON c.cadastro_codigo_da_empresa::text = a.codigo_cliente
         WHERE {where_clause}
@@ -378,7 +380,8 @@ def listar_pedidos(
             municipio          = r.get("municipio"),
             rota_principal     = r.get("rota_principal"),
             pedido_supra       = r.get("pedido_supra"),
-            nota_fiscal        = r.get("nota_fiscal")
+            nota_fiscal        = r.get("nota_fiscal"),
+            data_faturamento   = r.get("data_faturamento")
         )
         for r in rows_raw
     ]
@@ -639,7 +642,27 @@ def mudar_status(id_pedido: int, body: StatusChangeBody, db: Session = Depends(g
                 detail="O código da empresa não está preenchido. Por favor, complete o cadastro antes de faturar."
             )
 
-    upd = db.execute(STATUS_UPDATE_SQL, {
+    # Determinar atualizações adicionais de data dependendo do status manual
+    extra_set = ""
+    para_lower = str(body.para or "").lower().strip()
+    if para_lower in ("faturado supra", "faturado dispet"):
+        extra_set = ", data_faturamento = now()"
+    elif para_lower == "cancelado":
+        extra_set = ", cancelado_em = now()"
+    elif para_lower in ("pedido", "confirmado"):
+        extra_set = ", confirmado_em = now()"
+
+    dynamic_status_update = text(f"""
+        UPDATE public.tb_pedidos
+        SET status = :para_status,
+            atualizado_em = now(),
+            atualizado_por = :user_id
+            {extra_set}
+        WHERE id_pedido = :id_pedido
+        RETURNING id_pedido
+    """)
+
+    upd = db.execute(dynamic_status_update, {
         "para_status": body.para, 
         "id_pedido": id_pedido,
         "user_id": body.user_id
