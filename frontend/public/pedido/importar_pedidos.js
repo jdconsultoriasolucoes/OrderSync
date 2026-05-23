@@ -167,15 +167,11 @@ document.addEventListener("DOMContentLoaded", () => {
         const maisRecenteBr = obterDataMaisRecenteBr(itens);
         const maisRecenteIso = maisRecenteBr ? converterDataBrParaIso(maisRecenteBr) : obterDataAtualIso();
 
-        // Limpar os campos de filtros ao renderizar uma nova carga (e definir a data mais recente do arquivo no faturamento)
+        // Limpar todos os campos de filtros ao renderizar uma nova carga para exibir todos os resultados por padrão
         ["filterPedido", "filterCliente", "filterDataPedido", "filterDataFat", "filterValor", "filterPeso", "filterResultado", "filterStatus", "filterDetalhes"].forEach(id => {
             const el = document.getElementById(id);
             if (el) {
-                if (id === "filterDataFat") {
-                    el.value = maisRecenteIso;
-                } else {
-                    el.value = "";
-                }
+                el.value = "";
             }
         });
         
@@ -365,10 +361,10 @@ document.addEventListener("DOMContentLoaded", () => {
         }
     });
 
-    // Definir data de faturamento padrão no carregamento inicial
+    // No carregamento inicial, os filtros de data começam vazios para listar todos os resultados por padrão
     const inputFat = document.getElementById("filterDataFat");
     if (inputFat) {
-        inputFat.value = obterDataAtualIso();
+        inputFat.value = "";
     }
 
     // Carregar dados salvos do localStorage se existirem

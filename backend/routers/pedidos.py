@@ -323,7 +323,7 @@ def listar_pedidos(
     listagem_sql = text(f"""
         SELECT
           a.id_pedido                               AS numero_pedido,
-          COALESCE(a.confirmado_em, a.created_at)   AS data_pedido,
+          a.created_at                              AS data_pedido,
           COALESCE(c.cadastro_nome_cliente, a.cliente) AS cliente_nome,
           a.codigo_cliente                          AS cliente_codigo,
           CASE WHEN a.usar_valor_com_frete THEN 'ENTREGA' ELSE 'RETIRADA' END AS modalidade,
