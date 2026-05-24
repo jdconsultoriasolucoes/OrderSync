@@ -129,11 +129,12 @@
 .details-table th:nth-child(2), .details-table td:nth-child(2) { width: 7%; min-width: 80px; }
 .details-table th:nth-child(3), .details-table td:nth-child(3) { width: 8%; min-width: 100px; }
 .details-table th:nth-child(4), .details-table td:nth-child(4) { width: 8%; min-width: 110px; }
-.details-table th:nth-child(5), .details-table td:nth-child(5) { width: 9%; min-width: 95px; }
+.details-table th:nth-child(5), .details-table td:nth-child(5) { width: 16%; min-width: 170px; }
 .details-table th:nth-child(6), .details-table td:nth-child(6) { width: 11%; min-width: 115px; }
 .details-table th:nth-child(7), .details-table td:nth-child(7) { width: 10%; min-width: 110px; }
 .details-table th:nth-child(8), .details-table td:nth-child(8) { width: 12%; min-width: 130px; }
-.details-table th:nth-child(9), .details-table td:nth-child(9) { width: 28%; min-width: 320px; }
+.details-table th:nth-child(9), .details-table td:nth-child(9) { width: 13%; min-width: 150px; }
+.details-table th:nth-child(10), .details-table td:nth-child(10) { width: 8%; min-width: 110px; }
 
 .details-table tr:last-child td {
   border-bottom: none;

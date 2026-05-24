@@ -18,8 +18,11 @@ router = APIRouter(prefix="/api/pedidos", tags=["Pedidos"])
 def clean_client_name(name: Optional[str]) -> str:
     if not name:
         return "---"
-    cleaned = re.sub(r'^[\d\.\/\-]+\s*-\s*', '', name)
-    return cleaned
+    # Remove CPF ou CNPJ (com ou sem formatação) do início da string
+    cleaned = re.sub(r'^\d{3}\.?\d{3}\.?\d{3}\-?\d{2}\s*(?:-\s*)?', '', name)
+    cleaned = re.sub(r'^\d{2}\.?\d{3}\.?\d{3}/?\d{4}\-?\d{2}\s*(?:-\s*)?', '', cleaned)
+    cleaned = re.sub(r'^[\d\.\/\-]+\s*-\s*', '', cleaned)
+    return cleaned.strip()
 
 
 def get_db():
