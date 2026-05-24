@@ -264,19 +264,19 @@ def gerar_pdf_romaneio(db, carga_id: int) -> bytes:
     c.drawRightString(width - 0.7*cm, y, f"DATA CARREGAMENTO: {data_str}")
     y -= 0.5*cm
 
-    # Totais: calculados aqui para exibir abaixo do veículo
+    # Totais: calculados aqui
     total_liq_val = sum(p.peso_total_kg or 0 for p in pedidos)
     total_bruto_val = sum(p.peso_bruto_total or 0 for p in pedidos)
 
+    # Bloco de transporte em duas linhas para evitar sobreposições horizontais
     c.setFont("Helvetica-Bold", 10)
     c.drawString(0.7*cm, y, f"TRANSPORTADORA: {carga.get('transportadora') or 'Próprio'}")
-    c.drawString(8.0*cm, y, f"MOTORISTA: {carga.get('motorista') or '-'}")
-    c.drawRightString(width - 0.7*cm, y, f"VEÍCULO: {carga.get('modelo') or '-'} / PLACA: {carga.get('veiculo_placa') or '-'}")
-    y -= 0.8*cm
-    # Totais abaixo da linha do veículo, canto direito
-    c.setFont("Helvetica-Bold", 9)
     c.drawRightString(width - 0.7*cm, y, f"TOTAL P. LÍQ: {_br_number(total_liq_val, 0)} kg   |   TOTAL P. BRUTO: {_br_number(total_bruto_val, 0)} kg")
-    y -= 0.3*cm
+    y -= 0.55*cm
+
+    c.drawString(0.7*cm, y, f"MOTORISTA: {carga.get('motorista') or '-'}")
+    c.drawRightString(width - 0.7*cm, y, f"VEÍCULO: {carga.get('modelo') or '-'} / PLACA: {carga.get('veiculo_placa') or '-'}")
+    y -= 0.7*cm
 
     # Table columns: CÓDIGO | CLIENTE | N. FANTASIA | MUNICÍPIO | ORDEM | PESO LÍQ. ACUM | OBSERVAÇÕES
     styles = getSampleStyleSheet()
@@ -483,6 +483,7 @@ def gerar_pdf_relatorio_completo(db, carga_id: int) -> bytes:
             cp.ordem_carregamento,
             p.id_pedido,
             p.codigo_cliente,
+            p.pedido_supra,
             COALESCE(c.cadastro_nome_cliente, p.cliente) AS cliente,
             c.cadastro_nome_fantasia as nome_fantasia,
             c.entrega_municipio as cidade,
@@ -577,18 +578,14 @@ def _desenhar_romaneio_logic(c, carga, pedidos, width, height):
     t_liq = sum(getattr(p, 'peso_total_kg', 0.0) or 0.0 for p in pedidos)
     t_bru = sum(getattr(p, 'peso_bruto_total', 0.0) or 0.0 for p in pedidos)
 
-    c.setFont("Helvetica-Bold", 9)
-    c.drawRightString(width - 0.7*cm, y, f"TOTAL P. LÍQ: {_br_number(t_liq, 0)} kg   |   TOTAL P. BRUTO: {_br_number(t_bru, 0)} kg")
-    y -= 0.6*cm
-    
+    # Bloco de transporte em duas linhas para evitar sobreposições horizontais
+    c.setFont("Helvetica-Bold", 10)
     c.drawString(0.7*cm, y, f"TRANSPORTADORA: {carga.get('transportadora') or 'Próprio'}")
-    c.drawString(8.0*cm, y, f"MOTORISTA: {carga.get('motorista') or '-'}")
-    c.drawRightString(width - 0.7*cm, y, f"VEÍCULO/PLACA: {carga.get('modelo') or '-'} / {carga.get('veiculo_placa') or '-'}")
+    c.drawRightString(width - 0.7*cm, y, f"TOTAL P. LÍQ: {_br_number(t_liq, 0)} kg   |   TOTAL P. BRUTO: {_br_number(t_bru, 0)} kg")
     y -= 0.55*cm
 
-    # Totais abaixo da linha do veículo — canto direito
-    c.setFont("Helvetica-Bold", 9)
-    c.drawRightString(width - 0.7*cm, y, f"TOTAL P. LÍQ: {_br_number(t_liq, 0)} kg   |   TOTAL P. BRUTO: {_br_number(t_bru, 0)} kg")
+    c.drawString(0.7*cm, y, f"MOTORISTA: {carga.get('motorista') or '-'}")
+    c.drawRightString(width - 0.7*cm, y, f"VEÍCULO/PLACA: {carga.get('modelo') or '-'} / {carga.get('veiculo_placa') or '-'}")
     y -= 0.8*cm
 
     styles = getSampleStyleSheet()
@@ -597,16 +594,29 @@ def _desenhar_romaneio_logic(c, carga, pedidos, width, height):
     style_wrapped.leading = 10
     style_wrapped.textColor = colors.black
 
-    data = [["CÓDIGO", "CLIENTE", "N. FANTASIA", "MUNICÍPIO", "ORDEM CARREG.", "PESO LÍQ. ACUM", "OBSERVAÇÃO PEDIDO"]]
+    data = [["CÓDIGO / Supra", "CLIENTE", "N. FANTASIA", "MUNICÍPIO", "ORDEM CARREG.", "PESO LÍQ. ACUM", "OBSERVAÇÃO PEDIDO"]]
     for p in pedidos:
         cliente_p = Paragraph(str(p.cliente or ""), style_wrapped)
         fantasia_p = Paragraph(str(p.nome_fantasia or ""), style_wrapped)
         obs_p = Paragraph(str(p.obs_carga or ""), style_wrapped)
 
         peso_total_kg = getattr(p, 'peso_total_kg', 0.0) or 0.0
+        
+        # Mapeamento do Código / Supra igual ao romaneio individual
+        cod = str(p.codigo_cliente or "").strip()
+        if not cod or cod.lower() == "nao cadastrado":
+            cod = "---"
+            
+        supra = str(p.pedido_supra or "").strip()
+        if supra:
+            cod_text = f"{cod}<br/><font color='#555555' size='7'>S: {supra}</font>"
+        else:
+            cod_text = cod
+            
+        codigo_p = Paragraph(cod_text, style_wrapped)
 
         data.append([
-            str(p.codigo_cliente or p.id_pedido),
+            codigo_p,
             cliente_p,
             fantasia_p,
             str(p.cidade or "")[:20],

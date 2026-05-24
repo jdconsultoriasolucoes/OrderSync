@@ -168,7 +168,7 @@ document.addEventListener("DOMContentLoaded", () => {
         const maisRecenteIso = maisRecenteBr ? converterDataBrParaIso(maisRecenteBr) : obterDataAtualIso();
 
         // Limpar todos os campos de filtros ao renderizar uma nova carga para exibir todos os resultados por padrão
-        ["filterPedido", "filterCliente", "filterDataPedido", "filterDataFat", "filterValor", "filterValorDif", "filterPeso", "filterPesoDif", "filterResultado", "filterStatus", "filterDetalhes"].forEach(id => {
+        ["filterPedido", "filterCliente", "filterDataPedido", "filterDataFat", "filterValor", "filterValorDif", "filterPeso", "filterPesoDif", "filterResultado", "filterStatus"].forEach(id => {
             const el = document.getElementById(id);
             if (el) {
                 el.value = "";
@@ -221,7 +221,7 @@ document.addEventListener("DOMContentLoaded", () => {
         // Render Table Rows
         if (!itens || itens.length === 0) {
             const tr = document.createElement("tr");
-            tr.innerHTML = `<td colspan="11" style="text-align: center; color: var(--os-text-secondary);">Nenhum pedido processado.</td>`;
+            tr.innerHTML = `<td colspan="10" style="text-align: center; color: var(--os-text-secondary);">Nenhum pedido processado.</td>`;
             resultsBody.appendChild(tr);
         } else {
             itens.forEach(item => {
@@ -309,7 +309,6 @@ document.addEventListener("DOMContentLoaded", () => {
                     <td style="font-weight: 600; color: ${pesoDif === 0 ? 'var(--os-text)' : (pesoDif > 0 ? 'var(--os-warning)' : 'var(--os-error)')};">${pesoDifStr}</td>
                     <td><span class="${badgeClass}">${resultText}</span></td>
                     <td>${badgeNovoStatus}</td>
-                    <td>${detalhesHtml}</td>
                 `;
 
                 resultsBody.appendChild(tr);
@@ -341,7 +340,6 @@ document.addEventListener("DOMContentLoaded", () => {
         const fPesoDif = document.getElementById("filterPesoDif").value.toLowerCase().trim();
         const fResultado = document.getElementById("filterResultado").value.toLowerCase().trim();
         const fStatus = document.getElementById("filterStatus").value.toLowerCase().trim();
-        const fDetalhes = document.getElementById("filterDetalhes").value.toLowerCase().trim();
 
         const rows = resultsBody.querySelectorAll("tr");
         rows.forEach(tr => {
@@ -358,9 +356,8 @@ document.addEventListener("DOMContentLoaded", () => {
             const matchPesoDif = !fPesoDif || String(tr.dataset.peso_dif).toLowerCase().includes(fPesoDif);
             const matchResultado = !fResultado || String(tr.dataset.resultado).toLowerCase() === fResultado;
             const matchStatus = !fStatus || String(tr.dataset.status).toLowerCase().includes(fStatus);
-            const matchDetalhes = !fDetalhes || String(tr.dataset.detalhes).toLowerCase().includes(fDetalhes);
 
-            if (matchPedido && matchCliente && matchDataPedido && matchDataFat && matchPreco && matchPrecoDif && matchPeso && matchPesoDif && matchResultado && matchStatus && matchDetalhes) {
+            if (matchPedido && matchCliente && matchDataPedido && matchDataFat && matchPreco && matchPrecoDif && matchPeso && matchPesoDif && matchResultado && matchStatus) {
                 tr.style.display = "";
             } else {
                 tr.style.display = "none";
@@ -369,7 +366,7 @@ document.addEventListener("DOMContentLoaded", () => {
     }
 
     // Vincular os inputs de filtros aos event listeners
-    ["filterPedido", "filterCliente", "filterDataPedido", "filterDataFat", "filterValor", "filterValorDif", "filterPeso", "filterPesoDif", "filterResultado", "filterStatus", "filterDetalhes"].forEach(id => {
+    ["filterPedido", "filterCliente", "filterDataPedido", "filterDataFat", "filterValor", "filterValorDif", "filterPeso", "filterPesoDif", "filterResultado", "filterStatus"].forEach(id => {
         const el = document.getElementById(id);
         if (el) {
             el.addEventListener("input", applyFilters);
@@ -421,14 +418,14 @@ document.addEventListener("DOMContentLoaded", () => {
             return;
         }
         
-        let csv = "Nº Pedido;Cód. Cliente;Data Pedido;Data Faturamento;Preço (Planilha / Sistema);Preço Dif;Peso (Planilha / Sistema);Peso Dif;Resultado;Status Atualizado (Banco);Detalhes & Divergências\n";
+        let csv = "Nº Pedido;Cód. Cliente;Data Pedido;Data Faturamento;Preço (Planilha / Sistema);Preço Dif;Peso (Planilha / Sistema);Peso Dif;Resultado;Status Atualizado (Banco)\n";
         rows.forEach(tr => {
             if (tr.querySelector("td[colspan]")) return;
             // Se a linha estiver oculta por algum filtro ativo, não exporta
             if (tr.style.display === "none") return;
 
             const cells = tr.querySelectorAll("td");
-            if (cells.length < 11) return;
+            if (cells.length < 10) return;
             
             const ped = cells[0].innerText.trim().replace(/;/g, ",");
             const cli = cells[1].innerText.trim().replace(/;/g, ",");
@@ -441,10 +438,7 @@ document.addEventListener("DOMContentLoaded", () => {
             const res = cells[8].innerText.trim().replace(/;/g, ",");
             const status = cells[9].innerText.trim().replace(/;/g, ",");
             
-            const detailsList = Array.from(cells[10].querySelectorAll("li")).map(li => li.innerText.trim());
-            const details = (detailsList.length ? detailsList.join(" | ") : cells[10].innerText.trim()).replace(/;/g, ",");
-            
-            csv += `"${ped}";"${cli}";"${dtPed}";"${dtFat}";"${preco}";"${precoDif}";"${peso}";"${pesoDif}";"${res}";"${status}";"${details}"\n`;
+            csv += `"${ped}";"${cli}";"${dtPed}";"${dtFat}";"${preco}";"${precoDif}";"${peso}";"${pesoDif}";"${res}";"${status}"\n`;
         });
         
         const blob = new Blob(["\ufeff" + csv], { type: 'text/csv;charset=utf-8;' });
