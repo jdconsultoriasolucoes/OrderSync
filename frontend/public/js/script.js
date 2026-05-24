@@ -156,7 +156,9 @@ function obterDadosFormulario() {
     comissao_dispet: {
       insumos_ElaboracaoCadastro: document.getElementById("insumos_ElaboracaoCadastro")?.value || "",
       pet_ElaboracaoCadastro: document.getElementById("pet_ElaboracaoCadastro")?.value || "",
-      observacoes_ElaboracaoCadastro: document.getElementById("observacoes_ElaboracaoCadastro")?.value || ""
+      observacoes_ElaboracaoCadastro: document.getElementById("observacoes_ElaboracaoCadastro")?.value || "",
+      comissao_pet_dispet_flag: document.getElementById("comissao_pet_dispet_flag")?.checked ?? true,
+      comissao_insumos_dispet_flag: document.getElementById("comissao_insumos_dispet_flag")?.checked ?? true
     }
 }
 
@@ -323,6 +325,10 @@ function preencherFormularioCliente(cliente) {
   document.getElementById("insumos_ElaboracaoCadastro").value = com.insumos_ElaboracaoCadastro || "";
   document.getElementById("pet_ElaboracaoCadastro").value = com.pet_ElaboracaoCadastro || "";
   document.getElementById("observacoes_ElaboracaoCadastro").value = com.observacoes_ElaboracaoCadastro || "";
+  const chkPet = document.getElementById("comissao_pet_dispet_flag");
+  if (chkPet) chkPet.checked = com.comissao_pet_dispet_flag !== false;
+  const chkInsumos = document.getElementById("comissao_insumos_dispet_flag");
+  if (chkInsumos) chkInsumos.checked = com.comissao_insumos_dispet_flag !== false;
 
   // Auto-fill e Sincronização Forçada:
   // Garante que, ao abrir um cliente existente, ele sempre puxe os dados mais recentes de gerentes/supervisores.

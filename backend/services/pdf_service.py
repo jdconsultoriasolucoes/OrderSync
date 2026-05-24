@@ -127,13 +127,8 @@ def _desenhar_pdf(pedido: PedidoPdf, buffer: io.BytesIO, sem_validade: bool = Fa
         "DIGITAÇÃO DO ORÇAMENTO"
     )
     
-    c.setFont("Helvetica", 9)
-    ped_supra_val = pedido.pedido_supra or ""
-    c.drawString(
-        margin_x + 0.3 * cm,
-        faixa_y - faixa_h + 0.2 * cm,
-        f"Pedido Sistema: {pedido.id_pedido}   |   Ped. Supra: {ped_supra_val}"
-    )
+    # Removido Pedido Sistema e Ped. Supra do header conforme solicitado pelo usuário
+    pass
 
     # Data / Validade (Bloco direito do header)
     c.setFont("Helvetica", 10)
@@ -263,7 +258,9 @@ def _desenhar_pdf(pedido: PedidoPdf, buffer: io.BytesIO, sem_validade: bool = Fa
 
     frete_data = []
     if not sem_validade:
-        # Só mostra Frete Total no topo para Vendedor
+        # Só mostra Frete Total e Ped. Supra no topo para Vendedor
+        ped_supra_val = pedido.pedido_supra or ""
+        frete_data.append(["Ped. Supra:", ped_supra_val])
         frete_data.append(["Frete Total:", frete_str])
     else:
         # Cliente: Deixa em branco para manter alinhamento ou esconde
@@ -492,6 +489,11 @@ def _desenhar_pdf(pedido: PedidoPdf, buffer: io.BytesIO, sem_validade: bool = Fa
         data_fech.append(["Total em Peso Líquido:", _fmt_peso(total_peso_liq_raw)])
         
     data_fech.append(["Total em Peso Bruto:",   _fmt_peso(total_peso_bru_raw)])
+    
+    if not sem_validade:
+        ped_supra_val = pedido.pedido_supra or ""
+        data_fech.append(["Ped. Supra:", ped_supra_val])
+        
     data_fech.append(["Valor Frete:", "R$ " + _br_number(frete_total)])
     data_fech.append(["Total em Valor:", "R$ " + _br_number(total_valor)])
 

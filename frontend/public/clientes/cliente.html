@@ -215,7 +215,7 @@
           <button class="btn" id="btn-export-excel" onclick="exportarSupra('xlsx')" type="button"
             style="display: none; background-color: #27ae60; color: #fff;">Exportar Supra (Excel)</button>
           <button class="btn" id="btn-export-pdf" onclick="exportarSupra('pdf')" type="button"
-            style="display: none; background-color: #e74c3c; color: #fff;">Exportar Supra (PDF)</button>
+            style="display: none !important; background-color: #e74c3c; color: #fff;">Exportar Supra (PDF)</button>
         </div>
       </div>
 
@@ -757,10 +757,18 @@
               <input type="text" id="pre_posto_ElaboracaoCadastro" name="pre_posto_ElaboracaoCadastro" />
             </div>
             <div>
-              <label for="local_carregamento_ElaboracaoCadastro">Local de Carregamento:</label>
+              <label for="local_carregamento_ElaboracaoCadastro">Local de Carregamento "Filial":</label>
               <select id="local_carregamento_ElaboracaoCadastro" name="local_carregamento_ElaboracaoCadastro">
                 <option value="">Selecione</option>
               </select>
+            </div>
+            <div>
+              <label for="placa_veiculo_ElaboracaoCadastro">Placa do Veículo:</label>
+              <input type="text" id="placa_veiculo_ElaboracaoCadastro" name="placa_veiculo_ElaboracaoCadastro" placeholder="AAA-0000" />
+            </div>
+            <div>
+              <label for="proprietario_veiculo_ElaboracaoCadastro">Proprietário do Veículo:</label>
+              <input type="text" id="proprietario_veiculo_ElaboracaoCadastro" name="proprietario_veiculo_ElaboracaoCadastro" />
             </div>
           </div>
 
@@ -832,10 +840,22 @@
 
           <h2 class="subtitulo">Comissão Dispet</h2>
           <div class="form-grid-2col">
-            <div><label for="insumos_ElaboracaoCadastro">Insumos:</label><input type="text"
-                id="insumos_ElaboracaoCadastro" name="insumos_ElaboracaoCadastro" readonly /></div>
-            <div><label for="pet_ElaboracaoCadastro">Pet:</label><input type="text" id="pet_ElaboracaoCadastro"
-                name="pet_ElaboracaoCadastro" readonly /></div>
+            <div>
+              <label for="insumos_ElaboracaoCadastro">Insumos:</label>
+              <input type="text" id="insumos_ElaboracaoCadastro" name="insumos_ElaboracaoCadastro" readonly />
+              <div style="margin-top: 0.5rem; display: flex; align-items: center; gap: 0.5rem;">
+                <input type="checkbox" id="comissao_insumos_dispet_flag" name="comissao_insumos_dispet_flag" checked style="cursor: pointer; width: 16px; height: 16px; accent-color: var(--os-primary);" />
+                <label for="comissao_insumos_dispet_flag" style="margin: 0; font-weight: 500; font-size: 0.85rem; cursor: pointer; color: var(--os-text);">Cliente Direto Dispet (Insumos)</label>
+              </div>
+            </div>
+            <div>
+              <label for="pet_ElaboracaoCadastro">Pet:</label>
+              <input type="text" id="pet_ElaboracaoCadastro" name="pet_ElaboracaoCadastro" readonly />
+              <div style="margin-top: 0.5rem; display: flex; align-items: center; gap: 0.5rem;">
+                <input type="checkbox" id="comissao_pet_dispet_flag" name="comissao_pet_dispet_flag" checked style="cursor: pointer; width: 16px; height: 16px; accent-color: var(--os-primary);" />
+                <label for="comissao_pet_dispet_flag" style="margin: 0; font-weight: 500; font-size: 0.85rem; cursor: pointer; color: var(--os-text);">Cliente Direto Dispet (PET/Frost)</label>
+              </div>
+            </div>
             <div style="grid-column: span 2;">
               <label for="observacoes_ElaboracaoCadastro">Observações:</label>
               <textarea id="observacoes_ElaboracaoCadastro" name="observacoes_ElaboracaoCadastro" rows="3" maxlength="1000" oninput="updateCharCounter('observacoes_ElaboracaoCadastro', 'counter-observacoes_ElaboracaoCadastro')"></textarea>
@@ -905,7 +925,7 @@
             hide(btnSalvar);
             hide(btnCancelar);
             show(btnExpExcel);
-            show(btnExpPdf); 
+            hide(btnExpPdf); 
             disableForm(true);
           } else if (mode === 'EDITING' || mode === 'CREATING') {
             hide(btnListar);
@@ -952,6 +972,10 @@
           const petFld     = document.getElementById('pet_ElaboracaoCadastro');
           if (insumosFld && !insumosFld.value) insumosFld.value = DISPET_DEFAULT;
           if (petFld     && !petFld.value)     petFld.value     = DISPET_DEFAULT;
+          const chkPet = document.getElementById("comissao_pet_dispet_flag");
+          if (chkPet) chkPet.checked = true;
+          const chkInsumos = document.getElementById("comissao_insumos_dispet_flag");
+          if (chkInsumos) chkInsumos.checked = true;
         }
 
         function limparErros() {
@@ -1535,7 +1559,9 @@
               gerente_insumos_ElaboracaoCadastro: document.getElementById("gerente_insumos_ElaboracaoCadastro")?.value || "",
               gerente_pet_ElaboracaoCadastro: document.getElementById("gerente_pet_ElaboracaoCadastro")?.value || "",
               pre_posto_ElaboracaoCadastro: document.getElementById("pre_posto_ElaboracaoCadastro")?.value || "",
-              local_carregamento_ElaboracaoCadastro: document.getElementById("local_carregamento_ElaboracaoCadastro")?.value || ""
+              local_carregamento_ElaboracaoCadastro: document.getElementById("local_carregamento_ElaboracaoCadastro")?.value || "",
+              placa_veiculo_ElaboracaoCadastro: document.getElementById("placa_veiculo_ElaboracaoCadastro")?.value || "",
+              proprietario_veiculo_ElaboracaoCadastro: document.getElementById("proprietario_veiculo_ElaboracaoCadastro")?.value || ""
             },
             // Listas dinâmicas (JSONB)
             indicacoes_clientes: coletarLista('indicacoes'),
@@ -1554,7 +1580,9 @@
             comissao_dispet: {
               insumos_ElaboracaoCadastro: document.getElementById("insumos_ElaboracaoCadastro")?.value || "",
               pet_ElaboracaoCadastro: document.getElementById("pet_ElaboracaoCadastro")?.value || "",
-              observacoes_ElaboracaoCadastro: document.getElementById("observacoes_ElaboracaoCadastro")?.value || ""
+              observacoes_ElaboracaoCadastro: document.getElementById("observacoes_ElaboracaoCadastro")?.value || "",
+              comissao_pet_dispet_flag: document.getElementById("comissao_pet_dispet_flag")?.checked ?? true,
+              comissao_insumos_dispet_flag: document.getElementById("comissao_insumos_dispet_flag")?.checked ?? true
             },
             canal_venda_cliente: {
               canal_pet_ElaboracaoCadastro:     document.getElementById("canal_pet_ElaboracaoCadastro")?.value || "",
@@ -2093,6 +2121,8 @@
           setVal("gerente_pet_ElaboracaoCadastro", ed.gerente_pet_ElaboracaoCadastro || "");
           setVal("pre_posto_ElaboracaoCadastro", ed.pre_posto_ElaboracaoCadastro || "");
           setVal("local_carregamento_ElaboracaoCadastro", ed.local_carregamento_ElaboracaoCadastro || "");
+          setVal("placa_veiculo_ElaboracaoCadastro", ed.placa_veiculo_ElaboracaoCadastro || "");
+          setVal("proprietario_veiculo_ElaboracaoCadastro", ed.proprietario_veiculo_ElaboracaoCadastro || "");
 
           // Listas dinâmicas (JSONB)
           renderizarLista('indicacoes', 5, dados.indicacoes_clientes || []);
@@ -2110,10 +2140,16 @@
           setVal("codigo_pet_ElaboracaoCadastro", sup.codigo_pet_ElaboracaoCadastro || "");
           setVal("nome_pet_ElaboracaoCadastro", sup.nome_pet_ElaboracaoCadastro || "");
 
-          const cd = dados.comissao_dispet || {};
+           const cd = dados.comissao_dispet || {};
           setVal("insumos_ElaboracaoCadastro", cd.insumos_ElaboracaoCadastro || "");
           setVal("pet_ElaboracaoCadastro", cd.pet_ElaboracaoCadastro || "");
           setVal("observacoes_ElaboracaoCadastro", cd.observacoes_ElaboracaoCadastro || "");
+          
+          const chkPet = document.getElementById("comissao_pet_dispet_flag");
+          if (chkPet) chkPet.checked = cd.comissao_pet_dispet_flag !== false;
+          
+          const chkInsumos = document.getElementById("comissao_insumos_dispet_flag");
+          if (chkInsumos) chkInsumos.checked = cd.comissao_insumos_dispet_flag !== false;
 
           const cv = dados.canal_venda_cliente || {};
           setVal("canal_pet_ElaboracaoCadastro",     cv.canal_pet_ElaboracaoCadastro || "");

@@ -13,7 +13,10 @@ from models.catalogo_referencias import (
     MunicipioRotaModel,
     ReferenciasModel,
     SupervisoresModel,
-    PlantelAnimalModel
+    PlantelAnimalModel,
+    RamoAtividadeModel,
+    AtividadePrincipalModel,
+    FilialModel
 )
 
 # Schemas
@@ -23,7 +26,10 @@ from schemas.catalogo_referencias import (
     MunicipioRotaCreate, MunicipioRotaUpdate, MunicipioRotaResponse,
     ReferenciasCreate, ReferenciasUpdate, ReferenciasResponse,
     SupervisoresCreate, SupervisoresUpdate, SupervisoresResponse,
-    PlantelAnimalCreate, PlantelAnimalUpdate, PlantelAnimalResponse
+    PlantelAnimalCreate, PlantelAnimalUpdate, PlantelAnimalResponse,
+    RamoAtividadeCreate, RamoAtividadeUpdate, RamoAtividadeResponse,
+    AtividadePrincipalCreate, AtividadePrincipalUpdate, AtividadePrincipalResponse,
+    FilialCreate, FilialUpdate, FilialResponse
 )
 
 router = APIRouter(
@@ -273,3 +279,67 @@ def update_plantel_animais(item_id: int, item: PlantelAnimalUpdate, db: Session 
 @router.delete("/plantel-animais/{item_id}")
 def delete_plantel_animais(item_id: int, db: Session = Depends(get_db)):
     return delete_item(db, PlantelAnimalModel, "id", item_id)
+
+
+# ==========================================================
+# 7. RAMO DE ATIVIDADE
+# ==========================================================
+
+@router.get("/ramo-atividade", response_model=List[RamoAtividadeResponse])
+def get_ramo_atividade(db: Session = Depends(get_db)):
+    return db.query(RamoAtividadeModel).order_by(RamoAtividadeModel.ramo_atividade).all()
+
+@router.post("/ramo-atividade", response_model=RamoAtividadeResponse)
+def create_ramo_atividade(item: RamoAtividadeCreate, db: Session = Depends(get_db)):
+    return create_item(db, RamoAtividadeModel, item)
+
+@router.put("/ramo-atividade/{item_id}", response_model=RamoAtividadeResponse)
+def update_ramo_atividade(item_id: int, item: RamoAtividadeUpdate, db: Session = Depends(get_db)):
+    return update_item(db, RamoAtividadeModel, "id", item_id, item)
+
+@router.delete("/ramo-atividade/{item_id}")
+def delete_ramo_atividade(item_id: int, db: Session = Depends(get_db)):
+    return delete_item(db, RamoAtividadeModel, "id", item_id)
+
+
+# ==========================================================
+# 8. ATIVIDADE PRINCIPAL
+# ==========================================================
+
+@router.get("/atividade-principal", response_model=List[AtividadePrincipalResponse])
+def get_atividade_principal_list(db: Session = Depends(get_db)):
+    return db.query(AtividadePrincipalModel).order_by(AtividadePrincipalModel.atividade_principal).all()
+
+@router.post("/atividade-principal", response_model=AtividadePrincipalResponse)
+def create_atividade_principal(item: AtividadePrincipalCreate, db: Session = Depends(get_db)):
+    return create_item(db, AtividadePrincipalModel, item)
+
+@router.put("/atividade-principal/{item_id}", response_model=AtividadePrincipalResponse)
+def update_atividade_principal(item_id: int, item: AtividadePrincipalUpdate, db: Session = Depends(get_db)):
+    return update_item(db, AtividadePrincipalModel, "id", item_id, item)
+
+@router.delete("/atividade-principal/{item_id}")
+def delete_atividade_principal(item_id: int, db: Session = Depends(get_db)):
+    return delete_item(db, AtividadePrincipalModel, "id", item_id)
+
+
+# ==========================================================
+# 9. FILIAIS
+# ==========================================================
+
+@router.get("/filiais", response_model=List[FilialResponse])
+def get_filiais(db: Session = Depends(get_db)):
+    return db.query(FilialModel).order_by(FilialModel.filial).all()
+
+@router.post("/filiais", response_model=FilialResponse)
+def create_filial(item: FilialCreate, db: Session = Depends(get_db)):
+    return create_item(db, FilialModel, item)
+
+@router.put("/filiais/{item_id}", response_model=FilialResponse)
+def update_filial(item_id: int, item: FilialUpdate, db: Session = Depends(get_db)):
+    return update_item(db, FilialModel, "id", item_id, item)
+
+@router.delete("/filiais/{item_id}")
+def delete_filial(item_id: int, db: Session = Depends(get_db)):
+    return delete_item(db, FilialModel, "id", item_id)
+

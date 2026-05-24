@@ -168,7 +168,7 @@ document.addEventListener("DOMContentLoaded", () => {
         const maisRecenteIso = maisRecenteBr ? converterDataBrParaIso(maisRecenteBr) : obterDataAtualIso();
 
         // Limpar todos os campos de filtros ao renderizar uma nova carga para exibir todos os resultados por padrão
-        ["filterPedido", "filterCliente", "filterDataPedido", "filterDataFat", "filterValor", "filterPeso", "filterResultado", "filterStatus", "filterDetalhes"].forEach(id => {
+        ["filterPedido", "filterCliente", "filterDataPedido", "filterDataFat", "filterValor", "filterValorDif", "filterPeso", "filterPesoDif", "filterResultado", "filterStatus", "filterDetalhes"].forEach(id => {
             const el = document.getElementById(id);
             if (el) {
                 el.value = "";
@@ -221,7 +221,7 @@ document.addEventListener("DOMContentLoaded", () => {
         // Render Table Rows
         if (!itens || itens.length === 0) {
             const tr = document.createElement("tr");
-            tr.innerHTML = `<td colspan="8" style="text-align: center; color: var(--os-text-secondary);">Nenhum pedido processado.</td>`;
+            tr.innerHTML = `<td colspan="11" style="text-align: center; color: var(--os-text-secondary);">Nenhum pedido processado.</td>`;
             resultsBody.appendChild(tr);
         } else {
             itens.forEach(item => {
@@ -266,8 +266,18 @@ document.addEventListener("DOMContentLoaded", () => {
                         ? `<span style="color: var(--os-primary); font-weight: 600;">Faturado Supra</span>` 
                         : `<span style="color: var(--os-text-secondary);">-</span>`);
 
-                const pesoPlanilhaStr = item.peso_planilha != null ? item.peso_planilha.toFixed(2) + " kg" : "-";
-                const pesoSistemaStr = item.peso_sistema != null ? item.peso_sistema.toFixed(2) + " kg" : "-";
+                // Formatar valores e pesos
+                const valorPlanilha = item.valor_planilha || 0;
+                const valorSistema = item.valor_sistema || 0;
+                const precoDif = valorPlanilha - valorSistema;
+
+                const pesoPlanilha = item.peso_planilha || 0;
+                const pesoSistema = item.peso_sistema || 0;
+                const pesoDif = pesoPlanilha - pesoSistema;
+
+                const pesoPlanilhaStr = item.peso_planilha != null ? fmtMoney(item.peso_planilha) : "-";
+                const pesoSistemaStr = item.peso_sistema != null ? fmtMoney(item.peso_sistema) : "-";
+                const pesoDifStr = fmtMoney(pesoDif) + " kg";
 
                 // Textos normalizados para facilitar busca rápida
                 const textoStatus = item.novo_status_pedido === "PEDIDO_NAO_COMPLETO" 
@@ -280,8 +290,10 @@ document.addEventListener("DOMContentLoaded", () => {
                 tr.dataset.cliente = item.cliente_codigo || "";
                 tr.dataset.data_pedido = item.data_pedido || "";
                 tr.dataset.data_fat = item.data_faturamento || "";
-                tr.dataset.valor = fmtMoney(item.valor_planilha);
+                tr.dataset.preco = `R$ ${fmtMoney(valorPlanilha)} / R$ ${fmtMoney(valorSistema)}`;
+                tr.dataset.preco_dif = `R$ ${fmtMoney(precoDif)}`;
                 tr.dataset.peso = `${pesoPlanilhaStr} / ${pesoSistemaStr}`;
+                tr.dataset.peso_dif = pesoDifStr;
                 tr.dataset.resultado = resultText;
                 tr.dataset.status = textoStatus;
                 tr.dataset.detalhes = textoDetalhes;
@@ -291,8 +303,10 @@ document.addEventListener("DOMContentLoaded", () => {
                     <td>${item.cliente_codigo || "-"}</td>
                     <td>${item.data_pedido || "-"}</td>
                     <td>${item.data_faturamento || "-"}</td>
-                    <td>R$ ${fmtMoney(item.valor_planilha)}</td>
+                    <td>R$ ${fmtMoney(valorPlanilha)} / R$ ${fmtMoney(valorSistema)}</td>
+                    <td style="font-weight: 600; color: ${precoDif === 0 ? 'var(--os-text)' : (precoDif > 0 ? 'var(--os-warning)' : 'var(--os-error)')};">R$ ${fmtMoney(precoDif)}</td>
                     <td>${pesoPlanilhaStr} / ${pesoSistemaStr}</td>
+                    <td style="font-weight: 600; color: ${pesoDif === 0 ? 'var(--os-text)' : (pesoDif > 0 ? 'var(--os-warning)' : 'var(--os-error)')};">${pesoDifStr}</td>
                     <td><span class="${badgeClass}">${resultText}</span></td>
                     <td>${badgeNovoStatus}</td>
                     <td>${detalhesHtml}</td>
@@ -321,8 +335,10 @@ document.addEventListener("DOMContentLoaded", () => {
         const fDataPedido = converterDataIsoParaBr(fDataPedidoRaw).toLowerCase();
         const fDataFat = converterDataIsoParaBr(fDataFatRaw).toLowerCase();
         
-        const fValor = document.getElementById("filterValor").value.toLowerCase().trim();
+        const fPreco = document.getElementById("filterValor").value.toLowerCase().trim();
+        const fPrecoDif = document.getElementById("filterValorDif").value.toLowerCase().trim();
         const fPeso = document.getElementById("filterPeso").value.toLowerCase().trim();
+        const fPesoDif = document.getElementById("filterPesoDif").value.toLowerCase().trim();
         const fResultado = document.getElementById("filterResultado").value.toLowerCase().trim();
         const fStatus = document.getElementById("filterStatus").value.toLowerCase().trim();
         const fDetalhes = document.getElementById("filterDetalhes").value.toLowerCase().trim();
@@ -336,13 +352,15 @@ document.addEventListener("DOMContentLoaded", () => {
             const matchCliente = !fCliente || String(tr.dataset.cliente).toLowerCase().includes(fCliente);
             const matchDataPedido = !fDataPedido || String(tr.dataset.data_pedido).toLowerCase().includes(fDataPedido);
             const matchDataFat = !fDataFat || String(tr.dataset.data_fat).toLowerCase().includes(fDataFat);
-            const matchValor = !fValor || String(tr.dataset.valor).toLowerCase().includes(fValor);
+            const matchPreco = !fPreco || String(tr.dataset.preco).toLowerCase().includes(fPreco);
+            const matchPrecoDif = !fPrecoDif || String(tr.dataset.preco_dif).toLowerCase().includes(fPrecoDif);
             const matchPeso = !fPeso || String(tr.dataset.peso).toLowerCase().includes(fPeso);
+            const matchPesoDif = !fPesoDif || String(tr.dataset.peso_dif).toLowerCase().includes(fPesoDif);
             const matchResultado = !fResultado || String(tr.dataset.resultado).toLowerCase() === fResultado;
             const matchStatus = !fStatus || String(tr.dataset.status).toLowerCase().includes(fStatus);
             const matchDetalhes = !fDetalhes || String(tr.dataset.detalhes).toLowerCase().includes(fDetalhes);
 
-            if (matchPedido && matchCliente && matchDataPedido && matchDataFat && matchValor && matchPeso && matchResultado && matchStatus && matchDetalhes) {
+            if (matchPedido && matchCliente && matchDataPedido && matchDataFat && matchPreco && matchPrecoDif && matchPeso && matchPesoDif && matchResultado && matchStatus && matchDetalhes) {
                 tr.style.display = "";
             } else {
                 tr.style.display = "none";
@@ -351,7 +369,7 @@ document.addEventListener("DOMContentLoaded", () => {
     }
 
     // Vincular os inputs de filtros aos event listeners
-    ["filterPedido", "filterCliente", "filterDataPedido", "filterDataFat", "filterValor", "filterPeso", "filterResultado", "filterStatus", "filterDetalhes"].forEach(id => {
+    ["filterPedido", "filterCliente", "filterDataPedido", "filterDataFat", "filterValor", "filterValorDif", "filterPeso", "filterPesoDif", "filterResultado", "filterStatus", "filterDetalhes"].forEach(id => {
         const el = document.getElementById(id);
         if (el) {
             el.addEventListener("input", applyFilters);
@@ -403,28 +421,30 @@ document.addEventListener("DOMContentLoaded", () => {
             return;
         }
         
-        let csv = "Nº Pedido;Cód. Cliente;Data Pedido;Data Faturamento;Valor Planilha;Peso (Planilha / Sistema);Resultado;Status Atualizado (Banco);Detalhes & Divergências\n";
+        let csv = "Nº Pedido;Cód. Cliente;Data Pedido;Data Faturamento;Preço (Planilha / Sistema);Preço Dif;Peso (Planilha / Sistema);Peso Dif;Resultado;Status Atualizado (Banco);Detalhes & Divergências\n";
         rows.forEach(tr => {
             if (tr.querySelector("td[colspan]")) return;
             // Se a linha estiver oculta por algum filtro ativo, não exporta
             if (tr.style.display === "none") return;
 
             const cells = tr.querySelectorAll("td");
-            if (cells.length < 9) return;
+            if (cells.length < 11) return;
             
             const ped = cells[0].innerText.trim().replace(/;/g, ",");
             const cli = cells[1].innerText.trim().replace(/;/g, ",");
             const dtPed = cells[2].innerText.trim().replace(/;/g, ",");
             const dtFat = cells[3].innerText.trim().replace(/;/g, ",");
-            const val = cells[4].innerText.trim().replace(/;/g, ",").replace("R$", "").trim();
-            const peso = cells[5].innerText.trim().replace(/;/g, ",");
-            const res = cells[6].innerText.trim().replace(/;/g, ",");
-            const status = cells[7].innerText.trim().replace(/;/g, ",");
+            const preco = cells[4].innerText.trim().replace(/;/g, ",");
+            const precoDif = cells[5].innerText.trim().replace(/;/g, ",");
+            const peso = cells[6].innerText.trim().replace(/;/g, ",");
+            const pesoDif = cells[7].innerText.trim().replace(/;/g, ",");
+            const res = cells[8].innerText.trim().replace(/;/g, ",");
+            const status = cells[9].innerText.trim().replace(/;/g, ",");
             
-            const detailsList = Array.from(cells[8].querySelectorAll("li")).map(li => li.innerText.trim());
-            const details = (detailsList.length ? detailsList.join(" | ") : cells[8].innerText.trim()).replace(/;/g, ",");
+            const detailsList = Array.from(cells[10].querySelectorAll("li")).map(li => li.innerText.trim());
+            const details = (detailsList.length ? detailsList.join(" | ") : cells[10].innerText.trim()).replace(/;/g, ",");
             
-            csv += `"${ped}";"${cli}";"${dtPed}";"${dtFat}";"${val}";"${peso}";"${res}";"${status}";"${details}"\n`;
+            csv += `"${ped}";"${cli}";"${dtPed}";"${dtFat}";"${preco}";"${precoDif}";"${peso}";"${pesoDif}";"${res}";"${status}";"${details}"\n`;
         });
         
         const blob = new Blob(["\ufeff" + csv], { type: 'text/csv;charset=utf-8;' });

@@ -344,4 +344,103 @@ def run_migrations():
             db.rollback()
             logger.error(f"Falha ao inserir status PEDIDO_NAO_COMPLETO: {e}")
 
+        # 20. CadastroCliente: elaboracao_placa_veiculo, elaboracao_proprietario_veiculo
+        for col in ["elaboracao_placa_veiculo", "elaboracao_proprietario_veiculo"]:
+            try:
+                db.execute(text(f"SELECT {col} FROM t_cadastro_cliente_v2 LIMIT 1"))
+            except Exception:
+                db.rollback()
+                logger.info(f"Adicionando coluna {col} em t_cadastro_cliente_v2...")
+                try:
+                    db.execute(text(f"ALTER TABLE t_cadastro_cliente_v2 ADD COLUMN {col} VARCHAR"))
+                    db.commit()
+                    logger.info(f"Coluna {col} adicionada com sucesso.")
+                except Exception as e:
+                    db.rollback()
+                    logger.error(f"Falha ao adicionar coluna {col}: {e}")
+
+        # 21. Pré-popular tabelas de Ramo de Atividade, Atividade Principal e Filiais
+        try:
+            db.execute(text("""
+                CREATE TABLE IF NOT EXISTS tb_ramo_atividade (
+                    id SERIAL PRIMARY KEY,
+                    ramo_atividade VARCHAR
+                )
+            """))
+            db.commit()
+            
+            cnt = db.execute(text("SELECT COUNT(*) FROM tb_ramo_atividade")).scalar()
+            if cnt == 0:
+                logger.info("Pré-populando tb_ramo_atividade...")
+                from data.listas import RAMO_DE_ATIVIDADE
+                for ramo in RAMO_DE_ATIVIDADE:
+                    db.execute(text("INSERT INTO tb_ramo_atividade (ramo_atividade) VALUES (:val)"), {"val": ramo})
+                db.commit()
+        except Exception as e:
+            db.rollback()
+            logger.error(f"Erro ao popular tb_ramo_atividade: {e}")
+
+        try:
+            db.execute(text("""
+                CREATE TABLE IF NOT EXISTS tb_atividade_principal (
+                    id SERIAL PRIMARY KEY,
+                    atividade_principal VARCHAR
+                )
+            """))
+            db.commit()
+            
+            cnt = db.execute(text("SELECT COUNT(*) FROM tb_atividade_principal")).scalar()
+            if cnt == 0:
+                logger.info("Pré-populando tb_atividade_principal...")
+                from data.listas import ATIVIDADE_PRINCIPAL
+                for atividade in ATIVIDADE_PRINCIPAL:
+                    db.execute(text("INSERT INTO tb_atividade_principal (atividade_principal) VALUES (:val)"), {"val": atividade})
+                db.commit()
+        except Exception as e:
+            db.rollback()
+            logger.error(f"Erro ao popular tb_atividade_principal: {e}")
+
+        try:
+            db.execute(text("""
+                CREATE TABLE IF NOT EXISTS tb_filiais (
+                    id SERIAL PRIMARY KEY,
+                    filial VARCHAR
+                )
+            """))
+            db.commit()
+            
+            cnt = db.execute(text("SELECT COUNT(*) FROM tb_filiais")).scalar()
+            if cnt == 0:
+                logger.info("Pré-populando tb_filiais...")
+                filiais_set = {"Matriz SUPRA LOG"}
+                try:
+                    rows = db.execute(text("SELECT DISTINCT fornecedor FROM t_cadastro_produto_v2 WHERE fornecedor IS NOT NULL AND fornecedor != ''")).scalars().all()
+                    for r in rows:
+                        filiais_set.add(r.strip())
+                except Exception:
+                    pass
+                for f in sorted(list(filiais_set)):
+                    db.execute(text("INSERT INTO tb_filiais (filial) VALUES (:val)"), {"val": f})
+                db.commit()
+        except Exception as e:
+            db.rollback()
+            logger.error(f"Erro ao popular tb_filiais: {e}")
+
+        # 22. CadastroCliente: comissao_pet_dispet_flag, comissao_insumos_dispet_flag
+        for col in ["comissao_pet_dispet_flag", "comissao_insumos_dispet_flag"]:
+            try:
+                db.execute(text(f"SELECT {col} FROM t_cadastro_cliente_v2 LIMIT 1"))
+            except Exception:
+                db.rollback()
+                logger.info(f"Adicionando coluna {col} em t_cadastro_cliente_v2...")
+                try:
+                    db.execute(text(f"ALTER TABLE t_cadastro_cliente_v2 ADD COLUMN {col} BOOLEAN DEFAULT TRUE"))
+                    db.execute(text(f"UPDATE t_cadastro_cliente_v2 SET {col} = TRUE"))
+                    db.commit()
+                    logger.info(f"Coluna {col} adicionada com sucesso.")
+                except Exception as e:
+                    db.rollback()
+                    logger.error(f"Falha ao adicionar coluna {col}: {e}")
+
     logger.info("Todas as migrações concluídas.")
+

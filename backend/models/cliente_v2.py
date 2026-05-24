@@ -113,6 +113,8 @@ class ClienteModelV2(Base):
     elaboracao_gerente_pet = Column(String)
     elaboracao_pre_posto = Column(String)
     elaboracao_local_carregamento = Column(String)
+    elaboracao_placa_veiculo = Column(String)
+    elaboracao_proprietario_veiculo = Column(String)
 
     # 12. GrupoEconomico — JSONB: lista com até 3 grupos. Ex: [{"codigo": "G1", "nome": "Grupo X"}]
     grupos_economicos = Column(JSONB, default=list)
@@ -142,6 +144,9 @@ class ClienteModelV2(Base):
     comissao_insumos = Column(String)
     comissao_pet = Column(String)
     comissao_observacoes = Column(String)
+    comissao_pet_dispet_flag = Column(Boolean, default=True)
+    comissao_insumos_dispet_flag = Column(Boolean, default=True)
+
 
     # 20. CanalVenda
     canal_pet     = Column(String)

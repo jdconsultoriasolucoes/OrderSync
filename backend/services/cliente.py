@@ -11,6 +11,14 @@ TZ = ZoneInfo("America/Sao_Paulo")
 
 logger = logging.getLogger("ordersync.services.cliente")
 
+def clean_ie(val) -> Optional[str]:
+    if val is None:
+        return None
+    val_str = str(val).strip()
+    if val_str.endswith(".0"):
+        val_str = val_str[:-2]
+    return val_str
+
 def get_db():
     db = SessionLocal()
     try:
@@ -39,7 +47,7 @@ def _flat_to_nested(model: ClienteModelV2) -> dict:
             "nome_cliente": model.cadastro_nome_cliente,
             "nome_fantasia": model.cadastro_nome_fantasia,
             "cnpj": model.cadastro_cnpj,
-            "inscricao_estadual": model.cadastro_inscricao_estadual,
+            "inscricao_estadual": clean_ie(model.cadastro_inscricao_estadual),
             "cpf": model.cadastro_cpf,
             "situacao": model.cadastro_situacao,
             "data_inativacao": model.data_inativacao.strftime('%Y-%m-%d') if model.data_inativacao else None,
@@ -132,7 +140,9 @@ def _flat_to_nested(model: ClienteModelV2) -> dict:
             "gerente_insumos_ElaboracaoCadastro": model.elaboracao_gerente_insumos,
             "gerente_pet_ElaboracaoCadastro": model.elaboracao_gerente_pet,
             "pre_posto_ElaboracaoCadastro": model.elaboracao_pre_posto,
-            "local_carregamento_ElaboracaoCadastro": model.elaboracao_local_carregamento
+            "local_carregamento_ElaboracaoCadastro": model.elaboracao_local_carregamento,
+            "placa_veiculo_ElaboracaoCadastro": model.elaboracao_placa_veiculo,
+            "proprietario_veiculo_ElaboracaoCadastro": model.elaboracao_proprietario_veiculo
         },
         "grupos_economicos": model.grupos_economicos or [],
         "referencias_comerciais": model.referencias_comerciais or [],
@@ -151,7 +161,10 @@ def _flat_to_nested(model: ClienteModelV2) -> dict:
             "insumos_ElaboracaoCadastro": model.comissao_insumos,
             "pet_ElaboracaoCadastro": model.comissao_pet,
             "observacoes_ElaboracaoCadastro": model.comissao_observacoes,
+            "comissao_pet_dispet_flag": getattr(model, "comissao_pet_dispet_flag", True) if getattr(model, "comissao_pet_dispet_flag", True) is not None else True,
+            "comissao_insumos_dispet_flag": getattr(model, "comissao_insumos_dispet_flag", True) if getattr(model, "comissao_insumos_dispet_flag", True) is not None else True,
         },
+
         "canal_venda_cliente": {
             "canal_pet_ElaboracaoCadastro":     model.canal_pet,
             "canal_frost_ElaboracaoCadastro":   model.canal_frost,
@@ -195,7 +208,7 @@ def _nested_to_flat(data: dict) -> ClienteModelV2:
     model.cadastro_nome_cliente = c.get("nome_cliente")
     model.cadastro_nome_fantasia = c.get("nome_fantasia")
     model.cadastro_cnpj = c.get("cnpj")
-    model.cadastro_inscricao_estadual = c.get("inscricao_estadual")
+    model.cadastro_inscricao_estadual = clean_ie(c.get("inscricao_estadual"))
     model.cadastro_cpf = c.get("cpf")
     model.cadastro_situacao = c.get("situacao")
     model.cadastro_indicacao_cliente = c.get("indicacao_cliente")
@@ -282,6 +295,8 @@ def _nested_to_flat(data: dict) -> ClienteModelV2:
     model.elaboracao_gerente_pet = dec.get("gerente_pet_ElaboracaoCadastro")
     model.elaboracao_pre_posto = dec.get("pre_posto_ElaboracaoCadastro")
     model.elaboracao_local_carregamento = dec.get("local_carregamento_ElaboracaoCadastro")
+    model.elaboracao_placa_veiculo = dec.get("placa_veiculo_ElaboracaoCadastro")
+    model.elaboracao_proprietario_veiculo = dec.get("proprietario_veiculo_ElaboracaoCadastro")
 
     model.grupos_economicos = data.get("grupos_economicos") or []
     model.referencias_comerciais = data.get("referencias_comerciais") or []
@@ -308,6 +323,9 @@ def _nested_to_flat(data: dict) -> ClienteModelV2:
     model.comissao_insumos = cd.get("insumos_ElaboracaoCadastro")
     model.comissao_pet = cd.get("pet_ElaboracaoCadastro")
     model.comissao_observacoes = cd.get("observacoes_ElaboracaoCadastro")
+    model.comissao_pet_dispet_flag = cd.get("comissao_pet_dispet_flag", True) if cd.get("comissao_pet_dispet_flag", True) is not None else True
+    model.comissao_insumos_dispet_flag = cd.get("comissao_insumos_dispet_flag", True) if cd.get("comissao_insumos_dispet_flag", True) is not None else True
+
 
     model.canal_pet     = cv.get("canal_pet_ElaboracaoCadastro")
     model.canal_frost   = cv.get("canal_frost_ElaboracaoCadastro")

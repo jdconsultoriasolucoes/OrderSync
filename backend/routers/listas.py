@@ -33,8 +33,15 @@ def get_supervisor():
     return SUPERVISOR
 
 @router.get("/atividade_principal")
-def get_atividade_principal():
-    return ATIVIDADE_PRINCIPAL
+def get_atividade_principal(db: Session = Depends(get_db)):
+    try:
+        from models.catalogo_referencias import AtividadePrincipalModel
+        rows = db.query(AtividadePrincipalModel).order_by(AtividadePrincipalModel.atividade_principal).all()
+        if not rows:
+            return ATIVIDADE_PRINCIPAL
+        return [r.atividade_principal for r in rows]
+    except Exception:
+        return ATIVIDADE_PRINCIPAL
 
 @router.get("/rota")
 def get_rota(db: Session = Depends(get_db)):
@@ -59,13 +66,26 @@ def get_tipo_compra():
     return TIPO_COMPRA
 
 @router.get("/ramo_de_atividade")
-def get_ramo_de_atividade():
-    return RAMO_DE_ATIVIDADE
+def get_ramo_de_atividade(db: Session = Depends(get_db)):
+    try:
+        from models.catalogo_referencias import RamoAtividadeModel
+        rows = db.query(RamoAtividadeModel).order_by(RamoAtividadeModel.ramo_atividade).all()
+        if not rows:
+            return RAMO_DE_ATIVIDADE
+        return [r.ramo_atividade for r in rows]
+    except Exception:
+        return RAMO_DE_ATIVIDADE
 
 @router.get("/fornecedores_produtos")
 def get_fornecedores_produtos(db: Session = Depends(get_db)):
-    from sqlalchemy import text
     try:
+        from models.catalogo_referencias import FilialModel
+        rows = db.query(FilialModel).order_by(FilialModel.filial).all()
+        if rows:
+            return [r.filial for r in rows]
+        
+        # Fallback
+        from sqlalchemy import text
         query = text("SELECT DISTINCT fornecedor FROM t_cadastro_produto_v2 WHERE fornecedor IS NOT NULL AND fornecedor != '' ORDER BY fornecedor")
         result = db.execute(query).scalars().all()
         return list(result)

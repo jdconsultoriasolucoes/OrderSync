@@ -386,34 +386,95 @@ const CONFIG = {
             document.getElementById('plan-id').value = '';
             document.getElementById('plan-nome').value = '';
         }
+    },
+    ramo_atividade: {
+        apiPath: '/catalogo/ramo-atividade',
+        pk: 'id',
+        cols: [
+            { key: 'id', label: 'ID' },
+            { key: 'ramo_atividade', label: 'Ramo de Atividade' }
+        ],
+        modalId: 'modal-ramo_atividade',
+        fillForm: (item) => {
+            document.getElementById('ramo-id').value = item.id;
+            document.getElementById('ramo-nome').value = item.ramo_atividade || '';
+        },
+        clearForm: () => {
+            document.getElementById('ramo-id').value = '';
+            document.getElementById('ramo-nome').value = '';
+        }
+    },
+    atividade_principal: {
+        apiPath: '/catalogo/atividade-principal',
+        pk: 'id',
+        cols: [
+            { key: 'id', label: 'ID' },
+            { key: 'atividade_principal', label: 'Atividade Principal' }
+        ],
+        modalId: 'modal-atividade_principal',
+        fillForm: (item) => {
+            document.getElementById('ativ-id').value = item.id;
+            document.getElementById('ativ-nome').value = item.atividade_principal || '';
+        },
+        clearForm: () => {
+            document.getElementById('ativ-id').value = '';
+            document.getElementById('ativ-nome').value = '';
+        }
+    },
+    filiais: {
+        apiPath: '/catalogo/filiais',
+        pk: 'id',
+        cols: [
+            { key: 'id', label: 'ID' },
+            { key: 'filial', label: 'Filial' }
+        ],
+        modalId: 'modal-filiais',
+        fillForm: (item) => {
+            document.getElementById('filial-id').value = item.id;
+            document.getElementById('filial-nome').value = item.filial || '';
+        },
+        clearForm: () => {
+            document.getElementById('filial-id').value = '';
+            document.getElementById('filial-nome').value = '';
+        }
     }
 };
 
 function selectModule(mod) {
     currentModule = mod;
 
-    // Highlight menu button via JS if it's called programmatically without a click event
+    // Highlight menu button via JS and auto-expand category on mobile/desktop
     document.querySelectorAll('.module-nav-btn').forEach(btn => {
         btn.classList.remove('active');
-        if (btn.getAttribute('onclick')?.includes(mod)) {
+        if (btn.getAttribute('onclick')?.includes(`'${mod}'`) || btn.getAttribute('onclick')?.includes(`"${mod}"`)) {
             btn.classList.add('active');
+            
+            // Auto-expand the parent category accordion
+            const parentCat = btn.closest('.catalog-category');
+            if (parentCat) {
+                parentCat.classList.add('expanded');
+            }
         }
     });
 
-    // Set Header
+    // Set Header with new naming conventions requested by the user
     const titles = {
-        condicoes: 'Condições de Pagamento',
+        condicoes: 'Condições de pagamento',
         descontos: 'Descontos',
-        familias: 'Grupo de Produtos',
-        transporte: 'Transporte / Logística',
+        familias: 'Grupo de produtos',
+        transporte: 'Logística',
         vendedores: 'Vendedores',
         previsao_semanal: 'Previsão de Vendas Semanal',
-        automacao: 'Automação de Relatórios',
-        canal_venda: 'Canal de Venda',
-        cidade_supervisor: 'Cidade Supervisor',
-        municipio_rota: 'Município Rota',
-        referencias: 'Referências Comerciais e Bancárias',
-        supervisores: 'Supervisores'
+        automacao: 'Automação de relatórios',
+        canal_venda: 'Canais de Vendas',
+        cidade_supervisor: 'Cidades / Supervisores',
+        municipio_rota: 'Municipio / Rota',
+        referencias: 'Referências comerciais',
+        supervisores: 'Supervisores / Gerentes',
+        plantel_animais: 'Plantel de animais',
+        ramo_atividade: 'Ramo de atividade',
+        atividade_principal: 'Atividade principal',
+        filiais: 'Filiais'
     };
 
     const sectionTitle = document.getElementById('sectionTitle');
@@ -805,6 +866,37 @@ async function savePlantel(e) {
     };
     await saveGeneric(payload, !!currentItem, id);
 }
+
+async function saveRamoAtividade(e) {
+    e.preventDefault();
+    const id = document.getElementById('ramo-id').value;
+    const payload = {
+        ramo_atividade: document.getElementById('ramo-nome').value || null
+    };
+    await saveGeneric(payload, !!currentItem, id);
+}
+
+async function saveAtividadePrincipal(e) {
+    e.preventDefault();
+    const id = document.getElementById('ativ-id').value;
+    const payload = {
+        atividade_principal: document.getElementById('ativ-nome').value || null
+    };
+    await saveGeneric(payload, !!currentItem, id);
+}
+
+async function saveFilial(e) {
+    e.preventDefault();
+    const id = document.getElementById('filial-id').value;
+    const payload = {
+        filial: document.getElementById('filial-nome').value || null
+    };
+    await saveGeneric(payload, !!currentItem, id);
+}
+
+window.saveRamoAtividade = saveRamoAtividade;
+window.saveAtividadePrincipal = saveAtividadePrincipal;
+window.saveFilial = saveFilial;
 
 // --- Delete Handler ---
 

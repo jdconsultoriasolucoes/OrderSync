@@ -257,7 +257,7 @@ def gerar_excel_cliente_supra(cliente, apenas_primeira_aba: bool = False) -> byt
             ws2["A9"] = "Finalidade: Comercializar / Revender (X)"
         
         # Local de Carregamento (Linha 10)
-        ws2["A10"] = f"Local de Carregamento: {_s(cliente.elaboracao_local_carregamento)}"
+        ws2["A10"] = f"Local de Carregamento \"Filial\": {_s(cliente.elaboracao_local_carregamento)}"
 
         # Comissões — texto padrão em vermelho
         _DISPET_RED = Font(color="FF0000")
@@ -307,7 +307,7 @@ def gerar_excel_cliente_supra(cliente, apenas_primeira_aba: bool = False) -> byt
             tipo_venda_excel = ""
         elif "vista" in tipo_venda_raw:
             tipo_venda_excel = "Venda à vista"
-            ws2["D34"] = "( X ) Vendor"
+            ws2["D34"] = "(   ) Vendor"
             ws2["H34"] = "(   ) Cobrança"
         elif "prazo" in tipo_venda_raw:
             tipo_venda_excel = "Venda a prazo"

@@ -38,57 +38,151 @@
             margin-bottom: var(--os-space-3);
         }
 
-        /* Internal module navigation */
-        .module-nav {
-            display: flex;
-            gap: 0;
-            border-bottom: 2px solid var(--os-border);
-            margin-bottom: var(--os-space-3);
-            overflow-x: scroll; /* Força a exibição da barra de rolagem */
+        /* Layout lateral para o Catálogo */
+        .catalog-layout {
+            display: grid;
+            grid-template-columns: 290px 1fr;
+            gap: var(--os-space-3);
+            align-items: start;
             width: 100%;
-            padding-bottom: 12px; 
-            scrollbar-width: auto; /* Padrão do navegador no Firefox para ser bem visível */
-            scrollbar-color: var(--os-primary) rgba(0,0,0,0.05);
         }
 
-        /* Estilização para Chrome e Safari - Mais visível */
-        .module-nav::-webkit-scrollbar {
-            height: 10px; /* Mais grossa */
+        .catalog-sidebar {
+            background: var(--os-bg-white);
+            border-radius: var(--os-radius-lg);
+            box-shadow: var(--os-shadow);
+            border: 1px solid var(--os-border);
+            padding: var(--os-space-3);
+            display: flex;
+            flex-direction: column;
+            gap: var(--os-space-3);
         }
-        .module-nav::-webkit-scrollbar-thumb {
-            background-color: var(--os-primary); /* Cor azul vibrante */
-            border-radius: 10px;
+
+        .catalog-content {
+            background: var(--os-bg-white);
+            border-radius: var(--os-radius-lg);
+            box-shadow: var(--os-shadow);
+            border: 1px solid var(--os-border);
+            padding: var(--os-space-3);
+            min-height: 550px;
         }
-        .module-nav::-webkit-scrollbar-track {
-            background: rgba(0,0,0,0.05); /* Track visível */
-            border-radius: 10px;
+
+        .catalog-category {
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+        }
+
+        .category-header {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-size: var(--os-text-xs);
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.08em;
+            color: var(--os-text-secondary);
+            padding: 8px var(--os-space-1);
+            border-bottom: 1px solid var(--os-border);
+            transition: background-color 0.15s ease;
+        }
+
+        .category-icon {
+            width: 14px;
+            height: 14px;
+            stroke-width: 2.5;
+            color: var(--os-text-secondary);
+        }
+
+        .category-items {
+            display: flex;
+            flex-direction: column;
+            gap: 4px;
         }
 
         .module-nav-btn {
             appearance: none;
             background: transparent;
             border: none;
-            padding: 12px 20px;
+            border-left: 3px solid transparent;
+            padding: 8px 12px 8px 16px;
             font-size: var(--os-text-sm);
             font-weight: 500;
             color: var(--os-text-secondary);
             cursor: pointer;
-            border-bottom: 2px solid transparent;
-            margin-bottom: -2px;
-            transition: color 0.15s, border-color 0.15s;
+            text-align: left;
+            transition: all 0.15s ease-in-out;
             font-family: var(--os-font);
-            flex-shrink: 0; /* Impede que os botões esmaguem */
-            white-space: nowrap; /* Garante o texto em uma linha */
+            border-radius: 0 var(--os-radius) var(--os-radius) 0;
+            display: block;
+            width: 100%;
         }
 
         .module-nav-btn:hover {
             color: var(--os-primary);
+            background-color: var(--os-bg);
+            border-left-color: var(--os-border);
         }
 
         .module-nav-btn.active {
             color: var(--os-primary);
             font-weight: 600;
-            border-bottom-color: var(--os-primary);
+            background-color: var(--os-primary-light);
+            border-left-color: var(--os-primary);
+        }
+
+        /* Responsividade Mobile/Tablet */
+        @media (max-width: 992px) {
+            .catalog-layout {
+                grid-template-columns: 1fr;
+            }
+
+            .catalog-sidebar {
+                padding: var(--os-space-2);
+                gap: var(--os-space-2);
+            }
+
+            .category-header {
+                cursor: pointer;
+                user-select: none;
+                justify-content: space-between;
+                padding: 10px var(--os-space-2);
+                border-bottom: none;
+                background: var(--os-bg);
+                border-radius: var(--os-radius);
+            }
+
+            .category-items {
+                display: none;
+                padding: 4px var(--os-space-1) 0;
+            }
+
+            .catalog-category.expanded .category-items {
+                display: flex;
+            }
+
+            .category-header::after {
+                content: '▾';
+                font-size: 10px;
+                color: var(--os-text-secondary);
+                transition: transform 0.2s ease;
+            }
+
+            .catalog-category.expanded .category-header::after {
+                transform: rotate(180deg);
+            }
+
+            .module-nav-btn {
+                padding: 10px 16px;
+                border-radius: var(--os-radius);
+                border-left: none;
+                border-bottom: 1px solid var(--os-border);
+            }
+            
+            .module-nav-btn.active {
+                border-left: none;
+                background-color: var(--os-primary-light);
+            }
         }
 
         /* Table toolbar */
@@ -398,37 +492,93 @@
 
     <!-- ========== MAIN ========== -->
     <div class="page-container">
-        <div class="card">
-            <!-- Module Navigation -->
-            <nav class="module-nav">
-                <button class="module-nav-btn active" onclick="selectModule('condicoes')">Condições de
-                    Pagamento</button>
-                <button class="module-nav-btn" onclick="selectModule('descontos')">Descontos</button>
-                <button class="module-nav-btn" onclick="selectModule('familias')">Grupo de Produtos</button>
-                <button class="module-nav-btn" onclick="selectModule('transporte')">Transporte / Logística</button>
-                <button class="module-nav-btn" onclick="selectModule('vendedores')">Vendedores</button>
-                <button class="module-nav-btn" onclick="selectModule('automacao')">Automação de Relatórios</button>
-                <button class="module-nav-btn" onclick="selectModule('canal_venda')">Canal de Venda</button>
-                <button class="module-nav-btn" onclick="selectModule('cidade_supervisor')">Cidade Supervisor</button>
-                <button class="module-nav-btn" onclick="selectModule('municipio_rota')">Município Rota</button>
-                <button class="module-nav-btn" onclick="selectModule('referencias')">Referências</button>
-                <button class="module-nav-btn" onclick="selectModule('supervisores')">Supervisores</button>
-                <button class="module-nav-btn" onclick="selectModule('plantel_animais')">Plantel de Animais</button>
-            </nav>
-
-            <div class="toolbar">
-                <div class="module-section-title" id="sectionTitle">Condições de Pagamento</div>
-                <div style="display: flex; gap: 10px; align-items: center;">
-                    <input type="text" id="searchInput" placeholder="Buscar..." style="padding: 6px 12px; border: 1px solid var(--os-border); border-radius: var(--os-radius); font-size: var(--os-text-sm); font-family: var(--os-font); outline: none;" onkeyup="filterGrid()">
-                    <button id="btn-export-excel" class="os-btn os-btn-secondary os-btn-sm" style="display: none;" onclick="exportCurrentModuleToExcel()">Exportar Excel</button>
-                    <button id="btn-novo" class="os-btn os-btn-primary os-btn-sm" onclick="openModal()">+ Novo</button>
+        <div class="catalog-layout">
+            <!-- Barra Lateral do Catálogo -->
+            <aside class="catalog-sidebar">
+                <!-- Seção Representada -->
+                <div class="catalog-category expanded">
+                    <div class="category-header" onclick="toggleCategoryMobile(this)">
+                        <svg class="category-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <path d="M19 21V5a2 2 0 0 0-2-2H7a2 2 0 0 0-2 2v16" />
+                            <path d="M12 7v10" />
+                            <path d="M8 12h8" />
+                        </svg>
+                        <span>Representada</span>
+                    </div>
+                    <div class="category-items">
+                        <button class="module-nav-btn active" onclick="selectModule('condicoes')">Condições pagamento</button>
+                        <button class="module-nav-btn" onclick="selectModule('descontos')">Descontos</button>
+                        <button class="module-nav-btn" onclick="selectModule('canal_venda')">Canais de Vendas</button>
+                        <button class="module-nav-btn" onclick="selectModule('familias')">Grupo de produtos</button>
+                        <button class="module-nav-btn" onclick="selectModule('supervisores')">Supervisores / Gerentes</button>
+                        <button class="module-nav-btn" onclick="selectModule('cidade_supervisor')">Cidades / Supervisores</button>
+                        <button class="module-nav-btn" onclick="selectModule('municipio_rota')">Municipio / Rota</button>
+                        <button class="module-nav-btn" onclick="selectModule('ramo_atividade')">Ramo de atividade</button>
+                        <button class="module-nav-btn" onclick="selectModule('atividade_principal')">Atividade principal</button>
+                        <button class="module-nav-btn" onclick="selectModule('filiais')">Filiais</button>
+                    </div>
                 </div>
-            </div>
 
-            <div id="loading" style="display: none;">Carregando...</div>
-            <div id="grid"></div>
+                <!-- Seção Representante -->
+                <div class="catalog-category">
+                    <div class="category-header" onclick="toggleCategoryMobile(this)">
+                        <svg class="category-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" />
+                            <circle cx="9" cy="7" r="4" />
+                            <path d="M23 21v-2a4 4 0 0 0-3-3.87" />
+                            <path d="M16 3.13a4 4 0 0 1 0 7.75" />
+                        </svg>
+                        <span>Representante</span>
+                    </div>
+                    <div class="category-items">
+                        <button class="module-nav-btn" onclick="selectModule('vendedores')">Vendedores</button>
+                        <button class="module-nav-btn" onclick="selectModule('referencias')">Referências comerciais</button>
+                        <button class="module-nav-btn" onclick="selectModule('plantel_animais')">Plantel de animais</button>
+                        <button class="module-nav-btn" onclick="selectModule('transporte')">Logística</button>
+                    </div>
+                </div>
+
+                <!-- Seção Configurações -->
+                <div class="catalog-category">
+                    <div class="category-header" onclick="toggleCategoryMobile(this)">
+                        <svg class="category-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <circle cx="12" cy="12" r="3" />
+                            <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z" />
+                        </svg>
+                        <span>Configurações</span>
+                    </div>
+                    <div class="category-items">
+                        <button class="module-nav-btn" onclick="selectModule('automacao')">Automação de relatórios</button>
+                    </div>
+                </div>
+            </aside>
+
+            <!-- Conteúdo Principal -->
+            <main class="catalog-content">
+                <div class="toolbar">
+                    <div class="module-section-title" id="sectionTitle">Condições de Pagamento</div>
+                    <div style="display: flex; gap: 10px; align-items: center;">
+                        <input type="text" id="searchInput" placeholder="Buscar..." style="padding: 6px 12px; border: 1px solid var(--os-border); border-radius: var(--os-radius); font-size: var(--os-text-sm); font-family: var(--os-font); outline: none;" onkeyup="filterGrid()">
+                        <button id="btn-export-excel" class="os-btn os-btn-secondary os-btn-sm" style="display: none;" onclick="exportCurrentModuleToExcel()">Exportar Excel</button>
+                        <button id="btn-novo" class="os-btn os-btn-primary os-btn-sm" onclick="openModal()">+ Novo</button>
+                    </div>
+                </div>
+
+                <div id="loading" style="display: none;">Carregando...</div>
+                <div id="grid"></div>
+            </main>
         </div>
     </div>
+
+    <!-- Script helper para expandir categoria mobile -->
+    <script>
+        function toggleCategoryMobile(element) {
+            if (window.innerWidth <= 992) {
+                const category = element.closest('.catalog-category');
+                category.classList.toggle('expanded');
+            }
+        }
+    </script>
 
     <!-- ===== Modal: Condições de Pagamento ===== -->
     <div id="modal-condicoes" class="custom-modal">
@@ -491,7 +641,7 @@
     <!-- ===== Modal: Transporte / Logística ===== -->
     <div id="modal-transporte" class="custom-modal">
         <div class="modal-dialog">
-            <h3 id="modal-title-transporte">Novo Transporte / Logística</h3>
+            <h3 id="modal-title-transporte">Nova Logística</h3>
             <form id="form-transporte" onsubmit="saveTransporte(event)">
                 <input type="hidden" id="trans-id" />
                 <label>Transportadora</label>
@@ -656,6 +806,54 @@
                 <input type="hidden" id="plan-id" />
                 <label>Espécie (Plantel)</label>
                 <input id="plan-nome" type="text" placeholder="Nome do animal" required />
+                <div class="modal-footer">
+                    <button type="button" class="btn" onclick="closeModals()">Cancelar</button>
+                    <button type="submit" class="btn btn-primary">Salvar</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- ===== Modal: Ramo de Atividade ===== -->
+    <div id="modal-ramo_atividade" class="custom-modal">
+        <div class="modal-dialog">
+            <h3 id="modal-title-ramo_atividade">Novo Ramo de Atividade</h3>
+            <form id="form-ramo_atividade" onsubmit="saveRamoAtividade(event)">
+                <input type="hidden" id="ramo-id" />
+                <label>Ramo de Atividade</label>
+                <input id="ramo-nome" type="text" placeholder="Nome do Ramo" required />
+                <div class="modal-footer">
+                    <button type="button" class="btn" onclick="closeModals()">Cancelar</button>
+                    <button type="submit" class="btn btn-primary">Salvar</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- ===== Modal: Atividade Principal ===== -->
+    <div id="modal-atividade_principal" class="custom-modal">
+        <div class="modal-dialog">
+            <h3 id="modal-title-atividade_principal">Nova Atividade Principal</h3>
+            <form id="form-atividade_principal" onsubmit="saveAtividadePrincipal(event)">
+                <input type="hidden" id="ativ-id" />
+                <label>Atividade Principal</label>
+                <input id="ativ-nome" type="text" placeholder="Nome da Atividade" required />
+                <div class="modal-footer">
+                    <button type="button" class="btn" onclick="closeModals()">Cancelar</button>
+                    <button type="submit" class="btn btn-primary">Salvar</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- ===== Modal: Filiais ===== -->
+    <div id="modal-filiais" class="custom-modal">
+        <div class="modal-dialog">
+            <h3 id="modal-title-filiais">Nova Filial</h3>
+            <form id="form-filiais" onsubmit="saveFilial(event)">
+                <input type="hidden" id="filial-id" />
+                <label>Filial</label>
+                <input id="filial-nome" type="text" placeholder="Nome da Filial" required />
                 <div class="modal-footer">
                     <button type="button" class="btn" onclick="closeModals()">Cancelar</button>
                     <button type="submit" class="btn btn-primary">Salvar</button>

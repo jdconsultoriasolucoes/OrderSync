@@ -139,7 +139,24 @@ async def importar_pedidos_excel(file: UploadFile = File(...), db: Session = Dep
         col_danfe = find_column(df_bd, ["danfe"])
         col_codigo = find_column(df_bd, ["codigo"])
         col_data_pedido = find_column(df_bd, ["data", "pedido"])
-        col_data_danfe = find_column(df_bd, ["data", "danfe"])
+        # Busca flexível e resiliente de data de faturamento/danfe
+        col_data_danfe = None
+        for col in df_bd.columns:
+            norm_col = normalize_text(col)
+            if "data" in norm_col or "dt" in norm_col or "date" in norm_col:
+                if "danfe" in norm_col or "fatur" in norm_col:
+                    col_data_danfe = col
+                    break
+        if not col_data_danfe:
+            col_data_danfe = (
+                find_column(df_bd, ["data", "faturamento"]) or
+                find_column(df_bd, ["data", "danfe"]) or
+                find_column(df_bd, ["dt", "faturamento"]) or
+                find_column(df_bd, ["dt", "danfe"]) or
+                find_column(df_bd, ["faturamento"]) or
+                find_column(df_bd, ["danfe"])
+            )
+
         
         if not col_pedido:
             raise HTTPException(status_code=400, detail="Coluna de identificação do Pedido não encontrada na aba Banco_Dados.")
@@ -224,10 +241,12 @@ async def importar_pedidos_excel(file: UploadFile = File(...), db: Session = Dep
                 detalhes.append("Pedido não encontrado no OrderSync.")
                 resumo["erros"] += 1
                 peso_db = 0.0
+                total_db = 0.0
             else:
                 id_pedido, nf_db, total_db, peso_db, cod_cli_db, status_db, data_fat_db, supra_db = check_exist
                 total_db = float(total_db) if total_db is not None else 0.0
                 peso_db = float(peso_db) if peso_db is not None else 0.0
+
                 
                 # Auto-cura: Se o peso no cabeçalho do banco for 0, mas os itens/cadastro de produtos tiverem peso, recalculamos
                 if peso_db <= 0.001:
@@ -342,6 +361,7 @@ async def importar_pedidos_excel(file: UploadFile = File(...), db: Session = Dep
                 "data_pedido": data_pedido_dt.strftime('%d/%m/%Y') if pd.notna(data_pedido_dt) else (emissao_dt.strftime('%d/%m/%Y') if pd.notna(emissao_dt) else "-"),
                 "data_faturamento": data_danfe_dt.strftime('%d/%m/%Y') if pd.notna(data_danfe_dt) else "-",
                 "valor_planilha": valor_pedido,
+                "valor_sistema": total_db,
                 "peso_planilha": peso,
                 "peso_sistema": peso_db,
                 "ajuste_gerado": ajuste_gerado,

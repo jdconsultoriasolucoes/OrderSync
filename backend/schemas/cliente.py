@@ -228,6 +228,8 @@ class DadosElaboracaoCadastro(BaseModel):
     gerente_pet_ElaboracaoCadastro: Optional[str] = None
     pre_posto_ElaboracaoCadastro: Optional[str] = None
     local_carregamento_ElaboracaoCadastro: Optional[str] = None
+    placa_veiculo_ElaboracaoCadastro: Optional[str] = None
+    proprietario_veiculo_ElaboracaoCadastro: Optional[str] = None
 
     @field_validator("data_vencimento_ElaboracaoCadastro")
     @classmethod
@@ -297,6 +299,9 @@ class ComissaoDispet(BaseModel):
     insumos_ElaboracaoCadastro: Optional[str] = None
     pet_ElaboracaoCadastro: Optional[str] = None
     observacoes_ElaboracaoCadastro: Optional[str] = None
+    comissao_pet_dispet_flag: Optional[bool] = True
+    comissao_insumos_dispet_flag: Optional[bool] = True
+
 
 class CanalVendaCliente(BaseModel):
     canal_pet_ElaboracaoCadastro:     Optional[str] = None

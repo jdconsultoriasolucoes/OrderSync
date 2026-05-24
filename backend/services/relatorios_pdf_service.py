@@ -218,6 +218,7 @@ def gerar_pdf_romaneio(db, carga_id: int) -> bytes:
             cp.ordem_carregamento,
             p.id_pedido,
             p.codigo_cliente,
+            p.pedido_supra,
             COALESCE(c.cadastro_nome_cliente, p.cliente) AS cliente,
             c.cadastro_nome_fantasia as nome_fantasia,
             c.entrega_municipio as cidade,
@@ -291,20 +292,46 @@ def gerar_pdf_romaneio(db, carga_id: int) -> bytes:
     style_header_col.fontName = 'Helvetica-Bold'
     style_header_col.alignment = 2  # Right
 
-    peso_liq_hdr = Paragraph("PESO LÍQ.<br/>ACUM", style_header_col)
+    style_header_left = copy(styles["Normal"])
+    style_header_left.fontSize = 8
+    style_header_left.leading = 9
+    style_header_left.textColor = colors.white
+    style_header_left.fontName = 'Helvetica-Bold'
+    style_header_left.alignment = 0  # Left
 
-    data = [["CÓDIGO", "CLIENTE", "N. FANTASIA", "MUNICÍPIO", "ORDEM", peso_liq_hdr, "OBSERVAÇÕES"]]
+    codigo_hdr = Paragraph("CÓDIGO / Supra", style_header_left)
+    cliente_hdr = Paragraph("CLIENTE", style_header_left)
+    fantasia_hdr = Paragraph("N. FANTASIA", style_header_left)
+    municipio_hdr = Paragraph("MUNICÍPIO", style_header_left)
+    ordem_hdr = Paragraph("ORDEM", style_header_left)
+    peso_liq_hdr = Paragraph("PESO LÍQ.<br/>ACUM", style_header_col)
+    obs_hdr = Paragraph("OBSERVAÇÕES", style_header_left)
+
+    data = [[codigo_hdr, cliente_hdr, fantasia_hdr, municipio_hdr, ordem_hdr, peso_liq_hdr, obs_hdr]]
 
     for p in pedidos:
+        # Normalização do Código do cliente
+        cod = str(p.codigo_cliente or "").strip()
+        if not cod or cod.lower() == "nao cadastrado":
+            cod = "---"
+            
+        supra = str(p.pedido_supra or "").strip()
+        if supra:
+            cod_text = f"{cod}<br/><font color='#555555' size='7'>S: {supra}</font>"
+        else:
+            cod_text = cod
+            
+        codigo_p = Paragraph(cod_text, style_wrapped)
         cliente_p = Paragraph(str(p.cliente or ""), style_wrapped)
         fantasia_p = Paragraph(str(p.nome_fantasia or ""), style_wrapped)
+        cidade_p = Paragraph(str(p.cidade or ""), style_wrapped)
         obs_p = Paragraph(str(p.obs_carga or ""), style_wrapped)
 
         data.append([
-            str(p.codigo_cliente or p.id_pedido),
+            codigo_p,
             cliente_p,
             fantasia_p,
-            str(p.cidade or "")[:15],
+            cidade_p,
             str(p.ordem_carregamento or ""),
             _br_number(p.peso_total_kg, 0),
             obs_p
@@ -317,8 +344,7 @@ def gerar_pdf_romaneio(db, carga_id: int) -> bytes:
         ('TEXTCOLOR', (0, 0), (-1, 0), colors.white),
         ('ALIGN', (0, 0), (-1, -1), 'LEFT'),
         ('ALIGN', (5, 0), (5, -1), 'RIGHT'),  # Peso Líq.
-        ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
-        ('FONTSIZE', (0, 0), (-1, -1), 8),
+        ('VALIGN', (0, 0), (-1, -1), 'MIDDLE'),
         ('GRID', (0, 0), (-1, -1), 0.5, colors.grey),
     ])
     for i in range(1, len(data)):

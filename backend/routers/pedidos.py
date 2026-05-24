@@ -11,7 +11,16 @@ from services.pedidos import (
     STATUS_SQL, STATUS_UPDATE_SQL, STATUS_EVENT_INSERT_SQL
 )
 
+import re
+
 router = APIRouter(prefix="/api/pedidos", tags=["Pedidos"])
+
+def clean_client_name(name: Optional[str]) -> str:
+    if not name:
+        return "---"
+    cleaned = re.sub(r'^[\d\.\/\-]+\s*-\s*', '', name)
+    return cleaned
+
 
 def get_db():
     db = SessionLocal()
@@ -366,7 +375,7 @@ def listar_pedidos(
         PedidoListItem(
             numero_pedido      = r["numero_pedido"],
             data_pedido        = r["data_pedido"],
-            cliente_nome       = r["cliente_nome"],
+            cliente_nome       = clean_client_name(r["cliente_nome"]),
             cliente_codigo     = r["cliente_codigo"],
             modalidade         = r["modalidade"],
             valor_total        = r["valor_total"],
@@ -400,6 +409,7 @@ def resumo_pedido(id_pedido: int, db: Session = Depends(get_db)):
         raise HTTPException(status_code=404, detail="Pedido não encontrado")
 
     head_dict = dict(head)
+    head_dict["cliente"] = clean_client_name(head_dict.get("cliente"))
     for k in ("validade_ate", "created_at", "atualizado_em", "data_prevista", "confirmado_em"):
         if k in head_dict:
             head_dict[k] = to_iso_or_none(head_dict[k])

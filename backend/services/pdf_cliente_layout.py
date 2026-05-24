@@ -300,7 +300,7 @@ def gerar_pdf_cliente_simplificado(pedido: PedidoPdf) -> bytes:
         if is_last_page:
             # Tabela de totais + Observações (largura total: 19cm)
             totais_data = [
-                ["Total em Peso Bruto", f"{_br_number(pedido.total_peso_bruto, 0)} kg"],
+                ["Total em Peso liquido", f"{_br_number(pedido.total_peso_liquido, 0)} kg"],
                 ["Total em VL.", f"R$ {_br_number(pedido.total_valor, 2)}"]
             ]
             

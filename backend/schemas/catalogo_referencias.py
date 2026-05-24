@@ -113,3 +113,55 @@ class PlantelAnimalResponse(PlantelAnimalBase):
 
     class Config:
         from_attributes = True
+
+
+# Ramo Atividade
+class RamoAtividadeBase(BaseModel):
+    ramo_atividade: Optional[str] = None
+
+class RamoAtividadeCreate(RamoAtividadeBase):
+    pass
+
+class RamoAtividadeUpdate(RamoAtividadeBase):
+    pass
+
+class RamoAtividadeResponse(RamoAtividadeBase):
+    id: int
+
+    class Config:
+        from_attributes = True
+
+
+# Atividade Principal
+class AtividadePrincipalBase(BaseModel):
+    atividade_principal: Optional[str] = None
+
+class AtividadePrincipalCreate(AtividadePrincipalBase):
+    pass
+
+class AtividadePrincipalUpdate(AtividadePrincipalBase):
+    pass
+
+class AtividadePrincipalResponse(AtividadePrincipalBase):
+    id: int
+
+    class Config:
+        from_attributes = True
+
+
+# Filiais
+class FilialBase(BaseModel):
+    filial: Optional[str] = None
+
+class FilialCreate(FilialBase):
+    pass
+
+class FilialUpdate(FilialBase):
+    pass
+
+class FilialResponse(FilialBase):
+    id: int
+
+    class Config:
+        from_attributes = True
+

@@ -54,3 +54,25 @@ class PlantelAnimalModel(Base):
     id = Column("id", Integer, primary_key=True, index=True, autoincrement=True)
     plantel_animais = Column("plantel_animais", String)
 
+
+class RamoAtividadeModel(Base):
+    __tablename__ = "tb_ramo_atividade"
+
+    id = Column("id", Integer, primary_key=True, index=True, autoincrement=True)
+    ramo_atividade = Column("ramo_atividade", String)
+
+
+class AtividadePrincipalModel(Base):
+    __tablename__ = "tb_atividade_principal"
+
+    id = Column("id", Integer, primary_key=True, index=True, autoincrement=True)
+    atividade_principal = Column("atividade_principal", String)
+
+
+class FilialModel(Base):
+    __tablename__ = "tb_filiais"
+
+    id = Column("id", Integer, primary_key=True, index=True, autoincrement=True)
+    filial = Column("filial", String)
+
+

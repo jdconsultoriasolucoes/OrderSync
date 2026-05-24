@@ -181,17 +181,17 @@ async function carregarTabelas() {
             Editar
           </button>
           
-          <button class="os-btn os-btn-danger os-btn-sm" 
-            onclick="abrirModalDelecao(${tabela.id})">
-            Excluir
-          </button>
-          
           <button
             class="os-btn os-btn-primary os-btn-sm btn-enviar-link"
             data-id="${tabela.id}"
             data-frete-kg="${tabela.frete_kg !== undefined && tabela.frete_kg !== null ? tabela.frete_kg : ''}"
           >
             Enviar
+          </button>
+
+          <button class="os-btn os-btn-danger os-btn-sm" 
+            onclick="abrirModalDelecao(${tabela.id})">
+            Excluir
           </button>
         </div>
       </td>
