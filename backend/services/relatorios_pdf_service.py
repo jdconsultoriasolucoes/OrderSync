@@ -299,7 +299,8 @@ def gerar_pdf_romaneio(db, carga_id: int) -> bytes:
     style_header_left.fontName = 'Helvetica-Bold'
     style_header_left.alignment = 0  # Left
 
-    codigo_hdr = Paragraph("CÓDIGO / Supra", style_header_left)
+    codigo_hdr = Paragraph("CÓDIGO", style_header_left)
+    supra_hdr = Paragraph("PEDIDO SUPRA", style_header_left)
     cliente_hdr = Paragraph("CLIENTE", style_header_left)
     fantasia_hdr = Paragraph("N. FANTASIA", style_header_left)
     municipio_hdr = Paragraph("MUNICÍPIO", style_header_left)
@@ -307,21 +308,20 @@ def gerar_pdf_romaneio(db, carga_id: int) -> bytes:
     peso_liq_hdr = Paragraph("PESO LÍQ.<br/>ACUM", style_header_col)
     obs_hdr = Paragraph("OBSERVAÇÕES", style_header_left)
 
-    data = [[codigo_hdr, cliente_hdr, fantasia_hdr, municipio_hdr, ordem_hdr, peso_liq_hdr, obs_hdr]]
+    data = [[codigo_hdr, supra_hdr, cliente_hdr, fantasia_hdr, municipio_hdr, ordem_hdr, peso_liq_hdr, obs_hdr]]
 
     for p in pedidos:
         # Normalização do Código do cliente
         cod = str(p.codigo_cliente or "").strip()
-        if not cod or cod.lower() == "nao cadastrado":
-            cod = "---"
+        if not cod or "nao cadastrado" in cod.lower() or "não cadastrado" in cod.lower():
+            cod = "Não Cadastrado"
             
-        supra = str(p.pedido_supra or "").strip()
-        if supra:
-            cod_text = f"{cod}<br/><font color='#555555' size='7'>S: {supra}</font>"
-        else:
-            cod_text = cod
+        supra_text = str(p.pedido_supra or "").strip()
+        if not supra_text:
+            supra_text = "---"
             
-        codigo_p = Paragraph(cod_text, style_wrapped)
+        codigo_p = Paragraph(cod, style_wrapped)
+        supra_p = Paragraph(supra_text, style_wrapped)
         cliente_p = Paragraph(str(p.cliente or ""), style_wrapped)
         fantasia_p = Paragraph(str(p.nome_fantasia or ""), style_wrapped)
         cidade_p = Paragraph(str(p.cidade or ""), style_wrapped)
@@ -329,6 +329,7 @@ def gerar_pdf_romaneio(db, carga_id: int) -> bytes:
 
         data.append([
             codigo_p,
+            supra_p,
             cliente_p,
             fantasia_p,
             cidade_p,
@@ -337,13 +338,13 @@ def gerar_pdf_romaneio(db, carga_id: int) -> bytes:
             obs_p
         ])
 
-    # 7 colunas: sem Peso Br. Acum
-    table = Table(data, colWidths=[1.8*cm, 7.5*cm, 4.5*cm, 3.2*cm, 1.3*cm, 2.2*cm, 7.8*cm], repeatRows=1)
+    # 8 colunas com soma totalizando 28.3*cm (largura máxima da área imprimível do A4 paisagem)
+    table = Table(data, colWidths=[2.8*cm, 2.2*cm, 6.5*cm, 4.0*cm, 2.8*cm, 1.1*cm, 2.1*cm, 6.8*cm], repeatRows=1)
     style = TableStyle([
         ('BACKGROUND', (0, 0), (-1, 0), SUPRA_BAR),
         ('TEXTCOLOR', (0, 0), (-1, 0), colors.white),
         ('ALIGN', (0, 0), (-1, -1), 'LEFT'),
-        ('ALIGN', (5, 0), (5, -1), 'RIGHT'),  # Peso Líq.
+        ('ALIGN', (6, 0), (6, -1), 'RIGHT'),  # Peso Líq. (coluna index 6)
         ('VALIGN', (0, 0), (-1, -1), 'MIDDLE'),
         ('GRID', (0, 0), (-1, -1), 0.5, colors.grey),
     ])
@@ -590,33 +591,32 @@ def _desenhar_romaneio_logic(c, carga, pedidos, width, height):
 
     styles = getSampleStyleSheet()
     style_wrapped = copy(styles["Normal"])
-    style_wrapped.fontSize = 9
-    style_wrapped.leading = 10
+    style_wrapped.fontSize = 8
+    style_wrapped.leading = 9
     style_wrapped.textColor = colors.black
 
-    data = [["CÓDIGO / Supra", "CLIENTE", "N. FANTASIA", "MUNICÍPIO", "ORDEM CARREG.", "PESO LÍQ. ACUM", "OBSERVAÇÃO PEDIDO"]]
+    data = [["CÓDIGO", "PEDIDO SUPRA", "CLIENTE", "N. FANTASIA", "MUNICÍPIO", "ORDEM CARREG.", "PESO LÍQ. ACUM", "OBSERVAÇÃO PEDIDO"]]
     for p in pedidos:
+        # Normalização do Código do cliente
+        cod = str(p.codigo_cliente or "").strip()
+        if not cod or "nao cadastrado" in cod.lower() or "não cadastrado" in cod.lower():
+            cod = "Não Cadastrado"
+            
+        supra_text = str(p.pedido_supra or "").strip()
+        if not supra_text:
+            supra_text = "---"
+            
+        codigo_p = Paragraph(cod, style_wrapped)
+        supra_p = Paragraph(supra_text, style_wrapped)
         cliente_p = Paragraph(str(p.cliente or ""), style_wrapped)
         fantasia_p = Paragraph(str(p.nome_fantasia or ""), style_wrapped)
         obs_p = Paragraph(str(p.obs_carga or ""), style_wrapped)
 
         peso_total_kg = getattr(p, 'peso_total_kg', 0.0) or 0.0
-        
-        # Mapeamento do Código / Supra igual ao romaneio individual
-        cod = str(p.codigo_cliente or "").strip()
-        if not cod or cod.lower() == "nao cadastrado":
-            cod = "---"
-            
-        supra = str(p.pedido_supra or "").strip()
-        if supra:
-            cod_text = f"{cod}<br/><font color='#555555' size='7'>S: {supra}</font>"
-        else:
-            cod_text = cod
-            
-        codigo_p = Paragraph(cod_text, style_wrapped)
 
         data.append([
             codigo_p,
+            supra_p,
             cliente_p,
             fantasia_p,
             str(p.cidade or "")[:20],
@@ -625,15 +625,15 @@ def _desenhar_romaneio_logic(c, carga, pedidos, width, height):
             obs_p
         ])
 
-    # 7 colunas: sem Peso Br. Acum
-    table = Table(data, colWidths=[1.8*cm, 7.5*cm, 4.5*cm, 3.2*cm, 2.5*cm, 2.2*cm, 6.1*cm], repeatRows=1)
+    # 8 colunas com soma totalizando 28.3*cm (largura máxima da área imprimível do A4 paisagem)
+    table = Table(data, colWidths=[2.8*cm, 2.2*cm, 6.5*cm, 4.0*cm, 2.8*cm, 1.1*cm, 2.1*cm, 6.8*cm], repeatRows=1)
     style = TableStyle([
         ('BACKGROUND', (0, 0), (-1, 0), SUPRA_BAR),
         ('TEXTCOLOR', (0, 0), (-1, 0), colors.white),
         ('ALIGN', (0, 0), (-1, -1), 'LEFT'),
-        ('ALIGN', (5, 0), (5, -1), 'RIGHT'),  # Peso Líq.
+        ('ALIGN', (6, 0), (6, -1), 'RIGHT'),  # Peso Líq. (coluna index 6)
         ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
-        ('FONTSIZE', (0, 0), (-1, -1), 9),
+        ('FONTSIZE', (0, 0), (-1, -1), 8),
         ('GRID', (0, 0), (-1, -1), 0.5, colors.grey),
     ])
     for i in range(1, len(data)):
