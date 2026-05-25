@@ -265,6 +265,20 @@ async def importar_pedidos_excel(file: UploadFile = File(...), db: Session = Dep
                         peso_db = float(peso_calculado)
                         db.execute(text("UPDATE public.tb_pedidos SET peso_total_kg = :peso WHERE id_pedido = :id_pedido"), {"peso": peso_db, "id_pedido": id_pedido})
                 
+                # Consulta para calcular dinamicamente o peso líquido total do pedido a partir de seus itens e do cadastro de produtos
+                peso_liquido_calculado = db.execute(text("""
+                    SELECT SUM(c.quantidade * COALESCE(prod.peso, 0))
+                    FROM public.tb_pedidos_itens c
+                    LEFT JOIN (
+                      SELECT codigo_supra, MAX(peso) as peso
+                      FROM public.t_cadastro_produto_v2
+                      GROUP BY codigo_supra
+                    ) prod ON prod.codigo_supra = c.codigo
+                    WHERE c.id_pedido = :id_pedido AND c.quantidade > 0
+                """), {"id_pedido": id_pedido}).scalar()
+                
+                peso_liquido_db = float(peso_liquido_calculado) if peso_liquido_calculado is not None else 0.0
+                
                 # Regras de Status Dinâmicas (Calculadas primeiro para verificar se houve alteração)
                 if normalize_text(status_excel) == "pedido nao completo":
                     status_novo_pedido = 'PEDIDO_NAO_COMPLETO'
@@ -286,7 +300,7 @@ async def importar_pedidos_excel(file: UploadFile = File(...), db: Session = Dep
                 # Verificar se o pedido já está 100% atualizado com os mesmos dados (SEM_ALTERACAO)
                 is_nf_same = (nf_db or "") == danfe
                 is_val_same = abs(valor_pedido - total_db) <= 0.01
-                is_peso_same = abs(peso - peso_db) <= 0.01
+                is_peso_same = abs(peso - peso_liquido_db) <= 0.01
                 is_cli_same = clean_numeric_code(cod_cli_db) == codigo_cliente
                 is_status_same = (status_novo_pedido is None) or (status_db == status_novo_pedido)
                 is_date_same = is_same_date(data_danfe_dt, data_fat_db)
@@ -301,8 +315,8 @@ async def importar_pedidos_excel(file: UploadFile = File(...), db: Session = Dep
                     if cod_cli_db and clean_numeric_code(cod_cli_db) != codigo_cliente:
                         detalhes.append(f"Divergência de Cliente (Planilha: {codigo_cliente}, Banco: {cod_cli_db}).")
                     
-                    if abs(peso - peso_db) > 0.01:
-                        detalhes.append(f"Divergência de Peso (Planilha: {peso:.2f}kg, Banco: {peso_db:.2f}kg).")
+                    if abs(peso - peso_liquido_db) > 0.01:
+                        detalhes.append(f"Divergência de Peso Líquido (Planilha: {peso:.2f}kg, Banco (Líquido): {peso_liquido_db:.2f}kg).")
                         
                     diff_valor = valor_pedido - total_db
                     if abs(diff_valor) > 0.01:
@@ -363,7 +377,7 @@ async def importar_pedidos_excel(file: UploadFile = File(...), db: Session = Dep
                 "valor_planilha": valor_pedido,
                 "valor_sistema": total_db,
                 "peso_planilha": peso,
-                "peso_sistema": peso_db,
+                "peso_sistema": peso_liquido_db,
                 "ajuste_gerado": ajuste_gerado,
                 "status": status_proc,
                 "novo_status_pedido": status_novo_pedido or "N/A",

@@ -1,6 +1,6 @@
 /**
  * relatorios.js
- * Gerencia a lógica da visualização de 2 colunas do Módulo "Exportar Relatórios"
+ * Gerencia a lógica da visualização de 2 colunas do Módulo "Logística"
  */
 
 var API_BASE = window.API_BASE || window.location.origin;

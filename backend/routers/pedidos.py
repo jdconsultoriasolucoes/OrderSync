@@ -15,27 +15,7 @@ import re
 
 router = APIRouter(prefix="/api/pedidos", tags=["Pedidos"])
 
-def clean_client_name(name: Optional[str]) -> str:
-    if not name:
-        return "---"
-    
-    # 1. Remove qualquer CPF/CNPJ formatado ou não do início da string
-    # Também limpa se tiver qualquer prefixo numérico (ex: RG, código) seguido de traço
-    cleaned = re.sub(r'^\d{3}\.?\d{3}\.?\d{3}\-?\d{2}\s*(?:-\s*)?', '', name)
-    cleaned = re.sub(r'^\d{2}\.?\d{3}\.?\d{3}/?\d{4}\-?\d{2}\s*(?:-\s*)?', '', cleaned)
-    cleaned = re.sub(r'^[\d\.\/\-]+\s*-\s*', '', cleaned)
-    
-    # 2. Remove qualquer CPF/CNPJ/documento numérico (com ou sem formatação) do final da string
-    cleaned = re.sub(r'\s*-\s*\d{3}\.?\d{3}\.?\d{3}\-?\d{2}\s*$', '', cleaned)
-    cleaned = re.sub(r'\s*-\s*\d{2}\.?\d{3}\.?\d{3}/?\d{4}\-?\d{2}\s*$', '', cleaned)
-    cleaned = re.sub(r'\s*-\s*[\d\.\/\-]+\s*$', '', cleaned)
-    
-    # 3. Remove CPF/CNPJ/documento entre parênteses
-    cleaned = re.sub(r'\s*\(\s*\d{3}\.?\d{3}\.?\d{3}\-?\d{2}\s*\)', '', cleaned)
-    cleaned = re.sub(r'\s*\(\s*\d{2}\.?\d{3}\.?\d{3}/?\d{4}\-?\d{2}\s*\)', '', cleaned)
-    cleaned = re.sub(r'\s*\([\d\.\/\-]+\)', '', cleaned)
-    
-    return cleaned.strip()
+from utils.string_utils import clean_client_name
 
 
 def get_db():

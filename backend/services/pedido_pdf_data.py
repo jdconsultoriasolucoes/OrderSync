@@ -3,6 +3,7 @@ from sqlalchemy import text
 from database import SessionLocal
 from models.pedido_pdf import PedidoPdf, PedidoPdfItem
 from datetime import timedelta
+from utils.string_utils import clean_client_name
 
 
 def carregar_pedido_pdf(db, pedido_id: int) -> PedidoPdf:
@@ -182,9 +183,9 @@ def carregar_pedido_pdf(db, pedido_id: int) -> PedidoPdf:
     return PedidoPdf(
         id_pedido=head["id_pedido"],
         codigo_cliente=final_cod,
-        cliente=head["cliente"] or "",
+        cliente=clean_client_name(head["cliente"]) if head.get("cliente") else "",
         nome_fantasia=head.get("nome_fantasia") or "Sem Nome Fantasia",
-        razao_social=head.get("nome_empresarial") or None,
+        razao_social=clean_client_name(head["nome_empresarial"]) if head.get("nome_empresarial") else None,
         data_pedido=head["confirmado_em"],
         data_entrega_ou_retirada=head["data_retirada"],
         frete_total=float(head["frete_total"] or 0),

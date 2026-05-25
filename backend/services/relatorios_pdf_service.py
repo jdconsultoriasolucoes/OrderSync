@@ -12,6 +12,7 @@ from pathlib import Path
 import io
 from copy import copy
 from sqlalchemy import text
+from utils.string_utils import clean_client_name
 
 # Palette and standard formatters (based on pdf_service.py)
 SUPRA_BAR = colors.Color(0.78, 0.70, 0.60)       # Header bar
@@ -158,7 +159,7 @@ def gerar_pdf_formacao_carga(db, carga_id: int) -> bytes:
     data = [header_row]
 
     for p in pedidos:
-        cliente_p = Paragraph(str(p.cliente or ""), style_wrapped)
+        cliente_p = Paragraph(clean_client_name(p.cliente), style_wrapped)
         fantasia_p = Paragraph(str(p.nome_fantasia or ""), style_wrapped)
         cidade_p = Paragraph(str(p.cidade or ""), style_wrapped)
 
@@ -322,7 +323,7 @@ def gerar_pdf_romaneio(db, carga_id: int) -> bytes:
             
         codigo_p = Paragraph(cod, style_wrapped)
         supra_p = Paragraph(supra_text, style_wrapped)
-        cliente_p = Paragraph(str(p.cliente or ""), style_wrapped)
+        cliente_p = Paragraph(clean_client_name(p.cliente), style_wrapped)
         fantasia_p = Paragraph(str(p.nome_fantasia or ""), style_wrapped)
         cidade_p = Paragraph(str(p.cidade or ""), style_wrapped)
         obs_p = Paragraph(str(p.obs_carga or ""), style_wrapped)
@@ -608,7 +609,7 @@ def _desenhar_romaneio_logic(c, carga, pedidos, width, height):
             
         codigo_p = Paragraph(cod, style_wrapped)
         supra_p = Paragraph(supra_text, style_wrapped)
-        cliente_p = Paragraph(str(p.cliente or ""), style_wrapped)
+        cliente_p = Paragraph(clean_client_name(p.cliente), style_wrapped)
         fantasia_p = Paragraph(str(p.nome_fantasia or ""), style_wrapped)
         obs_p = Paragraph(str(p.obs_carga or ""), style_wrapped)
 
