@@ -236,6 +236,7 @@ async def importar_pedidos_excel(file: UploadFile = File(...), db: Session = Dep
                    )
             """), {"p": pedido_supra}).fetchone()
             
+            id_pedido = None
             if not check_exist:
                 status_proc = "ERRO_NAO_ENCONTRADO"
                 detalhes.append("Pedido não encontrado no OrderSync.")
@@ -370,6 +371,8 @@ async def importar_pedidos_excel(file: UploadFile = File(...), db: Session = Dep
             })
             
             itens_resposta.append({
+                "id_pedido": id_pedido,
+                "danfe": danfe,
                 "pedido_supra": pedido_supra,
                 "cliente_codigo": codigo_cliente,
                 "data_pedido": data_pedido_dt.strftime('%d/%m/%Y') if pd.notna(data_pedido_dt) else (emissao_dt.strftime('%d/%m/%Y') if pd.notna(emissao_dt) else "-"),

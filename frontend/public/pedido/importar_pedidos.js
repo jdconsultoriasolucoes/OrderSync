@@ -168,7 +168,7 @@ document.addEventListener("DOMContentLoaded", () => {
         const maisRecenteIso = maisRecenteBr ? converterDataBrParaIso(maisRecenteBr) : obterDataAtualIso();
 
         // Limpar todos os campos de filtros ao renderizar uma nova carga para exibir todos os resultados por padrão
-        ["filterPedido", "filterCliente", "filterDataPedido", "filterDataFat", "filterValor", "filterValorDif", "filterPeso", "filterPesoDif", "filterResultado", "filterStatus"].forEach(id => {
+        ["filterPedidoSistema", "filterPedido", "filterDanfe", "filterCliente", "filterDataPedido", "filterDataFat", "filterValor", "filterValorDif", "filterPeso", "filterPesoDif", "filterResultado", "filterStatus"].forEach(id => {
             const el = document.getElementById(id);
             if (el) {
                 el.value = "";
@@ -221,7 +221,7 @@ document.addEventListener("DOMContentLoaded", () => {
         // Render Table Rows
         if (!itens || itens.length === 0) {
             const tr = document.createElement("tr");
-            tr.innerHTML = `<td colspan="10" style="text-align: center; color: var(--os-text-secondary);">Nenhum pedido processado.</td>`;
+            tr.innerHTML = `<td colspan="12" style="text-align: center; color: var(--os-text-secondary);">Nenhum pedido processado.</td>`;
             resultsBody.appendChild(tr);
         } else {
             itens.forEach(item => {
@@ -286,7 +286,9 @@ document.addEventListener("DOMContentLoaded", () => {
                 const textoDetalhes = Array.isArray(item.detalhes) ? item.detalhes.join(" ") : (item.detalhes || "");
 
                 // Atributos de dados para filtragem ultra-rápida no client-side
+                tr.dataset.pedido_sistema = item.id_pedido || "";
                 tr.dataset.pedido = item.pedido_supra || "";
+                tr.dataset.danfe = item.danfe || "";
                 tr.dataset.cliente = item.cliente_codigo || "";
                 tr.dataset.data_pedido = item.data_pedido || "";
                 tr.dataset.data_fat = item.data_faturamento || "";
@@ -299,7 +301,9 @@ document.addEventListener("DOMContentLoaded", () => {
                 tr.dataset.detalhes = textoDetalhes;
 
                 tr.innerHTML = `
+                    <td><strong>${item.id_pedido || "-"}</strong></td>
                     <td><strong>${item.pedido_supra || "-"}</strong></td>
+                    <td>${item.danfe || "-"}</td>
                     <td>${item.cliente_codigo || "-"}</td>
                     <td>${item.data_pedido || "-"}</td>
                     <td>${item.data_faturamento || "-"}</td>
@@ -325,7 +329,9 @@ document.addEventListener("DOMContentLoaded", () => {
 
     // Lógica client-side para filtragem dinâmica instantânea
     function applyFilters() {
+        const fPedidoSistema = document.getElementById("filterPedidoSistema").value.toLowerCase().trim();
         const fPedido = document.getElementById("filterPedido").value.toLowerCase().trim();
+        const fDanfe = document.getElementById("filterDanfe").value.toLowerCase().trim();
         const fCliente = document.getElementById("filterCliente").value.toLowerCase().trim();
         
         // Converter data do calendário (ISO YYYY-MM-DD) para padrão brasileiro para filtrar na tabela
@@ -346,7 +352,9 @@ document.addEventListener("DOMContentLoaded", () => {
             // Se for o tr informativo de tabela vazia, ignora
             if (tr.querySelector("td[colspan]")) return;
 
+            const matchPedidoSistema = !fPedidoSistema || String(tr.dataset.pedido_sistema).toLowerCase().includes(fPedidoSistema);
             const matchPedido = !fPedido || String(tr.dataset.pedido).toLowerCase().includes(fPedido);
+            const matchDanfe = !fDanfe || String(tr.dataset.danfe).toLowerCase().includes(fDanfe);
             const matchCliente = !fCliente || String(tr.dataset.cliente).toLowerCase().includes(fCliente);
             const matchDataPedido = !fDataPedido || String(tr.dataset.data_pedido).toLowerCase().includes(fDataPedido);
             const matchDataFat = !fDataFat || String(tr.dataset.data_fat).toLowerCase().includes(fDataFat);
@@ -357,7 +365,7 @@ document.addEventListener("DOMContentLoaded", () => {
             const matchResultado = !fResultado || String(tr.dataset.resultado).toLowerCase() === fResultado;
             const matchStatus = !fStatus || String(tr.dataset.status).toLowerCase().includes(fStatus);
 
-            if (matchPedido && matchCliente && matchDataPedido && matchDataFat && matchPreco && matchPrecoDif && matchPeso && matchPesoDif && matchResultado && matchStatus) {
+            if (matchPedidoSistema && matchPedido && matchDanfe && matchCliente && matchDataPedido && matchDataFat && matchPreco && matchPrecoDif && matchPeso && matchPesoDif && matchResultado && matchStatus) {
                 tr.style.display = "";
             } else {
                 tr.style.display = "none";
@@ -366,7 +374,7 @@ document.addEventListener("DOMContentLoaded", () => {
     }
 
     // Vincular os inputs de filtros aos event listeners
-    ["filterPedido", "filterCliente", "filterDataPedido", "filterDataFat", "filterValor", "filterValorDif", "filterPeso", "filterPesoDif", "filterResultado", "filterStatus"].forEach(id => {
+    ["filterPedidoSistema", "filterPedido", "filterDanfe", "filterCliente", "filterDataPedido", "filterDataFat", "filterValor", "filterValorDif", "filterPeso", "filterPesoDif", "filterResultado", "filterStatus"].forEach(id => {
         const el = document.getElementById(id);
         if (el) {
             el.addEventListener("input", applyFilters);
@@ -418,27 +426,29 @@ document.addEventListener("DOMContentLoaded", () => {
             return;
         }
         
-        let csv = "Nº Pedido;Cód. Cliente;Data Pedido;Data Faturamento;Preço (Planilha / Sistema);Preço Dif;Peso (Planilha / Sistema);Peso Dif;Resultado;Status Atualizado (Banco)\n";
+        let csv = "Nº Pedido Sistema;Nº Pedido Supra;Danfe;Cód. Cliente;Data Pedido;Data Faturamento;Preço (Planilha / Sistema);Preço Dif;Peso (Planilha / Sistema);Peso Dif;Resultado;Status Atualizado (Banco)\n";
         rows.forEach(tr => {
             if (tr.querySelector("td[colspan]")) return;
             // Se a linha estiver oculta por algum filtro ativo, não exporta
             if (tr.style.display === "none") return;
 
             const cells = tr.querySelectorAll("td");
-            if (cells.length < 10) return;
+            if (cells.length < 12) return;
             
-            const ped = cells[0].innerText.trim().replace(/;/g, ",");
-            const cli = cells[1].innerText.trim().replace(/;/g, ",");
-            const dtPed = cells[2].innerText.trim().replace(/;/g, ",");
-            const dtFat = cells[3].innerText.trim().replace(/;/g, ",");
-            const preco = cells[4].innerText.trim().replace(/;/g, ",");
-            const precoDif = cells[5].innerText.trim().replace(/;/g, ",");
-            const peso = cells[6].innerText.trim().replace(/;/g, ",");
-            const pesoDif = cells[7].innerText.trim().replace(/;/g, ",");
-            const res = cells[8].innerText.trim().replace(/;/g, ",");
-            const status = cells[9].innerText.trim().replace(/;/g, ",");
+            const pedSis = cells[0].innerText.trim().replace(/;/g, ",");
+            const pedSup = cells[1].innerText.trim().replace(/;/g, ",");
+            const danfe = cells[2].innerText.trim().replace(/;/g, ",");
+            const cli = cells[3].innerText.trim().replace(/;/g, ",");
+            const dtPed = cells[4].innerText.trim().replace(/;/g, ",");
+            const dtFat = cells[5].innerText.trim().replace(/;/g, ",");
+            const preco = cells[6].innerText.trim().replace(/;/g, ",");
+            const precoDif = cells[7].innerText.trim().replace(/;/g, ",");
+            const peso = cells[8].innerText.trim().replace(/;/g, ",");
+            const pesoDif = cells[9].innerText.trim().replace(/;/g, ",");
+            const res = cells[10].innerText.trim().replace(/;/g, ",");
+            const status = cells[11].innerText.trim().replace(/;/g, ",");
             
-            csv += `"${ped}";"${cli}";"${dtPed}";"${dtFat}";"${preco}";"${precoDif}";"${peso}";"${pesoDif}";"${res}";"${status}"\n`;
+            csv += `"${pedSis}";"${pedSup}";"${danfe}";"${cli}";"${dtPed}";"${dtFat}";"${preco}";"${precoDif}";"${peso}";"${pesoDif}";"${res}";"${status}"\n`;
         });
         
         const blob = new Blob(["\ufeff" + csv], { type: 'text/csv;charset=utf-8;' });
