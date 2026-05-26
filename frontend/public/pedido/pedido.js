@@ -7,8 +7,8 @@ const API = {
   resumo: (id) => `${API_BASE}/api/pedidos/${id}/resumo`,
   cancelar: (id) => `${API_BASE}/api/pedidos/${id}/cancelar`,
   reenviar: (id) => `${API_BASE}/api/pedidos/${id}/reenviar_email`,
-  pdf: (id) => `${API_BASE}/api/pedido/${id}/pdf`, // endpoint de download direto padrão
-  pdf_cliente: (id) => `${API_BASE}/api/pedido/${id}/pdf_cliente`, // endpoint de download cliente
+  pdf: (id) => `${API_BASE}/api/pedido/${id}/pdf?t=${Date.now()}`, // endpoint de download direto padrão
+  pdf_cliente: (id) => `${API_BASE}/api/pedido/${id}/pdf_cliente?t=${Date.now()}`, // endpoint de download cliente
   camposFaturamento: (id) => `${API_BASE}/api/pedidos/${id}/campos_faturamento`,
 };
 

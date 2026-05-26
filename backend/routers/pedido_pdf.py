@@ -32,7 +32,12 @@ def gerar_pdf_pedido_endpoint(pedido_id: int):
         return StreamingResponse(
             io.BytesIO(pdf_bytes),
             media_type="application/pdf",
-            headers={"Content-Disposition": f'inline; filename="Pedido_{pedido_id}.pdf"'}
+            headers={
+                "Content-Disposition": f'inline; filename="Pedido_{pedido_id}.pdf"',
+                "Cache-Control": "no-store, no-cache, must-revalidate, max-age=0",
+                "Pragma": "no-cache",
+                "Expires": "0"
+            }
         )
 
 
@@ -54,7 +59,10 @@ def visualizar_pedido_pdf(pedido_id: int):
         io.BytesIO(pdf_bytes),
         media_type="application/pdf",
         headers={
-            "Content-Disposition": f'inline; filename="pedido_{pedido_id}.pdf"'
+            "Content-Disposition": f'inline; filename="pedido_{pedido_id}.pdf"',
+            "Cache-Control": "no-store, no-cache, must-revalidate, max-age=0",
+            "Pragma": "no-cache",
+            "Expires": "0"
         },
     )
 
@@ -79,6 +87,9 @@ def visualizar_pedido_pdf_cliente(pedido_id: int):
         io.BytesIO(pdf_bytes),
         media_type="application/pdf",
         headers={
-            "Content-Disposition": f'inline; filename="Orcamento_Preview_{pedido_id}.pdf"'
+            "Content-Disposition": f'inline; filename="Orcamento_Preview_{pedido_id}.pdf"',
+            "Cache-Control": "no-store, no-cache, must-revalidate, max-age=0",
+            "Pragma": "no-cache",
+            "Expires": "0"
         },
     )

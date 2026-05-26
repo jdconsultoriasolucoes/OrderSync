@@ -15,6 +15,8 @@ import os
 import logging
 from schemas.pedido_confirmacao import ConfirmarPedidoRequest
 from services.pedido_confirmacao_service import criar_pedido_confirmado
+from services.tabela_preco import cliente_calcula_st
+from services.fiscal import calcular_linha
 
 router = APIRouter(prefix="/pedido", tags=["Pedido"])
 logger = logging.getLogger(__name__)
@@ -52,35 +54,48 @@ async def pedido_preview(
     com_frete: bool = Query(..., description="true/false: decidir valor com ou sem frete"),
 ):
     with SessionLocal() as db:
-        # Cabeçalho: cliente "como está no banco"
+        # Cabeçalho: cliente e código
         cabecalho_sql = text("""
-            SELECT cliente
+            SELECT cliente, codigo_cliente
             FROM tb_tabela_preco
-            WHERE id_tabela = :tid
+            WHERE id_tabela = :tid AND ativo IS TRUE
             LIMIT 1
         """)
-        cliente = db.execute(cabecalho_sql, {"tid": tabela_id}).scalar() or ""
+        cab_row = db.execute(cabecalho_sql, {"tid": tabela_id}).mappings().first()
+        cliente = cab_row.get("cliente") if cab_row else ""
+        codigo_cliente = cab_row.get("codigo_cliente") if cab_row else None
+
+        # Determina se calcula ST de forma robusta e baseada no cadastro
+        aplica_st = cliente_calcula_st(db, codigo_cliente)
 
         itens_sql = text("""
             SELECT
-                id_tabela,                               -- cabeçalho (retornamos como tabela_id)
-                codigo_produto_supra       AS codigo_supra,
-                descricao_produto          AS nome,
-                embalagem                  AS embalagem,
-                peso_liquido               AS peso,
-                codigo_plano_pagamento     AS plano_pagamento,
-                codigo_plano_pagamento     AS plano_pagamento,
-                descricao_fator_comissao   AS tabela_comissao,
-                COALESCE(valor_frete, 0)   AS valor_com_frete,
-                COALESCE(valor_s_frete, 0) AS valor_sem_frete,
-                COALESCE(markup, 0)        AS markup,
-                COALESCE(valor_final_markup, 0)   AS valor_final_markup,
-                COALESCE(valor_s_frete_markup, 0) AS valor_s_frete_markup,
-                COALESCE(valor_frete_aplicado, 0) AS valor_frete_unitario,
-                COALESCE(manual_freight, FALSE)   AS manual_freight
-            FROM tb_tabela_preco
-            WHERE id_tabela = :tid AND ativo IS TRUE
-            ORDER BY descricao_produto
+                t.id_tabela,
+                t.codigo_produto_supra       AS codigo_supra,
+                t.descricao_produto          AS nome,
+                t.embalagem                  AS embalagem,
+                t.peso_liquido               AS peso,
+                t.codigo_plano_pagamento     AS plano_pagamento,
+                t.descricao_fator_comissao   AS tabela_comissao,
+                COALESCE(t.valor_frete, 0)   AS valor_com_frete_original,
+                COALESCE(t.valor_s_frete, 0) AS valor_sem_frete_original,
+                COALESCE(t.markup, 0)        AS markup,
+                COALESCE(t.valor_final_markup, 0)   AS valor_final_markup_original,
+                COALESCE(t.valor_s_frete_markup, 0) AS valor_s_frete_markup_original,
+                COALESCE(t.valor_frete_aplicado, 0) AS valor_frete_unitario,
+                COALESCE(t.manual_freight, FALSE)   AS manual_freight,
+                t.valor_produto,
+                t.comissao_aplicada,
+                t.ajuste_pagamento,
+                COALESCE(p.tipo, '')         AS tipo_produto,
+                COALESCE(i.ipi, 0.0)         AS tax_ipi,
+                COALESCE(i.icms, 0.18)       AS tax_icms,
+                COALESCE(i.iva_st, 0.0)      AS tax_iva_st
+            FROM tb_tabela_preco t
+            LEFT JOIN t_cadastro_produto_v2 p ON p.codigo_supra = t.codigo_produto_supra AND p.status_produto = 'ATIVO'
+            LEFT JOIN t_imposto_v2 i ON i.produto_id = p.id
+            WHERE t.id_tabela = :tid AND t.ativo IS TRUE
+            ORDER BY t.descricao_produto
         """)
         try:
             rows = db.execute(itens_sql, {"tid": tabela_id}).mappings().all()
@@ -96,36 +111,61 @@ async def pedido_preview(
 
         produtos: List[ProdutoPedidoPreview] = []
         for r in rows:
-            # ORIGINAL values (no overwrite)
-            v_com = float(r.get("valor_com_frete") or 0.0)
-            v_sem = float(r.get("valor_sem_frete") or 0.0)
+            valor_base = float(r.get("valor_produto") or 0.0)
+            comissao = float(r.get("comissao_aplicada") or 0.0)
+            ajuste = float(r.get("ajuste_pagamento") or 0.0)
+            frete_unit = float(r.get("valor_frete_unitario") or 0.0)
             
-            mk_pct = float(r.get("markup") or 0.0)
+            # Preço fiscal unitário = (valor - comissao) + ajuste
+            preco_fiscal_unit = max(0.0, valor_base - comissao) + ajuste
             
-            # Markup values
-            v_com_mk = float(r.get("valor_final_markup") or 0.0)
-            v_sem_mk = float(r.get("valor_s_frete_markup") or 0.0)
-
-            # If markup is 0 in DB, ensure we pass 0 or the normal price? 
-            # Ideally passthrough 0 if not applied, let frontend handle fallback.
-            # But user said "aparecer colunas preco normal + colunas markup".
-            # If markup is 0, markup price == normal price.
-            # providing specific markup fields allows frontend to decide.
+            # Alíquotas
+            tipo_prod = str(r.get("tipo_produto") or "").strip().lower()
+            is_pet = (tipo_prod == "pet" or tipo_prod == "insumos")
+            peso_liq = float(r.get("peso") or 0.0)
+            
+            ipi_rate = float(r.get("tax_ipi") or 0.0) if (is_pet and peso_liq <= 10) else 0.0
+            icms_rate = float(r.get("tax_icms") or 0.18)
+            iva_st_rate = float(r.get("tax_iva_st") or 0.0)
+            
+            # Lógica fiscal em tempo de execução
+            res_fiscal = calcular_linha(
+                preco_unit=preco_fiscal_unit,
+                quantidade=1,
+                desconto_linha=0,
+                frete_linha=frete_unit,
+                ipi=ipi_rate,
+                icms=icms_rate,
+                iva_st=iva_st_rate,
+                aplica_st=aplica_st
+            )
+            
+            # Totais recalculados
+            total_comercial = float(res_fiscal["total_com_st"])
+            total_sem_frete = max(0.0, total_comercial - frete_unit)
+            
+            markup_pct = float(r.get("markup") or 0.0)
+            factor = 1.0 + (markup_pct / 100.0)
+            
+            val_com = total_comercial
+            val_sem = total_sem_frete
+            val_com_mk = total_comercial * factor
+            val_sem_mk = total_sem_frete * factor
 
             produtos.append(ProdutoPedidoPreview(
                 codigo=str(r.get("codigo_supra") or ""),
                 nome=r.get("nome") or "",
                 embalagem=r.get("embalagem"),
-                peso=float(r.get("peso") or 0.0),
+                peso=peso_liq,
                 condicao_pagamento=r.get("plano_pagamento"),
                 tabela_comissao=r.get("tabela_comissao"),
-                valor_sem_frete=round(v_sem, 2),
-                valor_com_frete=round(v_com, 2),
-                valor_sem_frete_markup=round(v_sem_mk, 2),
-                valor_com_frete_markup=round(v_com_mk, 2),
+                valor_sem_frete=round(val_sem, 2),
+                valor_com_frete=round(val_com, 2),
+                valor_sem_frete_markup=round(val_sem_mk, 2),
+                valor_com_frete_markup=round(val_com_mk, 2),
                 quantidade=0,
-                markup=mk_pct,
-                valor_frete_unitario=float(r.get("valor_frete_unitario") or 0.0),
+                markup=markup_pct,
+                valor_frete_unitario=frete_unit,
                 manual_freight=bool(r.get("manual_freight") or False)
             ))
 

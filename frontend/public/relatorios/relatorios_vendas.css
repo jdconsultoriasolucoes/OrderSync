@@ -1,0 +1,133 @@
+/* relatorios_vendas.css */
+
+.filtros-grid-panel {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: var(--os-space-2);
+    background-color: var(--os-bg-white);
+    border: 1px solid var(--os-border);
+    border-radius: var(--os-radius-lg);
+    padding: var(--os-space-3);
+    margin-bottom: var(--os-space-3);
+    box-shadow: var(--os-shadow-sm);
+    animation: slideDown 0.3s ease-out;
+}
+
+.filtro-campo {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+}
+
+.filtros-actions-container {
+    grid-column: 1 / -1;
+    display: flex;
+    justify-content: flex-end;
+    align-items: center;
+    gap: 12px;
+    margin-top: 8px;
+    border-top: 1px dashed var(--os-border);
+    padding-top: var(--os-space-2);
+}
+
+.filtros-actions-container .os-btn {
+    min-width: 110px;
+}
+
+/* Tabela de Relatório com scroll */
+.report-table-container {
+    max-height: 550px;
+    overflow-y: auto;
+    border: 1px solid var(--os-border);
+    border-radius: var(--os-radius-lg);
+    position: relative;
+    box-shadow: var(--os-shadow-sm);
+}
+
+#tabela-vendas {
+    border-collapse: collapse;
+    width: 100%;
+}
+
+/* Cabeçalho Sticky */
+#tabela-vendas thead th {
+    position: sticky;
+    top: 0;
+    background-color: var(--os-bg);
+    z-index: 15;
+    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
+}
+
+/* Rodapé de Totais Sticky */
+#tabela-vendas tfoot {
+    position: sticky;
+    bottom: 0;
+    z-index: 15;
+    background-color: #f8fafc;
+}
+
+#tabela-vendas tfoot tr {
+    background-color: #f8fafc !important;
+}
+
+#tabela-vendas tfoot td {
+    font-weight: 700;
+    font-size: var(--os-text-sm);
+    color: var(--os-text);
+    border-top: 2px solid var(--os-border);
+    padding: 14px 16px;
+    box-shadow: 0 -3px 6px rgba(0, 0, 0, 0.04);
+}
+
+/* Animações */
+@keyframes slideDown {
+    from {
+        opacity: 0;
+        transform: translateY(-8px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+/* Ajustes Responsivos */
+@media (max-width: 992px) {
+    .filtros-grid-panel {
+        grid-template-columns: repeat(2, 1fr);
+    }
+}
+
+@media (max-width: 600px) {
+    .filtros-grid-panel {
+        grid-template-columns: 1fr;
+    }
+    
+    .filtros-actions-container {
+        flex-direction: column;
+        align-items: stretch;
+    }
+    
+    .filtros-actions-container .os-btn {
+        width: 100%;
+    }
+}
+
+/* Estilos de Ordenação Interativa */
+.sortable-header {
+    cursor: pointer;
+    user-select: none;
+    transition: background-color 0.15s ease, color 0.15s ease;
+}
+
+.sortable-header:hover {
+    background-color: var(--os-primary-light) !important;
+    color: var(--os-primary) !important;
+}
+
+.sort-indicator {
+    display: inline-block;
+    transition: transform 0.15s ease;
+    font-size: 11px;
+}
+

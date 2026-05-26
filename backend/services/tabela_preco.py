@@ -8,6 +8,32 @@ from models.tabela_preco import TabelaPreco as TabelaPrecoModel
 import logging
 import re
 
+def cliente_calcula_st(db: Session, codigo_cliente: str | None) -> bool:
+    if not codigo_cliente:
+        return False
+    try:
+        # Busca ativamente no cadastro de clientes
+        row = db.execute(text("""
+            SELECT ultimas_compras_cliente_calcula_st as calcula_st_flag, cadastro_tipo_cliente as ramo
+            FROM t_cadastro_cliente_v2
+            WHERE cadastro_codigo_da_empresa = :cod
+            LIMIT 1
+        """), {"cod": str(codigo_cliente).strip()}).mappings().first()
+        if not row:
+            return False
+        flag = str(row.get("calcula_st_flag") or "").strip().upper()
+        if flag in ["SIM", "YES", "TRUE", "S", "1"]:
+            return True
+        elif flag in ["NAO", "NO", "FALSE", "N", "0"]:
+            return False
+        # Fallback to Ramo
+        ramo = str(row.get("ramo") or "").strip().upper()
+        if "REVENDA" in ramo or "DISTRIBUIDORA" in ramo:
+            return True
+    except Exception as e:
+        logger.error("Erro ao verificar calcula_st do cliente: %s", e)
+    return False
+
 logger = logging.getLogger("tabela_preco_service")
 
 # --- Mantendo função original ---
@@ -74,7 +100,11 @@ def create_tabela(db: Session, body: TabelaSalvar, usuario_email: str) -> Dict[s
             RETURNING id_linha
         """)
 
-        logger.info("[create_tabela] header id=%s nome=%s cliente=%s", id_tabela, body.nome_tabela, body.cliente)
+        # Determina calcula_st a partir do cadastro do cliente
+        cod_cli = getattr(body, "codigo_cliente", None)
+        calcula_st_cliente = cliente_calcula_st(db, cod_cli)
+
+        logger.info("[create_tabela] header id=%s nome=%s cliente=%s calcula_st=%s", id_tabela, body.nome_tabela, body.cliente, calcula_st_cliente)
 
         inseridos = 0
         processed_codes = set()
@@ -119,7 +149,7 @@ def create_tabela(db: Session, body: TabelaSalvar, usuario_email: str) -> Dict[s
                 "ipi":     float(getattr(produto, "ipi", 0) or 0),
                 "icms_st": float(getattr(produto, "icms_st", 0) or 0),
                 "iva_st":  float(getattr(produto, "iva_st", 0) or 0),
-                "calcula_st": bool(getattr(body, "calcula_st", False)),
+                "calcula_st": calcula_st_cliente,
                 "criacao_usuario": usuario_email,
                 "alteracao_usuario": usuario_email,
                 "markup": float(getattr(produto, "markup", 0) or 0),
@@ -165,6 +195,10 @@ def update_tabela(db: Session, id_tabela: int, body: TabelaSalvar, usuario_email
             if c:
                 por_codigo[c] = r
 
+        # Determina calcula_st a partir do cadastro do cliente
+        cod_cli = body.codigo_cliente or (existentes[0].codigo_cliente if existentes else None)
+        calcula_st_cliente = cliente_calcula_st(db, cod_cli)
+
         # Update Cabeçalho (em todas as linhas)
         for r in existentes:
             r.nome_tabela    = body.nome_tabela
@@ -177,7 +211,7 @@ def update_tabela(db: Session, id_tabela: int, body: TabelaSalvar, usuario_email
                 r.codigo_cliente = "Não cadastrado"
             
             r.fornecedor     = body.fornecedor or ""
-            r.calcula_st     = bool(getattr(body, "calcula_st", False))
+            r.calcula_st     = calcula_st_cliente
             if hasattr(body, "observacao"):
                 r.observacao = body.observacao
             r.editado_em     = now
@@ -235,7 +269,7 @@ def update_tabela(db: Session, id_tabela: int, body: TabelaSalvar, usuario_email
                 target.ipi                      = (p.ipi or 0)
                 target.icms_st                  = (p.icms_st or 0)
                 target.iva_st                   = (p.iva_st or 0)
-                target.calcula_st               = bool(getattr(body, "calcula_st", False))
+                target.calcula_st               = calcula_st_cliente
                 target.markup                   = (p.markup or 0)
                 target.valor_final_markup       = (p.valor_final_markup or 0)
                 target.valor_s_frete_markup     = (p.valor_s_frete_markup or 0)
@@ -276,7 +310,7 @@ def update_tabela(db: Session, id_tabela: int, body: TabelaSalvar, usuario_email
                     ipi                  = (p.ipi or 0),
                     icms_st              = (p.icms_st or 0),
                     iva_st               = (p.iva_st or 0),
-                    calcula_st           = bool(getattr(body, "calcula_st", False)),
+                    calcula_st           = calcula_st_cliente,
                     markup               = (p.markup or 0),
                     valor_final_markup   = (p.valor_final_markup or 0),
                     valor_s_frete_markup = (p.valor_s_frete_markup or 0),

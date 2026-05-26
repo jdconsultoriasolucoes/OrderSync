@@ -182,7 +182,10 @@ def baixar_lista_preco(code: str, modo: str = "ambos"):
         
         # Quote filename to handle spaces safely
         return Response(content=pdf_bytes, media_type="application/pdf", headers={
-            "Content-Disposition": f'attachment; filename="Preco Lista - {safe_cliente}.pdf"'
+            "Content-Disposition": f'attachment; filename="Preco Lista - {safe_cliente}.pdf"',
+            "Cache-Control": "no-store, no-cache, must-revalidate, max-age=0",
+            "Pragma": "no-cache",
+            "Expires": "0"
         })
 
 @router.get("/pdf_cliente/{code}")
@@ -231,7 +234,10 @@ def baixar_pdf_cliente(code: str):
             filename = f"Orcamento_{pedido_id}_{safe_cliente}.pdf"
             
             return Response(content=pdf_bytes, media_type="application/pdf", headers={
-                "Content-Disposition": f'attachment; filename="{filename}"'
+                "Content-Disposition": f'attachment; filename="{filename}"',
+                "Cache-Control": "no-store, no-cache, must-revalidate, max-age=0",
+                "Pragma": "no-cache",
+                "Expires": "0"
             })
             
         except Exception as e:

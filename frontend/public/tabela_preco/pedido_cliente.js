@@ -146,11 +146,11 @@ window.baixarPdfManual = function () {
 
   if (code && code.length > 3) {
     console.log("Fallback CODE:", code);
-    window.open(API(`/link_pedido/pdf_cliente/${code}`), '_blank');
+    window.open(API(`/link_pedido/pdf_cliente/${code}?t=${Date.now()}`), '_blank');
   } else if (window.lastOrderId) {
     // 3. Fallback: Se não tem code na URL (modo interno), usa ID
     console.log("Fallback ID:", window.lastOrderId);
-    window.open(API(`/api/pedido/${window.lastOrderId}/pdf_cliente`), '_blank');
+    window.open(API(`/api/pedido/${window.lastOrderId}/pdf_cliente?t=${Date.now()}`), '_blank');
   } else {
     showOsModal({ title: 'Aviso', message: "Não foi possível identificar o link para download. Verifique seu e-mail para a cópia do orçamento.", type: 'alert' });
   }

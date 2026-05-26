@@ -21,8 +21,12 @@ document.addEventListener("DOMContentLoaded", () => {
 
     // Formatter helpers
     function fmtMoney(value) {
-        if (value === null || value === undefined) return "0,00";
-        return parseFloat(value).toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+        if (value === null || value === undefined) return "0";
+        let formatted = parseFloat(value).toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+        if (formatted.endsWith(",00")) {
+            return formatted.slice(0, -3);
+        }
+        return formatted;
     }
 
     // Obter data atual no formato YYYY-MM-DD para o input type="date"

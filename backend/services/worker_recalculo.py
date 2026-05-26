@@ -6,6 +6,7 @@ from models.background_task import BackgroundTaskModel
 from models.produto import ProdutoV2, ImpostoV2
 from models.tabela_preco import TabelaPreco
 from services.fiscal import calcular_linha
+from services.tabela_preco import cliente_calcula_st
 
 logger = logging.getLogger("worker_recalculo")
 
@@ -21,6 +22,30 @@ def processar_recalculo_massivo(db: Session, task: BackgroundTaskModel, codigos_
         task.status = "PROCESSANDO"
         task.mensagem_status = "Identificando tabelas de preço impactadas..."
         db.commit()
+
+        # Carregar flags de ST de todos os clientes cadastrados para otimizar
+        clientes_db = db.execute(text("""
+            SELECT cadastro_codigo_da_empresa as codigo_cliente, 
+                   ultimas_compras_cliente_calcula_st as calcula_st_flag,
+                   cadastro_tipo_cliente as ramo
+            FROM t_cadastro_cliente_v2
+        """)).mappings().all()
+        
+        clientes_st_map = {}
+        for c in clientes_db:
+            cod = str(c["codigo_cliente"]).strip()
+            flag = str(c["calcula_st_flag"] or "").strip().upper()
+            ramo = str(c["ramo"] or "").strip().upper()
+            
+            calcs_st = False
+            if flag in ["SIM", "YES", "TRUE", "S", "1"]:
+                calcs_st = True
+            elif flag in ["NAO", "NO", "FALSE", "N", "0"]:
+                calcs_st = False
+            elif "REVENDA" in ramo or "DISTRIBUIDORA" in ramo:
+                calcs_st = True
+                
+            clientes_st_map[cod] = calcs_st
 
         # Encontrar todas as tabelas (id_tabela) que possuem algum dos produtos alterados
         # e que estão ativas
@@ -65,6 +90,11 @@ def processar_recalculo_massivo(db: Session, task: BackgroundTaskModel, codigos_
                 produto = produtos_map.get(row.codigo_produto_supra)
                 if not produto:
                     continue
+
+                # Determina se calcula ST baseado no cadastro de clientes recente
+                cod_cli = str(row.codigo_cliente).strip() if row.codigo_cliente else ""
+                calcula_st_cliente = clientes_st_map.get(cod_cli, False)
+                row.calcula_st = calcula_st_cliente
 
                 imposto = impostos_map.get(produto.id)
                 tax_ipi = imposto.ipi if imposto else 0.0

@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, status, Query
 from sqlalchemy.orm import Session
 from sqlalchemy import func, text
 from typing import List, Optional
@@ -334,4 +334,203 @@ def download_relatorio_completo_pdf(carga_id: int, db: Session = Depends(get_db)
         media_type="application/pdf",
         headers={"Content-Disposition": f"attachment; filename=relatorio_completo_{carga_id}.pdf"}
     )
+
+
+# ----------------- RELATÓRIO DE VENDAS POR CLIENTE -----------------
+
+@router.get("/vendas_cliente/filtros")
+def get_vendas_cliente_filtros(db: Session = Depends(get_db)):
+    """
+    Retorna os valores únicos disponíveis para popular os filtros do frontend:
+    - Filiais (fornecedor em tb_pedidos)
+    - Municípios (entrega_municipio em t_cadastro_cliente_v2)
+    - Status do pedido (status em tb_pedidos)
+    - Grupos (marca em t_cadastro_produto_v2)
+    """
+    # 1. Filiais/Fornecedores de Pedidos
+    filiais_query = text("SELECT DISTINCT fornecedor FROM public.tb_pedidos WHERE fornecedor IS NOT NULL AND fornecedor != '' ORDER BY fornecedor")
+    filiais = db.execute(filiais_query).scalars().all()
+    
+    # 2. Municípios com compras realizadas
+    municipios_query = text("""
+        SELECT DISTINCT c.entrega_municipio 
+        FROM public.tb_pedidos p
+        JOIN public.t_cadastro_cliente_v2 c ON c.cadastro_codigo_da_empresa::text = p.codigo_cliente
+        WHERE c.entrega_municipio IS NOT NULL AND c.entrega_municipio != ''
+        ORDER BY c.entrega_municipio
+    """)
+    municipios = db.execute(municipios_query).scalars().all()
+    
+    # 3. Status de Pedidos
+    status_query = text("SELECT DISTINCT status FROM public.tb_pedidos WHERE status IS NOT NULL AND status != '' ORDER BY status")
+    status = db.execute(status_query).scalars().all()
+    
+    # 4. Grupos (marcas) de Produtos
+    grupos_query = text("SELECT DISTINCT marca FROM public.t_cadastro_produto_v2 WHERE marca IS NOT NULL AND marca != '' ORDER BY marca")
+    grupos = db.execute(grupos_query).scalars().all()
+    
+    return {
+        "filiais": filiais,
+        "municipios": municipios,
+        "status": status,
+        "grupos": grupos
+    }
+
+
+@router.get("/vendas_cliente")
+def get_vendas_cliente(
+    data_inicio: Optional[str] = Query(None),
+    data_fim: Optional[str] = Query(None),
+    filiais: Optional[List[str]] = Query(None),
+    categoria: Optional[str] = Query(None), # "INSUMOS" ou "PET"
+    status_list: Optional[List[str]] = Query(None),
+    municipios: Optional[List[str]] = Query(None),
+    db: Session = Depends(get_db)
+):
+    """
+    Retorna a listagem consolidada de vendas por cliente com base nos filtros informados.
+    """
+    # Normalização de parâmetros para chamadas diretas em Python/testes
+    if not isinstance(data_inicio, str): data_inicio = None
+    if not isinstance(data_fim, str): data_fim = None
+    if not isinstance(filiais, list): filiais = None
+    if not isinstance(categoria, str): categoria = None
+    if not isinstance(status_list, list): status_list = None
+    if not isinstance(municipios, list): municipios = None
+
+    query_str = """
+        SELECT DISTINCT
+            p.id_pedido                             AS numero_pedido,
+            p.pedido_supra                          AS pedido_supra,
+            p.nota_fiscal                           AS danfe,
+            p.codigo_cliente                        AS codigo_cliente,
+            COALESCE(c.cadastro_nome_cliente, p.cliente) AS cliente,
+            COALESCE(c.cadastro_nome_fantasia, 'Sem Nome Fantasia') AS nome_fantasia,
+            COALESCE(c.entrega_municipio, 'Sem Município') AS municipio,
+            COALESCE(p.peso_total_kg, 0)            AS peso_liquido,
+            COALESCE(p.total_sem_frete, 0)          AS valor_sem_frete,
+            COALESCE(p.total_com_frete, 0)          AS valor_com_frete
+        FROM public.tb_pedidos p
+        LEFT JOIN public.t_cadastro_cliente_v2 c ON c.cadastro_codigo_da_empresa::text = p.codigo_cliente
+        WHERE 1=1
+    """
+    
+    params = {}
+    
+    if data_inicio:
+        query_str += " AND p.created_at::date >= :data_inicio::date"
+        params["data_inicio"] = data_inicio
+        
+    if data_fim:
+        query_str += " AND p.created_at::date <= :data_fim::date"
+        params["data_fim"] = data_fim
+        
+    if filiais:
+        query_str += " AND p.fornecedor = ANY(:filiais)"
+        params["filiais"] = filiais
+        
+    if categoria:
+        query_str += """
+            AND EXISTS (
+                SELECT 1 FROM public.tb_pedidos_itens pi_cat
+                JOIN public.t_cadastro_produto_v2 pr_cat ON pi_cat.codigo = pr_cat.codigo_supra
+                WHERE pi_cat.id_pedido = p.id_pedido
+                  AND pi_cat.quantidade > 0
+                  AND UPPER(pr_cat.tipo) = :categoria
+            )
+        """
+        params["categoria"] = categoria.upper()
+        
+    if status_list:
+        query_str += " AND p.status = ANY(:status_list)"
+        params["status_list"] = status_list
+        
+    if municipios:
+        query_str += " AND c.entrega_municipio = ANY(:municipios)"
+        params["municipios"] = municipios
+        
+    query_str += " ORDER BY p.id_pedido DESC"
+    
+    rows = db.execute(text(query_str), params).mappings().all()
+    
+    return [dict(r) for r in rows]
+
+
+@router.get("/vendas_produtos")
+def get_vendas_produtos(
+    data_inicio: Optional[str] = Query(None),
+    data_fim: Optional[str] = Query(None),
+    filiais: Optional[List[str]] = Query(None),
+    categoria: Optional[str] = Query(None), # "INSUMOS" ou "PET"
+    status_list: Optional[List[str]] = Query(None),
+    municipios: Optional[List[str]] = Query(None),
+    grupos: Optional[List[str]] = Query(None), # marcas em t_cadastro_produto_v2
+    db: Session = Depends(get_db)
+):
+    """
+    Retorna a listagem consolidada de vendas agrupada por produto com base nos filtros informados.
+    """
+    # Normalização de parâmetros para chamadas diretas em Python/testes
+    if not isinstance(data_inicio, str): data_inicio = None
+    if not isinstance(data_fim, str): data_fim = None
+    if not isinstance(filiais, list): filiais = None
+    if not isinstance(categoria, str): categoria = None
+    if not isinstance(status_list, list): status_list = None
+    if not isinstance(municipios, list): municipios = None
+    if not isinstance(grupos, list): grupos = None
+
+    query_str = """
+        SELECT
+            i.codigo                                AS codigo_produto,
+            MAX(i.nome)                            AS produto,
+            MAX(i.embalagem)                       AS embalagem,
+            CAST(MAX(COALESCE(i.peso_kg, pr.peso, 0)) AS FLOAT) AS peso_liquido_unitario,
+            CAST(SUM(i.quantidade) AS FLOAT)        AS quantidade,
+            CAST(SUM(COALESCE(i.peso_kg, pr.peso, 0) * i.quantidade) AS FLOAT) AS peso_liquido_acumulado,
+            CAST(SUM(COALESCE(i.subtotal_sem_f, 0)) AS FLOAT) AS valor_sem_frete,
+            CAST(SUM(COALESCE(i.subtotal_com_f, 0)) AS FLOAT) AS valor_com_frete
+        FROM public.tb_pedidos_itens i
+        JOIN public.tb_pedidos p ON p.id_pedido = i.id_pedido
+        LEFT JOIN public.t_cadastro_cliente_v2 c ON c.cadastro_codigo_da_empresa::text = p.codigo_cliente
+        LEFT JOIN public.t_cadastro_produto_v2 pr ON pr.codigo_supra = i.codigo
+        WHERE i.quantidade > 0
+    """
+    
+    params = {}
+    
+    if data_inicio:
+        query_str += " AND p.created_at::date >= :data_inicio::date"
+        params["data_inicio"] = data_inicio
+        
+    if data_fim:
+        query_str += " AND p.created_at::date <= :data_fim::date"
+        params["data_fim"] = data_fim
+        
+    if filiais:
+        query_str += " AND p.fornecedor = ANY(:filiais)"
+        params["filiais"] = filiais
+        
+    if categoria:
+        query_str += " AND UPPER(pr.tipo) = :categoria"
+        params["categoria"] = categoria.upper()
+        
+    if status_list:
+        query_str += " AND p.status = ANY(:status_list)"
+        params["status_list"] = status_list
+        
+    if municipios:
+        query_str += " AND c.entrega_municipio = ANY(:municipios)"
+        params["municipios"] = municipios
+        
+    if grupos:
+        query_str += " AND pr.marca = ANY(:grupos)"
+        params["grupos"] = grupos
+        
+    query_str += " GROUP BY i.codigo ORDER BY peso_liquido_acumulado DESC"
+    
+    rows = db.execute(text(query_str), params).mappings().all()
+    
+    return [dict(r) for r in rows]
+
+
 
