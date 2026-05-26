@@ -395,7 +395,12 @@ document.addEventListener("DOMContentLoaded", () => {
     if (savedData) {
         try {
             const data = JSON.parse(savedData);
-            renderResults(data);
+            // Se for cache legado sem o campo id_pedido, limpa automaticamente para evitar exibição de colunas vazias
+            if (data && data.itens && data.itens.length > 0 && typeof data.itens[0].id_pedido === 'undefined') {
+                localStorage.removeItem("lastImportData");
+            } else {
+                renderResults(data);
+            }
         } catch (e) {
             console.error("Erro ao carregar dados salvos do localStorage:", e);
             localStorage.removeItem("lastImportData");
