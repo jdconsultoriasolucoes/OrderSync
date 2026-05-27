@@ -131,3 +131,11 @@
     font-size: 11px;
 }
 
+/* Colunas Financeiras - Evitar Quebras de Linha nas Casas Decimais */
+.col-money {
+    white-space: nowrap !important;
+    min-width: 140px !important;
+    text-align: right !important;
+}
+
+

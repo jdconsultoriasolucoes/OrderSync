@@ -112,8 +112,8 @@ function alternarRelatorioUI() {
                 <th data-sort="nome_fantasia">Nome Fantasia</th>
                 <th data-sort="municipio">Município</th>
                 <th data-sort="peso_liquido" class="tar">Peso Líquido (kg)</th>
-                <th data-sort="valor_sem_frete" class="tar">Valor Sem Frete</th>
-                <th data-sort="valor_com_frete" class="tar">Valor Com Frete</th>
+                <th data-sort="valor_sem_frete" class="tar col-money">Valor Sem Frete</th>
+                <th data-sort="valor_com_frete" class="tar col-money">Valor Com Frete</th>
             </tr>
         `;
     } else {
@@ -129,8 +129,8 @@ function alternarRelatorioUI() {
                 <th data-sort="peso_liquido_unitario" class="tar">Peso Líq. Unit.</th>
                 <th data-sort="quantidade" class="tar">Quantidade</th>
                 <th data-sort="peso_liquido_acumulado" class="tar">Peso Líq. Acum (kg)</th>
-                <th data-sort="valor_sem_frete" class="tar">Valor Sem Frete</th>
-                <th data-sort="valor_com_frete" class="tar">Valor Com Frete</th>
+                <th data-sort="valor_sem_frete" class="tar col-money">Valor Sem Frete</th>
+                <th data-sort="valor_com_frete" class="tar col-money">Valor Com Frete</th>
             </tr>
         `;
     }
@@ -272,8 +272,8 @@ function renderizarTabela() {
                     <td>${item.nome_fantasia || "-"}</td>
                     <td>${item.municipio || "-"}</td>
                     <td class="tar">${fmtPeso(item.peso_liquido)}</td>
-                    <td class="tar">${fmtMoney(item.valor_sem_frete)}</td>
-                    <td class="tar">${fmtMoney(item.valor_com_frete)}</td>
+                    <td class="tar col-money">${fmtMoney(item.valor_sem_frete)}</td>
+                    <td class="tar col-money">${fmtMoney(item.valor_com_frete)}</td>
                 </tr>
             `;
         });
@@ -285,8 +285,8 @@ function renderizarTabela() {
             <tr>
                 <td colspan="7">Total Acumulado</td>
                 <td class="tar" id="total-peso">${fmtPeso(totalPeso)}</td>
-                <td class="tar" id="total-valor-sem">${fmtMoney(totalSemFrete)}</td>
-                <td class="tar" id="total-valor-com">${fmtMoney(totalComFrete)}</td>
+                <td class="tar col-money" id="total-valor-sem">${fmtMoney(totalSemFrete)}</td>
+                <td class="tar col-money" id="total-valor-com">${fmtMoney(totalComFrete)}</td>
             </tr>
         `;
     } else {
@@ -304,8 +304,8 @@ function renderizarTabela() {
                     <td class="tar">${fmtPeso(item.peso_liquido_unitario).replace(' kg', '')}</td>
                     <td class="tar">${parseFloat(item.quantidade || 0).toLocaleString("pt-BR")}</td>
                     <td class="tar">${fmtPeso(item.peso_liquido_acumulado)}</td>
-                    <td class="tar">${fmtMoney(item.valor_sem_frete)}</td>
-                    <td class="tar">${fmtMoney(item.valor_com_frete)}</td>
+                    <td class="tar col-money">${fmtMoney(item.valor_sem_frete)}</td>
+                    <td class="tar col-money">${fmtMoney(item.valor_com_frete)}</td>
                 </tr>
             `;
         });
@@ -317,8 +317,8 @@ function renderizarTabela() {
             <tr>
                 <td colspan="5">Total Acumulado</td>
                 <td class="tar" id="total-peso">${fmtPeso(totalPeso)}</td>
-                <td class="tar" id="total-valor-sem">${fmtMoney(totalSemFrete)}</td>
-                <td class="tar" id="total-valor-com">${fmtMoney(totalComFrete)}</td>
+                <td class="tar col-money" id="total-valor-sem">${fmtMoney(totalSemFrete)}</td>
+                <td class="tar col-money" id="total-valor-com">${fmtMoney(totalComFrete)}</td>
             </tr>
         `;
     }
