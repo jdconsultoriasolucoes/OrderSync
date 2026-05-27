@@ -26,7 +26,6 @@ const loadingEl = document.getElementById("loading");
 const emptyStateEl = document.getElementById("empty-state");
 
 const txtTitulo = document.getElementById("titulo-relatorio-principal");
-const txtDesc = document.getElementById("desc-relatorio-principal");
 
 const menuButtons = document.querySelectorAll("#relatorios-menu-vendas button");
 
@@ -45,8 +44,8 @@ function fmtMoney(val) {
 }
 
 function fmtPeso(val) {
-    if (val === null || val === undefined) return "0,000 kg";
-    return parseFloat(val).toLocaleString("pt-BR", { minimumFractionDigits: 3, maximumFractionDigits: 3 }) + " kg";
+    if (val === null || val === undefined || val === "" || isNaN(parseFloat(val))) return "0 kg";
+    return Math.round(parseFloat(val)).toLocaleString("pt-BR", { minimumFractionDigits: 0, maximumFractionDigits: 0 }) + " kg";
 }
 
 document.addEventListener("DOMContentLoaded", async () => {
@@ -99,7 +98,6 @@ document.addEventListener("DOMContentLoaded", async () => {
 function alternarRelatorioUI() {
     if (activeReport === "cliente") {
         txtTitulo.textContent = "Relatório de Vendas por Cliente";
-        txtDesc.textContent = "Consolidado e listagem de pedidos realizados, permitindo acompanhamento comercial por cliente, filial, município e categoria de produto.";
         divFiltroGrupo.style.display = "none";
         selGrupo.value = ""; // limpa filtro de grupo
         
@@ -120,7 +118,6 @@ function alternarRelatorioUI() {
         `;
     } else {
         txtTitulo.textContent = "Relatório de Vendas por Produto";
-        txtDesc.textContent = "Consolidado e listagem de produtos vendidos, permitindo análise de volume, peso acumulado e receitas por filial, categoria, grupo, município e status.";
         divFiltroGrupo.style.display = "flex";
         
         // Cabeçalhos para Vendas por Produto
@@ -460,10 +457,10 @@ function exportarExcel() {
             totalSemFrete += vs;
             totalComFrete += vc;
 
-            csv += `"${clean(item.numero_pedido)}";"${clean(item.pedido_supra)}";"${clean(item.danfe)}";"${clean(item.codigo_cliente)}";"${clean(item.cliente)}";"${clean(item.nome_fantasia)}";"${clean(item.municipio)}";"${p.toFixed(3).replace('.', ',')}";"${vs.toFixed(2).replace('.', ',')}";"${vc.toFixed(2).replace('.', ',')}"\n`;
+            csv += `"${clean(item.numero_pedido)}";"${clean(item.pedido_supra)}";"${clean(item.danfe)}";"${clean(item.codigo_cliente)}";"${clean(item.cliente)}";"${clean(item.nome_fantasia)}";"${clean(item.municipio)}";"${Math.round(p)}";"${vs.toFixed(2).replace('.', ',')}";"${vc.toFixed(2).replace('.', ',')}"\n`;
         });
 
-        csv += `"TOTAL ACUMULADO";"";"";"";"";"";"";"${totalPeso.toFixed(3).replace('.', ',')}";"${totalSemFrete.toFixed(2).replace('.', ',')}";"${totalComFrete.toFixed(2).replace('.', ',')}"\n`;
+        csv += `"TOTAL ACUMULADO";"";"";"";"";"";"";"${Math.round(totalPeso)}";"${totalSemFrete.toFixed(2).replace('.', ',')}";"${totalComFrete.toFixed(2).replace('.', ',')}"\n`;
 
     } else {
         // Vendas por Produto
@@ -481,10 +478,10 @@ function exportarExcel() {
             totalSemFrete += vs;
             totalComFrete += vc;
 
-            csv += `"${clean(item.codigo_produto)}";"${clean(item.produto)}";"${clean(item.embalagem)}";"${pu.toFixed(3).replace('.', ',')}";"${q}";"${pa.toFixed(3).replace('.', ',')}";"${vs.toFixed(2).replace('.', ',')}";"${vc.toFixed(2).replace('.', ',')}"\n`;
+            csv += `"${clean(item.codigo_produto)}";"${clean(item.produto)}";"${clean(item.embalagem)}";"${Math.round(pu)}";"${q}";"${Math.round(pa)}";"${vs.toFixed(2).replace('.', ',')}";"${vc.toFixed(2).replace('.', ',')}"\n`;
         });
 
-        csv += `"TOTAL ACUMULADO";"";"";"";"";"${totalPeso.toFixed(3).replace('.', ',')}";"${totalSemFrete.toFixed(2).replace('.', ',')}";"${totalComFrete.toFixed(2).replace('.', ',')}"\n`;
+        csv += `"TOTAL ACUMULADO";"";"";"";"";"${Math.round(totalPeso)}";"${totalSemFrete.toFixed(2).replace('.', ',')}";"${totalComFrete.toFixed(2).replace('.', ',')}"\n`;
     }
 
     // Utiliza BOM (\ufeff) para forçar o Excel a interpretar os caracteres especiais em UTF-8 no Windows

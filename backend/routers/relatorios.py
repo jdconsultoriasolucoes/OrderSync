@@ -407,7 +407,12 @@ def get_vendas_cliente(
             COALESCE(c.cadastro_nome_cliente, p.cliente) AS cliente,
             COALESCE(c.cadastro_nome_fantasia, 'Sem Nome Fantasia') AS nome_fantasia,
             COALESCE(c.entrega_municipio, 'Sem Município') AS municipio,
-            COALESCE(p.peso_total_kg, 0)            AS peso_liquido,
+            COALESCE(NULLIF(p.peso_total_kg, 0), (
+                SELECT SUM(COALESCE(pr_sub.peso, 0) * pi_sub.quantidade)
+                FROM public.tb_pedidos_itens pi_sub
+                LEFT JOIN public.t_cadastro_produto_v2 pr_sub ON pr_sub.codigo_supra = pi_sub.codigo
+                WHERE pi_sub.id_pedido = p.id_pedido
+            ), 0)                                   AS peso_liquido,
             COALESCE(p.total_sem_frete, 0)          AS valor_sem_frete,
             COALESCE(p.total_com_frete, 0)          AS valor_com_frete
         FROM public.tb_pedidos p
@@ -484,9 +489,9 @@ def get_vendas_produtos(
             i.codigo                                AS codigo_produto,
             MAX(i.nome)                            AS produto,
             MAX(i.embalagem)                       AS embalagem,
-            CAST(MAX(COALESCE(i.peso_kg, pr.peso, 0)) AS FLOAT) AS peso_liquido_unitario,
+            CAST(MAX(COALESCE(NULLIF(i.peso_kg, 0), pr.peso, 0)) AS FLOAT) AS peso_liquido_unitario,
             CAST(SUM(i.quantidade) AS FLOAT)        AS quantidade,
-            CAST(SUM(COALESCE(i.peso_kg, pr.peso, 0) * i.quantidade) AS FLOAT) AS peso_liquido_acumulado,
+            CAST(SUM(COALESCE(NULLIF(i.peso_kg, 0), pr.peso, 0) * i.quantidade) AS FLOAT) AS peso_liquido_acumulado,
             CAST(SUM(COALESCE(i.subtotal_sem_f, 0)) AS FLOAT) AS valor_sem_frete,
             CAST(SUM(COALESCE(i.subtotal_com_f, 0)) AS FLOAT) AS valor_com_frete
         FROM public.tb_pedidos_itens i
