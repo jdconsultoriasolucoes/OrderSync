@@ -31,12 +31,15 @@ def decide_st(
     if is_revenda:
         motivos.append("cliente=Revenda")
 
-    # Se forçar via UI e cliente NÃO cadastrado: ainda exige que o produto
-    
-    if forcar_iva_st and not tipo_cliente:
+    # Se forçar via UI (forcar_iva_st for True):
+    if forcar_iva_st:
         aplica_forcado = is_pet
         if aplica_forcado:
-            motivos.extend(["forcado_ui", "cliente_sem_cadastro"])
+            motivos.extend(["forcado_ui"])
+            if not tipo_cliente:
+                motivos.append("cliente_sem_cadastro")
+            else:
+                motivos.append(f"cliente_com_cadastro_tipo={tipo_cliente}")
         else:
             motivos.append("forcado_ui_invalido")  # ajuda no debug
         return aplica_forcado, motivos

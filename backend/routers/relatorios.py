@@ -418,11 +418,11 @@ def get_vendas_cliente(
     params = {}
     
     if data_inicio:
-        query_str += " AND p.created_at::date >= :data_inicio::date"
+        query_str += " AND p.created_at::date >= CAST(:data_inicio AS DATE)"
         params["data_inicio"] = data_inicio
         
     if data_fim:
-        query_str += " AND p.created_at::date <= :data_fim::date"
+        query_str += " AND p.created_at::date <= CAST(:data_fim AS DATE)"
         params["data_fim"] = data_fim
         
     if filiais:
@@ -499,11 +499,11 @@ def get_vendas_produtos(
     params = {}
     
     if data_inicio:
-        query_str += " AND p.created_at::date >= :data_inicio::date"
+        query_str += " AND p.created_at::date >= CAST(:data_inicio AS DATE)"
         params["data_inicio"] = data_inicio
         
     if data_fim:
-        query_str += " AND p.created_at::date <= :data_fim::date"
+        query_str += " AND p.created_at::date <= CAST(:data_fim AS DATE)"
         params["data_fim"] = data_fim
         
     if filiais:

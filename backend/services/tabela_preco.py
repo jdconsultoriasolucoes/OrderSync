@@ -100,9 +100,8 @@ def create_tabela(db: Session, body: TabelaSalvar, usuario_email: str) -> Dict[s
             RETURNING id_linha
         """)
 
-        # Determina calcula_st a partir do cadastro do cliente
-        cod_cli = getattr(body, "codigo_cliente", None)
-        calcula_st_cliente = cliente_calcula_st(db, cod_cli)
+        # Respeita o calcula_st enviado pelo frontend (que reflete o toggle na UI)
+        calcula_st_cliente = getattr(body, "calcula_st", False)
 
         logger.info("[create_tabela] header id=%s nome=%s cliente=%s calcula_st=%s", id_tabela, body.nome_tabela, body.cliente, calcula_st_cliente)
 
@@ -195,9 +194,8 @@ def update_tabela(db: Session, id_tabela: int, body: TabelaSalvar, usuario_email
             if c:
                 por_codigo[c] = r
 
-        # Determina calcula_st a partir do cadastro do cliente
-        cod_cli = body.codigo_cliente or (existentes[0].codigo_cliente if existentes else None)
-        calcula_st_cliente = cliente_calcula_st(db, cod_cli)
+        # Respeita o calcula_st enviado pelo frontend (que reflete o toggle na UI)
+        calcula_st_cliente = getattr(body, "calcula_st", False)
 
         # Update Cabeçalho (em todas as linhas)
         for r in existentes:

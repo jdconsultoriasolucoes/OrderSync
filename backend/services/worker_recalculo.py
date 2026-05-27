@@ -91,10 +91,7 @@ def processar_recalculo_massivo(db: Session, task: BackgroundTaskModel, codigos_
                 if not produto:
                     continue
 
-                # Determina se calcula ST baseado no cadastro de clientes recente
-                cod_cli = str(row.codigo_cliente).strip() if row.codigo_cliente else ""
-                calcula_st_cliente = clientes_st_map.get(cod_cli, False)
-                row.calcula_st = calcula_st_cliente
+                # Mantém o calcula_st já salvo na tabela (preserva decisões manuais do vendedor)
 
                 imposto = impostos_map.get(produto.id)
                 tax_ipi = imposto.ipi if imposto else 0.0
