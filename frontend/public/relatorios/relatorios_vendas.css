@@ -2,7 +2,7 @@
 
 .filtros-grid-panel {
     display: grid;
-    grid-template-columns: repeat(3, 1fr);
+    grid-template-columns: repeat(4, 1fr);
     gap: var(--os-space-2);
     background-color: var(--os-bg-white);
     border: 1px solid var(--os-border);
