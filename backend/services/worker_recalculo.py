@@ -153,10 +153,13 @@ def processar_recalculo_massivo(db: Session, task: BackgroundTaskModel, codigos_
                     elif cod_plano_str.upper() in mapa_condicoes:
                         taxa_condicao = mapa_condicoes[cod_plano_str.upper()]
 
-                # Fallback de segurança se não encontrar nos cadastros ativos
+                # Se a condição de pagamento não existir ativamente, não atualizamos a linha (preserva o valor antigo)
                 if taxa_condicao is None:
-                    liquido_antigo = max(0, valor_antigo - comissao_antiga)
-                    taxa_condicao = (ajuste_antigo / liquido_antigo) if liquido_antigo > 0 else 0.0
+                    logger.warning(
+                        f"Condicao de pagamento '{cod_plano_str}' nao encontrada ou inativa na tabela {id_tabela} "
+                        f"para o produto {row.codigo_produto_supra}. Ignorando recálculo desta linha."
+                    )
+                    continue
 
                 # 2. Dados novos
                 novo_valor = float(produto.preco or 0)
@@ -172,9 +175,10 @@ def processar_recalculo_massivo(db: Session, task: BackgroundTaskModel, codigos_
                 novo_ajuste = novo_liquido * taxa_condicao
                 preco_fiscal_unit = novo_liquido + novo_ajuste
                 
-                # O frete aplicado (R$) NÃO deve ser alterado durante o processo de atualização de preços.
-                # Lemos o valor que já está persistido na linha para usá-lo como base nos cálculos fiscais (ST).
-                frete_total = float(row.valor_frete_aplicado or 0)
+                # O frete na linha (seja preenchido globalmente ou manualmente pelo usuário) sempre representa o valor por Tonelada.
+                # Portanto, como o peso do produto pode ter sido atualizado no PDF, SEMPRE recalculamos o valor R$ (frete_total)
+                frete_kg = float(row.frete_kg or 0)
+                frete_total = (frete_kg / 1000.0) * peso_para_frete
 
                 # 4. Lógica Fiscal
                 res_fiscal = calcular_linha(
@@ -204,7 +208,7 @@ def processar_recalculo_massivo(db: Session, task: BackgroundTaskModel, codigos_
                 row.peso_liquido = peso_liquido_prod if peso_liquido_prod > 0 else row.peso_liquido
                 row.comissao_aplicada = nova_comissao
                 row.ajuste_pagamento = novo_ajuste
-                # row.valor_frete_aplicado = round(frete_total, 2) # REMOVIDO: Não alterar o frete durante atualização de preços
+                row.valor_frete_aplicado = round(frete_total, 4)
                 
                 # Campos de totais compatíveis com tela
                 row.valor_frete = round(total_comercial, 2)  # na verdade guarda o total com ST (JS: item._totalComercial)
