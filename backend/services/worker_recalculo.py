@@ -47,6 +47,30 @@ def processar_recalculo_massivo(db: Session, task: BackgroundTaskModel, codigos_
                 
             clientes_st_map[cod] = calcs_st
 
+        # Carregar condições de pagamento (taxas) para mapeamento direto de juros/ajuste
+        condicoes_db = db.execute(text("""
+            SELECT codigo_prazo, custo as taxa_condicao
+            FROM t_condicoes_pagamento
+            WHERE ativo IS TRUE
+        """)).mappings().all()
+        
+        mapa_condicoes = {}
+        for row_c in condicoes_db:
+            cod = str(row_c["codigo_prazo"]).strip().upper()
+            mapa_condicoes[cod] = float(row_c["taxa_condicao"] or 0.0)
+
+        # Carregar descontos/fatores de comissão ativos
+        descontos_db = db.execute(text("""
+            SELECT id_desconto, fator_comissao
+            FROM t_desconto
+            WHERE ativo IS TRUE
+        """)).mappings().all()
+
+        mapa_descontos = {}
+        for row_d in descontos_db:
+            cod = str(row_d["id_desconto"]).strip().upper()
+            mapa_descontos[cod] = float(row_d["fator_comissao"] or 0.0)
+
         # Encontrar todas as tabelas (id_tabela) que possuem algum dos produtos alterados
         # e que estão ativas
         tabelas_afetadas = db.query(TabelaPreco.id_tabela).filter(
@@ -98,14 +122,41 @@ def processar_recalculo_massivo(db: Session, task: BackgroundTaskModel, codigos_
                 tax_icms = imposto.icms if imposto else 0.0
                 tax_iva_st = imposto.iva_st if imposto else 0.0
 
-                # 1. Derivar Fatores antigos
+                # 1. Derivar Fatores das colunas da própria linha de forma precisa
                 valor_antigo = float(row.valor_produto)
                 comissao_antiga = float(row.comissao_aplicada)
                 ajuste_antigo = float(row.ajuste_pagamento)
 
-                fator_comissao = (comissao_antiga / valor_antigo) if valor_antigo > 0 else 0.0
-                liquido_antigo = max(0, valor_antigo - comissao_antiga)
-                taxa_condicao = (ajuste_antigo / liquido_antigo) if liquido_antigo > 0 else 0.0
+                # --- DESCONTO / FATOR ---
+                fator_comissao = None
+                desc_fator_str = str(row.descricao_fator_comissao or "").strip()
+                if desc_fator_str:
+                    # Trata chaves compostas "CODIGO - DESC" ou apenas "CODIGO"
+                    cod_desc = desc_fator_str.split(" - ")[0].strip().upper()
+                    if cod_desc in mapa_descontos:
+                        fator_comissao = mapa_descontos[cod_desc]
+                    elif desc_fator_str.upper() in mapa_descontos:
+                        fator_comissao = mapa_descontos[desc_fator_str.upper()]
+
+                # Fallback de segurança se não encontrar nos cadastros ativos
+                if fator_comissao is None:
+                    fator_comissao = (comissao_antiga / valor_antigo) if valor_antigo > 0 else 0.0
+
+                # --- CONDIÇÃO DE PAGAMENTO ---
+                taxa_condicao = None
+                cod_plano_str = str(row.codigo_plano_pagamento or "").strip()
+                if cod_plano_str:
+                    # Trata chaves compostas "CODIGO - DESC" ou apenas "CODIGO"
+                    cod_plano = cod_plano_str.split(" - ")[0].strip().upper()
+                    if cod_plano in mapa_condicoes:
+                        taxa_condicao = mapa_condicoes[cod_plano]
+                    elif cod_plano_str.upper() in mapa_condicoes:
+                        taxa_condicao = mapa_condicoes[cod_plano_str.upper()]
+
+                # Fallback de segurança se não encontrar nos cadastros ativos
+                if taxa_condicao is None:
+                    liquido_antigo = max(0, valor_antigo - comissao_antiga)
+                    taxa_condicao = (ajuste_antigo / liquido_antigo) if liquido_antigo > 0 else 0.0
 
                 # 2. Dados novos
                 novo_valor = float(produto.preco or 0)

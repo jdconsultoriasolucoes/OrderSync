@@ -2702,13 +2702,6 @@ document.addEventListener('DOMContentLoaded', () => {
   document.getElementById('plano_pagamento')?.addEventListener('change', (e) => {
     e.currentTarget.dataset.userEdited = '1';
     atualizarPillTaxa();
-    document.getElementById('btn-aplicar-condicao-todos')?.click();
-    refreshToolbarEnablement(); saveHeaderSnapshot();
-  });
-  document.getElementById('plano_pagamento')?.addEventListener('change', (e) => {
-    e.currentTarget.dataset.userEdited = '1';
-    atualizarPillTaxa();
-    document.getElementById('btn-aplicar-condicao-todos')?.click();
     if (typeof refreshToolbarEnablement === 'function') refreshToolbarEnablement();
     if (typeof saveHeaderSnapshot === 'function') saveHeaderSnapshot();
   });
@@ -3061,8 +3054,6 @@ document.getElementById('btn-aplicar-markup-todos')?.addEventListener('click', (
 });
 
 document.getElementById('markup_global')?.addEventListener('change', () => {
-  // Auto-apply immediately on change/blur
-  document.getElementById('btn-aplicar-markup-todos')?.click();
   saveHeaderSnapshot();
 });
 
@@ -3075,8 +3066,6 @@ document.getElementById('desconto_global')?.addEventListener('change', (e) => {
   // 👇 marca que o usuário editou manualmente o header
   e.currentTarget.dataset.userEdited = '1';
   atualizarPillDesconto();
-  // Auto-apply immediately on change
-  document.getElementById('btn-aplicar-todos')?.click();
   saveHeaderSnapshot();
 });
 
