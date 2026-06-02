@@ -1,9 +1,22 @@
 import psycopg2
 
-DB_URL = 'postgresql://dispet_admin_:VTCgwlOp1saQYLdv2gLeHQOVdbhvZO33@dpg-d4781ehr0fns73f9ipc0-a.oregon-postgres.render.com/db_ordersync'
+DB_URL = 'postgresql://dispet_admin_:VTCgwlOp1saQYLdv2gLeHQOVdbhvZO33@dpg-d4781ehr0fns73f9ipc0-a.oregon-postgres.render.com/db_ordersync?sslmode=require'
+
+import time
+
+def connect_with_retry(db_url, max_retries=5, delay=2):
+    last_error = None
+    for attempt in range(1, max_retries + 1):
+        try:
+            return psycopg2.connect(db_url)
+        except psycopg2.OperationalError as e:
+            last_error = e
+            print(f"Tentativa de conexao {attempt}/{max_retries} falhou: {e}. Retentando em {delay}s...")
+            time.sleep(delay)
+    raise last_error
 
 def move_to_production():
-    conn = psycopg2.connect(DB_URL)
+    conn = connect_with_retry(DB_URL)
     cur = conn.cursor()
     
     try:

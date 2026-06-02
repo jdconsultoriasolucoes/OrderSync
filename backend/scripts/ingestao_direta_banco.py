@@ -4,7 +4,7 @@ from psycopg2.extras import execute_batch
 import math
 import os
 
-DB_URL = 'postgresql://dispet_admin_:VTCgwlOp1saQYLdv2gLeHQOVdbhvZO33@dpg-d4781ehr0fns73f9ipc0-a.oregon-postgres.render.com/db_ordersync'
+DB_URL = 'postgresql://dispet_admin_:VTCgwlOp1saQYLdv2gLeHQOVdbhvZO33@dpg-d4781ehr0fns73f9ipc0-a.oregon-postgres.render.com/db_ordersync?sslmode=require'
 FILE_PEDIDOS = r'E:\Projeto Sistema pedidos\Planejamento\Arquivos bases edson\Ingestao\Processados\tb_pedidos_ingestao.csv'
 FILE_ITENS = r'E:\Projeto Sistema pedidos\Planejamento\Arquivos bases edson\Ingestao\Processados\tb_pedidos_itens_ingestao.csv'
 
@@ -13,29 +13,33 @@ def clean_value(val):
         return None
     return val
 
+import time
+
+def connect_with_retry(db_url, max_retries=5, delay=2):
+    last_error = None
+    for attempt in range(1, max_retries + 1):
+        try:
+            return psycopg2.connect(db_url)
+        except psycopg2.OperationalError as e:
+            last_error = e
+            print(f"Tentativa de conexao {attempt}/{max_retries} falhou: {e}. Retentando em {delay}s...")
+            time.sleep(delay)
+    raise last_error
+
 def importar_para_staging():
     conn = None
     cur = None
     try:
-        conn = psycopg2.connect(DB_URL)
+        conn = connect_with_retry(DB_URL)
         cur = conn.cursor()
         
-        print("Limpando profundamente o sistema (Pedidos, Itens, Links, Cargas e Históricos)...")
+        print("Limpando tabelas de ingestão de histórico...")
         # Tabelas de Ingestão (Staging)
         cur.execute("TRUNCATE TABLE tb_pedidos_itens_ingestao RESTART IDENTITY CASCADE;")
         cur.execute("TRUNCATE TABLE tb_pedidos_ingestao RESTART IDENTITY CASCADE;")
         
-        # Tabelas de Produção (Limpeza Geral conforme solicitado)
-        cur.execute("TRUNCATE TABLE tb_pedidos_itens RESTART IDENTITY CASCADE;")
-        cur.execute("TRUNCATE TABLE tb_pedidos RESTART IDENTITY CASCADE;")
-        cur.execute("TRUNCATE TABLE tb_pedido_link RESTART IDENTITY CASCADE;")
-        cur.execute("TRUNCATE TABLE tb_idempotency_keys RESTART IDENTITY CASCADE;")
-        cur.execute("TRUNCATE TABLE tb_cliente_historico RESTART IDENTITY CASCADE;")
-        cur.execute("TRUNCATE TABLE tb_cargas_pedidos RESTART IDENTITY CASCADE;")
-        cur.execute("TRUNCATE TABLE tb_cargas RESTART IDENTITY CASCADE;")
-        
         conn.commit()
-        print("Sistema limpo e IDs zerados com sucesso!")
+        print("Tabelas de staging limpas com sucesso!")
         
         # 1. tb_pedidos_ingestao
         print(f"Lendo dados de pedidos: {FILE_PEDIDOS}")

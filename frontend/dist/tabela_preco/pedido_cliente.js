@@ -1,0 +1,947 @@
+// pedido_cliente.js
+
+// -------------------- Helpers básicos --------------------
+const url = new URL(window.location.href);
+
+// Modo interno (prévia via "Visualizar")
+const IS_MODO_INTERNO = new URLSearchParams(location.search).get("modo") === "interno" || location.hash.replace("#", "") === "interno";;
+// preferir valores vindos do /p/{code} (definidos no HTML), senão cair no querystring
+let tabelaIdParam = (typeof window.currentTabelaId !== "undefined" && window.currentTabelaId !== null)
+  ? String(window.currentTabelaId)
+  : url.searchParams.get("tabela_id");
+
+let pedidoId = url.searchParams.get("id");
+let produtos = [];
+let usarValorComFrete = true;
+
+
+
+// Caso a página tenha sido aberta como arquivo estático (ex.: pedido_cliente.html), evita pegar ".html" como id
+if (pedidoId && pedidoId.includes(".html")) pedidoId = null;
+
+const comFreteParamQS = url.searchParams.get("com_frete");
+const comFreteFromCode = (typeof window.currentComFrete !== "undefined")
+  ? (window.currentComFrete ? "true" : "false")
+  : null;
+const comFreteParam = comFreteFromCode ?? comFreteParamQS;
+
+// Dados opcionais vindos do link
+const razaoParam = url.searchParams.get("razao_social");
+const condPagtoParam = url.searchParams.get("cond_pagto");
+
+const API_BASE = window.API_BASE || window.location.origin;
+const API = (p) => {
+  const base = (typeof window !== "undefined" && window.API_BASE ? window.API_BASE : location.origin) || "";
+  // remove barra final do base e garante que p tem barra inicial
+  const normBase = base.replace(/\/+$/, "");
+  const normPath = p.startsWith("/") ? p : `/${p}`;
+  return `${normBase}${normPath}`;
+};
+
+const fmtBRL = new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" });
+
+// ---- Helpers para Data de Entrega/Retirada ----
+function isISODate(s) {
+  return typeof s === "string" && /^\d{4}-\d{2}-\d{2}$/.test(s);
+}
+function formatarBR(iso) {
+  if (!isISODate(iso)) return null;
+  const [y, m, d] = iso.split("-").map(Number);
+  const dt = new Date(y, m - 1, d);
+  if (Number.isNaN(dt.getTime())) return null;
+  return dt.toLocaleDateString("pt-BR", { timeZone: "America/Sao_Paulo" });
+}
+function normalizarEntregaISO(iso) {
+  if (!isISODate(iso)) return null;
+  const [y, m, d] = iso.split("-").map(Number);
+  const dt = new Date(y, m - 1, d);
+  if (Number.isNaN(dt.getTime())) return null;
+  const hoje = new Date(); hoje.setHours(0, 0, 0, 0);
+  dt.setHours(0, 0, 0, 0);
+  // regra atual: aceitar passado também mostra "a combinar"? 
+  // Se quiser bloquear passado, descomente abaixo:
+  if (dt < hoje) return null;
+  return iso;
+}
+
+function brToISO(br) {
+  // "31/12/2025" -> "2025-12-31"
+  if (typeof br !== "string") return null;
+  const m = br.match(/^(\d{2})\/(\d{2})\/(\d{4})$/);
+  return m ? `${m[3]}-${m[2]}-${m[1]}` : null;
+}
+function normalizarValidadeCampo(x) {
+  if (!x) return null;
+  if (/^\d{4}-\d{2}-\d{2}$/.test(x)) return x; // já é ISO
+  return brToISO(x); // tenta converter BR -> ISO
+}
+
+
+function aplicarEntregaRetiradaHeader() {
+  const labelEl = document.getElementById("labelEntregaRetirada");
+  const valorEl = document.getElementById("dataEntregaValor");
+  if (!labelEl || !valorEl) return;
+
+  const label = (window.usarValorComFrete === true)
+    ? "Data de entrega:"
+    : "Data de retirada:";
+  labelEl.textContent = label;
+
+  const iso = (typeof window.entregaISO === "string" && isISODate(window.entregaISO))
+    ? window.entregaISO
+    : null;
+
+  valorEl.textContent = iso ? (formatarBR(iso) || "a combinar") : "a combinar";
+}
+
+// -------------------- Elementos --------------------
+const tbody = document.querySelector("#tabelaProdutos tbody");
+const totalEl = document.getElementById("totalGeral");
+const msgEl = document.getElementById("mensagem");
+const btnConfirmar = document.getElementById("btnConfirmar");
+const btnCancelar = document.getElementById("btnCancelar");
+
+// Observação do cliente – contador de caracteres
+const taObs = document.getElementById('observacaoPedido');
+const obsCounter = document.getElementById('obsCount');
+
+// -------------------- UI utils --------------------
+function setMensagem(texto, ok = false) {
+  msgEl.textContent = texto;
+  msgEl.style.color = ok ? "green" : "red";
+}
+
+// --- Global Download Function for Stability ---
+window.baixarPdfManual = function () {
+  console.log("CLIQUE DOWNLOAD MANUAL");
+  console.log("lastPdfBase64 exists?", !!window.lastPdfBase64);
+  console.log("lastOrderId:", window.lastOrderId);
+
+  // 1. Tenta usar base64 em memória (mais garantido e imediato)
+  if (window.lastPdfBase64 && window.lastOrderId) {
+    try {
+      // Feedback visual
+      const btn = document.getElementById('btnBaixarManual');
+      if (btn) { btn.textContent = "Gerando PDF..."; btn.disabled = true; }
+
+      const link = document.createElement('a');
+      link.href = `data:application/pdf;base64,${window.lastPdfBase64}`;
+      link.download = `Orcamento_${window.lastOrderId}.pdf`;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+
+      // Reset botão
+      setTimeout(() => { if (btn) { btn.textContent = "Baixar PDF do Orçamento"; btn.disabled = false; } }, 1000);
+      return;
+    } catch (e) {
+      console.error("Erro download base64 manual:", e);
+      alert("Houve um erro ao gerar o arquivo. Tente recarregar a página.");
+    }
+  }
+
+  // 2. Fallback: Pega o code da URL
+  const pathParts = window.location.pathname.split('/').filter(Boolean);
+  const code = pathParts[pathParts.length - 1];
+
+  if (code && code.length > 3) {
+    console.log("Fallback CODE:", code);
+    window.open(API(`/link_pedido/pdf_cliente/${code}?t=${Date.now()}`), '_blank');
+  } else if (window.lastOrderId) {
+    // 3. Fallback: Se não tem code na URL (modo interno), usa ID
+    console.log("Fallback ID:", window.lastOrderId);
+    window.open(API(`/api/pedido/${window.lastOrderId}/pdf_cliente?t=${Date.now()}`), '_blank');
+  } else {
+    showOsModal({ title: 'Aviso', message: "Não foi possível identificar o link para download. Verifique seu e-mail para a cópia do orçamento.", type: 'alert' });
+  }
+};
+
+function atualizarObsCounter() {
+  if (!taObs || !obsCounter) return;
+  const len = (taObs.value || "").length;
+  obsCounter.textContent = `${len}/100`;
+}
+
+function renderTabela() {
+  if (!tbody) return;
+
+  // Otimização: Renderizar tudo em um fragmento
+  const fragment = document.createDocumentFragment();
+  tbody.innerHTML = "";
+
+  produtos.forEach((item, i) => {
+    // Logica de preço unitário:
+    // Se tiver markup, o preço "unitario" p/ calculo do total/subtotal É o preço markup.
+    // Mas na tela, mostramos o unitário base original na coluna "Valor".
+    // Então aqui definimos "precoEfetivo" para contas e "valorBase" para display.
+
+    // Valor Base (Original)
+    const valorBase = usarValorComFrete ? item.valor_com_frete : item.valor_sem_frete;
+
+    // Valor c/ Markup (se existir > 0)
+    const valorMarkup = usarValorComFrete ? (item.valor_com_frete_markup || 0) : (item.valor_sem_frete_markup || 0);
+
+    // Preço efetivo (se markup > 0, usa ele. Se não, usa base)
+    // NOTE: Usuário pediu para ignorar Markup no cálculo do TOTAL. O total deve ser sobre o valor COM/SEM frete (Base).
+    // O Markup é apenas visual/informativo.
+    const precoCalculo = valorBase;
+
+    const subtotal = precoCalculo * (Number(item.quantidade) || 0);
+
+    const tr = document.createElement("tr");
+    tr.innerHTML = `
+      <td>${i + 1}</td>
+      <td>${item.codigo ?? ""}</td>
+      <td>${item.nome ?? ""}</td>
+      <td>${item.embalagem ?? ""}</td>
+      <td class="right"><input type="number" min="0" max="999" step="1" value="${item.quantidade || 0}" data-index="${i}" class="os-input qtd" style="width: 100%; max-width: 60px;" oninput="if(this.value.length>3) this.value=this.value.slice(0,3); if(Number(this.value)<0) this.value=0;" /></td>
+      <td class="celula-peso right" data-peso-unit="${Number(item.peso ?? 0)}"></td>
+      <td class="right">${fmtBRL.format(valorBase)}</td>
+      <td>${item.condicao_pagamento ?? ""}</td>
+      <td class="col-markup right">${item.markup ? Number(item.markup).toLocaleString("pt-BR", { minimumFractionDigits: 2 }) + "%" : "-"}</td>
+      <td class="col-markup right">${item.markup > 0 ? fmtBRL.format(usarValorComFrete ? item.valor_com_frete_markup : item.valor_sem_frete_markup) : "-"}</td>
+      <td id="subtotal-${i}" class="right">${fmtBRL.format(subtotal)}</td>
+    `;
+
+    // Peso total inicial (peso unitário × quantidade inicial)
+    const pesoUnit = Number(item.peso ?? 0);
+    const qtdInicial = Number(item.quantidade) || 0;
+    const pesoCell = tr.querySelector('.celula-peso');
+    if (pesoCell) {
+      const pesoTotal = pesoUnit * qtdInicial;
+      pesoCell.textContent = formatIntBR(pesoTotal, { mode: "trunc" });
+    }
+
+    fragment.appendChild(tr);
+  });
+
+  tbody.appendChild(fragment);
+
+  // Ocultar colunas de markup se todos os itens forem zero
+  const temMarkup = produtos.some(p => Number(p.markup || 0) > 0);
+  document.querySelectorAll('.col-markup').forEach(el => {
+    el.style.display = temMarkup ? '' : 'none';
+  });
+
+  // Listeners de quantidade
+  tbody.querySelectorAll("input.qtd").forEach((input) => {
+    const handler = (e) => onQtdChange(e);
+    input.addEventListener("input", handler);
+    input.addEventListener("change", handler);
+  });
+  atualizarResumoFreteEPeso();
+}
+
+function formatIntBR(n, { mode = "trunc" } = {}) {
+  const v = (mode === "trunc") ? Math.trunc(n) : Math.round(n); // escolha truncar ou arredondar
+  return v.toLocaleString("pt-BR");
+}
+
+function onQtdChange(e) {
+  const idx = Number(e.target.dataset.index);
+  let quantidade = Math.max(0, Number(e.target.value) || 0);
+  e.target.value = quantidade;
+  produtos[idx].quantidade = quantidade;
+
+  // Recalculo dinâmico
+  const valorBase = usarValorComFrete
+    ? produtos[idx].valor_com_frete
+    : produtos[idx].valor_sem_frete;
+
+  const valorMarkup = usarValorComFrete
+    ? (produtos[idx].valor_com_frete_markup || 0)
+    : (produtos[idx].valor_sem_frete_markup || 0);
+
+  // USER REQUEST: Cálculo deve ser sobre o valor da nota (Base), ignorando Markup no total
+  const precoCalculo = valorBase;
+
+  const subtotal = quantidade * precoCalculo;
+  const cell = document.getElementById(`subtotal-${idx}`);
+  if (cell) cell.textContent = fmtBRL.format(subtotal);
+
+  // Atualizar peso total da linha (peso unitário × nova quantidade)
+  const tr = e.target.closest('tr');
+  const pesoCell = tr?.querySelector('.celula-peso');
+  if (pesoCell) {
+    const pesoUnit = Number(pesoCell.dataset.pesoUnit || produtos[idx].peso || 0);
+    const pesoTotal = pesoUnit * quantidade;
+    pesoCell.textContent = (Number.isFinite(pesoTotal) ? pesoTotal : 0).toLocaleString('pt-BR');
+  }
+
+  atualizarTotal();
+  atualizarResumoFreteEPeso();
+}
+
+function atualizarTotal() {
+  const total = produtos.reduce((acc, item) => {
+    const vBase = usarValorComFrete ? item.valor_com_frete : item.valor_sem_frete;
+    const vMk = usarValorComFrete ? (item.valor_com_frete_markup || 0) : (item.valor_sem_frete_markup || 0);
+    // USER REQUEST: Total ignorando markup
+    const vCalc = vBase;
+
+    return acc + vCalc * (Number(item.quantidade) || 0);
+  }, 0);
+  if (totalEl) totalEl.textContent = fmtBRL.format(total);
+  if (btnConfirmar) btnConfirmar.disabled = total <= 0;
+}
+
+function atualizarResumoFreteEPeso() {
+  const tbody = document.querySelector('#tabelaProdutos tbody');
+  if (!tbody) return;
+
+  let pesoTotal = 0;
+  let freteTotal = 0;
+
+  // usa o mesmo array 'produtos' já usado para render (presente no seu JS)
+  const linhas = tbody.querySelectorAll('tr');
+  linhas.forEach((tr, idx) => {
+    // quantidade
+    const qtdInput = tr.querySelector('input.qtd');
+    const qtd = Math.max(0, Number(qtdInput?.value) || 0);
+
+    // peso unitário (guardado na célula .celula-peso como data-attribute)
+    const pesoUnit = Number(tr.querySelector('.celula-peso')?.dataset.pesoUnit || 0);
+    pesoTotal += pesoUnit * qtd;
+
+    // frete por item (diferença entre valores) — só soma quando estiver em "com frete"
+    if (window.usarValorComFrete === true) {
+      const valorCom = Number((produtos[idx]?.valor_com_frete) || 0);
+      const valorSem = Number((produtos[idx]?.valor_sem_frete) || 0);
+      const delta = Math.max(valorCom - valorSem, 0);
+      freteTotal += delta * qtd;
+    }
+  });
+
+  // escreve na tela
+  const elPeso = document.getElementById('totalPesoPedido');
+  const elFrete = document.getElementById('totalFretePedido');
+
+  if (elPeso) {
+    const pesoArredondado = Number.isFinite(pesoTotal) ? Math.round(pesoTotal) : 0;
+    elPeso.textContent = pesoArredondado.toLocaleString('pt-BR');
+  }
+  if (elFrete) elFrete.textContent = window.usarValorComFrete === true ? fmtBRL.format(freteTotal) : fmtBRL.format(0);
+}
+
+
+
+function obterParametrosPedido() {
+  const qs = new URLSearchParams(location.search);
+  let tabelaId = qs.get("tabela_id") || window.currentTabelaId;
+  let comFrete = qs.get("com_frete");
+
+  if (comFrete === null || comFrete === undefined) comFrete = window.currentComFrete;
+
+  comFrete = String(comFrete).toLowerCase() === "true";
+  if (!tabelaId) throw new Error("sem_parametros");
+
+  return { tabelaId: Number(tabelaId), comFrete };
+}
+
+// -------------------- Carregamento de dados --------------------
+async function carregarPedido() {
+  try {
+    const _qsNow = new URLSearchParams(location.search);
+    const pathParts = location.pathname.split('/').filter(Boolean);
+    const lastPart = pathParts[pathParts.length - 1];
+
+    let info = null;
+
+    if (pathParts[0] === 'p' && lastPart) {
+      try {
+        const r = await fetch(API(`/link_pedido/resolver?code=${encodeURIComponent(lastPart)}`), { cache: "no-store" });
+        if (r.ok) {
+          info = await r.json();
+          window.currentTabelaId = info.tabela_id ?? window.currentTabelaId;
+          window.currentComFrete = info.com_frete ?? window.currentComFrete;
+          window.entregaISO = (typeof info.data_prevista === 'string' ? info.data_prevista : null);
+
+          // --- Lógica de Link Expirado ---
+          if (info.is_expired) {
+            window.linkExpirado = true; // flag global
+            setMensagem("Este link de pedido está com validade vencida, mas você pode confirmar normalmente.", false);
+            // if (btnConfirmar) btnConfirmar.disabled = true; // REMOVIDO: permitir confirmar mesmo vencido
+          }
+
+          // --- Lógica de Pedido Já Confirmado ---
+          if (info.link_status === 'CONFIRMADO') {
+            // Esconde botões
+            const actions = document.querySelector('.acoes');
+            if (actions) actions.style.display = 'none';
+
+            // Avisa o usuário
+            const msg = document.getElementById('mensagem');
+            if (msg) {
+              msg.textContent = "Este pedido já foi aceito e processado.";
+              msg.style.color = "blue";
+              msg.style.fontWeight = "bold";
+              msg.style.fontSize = "1.2rem";
+              msg.style.marginTop = "20px";
+            }
+
+            // Bloqueia inputs
+            lockPageAfterConfirm();
+            // (Opcional) Abrir modal de sucesso direto? O usuário pediu "notificação informando que já foi aceito".
+            // Vou deixar o texto na tela + bloqueio.
+          }
+
+          console.log('[resolver] ok', info);
+
+          window.codigoClienteHidden = info.codigo_cliente || null;  // <— oculto
+          const elCriado = document.getElementById("datadopedido");
+          if (elCriado && info?.created_at) {
+            const dt = new Date(info.created_at);
+            elCriado.textContent = dt.toLocaleString("pt-BR", { timeZone: "America/Sao_Paulo" });
+          }
+          const logoEl = document.getElementById("logoCliente");
+          if (logoEl && typeof info?.logo_url === "string" && /^https?:\/\//.test(info.logo_url)) {
+            logoEl.src = info.logo_url;
+            logoEl.onerror = () => { logoEl.style.display = "none"; };
+          }
+        }
+      } catch { }
+    }
+
+    tabelaIdParam = tabelaIdParam
+      || _qsNow.get("tabela_id")
+      || (typeof window.currentTabelaId !== "undefined" ? String(window.currentTabelaId) : null);
+
+    const _comFreteQS = _qsNow.get("com_frete");
+    const _comFreteCode = (typeof window.currentComFrete !== "undefined")
+      ? (window.currentComFrete ? "true" : "false")
+      : null;
+
+    // valor efetivo de com_frete (prioriza query; se não houver, usa o do resolver)
+    const _comFreteEfetivo = (_comFreteQS ?? _comFreteCode);
+    // Fluxo 1: veio de criação/listagem com ?tabela_id=... (preview)
+    if (tabelaIdParam) {
+      // 1A) Preview dos itens (sem validade aqui)
+      // 1A) Preview dos itens (sem validade aqui)
+      const qs = new URLSearchParams({
+        tabela_id: tabelaIdParam,
+        com_frete: (_comFreteEfetivo === "1" || String(_comFreteEfetivo).toLowerCase() === "true") ? "true" : "false",
+        razao_social: razaoParam || "",
+        condicao_pagamento: condPagtoParam || ""
+      });
+
+      // 🔎 LOGA a URL completa que será chamada
+      const previewURL = `/pedido/preview?${qs.toString()}`;
+      console.debug("[preview] URL:", previewURL);
+
+      const r1 = await fetch(API(`/pedido/preview?${qs.toString()}`));
+
+      if (!r1.ok) {
+        let detail = "";
+        try {
+          const err = await r1.json();
+          detail = err?.detail || JSON.stringify(err);
+        } catch (_) { }
+        throw new Error(`Erro ${r1.status} no preview${detail ? " — " + detail : ""}`);
+      }
+
+      const dados = await r1.json();
+
+      // Preencher cabeçalho (sem validade ainda)
+      setCampoTexto("razaoSocialCliente", dados.razao_social ?? "---");
+      setCampoTexto("condicaoPagamento", dados.condicao_pagamento ?? "---");
+
+      // Usar c/ ou s/ frete decidido no link
+      usarValorComFrete = Boolean(dados.usar_valor_com_frete);
+      const tituloValorFrete = document.getElementById("tituloValorFrete");
+      if (tituloValorFrete) {
+        tituloValorFrete.innerHTML = usarValorComFrete ? "c/<br>Frete" : "s/<br>Frete";
+      }
+
+      window.usarValorComFrete = usarValorComFrete;
+      aplicarEntregaRetiradaHeader();
+      // Itens
+      produtos = (dados.produtos || []).map(p => ({
+        ...p,
+        valor_com_frete: Number(p.valor_com_frete) || 0,
+        valor_sem_frete: Number(p.valor_sem_frete) || 0,
+        valor_com_frete_markup: Number(p.valor_com_frete_markup) || 0,
+        valor_sem_frete_markup: Number(p.valor_sem_frete_markup) || 0,
+        markup: Number(p.markup) || 0,
+        quantidade: Number(p.quantidade) || 0
+      }));
+      renderTabela();
+      atualizarResumoFreteEPeso();
+      atualizarTotal();
+
+      // 1B) Validade global (busca direto no front)
+      try {
+        const r2 = await fetch(API(`/tabela_preco/meta/validade_global?tabela_id=${encodeURIComponent(tabelaIdParam)}`));
+
+        if (r2.ok) {
+          const v = await r2.json();
+          setCampoTexto("validadeTabela", v.validade ?? v.validade_tabela ?? "---");
+          setCampoTexto("tempoRestante", v.tempo_restante ?? "---");
+          const rawVal = v.validade ?? v.validade_tabela ?? null;
+          window.validadeGlobalISO = normalizarValidadeCampo(rawVal);
+
+          if (window.linkExpirado) {
+            // setCampoTexto("tempoRestante", "Validade vencida - valores sujeitos a alteração");
+            const el = document.getElementById("tempoRestante");
+            if (el) el.style.color = "#d9534f"; // vermelho aviso
+          } else {
+            setCampoTexto("tempoRestante", v.tempo_restante ?? "---");
+          }
+
+          console.debug("[validade] raw:", rawVal, "ISO:", window.validadeGlobalISO);
+        } else {
+          setCampoTexto("validadeTabela", "---");
+          setCampoTexto("tempoRestante", "---");
+        }
+      } catch {
+        setCampoTexto("validadeTabela", "---");
+        setCampoTexto("tempoRestante", "---");
+      }
+
+      return;
+    }
+
+    // Fluxo 2: (opcional) se vier por ?id=<pedidoId>, buscar um pedido existente
+    if (pedidoId) {
+      const resp = await fetch(API(`/pedido/${encodeURIComponent(pedidoId)}`));
+      if (!resp.ok) throw new Error(`Erro ${resp.status} ao carregar pedido`);
+      const dados = await resp.json();
+
+      setCampoTexto("razaoSocialCliente", dados.razao_social ?? "---");
+      setCampoTexto("condicaoPagamento", dados.condicao_pagamento ?? "---");
+      setCampoTexto("validadeTabela", dados.validade ?? "---");
+      setCampoTexto("tempoRestante", dados.tempo_restante ?? "---");
+
+      usarValorComFrete = Boolean(dados.usar_valor_com_frete);
+      const tituloValorFrete = document.getElementById("tituloValorFrete");
+      if (tituloValorFrete) {
+        tituloValorFrete.innerHTML = usarValorComFrete ? "c/<br>Frete" : "s/<br>Frete";
+      }
+
+      window.usarValorComFrete = usarValorComFrete;
+      aplicarEntregaRetiradaHeader();
+
+      produtos = Array.isArray(dados.produtos)
+        ? dados.produtos.map((p) => ({
+          ...p,
+          valor_com_frete: Number(p.valor_com_frete) || 0,
+          valor_sem_frete: Number(p.valor_sem_frete) || 0,
+          quantidade: Number(p.quantidade) || 0,
+        }))
+        : [];
+
+      renderTabela();
+      atualizarTotal();
+      return;
+    }
+
+    // Nenhum parâmetro reconhecido
+    setMensagem("URL sem parâmetros válidos. Use ?tabela_id=<id> (preview) ou ?id=<pedido>.");
+    if (btnConfirmar) btnConfirmar.disabled = true;
+  } catch (e) {
+    console.error(e);
+    setMensagem("Não foi possível carregar os dados do pedido.");
+    if (btnConfirmar) btnConfirmar.disabled = true;
+  }
+}
+
+// Pequeno util pra preencher elementos de texto por id
+function setCampoTexto(id, valor) {
+  const el = document.getElementById(id);
+  if (el) el.textContent = valor;
+}
+
+function obterValidadeDiasDaTela() {
+  const el = document.getElementById("tempoRestante");
+  if (!el) return null;
+  const m = (el.textContent || "").match(/(\d+)/);
+  return m ? parseInt(m[1], 10) : null;
+}
+//Bloqueia tela depois de confirmar pedido
+function lockPageAfterConfirm() {
+  // Desabilita todos os elementos interativos da página (menos o botão do modal)
+  document.body.classList.add('page-locked');
+  document.querySelectorAll('input, textarea, select, button').forEach(el => {
+    if (el.id === 'btnFecharConfirm' || el.id === 'btnBaixarManual') return;
+    el.disabled = true;
+  });
+  // Também evita scroll enquanto o modal estiver aberto
+  document.body.classList.add('modal-open');
+}
+
+function openConfirmModal(pedidoId) {
+  const modal = document.getElementById('confirmModal');
+  const info = document.getElementById('confirmPedidoInfo');
+  if (!modal) return;
+
+  info.textContent = pedidoId ? `Número do pedido: ${pedidoId}` : '';
+  modal.hidden = false;
+
+  // Trava a página para não permitir mais modificações
+  lockPageAfterConfirm();
+
+  // Foco no botão para acessibilidade
+  const btn = document.getElementById('btnFecharConfirm');
+  btn && btn.focus();
+}
+
+function closeConfirmModal() {
+  const modal = document.getElementById('confirmModal');
+  if (modal) modal.hidden = true;
+
+  // 1) fecha a aba (se aberta via window.open)
+  try { window.close(); } catch { }
+
+  // 2) se não fechar, volta no histórico
+  if (history.length > 1) {
+    history.back();
+    return;
+  }
+
+  // 3) fallback: limpa a aba
+  window.location.replace("about:blank");
+}
+
+// -------------------- Ações --------------------
+// -------------------- Ações --------------------
+// ===================================
+// CUSTOM OS MODALS
+// ===================================
+function showOsModal(options) {
+  return new Promise((resolve) => {
+    const backdrop = document.createElement('div');
+    backdrop.className = 'os-modal-backdrop active';
+    backdrop.style.zIndex = '99999';
+
+    const dialog = document.createElement('div');
+    dialog.className = 'os-modal-dialog';
+    dialog.style.maxWidth = '400px';
+
+    const header = document.createElement('div');
+    header.className = 'os-modal-header';
+    header.innerHTML = `<h3 class="os-modal-title">${options.title}</h3>
+                        <button class="os-modal-close">&times;</button>`;
+
+    const body = document.createElement('div');
+    body.className = 'os-modal-body';
+    body.innerHTML = `<p style="margin:0;">${options.message}</p>`;
+
+    const footer = document.createElement('div');
+    footer.className = 'os-modal-footer';
+
+    if (options.type === 'confirm') {
+      const btnCancel = document.createElement('button');
+      btnCancel.className = 'os-btn os-btn-secondary';
+      btnCancel.textContent = 'Cancelar';
+
+      const btnOk = document.createElement('button');
+      btnOk.className = 'os-btn os-btn-primary';
+      btnOk.textContent = 'OK';
+
+      footer.appendChild(btnCancel);
+      footer.appendChild(btnOk);
+
+      btnCancel.onclick = () => { document.body.removeChild(backdrop); resolve(false); };
+      btnOk.onclick = () => { document.body.removeChild(backdrop); resolve(true); };
+    } else {
+      const btnOk = document.createElement('button');
+      btnOk.className = 'os-btn os-btn-primary';
+      btnOk.textContent = 'OK';
+      footer.appendChild(btnOk);
+      btnOk.onclick = () => { document.body.removeChild(backdrop); resolve(true); };
+    }
+
+    header.querySelector('.os-modal-close').onclick = () => {
+      document.body.removeChild(backdrop);
+      resolve(options.type === 'confirm' ? false : true);
+    };
+
+    dialog.appendChild(header);
+    dialog.appendChild(body);
+    dialog.appendChild(footer);
+    backdrop.appendChild(dialog);
+    document.body.appendChild(backdrop);
+  });
+}
+
+async function confirmarPedido() {
+  let originCode = "";
+  let pedidoIdConfirmado = null; // Store ID when confirmed
+
+  try {
+    const itens = produtos;
+    if (!Array.isArray(itens) || itens.length === 0) {
+      setMensagem("Inclua pelo menos 1 item com quantidade > 0.", false);
+      return;
+    }
+
+    if (btnConfirmar) btnConfirmar.disabled = true;
+    setMensagem("Enviando pedido...", true);
+
+    const totalCalculado = itens.reduce((acc, x) => acc + (Number(x.valor_sem_frete || 0) * Number(x.quantidade || 0)), 0);
+    if (totalCalculado <= 0) {
+      const prosseguir = await showOsModal({ 
+        title: 'Aviso Financeiro', 
+        message: "Atenção: O valor dos produtos deste pedido está aparecendo como R$ 0,00. Isso pode ser um erro de carregamento. Deseja confirmar o pedido assim mesmo?", 
+        type: 'confirm' 
+      });
+      if (!prosseguir) {
+        if (btnConfirmar) btnConfirmar.disabled = false;
+        setMensagem("", true);
+        return;
+      }
+    }
+
+    // token do link curto (/p/{code})
+    const pathParts = location.pathname.split('/').filter(Boolean);
+    originCode = pathParts.length > 0 ? pathParts[pathParts.length - 1] : null;
+
+    // DEBUG: Verificar se o código foi detectado
+    if (!originCode) {
+      showOsModal({ title: 'Aviso', message: "AVISO: Código do link não detectado (originCode is null). O download do PDF pode falhar.", type: 'alert' });
+    }
+    // console.log("OriginCode:", originCode);
+
+    // razão social mostrada na tela
+    const clienteRazao = (document.getElementById('razaoSocialCliente')?.textContent || '').trim() || null;
+
+    // observação limitada a 100 chars
+    const observacao = (document.getElementById('observacaoPedido')?.value || '').trim().slice(0, 100);
+
+    const entregaQS = new URLSearchParams(location.search).get("entrega");
+    const dataRetiradaISO = (typeof entregaQS === "string" && isISODate(entregaQS)) ? entregaQS : null;
+
+    // pega a validade que guardamos ao carregar a tela
+    const validadeISO = (typeof window.validadeGlobalISO === "string" && isISODate(window.validadeGlobalISO))
+      ? window.validadeGlobalISO
+      : null;
+
+    // CHAMADA ao backend: agora usamos /pedido/{tabela_id}/confirmar
+    const resp = await fetch(API(`/pedido/${encodeURIComponent(tabelaIdParam)}/confirmar`), {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      cache: "no-store",
+      body: JSON.stringify({
+        origin_code: originCode,
+        usar_valor_com_frete: !!usarValorComFrete,
+        produtos: itens.map(x => {
+          // Lógica para enviar o preço EFETIVO (com markup se houver)
+          // Backend espera 'preco_unit' (sem frete) e 'preco_unit_com_frete' (com frete)
+          // Se houver markup, enviamos o valor markup. Se não, o base.
+
+          const vBaseSem = x.valor_sem_frete || 0;
+          const vBaseCom = x.valor_com_frete || 0;
+          const vMkSem = x.valor_sem_frete_markup || 0;
+          const vMkCom = x.valor_com_frete_markup || 0;
+
+          // Se markup > 0, usa ele.
+          // USER REQUEST: Salvar o pedido com valor BASE, ignorando markup no valor final do pedido.
+          const pSem = vBaseSem;
+          const pCom = vBaseCom;
+
+          return {
+            codigo: x.codigo,
+            descricao: x.nome ?? null,
+            embalagem: x.embalagem ?? null,
+            condicao_pagamento: x.condicao_pagamento ?? null,
+            tabela_comissao: x.tabela_comissao ?? null,
+            quantidade: Number(x.quantidade || 0),
+            // Envia o EFETIVO para o backend registrar o valor correto do pedido
+            preco_unit: pSem,
+            preco_unit_com_frete: pCom,
+            peso_kg: x.peso ?? x.peso_kg ?? null,
+            valor_frete_unitario: x.valor_frete_unitario || 0,
+            manual_freight: !!x.manual_freight,
+            markup: x.markup || 0,
+            valor_final_markup: vMkCom,
+            valor_s_frete_markup: vMkSem
+          };
+        }),
+        observacao,
+        cliente: clienteRazao,
+        validade_ate:
+          (typeof window.validadeGlobalISO === "string" && isISODate(window.validadeGlobalISO))
+            ? window.validadeGlobalISO
+            : null,
+        data_retirada: dataRetiradaISO,
+        validade_dias: obterValidadeDiasDaTela(),
+        codigo_cliente:
+          (typeof window.codigoClienteHidden === "string" ? window.codigoClienteHidden : null),
+        link_url: location.href
+      })
+    });
+
+    if (!resp.ok) {
+      const txt = await resp.text();
+      throw new Error(`Erro ao confirmar (${resp.status}) ${txt || ''}`);
+    }
+
+    const data = await resp.json();
+    const pedidoIdConfirmado = data?.id ?? data?.pedido_id;
+
+    if (!pedidoIdConfirmado) {
+      throw new Error("Resposta sem id do pedido.");
+    }
+
+    // --- Lógica de Download do PDF (Híbrido) ---
+    if (data.pdf_base64) {
+      console.log("PDF Base64 recebido! Length:", data.pdf_base64.length);
+      // alert("DEBUG: PDF Base64 chegou do servidor!");
+
+      // Store base64 for manual download
+      window.lastPdfBase64 = data.pdf_base64;
+      window.lastOrderId = pedidoIdConfirmado;
+    } else {
+      console.warn("DEBUG: data.pdf_base64 veio vazio/nulo.");
+      // alert("DEBUG: data.pdf_base64 veio VAZIO.");
+    }
+
+    // Atualiza texto do modal para avisar do email/download
+    const msgEmail = data.email_enviado === true
+      ? "Uma cópia foi enviada para seu e-mail."
+      : "E-mail não cadastrado (ou não configurado). Solicite o cadastro junto ao nosso time.";
+
+    const txtConfirm = document.querySelector('.confirm-text');
+    if (txtConfirm) {
+      txtConfirm.innerHTML = `
+        Orçamento confirmado com sucesso!<br>
+        <span style="color: ${data.email_enviado ? 'inherit' : '#d9534f'}">${msgEmail}</span>
+        <br><br>
+        <button id="btnBaixarManual" class="btn-baixar-manual" style="background-color: #28a745; color: white; border: none; padding: 10px 20px; border-radius: 5px; cursor: pointer; font-size: 1rem; margin-top: 10px;">
+          <i class="fas fa-file-pdf"></i> Baixar PDF do Orçamento
+        </button>
+      `;
+      // Attach listener dynamically to avoid scope/CSP issues
+      setTimeout(() => {
+        const btn = document.getElementById('btnBaixarManual');
+        if (btn) {
+          btn.onclick = window.baixarPdfManual; // Using direct property to ensure binding
+          btn.disabled = false; // Force enable
+          btn.style.pointerEvents = 'auto'; // Force clickable
+          console.log("Evento onclick vinculado ao botão PDF");
+        } else {
+          console.error("Botão PDF não encontrado para vincular evento");
+        }
+      }, 50);
+    }
+
+    openConfirmModal(pedidoIdConfirmado);
+
+  } catch (err) {
+    console.error('[confirmarPedido] erro', err);
+    await showOsModal({ title: 'Pedido Recebido', message: "Recebemos seu pedido e ele já está sendo processado. Em breve alguém da nossa equipe entrará em contato.", type: 'alert' });
+    setMensagem("Falha ao enviar o pedido.", false);
+    if (btnConfirmar) btnConfirmar.disabled = false;
+  }
+}
+
+function assertShape(d) {
+  const must = [
+    ["tabela", "object"],
+    ["tabela.nome", "string"],
+    ["tabela.validade", "string"], // ajuste aos seus campos reais
+    ["cliente", "object"],
+    ["cliente.nome", "string"],
+    ["itens", "object"], // array
+  ];
+  const get = (o, path) => path.split(".").reduce((a, k) => (a && a[k] !== undefined ? a[k] : undefined), o);
+  const errs = [];
+  for (const [p, t] of must) {
+    const v = get(d, p);
+    if (t === "object" && (typeof v !== "object" || v === null)) errs.push(`${p} ausente`);
+    if (t === "string" && typeof v !== "string") errs.push(`${p} inválido`);
+  }
+  if (Array.isArray(d.itens) === false) errs.push("itens não é array");
+  if (errs.length) {
+    console.error("[pedido] shape inválido:", errs, d);
+    showOsModal({ title: 'Erro de Dados', message: "Formato de dados inesperado para a tela de pedido.", type: 'alert' });
+  }
+}
+
+
+function cancelarPedido() {
+  if (window.opener) {
+    window.close();
+  } else if (history.length > 1) {
+    history.back();
+  } else {
+    window.location.href = "/";
+  }
+}
+
+
+function aplicarModoInterno() {
+  if (!IS_MODO_INTERNO) return;
+
+  // Esconde "Confirmar"
+  document.getElementById("btnConfirmar")?.style.setProperty("display", "none");
+
+  // "Cancelar" -> "Voltar" com override total de listeners
+  const oldBtn = document.getElementById("btnCancelar");
+  if (oldBtn) {
+    const newBtn = oldBtn.cloneNode(true);   // remove listeners antigos
+    newBtn.textContent = "Voltar";
+    newBtn.disabled = false;
+
+    newBtn.onclick = (ev) => {
+      ev.preventDefault();
+      ev.stopPropagation();
+
+      // fecha se foi aberto pelo botão Visualizar
+      try { window.close(); } catch { }
+
+      // se não fechar, tenta voltar
+      if (history.length > 1) {
+        history.back();
+        return;
+      }
+
+      // fallback
+      window.location.replace("about:blank");
+    };
+
+    oldBtn.replaceWith(newBtn);
+  }
+
+  // "Validade:" -> "Proposta válida até:"
+  const spanVal = document.getElementById("validadeTabela");
+  if (spanVal) {
+    const lbl = spanVal.previousElementSibling;
+    if (lbl && lbl.tagName === "STRONG") lbl.textContent = "Proposta válida até:";
+  }
+}
+// -------------------- Bind de eventos e início --------------------
+if (btnConfirmar) {
+  btnConfirmar.addEventListener("click", () => {
+    // Validação de Data Retirada
+    const dataRetStr = document.getElementById('dataEntregaValor')?.textContent;
+    if (dataRetStr && dataRetStr !== 'a combinar') {
+      const parts = dataRetStr.split('/');
+      if (parts.length === 3) {
+        const [d, m, y] = parts;
+        const dataRet = new Date(parseInt(y), parseInt(m) - 1, parseInt(d));
+        const hoje = new Date();
+        hoje.setHours(0, 0, 0, 0);
+        if (dataRet < hoje) {
+          alert("⚠️ A data de retirada deste orçamento já passou. Por favor, solicite a atualização do link antes de confirmar.");
+          return;
+        }
+      }
+    }
+    confirmarPedido();
+  });
+}
+if (btnCancelar) btnCancelar.addEventListener("click", cancelarPedido);
+
+window.carregarPedido = carregarPedido;
+window.addEventListener("DOMContentLoaded", aplicarModoInterno);
+window.addEventListener("load", aplicarModoInterno);
+
+if (taObs) {
+  taObs.addEventListener('input', atualizarObsCounter);
+  atualizarObsCounter(); // inicia contador
+}
+window.addEventListener('DOMContentLoaded', () => {
+  const btnFecharConfirm = document.getElementById('btnFecharConfirm');
+  if (btnFecharConfirm) btnFecharConfirm.addEventListener('click', closeConfirmModal);
+});
+

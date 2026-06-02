@@ -1,0 +1,191 @@
+/* ============================================================
+   OrderSync — Login Pages Shared Styles
+   ============================================================ */
+
+body.os-login-page {
+    background-color: var(--os-bg);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    min-height: 100vh;
+    margin: 0;
+    padding: var(--os-space-2);
+}
+
+.os-login-card {
+    background: var(--os-bg-white);
+    padding: var(--os-space-4);
+    border-radius: var(--os-radius-lg);
+    box-shadow: var(--os-shadow-md);
+    border: 1px solid var(--os-border);
+    width: 100%;
+    max-width: 420px;
+    text-align: center;
+}
+
+.os-login-logo {
+    height: 48px;
+    margin-bottom: var(--os-space-3);
+}
+
+.os-login-card h2 {
+    margin: 0 0 var(--os-space-1);
+    font-size: var(--os-text-xl);
+    font-weight: 700;
+    color: var(--os-text);
+}
+
+.os-login-card .os-login-subtitle {
+    color: var(--os-text-secondary);
+    font-size: var(--os-text-sm);
+    margin-bottom: var(--os-space-3);
+}
+
+.os-login-form .os-form-group {
+    text-align: left;
+    margin-bottom: var(--os-space-2);
+}
+
+.os-login-form .os-form-group label {
+    display: block;
+    margin-bottom: 6px;
+    font-weight: 600;
+    color: #374151;
+    font-size: var(--os-text-sm);
+}
+
+.os-login-form .os-form-group input {
+    width: 100%;
+    padding: 10px 12px;
+    border: 1px solid var(--os-border);
+    border-radius: var(--os-radius);
+    outline: none;
+    font-size: var(--os-text-sm);
+    font-family: var(--os-font);
+    transition: border-color 0.15s, box-shadow 0.15s;
+    box-sizing: border-box;
+}
+
+.os-login-form .os-form-group input:focus {
+    border-color: var(--os-primary);
+    box-shadow: 0 0 0 3px var(--os-primary-ring);
+}
+
+.os-login-btn {
+    width: 100%;
+    padding: 12px;
+    background-color: var(--os-primary);
+    color: #fff;
+    border: none;
+    border-radius: var(--os-radius);
+    font-weight: 600;
+    font-size: var(--os-text-sm);
+    font-family: var(--os-font);
+    cursor: pointer;
+    transition: background-color 0.15s;
+    margin-top: var(--os-space-1);
+}
+
+.os-login-btn:hover {
+    background-color: var(--os-primary-hover);
+}
+
+.os-login-btn:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+}
+
+.os-login-error {
+    color: var(--os-error);
+    margin-bottom: var(--os-space-2);
+    font-size: var(--os-text-sm);
+    display: none;
+    background: var(--os-error-light);
+    padding: 10px 14px;
+    border-radius: var(--os-radius);
+    border: 1px solid #FECACA;
+    text-align: left;
+}
+
+.os-login-success {
+    color: var(--os-success);
+    margin-bottom: var(--os-space-2);
+    font-size: var(--os-text-sm);
+    display: none;
+    background: var(--os-success-light);
+    padding: 10px 14px;
+    border-radius: var(--os-radius);
+    border: 1px solid #A7F3D0;
+    text-align: left;
+}
+
+.os-login-link {
+    margin-top: var(--os-space-2);
+    font-size: var(--os-text-sm);
+    color: var(--os-text-secondary);
+}
+
+.os-login-link a {
+    color: var(--os-primary);
+    font-weight: 500;
+}
+
+.os-login-footer {
+    margin-top: var(--os-space-3);
+    font-size: var(--os-text-xs);
+    color: var(--os-text-muted);
+}
+
+/* Password toggle */
+.os-password-wrap {
+    position: relative;
+}
+
+.os-password-toggle {
+    position: absolute;
+    right: 12px;
+    top: 50%;
+    transform: translateY(-50%);
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    color: var(--os-text-muted);
+}
+
+.os-password-toggle:hover {
+    color: var(--os-text-secondary);
+}
+
+/* Message box for forgot/reset */
+.os-msg-box {
+    margin-top: var(--os-space-2);
+    padding: 10px 14px;
+    border-radius: var(--os-radius);
+    font-size: var(--os-text-sm);
+    display: none;
+    text-align: left;
+}
+
+.os-msg-box.success {
+    background: var(--os-success-light);
+    color: var(--os-success);
+    border: 1px solid #A7F3D0;
+}
+
+.os-msg-box.error {
+    background: var(--os-error-light);
+    color: var(--os-error);
+    border: 1px solid #FECACA;
+}
+
+.os-back-link {
+    display: inline-block;
+    margin-top: var(--os-space-2);
+    color: var(--os-text-secondary);
+    font-size: var(--os-text-sm);
+    text-decoration: none;
+}
+
+.os-back-link:hover {
+    color: var(--os-primary);
+}

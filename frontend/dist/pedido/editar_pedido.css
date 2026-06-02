@@ -228,18 +228,18 @@
 }
 
 /* --- Colapse das colunas ST (Visualização Detalhada) --- */
-/* Índices: BaseST=14 -> Colunas filhas: 15, 16, 17 */
-#tabela-itens:has(#st-toggle:not(:checked)) tr> :nth-child(15),
-#tabela-itens:has(#st-toggle:not(:checked)) tr> :nth-child(16),
-#tabela-itens:has(#st-toggle:not(:checked)) tr> :nth-child(17) {
+/* Esconde: ICMS próprio, ICMS ST cheio, ICMS ST a reter */
+#tabela-itens:has(#st-toggle:not(:checked)) .col-icms-proprio,
+#tabela-itens:has(#st-toggle:not(:checked)) .col-icms-st-cheio,
+#tabela-itens:has(#st-toggle:not(:checked)) .col-icms-st-reter {
   display: none;
 }
 
 /* --- Toggle PRODUTO (Descrição) --- */
-/* Esconde: Embalagem(4), Grupo(5), Peso(6) */
-#tabela-itens:has(#prod-toggle:not(:checked)) tr> :nth-child(4),
-#tabela-itens:has(#prod-toggle:not(:checked)) tr> :nth-child(5),
-#tabela-itens:has(#prod-toggle:not(:checked)) tr> :nth-child(6) {
+/* Esconde: Embalagem, Grupo, Peso */
+#tabela-itens:has(#prod-toggle:not(:checked)) .col-emb,
+#tabela-itens:has(#prod-toggle:not(:checked)) .col-grupo,
+#tabela-itens:has(#prod-toggle:not(:checked)) .col-peso {
   display: none;
 }
 
@@ -250,8 +250,8 @@
 
 
 /* --- Toggle DESCONTO (Fator %) --- */
-/* Esconde: Desc. Aplicado R$ (9) */
-#tabela-itens:has(#desc-toggle:not(:checked)) tr> :nth-child(9) {
+/* Esconde: Desc. Aplicado R$ */
+#tabela-itens:has(#desc-toggle:not(:checked)) .col-desc-aplicado {
   display: none;
 }
 
@@ -262,8 +262,8 @@
 
 
 /* --- Toggle CONDIÇÃO (Código) --- */
-/* Esconde: Cond. Pagto R$ (11) */
-#tabela-itens:has(#cond-toggle:not(:checked)) tr> :nth-child(11) {
+/* Esconde: Cond. Pagto R$ */
+#tabela-itens:has(#cond-toggle:not(:checked)) .col-cond-valor {
   display: none;
 }
 
@@ -274,9 +274,8 @@
 
 
 /* --- Colapse das colunas MARKUP --- */
-/* Índices: Markup%(Inp)=20, Final(Mk)=21, SemFrete(Mk)=22 */
-#tabela-itens:has(#markup-cols-toggle:not(:checked)) tr> :nth-child(21),
-#tabela-itens:has(#markup-cols-toggle:not(:checked)) tr> :nth-child(22) {
+/* Esconde: Valor Final (Mk) e Valor s/ Frete (Mk) */
+#tabela-itens:has(#markup-cols-toggle:not(:checked)) .col-mk-derived {
   display: none;
 }
 
@@ -777,16 +776,4 @@
   .area-markup {
     order: 6;
   }
-}
-
-/* Button Enxuto Styling */
-.btn-enxuto {
-  padding: 4px 10px !important;
-  font-size: 0.75rem !important;
-  border-radius: 6px !important;
-  display: inline-flex !important;
-  align-items: center !important;
-  gap: 4px !important;
-  margin-top: 4px !important;
-  font-weight: 500 !important;
 }

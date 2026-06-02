@@ -1,16 +1,33 @@
 import psycopg2
 
-DB_URL = 'postgresql://dispet_admin_:VTCgwlOp1saQYLdv2gLeHQOVdbhvZO33@dpg-d4781ehr0fns73f9ipc0-a.oregon-postgres.render.com/db_ordersync'
+DB_URL = 'postgresql://dispet_admin_:VTCgwlOp1saQYLdv2gLeHQOVdbhvZO33@dpg-d4781ehr0fns73f9ipc0-a.oregon-postgres.render.com/db_ordersync?sslmode=require'
+
+import time
+
+def connect_with_retry(db_url, max_retries=5, delay=2):
+    last_error = None
+    for attempt in range(1, max_retries + 1):
+        try:
+            return psycopg2.connect(db_url)
+        except psycopg2.OperationalError as e:
+            last_error = e
+            print(f"Tentativa de conexao {attempt}/{max_retries} falhou: {e}. Retentando em {delay}s...")
+            time.sleep(delay)
+    raise last_error
 
 def create_staging_tables():
-    conn = psycopg2.connect(DB_URL)
+    conn = connect_with_retry(DB_URL)
     cur = conn.cursor()
     
-    print("Criando tabelas de staging se não existirem...")
+    print("Deletando tabelas antigas de staging...")
+    cur.execute("DROP TABLE IF EXISTS tb_pedidos_itens_ingestao CASCADE;")
+    cur.execute("DROP TABLE IF EXISTS tb_pedidos_ingestao CASCADE;")
+    
+    print("Criando tabelas de staging do zero...")
     
     # Criar tb_pedidos_ingestao baseada em tb_pedidos
     cur.execute("""
-        CREATE TABLE IF NOT EXISTS tb_pedidos_ingestao (
+        CREATE TABLE tb_pedidos_ingestao (
             id_pedido BIGSERIAL PRIMARY KEY,
             codigo_cliente VARCHAR(80),
             cliente VARCHAR(255),
@@ -55,7 +72,7 @@ def create_staging_tables():
     
     # Criar tb_pedidos_itens_ingestao baseada em tb_pedidos_itens
     cur.execute("""
-        CREATE TABLE IF NOT EXISTS tb_pedidos_itens_ingestao (
+        CREATE TABLE tb_pedidos_itens_ingestao (
             id_item BIGSERIAL PRIMARY KEY,
             id_pedido BIGINT,
             codigo VARCHAR(80),

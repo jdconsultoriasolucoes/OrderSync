@@ -1,0 +1,555 @@
+/* ============================================================
+   OrderSync — Clientes Screen CSS
+   Uses design-system.css tokens throughout
+   ============================================================ */
+
+body {
+  font-size: var(--os-text-sm);
+}
+
+/* Page layout */
+.page-container {
+  padding: var(--os-space-4);
+  padding-top: calc(var(--os-header-height) + var(--os-space-3));
+  max-width: var(--os-max-content);
+  margin: 0 auto;
+  box-sizing: border-box;
+}
+
+/* Form container */
+.form-container {
+  width: 100%;
+  max-width: var(--os-max-content);
+  margin: 0 auto;
+  background-color: var(--os-bg-white);
+  padding: var(--os-space-3);
+  border-radius: var(--os-radius-lg);
+  box-shadow: var(--os-shadow);
+  border: 1px solid var(--os-border);
+  box-sizing: border-box;
+}
+
+/* Titles */
+h1 {
+  font-size: var(--os-text-2xl);
+  font-weight: 600;
+  color: var(--os-text);
+  text-align: left;
+  margin-bottom: var(--os-space-2);
+}
+
+h2 {
+  font-size: var(--os-text-lg);
+  font-weight: 600;
+  color: var(--os-text);
+}
+
+main {
+  padding: 0;
+}
+
+/* Tabs — design system style */
+.tabs {
+  display: flex;
+  gap: 0;
+  border-bottom: 2px solid var(--os-border);
+  margin-bottom: var(--os-space-3);
+  /* Removed top margin so header fits above */
+  /* Pull left to stretch */
+  margin-left: calc(-1 * var(--os-space-3));
+  /* Pull right to stretch */
+  margin-right: calc(-1 * var(--os-space-3));
+  padding-left: var(--os-space-3);
+  padding-top: 0;
+  background-color: #f8fafc;
+  /* Slight contrast for tab header area */
+  border-radius: 0;
+  /* Removed top rounding so it spans edge-to-edge in middle */
+  border-top: 1px solid var(--os-border);
+  /* Top border to separate from header */
+  overflow-x: auto;
+  scrollbar-width: none;
+  /* Firefox */
+  -ms-overflow-style: none;
+  /* IE/Edge */
+}
+
+.tabs::-webkit-scrollbar {
+  display: none;
+  /* Chrome/Safari */
+}
+
+.tab {
+  appearance: none;
+  background: transparent;
+  border: none;
+  padding: 12px 20px;
+  font-size: var(--os-text-sm);
+  font-weight: 500;
+  color: var(--os-text-secondary);
+  cursor: pointer;
+  border-bottom: 2px solid transparent;
+  margin-bottom: -2px;
+  white-space: nowrap;
+  flex-shrink: 0;
+  transition: color 0.15s, border-color 0.15s;
+  font-family: var(--os-font);
+}
+
+.tab:hover {
+  color: var(--os-primary);
+}
+
+.tab.active {
+  color: var(--os-primary);
+  font-weight: 600;
+  border-bottom-color: var(--os-primary);
+}
+
+.tab-content {
+  display: none;
+}
+
+.tab-content.active {
+  display: block;
+}
+
+/* Form grids */
+form {
+  background: var(--os-bg-white);
+  border: 1px solid var(--os-border);
+  padding: var(--os-space-3);
+  border-radius: var(--os-radius);
+}
+
+.form-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+  gap: var(--os-space-2);
+}
+
+.form-grid-1col {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: var(--os-space-2);
+  margin-bottom: var(--os-space-3);
+}
+
+.form-grid-2col {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: var(--os-space-2);
+  margin-bottom: var(--os-space-3);
+}
+
+.form-grid-3col {
+  display: grid;
+  grid-template-columns: 1fr 1fr 1fr;
+  gap: var(--os-space-2);
+  margin-bottom: var(--os-space-3);
+}
+
+.form-grid-4col {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: var(--os-space-2);
+  margin-bottom: var(--os-space-3);
+}
+
+/* Container de indicações em 2 colunas */
+#container-indicacoes {
+  display: grid !important;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+}
+
+/* Labels */
+label {
+  display: flex;
+  flex-direction: column;
+  font-weight: 500;
+  color: #374151;
+  font-size: var(--os-text-sm);
+}
+
+.form-grid label {
+  display: block;
+  font-weight: 500;
+  margin-bottom: 4px;
+}
+
+.form-grid-2col label {
+  font-weight: 500;
+  display: block;
+  margin-bottom: 4px;
+}
+
+/* Inputs */
+input[type="text"],
+select {
+  padding: 10px 12px;
+  border-radius: var(--os-radius);
+  border: 1px solid var(--os-border);
+  font-family: var(--os-font);
+  font-size: var(--os-text-sm);
+  color: var(--os-text);
+  outline: none;
+  transition: border-color 0.15s, box-shadow 0.15s;
+}
+
+input[type="text"]:focus,
+select:focus {
+  border-color: var(--os-primary);
+  box-shadow: 0 0 0 3px var(--os-primary-ring);
+}
+
+.form-grid input,
+.form-grid select {
+  width: 100%;
+  padding: 10px 12px;
+  border: 1px solid var(--os-border);
+  border-radius: var(--os-radius);
+}
+
+.form-grid-2col input,
+.form-grid-2col select {
+  width: 100%;
+  padding: 10px 12px;
+  box-sizing: border-box;
+}
+
+/* Checkbox */
+.checkbox-container {
+  display: flex;
+  align-items: center;
+  gap: var(--os-space-1);
+}
+
+.icon-button {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background-color: var(--os-bg);
+  border: 1px solid var(--os-border);
+  border-radius: var(--os-radius);
+  width: 32px;
+  height: 32px;
+  cursor: pointer;
+}
+
+.icon-button:hover {
+  background-color: var(--os-bg-hover);
+}
+
+/* Buttons — unified with design system palette */
+.btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  padding: 6px 14px;
+  /* Reduced for sleeker look */
+  font-size: 0.85rem;
+  /* Reduced from text-sm */
+  font-weight: 500;
+  font-family: var(--os-font);
+  border-radius: var(--os-radius);
+  border: 1px solid transparent;
+  cursor: pointer;
+  transition: all 0.15s;
+  white-space: nowrap;
+  line-height: 1;
+  color: #fff;
+}
+
+.btn:hover {
+  opacity: 0.9;
+}
+
+.btn-editar {
+  background-color: var(--os-primary) !important;
+}
+
+.btn-cancelar {
+  background-color: var(--os-text-secondary) !important;
+}
+
+.btn-salvar {
+  background-color: var(--os-success) !important;
+}
+
+.btn-excluir {
+  background-color: var(--os-error) !important;
+}
+
+.btn-listar {
+  background-color: var(--os-bg-white) !important;
+  color: var(--os-text) !important;
+  border: 1px solid var(--os-border) !important;
+}
+
+.btn-listar:hover {
+  border-color: var(--os-primary) !important;
+  color: var(--os-primary) !important;
+}
+
+.btn-novo {
+  background-color: var(--os-primary) !important;
+  color: white !important;
+}
+
+.btn-voltar {
+  background-color: var(--os-text-secondary) !important;
+  color: white !important;
+}
+
+/* Tab button (navigation) */
+.tab-button {
+  font-size: var(--os-text-xs);
+  padding: 6px 14px;
+  margin-right: var(--os-space-1);
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+  .page-container {
+    margin-left: 0;
+    padding: var(--os-space-2);
+    padding-top: calc(var(--os-header-height) + var(--os-space-2));
+  }
+
+  .form-container {
+    padding: var(--os-space-2);
+    border-radius: var(--os-radius);
+    box-shadow: none;
+    border: none;
+  }
+
+  form {
+    padding: var(--os-space-3) var(--os-space-2);
+    border: 1px solid var(--os-border);
+    border-radius: var(--os-radius);
+  }
+
+  /* Force all grids to a clean 1-column mobile layout */
+  .form-grid,
+  .form-grid-1col,
+  .form-grid-2col,
+  .form-grid-3col,
+  .form-grid-4col,
+  #container-indicacoes {
+    grid-template-columns: 1fr !important;
+    gap: var(--os-space-3) !important;
+  }
+
+  /* Reset any explicit column spanning so fields stretch full width */
+  .form-grid > div,
+  .form-grid-1col > div,
+  .form-grid-2col > div,
+  .form-grid-3col > div,
+  .form-grid-4col > div,
+  #container-indicacoes > div {
+    grid-column: span 1 !important;
+  }
+
+  .tabs {
+    flex-wrap: nowrap;
+    overflow-x: auto;
+    scrollbar-width: none;
+    -webkit-overflow-scrolling: touch;
+    margin-left: calc(-1 * var(--os-space-2));
+    margin-right: calc(-1 * var(--os-space-2));
+    padding-left: var(--os-space-2);
+    padding-right: var(--os-space-2);
+  }
+
+  /* Make tabs easy to scroll and tap on mobile */
+  .tab {
+    padding: 14px 18px;
+    font-size: 0.95rem;
+    font-weight: 600;
+  }
+
+  /* 44px+ touch targets, 16px font-size to prevent iOS autofocust-zoom */
+  input[type="text"],
+  input[type="number"],
+  input[type="date"],
+  select,
+  textarea {
+    font-size: 16px !important;
+    padding: 12px 14px !important;
+    min-height: 44px !important;
+    box-sizing: border-box !important;
+    width: 100% !important;
+  }
+
+  /* Premium mobile styling for toolbar actions */
+  #action-buttons {
+    display: grid !important;
+    grid-template-columns: repeat(2, 1fr) !important;
+    gap: var(--os-space-2) !important;
+    width: 100% !important;
+  }
+
+  #action-buttons .btn {
+    width: 100% !important;
+    padding: 12px 8px !important;
+    font-size: 0.85rem !important;
+    min-height: 44px !important;
+    white-space: normal !important;
+    text-align: center !important;
+    box-sizing: border-box !important;
+  }
+
+  /* Stack dynamic JSONB lists vertically on mobile */
+  .item-dinamico-bloco {
+    flex-direction: column !important;
+    align-items: stretch !important;
+    padding: var(--os-space-3) !important;
+    gap: var(--os-space-2) !important;
+  }
+
+  /* Transform the tiny delete trash icon into a beautiful full-width button on mobile */
+  .btn-remover-item {
+    align-self: stretch !important;
+    text-align: center !important;
+    margin-top: var(--os-space-1) !important;
+    padding: 12px !important;
+    font-size: 0.95rem !important;
+    min-height: 44px !important;
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    gap: 6px !important;
+    border-radius: var(--os-radius) !important;
+    background-color: #fef2f2 !important;
+    color: #ef4444 !important;
+    border: 1px solid #fecaca !important;
+    width: 100% !important;
+    box-sizing: border-box !important;
+  }
+
+  .btn-remover-item::after {
+    content: " Remover Item";
+    font-size: 0.9rem;
+    font-weight: 500;
+  }
+
+  /* Table horizontal scroll wrapper for the Purchases (Compras) tab */
+  #compras table {
+    display: block !important;
+    width: 100% !important;
+    overflow-x: auto !important;
+    white-space: nowrap !important;
+    -webkit-overflow-scrolling: touch !important;
+  }
+}
+
+.tabs::-webkit-scrollbar {
+  display: none;
+}
+
+/* Toolbar buttons wrap to next line cleanly */
+.d-flex.gap-2 {
+  flex-wrap: wrap;
+  justify-content: flex-start;
+}
+
+.char-counter {
+  font-size: 11px;
+  color: var(--os-text-muted, #6b7280);
+  text-align: right;
+  margin-top: 2px;
+}
+
+textarea {
+  width: 100%;
+  padding: 10px 12px;
+  border-radius: var(--os-radius);
+  border: 1px solid var(--os-border);
+  font-family: var(--os-font);
+  font-size: var(--os-text-sm);
+  color: var(--os-text);
+  outline: none;
+  transition: border-color 0.15s, box-shadow 0.15s;
+  resize: vertical;
+  box-sizing: border-box;
+}
+
+textarea:focus {
+  border-color: var(--os-primary);
+  box-shadow: 0 0 0 3px var(--os-primary-ring);
+}
+
+/* ============================================================
+   LISTAS DINÂMICAS (JSONB) — botões + e blocos de itens
+   ============================================================ */
+
+.lista-dinamica-container {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin-bottom: 10px;
+}
+
+.item-dinamico-bloco {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  background: #f8fafc;
+  border: 1px solid var(--os-border, #e2e8f0);
+  border-radius: var(--os-radius, 8px);
+  padding: 12px;
+  position: relative;
+  animation: fadeInBloco 0.18s ease;
+}
+
+@keyframes fadeInBloco {
+  from { opacity: 0; transform: translateY(-4px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+.item-dinamico-bloco .form-grid-2col {
+  margin-bottom: 0;
+}
+
+.btn-add-item {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 7px 14px;
+  font-size: 0.82rem;
+  font-weight: 500;
+  font-family: var(--os-font);
+  border-radius: var(--os-radius, 8px);
+  border: 1.5px dashed var(--os-primary, #2563eb);
+  background: transparent;
+  color: var(--os-primary, #2563eb);
+  cursor: pointer;
+  transition: background 0.15s, color 0.15s;
+  margin-top: 4px;
+  margin-bottom: 6px;
+}
+
+.btn-add-item:hover {
+  background: #eff6ff;
+}
+
+.btn-remover-item {
+  flex-shrink: 0;
+  align-self: center;
+  background: transparent;
+  border: 1px solid #fca5a5;
+  border-radius: var(--os-radius, 8px);
+  color: #ef4444;
+  font-size: 0.95rem;
+  padding: 6px 9px;
+  cursor: pointer;
+  transition: background 0.15s, color 0.15s;
+  line-height: 1;
+}
+
+.btn-remover-item:hover {
+  background: #fee2e2;
+  color: #b91c1c;
+}

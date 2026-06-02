@@ -1,0 +1,967 @@
+
+const API_BASE = window.API_BASE || window.location.origin;
+
+let currentModule = null; // 'condicoes', 'descontos', 'familias'
+let currentItem = null;   // Item sendo editado (null se novo)
+
+// Maps for configuration
+const CONFIG = {
+    condicoes: {
+        apiPath: '/system/condicoes',
+        pk: 'codigo_prazo',
+        cols: [
+            { key: 'codigo_prazo', label: 'Código' },
+            { key: 'prazo', label: 'Prazo' },
+            { key: 'descricao', label: 'Descrição' },
+            { key: 'custo', label: 'Custo (%)', fmt: v => (v || 0).toFixed(2) + '%' }
+        ],
+        modalId: 'modal-condicoes',
+        fillForm: (item) => {
+            document.getElementById('cond-id').value = item.codigo_prazo;
+            document.getElementById('cond-id').disabled = true; // PK locked
+            document.getElementById('cond-prazo').value = item.prazo;
+            document.getElementById('cond-desc').value = item.descricao;
+            document.getElementById('cond-custo').value = item.custo;
+        },
+        clearForm: () => {
+            document.getElementById('cond-id').value = '';
+            document.getElementById('cond-id').disabled = false;
+            document.getElementById('cond-prazo').value = '';
+            document.getElementById('cond-desc').value = '';
+            document.getElementById('cond-custo').value = '';
+        }
+    },
+    descontos: {
+        apiPath: '/system/descontos',
+        pk: 'id_desconto',
+        cols: [
+            { key: 'id_desconto', label: 'ID' },
+            { key: 'fator_comissao', label: 'Fator Comiss. (%)', fmt: v => (v || 0).toFixed(2) + '%' }
+        ],
+        modalId: 'modal-descontos',
+        fillForm: (item) => {
+            document.getElementById('desc-id').value = item.id_desconto;
+            document.getElementById('desc-id').disabled = true;
+            document.getElementById('desc-fator').value = item.fator_comissao;
+        },
+        clearForm: () => {
+            document.getElementById('desc-id').value = '';
+            document.getElementById('desc-id').disabled = false;
+            document.getElementById('desc-fator').value = '';
+        }
+    },
+    familias: {
+        apiPath: '/system/familias',
+        pk: 'id',
+        cols: [
+            { key: 'id', label: 'ID' },
+            { key: 'tipo', label: 'Tipo' },
+            { key: 'familia', label: 'Família' },
+            { key: 'marca', label: 'Grupo' }
+        ],
+        modalId: 'modal-familias',
+        fillForm: (item) => {
+            document.getElementById('fam-id').value = item.id;
+            document.getElementById('fam-tipo').value = item.tipo;
+            document.getElementById('fam-nome').value = item.familia;
+            document.getElementById('fam-marca').value = item.marca || '';
+        },
+        clearForm: () => {
+            document.getElementById('fam-id').value = '';
+            document.getElementById('fam-tipo').value = '';
+            document.getElementById('fam-nome').value = '';
+            document.getElementById('fam-marca').value = '';
+        }
+    },
+    transporte: {
+        apiPath: '/api/transporte',
+        pk: 'id',
+        cols: [
+            { key: 'id', label: 'ID' },
+            { key: 'transportadora', label: 'Empresa' },
+            { key: 'motorista', label: 'Motorista' },
+            { key: 'modelo', label: 'Modelo' },
+            { key: 'veiculo_placa', label: 'Placa' },
+            { key: 'tipo_veiculo', label: 'Tipo', fmt: v => v === 'Proprio' ? 'Próprio' : 'Terceiro' },
+            { key: 'capacidade_kg', label: 'Capacidade', fmt: v => v ? (v).toLocaleString('pt-BR') + ' kg' : '-' }
+        ],
+        modalId: 'modal-transporte',
+        fillForm: (item) => {
+            document.getElementById('trans-id').value = item.id;
+            document.getElementById('trans-empresa').value = item.transportadora;
+            document.getElementById('trans-motorista').value = item.motorista;
+            document.getElementById('trans-modelo').value = item.modelo || '';
+            document.getElementById('trans-placa').value = item.veiculo_placa;
+            document.getElementById('trans-tipo').value = item.tipo_veiculo || 'Proprio';
+            document.getElementById('trans-capacidade').value = item.capacidade_kg || '';
+        },
+        clearForm: () => {
+            document.getElementById('trans-id').value = '';
+            document.getElementById('trans-empresa').value = '';
+            document.getElementById('trans-motorista').value = '';
+            document.getElementById('trans-modelo').value = '';
+            document.getElementById('trans-placa').value = '';
+            document.getElementById('trans-tipo').value = 'Proprio';
+            document.getElementById('trans-capacidade').value = '';
+        }
+    },
+    vendedores: {
+        apiPath: '/vendedores',
+        pk: 'id',
+        cols: [
+            { key: 'id', label: 'ID' },
+            { key: 'nome', label: 'Nome' },
+            { key: 'email', label: 'E-mail' }
+        ],
+        modalId: 'modal-vendedores',
+        fillForm: (item) => {
+            document.getElementById('vend-id').value = item.id;
+            document.getElementById('vend-nome').value = item.nome;
+            document.getElementById('vend-email').value = item.email || '';
+        },
+        clearForm: () => {
+            document.getElementById('vend-id').value = '';
+            document.getElementById('vend-nome').value = '';
+            document.getElementById('vend-email').value = '';
+        }
+    },
+    previsao_semanal: {
+        apiPath: '/captacao-pedidos/previsao-semanal',
+        customRender: (data, container) => {
+            if (!data || !data.dados || data.dados.length === 0) {
+                container.innerHTML = `<p style="padding: 16px;">Nenhuma previsão de vendas para a semana (${data?.semana_inicio || ''} a ${data?.semana_fim || ''}).</p>`;
+                return;
+            }
+            
+            let html = `<h4 style="margin: 0 0 16px 0; color: var(--os-text-secondary);">Período: ${data.semana_inicio} a ${data.semana_fim}</h4>`;
+            
+            data.dados.forEach(vendedorGrupo => {
+                html += `<div style="margin-top: 24px; margin-bottom: 8px;">
+                            <h5 style="margin: 0; color: var(--os-primary); font-size: 16px; border-bottom: 2px solid var(--os-border); padding-bottom: 8px;">
+                                Vendedor: ${vendedorGrupo.vendedor} <span style="font-size: 13px; color: var(--os-text-secondary); float: right;">${vendedorGrupo.clientes.length} cliente(s)</span>
+                            </h5>
+                         </div>`;
+                         
+                html += `<table class="data-table" style="margin-bottom: 20px;">
+                            <thead>
+                                <tr>
+                                    <th>Cód</th>
+                                    <th>Cliente</th>
+                                    <th>Município</th>
+                                    <th>Rota</th>
+                                    <th>Últ. Compra</th>
+                                    <th>Previsão</th>
+                                    <th>Status</th>
+                                </tr>
+                            </thead>
+                            <tbody>`;
+                            
+                vendedorGrupo.clientes.forEach(c => {
+                    let badgeColor = '#6b7280';
+                    let bgColor = '#f3f4f6';
+                    if (c.status_cor === 'verde') { badgeColor = '#15803d'; bgColor = '#dcfce7'; }
+                    else if (c.status_cor === 'amarelo') { badgeColor = '#b45309'; bgColor = '#fef3c7'; }
+                    else if (c.status_cor === 'vermelho') { badgeColor = '#b91c1c'; bgColor = '#fee2e2'; }
+                    
+                    const badge = `<span style="background-color: ${bgColor}; color: ${badgeColor}; padding: 2px 8px; border-radius: 12px; font-size: 12px; font-weight: 600;">${c.status_cor.toUpperCase()}</span>`;
+                    
+                    html += `<tr>
+                                <td>${c.codigo_cliente}</td>
+                                <td><strong>${c.cliente}</strong><br><span style="font-size: 11px; color: #6b7280;">${c.nome_fantasia || '-'}</span></td>
+                                <td>${c.municipio || '-'}</td>
+                                <td><span style="font-size: 11px;">Geral: ${c.rota_geral || '-'}<br>Aprox: ${c.rota_aproximacao || '-'}</span></td>
+                                <td>${c.data_ultima_compra || '-'}</td>
+                                <td style="color: var(--os-primary); font-weight: 600;">${c.data_previsao_proxima || '-'}</td>
+                                <td>${badge}</td>
+                             </tr>`;
+                });
+                html += `</tbody></table>`;
+            });
+            container.innerHTML = html;
+        }
+    },
+    automacao: {
+        apiPath: '/admin/automacao/config',
+        customRender: (data, container) => {
+            let html = `
+                <div class="card" style="max-width: 600px; margin: 20px auto; border: 1px solid var(--os-border); box-shadow: var(--os-shadow);">
+                    <div style="padding: var(--os-space-3); border-bottom: 1px solid var(--os-border);">
+                        <h3 style="margin:0; font-size:18px; color:var(--os-text);">Agendamento: Relatório de Prospecção</h3>
+                        <p style="margin:5px 0 0 0; font-size:13px; color:var(--os-text-secondary);">Configure o envio automático do PDF de prospecção para os vendedores toda semana.</p>
+                    </div>
+                    <div style="padding: var(--os-space-3);">
+                        <form id="form-automacao" onsubmit="saveAutomacao(event)">
+                            <div style="margin-bottom: 20px;">
+                                <label style="display:flex; align-items:center; gap:8px; font-weight:600; cursor:pointer;">
+                                    <input type="checkbox" id="auto-ativa" style="width:18px; height:18px;" ${data.prospeccao_ativa ? 'checked' : ''} />
+                                    Habilitar Envio Automático
+                                </label>
+                            </div>
+
+                            <div style="display: flex; gap: 16px; margin-bottom: 20px;">
+                                <div style="flex:1;">
+                                    <label style="display:block; margin-bottom:6px; font-weight:600; font-size:13px;">Dia da Semana</label>
+                                    <select id="auto-dia" required style="width:100%; padding:10px; border:1px solid var(--os-border); border-radius:4px; font-family:var(--os-font);">
+                                        <option value="0" ${data.prospeccao_dia_semana === 0 ? 'selected' : ''}>Segunda-feira</option>
+                                        <option value="1" ${data.prospeccao_dia_semana === 1 ? 'selected' : ''}>Terça-feira</option>
+                                        <option value="2" ${data.prospeccao_dia_semana === 2 ? 'selected' : ''}>Quarta-feira</option>
+                                        <option value="3" ${data.prospeccao_dia_semana === 3 ? 'selected' : ''}>Quinta-feira</option>
+                                        <option value="4" ${data.prospeccao_dia_semana === 4 ? 'selected' : ''}>Sexta-feira</option>
+                                        <option value="5" ${data.prospeccao_dia_semana === 5 ? 'selected' : ''}>Sábado</option>
+                                        <option value="6" ${data.prospeccao_dia_semana === 6 ? 'selected' : ''}>Domingo</option>
+                                    </select>
+                                </div>
+                                <div style="flex:1;">
+                                    <label style="display:block; margin-bottom:6px; font-weight:600; font-size:13px;">Horário de Envio</label>
+                                    <input type="time" id="auto-hora" required step="60" value="${data.prospeccao_horario ? data.prospeccao_horario.substring(0, 5) : '08:00'}" style="width:100%; padding:10px; border:1px solid var(--os-border); border-radius:4px; font-family:var(--os-font);" />
+                                </div>
+                            </div>
+
+                            <div style="display: flex; gap: 10px; justify-content: flex-end; margin-top:20px; padding-top:20px; border-top:1px solid var(--os-border);">
+                                <button type="button" class="btn" onclick="testarAutomacaoAgora()">Disparar Agora (Teste)</button>
+                                <button type="submit" class="btn btn-primary">Salvar Configuração</button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            `;
+            container.innerHTML = html;
+        }
+    },
+    canal_venda: {
+        apiPath: '/catalogo/canal-venda',
+        pk: 'Id',
+        cols: [
+            { key: 'Id', label: 'ID' },
+            { key: 'tipo', label: 'Tipo' },
+            { key: 'linha', label: 'Linha' }
+        ],
+        modalId: 'modal-canal_venda',
+        fillForm: (item) => {
+            document.getElementById('cv-id').value = item.Id;
+            document.getElementById('cv-tipo').value = item.tipo || '';
+            document.getElementById('cv-linha').value = item.linha || '';
+        },
+        clearForm: () => {
+            document.getElementById('cv-id').value = '';
+            document.getElementById('cv-tipo').value = '';
+            document.getElementById('cv-linha').value = '';
+        }
+    },
+    cidade_supervisor: {
+        apiPath: '/catalogo/cidade-supervisor',
+        pk: 'codigo',
+        cols: [
+            { key: 'codigo', label: 'Cód.' },
+            { key: 'cidades', label: 'Cidade' },
+            { key: 'uf', label: 'UF' },
+            { key: 'nome_supervisor_insumos', label: 'Sup. Insumos' },
+            { key: 'gerente_insumos', label: 'Ger. Insumos' },
+            { key: 'nome_supervisor_pet', label: 'Sup. Pet' },
+            { key: 'gerente_pet', label: 'Ger. Pet' }
+        ],
+        modalId: 'modal-cidade_supervisor',
+        fillForm: (item) => {
+            document.getElementById('cs-codigo').value = item.codigo;
+            document.getElementById('cs-num-insumos').value = item.numero_supervisor_insumos || '';
+            document.getElementById('cs-num-pet').value = item.numero_supervisor_pet || '';
+            document.getElementById('cs-nome-insumos').value = item.nome_supervisor_insumos || '';
+            document.getElementById('cs-nome-pet').value = item.nome_supervisor_pet || '';
+            document.getElementById('cs-cidade').value = item.cidades || '';
+            document.getElementById('cs-uf').value = item.uf || '';
+            document.getElementById('cs-gerente-insumos').value = item.gerente_insumos || '';
+            document.getElementById('cs-gerente-pet').value = item.gerente_pet || '';
+
+            // Trigger masks if any
+            ['cs-num-insumos', 'cs-num-pet'].forEach(id => {
+               document.getElementById(id).dispatchEvent(new Event('input'));
+            });
+        },
+        clearForm: () => {
+            document.getElementById('cs-codigo').value = '';
+            document.getElementById('cs-num-insumos').value = '';
+            document.getElementById('cs-num-pet').value = '';
+            document.getElementById('cs-nome-insumos').value = '';
+            document.getElementById('cs-nome-pet').value = '';
+            document.getElementById('cs-cidade').value = '';
+            document.getElementById('cs-uf').value = '';
+            document.getElementById('cs-gerente-insumos').value = '';
+            document.getElementById('cs-gerente-pet').value = '';
+        }
+    },
+    municipio_rota: {
+        apiPath: '/catalogo/municipio-rota',
+        pk: 'id',
+        cols: [
+            { key: 'id', label: 'ID' },
+            { key: 'rota', label: 'Rota' },
+            { key: 'municipio', label: 'Município' },
+            { key: 'km', label: 'KM' }
+        ],
+        modalId: 'modal-municipio_rota',
+        fillForm: (item) => {
+            document.getElementById('mr-id').value = item.id;
+            document.getElementById('mr-rota').value = item.rota || '';
+            document.getElementById('mr-municipio').value = item.municipio || '';
+            document.getElementById('mr-km').value = item.km || '';
+        },
+        clearForm: () => {
+            document.getElementById('mr-id').value = '';
+            document.getElementById('mr-rota').value = '';
+            document.getElementById('mr-municipio').value = '';
+            document.getElementById('mr-km').value = '';
+        }
+    },
+    referencias: {
+        apiPath: '/catalogo/referencias',
+        pk: 'codigo',
+        cols: [
+            { key: 'codigo', label: 'Cód.' },
+            { key: 'empresa', label: 'Empresa' },
+            { key: 'cidade', label: 'Cidade' },
+            { key: 'telefone', label: 'Telefone' },
+            { key: 'contato', label: 'Contato' }
+        ],
+        modalId: 'modal-referencias',
+        fillForm: (item) => {
+            document.getElementById('ref-codigo').value = item.codigo;
+            document.getElementById('ref-empresa').value = item.empresa || '';
+            document.getElementById('ref-cidade').value = item.cidade || '';
+            document.getElementById('ref-telefone').value = item.telefone || '';
+            document.getElementById('ref-contato').value = item.contato || '';
+
+            document.getElementById('ref-telefone').dispatchEvent(new Event('input'));
+        },
+        clearForm: () => {
+            document.getElementById('ref-codigo').value = '';
+            document.getElementById('ref-empresa').value = '';
+            document.getElementById('ref-cidade').value = '';
+            document.getElementById('ref-telefone').value = '';
+            document.getElementById('ref-contato').value = '';
+        }
+    },
+    supervisores: {
+        apiPath: '/catalogo/supervisores',
+        pk: 'id',
+        cols: [
+            { key: 'id', label: 'ID' },
+            { key: 'codigo', label: 'Cód' },
+            { key: 'supervisores', label: 'Supervisor' },
+            { key: 'tipo', label: 'Tipo' },
+            { key: 'email', label: 'E-mail' }
+        ],
+        modalId: 'modal-supervisores',
+        fillForm: (item) => {
+            document.getElementById('sup-id').value = item.id;
+            document.getElementById('sup-codigo').value = item.codigo || '';
+            document.getElementById('sup-supervisores').value = item.supervisores || '';
+            document.getElementById('sup-tipo').value = item.tipo || '';
+            document.getElementById('sup-telefone').value = item.telefone || '';
+            document.getElementById('sup-email').value = item.email || '';
+
+            document.getElementById('sup-telefone').dispatchEvent(new Event('input'));
+        },
+        clearForm: () => {
+            document.getElementById('sup-id').value = '';
+            document.getElementById('sup-codigo').value = '';
+            document.getElementById('sup-supervisores').value = '';
+            document.getElementById('sup-tipo').value = '';
+            document.getElementById('sup-telefone').value = '';
+            document.getElementById('sup-email').value = '';
+        }
+    },
+    plantel_animais: {
+        apiPath: '/catalogo/plantel-animais',
+        pk: 'id',
+        cols: [
+            { key: 'id', label: 'ID' },
+            { key: 'plantel_animais', label: 'Espécie' }
+        ],
+        modalId: 'modal-plantel',
+        fillForm: (item) => {
+            document.getElementById('plan-id').value = item.id;
+            document.getElementById('plan-nome').value = item.plantel_animais || '';
+        },
+        clearForm: () => {
+            document.getElementById('plan-id').value = '';
+            document.getElementById('plan-nome').value = '';
+        }
+    },
+    ramo_atividade: {
+        apiPath: '/catalogo/ramo-atividade',
+        pk: 'id',
+        cols: [
+            { key: 'id', label: 'ID' },
+            { key: 'ramo_atividade', label: 'Ramo de Atividade' }
+        ],
+        modalId: 'modal-ramo_atividade',
+        fillForm: (item) => {
+            document.getElementById('ramo-id').value = item.id;
+            document.getElementById('ramo-nome').value = item.ramo_atividade || '';
+        },
+        clearForm: () => {
+            document.getElementById('ramo-id').value = '';
+            document.getElementById('ramo-nome').value = '';
+        }
+    },
+    atividade_principal: {
+        apiPath: '/catalogo/atividade-principal',
+        pk: 'id',
+        cols: [
+            { key: 'id', label: 'ID' },
+            { key: 'atividade_principal', label: 'Atividade Principal' }
+        ],
+        modalId: 'modal-atividade_principal',
+        fillForm: (item) => {
+            document.getElementById('ativ-id').value = item.id;
+            document.getElementById('ativ-nome').value = item.atividade_principal || '';
+        },
+        clearForm: () => {
+            document.getElementById('ativ-id').value = '';
+            document.getElementById('ativ-nome').value = '';
+        }
+    },
+    filiais: {
+        apiPath: '/catalogo/filiais',
+        pk: 'id',
+        cols: [
+            { key: 'id', label: 'ID' },
+            { key: 'filial', label: 'Filial' }
+        ],
+        modalId: 'modal-filiais',
+        fillForm: (item) => {
+            document.getElementById('filial-id').value = item.id;
+            document.getElementById('filial-nome').value = item.filial || '';
+        },
+        clearForm: () => {
+            document.getElementById('filial-id').value = '';
+            document.getElementById('filial-nome').value = '';
+        }
+    }
+};
+
+function selectModule(mod) {
+    currentModule = mod;
+
+    // Highlight menu button via JS and auto-expand category on mobile/desktop
+    document.querySelectorAll('.module-nav-btn').forEach(btn => {
+        btn.classList.remove('active');
+        if (btn.getAttribute('onclick')?.includes(`'${mod}'`) || btn.getAttribute('onclick')?.includes(`"${mod}"`)) {
+            btn.classList.add('active');
+            
+            // Auto-expand the parent category accordion
+            const parentCat = btn.closest('.catalog-category');
+            if (parentCat) {
+                parentCat.classList.add('expanded');
+            }
+        }
+    });
+
+    // Set Header with new naming conventions requested by the user
+    const titles = {
+        condicoes: 'Condições de pagamento',
+        descontos: 'Descontos',
+        familias: 'Grupo de produtos',
+        transporte: 'Logística',
+        vendedores: 'Vendedores',
+        previsao_semanal: 'Previsão de Vendas Semanal',
+        automacao: 'Automação de relatórios',
+        canal_venda: 'Canais de Vendas',
+        cidade_supervisor: 'Cidades / Supervisores',
+        municipio_rota: 'Municipio / Rota',
+        referencias: 'Referências comerciais',
+        supervisores: 'Supervisores / Gerentes',
+        plantel_animais: 'Plantel de animais',
+        ramo_atividade: 'Ramo de atividade',
+        atividade_principal: 'Atividade principal',
+        filiais: 'Filiais'
+    };
+
+    const sectionTitle = document.getElementById('sectionTitle');
+    if (sectionTitle) sectionTitle.textContent = titles[mod];
+
+    const btnNovo = document.getElementById('btn-novo');
+    if (btnNovo) {
+        if (mod === 'previsao_semanal' || mod === 'automacao') {
+            btnNovo.style.display = 'none';
+        } else {
+            btnNovo.style.display = 'inline-block';
+            btnNovo.disabled = false;
+        }
+    }
+
+    const searchInput = document.getElementById('searchInput');
+    if (searchInput) {
+        searchInput.value = ''; // limpa a busca ao trocar de guia
+        if (mod === 'automacao') {
+            searchInput.style.display = 'none';
+        } else {
+            searchInput.style.display = 'inline-block';
+        }
+    }
+
+    const btnExport = document.getElementById('btn-export-excel');
+    if (btnExport) {
+        // Habilita exportação apenas para Referências (conforme pedido)
+        if (mod === 'referencias') {
+            btnExport.style.display = 'inline-block';
+        } else {
+            btnExport.style.display = 'none';
+        }
+    }
+
+    loadData();
+}
+
+async function loadData() {
+    const cfg = CONFIG[currentModule];
+    const container = document.getElementById('grid');
+    container.innerHTML = '<p>Carregando...</p>';
+
+    try {
+        const token = localStorage.getItem("ordersync_token");
+        const res = await fetch(`${API_BASE}${cfg.apiPath}`, {
+            headers: { "Authorization": `Bearer ${token}` }
+        });
+        if (!res.ok) throw new Error("Erro ao buscar dados");
+        const data = await res.json();
+
+        if (cfg.customRender) {
+            cfg.customRender(data, container);
+        } else {
+            // Ordenação por Rota (Pedido do Usuário)
+            if (currentModule === 'municipio_rota') {
+                data.sort((a, b) => {
+                    const rA = parseInt(a.rota) || 0;
+                    const rB = parseInt(b.rota) || 0;
+                    return rA - rB;
+                });
+            }
+            renderGrid(data);
+        }
+    } catch (e) {
+        container.innerHTML = `<p style="color:red">Erro: ${e.message}</p>`;
+    }
+}
+
+function renderGrid(rows) {
+    const cfg = CONFIG[currentModule];
+    const container = document.getElementById('grid');
+
+    if (!rows || rows.length === 0) {
+        container.innerHTML = '<p>Nenhum registro encontrado.</p>';
+        return;
+    }
+
+    let html = '<table class="data-table"><thead><tr>';
+    cfg.cols.forEach(c => html += `<th>${c.label}</th>`);
+    html += '<th>Ações</th></tr></thead><tbody>';
+
+    rows.forEach(r => {
+        html += '<tr>';
+        cfg.cols.forEach(c => {
+            let val = r[c.key];
+            if (c.fmt) val = c.fmt(val);
+            html += `<td>${val != null ? val : ''}</td>`;
+        });
+
+        // Actions
+        // Need to serialize item properly for passing to edit
+        // Storing in data attr is easier or finding by ID from global list
+        // Let's attach onclick with ID
+        const pkVal = r[cfg.pk];
+        html += `
+            <td>
+                <button class="os-btn os-btn-secondary os-btn-sm" style="margin-right: 4px;" onclick="editItem('${pkVal}')">Editar</button>
+                <button class="os-btn os-btn-sm" style="background-color: var(--os-error-light); color: var(--os-error); border-color: #FECACA;" onclick="deleteItem('${pkVal}')">Excluir</button>
+            </td>
+        </tr>`;
+    });
+    html += '</tbody></table>';
+    container.innerHTML = html;
+
+    // Store data globally to lookup for edit
+    window._currentData = rows;
+}
+
+function openModal(pkVal = null) {
+    const cfg = CONFIG[currentModule];
+    const modal = document.getElementById(cfg.modalId);
+
+    if (pkVal) {
+        // Edit
+        const item = window._currentData.find(r => String(r[cfg.pk]) === String(pkVal));
+        if (!item) return;
+        currentItem = item;
+        cfg.fillForm(item);
+    } else {
+        // New
+        currentItem = null;
+        cfg.clearForm();
+    }
+
+    modal.style.display = 'flex';
+}
+
+function closeModals() {
+    document.querySelectorAll('.custom-modal').forEach(m => m.style.display = 'none');
+}
+
+// --- Save Handlers ---
+
+async function saveGeneric(payload, isUpdate, urlSuffix = '') {
+    const cfg = CONFIG[currentModule];
+    const token = localStorage.getItem("ordersync_token");
+    const url = `${API_BASE}${cfg.apiPath}${isUpdate ? '/' + urlSuffix : ''}`;
+    const method = isUpdate ? 'PUT' : 'POST';
+
+    try {
+        const res = await fetch(url, {
+            method,
+            headers: {
+                "Content-Type": "application/json",
+                "Authorization": `Bearer ${token}`
+            },
+            body: JSON.stringify(payload)
+        });
+
+        if (!res.ok) {
+            const txt = await res.text();
+            throw new Error(txt);
+        }
+
+        alert("Salvo com sucesso!");
+        closeModals();
+        loadData();
+    } catch (e) {
+        alert("Erro ao salvar: " + e.message);
+    }
+}
+
+async function saveCondicao(e) {
+    e.preventDefault();
+    const id = document.getElementById('cond-id').value;
+    const prazo = document.getElementById('cond-prazo').value;
+    const desc = document.getElementById('cond-desc').value;
+    const custo = document.getElementById('cond-custo').value;
+
+    if (!id) {
+        alert("Obrigatório informar o código.");
+        return;
+    }
+
+    const payload = {
+        codigo_prazo: parseInt(id),
+        prazo,
+        descricao: desc,
+        custo: parseFloat(custo)
+    };
+
+    const isUpdate = !!currentItem;
+    if (isUpdate) {
+        // payload can't change ID in body if used in URL usually, but backend schema has codigo_prazo in Create. 
+        // Update schema doesn't have ID. 
+        // Pydantic `CondicaoPagamentoUpdate` doesn't have ID. OK.
+        delete payload.codigo_prazo;
+    }
+
+    await saveGeneric(payload, isUpdate, id);
+}
+
+async function saveDesconto(e) {
+    e.preventDefault();
+    const id = document.getElementById('desc-id').value;
+    const fator = document.getElementById('desc-fator').value;
+
+    if (!id) {
+        alert("Obrigatório informar o ID.");
+        return;
+    }
+
+    const payload = {
+        id_desconto: parseInt(id),
+        fator_comissao: parseFloat(fator)
+    };
+
+    const isUpdate = !!currentItem;
+    if (isUpdate) delete payload.id_desconto;
+
+    await saveGeneric(payload, isUpdate, id);
+}
+
+async function saveFamilia(e) {
+    e.preventDefault();
+    // ID is auto/hidden for new, present for edit
+    const id = document.getElementById('fam-id').value;
+    const tipo = document.getElementById('fam-tipo').value;
+    const familia = document.getElementById('fam-nome').value;
+    const marca = document.getElementById('fam-marca').value;
+
+    // Create schema: tipo, familia, marca (id ignored/auto-gen in backend logic I wrote? 
+    // Wait, backend logic for families: 
+    // `new_id = max_id + 1`. So frontend doesn't send ID for create.
+
+    const payload = {
+        tipo,
+        familia,
+        marca: marca || null
+    };
+
+    const isUpdate = !!currentItem;
+
+    await saveGeneric(payload, isUpdate, id);
+}
+
+async function saveTransporte(e) {
+    e.preventDefault();
+    const id = document.getElementById('trans-id').value;
+    const empresa = document.getElementById('trans-empresa').value;
+    const motorista = document.getElementById('trans-motorista').value;
+    const placa = document.getElementById('trans-placa').value;
+    const cap = document.getElementById('trans-capacidade').value;
+
+    const payload = {
+        transportadora: empresa,
+        motorista: motorista,
+        modelo: document.getElementById('trans-modelo').value || null,
+        veiculo_placa: placa,
+        tipo_veiculo: document.getElementById('trans-tipo').value,
+        capacidade_kg: cap ? parseInt(cap) : null
+    };
+
+    const isUpdate = !!currentItem;
+    await saveGeneric(payload, isUpdate, id);
+}
+
+async function saveVendedor(e) {
+    e.preventDefault();
+    const id = document.getElementById('vend-id').value;
+    const nome = document.getElementById('vend-nome').value;
+    const email = document.getElementById('vend-email').value;
+
+    const payload = {
+        nome: nome,
+        email: email || null
+    };
+
+    const isUpdate = !!currentItem;
+    await saveGeneric(payload, isUpdate, id);
+}
+
+async function saveAutomacao(e) {
+    e.preventDefault();
+    const ativa = document.getElementById('auto-ativa').checked;
+    const dia = parseInt(document.getElementById('auto-dia').value);
+    let hora = document.getElementById('auto-hora').value;
+    if (hora.length === 5) hora += ":00"; // format HH:MM:SS
+
+    const payload = {
+        prospeccao_ativa: ativa,
+        prospeccao_dia_semana: dia,
+        prospeccao_horario: hora
+    };
+
+    const token = localStorage.getItem("ordersync_token");
+    try {
+        const res = await fetch(`${API_BASE}/admin/automacao/config`, {
+            method: 'PUT',
+            headers: {
+                "Content-Type": "application/json",
+                "Authorization": `Bearer ${token}`
+            },
+            body: JSON.stringify(payload)
+        });
+
+        if (!res.ok) throw new Error(await res.text());
+        alert("Configuração salva com sucesso!");
+        loadData();
+    } catch (err) {
+        alert("Erro ao salvar configuração: " + err.message);
+    }
+}
+
+async function testarAutomacaoAgora() {
+    if (!confirm("Isso irá disparar os e-mails com PDFs imediatamente para os vendedores ativos. Tem certeza?")) return;
+    
+    const token = localStorage.getItem("ordersync_token");
+    try {
+        const res = await fetch(`${API_BASE}/admin/automacao/testar-prospeccao`, {
+            method: 'POST',
+            headers: { "Authorization": `Bearer ${token}` }
+        });
+        if (!res.ok) throw new Error(await res.text());
+        alert("Rotina disparada com sucesso! Os e-mails serão enviados em plano de fundo.");
+    } catch (err) {
+        alert("Erro ao disparar teste: " + err.message);
+    }
+}
+
+async function saveCanalVenda(e) {
+    e.preventDefault();
+    const id = document.getElementById('cv-id').value;
+    const payload = {
+        tipo: document.getElementById('cv-tipo').value || null,
+        linha: document.getElementById('cv-linha').value || null
+    };
+    await saveGeneric(payload, !!currentItem, id);
+}
+
+async function saveCidadeSupervisor(e) {
+    e.preventDefault();
+    const id = document.getElementById('cs-codigo').value;
+    const payload = {
+        numero_supervisor_insumos: parseFloat(document.getElementById('cs-num-insumos').value) || null,
+        numero_supervisor_pet: parseFloat(document.getElementById('cs-num-pet').value) || null,
+        nome_supervisor_insumos: document.getElementById('cs-nome-insumos').value || null,
+        nome_supervisor_pet: document.getElementById('cs-nome-pet').value || null,
+        cidades: document.getElementById('cs-cidade').value || null,
+        uf: document.getElementById('cs-uf').value || null,
+        gerente_insumos: document.getElementById('cs-gerente-insumos').value || null,
+        gerente_pet: document.getElementById('cs-gerente-pet').value || null
+    };
+    await saveGeneric(payload, !!currentItem, id);
+}
+
+async function saveMunicipioRota(e) {
+    e.preventDefault();
+    const id = document.getElementById('mr-id').value;
+    const payload = {
+        rota: parseInt(document.getElementById('mr-rota').value),
+        municipio: document.getElementById('mr-municipio').value || null,
+        km: document.getElementById('mr-km').value || null
+    };
+    await saveGeneric(payload, !!currentItem, id);
+}
+
+async function saveReferencias(e) {
+    e.preventDefault();
+    const id = document.getElementById('ref-codigo').value;
+    const payload = {
+        empresa: document.getElementById('ref-empresa').value || null,
+        cidade: document.getElementById('ref-cidade').value || null,
+        telefone: document.getElementById('ref-telefone').value || null,
+        contato: document.getElementById('ref-contato').value || null
+    };
+    await saveGeneric(payload, !!currentItem, id);
+}
+
+async function saveSupervisores(e) {
+    e.preventDefault();
+    const id = document.getElementById('sup-id').value;
+    const payload = {
+        codigo: parseFloat(document.getElementById('sup-codigo').value) || null,
+        supervisores: document.getElementById('sup-supervisores').value || null,
+        tipo: document.getElementById('sup-tipo').value || null,
+        telefone: document.getElementById('sup-telefone').value || null,
+        email: document.getElementById('sup-email').value || null
+    };
+    await saveGeneric(payload, !!currentItem, id);
+}
+
+async function savePlantel(e) {
+    e.preventDefault();
+    const id = document.getElementById('plan-id').value;
+    const payload = {
+        plantel_animais: document.getElementById('plan-nome').value || null
+    };
+    await saveGeneric(payload, !!currentItem, id);
+}
+
+async function saveRamoAtividade(e) {
+    e.preventDefault();
+    const id = document.getElementById('ramo-id').value;
+    const payload = {
+        ramo_atividade: document.getElementById('ramo-nome').value || null
+    };
+    await saveGeneric(payload, !!currentItem, id);
+}
+
+async function saveAtividadePrincipal(e) {
+    e.preventDefault();
+    const id = document.getElementById('ativ-id').value;
+    const payload = {
+        atividade_principal: document.getElementById('ativ-nome').value || null
+    };
+    await saveGeneric(payload, !!currentItem, id);
+}
+
+async function saveFilial(e) {
+    e.preventDefault();
+    const id = document.getElementById('filial-id').value;
+    const payload = {
+        filial: document.getElementById('filial-nome').value || null
+    };
+    await saveGeneric(payload, !!currentItem, id);
+}
+
+window.saveRamoAtividade = saveRamoAtividade;
+window.saveAtividadePrincipal = saveAtividadePrincipal;
+window.saveFilial = saveFilial;
+
+// --- Delete Handler ---
+
+async function deleteItem(pkVal) {
+    if (!confirm("Tem certeza que deseja remover (inativar) este item?")) return;
+
+    const cfg = CONFIG[currentModule];
+    const token = localStorage.getItem("ordersync_token");
+
+    try {
+        const res = await fetch(`${API_BASE}${cfg.apiPath}/${pkVal}`, {
+            method: 'DELETE',
+            headers: { "Authorization": `Bearer ${token}` }
+        });
+
+        if (!res.ok) throw new Error(await res.text());
+        alert("Excluído com sucesso!");
+        loadData();
+    } catch (e) {
+        alert("Erro ao excluir: " + e.message);
+    }
+}
+
+function exportCurrentModuleToExcel() {
+    if (!window._currentData || window._currentData.length === 0) {
+        alert("Não há dados para exportar.");
+        return;
+    }
+
+    const cfg = CONFIG[currentModule];
+    
+    // Preparar os dados (apenas as colunas visíveis)
+    const dataToExport = window._currentData.map(item => {
+        const row = {};
+        cfg.cols.forEach(col => {
+            let val = item[col.key];
+            if (col.fmt) val = col.fmt(val);
+            row[col.label] = val;
+        });
+        return row;
+    });
+
+    const worksheet = XLSX.utils.json_to_sheet(dataToExport);
+    const workbook = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(workbook, worksheet, "Dados");
+
+    // Gerar download
+    const filename = `${currentModule}_${new Date().toISOString().split('T')[0]}.xlsx`;
+    XLSX.writeFile(workbook, filename);
+}
+
+// Global hook for edit
+window.editItem = function (pk) {
+    openModal(pk);
+};
+window.deleteItem = deleteItem;
+
+window.filterGrid = function () {
+    const input = document.getElementById('searchInput');
+    if (!input) return;
+    const filter = input.value.toLowerCase();
+    const rows = document.querySelectorAll('#grid .data-table tbody tr');
+
+    rows.forEach(row => {
+        const text = row.textContent.toLowerCase();
+        row.style.display = text.includes(filter) ? '' : 'none';
+    });
+};

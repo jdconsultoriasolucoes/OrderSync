@@ -1,0 +1,247 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Inserir Produtos  OrderSync</title>
+
+  <!-- Design System -->
+  <link rel="stylesheet" href="../design-system.css">
+
+  <!-- Bootstrap -->
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+
+  <!-- Page CSS -->
+  <link rel="stylesheet" href="tabela_preco.css">
+
+  <!-- Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+
+  <script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js"></script>
+  <script src="../js/config.js"></script>
+  <script src="../js/auth.js"></script>
+  <script src="../js/sidebar_control.js"></script>
+</head>
+
+<body>
+
+  <!-- ========== HEADER ========== -->
+  <header class="os-header">
+    <button class="os-menu-btn" id="menu-button" aria-label="Menu">&#9776;</button>
+    <img src="../logo.png" alt="Logo" class="os-logo" />
+    <span class="os-header-title">Inserir Produtos</span>
+  </header>
+
+  <!-- ========== SIDEBAR ========== -->
+      <nav class="os-sidebar" id="sidebar">
+        <div class="os-sidebar-section">Menu</div>
+        <ul>
+            <li><a href="/index.html">
+                    <svg class="os-nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z" />
+                        <polyline points="9 22 9 12 15 12 15 22" />
+                    </svg> Home
+                </a></li>
+            <li><a href="/dashboards.html">
+                    <svg class="os-nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect>
+                        <line x1="3" y1="9" x2="21" y2="9"></line>
+                        <line x1="9" y1="21" x2="9" y2="9"></line>
+                    </svg> Dashboards
+                </a></li>
+            <li><a href="/tabela_preco/criacao_tabela_preco.html" class="active">
+                    <svg class="os-nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M20.59 13.41l-7.17 7.17a2 2 0 0 1-2.83 0L2 12V2h10l8.59 8.59a2 2 0 0 1 0 2.82z"></path>
+                        <line x1="7" y1="7" x2="7.01" y2="7"></line>
+                    </svg> Tabela de Preço
+                </a></li>
+            <li><a href="/produto/produto.html">
+                    <svg class="os-nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path
+                            d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z" />
+                    </svg> Produtos
+                </a></li>
+            <li><a href="/clientes/cliente.html">
+                    <svg class="os-nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" />
+                        <circle cx="9" cy="7" r="4" />
+                        <path d="M23 21v-2a4 4 0 0 0-3-3.87" />
+                        <path d="M16 3.13a4 4 0 0 1 0 7.75" />
+                    </svg> Clientes
+                </a></li>
+            <li><a href="/pedido/pedido.html">
+                    <svg class="os-nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M6 2L3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z" />
+                    </svg> Consultar Pedidos
+                </a></li>
+            <li><a href="/gerenciar_tabelas/gerenciar_tabelas.html">
+                    <svg class="os-nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <rect x="3" y="3" width="7" height="7" />
+                        <rect x="14" y="3" width="7" height="7" />
+                    </svg> Atualizar Catálogo
+                </a></li>
+            <li><a href="/relatorios/relatorios.html">
+                    <svg class="os-nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
+                        <polyline points="14 2 14 8 20 8" />
+                        <line x1="16" y1="13" x2="8" y2="13" />
+                        <line x1="16" y1="17" x2="8" y2="17" />
+                        <polyline points="10 9 9 9 8 9" />
+                    </svg> Logística
+                </a></li>
+            <li><a href="/relatorios/relatorios_vendas.html">
+                    <svg class="os-nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <line x1="18" y1="20" x2="18" y2="10"></line>
+                        <line x1="12" y1="20" x2="12" y2="4"></line>
+                        <line x1="6" y1="20" x2="6" y2="14"></line>
+                    </svg> Relatórios
+                </a></li>
+        </ul>
+        <div class="os-sidebar-section">Sistema</div>
+        <ul>
+            <li><a href="/config_email/config_email.html">
+                    <svg class="os-nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z" />
+                    </svg> Configuração E-mail
+                </a></li>
+            <li><a href="/usuarios.html">
+                    <svg class="os-nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" />
+                        <circle cx="12" cy="7" r="4" />
+                    </svg> Usuários
+                </a></li>
+            <li><a href="#" onclick="window.Auth.openChangePasswordModal()">
+                    <svg class="os-nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <rect x="3" y="11" width="18" height="11" rx="2" ry="2" />
+                        <path d="M7 11V7a5 5 0 0 1 10 0v4" />
+                    </svg> Trocar Senha
+                </a></li>
+            <li><a href="#" onclick="window.Auth.logout()">
+                    <svg class="os-nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4" />
+                        <polyline points="16 17 21 12 16 7" />
+                        <line x1="21" y1="12" x2="9" y2="12" />
+                    </svg> Sair
+                </a></li>
+        </ul>
+    </nav>
+  <div class="os-sidebar-overlay" id="overlay"></div>
+
+  <div class="os-page-container"
+    style="padding: var(--os-space-4); padding-top: calc(var(--os-header-height) + var(--os-space-4));">
+
+    <!-- Filtros e Busca -->
+    <section class="os-card" style="margin-bottom: var(--os-space-4);">
+      <div id="header-toggle-filtros"
+        style="display: flex; justify-content: space-between; align-items: center; cursor: pointer;">
+        <h2 class="os-section-title" style="margin: 0; border-bottom: none; padding-bottom: 0;">Filtros e Busca</h2>
+        <button class="os-btn-icon" id="icon-toggle-filtros" aria-label="Minimizar">?</button>
+      </div>
+
+      <div id="conteudo-filtros" style="margin-top: var(--os-space-3);">
+        <div id="toolbar-filtros" class="os-toolbar"
+          style="display: flex; gap: var(--os-space-3); flex-wrap: wrap; align-items: flex-end;">
+          <div class="os-form-group" style="margin-bottom: 0;">
+            <label class="os-label" for="grupo">Grupo:</label>
+            <select id="grupo" class="os-select"></select>
+          </div>
+
+          <div class="os-form-group" style="margin-bottom: 0;">
+            <label class="os-label" for="tipo">Tipo:</label>
+            <select id="tipo" class="os-select">
+              <option value="">Todos</option>
+              <option value="INSUMOS">Insumo</option>
+              <option value="PET">Pet</option>
+            </select>
+          </div>
+
+          <div class="os-form-group" style="margin-bottom: 0;">
+            <label class="os-label" for="filtro-fornecedor">Fornecedor:</label>
+            <select id="filtro-fornecedor" class="os-select"></select>
+          </div>
+
+          <div class="os-form-group" style="margin-bottom: 0; flex: 1; min-width: 250px;">
+            <label class="os-label" for="filtro-palavra">&nbsp;</label>
+            <input id="filtro-palavra" class="os-input" type="text" placeholder="Buscar por código, descrição...">
+          </div>
+        </div>
+      </div>
+
+      <div id="actions-filtros" class="actions"
+        style="display: flex; gap: var(--os-space-2); margin-top: var(--os-space-4); flex-wrap: wrap;">
+        <button class="os-btn os-btn-primary" id="btn-adicionar-selecionados">Adicionar selecionados</button>
+        <button id="btn-selecionar-todos-massivo" class="os-btn os-btn-primary" style="display: flex; align-items: center; gap: 8px;">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path>
+            <polyline points="22 4 12 14.01 9 11.01"></polyline>
+          </svg>
+          Add todos os produtos
+        </button>
+        <button id="btn-limpar" class="os-btn os-btn-secondary" type="button">Limpar</button>
+        <button class="os-btn os-btn-ghost" id="btn-cancelar">Voltar</button>
+      </div>
+    </section>
+
+    <section class="os-card">
+      <div class="os-table-wrap">
+        <h2 class="os-section-title" style="margin-left: var(--os-space-3); margin-top: var(--os-space-2);">Produtos
+          Disponíveis</h2>
+        <table id="tabela_produtos" class="os-table">
+          <thead>
+            <tr>
+              <th class="center" style="width:72px"><input type="checkbox" id="chk-selecionar-todos-pagina"></th>
+              <th style="min-width:110px">Código</th>
+              <th style="min-width:320px">Descrição</th>
+              <th style="min-width:120px">Embalagem</th>
+              <th class="right" style="min-width:120px">Peso Líquido</th>
+              <th class="right" style="min-width:110px">Valor</th>
+            </tr>
+          </thead>
+          <tbody id="tabela-produtos-body"></tbody>
+        </table>
+      </div>
+
+      <!-- Paginação -->
+      <div class="paginacao"
+        style="display:flex; gap:12px; align-items:center; margin-top:var(--os-space-4); justify-content: center; padding-bottom: var(--os-space-2);">
+        <label class="os-label" style="display: flex; align-items: center; gap: 8px; margin-bottom: 0;">Itens por
+          página:
+          <select id="page_size" class="os-select" style="width: auto;">
+            <option>10</option>
+            <option selected>20</option>
+            <option>30</option>
+            <option>60</option>
+          </select>
+        </label>
+        <button type="button" class="os-btn os-btn-secondary" id="btn-prev" onclick="gotoPrevPage()">? Anterior</button>
+        <span id="pagina-info" style="font-weight: 500;"></span>
+        <button type="button" class="os-btn os-btn-secondary" id="btn-next" onclick="gotoNextPage()">Próxima ?</button>
+      </div>
+    </section>
+
+  </div>
+
+  <div id="toast" class="os-toast"></div>
+
+
+  <script src="tabela_preco.js"></script>
+  <script>
+    const menuButton = document.getElementById("menu-button");
+    const sidebar = document.getElementById("sidebar");
+    const overlay = document.getElementById("overlay");
+
+    menuButton.addEventListener("click", () => {
+      sidebar.classList.toggle("active");
+      overlay.classList.toggle("active");
+    });
+    overlay.addEventListener("click", () => {
+      sidebar.classList.remove("active");
+      overlay.classList.remove("active");
+    });
+  </script>
+</body>
+
+</html>

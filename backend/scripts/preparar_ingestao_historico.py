@@ -47,9 +47,35 @@ def processar_historico():
         return f"{tabela} - {desc_perc}"
     
     map_comissao_nome = df_desc.set_index('Lista').apply(format_comissao, axis=1).to_dict()
+    
+    def format_supra_or_nota(val):
+        if pd.isna(val):
+            return ""
+        try:
+            float_val = float(val)
+            if float_val.is_integer():
+                return str(int(float_val))
+            return str(float_val)
+        except:
+            return str(val).strip()
+
+    def formatar_data_emissao(val):
+        if pd.isna(val):
+            return None
+        try:
+            if hasattr(val, 'to_pydatetime'):
+                dt = val.to_pydatetime()
+            elif isinstance(val, (datetime, pd.Timestamp)):
+                dt = val
+            else:
+                dt = pd.to_datetime(val).to_pydatetime()
+            return f"{dt.strftime('%Y-%m-%d')} 00:00:00-03"
+        except Exception as e:
+            print(f"Erro ao formatar data: {val} - {e}")
+            return None
 
     # 2. Carregar base de histórico
-    df = pd.read_excel(INPUT_FILE)
+    df = pd.read_excel(INPUT_FILE, sheet_name='Planilha1')
     
     # 3. Aplicar Regras de Negócio e Cálculos Comerciais
     print("Aplicando descontos e condições de pagamento...")
@@ -160,7 +186,7 @@ def processar_historico():
             "total_pedido": round(total_sem_frete, 2),
             "observacoes": "Importação Histórica",
             "status": "Orçamento",
-            "confirmado_em": primeira_linha['Emissão'],
+            "confirmado_em": formatar_data_emissao(primeira_linha['Emissão']),
             "cancelado_em": None,
             "cancelado_motivo": None,
             "link_token": None,
@@ -173,11 +199,13 @@ def processar_historico():
             "link_status": "DESABILITADO",
             "criado_em": datetime.now(),
             "atualizado_em": datetime.now(),
-            "created_at": primeira_linha['Emissão'],
+            "created_at": formatar_data_emissao(primeira_linha['Emissão']),
             "fornecedor": primeira_linha['Local'],
             "tabela_preco_nome": "ingestão manual",
             "atualizado_por": "Admin",
-            "valor_frete_to": primeira_linha['Frete(TO)']
+            "valor_frete_to": primeira_linha['Frete(TO)'],
+            "pedido_supra": format_supra_or_nota(primeira_linha['Pedido']),
+            "nota_fiscal": format_supra_or_nota(primeira_linha['Nota'])
         })
 
     # Criar DataFrames com ordem de colunas exata
@@ -188,7 +216,7 @@ def processar_historico():
         "observacoes", "status", "confirmado_em", "cancelado_em", "cancelado_motivo", "link_token",
         "link_url", "link_enviado_em", "link_expira_em", "link_primeiro_acesso_em", "link_ultimo_acesso_em",
         "link_qtd_acessos", "link_status", "criado_em", "atualizado_em", "created_at", "fornecedor",
-        "tabela_preco_nome", "atualizado_por", "valor_frete_to"
+        "tabela_preco_nome", "atualizado_por", "valor_frete_to", "pedido_supra", "nota_fiscal"
     ]
     
     cols_itens = [

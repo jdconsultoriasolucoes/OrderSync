@@ -1,0 +1,469 @@
+/* pedido_cliente.css */
+
+body {
+  margin: 0;
+  padding: 0;
+  background-color: var(--os-bg);
+  font-family: var(--os-font-family);
+  position: relative;
+}
+
+
+
+/* =========================================
+   ESTILOS DE LARGURA E QUEBRA DA TABELA
+   ========================================= */
+
+/* Remove table-layout fixed que quebrava colunas pequenas */
+#tabelaProdutos {
+  width: 100%;
+}
+
+/* Coluna 2: Código - Evita esmagamento e proíbe quebra de linha */
+#tabelaProdutos th:nth-child(2),
+#tabelaProdutos td:nth-child(2) {
+  min-width: 60px;
+  white-space: nowrap !important;
+  /* Nunca quebra a linha do código */
+  padding-right: 8px;
+}
+
+/* Coluna 3: Produto - Quebra de linha permitida no texto longo e absorve o espaço vazio */
+#tabelaProdutos th:nth-child(3),
+#tabelaProdutos td:nth-child(3) {
+  width: auto;
+  /* Absorve o espaço excedente da tabela */
+  min-width: 160px;
+  padding-left: 8px;
+  padding-right: 8px;
+  text-align: left;
+  white-space: normal !important;
+  overflow-wrap: break-word;
+}
+
+/* Coluna 4: Embalagem - Mantém compacta */
+#tabelaProdutos th:nth-child(4),
+#tabelaProdutos td:nth-child(4) {
+  width: 1%;
+  min-width: 50px;
+  white-space: nowrap !important;
+  text-align: center;
+  padding-left: 8px;
+}
+
+
+
+
+
+
+/* Centraliza os títulos e células da tabela de produtos */
+#tabelaProdutos th,
+#tabelaProdutos td {
+  text-align: center;
+}
+
+/* Permite quebra de linha APENAS nos cabeçalhos das colunas finais */
+#tabelaProdutos th:nth-child(7),
+#tabelaProdutos th:nth-child(8) {
+  white-space: normal !important;
+  word-break: break-word !important;
+  padding-left: 4px;
+  padding-right: 4px;
+}
+
+/* Protege as colunas de Markup (9 e 10) de quebrarem a palavra "MARKUP" no meio */
+#tabelaProdutos th:nth-child(9),
+#tabelaProdutos th:nth-child(10) {
+  white-space: normal !important;
+  word-break: normal !important;
+  /* Normal: não rasga palavras no meio */
+  word-wrap: normal !important;
+  padding-left: 4px;
+  padding-right: 4px;
+}
+
+/* Força o conteúdo das colunas finais a abraçar o texto (tira o excesso de espaço vazio) */
+#tabelaProdutos td:nth-child(7),
+#tabelaProdutos td:nth-child(8),
+#tabelaProdutos td:nth-child(9),
+#tabelaProdutos td:nth-child(10) {
+  width: 1%;
+  /* Mínima largura possível baseada no conteúdo */
+  white-space: nowrap !important;
+  /* Texto numa linha só */
+  padding-left: 6px;
+  padding-right: 6px;
+}
+
+
+
+
+
+#mensagem {
+  text-align: center;
+  font-weight: bold;
+  margin-top: 20px;
+  color: green;
+}
+
+.marca-dagua {
+  display: flex;
+  justify-content: center;
+  margin-top: 60px;
+  opacity: 0.80;
+}
+
+.marca-dagua img {
+  height: 80px;
+  width: auto;
+}
+
+/* Resumo do pedido */
+
+
+/* ===== Modal de confirmação ===== */
+
+
+body.modal-open {
+  overflow: hidden;
+}
+
+/* Modal de confirmação — centralizado na tela */
+.modal {
+  display: none;
+  position: fixed;
+  inset: 0;
+  z-index: 9000;
+  align-items: center;
+  justify-content: center;
+}
+
+/* Quando não está "hidden", exibe como flex para centralizar */
+.modal:not([hidden]) {
+  display: flex;
+}
+
+.modal-backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.5);
+  z-index: 0;
+}
+
+.modal-content {
+  position: relative;
+  z-index: 1;
+  background: #fff;
+  border-radius: 12px;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.22);
+  padding: 32px 28px 24px;
+  width: 92%;
+  max-width: 480px;
+  animation: os-slide-up 0.22s ease;
+}
+
+/* Estado travado após confirmação (evita interação/estilo visual) */
+body.page-locked .documento {
+  filter: grayscale(0.2);
+}
+
+body.page-locked .documento *:not(#confirmModal):not(.modal-content):not(.btn-modal) {
+  cursor: not-allowed !important;
+}
+
+/* Exceção: botão de download do PDF deve permanecer clicável */
+#btnBaixarManual {
+  cursor: pointer !important;
+  pointer-events: auto !important;
+}
+
+.hidden {
+  display: none !important;
+}
+
+/* esconde a coluna 6 (Peso) da tabela - ajustado para +1 coluna (#) */
+#tabelaProdutos th:nth-child(6),
+#tabelaProdutos td:nth-child(6),
+/* esconde a coluna 11 (Subtotal) da tabela - ajustado para +1 coluna (#) */
+#tabelaProdutos th:nth-child(11),
+#tabelaProdutos td:nth-child(11) {
+  display: none !important;
+}
+
+/* largura máxima do bloco de totais (opcional) */
+.fechamento-card {
+  max-width: 420px;
+}
+
+/* cada linha: rótulo à esquerda, valor à direita em coluna fixa */
+.fech-row {
+  display: grid;
+  grid-template-columns: 1fr 140px;
+  /* ajuste a largura dos valores se quiser */
+  align-items: center;
+  padding: 8px 0;
+  border-bottom: 1px solid #eee;
+}
+
+.fech-row:last-child {
+  border-bottom: 0;
+}
+
+/* rótulos e valores no MESMO tamanho */
+.fech-label {
+  font-size: 16px;
+  font-weight: 600;
+  color: #475569;
+  /* cinza 600 */
+}
+
+.fech-value {
+  text-align: right;
+  font-size: 16px;
+  /* igual ao rótulo */
+  font-weight: 600;
+  /* sem negrito exagerado */
+  letter-spacing: 0;
+  font-variant-numeric: tabular-nums;
+  /* dígitos com largura fixa */
+  color: #0f172a;
+  /* quase preto */
+}
+
+/* neutraliza <strong> dentro do valor para não “engrossar” */
+.fech-value strong {
+  font-weight: 600;
+}
+
+.fech-value span {
+  line-height: 1;
+}
+
+/* unidade do peso (opcional, se usar <span class="unit"> kg</span>) */
+.fech-value .unit {
+  color: #64748b;
+  margin-left: 4px;
+}
+
+/* Observações clean (mantém seu HTML/IDs) */
+
+
+/* Responsivo */
+@media (max-width: 700px) {
+  .fech-row {
+    grid-template-columns: 1fr 120px;
+  }
+}
+
+/* Garante largura mínima para a coluna QTD (5ª) e o input dentro dela */
+#tabelaProdutos th:nth-child(5),
+#tabelaProdutos td:nth-child(5) {
+  min-width: 72px;
+  width: 72px;
+}
+
+#tabelaProdutos td:nth-child(5) input {
+  width: 100% !important;
+  max-width: 100% !important;
+  min-width: 52px;
+  box-sizing: border-box;
+  padding: 4px 6px;
+  text-align: center;
+}
+
+/* Wrapper lado a lado (desktop) e empilhado (mobile) */
+.fechamento-grid {
+  display: grid;
+  grid-template-columns: minmax(260px, 360px) 1fr;
+  gap: 24px;
+  align-items: start;
+  margin: 20px 0 10px;
+}
+
+@media (max-width: 700px) {
+
+  /* Impede qualquer risco de barra horizontal no eixo da janela */
+  body,
+  html {
+    overflow-x: hidden !important;
+    width: 100vw !important;
+  }
+
+  /* O container principal fica full-width no celular para aproveitar todo o espaço */
+  .os-page-container {
+    width: 100% !important;
+    max-width: 100% !important;
+    margin: 0 !important;
+    padding: 10px 6px !important;
+    /* Reduzido ainda mais o padding para 'desaproximar' a tela */
+    border-radius: 0 !important;
+    box-sizing: border-box !important;
+    box-shadow: none !important;
+  }
+
+  .fechamento-grid {
+    grid-template-columns: 1fr !important;
+    margin: 8px 0 !important;
+    gap: 10px !important;
+    /* Mais apertado */
+  }
+
+  .fechamento-card {
+    max-width: 100% !important;
+  }
+
+  header {
+    flex-direction: row-reverse !important;
+    align-items: flex-start !important;
+    text-align: left !important;
+    padding-bottom: 6px !important;
+    margin-bottom: 6px !important;
+  }
+
+  .dados-header {
+    text-align: left !important;
+    width: 65% !important;
+  }
+
+  .dados-header p,
+  .dados-header h1,
+  .dados-header .meta-link {
+    font-size: 11px !important;
+    /* Reduzido de 12px */
+    color: var(--os-text) !important;
+    width: 100% !important;
+    word-wrap: break-word !important;
+    margin-bottom: 2px !important;
+    line-height: 1.2 !important;
+  }
+
+  .dados-header h1 {
+    font-size: 14px !important;
+    /* Reduzido de 15px */
+    margin-bottom: 16px !important;
+  }
+
+  /* Faz a tabela respirar um pouco mais no celular, forçando quebra em titulos longos */
+  .os-table th {
+    font-size: 10px !important;
+    /* Reduzido da tabela para evitar 'zoom' */
+    padding: 6px 3px !important;
+    white-space: normal !important;
+    /* Permite quebrar a linha dos titulos das colunas */
+    word-break: break-word !important;
+    line-height: 1.1 !important;
+    text-align: center !important;
+  }
+
+  /* Protege a palavra MARKUP no mobile para não partir no meio */
+  #tabelaProdutos th:nth-child(9),
+  #tabelaProdutos th:nth-child(10) {
+    word-break: normal !important;
+    word-wrap: normal !important;
+  }
+
+  .os-table td {
+    font-size: 10px !important;
+    /* Reduzido da tabela para evitar 'zoom' */
+    padding: 6px 3px !important;
+    word-break: break-word !important;
+  }
+
+  /* Deixa o Código o mais colado possível no mobile, mas SEM quebrar a linha */
+  #tabelaProdutos th:nth-child(2),
+  #tabelaProdutos td:nth-child(2) {
+    width: 1% !important;
+    min-width: 60px !important;
+    white-space: nowrap !important;
+    padding-right: 4px !important;
+  }
+
+  /* Deixa a coluna de produto fluir e absorver o espaço */
+  #tabelaProdutos th:nth-child(3),
+  #tabelaProdutos td:nth-child(3) {
+    width: auto !important;
+    min-width: 120px !important;
+    white-space: normal !important;
+    word-break: break-word !important;
+    padding-left: 2px !important;
+    padding-right: 2px !important;
+  }
+
+  /* Remove max-width/min-width fixos e agressivos da Condição de pagamento no mobile */
+  #tabelaProdutos th:nth-child(8),
+  #tabelaProdutos td:nth-child(8) {
+    white-space: normal !important;
+    word-wrap: break-word !important;
+    width: 1% !important;
+    min-width: 110px !important;
+    /* Limite seguro para mobile */
+  }
+
+  /* Evitar quebra de linha na coluna Embal. */
+  #tabelaProdutos th:nth-child(4),
+  #tabelaProdutos td:nth-child(4) {
+    white-space: nowrap !important;
+  }
+
+  /* Sobrepõe estilo inline de justify-content: flex-end */
+  .logo-cliente {
+    margin-bottom: 0 !important;
+    width: 35% !important;
+    display: flex !important;
+    justify-content: flex-end !important;
+    align-items: flex-start !important;
+  }
+
+  /* Garante que o logo não seja esmagado (squished) horizontalmente */
+  .logo-cliente img {
+    width: 100% !important;
+    max-width: 90px !important;
+    /* Redução drástica do Logo */
+    height: auto !important;
+    max-height: 50px !important;
+    object-fit: contain !important;
+    flex-shrink: 0 !important;
+    /* DONT SQUISH ME */
+  }
+
+  /* Scroll suave em dispositivos iOS para a tabela que transborda */
+  .os-table-wrap {
+    width: 100vw !important;
+    margin-left: -6px !important;
+    /* Compensa o padding do container para scroll total */
+    padding-left: 6px !important;
+    padding-right: 6px !important;
+    box-sizing: border-box !important;
+    -webkit-overflow-scrolling: touch;
+    margin-bottom: 16px !important;
+  }
+
+  .fech-row {
+    grid-template-columns: 1fr 90px !important;
+    /* Espaço mais otimizado na linha de totais */
+  }
+
+  .fech-label,
+  .fech-value {
+    font-size: 13px !important;
+    /* Redução de 16px para 13px */
+  }
+
+  /* Botões de ação empilhados usando flex column */
+  .acoes {
+    display: flex !important;
+    flex-direction: column !important;
+    gap: 10px !important;
+    /* Mais justo */
+    padding: 0 8px !important;
+  }
+
+  .acoes button {
+    width: 100% !important;
+    margin: 0 !important;
+    padding: 12px 16px !important;
+    /* Mais baixo */
+    /* Button hit target larger on mobile */
+    font-size: 14px !important;
+  }
+}

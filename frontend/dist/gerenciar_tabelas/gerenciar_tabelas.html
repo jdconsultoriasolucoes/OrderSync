@@ -1,0 +1,894 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Gerenciar Tabelas  OrderSync</title>
+    <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate" />
+
+    <!-- Design System -->
+    <link rel="stylesheet" href="../design-system.css" />
+
+    <!-- Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
+
+    <style>
+        .page-container {
+            padding: var(--os-space-4);
+            padding-top: calc(var(--os-header-height) + var(--os-space-3));
+            max-width: 1550px;
+            margin: 0 auto;
+        }
+
+        .card {
+            background: var(--os-bg-white);
+            border-radius: var(--os-radius-lg);
+            box-shadow: var(--os-shadow);
+            border: 1px solid var(--os-border);
+            padding: var(--os-space-3);
+        }
+
+        .page-title {
+            font-size: var(--os-text-2xl);
+            font-weight: 600;
+            color: var(--os-text);
+            margin-bottom: var(--os-space-3);
+        }
+
+        /* Layout lateral para o Catálogo */
+        .catalog-layout {
+            display: grid;
+            grid-template-columns: 290px 1fr;
+            gap: var(--os-space-3);
+            align-items: start;
+            width: 100%;
+        }
+
+        .catalog-sidebar {
+            background: var(--os-bg-white);
+            border-radius: var(--os-radius-lg);
+            box-shadow: var(--os-shadow);
+            border: 1px solid var(--os-border);
+            padding: var(--os-space-3);
+            display: flex;
+            flex-direction: column;
+            gap: var(--os-space-3);
+        }
+
+        .catalog-content {
+            background: var(--os-bg-white);
+            border-radius: var(--os-radius-lg);
+            box-shadow: var(--os-shadow);
+            border: 1px solid var(--os-border);
+            padding: var(--os-space-3);
+            min-height: 550px;
+        }
+
+        .catalog-category {
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+        }
+
+        .category-header {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-size: var(--os-text-xs);
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.08em;
+            color: var(--os-text-secondary);
+            padding: 8px var(--os-space-1);
+            border-bottom: 1px solid var(--os-border);
+            transition: background-color 0.15s ease;
+        }
+
+        .category-icon {
+            width: 14px;
+            height: 14px;
+            stroke-width: 2.5;
+            color: var(--os-text-secondary);
+        }
+
+        .category-items {
+            display: flex;
+            flex-direction: column;
+            gap: 4px;
+        }
+
+        .module-nav-btn {
+            appearance: none;
+            background: transparent;
+            border: none;
+            border-left: 3px solid transparent;
+            padding: 8px 12px 8px 16px;
+            font-size: var(--os-text-sm);
+            font-weight: 500;
+            color: var(--os-text-secondary);
+            cursor: pointer;
+            text-align: left;
+            transition: all 0.15s ease-in-out;
+            font-family: var(--os-font);
+            border-radius: 0 var(--os-radius) var(--os-radius) 0;
+            display: block;
+            width: 100%;
+        }
+
+        .module-nav-btn:hover {
+            color: var(--os-primary);
+            background-color: var(--os-bg);
+            border-left-color: var(--os-border);
+        }
+
+        .module-nav-btn.active {
+            color: var(--os-primary);
+            font-weight: 600;
+            background-color: var(--os-primary-light);
+            border-left-color: var(--os-primary);
+        }
+
+        /* Responsividade Mobile/Tablet */
+        @media (max-width: 992px) {
+            .catalog-layout {
+                grid-template-columns: 1fr;
+            }
+
+            .catalog-sidebar {
+                padding: var(--os-space-2);
+                gap: var(--os-space-2);
+            }
+
+            .category-header {
+                cursor: pointer;
+                user-select: none;
+                justify-content: space-between;
+                padding: 10px var(--os-space-2);
+                border-bottom: none;
+                background: var(--os-bg);
+                border-radius: var(--os-radius);
+            }
+
+            .category-items {
+                display: none;
+                padding: 4px var(--os-space-1) 0;
+            }
+
+            .catalog-category.expanded .category-items {
+                display: flex;
+            }
+
+            .category-header::after {
+                content: '▾';
+                font-size: 10px;
+                color: var(--os-text-secondary);
+                transition: transform 0.2s ease;
+            }
+
+            .catalog-category.expanded .category-header::after {
+                transform: rotate(180deg);
+            }
+
+            .module-nav-btn {
+                padding: 10px 16px;
+                border-radius: var(--os-radius);
+                border-left: none;
+                border-bottom: 1px solid var(--os-border);
+            }
+            
+            .module-nav-btn.active {
+                border-left: none;
+                background-color: var(--os-primary-light);
+            }
+        }
+
+        /* Table toolbar */
+        .toolbar {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: var(--os-space-2);
+        }
+
+        .module-section-title {
+            font-size: var(--os-text-lg);
+            font-weight: 600;
+            color: var(--os-text);
+        }
+
+        /* Data grid (dynamic table rendered by JS) */
+        #grid {
+            overflow-x: auto;
+        }
+
+        #grid table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: var(--os-text-sm);
+        }
+
+        #grid thead {
+            background-color: var(--os-bg);
+        }
+
+        #grid th {
+            padding: 12px 16px;
+            text-align: left;
+            font-weight: 600;
+            font-size: var(--os-text-xs);
+            text-transform: uppercase;
+            letter-spacing: 0.04em;
+            color: var(--os-text-secondary);
+            border-bottom: 1px solid var(--os-border);
+            white-space: nowrap;
+        }
+
+        #grid td {
+            padding: 12px 16px;
+            border-bottom: 1px solid var(--os-border);
+            color: var(--os-text);
+            vertical-align: middle;
+        }
+
+        #grid tbody tr:last-child td {
+            border-bottom: none;
+        }
+
+        #grid tbody tr:hover {
+            background-color: #F8FAFC;
+        }
+
+        #grid .btn {
+            margin-right: 4px;
+        }
+
+        /* Buttons in grid */
+        #grid .btn-sm {
+            padding: 4px 10px;
+            font-size: var(--os-text-xs);
+            border-radius: var(--os-radius);
+            border: 1px solid var(--os-border);
+            background: var(--os-bg-white);
+            cursor: pointer;
+            font-family: var(--os-font);
+        }
+
+        #grid .btn-primary {
+            background: var(--os-primary);
+            color: #fff;
+            border-color: var(--os-primary);
+        }
+
+        #grid .btn-danger {
+            background: var(--os-error-light);
+            color: var(--os-error);
+            border-color: #FECACA;
+        }
+
+        #grid .btn-danger:hover {
+            background: #FECACA;
+        }
+
+        /* Modals */
+        .custom-modal {
+            display: none;
+            position: fixed;
+            inset: 0;
+            background: rgba(0, 0, 0, 0.4);
+            align-items: center;
+            justify-content: center;
+            z-index: 1000;
+            animation: os-fade-in 0.15s ease;
+        }
+
+        .custom-modal.flex {
+            display: flex;
+        }
+
+        .modal-dialog {
+            background: var(--os-bg-white);
+            border-radius: var(--os-radius-lg);
+            box-shadow: var(--os-shadow-lg);
+            padding: var(--os-space-3);
+            width: 100%;
+            max-width: 500px;
+            animation: os-slide-up 0.2s ease;
+        }
+
+        .modal-dialog h3 {
+            font-size: var(--os-text-lg);
+            font-weight: 600;
+            color: var(--os-text);
+            margin: 0 0 var(--os-space-2);
+            padding-bottom: var(--os-space-2);
+            border-bottom: 1px solid var(--os-border);
+        }
+
+        .modal-dialog label {
+            display: block;
+            font-weight: 600;
+            margin-bottom: 6px;
+            color: #374151;
+            font-size: var(--os-text-sm);
+        }
+
+        .modal-dialog input,
+        .modal-dialog select {
+            width: 100%;
+            padding: 10px 12px;
+            border: 1px solid var(--os-border);
+            border-radius: var(--os-radius);
+            margin-bottom: var(--os-space-2);
+            font-family: var(--os-font);
+            font-size: var(--os-text-sm);
+            outline: none;
+        }
+
+        .modal-dialog input:focus,
+        .modal-dialog select:focus {
+            border-color: var(--os-primary);
+            box-shadow: 0 0 0 3px var(--os-primary-ring);
+        }
+
+        .modal-footer {
+            display: flex;
+            gap: var(--os-space-1);
+            justify-content: flex-end;
+            margin-top: var(--os-space-2);
+            padding-top: var(--os-space-2);
+            border-top: 1px solid var(--os-border);
+        }
+
+        .modal-footer .btn {
+            padding: 10px 16px;
+            border-radius: var(--os-radius);
+            border: 1px solid var(--os-border);
+            background: var(--os-bg-white);
+            cursor: pointer;
+            font-weight: 600;
+            font-size: var(--os-text-sm);
+            font-family: var(--os-font);
+        }
+
+        .modal-footer .btn-primary {
+            background: var(--os-primary);
+            color: #fff;
+            border-color: var(--os-primary);
+        }
+
+        .modal-footer .btn-primary:hover {
+            background: var(--os-primary-hover);
+        }
+
+        .loading-text,
+        #loading {
+            text-align: center;
+            padding: var(--os-space-4);
+            color: var(--os-text-secondary);
+            font-size: var(--os-text-sm);
+        }
+
+        @media (max-width: 768px) {
+            .page-container {
+                margin-left: 0;
+                padding: var(--os-space-2);
+                padding-top: calc(var(--os-header-height) + var(--os-space-2));
+            }
+
+            .module-nav {
+                overflow-x: auto;
+            }
+        }
+    </style>
+
+    <script src="https://unpkg.com/imask"></script>
+    <script src="https://cdn.sheetjs.com/xlsx-0.20.1/package/dist/xlsx.full.min.js"></script>
+    <script src="../js/config.js"></script>
+    <script src="../js/auth.js"></script>
+    <script src="../js/sidebar_control.js"></script>
+    <script>
+        if (window.Auth) { window.Auth.checkAuth(); }
+    </script>
+</head>
+
+<body>
+    <!-- ========== HEADER ========== -->
+    <header class="os-header">
+        <button class="os-menu-btn" id="menu-button" aria-label="Menu">&#9776;</button>
+        <img src="../logo.png" alt="Logo" class="os-logo" />
+        <span class="os-header-title">Gerenciar Tabelas</span>
+    </header>
+
+    <!-- ========== SIDEBAR GLOBAL ========== -->
+        <nav class="os-sidebar" id="sidebar">
+        <div class="os-sidebar-section">Menu</div>
+        <ul>
+            <li><a href="/index.html">
+                    <svg class="os-nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z" />
+                        <polyline points="9 22 9 12 15 12 15 22" />
+                    </svg> Home
+                </a></li>
+            <li><a href="/dashboards.html">
+                    <svg class="os-nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect>
+                        <line x1="3" y1="9" x2="21" y2="9"></line>
+                        <line x1="9" y1="21" x2="9" y2="9"></line>
+                    </svg> Dashboards
+                </a></li>
+            <li><a href="/tabela_preco/criacao_tabela_preco.html">
+                    <svg class="os-nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M20.59 13.41l-7.17 7.17a2 2 0 0 1-2.83 0L2 12V2h10l8.59 8.59a2 2 0 0 1 0 2.82z"></path>
+                        <line x1="7" y1="7" x2="7.01" y2="7"></line>
+                    </svg> Tabela de Preço
+                </a></li>
+            <li><a href="/produto/produto.html">
+                    <svg class="os-nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path
+                            d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z" />
+                    </svg> Produtos
+                </a></li>
+            <li><a href="/clientes/cliente.html">
+                    <svg class="os-nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" />
+                        <circle cx="9" cy="7" r="4" />
+                        <path d="M23 21v-2a4 4 0 0 0-3-3.87" />
+                        <path d="M16 3.13a4 4 0 0 1 0 7.75" />
+                    </svg> Clientes
+                </a></li>
+            <li><a href="/pedido/pedido.html">
+                    <svg class="os-nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M6 2L3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z" />
+                    </svg> Consultar Pedidos
+                </a></li>
+            <li><a href="/gerenciar_tabelas/gerenciar_tabelas.html" class="active">
+                    <svg class="os-nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <rect x="3" y="3" width="7" height="7" />
+                        <rect x="14" y="3" width="7" height="7" />
+                    </svg> Atualizar Catálogo
+                </a></li>
+            <li><a href="/relatorios/relatorios.html">
+                    <svg class="os-nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
+                        <polyline points="14 2 14 8 20 8" />
+                        <line x1="16" y1="13" x2="8" y2="13" />
+                        <line x1="16" y1="17" x2="8" y2="17" />
+                        <polyline points="10 9 9 9 8 9" />
+                    </svg> Logística
+                </a></li>
+            <li><a href="/relatorios/relatorios_vendas.html">
+                    <svg class="os-nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <line x1="18" y1="20" x2="18" y2="10"></line>
+                        <line x1="12" y1="20" x2="12" y2="4"></line>
+                        <line x1="6" y1="20" x2="6" y2="14"></line>
+                    </svg> Relatórios
+                </a></li>
+        </ul>
+        <div class="os-sidebar-section">Sistema</div>
+        <ul>
+            <li><a href="/config_email/config_email.html">
+                    <svg class="os-nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z" />
+                    </svg> Configuração E-mail
+                </a></li>
+            <li><a href="/usuarios.html">
+                    <svg class="os-nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" />
+                        <circle cx="12" cy="7" r="4" />
+                    </svg> Usuários
+                </a></li>
+            <li><a href="#" onclick="window.Auth.openChangePasswordModal()">
+                    <svg class="os-nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <rect x="3" y="11" width="18" height="11" rx="2" ry="2" />
+                        <path d="M7 11V7a5 5 0 0 1 10 0v4" />
+                    </svg> Trocar Senha
+                </a></li>
+            <li><a href="#" onclick="window.Auth.logout()">
+                    <svg class="os-nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4" />
+                        <polyline points="16 17 21 12 16 7" />
+                        <line x1="21" y1="12" x2="9" y2="12" />
+                    </svg> Sair
+                </a></li>
+        </ul>
+    </nav>
+    <div class="os-sidebar-overlay" id="overlay"></div>
+
+    <!-- ========== MAIN ========== -->
+    <div class="page-container">
+        <div class="catalog-layout">
+            <!-- Barra Lateral do Catálogo -->
+            <aside class="catalog-sidebar">
+                <!-- Seção Representada -->
+                <div class="catalog-category expanded">
+                    <div class="category-header" onclick="toggleCategoryMobile(this)">
+                        <svg class="category-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <path d="M19 21V5a2 2 0 0 0-2-2H7a2 2 0 0 0-2 2v16" />
+                            <path d="M12 7v10" />
+                            <path d="M8 12h8" />
+                        </svg>
+                        <span>Representada</span>
+                    </div>
+                    <div class="category-items">
+                        <button class="module-nav-btn active" onclick="selectModule('condicoes')">Condições pagamento</button>
+                        <button class="module-nav-btn" onclick="selectModule('descontos')">Descontos</button>
+                        <button class="module-nav-btn" onclick="selectModule('canal_venda')">Canais de Vendas</button>
+                        <button class="module-nav-btn" onclick="selectModule('familias')">Grupo de produtos</button>
+                        <button class="module-nav-btn" onclick="selectModule('supervisores')">Supervisores / Gerentes</button>
+                        <button class="module-nav-btn" onclick="selectModule('cidade_supervisor')">Cidades / Supervisores</button>
+                        <button class="module-nav-btn" onclick="selectModule('municipio_rota')">Municipio / Rota</button>
+                        <button class="module-nav-btn" onclick="selectModule('ramo_atividade')">Ramo de atividade</button>
+                        <button class="module-nav-btn" onclick="selectModule('atividade_principal')">Atividade principal</button>
+                        <button class="module-nav-btn" onclick="selectModule('filiais')">Filiais</button>
+                    </div>
+                </div>
+
+                <!-- Seção Representante -->
+                <div class="catalog-category">
+                    <div class="category-header" onclick="toggleCategoryMobile(this)">
+                        <svg class="category-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" />
+                            <circle cx="9" cy="7" r="4" />
+                            <path d="M23 21v-2a4 4 0 0 0-3-3.87" />
+                            <path d="M16 3.13a4 4 0 0 1 0 7.75" />
+                        </svg>
+                        <span>Representante</span>
+                    </div>
+                    <div class="category-items">
+                        <button class="module-nav-btn" onclick="selectModule('vendedores')">Vendedores</button>
+                        <button class="module-nav-btn" onclick="selectModule('referencias')">Referências comerciais</button>
+                        <button class="module-nav-btn" onclick="selectModule('plantel_animais')">Plantel de animais</button>
+                        <button class="module-nav-btn" onclick="selectModule('transporte')">Logística</button>
+                    </div>
+                </div>
+
+                <!-- Seção Configurações -->
+                <div class="catalog-category">
+                    <div class="category-header" onclick="toggleCategoryMobile(this)">
+                        <svg class="category-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <circle cx="12" cy="12" r="3" />
+                            <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z" />
+                        </svg>
+                        <span>Configurações</span>
+                    </div>
+                    <div class="category-items">
+                        <button class="module-nav-btn" onclick="selectModule('automacao')">Automação de relatórios</button>
+                    </div>
+                </div>
+            </aside>
+
+            <!-- Conteúdo Principal -->
+            <main class="catalog-content">
+                <div class="toolbar">
+                    <div class="module-section-title" id="sectionTitle">Condições de Pagamento</div>
+                    <div style="display: flex; gap: 10px; align-items: center;">
+                        <input type="text" id="searchInput" placeholder="Buscar..." style="padding: 6px 12px; border: 1px solid var(--os-border); border-radius: var(--os-radius); font-size: var(--os-text-sm); font-family: var(--os-font); outline: none;" onkeyup="filterGrid()">
+                        <button id="btn-export-excel" class="os-btn os-btn-secondary os-btn-sm" style="display: none;" onclick="exportCurrentModuleToExcel()">Exportar Excel</button>
+                        <button id="btn-novo" class="os-btn os-btn-primary os-btn-sm" onclick="openModal()">+ Novo</button>
+                    </div>
+                </div>
+
+                <div id="loading" style="display: none;">Carregando...</div>
+                <div id="grid"></div>
+            </main>
+        </div>
+    </div>
+
+    <!-- Script helper para expandir categoria mobile -->
+    <script>
+        function toggleCategoryMobile(element) {
+            if (window.innerWidth <= 992) {
+                const category = element.closest('.catalog-category');
+                category.classList.toggle('expanded');
+            }
+        }
+    </script>
+
+    <!-- ===== Modal: Condições de Pagamento ===== -->
+    <div id="modal-condicoes" class="custom-modal">
+        <div class="modal-dialog">
+            <h3 id="modal-title-condicoes">Nova Condição</h3>
+            <form id="form-condicoes" onsubmit="saveCondicao(event)">
+                <label>Código</label>
+                <input type="number" id="cond-id" placeholder="Ex: 5" required />
+                <label>Prazo</label>
+                <input id="cond-prazo" type="text" placeholder="Ex: 28/42DDL" required />
+                <label>Descrição</label>
+                <input id="cond-desc" type="text" placeholder="Descrição da condição">
+                <label>Custo (%)</label>
+                <input id="cond-custo" type="number" step="0.01" value="0" />
+                <div class="modal-footer">
+                    <button type="button" class="btn" onclick="closeModals()">Cancelar</button>
+                    <button type="submit" class="btn btn-primary">Salvar</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- ===== Modal: Descontos ===== -->
+    <div id="modal-descontos" class="custom-modal">
+        <div class="modal-dialog">
+            <h3 id="modal-title-descontos">Novo Desconto</h3>
+            <form id="form-descontos" onsubmit="saveDesconto(event)">
+                <label>ID Desconto</label>
+                <input type="number" id="desc-id" placeholder="Ex: 1" required />
+                <label>Fator Comissão (%)</label>
+                <input id="desc-fator" type="number" step="0.01" value="0" required />
+                <div class="modal-footer">
+                    <button type="button" class="btn" onclick="closeModals()">Cancelar</button>
+                    <button type="submit" class="btn btn-primary">Salvar</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- ===== Modal: Famílias ===== -->
+    <div id="modal-familias" class="custom-modal">
+        <div class="modal-dialog">
+            <h3 id="modal-title-familias">Novo Grupo de Produtos</h3>
+            <form id="form-familias" onsubmit="saveFamilia(event)">
+                <input type="hidden" id="fam-id" />
+                <label>Tipo</label>
+                <input id="fam-tipo" type="text" placeholder="Ex: Revenda" required />
+                <label>Família</label>
+                <input id="fam-nome" type="text" placeholder="Ex: ARAME" required />
+                <label>Grupo</label>
+                <input id="fam-marca" type="text" placeholder="Ex: GERDAU" required />
+                <div class="modal-footer">
+                    <button type="button" class="btn" onclick="closeModals()">Cancelar</button>
+                    <button type="submit" class="btn btn-primary">Salvar</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- ===== Modal: Transporte / Logística ===== -->
+    <div id="modal-transporte" class="custom-modal">
+        <div class="modal-dialog">
+            <h3 id="modal-title-transporte">Nova Logística</h3>
+            <form id="form-transporte" onsubmit="saveTransporte(event)">
+                <input type="hidden" id="trans-id" />
+                <label>Transportadora</label>
+                <input id="trans-empresa" type="text" placeholder="Nome da Transportadora" required />
+                <label>Motorista</label>
+                <input id="trans-motorista" type="text" placeholder="Nome do Motorista" required />
+                <label>Modelo do Caminhão</label>
+                <input id="trans-modelo" type="text" placeholder="Ex: Scania R450" />
+                <label>Placa</label>
+                <input id="trans-placa" type="text" placeholder="Ex: ABC-1234" required />
+                <label>Tipo de Veículo</label>
+                <select id="trans-tipo">
+                    <option value="Proprio">Frotas Próprias</option>
+                    <option value="Terceiro">Frotas Terceiras</option>
+                </select>
+                <label>Capacidade (kg)</label>
+                <input id="trans-capacidade" type="number" placeholder="Ex: 15000" />
+                <div class="modal-footer">
+                    <button type="button" class="btn" onclick="closeModals()">Cancelar</button>
+                    <button type="submit" class="btn btn-primary">Salvar</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- ===== Modal: Vendedores ===== -->
+    <div id="modal-vendedores" class="custom-modal">
+        <div class="modal-dialog">
+            <h3 id="modal-title-vendedores">Novo Vendedor</h3>
+            <form id="form-vendedores" onsubmit="saveVendedor(event)">
+                <input type="hidden" id="vend-id" />
+                <label>Nome do Vendedor</label>
+                <input id="vend-nome" type="text" placeholder="Nome completo" required />
+                <label>E-mail</label>
+                <input id="vend-email" type="email" placeholder="email@exemplo.com" />
+                <div class="modal-footer">
+                    <button type="button" class="btn" onclick="closeModals()">Cancelar</button>
+                    <button type="submit" class="btn btn-primary">Salvar</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- ===== Modal: Canal de Venda ===== -->
+    <div id="modal-canal_venda" class="custom-modal">
+        <div class="modal-dialog">
+            <h3 id="modal-title-canal_venda">Novo Canal de Venda</h3>
+            <form id="form-canal_venda" onsubmit="saveCanalVenda(event)">
+                <input type="hidden" id="cv-id" />
+                <label>Tipo</label>
+                <input id="cv-tipo" type="text" placeholder="Ex: DISTRIBUIDOR" required />
+                <label>Linha</label>
+                <input id="cv-linha" type="text" placeholder="Ex: PET" required />
+                <div class="modal-footer">
+                    <button type="button" class="btn" onclick="closeModals()">Cancelar</button>
+                    <button type="submit" class="btn btn-primary">Salvar</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- ===== Modal: Cidade Supervisor ===== -->
+    <div id="modal-cidade_supervisor" class="custom-modal">
+        <div class="modal-dialog">
+            <h3 id="modal-title-cidade_supervisor">Nova Cidade Supervisor</h3>
+            <form id="form-cidade_supervisor" onsubmit="saveCidadeSupervisor(event)">
+                <input type="hidden" id="cs-codigo" />
+                <label>Nº Supervisor Insumos</label>
+                <input id="cs-num-insumos" type="number" step="0.01" />
+                <label>Nº Supervisor Pet</label>
+                <input id="cs-num-pet" type="number" step="0.01" />
+                <label>Nome Supervisor Insumos</label>
+                <input id="cs-nome-insumos" type="text" />
+                <label>Nome Supervisor Pet</label>
+                <input id="cs-nome-pet" type="text" />
+                <label>Cidades</label>
+                <input id="cs-cidade" type="text" required />
+                <label>UF</label>
+                <input id="cs-uf" type="text" maxlength="2" />
+                <label>Gerente Insumos</label>
+                <input id="cs-gerente-insumos" type="text" placeholder="Nome do Gerente Insumos" />
+                <label>Gerente Pet</label>
+                <input id="cs-gerente-pet" type="text" placeholder="Nome do Gerente Pet" />
+                <div class="modal-footer">
+                    <button type="button" class="btn" onclick="closeModals()">Cancelar</button>
+                    <button type="submit" class="btn btn-primary">Salvar</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- ===== Modal: Município Rota ===== -->
+    <div id="modal-municipio_rota" class="custom-modal">
+        <div class="modal-dialog">
+            <h3 id="modal-title-municipio_rota">Novo Município Rota</h3>
+            <form id="form-municipio_rota" onsubmit="saveMunicipioRota(event)">
+                <input type="hidden" id="mr-id" />
+                <label>Rota</label>
+                <input id="mr-rota" type="number" required />
+                <label>Município</label>
+                <input id="mr-municipio" type="text" required />
+                <label>KM</label>
+                <input id="mr-km" type="text" />
+                <div class="modal-footer">
+                    <button type="button" class="btn" onclick="closeModals()">Cancelar</button>
+                    <button type="submit" class="btn btn-primary">Salvar</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- ===== Modal: Referências ===== -->
+    <div id="modal-referencias" class="custom-modal">
+        <div class="modal-dialog">
+            <h3 id="modal-title-referencias">Nova Referência</h3>
+            <form id="form-referencias" onsubmit="saveReferencias(event)">
+                <input type="hidden" id="ref-codigo" />
+                <label>Empresa</label>
+                <input id="ref-empresa" type="text" required />
+                <label>Cidade</label>
+                <input id="ref-cidade" type="text" />
+                <label>Telefone</label>
+                <input id="ref-telefone" type="text" />
+                <label>Contato</label>
+                <input id="ref-contato" type="text" />
+                <div class="modal-footer">
+                    <button type="button" class="btn" onclick="closeModals()">Cancelar</button>
+                    <button type="submit" class="btn btn-primary">Salvar</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- ===== Modal: Supervisores ===== -->
+    <div id="modal-supervisores" class="custom-modal">
+        <div class="modal-dialog">
+            <h3 id="modal-title-supervisores">Novo Supervisor</h3>
+            <form id="form-supervisores" onsubmit="saveSupervisores(event)">
+                <input type="hidden" id="sup-id" />
+                <label>Código</label>
+                <input id="sup-codigo" type="number" step="0.01" />
+                <label>Supervisor</label>
+                <input id="sup-supervisores" type="text" required />
+                <label>Tipo</label>
+                <input id="sup-tipo" type="text" />
+                <label>Telefone</label>
+                <input id="sup-telefone" type="text" />
+                <label>E-mail</label>
+                <input id="sup-email" type="email" />
+                <div class="modal-footer">
+                    <button type="button" class="btn" onclick="closeModals()">Cancelar</button>
+                    <button type="submit" class="btn btn-primary">Salvar</button>
+                </div>
+            </form>
+        </div>
+    </div>
+    <!-- ===== Modal: Plantel Animais ===== -->
+    <div id="modal-plantel" class="custom-modal">
+        <div class="modal-dialog">
+            <h3 id="modal-title-plantel">Novo Plantel</h3>
+            <form id="form-plantel" onsubmit="savePlantel(event)">
+                <input type="hidden" id="plan-id" />
+                <label>Espécie (Plantel)</label>
+                <input id="plan-nome" type="text" placeholder="Nome do animal" required />
+                <div class="modal-footer">
+                    <button type="button" class="btn" onclick="closeModals()">Cancelar</button>
+                    <button type="submit" class="btn btn-primary">Salvar</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- ===== Modal: Ramo de Atividade ===== -->
+    <div id="modal-ramo_atividade" class="custom-modal">
+        <div class="modal-dialog">
+            <h3 id="modal-title-ramo_atividade">Novo Ramo de Atividade</h3>
+            <form id="form-ramo_atividade" onsubmit="saveRamoAtividade(event)">
+                <input type="hidden" id="ramo-id" />
+                <label>Ramo de Atividade</label>
+                <input id="ramo-nome" type="text" placeholder="Nome do Ramo" required />
+                <div class="modal-footer">
+                    <button type="button" class="btn" onclick="closeModals()">Cancelar</button>
+                    <button type="submit" class="btn btn-primary">Salvar</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- ===== Modal: Atividade Principal ===== -->
+    <div id="modal-atividade_principal" class="custom-modal">
+        <div class="modal-dialog">
+            <h3 id="modal-title-atividade_principal">Nova Atividade Principal</h3>
+            <form id="form-atividade_principal" onsubmit="saveAtividadePrincipal(event)">
+                <input type="hidden" id="ativ-id" />
+                <label>Atividade Principal</label>
+                <input id="ativ-nome" type="text" placeholder="Nome da Atividade" required />
+                <div class="modal-footer">
+                    <button type="button" class="btn" onclick="closeModals()">Cancelar</button>
+                    <button type="submit" class="btn btn-primary">Salvar</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- ===== Modal: Filiais ===== -->
+    <div id="modal-filiais" class="custom-modal">
+        <div class="modal-dialog">
+            <h3 id="modal-title-filiais">Nova Filial</h3>
+            <form id="form-filiais" onsubmit="saveFilial(event)">
+                <input type="hidden" id="filial-id" />
+                <label>Filial</label>
+                <input id="filial-nome" type="text" placeholder="Nome da Filial" required />
+                <div class="modal-footer">
+                    <button type="button" class="btn" onclick="closeModals()">Cancelar</button>
+                    <button type="submit" class="btn btn-primary">Salvar</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <script src="gerenciar_tabelas.js"></script>
+    <script>
+        // Inicialização de Máscaras
+        window.addEventListener('DOMContentLoaded', () => {
+            if (window.IMask) {
+                const phoneOptions = {
+                    mask: [
+                        { mask: '(00) 0000-0000' },
+                        { mask: '(00) 00000-0000' }
+                    ]
+                };
+                
+                const refTel = document.getElementById('ref-telefone');
+                if (refTel) IMask(refTel, phoneOptions);
+                
+                const supTel = document.getElementById('sup-telefone');
+                if (supTel) IMask(supTel, phoneOptions);
+            }
+        });
+    </script>
+</body>
+
+</html>
