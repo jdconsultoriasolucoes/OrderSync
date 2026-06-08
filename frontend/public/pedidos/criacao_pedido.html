@@ -21,6 +21,13 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <style>
+    .os-table th {
+        white-space: normal !important;
+        vertical-align: middle;
+        text-align: center;
+    }
+  </style>
 
   <script src="../js/config.js"></script>
   <script src="../js/auth.js"></script>
@@ -174,9 +181,9 @@
           <div class="os-form-group area-nome" style="flex: 1.5; min-width: 250px;">
             <label class="os-label" for="tabela_base_id">Buscar Tabela de Preço (Opcional)</label>
             <div style="display: flex; gap: var(--os-space-1);">
-                <input id="tabela_base_id" class="os-input" type="text" placeholder="ID da tabela para carregar preços..." />
-                <button id="btn-carregar-tabela" class="os-btn os-btn-secondary" title="Carregar produtos desta tabela">
-                    <i class="bi bi-search"></i> Carregar
+                <input id="tabela_base_id" class="os-input" type="text" placeholder="ID da tabela..." readonly style="background-color: var(--os-bg-disabled); cursor: not-allowed; width: 120px;" />
+                <button type="button" id="btn-carregar-tabela" class="os-btn os-btn-secondary" title="Buscar tabela de preço">
+                    <i class="bi bi-search"></i> Buscar Tabela
                 </button>
             </div>
             <div id="tabela_suggestions" class="suggestions"></div>
@@ -271,22 +278,22 @@
 
       <!-- Resumo Valores (Movido para cima) -->
       <div style="display: flex; justify-content: flex-start; margin-bottom: var(--os-space-3); width: 100%;">
-          <div style="background: var(--os-surface-hover); padding: var(--os-space-2) var(--os-space-3); border-radius: var(--os-radius-md); border: 1px solid var(--os-border); min-width: 300px; display: flex; flex-direction: row; gap: var(--os-space-4); align-items: center;">
+          <div style="background: var(--os-surface-hover); padding: 8px 12px; border-radius: var(--os-radius-md); border: 1px solid var(--os-border); min-width: 300px; display: flex; flex-direction: row; gap: var(--os-space-3); align-items: center;">
               <div style="display: flex; flex-direction: column;">
-                  <span style="color: var(--os-text-secondary); font-size: 12px;">Total Itens</span>
-                  <strong id="resumo-qtd-itens" style="font-size: 16px;">0</strong>
+                  <span style="color: var(--os-text-secondary); font-size: 11px;">Total Itens</span>
+                  <strong id="resumo-qtd-itens" style="font-size: 13px;">0</strong>
               </div>
               <div style="display: flex; flex-direction: column;">
-                  <span style="color: var(--os-text-secondary); font-size: 12px;">Peso Total</span>
-                  <strong id="resumo-peso" style="font-size: 16px;">0,000 kg</strong>
+                  <span style="color: var(--os-text-secondary); font-size: 11px;">Peso Total</span>
+                  <strong id="resumo-peso" style="font-size: 13px;">0,000 kg</strong>
               </div>
               <div style="display: flex; flex-direction: column;">
-                  <span style="color: var(--os-text-secondary); font-size: 12px;">Total sem Frete</span>
-                  <strong id="resumo-total-sf" style="font-size: 16px;">R$ 0,00</strong>
+                  <span style="color: var(--os-text-secondary); font-size: 11px;">Total sem Frete</span>
+                  <strong id="resumo-total-sf" style="font-size: 13px;">R$ 0,00</strong>
               </div>
-              <div style="display: flex; flex-direction: column; border-left: 1px dashed var(--os-border); padding-left: var(--os-space-4);">
-                  <span style="color: var(--os-text); font-weight: 600; font-size: 12px;">Total com Frete</span>
-                  <strong id="resumo-total-cf" style="color: var(--os-primary); font-size: 1.1em;">R$ 0,00</strong>
+              <div style="display: flex; flex-direction: column; border-left: 1px dashed var(--os-border); padding-left: var(--os-space-3);">
+                  <span style="color: var(--os-text); font-weight: 600; font-size: 11px;">Total com Frete</span>
+                  <strong id="resumo-total-cf" style="color: var(--os-primary); font-size: 14px;">R$ 0,00</strong>
               </div>
           </div>
       </div>
@@ -315,8 +322,6 @@
               <th>Embalagem</th>
               <th>Grupo / Depto.</th>
               <th class="right">Peso Líq.</th>
-              <!-- NOVA COLUNA QUANTIDADE -->
-              <th class="right" style="width: 100px;">Qtde</th>
               <th class="right">Valor Unitário</th>
 
               <!-- Toggle Desconto: controla Desc. aplicado(9) -->
@@ -350,6 +355,7 @@
               <th class="right">ICMS próprio (R$)</th> <!-- novo -->
               <th class="right">ICMS ST cheio (R$)</th><!-- novo -->
               <th class="right">ICMS ST a reter (R$)</th><!-- novo -->
+              <th class="right" style="width: 80px;">Qtde</th>
               <th class="right">Valor Final (R$)</th>
               <th class="right">Valor s/ Frete (R$)</th>
               <th class="right th-markup">

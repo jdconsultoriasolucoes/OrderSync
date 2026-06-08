@@ -169,13 +169,17 @@ async function carregarTabelas() {
       const tr = document.createElement("tr");
       tr.dataset.id = tabela.id;
 
-      tr.innerHTML = `
-      <td>${tabela.nome_tabela || '-'}</td>
-      <td>${tabela.cliente || '-'}</td>
-      <td>${tabela.fornecedor || '-'}</td>
-      <td>${tabela.observacao || '-'}</td>
-      <td>
-        <div style="display: flex; gap: var(--os-space-2);">
+      const isPicker = new URLSearchParams(window.location.search).get("picker") === "true";
+      let actionButtons = "";
+      if (isPicker) {
+        actionButtons = `
+          <button class="os-btn os-btn-primary os-btn-sm" 
+            onclick="selecionarParaPicker(${tabela.id})">
+            Selecionar
+          </button>
+        `;
+      } else {
+        actionButtons = `
           <button class="os-btn os-btn-secondary os-btn-sm" 
             onclick="window.location.href='criacao_tabela_preco.html?id=${encodeURIComponent(tabela.id)}'">
             Editar
@@ -193,6 +197,17 @@ async function carregarTabelas() {
             onclick="abrirModalDelecao(${tabela.id})">
             Excluir
           </button>
+        `;
+      }
+
+      tr.innerHTML = `
+      <td>${tabela.nome_tabela || '-'}</td>
+      <td>${tabela.cliente || '-'}</td>
+      <td>${tabela.fornecedor || '-'}</td>
+      <td>${tabela.observacao || '-'}</td>
+      <td>
+        <div style="display: flex; gap: var(--os-space-2);">
+          ${actionButtons}
         </div>
       </td>
       `;
@@ -271,6 +286,13 @@ function abrirModalDelecao(id) {
 window.voltar = voltar;
 window.confirmarDelecao = confirmarDelecao;
 window.abrirModalDelecao = abrirModalDelecao;
+
+function selecionarParaPicker(id) {
+  sessionStorage.setItem('PICKER_TABELA_ID', id);
+  const returnUrl = sessionStorage.getItem('PICKER_TABELA_RETURN_URL') || '/pedidos/criacao_pedido.html';
+  window.location.href = returnUrl;
+}
+window.selecionarParaPicker = selecionarParaPicker;
 
 // Listener for "Enviar" buttons (delegated)
 document.addEventListener("click", async (e) => {

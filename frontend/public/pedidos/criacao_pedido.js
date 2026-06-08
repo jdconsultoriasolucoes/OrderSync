@@ -1618,10 +1618,10 @@ function criarLinha(item, idx) {
 
   tr.append(
     tdSel, tdCod, tdDesc, tdEmb, tdGrupo,
-    tdPeso, tdQtd, tdValor, tdPercent, tdDescAplic,
+    tdPeso, tdValor, tdPercent, tdDescAplic,
     tdCondCod, tdCondVal,
     tdFrete,
-    tdIpiR$, tdBaseStR$, tdIcmsProp$, tdIcmsCheio$, tdIcmsReter$, tdFinal, tdTotalSemFrete,
+    tdIpiR$, tdBaseStR$, tdIcmsProp$, tdIcmsCheio$, tdIcmsReter$, tdQtd, tdFinal, tdTotalSemFrete,
     tdMarkup, // <--- MOVED TO END
     tdFinalMarkup, tdSemFreteMarkup // <--- ALREADY AT END
   );
@@ -3764,13 +3764,22 @@ document.addEventListener('DOMContentLoaded', () => {
     if(btnCarregar) {
         btnCarregar.addEventListener('click', carregarTabelaBase);
     }
+
+    const pickedId = sessionStorage.getItem('PICKER_TABELA_ID');
+    if (pickedId) {
+        const inp = document.getElementById('tabela_base_id');
+        if (inp) inp.value = pickedId;
+        sessionStorage.removeItem('PICKER_TABELA_ID');
+        setTimeout(() => carregarTabelaBase(), 300); // Load automaticaly
+    }
 });
 
 async function carregarTabelaBase(e) {
     if(e) e.preventDefault();
     const id = document.getElementById('tabela_base_id')?.value?.trim();
     if(!id) {
-        alert('Por favor, informe o ID da tabela de preço primeiro.');
+        sessionStorage.setItem('PICKER_TABELA_RETURN_URL', '/pedidos/criacao_pedido.html');
+        window.location.href = '../tabela_preco/listar_tabelas.html?picker=true';
         return;
     }
     
