@@ -428,8 +428,8 @@ def _desenhar_resumo_logic(c, db, carga, produtos, width, height, y_start=None):
     else:
         y = y_start
 
-    # Table columns: CÓDIGO | DESCRIÇÃO PRODUTO | EMBALAGEM | P. LÍQ. UN | QTD | P. LÍQ ACUM
-    data = [["CÓDIGO", "DESCRIÇÃO PRODUTO", "EMBALAGEM", "P. LÍQ. UN", "QTD", "P. LÍQ ACUM"]]
+    # Table columns: CÓDIGO | DESCRIÇÃO PRODUTO | Emb. | Peso EMB. | (vaza) | QTD | P. LÍQ ACUM
+    data = [["CÓDIGO", "DESCRIÇÃO PRODUTO", "Emb.", "Peso EMB.", "", "QTD", "P. LÍQ ACUM"]]
     
     for p in produtos:
         peso_unit = getattr(p, 'peso_unitario', 0.0) or 0.0
@@ -439,20 +439,21 @@ def _desenhar_resumo_logic(c, db, carga, produtos, width, height, y_start=None):
             str(p.item_nome)[:50],
             str(p.item_embalagem or ""),
             _br_number(peso_unit, 0),
+            "",
             str(int(p.qtd_total or 0)),
             _br_number(peso_total, 0),
         ])
 
     # Width distribution for portrait A4 (~21cm width - margins)
-    col_widths = [2.2*cm, 8.5*cm, 2.5*cm, 2.2*cm, 1.5*cm, 2.7*cm]
+    col_widths = [2.2*cm, 7.7*cm, 1.8*cm, 2.2*cm, 1.5*cm, 1.5*cm, 2.7*cm]
     table = Table(data, colWidths=col_widths, repeatRows=1)
     style = TableStyle([
         ('BACKGROUND', (0, 0), (-1, 0), SUPRA_BAR),
         ('TEXTCOLOR', (0, 0), (-1, 0), colors.white),
         ('ALIGN', (0, 0), (-1, -1), 'LEFT'),
-        ('ALIGN', (3, 0), (3, -1), 'RIGHT'), # P. LÍQ. UN
-        ('ALIGN', (4, 0), (4, -1), 'CENTER'), # Qtd
-        ('ALIGN', (5, 0), (5, -1), 'RIGHT'), # P. LÍQ ACUM
+        ('ALIGN', (3, 0), (3, -1), 'RIGHT'), # Peso EMB.
+        ('ALIGN', (5, 0), (5, -1), 'CENTER'), # Qtd
+        ('ALIGN', (6, 0), (6, -1), 'RIGHT'), # P. LÍQ ACUM
         ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
         ('FONTSIZE', (0, 0), (-1, -1), 8),
         ('GRID', (0, 0), (-1, -1), 0.5, colors.grey),

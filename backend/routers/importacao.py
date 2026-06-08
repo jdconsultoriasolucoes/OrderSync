@@ -238,6 +238,7 @@ async def importar_pedidos_excel(file: UploadFile = File(...), db: Session = Dep
             
             id_pedido = None
             nf_db = ""
+            peso_liquido_db = 0.0
             if not check_exist:
                 status_proc = "ERRO_NAO_ENCONTRADO"
                 detalhes.append("Pedido não encontrado no OrderSync.")
