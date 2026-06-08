@@ -269,8 +269,30 @@
       <h2 id="sec-itens" class="os-section-title" style="margin-top: 0; border-bottom: none; padding-bottom: 0;">
         Produtos do Pedido</h2>
 
+      <!-- Resumo Valores (Movido para cima) -->
+      <div style="display: flex; justify-content: flex-start; margin-bottom: var(--os-space-3); width: 100%;">
+          <div style="background: var(--os-surface-hover); padding: var(--os-space-2) var(--os-space-3); border-radius: var(--os-radius-md); border: 1px solid var(--os-border); min-width: 300px; display: flex; flex-direction: row; gap: var(--os-space-4); align-items: center;">
+              <div style="display: flex; flex-direction: column;">
+                  <span style="color: var(--os-text-secondary); font-size: 12px;">Total Itens</span>
+                  <strong id="resumo-qtd-itens" style="font-size: 16px;">0</strong>
+              </div>
+              <div style="display: flex; flex-direction: column;">
+                  <span style="color: var(--os-text-secondary); font-size: 12px;">Peso Total</span>
+                  <strong id="resumo-peso" style="font-size: 16px;">0,000 kg</strong>
+              </div>
+              <div style="display: flex; flex-direction: column;">
+                  <span style="color: var(--os-text-secondary); font-size: 12px;">Total sem Frete</span>
+                  <strong id="resumo-total-sf" style="font-size: 16px;">R$ 0,00</strong>
+              </div>
+              <div style="display: flex; flex-direction: column; border-left: 1px dashed var(--os-border); padding-left: var(--os-space-4);">
+                  <span style="color: var(--os-text); font-weight: 600; font-size: 12px;">Total com Frete</span>
+                  <strong id="resumo-total-cf" style="color: var(--os-primary); font-size: 1.1em;">R$ 0,00</strong>
+              </div>
+          </div>
+      </div>
+
       <div class="toolbar desktop-only" id="toolbar-acoes">
-        <button id="btn-buscar" class="os-btn os-btn-primary">Buscar Produtos Manuais</button>
+        <button id="btn-buscar" class="os-btn os-btn-primary">Buscar Produtos</button>
         <button id="btn-remover-selecionados" class="os-btn os-btn-danger">Remover selecionados</button>
         <button id="btn-salvar-pedido" class="os-btn os-btn-primary"
           style="background-color: var(--os-success); border-color: var(--os-success);">Salvar e Gerar Pedido</button>
@@ -344,27 +366,7 @@
           <tbody id="tbody-itens"></tbody>
         </table>
       </div>
-      <!-- Resumo Valores (Novo) -->
-      <div style="display: flex; justify-content: flex-end; margin-top: var(--os-space-3); padding-right: var(--os-space-2);">
-          <div style="background: var(--os-surface-hover); padding: var(--os-space-2) var(--os-space-3); border-radius: var(--os-radius-md); border: 1px solid var(--os-border); min-width: 300px;">
-              <div style="display: flex; justify-content: space-between; margin-bottom: 8px;">
-                  <span style="color: var(--os-text-secondary);">Total Itens:</span>
-                  <strong id="resumo-qtd-itens">0</strong>
-              </div>
-              <div style="display: flex; justify-content: space-between; margin-bottom: 8px;">
-                  <span style="color: var(--os-text-secondary);">Peso Total:</span>
-                  <strong id="resumo-peso">0,000 kg</strong>
-              </div>
-              <div style="display: flex; justify-content: space-between; margin-bottom: 8px;">
-                  <span style="color: var(--os-text-secondary);">Total sem Frete:</span>
-                  <strong id="resumo-total-sf">R$ 0,00</strong>
-              </div>
-              <div style="display: flex; justify-content: space-between; border-top: 1px dashed var(--os-border); padding-top: 8px;">
-                  <span style="color: var(--os-text); font-weight: 600;">Total com Frete:</span>
-                  <strong id="resumo-total-cf" style="color: var(--os-primary); font-size: 1.1em;">R$ 0,00</strong>
-              </div>
-          </div>
-      </div>
+      <!-- Resumo Valores removido daqui e colocado acima -->
     </section>
 
     <!-- Container: Mobile Cards (injected via JS) -->

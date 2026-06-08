@@ -2852,11 +2852,13 @@ document.addEventListener('DOMContentLoaded', () => {
     chkAll.addEventListener('change', toggleAll);
   })();
 
-  document.getElementById('btn-buscar')?.addEventListener('click', () => {
+  document.getElementById('btn-buscar')?.addEventListener('click', (e) => {
+    e.preventDefault();
     saveHeaderSnapshot();
     preparePickerBridgeBeforeNavigate();
     snapshotSelecionadosParaPicker();
-    window.location.href = 'tabela_preco.html';
+    sessionStorage.setItem('TP_RETURN_URL', '/pedidos/criacao_pedido.html');
+    window.location.href = '../tabela_preco/tabela_preco.html';
   });
 
   document.getElementById('btn-remover-selecionados')?.addEventListener('click', () => {
@@ -3764,9 +3766,13 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 });
 
-async function carregarTabelaBase() {
-    const id = document.getElementById('tabela_base_id')?.value;
-    if(!id) return;
+async function carregarTabelaBase(e) {
+    if(e) e.preventDefault();
+    const id = document.getElementById('tabela_base_id')?.value?.trim();
+    if(!id) {
+        alert('Por favor, informe o ID da tabela de preço primeiro.');
+        return;
+    }
     
     try {
         document.body.style.cursor = 'wait';
