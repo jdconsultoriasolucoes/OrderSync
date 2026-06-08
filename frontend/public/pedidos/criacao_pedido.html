@@ -1,0 +1,409 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Criação de Pedido — OrderSync</title>
+
+  <!-- Design System -->
+  <link rel="stylesheet" href="../design-system.css">
+
+  <!-- Bootstrap -->
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css">
+  <link rel="icon" href="../logo.png">
+
+  <!-- Page CSS -->
+  <link rel="stylesheet" href="criacao_pedido.css">
+
+  <!-- Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+
+  <script src="../js/config.js"></script>
+  <script src="../js/auth.js"></script>
+  <script src="../js/sidebar_control.js"></script>
+  <script src="criacao_pedido.js?v=1.0" defer></script>
+</head>
+
+
+<body>
+  <!-- ========== HEADER ========== -->
+  <header class="os-header">
+    <button class="os-menu-btn" id="menu-button" aria-label="Menu">&#9776;</button>
+    <img src="../logo.png" alt="Logo" class="os-logo" />
+    <span class="os-header-title">Criação de Pedido Manual</span>
+  </header>
+
+  <!-- ========== SIDEBAR GLOBAL ========== -->
+      <nav class="os-sidebar" id="sidebar">
+        <div class="os-sidebar-section">Menu</div>
+        <ul>
+            <li><a href="/index.html">
+                    <svg class="os-nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z" />
+                        <polyline points="9 22 9 12 15 12 15 22" />
+                    </svg> Home
+                </a></li>
+            <li><a href="/dashboards.html">
+                    <svg class="os-nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect>
+                        <line x1="3" y1="9" x2="21" y2="9"></line>
+                        <line x1="9" y1="21" x2="9" y2="9"></line>
+                    </svg> Dashboards
+                </a></li>
+            <li><a href="/tabela_preco/criacao_tabela_preco.html" class="active">
+                    <svg class="os-nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M20.59 13.41l-7.17 7.17a2 2 0 0 1-2.83 0L2 12V2h10l8.59 8.59a2 2 0 0 1 0 2.82z"></path>
+                        <line x1="7" y1="7" x2="7.01" y2="7"></line>
+                    </svg> Tabela de Preço
+                </a></li>
+            <li><a href="/produto/produto.html">
+                    <svg class="os-nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path
+                            d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z" />
+                    </svg> Produtos
+                </a></li>
+            <li><a href="/clientes/cliente.html">
+                    <svg class="os-nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" />
+                        <circle cx="9" cy="7" r="4" />
+                        <path d="M23 21v-2a4 4 0 0 0-3-3.87" />
+                        <path d="M16 3.13a4 4 0 0 1 0 7.75" />
+                    </svg> Clientes
+                </a></li>
+            <li><a href="/pedido/pedido.html">
+                    <svg class="os-nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M6 2L3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z" />
+                    </svg> Consultar Pedidos
+                </a></li>
+            <li><a href="/gerenciar_tabelas/gerenciar_tabelas.html">
+                    <svg class="os-nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <rect x="3" y="3" width="7" height="7" />
+                        <rect x="14" y="3" width="7" height="7" />
+                    </svg> Atualizar Catálogo
+                </a></li>
+            <li><a href="/relatorios/relatorios.html">
+                    <svg class="os-nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
+                        <polyline points="14 2 14 8 20 8" />
+                        <line x1="16" y1="13" x2="8" y2="13" />
+                        <line x1="16" y1="17" x2="8" y2="17" />
+                        <polyline points="10 9 9 9 8 9" />
+                    </svg> Logística
+                </a></li>
+            <li><a href="/relatorios/relatorios_vendas.html">
+                    <svg class="os-nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <line x1="18" y1="20" x2="18" y2="10"></line>
+                        <line x1="12" y1="20" x2="12" y2="4"></line>
+                        <line x1="6" y1="20" x2="6" y2="14"></line>
+                    </svg> Relatórios
+                </a></li>
+        </ul>
+        <div class="os-sidebar-section">Sistema</div>
+        <ul>
+            <li><a href="/config_email/config_email.html">
+                    <svg class="os-nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z" />
+                    </svg> Configuração E-mail
+                </a></li>
+            <li><a href="/usuarios.html">
+                    <svg class="os-nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" />
+                        <circle cx="12" cy="7" r="4" />
+                    </svg> Usuários
+                </a></li>
+            <li><a href="#" onclick="window.Auth.openChangePasswordModal()">
+                    <svg class="os-nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <rect x="3" y="11" width="18" height="11" rx="2" ry="2" />
+                        <path d="M7 11V7a5 5 0 0 1 10 0v4" />
+                    </svg> Trocar Senha
+                </a></li>
+            <li><a href="#" onclick="window.Auth.logout()">
+                    <svg class="os-nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4" />
+                        <polyline points="16 17 21 12 16 7" />
+                        <line x1="21" y1="12" x2="9" y2="12" />
+                    </svg> Sair
+                </a></li>
+        </ul>
+    </nav>
+  <div class="os-sidebar-overlay" id="overlay"></div>
+
+  <div class="os-page-container"
+    style="padding: var(--os-space-4); padding-top: calc(var(--os-header-height) + var(--os-space-2));">
+
+    <!-- <h1>Criação de Tabela de Preço <span class="subtle">(etapa de conferência)</span></h1> -->
+    <!-- TOPO: Cabeçalho e parmetros globais -->
+
+    <section class="os-card" aria-labelledby="sec-topo">
+      <div class="section-header-flex">
+        <h2 id="sec-topo" class="os-section-title"
+          style="margin: 0; margin-top: 0; border-bottom: none; padding-bottom: 0;">Dados principais</h2>
+
+        <!-- Collapsed Summary (Hidden by default) -->
+        <div id="header-collapsed-summary" class="header-summary hidden">
+          <span id="summary-nome" class="fw-bold"></span>
+          <span class="sep">  </span>
+          <span id="summary-cliente" class="text-muted"></span>
+        </div>
+
+        <div class="header-info-group">
+          <div class="info-item">
+            <span class="info-label">Validade:</span>
+            <input id="validade_tabela" class="os-input" type="text" readonly tabindex="-1"
+              style="border: none; background: transparent; width: auto; max-width: 120px; padding: 0;" />
+          </div>
+          <div class="info-item">
+            <span class="info-label">Tempo:</span>
+            <input id="dias_restantes" class="os-input" type="text" readonly tabindex="-1"
+              style="border: none; background: transparent; width: auto; max-width: 120px; padding: 0;" />
+          </div>
+          <button id="btn-toggle-header" class="os-btn-icon" title="Ocultar cabeçalho">
+            <i class="bi bi-chevron-up"></i>
+          </button>
+        </div>
+      </div>
+
+      <div id="header-collapsible-area" class="expanded">
+        <div class="custom-grid" style="margin-top: var(--os-space-2);">
+
+          <!-- Buscar Tabela Base (Opcional) -->
+          <div class="os-form-group area-nome" style="flex: 1.5; min-width: 250px;">
+            <label class="os-label" for="tabela_base_id">Buscar Tabela de Preço (Opcional)</label>
+            <div style="display: flex; gap: var(--os-space-1);">
+                <input id="tabela_base_id" class="os-input" type="text" placeholder="ID da tabela para carregar preços..." />
+                <button id="btn-carregar-tabela" class="os-btn os-btn-secondary" title="Carregar produtos desta tabela">
+                    <i class="bi bi-search"></i> Carregar
+                </button>
+            </div>
+            <div id="tabela_suggestions" class="suggestions"></div>
+          </div>
+
+          <!-- Cliente (First, widest - left) -->
+          <div class="os-form-group area-cliente">
+            <label class="os-label" for="cliente_nome">Cliente (Obrigatório para o e-mail)</label>
+            <input id="cliente_nome" class="os-input" type="text" autocomplete="off"
+              placeholder="Digite o nome ou CNPJ..." />
+            <input id="codigo_cliente" type="hidden" />
+            <input id="ramo_juridico" type="hidden" />
+            <div id="cliente_suggestions" class="suggestions"></div>
+
+            <div class="os-checkbox-group" style="margin-top: var(--os-space-1);">
+              <input id="iva_st_toggle" type="checkbox" disabled />
+              <label for="iva_st_toggle" class="os-form-hint">Aplicar IVA_ST</label>
+            </div>
+          </div>
+
+          <!-- Markup (Third, auto width - far right) -->
+          <div class="os-form-group area-markup">
+            <div class="field">
+              <label class="os-label" for="markup_global">Markup Global %</label>
+              <div style="display: flex; flex-direction: column; gap: var(--os-space-1); align-items: flex-start;">
+                <input id="markup_global" class="os-input" style="width: 140px;" type="number" step="0.01" min="0"
+                  placeholder="0.00" />
+                <button class="os-btn os-btn-secondary os-btn-sm btn-enxuto" id="btn-aplicar-markup-todos">
+                  <i class="bi bi-check-all"></i> Aplicar a todos
+                </button>
+              </div>
+            </div>
+          </div>
+
+        </div>
+
+        <!-- Bottom (Condition / Discount) -->
+        <div class="grid-condition-discount"
+          style="border-top: 1px solid var(--os-border); padding-top: var(--os-space-3);">
+
+          <!-- Condição -->
+          <!-- Condição -->
+          <div class="os-form-group area-condicao">
+            <label class="os-label" for="plano_pagamento">Condição de Pagamento</label>
+            <div style="display: flex; gap: var(--os-space-1); align-items: center; margin-bottom: var(--os-space-1);">
+              <select id="plano_pagamento" class="os-select" style="flex: 1;"></select>
+              <span class="os-badge os-badge-default" style="white-space: nowrap;">Taxa: <strong id="pill-taxa"
+                  style="margin-left: 4px;">—</strong></span>
+            </div>
+            <button class="os-btn os-btn-secondary os-btn-sm btn-enxuto" id="btn-aplicar-condicao-todos">
+              <i class="bi bi-check-all"></i> Aplicar a todos
+            </button>
+          </div>
+
+          <!-- Desconto: Reordered -->
+          <div class="os-form-group area-desconto">
+            <label class="os-label" for="desconto_global">Desconto / Fator %</label>
+            <div style="display: flex; gap: var(--os-space-1); align-items: center; margin-bottom: var(--os-space-1);">
+              <select id="desconto_global" class="os-select" style="flex: 1;"></select>
+              <span class="os-badge os-badge-default" style="white-space: nowrap;">Fator: <strong id="pill-fator"
+                  style="margin-left: 4px;">—</strong><span>%</span></span>
+            </div>
+            <button class="os-btn os-btn-secondary os-btn-sm btn-enxuto" id="btn-aplicar-todos">
+              <i class="bi bi-check-all"></i> Aplicar a todos
+            </button>
+          </div>
+
+          <!-- Frete: Moved Here -->
+          <div class="os-form-group field-frete">
+            <label class="os-label" for="frete_kg">Frete/KG</label>
+            <input id="frete_kg" class="os-input" style="width: 140px;" type="text" inputmode="decimal"
+              pattern="[0-9]+([.,][0-9]*)?" placeholder="0.00" value="0"
+              oninput="this.value = this.value.replace(',', '.')" />
+          </div>
+
+          <!-- Observação: Novo -->
+          <div class="os-form-group area-obs" style="flex: 1; min-width: 200px;">
+            <label class="os-label" for="observacao">Observação</label>
+            <input id="observacao" class="os-input" type="text" maxlength="100" placeholder="Observação da tabela (máx 100 caracteres)" />
+          </div>
+
+        </div>
+      </div>
+    </section>
+
+    <div class="divider"></div>
+
+    <!-- BASE: Tabela de itens selecionados -->
+    <section class="os-card" style="margin-top: var(--os-space-3);" aria-labelledby="sec-itens">
+      <h2 id="sec-itens" class="os-section-title" style="margin-top: 0; border-bottom: none; padding-bottom: 0;">
+        Produtos do Pedido</h2>
+
+      <div class="toolbar desktop-only" id="toolbar-acoes">
+        <button id="btn-buscar" class="os-btn os-btn-primary">Buscar Produtos Manuais</button>
+        <button id="btn-remover-selecionados" class="os-btn os-btn-danger">Remover selecionados</button>
+        <button id="btn-salvar-pedido" class="os-btn os-btn-primary"
+          style="background-color: var(--os-success); border-color: var(--os-success);">Salvar e Gerar Pedido</button>
+      </div>
+
+      <div class="os-table-wrap desktop-only" style="max-height: 56vh;">
+        <table id="tabela-itens" class="os-table" style="margin-bottom: 0;">
+          <thead>
+            <tr>
+              <th><input id="chk-all" type="checkbox" /></th>
+              <th>Código</th>
+              <!-- Toggle Produto: controla Embalagem(4), Grupo(5), Peso(6) -->
+              <th class="th-toggle-prod">
+                <label class="st-toggle-in-th" title="Mostrar/ocultar detalhes do produto">
+                  <input id="prod-toggle" type="checkbox" />
+                  <span class="st-title">Descrição</span>
+                  <span class="chevron"><i class="bi bi-chevron-down"></i></span>
+                </label>
+              </th>
+              <th>Embalagem</th>
+              <th>Grupo / Depto.</th>
+              <th class="right">Peso Líq.</th>
+              <!-- NOVA COLUNA QUANTIDADE -->
+              <th class="right" style="width: 100px;">Qtde</th>
+              <th class="right">Valor Unitário</th>
+
+              <!-- Toggle Desconto: controla Desc. aplicado(9) -->
+              <th class="right th-toggle-desc">
+                <label class="st-toggle-in-th" title="Mostrar/ocultar valor do desconto">
+                  <input id="desc-toggle" type="checkbox" />
+                  <span class="st-title">Fator %</span>
+                  <span class="chevron"><i class="bi bi-chevron-down"></i></span>
+                </label>
+              </th>
+              <th class="right">Desc. aplicado (R$)</th>
+
+              <!-- Toggle Condição: controla Cond. Pagto R$(11) -->
+              <th class="th-toggle-cond">
+                <label class="st-toggle-in-th" title="Mostrar/ocultar valor da condição">
+                  <input id="cond-toggle" type="checkbox" />
+                  <span class="st-title">Cond. Pagto</span>
+                  <span class="chevron"><i class="bi bi-chevron-down"></i></span>
+                </label>
+              </th>
+              <th class="right">Cond. Pagto (R$)</th>
+              <th class="right">Frete (R$)</th>
+              <th class="right">IPI (R$)</th> <!-- foi IPI (%) -->
+              <th class="th-st">
+                <label class="st-toggle-in-th" title="Mostrar/ocultar detalhes de ST">
+                  <input id="st-toggle" type="checkbox" />
+                  <span class="st-title">Base ST (R$)</span>
+                  <span class="chevron"><i class="bi bi-chevron-down"></i></span>
+                </label>
+              </th> <!-- novo, no lugar do IVA_ST (%) -->
+              <th class="right">ICMS próprio (R$)</th> <!-- novo -->
+              <th class="right">ICMS ST cheio (R$)</th><!-- novo -->
+              <th class="right">ICMS ST a reter (R$)</th><!-- novo -->
+              <th class="right">Valor Final (R$)</th>
+              <th class="right">Valor s/ Frete (R$)</th>
+              <th class="right th-markup">
+                <label class="st-toggle-in-th" title="Mostrar/ocultar colunas de Markup">
+                  <input id="markup-cols-toggle" type="checkbox" />
+                  <span class="st-title">Markup %</span>
+                  <span class="chevron"><i class="bi bi-chevron-down"></i></span>
+                </label>
+              </th>
+              <th class="right col-mk-derived">Valor Final (Mk)</th>
+              <th class="right col-mk-derived">Valor s/ Frete (Mk)</th>
+            </tr>
+          </thead>
+          <tbody id="tbody-itens"></tbody>
+        </table>
+      </div>
+      <!-- Resumo Valores (Novo) -->
+      <div style="display: flex; justify-content: flex-end; margin-top: var(--os-space-3); padding-right: var(--os-space-2);">
+          <div style="background: var(--os-surface-hover); padding: var(--os-space-2) var(--os-space-3); border-radius: var(--os-radius-md); border: 1px solid var(--os-border); min-width: 300px;">
+              <div style="display: flex; justify-content: space-between; margin-bottom: 8px;">
+                  <span style="color: var(--os-text-secondary);">Total Itens:</span>
+                  <strong id="resumo-qtd-itens">0</strong>
+              </div>
+              <div style="display: flex; justify-content: space-between; margin-bottom: 8px;">
+                  <span style="color: var(--os-text-secondary);">Peso Total:</span>
+                  <strong id="resumo-peso">0,000 kg</strong>
+              </div>
+              <div style="display: flex; justify-content: space-between; margin-bottom: 8px;">
+                  <span style="color: var(--os-text-secondary);">Total sem Frete:</span>
+                  <strong id="resumo-total-sf">R$ 0,00</strong>
+              </div>
+              <div style="display: flex; justify-content: space-between; border-top: 1px dashed var(--os-border); padding-top: 8px;">
+                  <span style="color: var(--os-text); font-weight: 600;">Total com Frete:</span>
+                  <strong id="resumo-total-cf" style="color: var(--os-primary); font-size: 1.1em;">R$ 0,00</strong>
+              </div>
+          </div>
+      </div>
+    </section>
+
+    <!-- Container: Mobile Cards (injected via JS) -->
+    <div id="mobile-card-container" class="mobile-only mobile-card-list">
+      <!-- Cards will be rendered here -->
+      <div class="empty-state-mobile">
+        <p>Nenhum produto selecionado.</p>
+        <button id="btn-mobile-add-initial" class="btn btn-primary btn-sm">Adicionar Produtos</button>
+      </div>
+    </div>
+
+    <!-- Mobile Sticky Bottom Toolbar -->
+    <div class="mobile-toolbar mobile-only">
+      <div class="mobile-toolbar-content">
+        <div class="mobile-toolbar-info">
+          <span id="mobile-total-itens">0 itens</span>
+          <span id="mobile-total-valor">R$ 0,00</span>
+        </div>
+        <div class="mobile-toolbar-actions">
+          <button id="btn-mobile-list" class="btn-icon-mobile" title="Listar Tabelas" style="margin-right:auto"><i
+              class="bi bi-list-task"></i></button>
+
+          <!-- Actions Grouped -->
+          <button id="btn-mobile-add" class="btn-icon-mobile hidden" title="Adicionar Produto"><i
+              class="bi bi-plus-circle"></i></button>
+          <button id="btn-mobile-edit" class="btn-icon-mobile hidden" title="Editar"><i
+              class="bi bi-pencil"></i></button>
+          <button id="btn-mobile-dup" class="btn-icon-mobile hidden" title="Duplicar"><i
+              class="bi bi-files"></i></button>
+          <button id="btn-mobile-save" class="btn-primary-mobile"><i class="bi bi-floppy"></i> Salvar</button>
+
+          <!-- Cancel Moved to End -->
+          <button id="btn-mobile-cancel" class="btn-icon-mobile hidden" title="Cancelar"><i
+              class="bi bi-x-circle"></i></button>
+        </div>
+      </div>
+    </div>
+  </div>
+  <!-- Lógica totalmente externa -->
+</body>
+
+</html>
