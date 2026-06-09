@@ -1982,6 +1982,8 @@ function applyFiscalToRow(tr, f, fallbackItem = null) {
       tdsMk[1].textContent = fmtMoney(valSemMk);
     }
     setCell('.col-total', totalComercial);
+    const lineTotal = valFinMk * (item.quantidade || 1);
+    setCell('.col-linha-total', lineTotal);
   }
 
   item._totalComercial = Number(totalComercial || 0);
