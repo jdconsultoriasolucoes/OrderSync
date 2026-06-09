@@ -175,13 +175,14 @@
       </div>
 
       <div id="header-collapsible-area" class="expanded">
-        <div class="custom-grid" style="margin-top: var(--os-space-2);">
+        <div class="custom-grid" style="margin-top: 0;">
 
           <!-- Buscar Tabela Base (Opcional) -->
           <div class="os-form-group area-nome" style="flex: 1.5; min-width: 250px;">
-            <label class="os-label" for="tabela_base_id">Buscar Tabela de Preço (Opcional)</label>
+            <label class="os-label" for="tabela_base_nome">Buscar Tabela de Preço (Opcional)</label>
             <div style="display: flex; gap: var(--os-space-1);">
-                <input id="tabela_base_id" class="os-input" type="text" placeholder="ID da tabela..." readonly style="background-color: var(--os-bg-disabled); cursor: not-allowed; width: 120px;" />
+                <input id="tabela_base_nome" class="os-input" type="text" placeholder="Selecione uma tabela..." readonly style="background-color: var(--os-bg-disabled); cursor: not-allowed; width: 100%;" />
+                <input id="tabela_base_id" type="hidden" />
                 <button type="button" id="btn-carregar-tabela" class="os-btn os-btn-secondary" title="Buscar tabela de preço">
                     <i class="bi bi-search"></i> Buscar Tabela
                 </button>
@@ -221,8 +222,7 @@
         </div>
 
         <!-- Bottom (Condition / Discount) -->
-        <div class="grid-condition-discount"
-          style="border-top: 1px solid var(--os-border); padding-top: var(--os-space-3);">
+        <div class="grid-condition-discount">
 
           <!-- Condição -->
           <!-- Condição -->
@@ -277,7 +277,7 @@
         Produtos do Pedido</h2>
 
       <!-- Resumo Valores (Movido para cima) -->
-      <div style="display: flex; justify-content: flex-start; margin-bottom: var(--os-space-3); width: 100%;">
+      <div style="display: flex; justify-content: flex-start; margin-bottom: 8px; width: 100%;">
           <div style="background: var(--os-surface-hover); padding: 8px 12px; border-radius: var(--os-radius-md); border: 1px solid var(--os-border); min-width: 300px; display: flex; flex-direction: row; gap: var(--os-space-3); align-items: center;">
               <div style="display: flex; flex-direction: column;">
                   <span style="color: var(--os-text-secondary); font-size: 11px;">Total Itens</span>

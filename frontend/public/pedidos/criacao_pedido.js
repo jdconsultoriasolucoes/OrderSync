@@ -3772,8 +3772,10 @@ document.addEventListener('DOMContentLoaded', () => {
 
     const pickedId = sessionStorage.getItem('PICKER_TABELA_ID');
     if (pickedId) {
-        const inp = document.getElementById('tabela_base_id');
-        if (inp) inp.value = pickedId;
+        const inpId = document.getElementById('tabela_base_id');
+        const inpNome = document.getElementById('tabela_base_nome');
+        if (inpId) inpId.value = pickedId;
+        if (inpNome) inpNome.value = "Carregando...";
         sessionStorage.removeItem('PICKER_TABELA_ID');
         setTimeout(() => carregarTabelaBase(), 300); // Load automaticaly
     }
@@ -3794,6 +3796,12 @@ async function carregarTabelaBase(e) {
         if(!r.ok) throw new Error('Tabela não encontrada');
         const data = await r.json();
         
+        const inpNome = document.getElementById('tabela_base_nome');
+        if (inpNome) {
+             const nomeDaTabela = data.tabela ? data.tabela.nome_tabela : (data.nome_tabela || `Tabela #${id}`);
+             inpNome.value = nomeDaTabela;
+        }
+
         // Copiar produtos
         if(data.produtos && data.produtos.length > 0) {
             itens = data.produtos.map(p => {
