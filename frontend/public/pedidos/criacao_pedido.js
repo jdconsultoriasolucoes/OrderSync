@@ -1613,15 +1613,16 @@ function criarLinha(item, idx) {
 
 
   const tdGrupo = document.createElement('td'); tdGrupo.textContent = [item.grupo, item.departamento].filter(Boolean).join(' / ');
-  const tdFinal = document.createElement('td'); tdFinal.className = 'num col-total'; tdFinal.textContent = fmtMoney(item.valor || 0); tr.appendChild(tdFinal);
-  const tdTotalSemFrete = document.createElement('td'); tdTotalSemFrete.className = 'num col-total-sem-frete'; tdTotalSemFrete.textContent = '0,00'; tr.appendChild(tdTotalSemFrete);
+  const tdFinal = document.createElement('td'); tdFinal.className = 'num col-total'; tdFinal.textContent = fmtMoney(item.valor || 0); 
+  const tdLinhaTotal = document.createElement('td'); tdLinhaTotal.className = 'num col-linha-total'; tdLinhaTotal.style.fontWeight = 'bold'; tdLinhaTotal.style.color = 'var(--os-primary)'; tdLinhaTotal.style.backgroundColor = 'var(--os-surface-hover)'; tdLinhaTotal.textContent = fmtMoney((item.valor || 0) * (item.quantidade || 1));
+  const tdTotalSemFrete = document.createElement('td'); tdTotalSemFrete.className = 'num col-total-sem-frete'; tdTotalSemFrete.textContent = '0,00'; 
 
   tr.append(
     tdSel, tdCod, tdDesc, tdEmb, tdGrupo,
     tdPeso, tdValor, tdPercent, tdDescAplic,
     tdCondCod, tdCondVal,
     tdFrete,
-    tdIpiR$, tdBaseStR$, tdIcmsProp$, tdIcmsCheio$, tdIcmsReter$, tdQtd, tdFinal, tdTotalSemFrete,
+    tdIpiR$, tdBaseStR$, tdIcmsProp$, tdIcmsCheio$, tdIcmsReter$, tdQtd, tdFinal, tdLinhaTotal, tdTotalSemFrete,
     tdMarkup, // <--- MOVED TO END
     tdFinalMarkup, tdSemFreteMarkup // <--- ALREADY AT END
   );
@@ -1636,7 +1637,7 @@ async function recalcularLinhaComFiscal(item, codigo_cliente, forcarST, frete_li
     tipo: (item.tipo || "").toLowerCase(),
     peso_kg: Number(item.peso_liquido || 0),
     preco_unit: Number(item.valor || 0),
-    quantidade: item.quantidade || 1,
+    quantidade: 1, // FORCE UNIT CALCULATION
     desconto_linha: Number(item.desconto || 0),
     frete_linha: Number(frete_linha || 0),
   };
@@ -1704,7 +1705,7 @@ function buildFiscalInputsFromRow(tr, fallbackItem = null, idx = -1) {
     peso_kg: Number(peso_kg || 0),
     tipo: tipo,
     preco_unit: Number(precoBase || 0),
-    quantidade: item.quantidade || 1,
+    quantidade: 1, // FORCE UNIT CALCULATION
     desconto_linha: 0,
     frete_linha: Number(frete_linha || 0),
   };
@@ -1891,6 +1892,8 @@ async function recalcLinha(tr) {
     }
 
     setCell('.col-total', totalComercial);
+    const lineTotal = valFinMk * (item.quantidade || 1);
+    setCell('.col-linha-total', lineTotal);
     item._freteValor = Number(freteValor || 0);
     item._totalComercial = Number(totalComercial || 0);
     item.total_sem_frete = Math.max(0, item._totalComercial - item._freteValor);
