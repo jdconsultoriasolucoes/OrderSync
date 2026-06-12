@@ -2888,7 +2888,7 @@ document.addEventListener('DOMContentLoaded', () => {
     saveHeaderSnapshot();
     preparePickerBridgeBeforeNavigate();
     snapshotSelecionadosParaPicker();
-    sessionStorage.setItem('TP_RETURN_URL', '/pedidos/criacao_pedido.html');
+    sessionStorage.setItem('TP_RETURN_URL', '../pedidos/criacao_pedido.html');
     window.location.href = '../tabela_preco/tabela_preco.html';
   });
 
@@ -3813,7 +3813,7 @@ async function carregarTabelaBase(e) {
         const ctx = getCtxId();
         sessionStorage.setItem('TP_CTX_ID', ctx);
         sessionStorage.setItem(`TP_RETURN_MODE:${ctx}`, currentMode);
-        sessionStorage.setItem('PICKER_TABELA_RETURN_URL', '/pedidos/criacao_pedido.html');
+        sessionStorage.setItem('PICKER_TABELA_RETURN_URL', '../pedidos/criacao_pedido.html');
         window.location.href = '../tabela_preco/listar_tabelas.html?picker=true';
         return;
     }
