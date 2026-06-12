@@ -8,6 +8,8 @@ var API_BASE = window.API_BASE || window.location.origin;
 // DOM Elements
 const inDataInicio = document.getElementById("filtro-data-inicio");
 const inDataFim = document.getElementById("filtro-data-fim");
+const inFaturamentoInicio = document.getElementById("filtro-faturamento-inicio");
+const inFaturamentoFim = document.getElementById("filtro-faturamento-fim");
 const selFilial = document.getElementById("filtro-filial");
 const selCategoria = document.getElementById("filtro-categoria");
 const selStatus = document.getElementById("filtro-status");
@@ -46,6 +48,15 @@ function fmtMoney(val) {
 function fmtPeso(val) {
     if (val === null || val === undefined || val === "" || isNaN(parseFloat(val))) return "0 kg";
     return Math.round(parseFloat(val)).toLocaleString("pt-BR", { minimumFractionDigits: 0, maximumFractionDigits: 0 }) + " kg";
+}
+
+function fmtData(dateStr) {
+    if (!dateStr) return "-";
+    const parts = dateStr.split('-');
+    if (parts.length === 3) {
+        return `${parts[2]}/${parts[1]}/${parts[0]}`;
+    }
+    return dateStr;
 }
 
 document.addEventListener("DOMContentLoaded", async () => {
@@ -104,9 +115,11 @@ function alternarRelatorioUI() {
         // Cabeçalhos para Vendas por Cliente
         tableHeaders.innerHTML = `
             <tr>
+                <th>#</th>
                 <th data-sort="numero_pedido">Nº Pedido Sistema</th>
                 <th data-sort="pedido_supra">Pedido Supra</th>
                 <th data-sort="danfe">Danfe</th>
+                <th data-sort="data_faturamento">Data Faturamento</th>
                 <th data-sort="codigo_cliente">Código Cliente</th>
                 <th data-sort="cliente">Cliente</th>
                 <th data-sort="nome_fantasia">Nome Fantasia</th>
@@ -123,6 +136,7 @@ function alternarRelatorioUI() {
         // Cabeçalhos para Vendas por Produto
         tableHeaders.innerHTML = `
             <tr>
+                <th>#</th>
                 <th data-sort="codigo_produto">Código Produto</th>
                 <th data-sort="produto">Produto</th>
                 <th data-sort="embalagem">Embalagem</th>
@@ -209,6 +223,8 @@ async function buscarDadosRelatorio() {
     const queryParams = new URLSearchParams();
     if (inDataInicio.value) queryParams.append("data_inicio", inDataInicio.value);
     if (inDataFim.value) queryParams.append("data_fim", inDataFim.value);
+    if (inFaturamentoInicio.value) queryParams.append("faturamento_inicio", inFaturamentoInicio.value);
+    if (inFaturamentoFim.value) queryParams.append("faturamento_fim", inFaturamentoFim.value);
     if (selFilial.value) queryParams.append("filiais", selFilial.value);
     if (selCategoria.value) queryParams.append("categoria", selCategoria.value);
     if (selStatus.value) queryParams.append("status_list", selStatus.value);
@@ -257,16 +273,18 @@ function renderizarTabela() {
     let totalComFrete = 0;
 
     if (activeReport === "cliente") {
-        listagemVendas.forEach(item => {
+        listagemVendas.forEach((item, index) => {
             totalPeso += parseFloat(item.peso_liquido || 0);
             totalSemFrete += parseFloat(item.valor_sem_frete || 0);
             totalComFrete += parseFloat(item.valor_com_frete || 0);
 
             html += `
                 <tr>
+                    <td>${index + 1}</td>
                     <td><strong>${item.numero_pedido || "-"}</strong></td>
                     <td><strong>${item.pedido_supra || "-"}</strong></td>
                     <td>${item.danfe || "-"}</td>
+                    <td>${fmtData(item.data_faturamento)}</td>
                     <td>${item.codigo_cliente || "-"}</td>
                     <td>${item.cliente || "-"}</td>
                     <td>${item.nome_fantasia || "-"}</td>
@@ -280,10 +298,10 @@ function renderizarTabela() {
         
         tbody.innerHTML = html;
 
-        // Rodapé dinâmico Vendas por Cliente (colspan 7 para alinhar totais)
+        // Rodapé dinâmico Vendas por Cliente (colspan 9 para alinhar totais)
         tfoot.innerHTML = `
             <tr>
-                <td colspan="7">Total Acumulado</td>
+                <td colspan="9">Total Acumulado</td>
                 <td class="tar" id="total-peso">${fmtPeso(totalPeso)}</td>
                 <td class="tar col-money" id="total-valor-sem">${fmtMoney(totalSemFrete)}</td>
                 <td class="tar col-money" id="total-valor-com">${fmtMoney(totalComFrete)}</td>
@@ -291,13 +309,14 @@ function renderizarTabela() {
         `;
     } else {
         // Relatório de Vendas por Produto
-        listagemVendas.forEach(item => {
+        listagemVendas.forEach((item, index) => {
             totalPeso += parseFloat(item.peso_liquido_acumulado || 0);
             totalSemFrete += parseFloat(item.valor_sem_frete || 0);
             totalComFrete += parseFloat(item.valor_com_frete || 0);
 
             html += `
                 <tr>
+                    <td>${index + 1}</td>
                     <td><strong>${item.codigo_produto || "-"}</strong></td>
                     <td>${item.produto || "-"}</td>
                     <td>${item.embalagem || "-"}</td>
@@ -312,10 +331,10 @@ function renderizarTabela() {
 
         tbody.innerHTML = html;
 
-        // Rodapé dinâmico Vendas por Produto (colspan 5 para alinhar totais)
+        // Rodapé dinâmico Vendas por Produto (colspan 6 para alinhar totais)
         tfoot.innerHTML = `
             <tr>
-                <td colspan="5">Total Acumulado</td>
+                <td colspan="6">Total Acumulado</td>
                 <td class="tar" id="total-peso">${fmtPeso(totalPeso)}</td>
                 <td class="tar col-money" id="total-valor-sem">${fmtMoney(totalSemFrete)}</td>
                 <td class="tar col-money" id="total-valor-com">${fmtMoney(totalComFrete)}</td>
@@ -417,6 +436,8 @@ async function limparTodosFiltros() {
 
     inDataInicio.value = formatLocalDate(primeiroDia);
     inDataFim.value = formatLocalDate(hoje);
+    inFaturamentoInicio.value = "";
+    inFaturamentoFim.value = "";
     selFilial.value = "";
     selCategoria.value = "";
     selStatus.value = "";
@@ -445,10 +466,10 @@ function exportarExcel() {
     const clean = (txt) => txt ? String(txt).replace(/;/g, ",").replace(/"/g, '""').trim() : "-";
 
     if (activeReport === "cliente") {
-        csv = "Nº Pedido Sistema;Pedido Supra;Danfe;Código Cliente;Cliente;Nome Fantasia;Município;Peso Líquido (kg);Valor Sem Frete;Valor Com Frete\n";
+        csv = "#;Nº Pedido Sistema;Pedido Supra;Danfe;Data Faturamento;Código Cliente;Cliente;Nome Fantasia;Município;Peso Líquido (kg);Valor Sem Frete;Valor Com Frete\n";
         filename = "relatorio_vendas_por_cliente";
 
-        listagemVendas.forEach(item => {
+        listagemVendas.forEach((item, index) => {
             const p = parseFloat(item.peso_liquido || 0);
             const vs = parseFloat(item.valor_sem_frete || 0);
             const vc = parseFloat(item.valor_com_frete || 0);
@@ -457,17 +478,17 @@ function exportarExcel() {
             totalSemFrete += vs;
             totalComFrete += vc;
 
-            csv += `"${clean(item.numero_pedido)}";"${clean(item.pedido_supra)}";"${clean(item.danfe)}";"${clean(item.codigo_cliente)}";"${clean(item.cliente)}";"${clean(item.nome_fantasia)}";"${clean(item.municipio)}";"${Math.round(p)}";"${vs.toFixed(2).replace('.', ',')}";"${vc.toFixed(2).replace('.', ',')}"\n`;
+            csv += `"${index + 1}";"${clean(item.numero_pedido)}";"${clean(item.pedido_supra)}";"${clean(item.danfe)}";"${fmtData(item.data_faturamento)}";"${clean(item.codigo_cliente)}";"${clean(item.cliente)}";"${clean(item.nome_fantasia)}";"${clean(item.municipio)}";"${Math.round(p)}";"${vs.toFixed(2).replace('.', ',')}";"${vc.toFixed(2).replace('.', ',')}"\n`;
         });
 
-        csv += `"TOTAL ACUMULADO";"";"";"";"";"";"";"${Math.round(totalPeso)}";"${totalSemFrete.toFixed(2).replace('.', ',')}";"${totalComFrete.toFixed(2).replace('.', ',')}"\n`;
+        csv += `"TOTAL ACUMULADO";"";"";"";"";"";"";"";"";"${Math.round(totalPeso)}";"${totalSemFrete.toFixed(2).replace('.', ',')}";"${totalComFrete.toFixed(2).replace('.', ',')}"\n`;
 
     } else {
         // Vendas por Produto
-        csv = "Código Produto;Produto;Embalagem;Peso Líq. Unit. (kg);Quantidade;Peso Líq. Acumulado (kg);Valor Sem Frete;Valor Com Frete\n";
+        csv = "#;Código Produto;Produto;Embalagem;Peso Líq. Unit. (kg);Quantidade;Peso Líq. Acumulado (kg);Valor Sem Frete;Valor Com Frete\n";
         filename = "relatorio_vendas_por_produto";
 
-        listagemVendas.forEach(item => {
+        listagemVendas.forEach((item, index) => {
             const pu = parseFloat(item.peso_liquido_unitario || 0);
             const q = parseFloat(item.quantidade || 0);
             const pa = parseFloat(item.peso_liquido_acumulado || 0);
@@ -478,10 +499,10 @@ function exportarExcel() {
             totalSemFrete += vs;
             totalComFrete += vc;
 
-            csv += `"${clean(item.codigo_produto)}";"${clean(item.produto)}";"${clean(item.embalagem)}";"${Math.round(pu)}";"${q}";"${Math.round(pa)}";"${vs.toFixed(2).replace('.', ',')}";"${vc.toFixed(2).replace('.', ',')}"\n`;
+            csv += `"${index + 1}";"${clean(item.codigo_produto)}";"${clean(item.produto)}";"${clean(item.embalagem)}";"${Math.round(pu)}";"${q}";"${Math.round(pa)}";"${vs.toFixed(2).replace('.', ',')}";"${vc.toFixed(2).replace('.', ',')}"\n`;
         });
 
-        csv += `"TOTAL ACUMULADO";"";"";"";"";"${Math.round(totalPeso)}";"${totalSemFrete.toFixed(2).replace('.', ',')}";"${totalComFrete.toFixed(2).replace('.', ',')}"\n`;
+        csv += `"TOTAL ACUMULADO";"";"";"";"";"";"${Math.round(totalPeso)}";"${totalSemFrete.toFixed(2).replace('.', ',')}";"${totalComFrete.toFixed(2).replace('.', ',')}"\n`;
     }
 
     // Utiliza BOM (\ufeff) para forçar o Excel a interpretar os caracteres especiais em UTF-8 no Windows

@@ -381,6 +381,8 @@ def get_vendas_cliente_filtros(db: Session = Depends(get_db)):
 def get_vendas_cliente(
     data_inicio: Optional[str] = Query(None),
     data_fim: Optional[str] = Query(None),
+    faturamento_inicio: Optional[str] = Query(None),
+    faturamento_fim: Optional[str] = Query(None),
     filiais: Optional[List[str]] = Query(None),
     categoria: Optional[str] = Query(None), # "INSUMOS" ou "PET"
     status_list: Optional[List[str]] = Query(None),
@@ -393,6 +395,8 @@ def get_vendas_cliente(
     # Normalização de parâmetros para chamadas diretas em Python/testes
     if not isinstance(data_inicio, str): data_inicio = None
     if not isinstance(data_fim, str): data_fim = None
+    if not isinstance(faturamento_inicio, str): faturamento_inicio = None
+    if not isinstance(faturamento_fim, str): faturamento_fim = None
     if not isinstance(filiais, list): filiais = None
     if not isinstance(categoria, str): categoria = None
     if not isinstance(status_list, list): status_list = None
@@ -403,6 +407,7 @@ def get_vendas_cliente(
             p.id_pedido                             AS numero_pedido,
             p.pedido_supra                          AS pedido_supra,
             p.nota_fiscal                           AS danfe,
+            to_char(p.data_faturamento, 'YYYY-MM-DD') AS data_faturamento,
             p.codigo_cliente                        AS codigo_cliente,
             COALESCE(c.cadastro_nome_cliente, p.cliente) AS cliente,
             COALESCE(c.cadastro_nome_fantasia, 'Sem Nome Fantasia') AS nome_fantasia,
@@ -433,12 +438,20 @@ def get_vendas_cliente(
     params = {}
     
     if data_inicio:
-        query_str += " AND p.data_faturamento::date >= CAST(:data_inicio AS DATE)"
+        query_str += " AND p.created_at::date >= CAST(:data_inicio AS DATE)"
         params["data_inicio"] = data_inicio
         
     if data_fim:
-        query_str += " AND p.data_faturamento::date <= CAST(:data_fim AS DATE)"
+        query_str += " AND p.created_at::date <= CAST(:data_fim AS DATE)"
         params["data_fim"] = data_fim
+        
+    if faturamento_inicio:
+        query_str += " AND p.data_faturamento::date >= CAST(:faturamento_inicio AS DATE)"
+        params["faturamento_inicio"] = faturamento_inicio
+        
+    if faturamento_fim:
+        query_str += " AND p.data_faturamento::date <= CAST(:faturamento_fim AS DATE)"
+        params["faturamento_fim"] = faturamento_fim
         
     if filiais:
         query_str += " AND p.fornecedor = ANY(:filiais)"
@@ -475,6 +488,8 @@ def get_vendas_cliente(
 def get_vendas_produtos(
     data_inicio: Optional[str] = Query(None),
     data_fim: Optional[str] = Query(None),
+    faturamento_inicio: Optional[str] = Query(None),
+    faturamento_fim: Optional[str] = Query(None),
     filiais: Optional[List[str]] = Query(None),
     categoria: Optional[str] = Query(None), # "INSUMOS" ou "PET"
     status_list: Optional[List[str]] = Query(None),
@@ -488,6 +503,8 @@ def get_vendas_produtos(
     # Normalização de parâmetros para chamadas diretas em Python/testes
     if not isinstance(data_inicio, str): data_inicio = None
     if not isinstance(data_fim, str): data_fim = None
+    if not isinstance(faturamento_inicio, str): faturamento_inicio = None
+    if not isinstance(faturamento_fim, str): faturamento_fim = None
     if not isinstance(filiais, list): filiais = None
     if not isinstance(categoria, str): categoria = None
     if not isinstance(status_list, list): status_list = None
@@ -528,12 +545,20 @@ def get_vendas_produtos(
     params = {}
     
     if data_inicio:
-        query_str += " AND p.data_faturamento::date >= CAST(:data_inicio AS DATE)"
+        query_str += " AND p.created_at::date >= CAST(:data_inicio AS DATE)"
         params["data_inicio"] = data_inicio
         
     if data_fim:
-        query_str += " AND p.data_faturamento::date <= CAST(:data_fim AS DATE)"
+        query_str += " AND p.created_at::date <= CAST(:data_fim AS DATE)"
         params["data_fim"] = data_fim
+        
+    if faturamento_inicio:
+        query_str += " AND p.data_faturamento::date >= CAST(:faturamento_inicio AS DATE)"
+        params["faturamento_inicio"] = faturamento_inicio
+        
+    if faturamento_fim:
+        query_str += " AND p.data_faturamento::date <= CAST(:faturamento_fim AS DATE)"
+        params["faturamento_fim"] = faturamento_fim
         
     if filiais:
         query_str += " AND p.fornecedor = ANY(:filiais)"

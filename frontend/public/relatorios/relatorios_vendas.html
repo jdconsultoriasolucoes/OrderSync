@@ -130,10 +130,9 @@
 
     <!-- ========== MAIN CONTENT ========== -->
     <main class="os-main module-relatorios">
-        <div class="relatorios-container">
-            <!-- Sidebar Interna dos Relatórios -->
+        <div class="relatorios-container relatorios-top-nav-container">
+            <!-- Sidebar Interna dos Relatórios (agora no topo) -->
             <aside class="relatorios-sidebar">
-                <h3 class="relatorios-sidebar-title">Relatórios</h3>
                 <ul class="relatorios-menu" id="relatorios-menu-vendas">
                     <li><button data-report="cliente" class="active">Vendas por Cliente</button></li>
                     <li><button data-report="produto">Vendas por Produto</button></li>
@@ -150,20 +149,25 @@
 
                 <!-- PAINEL DE FILTROS AVANÇADOS -->
                 <div class="filtros-grid-panel">
-                    <div class="filtro-campo">
-                        <label class="os-label">Período De</label>
-                        <input type="date" id="filtro-data-inicio" class="os-input">
+                    <!-- 1. Período Abertura -->
+                    <div class="filtro-campo filtro-duplo">
+                        <label class="os-label">Período Abertura</label>
+                        <div class="duplo-inputs">
+                            <input type="date" id="filtro-data-inicio" class="os-input" title="Abertura De">
+                            <span class="duplo-separador">até</span>
+                            <input type="date" id="filtro-data-fim" class="os-input" title="Abertura Até">
+                        </div>
                     </div>
-                    <div class="filtro-campo">
-                        <label class="os-label">Período Até</label>
-                        <input type="date" id="filtro-data-fim" class="os-input">
-                    </div>
+                    
+                    <!-- 2. Filial -->
                     <div class="filtro-campo">
                         <label class="os-label">Filial (Fornecedor)</label>
                         <select id="filtro-filial" class="os-select">
                             <option value="">Todas as Filiais</option>
                         </select>
                     </div>
+                    
+                    <!-- 3. Categoria -->
                     <div class="filtro-campo">
                         <label class="os-label">Categoria</label>
                         <select id="filtro-categoria" class="os-select">
@@ -172,18 +176,34 @@
                             <option value="PET">Pets</option>
                         </select>
                     </div>
-                    <div class="filtro-campo">
-                        <label class="os-label">Status do Pedido</label>
-                        <select id="filtro-status" class="os-select">
-                            <option value="">Todos os Status</option>
-                        </select>
-                    </div>
+                    
+                    <!-- 4. Município -->
                     <div class="filtro-campo">
                         <label class="os-label">Município</label>
                         <select id="filtro-municipio" class="os-select">
                             <option value="">Todos os Municípios</option>
                         </select>
                     </div>
+                    
+                    <!-- 5. Status do Pedido -->
+                    <div class="filtro-campo">
+                        <label class="os-label">Status do Pedido</label>
+                        <select id="filtro-status" class="os-select">
+                            <option value="">Todos os Status</option>
+                        </select>
+                    </div>
+                    
+                    <!-- 6. Período Faturamento -->
+                    <div class="filtro-campo filtro-duplo">
+                        <label class="os-label">Período Faturamento</label>
+                        <div class="duplo-inputs">
+                            <input type="date" id="filtro-faturamento-inicio" class="os-input" title="Faturamento De">
+                            <span class="duplo-separador">até</span>
+                            <input type="date" id="filtro-faturamento-fim" class="os-input" title="Faturamento Até">
+                        </div>
+                    </div>
+
+                    <!-- 7. Grupo (Marca) -->
                     <div class="filtro-campo" id="campo-filtro-grupo" style="display: none;">
                         <label class="os-label">Grupo (Marca)</label>
                         <select id="filtro-grupo" class="os-select">
@@ -225,9 +245,11 @@
                     <table class="os-table" id="tabela-vendas">
                         <thead>
                             <tr>
+                                <th>#</th>
                                 <th>Nº Pedido Sistema</th>
                                 <th>Pedido Supra</th>
                                 <th>Danfe</th>
+                                <th>Data Faturamento</th>
                                 <th>Código Cliente</th>
                                 <th>Cliente</th>
                                 <th>Nome Fantasia</th>
@@ -242,7 +264,7 @@
                         </tbody>
                         <tfoot id="vendas-tfoot">
                             <tr>
-                                <td colspan="7">Total Acumulado</td>
+                                <td colspan="9">Total Acumulado</td>
                                 <td class="tar" id="total-peso">0,000 kg</td>
                                 <td class="tar col-money" id="total-valor-sem">R$ 0,00</td>
                                 <td class="tar col-money" id="total-valor-com">R$ 0,00</td>

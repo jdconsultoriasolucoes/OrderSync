@@ -138,4 +138,89 @@
     text-align: right !important;
 }
 
+/* =========================================
+   Layout Top Navigation (Override global)
+   ========================================= */
+.relatorios-top-nav-container {
+    display: flex !important;
+    flex-direction: column !important;
+    gap: var(--os-space-3) !important;
+}
 
+.relatorios-top-nav-container .relatorios-sidebar {
+    position: static !important;
+    width: 100% !important;
+    padding: 0 !important;
+    background: transparent !important;
+    border: none !important;
+    box-shadow: none !important;
+}
+
+.relatorios-top-nav-container .relatorios-menu {
+    flex-direction: row !important;
+    flex-wrap: wrap;
+    gap: 8px;
+    border-bottom: 2px solid var(--os-border);
+    padding-bottom: 8px;
+}
+
+.relatorios-top-nav-container .relatorios-menu button {
+    width: auto !important;
+    padding: 10px 20px !important;
+    background: var(--os-bg-white);
+    border: 1px solid var(--os-border);
+    border-bottom: none;
+    border-radius: var(--os-radius-lg) var(--os-radius-lg) 0 0;
+    color: var(--os-text-secondary);
+    font-weight: 600;
+    transition: all 0.2s ease;
+    margin-bottom: -10px; /* Puxa para cima da borda inferior */
+}
+
+.relatorios-top-nav-container .relatorios-menu button:hover {
+    color: var(--os-primary);
+    background: #f8fafc;
+}
+
+.relatorios-top-nav-container .relatorios-menu button.active {
+    background: var(--os-primary-light);
+    color: var(--os-primary);
+    border-color: rgba(var(--os-primary-rgb), 0.2);
+    box-shadow: 0 -2px 0 var(--os-primary) inset;
+}
+
+/* =========================================
+   Filtros Duplos (Datas)
+   ========================================= */
+.filtro-duplo {
+    grid-column: span 2;
+}
+
+.duplo-inputs {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.duplo-inputs .os-input {
+    flex: 1;
+}
+
+.duplo-separador {
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--os-text-muted);
+}
+
+@media (max-width: 600px) {
+    .filtro-duplo {
+        grid-column: span 1;
+    }
+    .duplo-inputs {
+        flex-direction: column;
+        align-items: stretch;
+    }
+    .duplo-separador {
+        display: none;
+    }
+}

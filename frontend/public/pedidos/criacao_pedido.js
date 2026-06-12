@@ -180,6 +180,8 @@ function getHeaderSnapshot() {
   return {
     // visuais
     nome_tabela: val("nome_tabela"),
+    tabela_base_nome: val("tabela_base_nome"),
+    tabela_base_id: val("tabela_base_id"),
     cliente: val("cliente_nome"),   // texto mostrado no input
     // ocultos/importantes
     codigo_cliente: val("codigo_cliente"),
@@ -221,6 +223,8 @@ function restoreHeaderSnapshotIfNew(force = false) {
 
     // ---- Cabeçalho básico
     set('nome_tabela', snap.nome_tabela);
+    set('tabela_base_nome', snap.tabela_base_nome);
+    set('tabela_base_id', snap.tabela_base_id);
     set('cliente_nome', snap.cliente);
     set('codigo_cliente', snap.codigo_cliente);
     set('ramo_juridico', snap.ramo_juridico);
@@ -572,7 +576,7 @@ function onDuplicar() {
   currentTabelaId = null;      // POST
 
   // 🧽 Limpa TODO o cabeçalho (nome e cliente)
-  const nome = document.getElementById('nome_tabela');
+  const nome = document.getElementById('nome_tabela') || document.getElementById('tabela_base_nome');
   const cli = document.getElementById('cliente_nome');
   const cod = document.getElementById('codigo_cliente');
   const ramo = document.getElementById('ramo_juridico');
@@ -1087,7 +1091,10 @@ async function carregarItens() {
       const r = await fetch(`${API_BASE}/tabela_preco/${id}`);
       if (r.ok) {
         const t = await r.json();
-      document.getElementById('nome_tabela').value = t.nome_tabela || '';
+      const elNomeTabela = document.getElementById('nome_tabela');
+      if (elNomeTabela) elNomeTabela.value = t.nome_tabela || '';
+      const elBaseNome = document.getElementById('tabela_base_nome');
+      if (elBaseNome) elBaseNome.value = t.nome_tabela || '';
       document.getElementById('cliente_nome').value = t.cliente_nome || t.cliente || '';
       document.getElementById('ramo_juridico').value = t.ramo_juridico || '';
       document.getElementById('observacao').value = t.observacao || ''; // ✅ Restore Observação
@@ -2523,10 +2530,19 @@ function refreshToolbarEnablement() {
 function limparFormularioCabecalho() {
   clearFullSnapshot();
   // Campos principais
-  document.getElementById('nome_tabela').value = '';
-  document.getElementById('cliente_nome').value = '';
-  document.getElementById('codigo_cliente').value = '';
-  document.getElementById('observacao').value = '';
+  const elNomeTabela = document.getElementById('nome_tabela');
+  if (elNomeTabela) elNomeTabela.value = '';
+  const elBaseNome = document.getElementById('tabela_base_nome');
+  if (elBaseNome) elBaseNome.value = '';
+  const elBaseId = document.getElementById('tabela_base_id');
+  if (elBaseId) elBaseId.value = '';
+
+  const elClienteNome = document.getElementById('cliente_nome');
+  if (elClienteNome) elClienteNome.value = '';
+  const elCodigoCliente = document.getElementById('codigo_cliente');
+  if (elCodigoCliente) elCodigoCliente.value = '';
+  const elObservacao = document.getElementById('observacao');
+  if (elObservacao) elObservacao.value = '';
 
   // Parâmetros globais
   const frete = document.getElementById('frete_kg');
@@ -2615,7 +2631,10 @@ async function onCancelar(e) {
           const t = await r.json();
 
           // repõe cabeçalho
-          document.getElementById('nome_tabela').value = t.nome_tabela || '';
+          const elNomeTabela = document.getElementById('nome_tabela');
+          if (elNomeTabela) elNomeTabela.value = t.nome_tabela || '';
+          const elBaseNome = document.getElementById('tabela_base_nome');
+          if (elBaseNome) elBaseNome.value = t.nome_tabela || '';
           document.getElementById('cliente_nome').value = t.cliente_nome || t.cliente || '';
           document.getElementById('codigo_cliente').value = t.codigo_cliente || '';
           document.getElementById('ramo_juridico').value = t.ramo_juridico || '';
@@ -2776,7 +2795,7 @@ document.addEventListener('DOMContentLoaded', () => {
   document.getElementById('btn-listar')?.addEventListener('click', () => { goToListarTabelas(); });
 
   // Disparar validação do botão salvar ao digitar nos campos obrigatórios
-  ['nome_tabela', 'cliente_nome'].forEach(id => {
+  ['nome_tabela', 'tabela_base_nome', 'cliente_nome'].forEach(id => {
     document.getElementById(id)?.addEventListener('input', () => {
       if (typeof refreshToolbarEnablement === 'function') refreshToolbarEnablement();
     });
@@ -2880,8 +2899,7 @@ document.addEventListener('DOMContentLoaded', () => {
   // handler único (sem aninhar addEventListener dentro de outro)
   (() => {
     const btnsSalvar = [
-      document.getElementById('btn-salvar'),
-      document.getElementById('btn-mobile-save')
+      document.getElementById('btn-salvar')
     ].filter(Boolean);
 
     if (btnsSalvar.length === 0) return;
@@ -3764,6 +3782,10 @@ document.addEventListener('DOMContentLoaded', () => {
     if(btnSalvar) {
         btnSalvar.addEventListener('click', salvarPedido);
     }
+    const btnMobileSave = document.getElementById('btn-mobile-save');
+    if(btnMobileSave) {
+        btnMobileSave.addEventListener('click', salvarPedido);
+    }
     
     const btnCarregar = document.getElementById('btn-carregar-tabela');
     if(btnCarregar) {
@@ -3785,6 +3807,10 @@ async function carregarTabelaBase(e) {
     if(e) e.preventDefault();
     const id = document.getElementById('tabela_base_id')?.value?.trim();
     if(!id) {
+        saveHeaderSnapshot();
+        const ctx = getCtxId();
+        sessionStorage.setItem('TP_CTX_ID', ctx);
+        sessionStorage.setItem(`TP_RETURN_MODE:${ctx}`, currentMode);
         sessionStorage.setItem('PICKER_TABELA_RETURN_URL', '/pedidos/criacao_pedido.html');
         window.location.href = '../tabela_preco/listar_tabelas.html?picker=true';
         return;
@@ -3800,6 +3826,43 @@ async function carregarTabelaBase(e) {
         if (inpNome) {
              const nomeDaTabela = data.tabela ? data.tabela.nome_tabela : (data.nome_tabela || `Tabela #${id}`);
              inpNome.value = nomeDaTabela;
+        }
+
+        const first = (Array.isArray(data.produtos) && data.produtos.length) ? data.produtos[0] : null;
+
+        // Copiar configurações da tabela base para o formulário
+        const freteInput = document.getElementById('frete_kg');
+        if (freteInput) {
+            const freteVal = first?.frete_kg ?? 0;
+            freteInput.value = String(freteVal);
+        }
+
+        const planoSel = document.getElementById('plano_pagamento');
+        if (planoSel && first) {
+            const planoVal = data.codigo_plano_pagamento ?? first.codigo_plano_pagamento ?? '';
+            if (planoVal) {
+                const opt = Array.from(planoSel.options)
+                    .find(o => (o.textContent || '').trim() === String(planoVal).trim() || o.value === String(planoVal));
+                if (opt) planoSel.value = opt.value;
+            } else {
+                planoSel.value = '';
+            }
+            atualizarPillTaxa();
+        }
+
+        const mkInput = document.getElementById('markup_global');
+        if (mkInput) {
+            const mkVal = first?.markup ?? 0;
+            mkInput.value = Number(mkVal).toFixed(2);
+            window.currentClientMarkup = Number(mkVal);
+        }
+
+        const cliInput = document.getElementById('cliente_nome');
+        const codInput = document.getElementById('codigo_cliente');
+        if (cliInput && !cliInput.value && data.cliente) {
+            cliInput.value = data.cliente;
+            if (codInput) codInput.value = data.codigo_cliente || '';
+            enforceIvaLockByCliente?.();
         }
 
         // Copiar produtos
@@ -3866,12 +3929,18 @@ async function salvarPedido() {
         })
     };
 
-    try {
-        btnSalvar = document.getElementById('btn-salvar-pedido');
-        btnSalvar.disabled = true;
-        btnSalvar.textContent = "Gerando...";
+    const btnsSalvar = [
+        document.getElementById('btn-salvar-pedido'),
+        document.getElementById('btn-mobile-save')
+    ].filter(Boolean);
 
-        const r = await fetch(`${API_BASE}/pedidos/admin_criar`, {
+    try {
+        btnsSalvar.forEach(b => {
+            b.disabled = true;
+            if (b.id === 'btn-salvar-pedido') b.textContent = "Gerando...";
+        });
+
+        const r = await fetch(`${API_BASE}/api/pedidos/admin_criar`, {
             method: 'POST',
             headers: {'Content-Type': 'application/json'},
             body: JSON.stringify(payload)
@@ -3887,17 +3956,25 @@ async function salvarPedido() {
         
         // Limpar tela
         itens = [];
-        document.getElementById('cliente_nome').value = '';
-        document.getElementById('codigo_cliente').value = '';
+        const elClienteNome = document.getElementById('cliente_nome');
+        if (elClienteNome) elClienteNome.value = '';
+        const elCodigoCliente = document.getElementById('codigo_cliente');
+        if (elCodigoCliente) elCodigoCliente.value = '';
+        
+        const elBaseNome = document.getElementById('tabela_base_nome');
+        if (elBaseNome) elBaseNome.value = '';
+        const elBaseId = document.getElementById('tabela_base_id');
+        if (elBaseId) elBaseId.value = '';
+        
         renderTabela();
         atualizarResumoPedido();
         
     } catch(err) {
         alert(err.message);
     } finally {
-        if(btnSalvar) {
-            btnSalvar.disabled = false;
-            btnSalvar.textContent = "Salvar e Gerar Pedido";
-        }
+        btnsSalvar.forEach(b => {
+            b.disabled = false;
+            if (b.id === 'btn-salvar-pedido') b.textContent = "Salvar e Gerar Pedido";
+        });
     }
 }
