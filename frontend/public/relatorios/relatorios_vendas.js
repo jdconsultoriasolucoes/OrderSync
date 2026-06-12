@@ -117,7 +117,7 @@ function alternarRelatorioUI() {
             <tr>
                 <th>#</th>
                 <th data-sort="numero_pedido">Nº Pedido Sistema</th>
-                <th data-sort="pedido_supra">Pedido Supra</th>
+                <th data-sort="pedido_supra" class="col-pedido-supra">Pedido Supra</th>
                 <th data-sort="danfe">Danfe</th>
                 <th data-sort="data_faturamento">Data Faturamento</th>
                 <th data-sort="codigo_cliente">Código Cliente</th>
@@ -282,7 +282,7 @@ function renderizarTabela() {
                 <tr>
                     <td>${index + 1}</td>
                     <td><strong>${item.numero_pedido || "-"}</strong></td>
-                    <td><strong>${item.pedido_supra || "-"}</strong></td>
+                    <td class="col-pedido-supra"><strong>${item.pedido_supra || "-"}</strong></td>
                     <td>${item.danfe || "-"}</td>
                     <td>${fmtData(item.data_faturamento)}</td>
                     <td>${item.codigo_cliente || "-"}</td>

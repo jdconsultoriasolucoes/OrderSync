@@ -1,5 +1,11 @@
 /* relatorios_vendas.css */
 
+.relatorios-container {
+    max-width: 1400px;
+    width: 100%;
+    margin: 0 auto;
+}
+
 .filtros-grid-panel {
     display: grid;
     grid-template-columns: repeat(4, 1fr);
@@ -222,5 +228,41 @@
     }
     .duplo-separador {
         display: none;
+    }
+}
+
+/* =========================================
+   Ajuste Fino - Pedido Supra
+   ========================================= */
+.col-pedido-supra {
+    min-width: 120px !important;
+    white-space: nowrap !important;
+}
+
+/* =========================================
+   Layout Filtros em 1 Linha (Desktop)
+   ========================================= */
+@media (min-width: 993px) {
+    .filtros-grid-panel {
+        display: flex !important;
+        flex-wrap: nowrap !important;
+        align-items: flex-end !important;
+        gap: 8px !important;
+        overflow-x: auto;
+        padding-bottom: 4px;
+    }
+    
+    .filtros-grid-panel .filtro-campo {
+        flex: 1;
+        min-width: 110px;
+    }
+    
+    .filtros-grid-panel .filtro-duplo {
+        flex: 1.5;
+        min-width: 190px;
+    }
+    
+    .duplo-inputs .os-input {
+        padding: 6px 4px !important; /* Mais enxuto horizontalmente */
     }
 }
