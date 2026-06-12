@@ -868,7 +868,7 @@ def admin_criar_pedido(body: AdminCriarPedidoRequest, db: Session = Depends(get_
             criado_em, atualizado_em, created_at
         )
         VALUES (
-            :codigo_cliente, :cliente, :tabela_preco_id, NULL,
+            :codigo_cliente, :cliente, :tabela_preco_id, :tabela_preco_nome,
             :usar_valor_com_frete, CAST(:itens AS jsonb),
             :peso_total_kg, :frete_total, 0, :total_sem_frete, :total_com_frete, :total_pedido,
             :observacoes, 'Orçamento', :confirmado_em,
@@ -880,10 +880,19 @@ def admin_criar_pedido(body: AdminCriarPedidoRequest, db: Session = Depends(get_
     
     tid = body.tabela_preco_id if body.tabela_preco_id and str(body.tabela_preco_id).strip() else None
     
+    tabela_id_final = int(tid) if tid and tid.isdigit() else 0
+    tabela_nome_final = "Criação manual"
+    
+    if tabela_id_final > 0:
+        nome_db = db.execute(text("SELECT nome_tabela FROM tb_tabela_preco WHERE id_tabela = :tid LIMIT 1"), {"tid": tabela_id_final}).scalar()
+        if nome_db:
+            tabela_nome_final = nome_db
+            
     params = {
         "codigo_cliente": body.codigo_cliente[:80],
         "cliente": body.cliente.strip(),
-        "tabela_preco_id": int(tid) if tid and tid.isdigit() else None,
+        "tabela_preco_id": tabela_id_final,
+        "tabela_preco_nome": tabela_nome_final,
         "usar_valor_com_frete": body.usar_valor_com_frete,
         "itens": json.dumps([i.dict() for i in body.produtos]),
         "peso_total_kg": round(peso_total_kg, 3),
