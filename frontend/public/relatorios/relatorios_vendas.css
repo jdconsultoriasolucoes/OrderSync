@@ -265,4 +265,10 @@
     .duplo-inputs .os-input {
         padding: 6px 4px !important; /* Mais enxuto horizontalmente */
     }
+    
+    .filtros-actions-container {
+        width: 100%;
+        margin-top: 16px;
+        padding-top: 12px;
+    }
 }
