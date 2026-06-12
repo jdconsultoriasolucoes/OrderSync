@@ -823,6 +823,12 @@ function setupClienteAutocomplete() {
       if (ramoEl) ramoEl.value = c.ramo_juridico ?? c.ramo ?? '';
       window.currentClientMarkup = Number(c.markup || 0); // Sets default markup global
 
+      const freteEl = document.getElementById('frete_kg');
+      if (freteEl) {
+          freteEl.value = String(c.frete_kg ?? c.frete ?? 0);
+          freteEl.dispatchEvent(new Event('input', { bubbles: true }));
+      }
+
       // Apply markup to all existing items
       if (itens && itens.length > 0) {
         itens.forEach(it => {
@@ -881,7 +887,8 @@ function setupClienteAutocomplete() {
       nome: c.nome_cliente ?? c.nomeCliente ?? c.NOME_CLIENTE ?? c.nome ?? c.razao ?? c.razao_social ?? c.razaoSocial ?? c.fantasia ?? '',
       cnpj: c.cnpj ?? c.CNPJ ?? c.cnpj_cpf ?? c.cnpjCpf ?? '',
       ramo_juridico: c.ramo_juridico ?? '',
-      markup: c.cadastro_markup ?? 0 // Map markup from backend
+      markup: c.cadastro_markup ?? 0, // Map markup from backend
+      frete_kg: c.frete_padrao ?? 0
     })).filter(c => (c.nome || c.cnpj));
 
     // 🔎 filtro FINAL no front (sempre), por nome ou CNPJ
@@ -3041,12 +3048,7 @@ document.addEventListener('DOMContentLoaded', () => {
     // 🔒 Se tem id na URL (edição/visualização), NÃO limpe/restaure snapshot agora
     // EXCETO se estivermos VOLTANDO do picker (returnMode existe) -> aí queremos restaurar o estado visual anterior
     if (!temIdNaUrl || returnMode) {
-      if (__IS_RELOAD) {
-        // Se for reload, talvez não devêssemos limpar se tiver returnMode? 
-        // Por segurança, se for reload real, limpa. Mas se for navegação, restaura.
-        // O __IS_RELOAD detecta F5. Se for F5, ok limpar.
-        if (!__IS_RELOAD) restoreHeaderSnapshotIfNew(true);
-      } else {
+      if (!__IS_RELOAD || returnMode) {
         restoreHeaderSnapshotIfNew(true);
       }
     }

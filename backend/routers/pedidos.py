@@ -421,7 +421,7 @@ def resumo_pedido(id_pedido: int, db: Session = Depends(get_db)):
 
     return PedidoResumo(**head_dict)
 
-@router.put("/{id_pedido}")
+@router.put("/{id_pedido:int}")
 def atualizar_pedido(
     id_pedido: int,
     body: PedidoUpdateRequest,
