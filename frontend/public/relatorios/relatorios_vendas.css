@@ -204,18 +204,13 @@
 
 .duplo-inputs {
     display: flex;
-    align-items: center;
-    gap: 8px;
-}
-
-.duplo-inputs .os-input {
-    flex: 1;
+    flex-direction: column;
+    gap: 4px;
+    align-items: stretch;
 }
 
 .duplo-separador {
-    font-size: 13px;
-    font-weight: 600;
-    color: var(--os-text-muted);
+    display: none;
 }
 
 @media (max-width: 600px) {
@@ -258,8 +253,8 @@
     }
     
     .filtros-grid-panel .filtro-duplo {
-        flex: 1.5;
-        min-width: 190px;
+        flex: 1;
+        min-width: 130px;
     }
     
     .duplo-inputs .os-input {
