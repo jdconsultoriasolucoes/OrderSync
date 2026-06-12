@@ -1,8 +1,8 @@
 /* relatorios_vendas.css */
 
 .relatorios-container {
-    max-width: 1400px;
-    width: 100%;
+    max-width: 1800px;
+    width: 98%;
     margin: 0 auto;
 }
 
@@ -245,10 +245,10 @@
 @media (min-width: 993px) {
     .filtros-grid-panel {
         display: flex !important;
-        flex-wrap: nowrap !important;
+        flex-wrap: wrap !important;
         align-items: flex-end !important;
+        justify-content: flex-start;
         gap: 8px !important;
-        overflow-x: auto;
         padding-bottom: 4px;
     }
     
