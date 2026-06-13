@@ -362,7 +362,7 @@ def get_vendas_cliente_filtros(db: Session = Depends(get_db)):
     municipios = db.execute(municipios_query).scalars().all()
     
     # 3. Status de Pedidos
-    status_query = text("SELECT DISTINCT status FROM public.tb_pedidos WHERE status IS NOT NULL AND status != '' ORDER BY status")
+    status_query = text("SELECT DISTINCT status FROM public.tb_pedidos WHERE status IS NOT NULL AND status != '' AND UPPER(status) NOT LIKE '%CANCEL%' ORDER BY status")
     status = db.execute(status_query).scalars().all()
     
     # 4. Grupos (marcas) de Produtos
@@ -432,7 +432,7 @@ def get_vendas_cliente(
             END                                     AS valor_com_frete
         FROM public.tb_pedidos p
         LEFT JOIN public.t_cadastro_cliente_v2 c ON c.cadastro_codigo_da_empresa::text = p.codigo_cliente
-        WHERE 1=1
+        WHERE UPPER(p.status) NOT LIKE '%CANCEL%'
     """
     
     params = {}
@@ -539,7 +539,7 @@ def get_vendas_produtos(
         JOIN public.tb_pedidos p ON p.id_pedido = i.id_pedido
         LEFT JOIN public.t_cadastro_cliente_v2 c ON c.cadastro_codigo_da_empresa::text = p.codigo_cliente
         LEFT JOIN public.t_cadastro_produto_v2 pr ON pr.codigo_supra = i.codigo
-        WHERE i.quantidade > 0
+        WHERE i.quantidade > 0 AND UPPER(p.status) NOT LIKE '%CANCEL%'
     """
     
     params = {}
