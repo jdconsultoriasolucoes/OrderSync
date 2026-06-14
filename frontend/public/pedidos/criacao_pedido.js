@@ -3798,13 +3798,22 @@ document.addEventListener('DOMContentLoaded', () => {
         btnCarregar.addEventListener('click', carregarTabelaBase);
     }
 
-    const pickedId = sessionStorage.getItem('PICKER_TABELA_ID');
+    const qParams = new URLSearchParams(window.location.search);
+    const pickedId = qParams.get('picker_tabela_id') || sessionStorage.getItem('PICKER_TABELA_ID');
     if (pickedId) {
         const inpId = document.getElementById('tabela_base_id');
         const inpNome = document.getElementById('tabela_base_nome');
         if (inpId) inpId.value = pickedId;
         if (inpNome) inpNome.value = "Carregando...";
         sessionStorage.removeItem('PICKER_TABELA_ID');
+        
+        // Clean up URL
+        if (qParams.has('picker_tabela_id')) {
+            qParams.delete('picker_tabela_id');
+            const newUrl = window.location.pathname + (qParams.toString() ? '?' + qParams.toString() : '');
+            window.history.replaceState({}, document.title, newUrl);
+        }
+
         setTimeout(() => carregarTabelaBase(), 300); // Load automaticaly
     }
 });

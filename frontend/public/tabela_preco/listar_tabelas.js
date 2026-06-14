@@ -296,7 +296,8 @@ window.abrirModalDelecao = abrirModalDelecao;
 function selecionarParaPicker(id) {
   sessionStorage.setItem('PICKER_TABELA_ID', id);
   const returnUrl = sessionStorage.getItem('PICKER_TABELA_RETURN_URL') || '../pedidos/criacao_pedido.html';
-  window.location.href = returnUrl;
+  const separator = returnUrl.includes('?') ? '&' : '?';
+  window.location.href = returnUrl + separator + 'picker_tabela_id=' + id;
 }
 window.selecionarParaPicker = selecionarParaPicker;
 
