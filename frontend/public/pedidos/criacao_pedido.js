@@ -1378,6 +1378,16 @@ function criarLinha(item, idx) {
       itens[idx].quantidade = Number(inpQtd.value) || 0;
       recalcTudo();
   });
+  inpQtd.addEventListener('focus', () => {
+      if (inpQtd.value === '0') inpQtd.value = '';
+  });
+  inpQtd.addEventListener('blur', () => {
+      if (inpQtd.value === '') {
+          inpQtd.value = '0';
+          itens[idx].quantidade = 0;
+          recalcTudo();
+      }
+  });
   tdQtd.appendChild(inpQtd);
 
   const tdValor = document.createElement('td'); tdValor.className = 'num'; tdValor.textContent = fmtMoney(item.valor || 0);
@@ -1493,35 +1503,7 @@ function criarLinha(item, idx) {
 
   const tdCondVal = document.createElement('td'); tdCondVal.className = 'num'; tdCondVal.textContent = '0,00';
 
-  // MARKUP Input
-  const tdMarkup = document.createElement('td');
-  const inpMarkup = document.createElement('input');
-  inpMarkup.type = 'number'; inpMarkup.step = '0.01'; inpMarkup.className = 'field-markup num';
-  // Use existing item markup or fallback to client default
-  const mVal = (item.markup != null) ? Number(item.markup) : currentClientMarkup;
-  item.markup = mVal; // Sync item
-  inpMarkup.value = mVal.toFixed(2); // Format for display? Or raw? input type=number needs dot. 
-  // Wait, local String uses comma? step 0.01. Input number usually requires dot.
-  // fmtMoney uses comma.
-  // Let's use clean input
-  inpMarkup.style.width = '70px';
-  inpMarkup.addEventListener('change', () => {
-    let v = parseFloat(inpMarkup.value.replace(',', '.')); // Fix potential comma issue
-    if (isNaN(v)) v = 0;
-    itens[idx].markup = v;
-    recalcLinha(tr); // FIXED: Trigger recalculation
-  });
-  tdMarkup.appendChild(inpMarkup);
 
-  // -- NOVAS COLUNAS DE MARKUP (exibição calculada)
-  // Serão preenchidas em recalcLinha
-  const tdFinalMarkup = document.createElement('td');
-  tdFinalMarkup.className = 'num col-mk-derived';
-  tdFinalMarkup.textContent = '0,00';
-
-  const tdSemFreteMarkup = document.createElement('td');
-  tdSemFreteMarkup.className = 'num col-mk-derived';
-  tdSemFreteMarkup.textContent = '0,00';
 
   const tdFrete = document.createElement('td'); 
   tdFrete.className = 'num'; 
@@ -1636,9 +1618,7 @@ function criarLinha(item, idx) {
     tdPeso, tdValor, tdPercent, tdDescAplic,
     tdCondCod, tdCondVal,
     tdFrete,
-    tdIpiR$, tdBaseStR$, tdIcmsProp$, tdIcmsCheio$, tdIcmsReter$, tdQtd, tdFinal, tdLinhaTotal, tdTotalSemFrete,
-    tdMarkup, // <--- MOVED TO END
-    tdFinalMarkup, tdSemFreteMarkup // <--- ALREADY AT END
+    tdIpiR$, tdBaseStR$, tdIcmsProp$, tdIcmsCheio$, tdIcmsReter$, tdQtd, tdFinal, tdLinhaTotal, tdTotalSemFrete
   );
   return tr;
 }
