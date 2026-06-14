@@ -205,21 +205,7 @@
             </div>
           </div>
 
-          <!-- Markup (Third, auto width - far right) -->
-          <div class="os-form-group area-markup">
-            <div class="field">
-              <label class="os-label" for="markup_global">Markup Global %</label>
-              <div style="display: flex; flex-direction: column; gap: var(--os-space-1); align-items: flex-start;">
-                <input id="markup_global" class="os-input" style="width: 140px;" type="number" step="0.01" min="0"
-                  placeholder="0.00" />
-                <button class="os-btn os-btn-secondary os-btn-sm btn-enxuto" id="btn-aplicar-markup-todos">
-                  <i class="bi bi-check-all"></i> Aplicar a todos
-                </button>
-              </div>
-            </div>
-          </div>
-
-        </div>
+          <!-- Markup (Removed per user request) -->
 
         <!-- Bottom (Condition / Discount) -->
         <div class="grid-condition-discount">
@@ -291,6 +277,10 @@
                   <span style="color: var(--os-text-secondary); font-size: 11px;">Total sem Frete</span>
                   <strong id="resumo-total-sf" style="font-size: 13px;">R$ 0,00</strong>
               </div>
+              <div style="display: flex; flex-direction: column;">
+                  <span style="color: var(--os-text-secondary); font-size: 11px;">Frete Total</span>
+                  <strong id="resumo-frete" style="font-size: 13px;">R$ 0,00</strong>
+              </div>
               <div style="display: flex; flex-direction: column; border-left: 1px dashed var(--os-border); padding-left: var(--os-space-3);">
                   <span style="color: var(--os-text); font-weight: 600; font-size: 11px;">Total com Frete</span>
                   <strong id="resumo-total-cf" style="color: var(--os-primary); font-size: 14px;">R$ 0,00</strong>
@@ -359,15 +349,6 @@
               <th class="right" title="Valor unitário final do item">Valor Final Unit.</th>
               <th class="right" style="font-weight: bold; background-color: var(--os-surface-hover); color: var(--os-primary);" title="Total para esta quantidade">Total da Linha</th>
               <th class="right">Valor s/ Frete (R$)</th>
-              <th class="right th-markup">
-                <label class="st-toggle-in-th" title="Mostrar/ocultar colunas de Markup">
-                  <input id="markup-cols-toggle" type="checkbox" />
-                  <span class="st-title">Markup %</span>
-                  <span class="chevron"><i class="bi bi-chevron-down"></i></span>
-                </label>
-              </th>
-              <th class="right col-mk-derived">Valor Final (Mk)</th>
-              <th class="right col-mk-derived">Valor s/ Frete (Mk)</th>
             </tr>
           </thead>
           <tbody id="tbody-itens"></tbody>

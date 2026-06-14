@@ -273,7 +273,13 @@ function confirmarDelecao(confirmado) {
 }
 
 function voltar() {
-  window.location.href = "criacao_tabela_preco.html";
+  const isPicker = new URLSearchParams(window.location.search).get("picker") === "true";
+  if (isPicker) {
+    const returnUrl = sessionStorage.getItem('PICKER_TABELA_RETURN_URL') || '../pedidos/criacao_pedido.html';
+    window.location.href = returnUrl;
+  } else {
+    window.location.href = "criacao_tabela_preco.html";
+  }
 }
 
 function abrirModalDelecao(id) {

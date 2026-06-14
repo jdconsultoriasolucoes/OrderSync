@@ -685,8 +685,8 @@ function calcularLinha(item, fator, taxaCond, freteKg) {
   // 2) Condição SOBRE o líquido
   const acrescimoCond = liquido * Number(taxaCond || 0);
 
-  // 3) Frete (agora usa Peso Bruto se disponível, senão Liquido)
-  const pesoParaFrete = (pesoBruto > 0) ? pesoBruto : peso;
+  // 3) Frete (agora usa Liquido)
+  const pesoParaFrete = peso;
   const freteValor = (Number(freteKg || 0) / 1000) * pesoParaFrete;
 
   // 4) Preço comercial sem impostos (líquido + condição)
@@ -1364,18 +1364,18 @@ function criarLinha(item, idx) {
   }
 
   const tdEmb = document.createElement('td'); tdEmb.textContent = item.embalagem || '';
-  const tdPeso = document.createElement('td'); tdPeso.className = 'num'; tdPeso.textContent = fmt4(item.peso_liquido || 0);
+  const tdPeso = document.createElement('td'); tdPeso.className = 'num'; tdPeso.textContent = Number(item.peso_liquido || 0).toFixed(0);
   
   const tdQtd = document.createElement('td');
   const inpQtd = document.createElement('input');
   inpQtd.type = 'number';
   inpQtd.className = 'os-input inp-qtd right';
   inpQtd.style.width = '80px';
-  inpQtd.min = '1';
-  inpQtd.value = item.quantidade || 1;
+  inpQtd.min = '0';
+  inpQtd.value = item.quantidade !== undefined ? item.quantidade : 0;
   item.quantidade = Number(inpQtd.value);
   inpQtd.addEventListener('input', () => {
-      itens[idx].quantidade = Number(inpQtd.value) || 1;
+      itens[idx].quantidade = Number(inpQtd.value) || 0;
       recalcTudo();
   });
   tdQtd.appendChild(inpQtd);
@@ -1698,7 +1698,7 @@ function buildFiscalInputsFromRow(tr, fallbackItem = null, idx = -1) {
   const tipo = String(item?.tipo || item?.grupo || item?.departamento || '').trim();
   const peso_bruto = Number(item?.peso_bruto || 0);
   const peso_liq = Number(item?.peso_liquido ?? item?.peso ?? item?.peso_kg ?? item?.pesoLiquido ?? 0);
-  const peso_kg = (peso_bruto > 0) ? peso_bruto : peso_liq;
+  const peso_kg = peso_liq;
 
   // Preço base (espelha sua lógica da tela): valor + acrescimo(condição) - desconto(fator)
   const valor = Number(item?.valor || 0);
@@ -3753,11 +3753,12 @@ function atualizarResumoPedido() {
     let pesoTotal = 0;
     let totalSF = 0;
     let totalCF = 0;
+    let freteTotal = 0;
 
     itens.forEach(it => {
-        const q = Number(it.quantidade || 1);
+        const q = Number(it.quantidade !== undefined ? it.quantidade : 0);
         qtdTotal += q;
-        pesoTotal += (Number(it.peso_bruto || it.peso_liquido || 0)) * q;
+        pesoTotal += (Number(it.peso_liquido || 0)) * q;
         
         // As items have _totalComercial or final markup values which are PER UNIT
         const vSF = Number(it.valor_s_frete_markup || it.valor_s_frete || it.precoBase || it.valor || 0);
@@ -3765,17 +3766,20 @@ function atualizarResumoPedido() {
         
         totalSF += vSF * q;
         totalCF += vCF * q;
+        freteTotal += (vCF - vSF) * q;
     });
 
     const elQtd = document.getElementById('resumo-qtd-itens');
     const elPeso = document.getElementById('resumo-peso');
     const elSF = document.getElementById('resumo-total-sf');
     const elCF = document.getElementById('resumo-total-cf');
+    const elFrete = document.getElementById('resumo-frete');
 
     if (elQtd) elQtd.textContent = qtdTotal;
-    if (elPeso) elPeso.textContent = fmt4(pesoTotal) + ' kg';
+    if (elPeso) elPeso.textContent = pesoTotal.toFixed(0) + ' kg';
     if (elSF) elSF.textContent = fmtMoney(totalSF);
     if (elCF) elCF.textContent = fmtMoney(totalCF);
+    if (elFrete) elFrete.textContent = fmtMoney(freteTotal);
 }
 
 
@@ -3871,7 +3875,7 @@ async function carregarTabelaBase(e) {
         if(data.produtos && data.produtos.length > 0) {
             itens = data.produtos.map(p => {
                 const mapItem = mapBackendItemToFrontend(p, data.tabela || {});
-                mapItem.quantidade = 1; // Default
+                mapItem.quantidade = 0; // Default
                 return mapItem;
             });
             renderTabela();
@@ -3900,7 +3904,7 @@ async function salvarPedido() {
         return;
     }
 
-    const mkGlobal = Number(document.getElementById('markup_global')?.value || 0);
+    const mkGlobal = 0;
     const tblId = document.getElementById('tabela_base_id')?.value || null;
     const observacao = document.getElementById('observacao')?.value || '';
 
