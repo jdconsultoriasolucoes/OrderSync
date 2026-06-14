@@ -685,8 +685,8 @@ function calcularLinha(item, fator, taxaCond, freteKg) {
   // 2) Condição SOBRE o líquido
   const acrescimoCond = liquido * Number(taxaCond || 0);
 
-  // 3) Frete (agora usa Liquido)
-  const pesoParaFrete = peso;
+  // 3) Frete (usa Peso Bruto conforme solicitado)
+  const pesoParaFrete = pesoBruto > 0 ? pesoBruto : peso;
   const freteValor = (Number(freteKg || 0) / 1000) * pesoParaFrete;
 
   // 4) Preço comercial sem impostos (líquido + condição)
@@ -3794,13 +3794,13 @@ document.addEventListener('DOMContentLoaded', () => {
             window.history.replaceState({}, document.title, newUrl);
         }
 
-        setTimeout(() => carregarTabelaBase(), 300); // Load automaticaly
+        setTimeout(() => carregarTabelaBase(null, pickedId), 100); // Load automaticaly
     }
 });
 
-async function carregarTabelaBase(e) {
+async function carregarTabelaBase(e, forceId = null) {
     if(e) e.preventDefault();
-    const id = document.getElementById('tabela_base_id')?.value?.trim();
+    const id = forceId || document.getElementById('tabela_base_id')?.value?.trim();
     if(!id) {
         saveHeaderSnapshot();
         const ctx = getCtxId();
