@@ -222,8 +222,8 @@ def _desenhar_pdf(pedido: PedidoPdf, buffer: io.BytesIO, sem_validade: bool = Fa
     else:
         data_entrega_str = ""
 
-    if frete_kg > 0:
-        frete_str = "R$ " + _br_number(frete_kg)
+    if frete_total > 0:
+        frete_str = "R$ " + _br_number(frete_total)
     else:
         frete_str = "R$ 0,00"
 
