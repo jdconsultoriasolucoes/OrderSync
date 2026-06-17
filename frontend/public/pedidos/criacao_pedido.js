@@ -2912,6 +2912,7 @@ document.addEventListener('DOMContentLoaded', () => {
   document.getElementById('plano_pagamento')?.addEventListener('change', (e) => {
     e.currentTarget.dataset.userEdited = '1';
     atualizarPillTaxa();
+    document.getElementById('btn-aplicar-condicao-todos')?.click();
     if (typeof refreshToolbarEnablement === 'function') refreshToolbarEnablement();
     if (typeof saveHeaderSnapshot === 'function') saveHeaderSnapshot();
   });
@@ -3204,6 +3205,7 @@ document.getElementById('iva_st_toggle')?.addEventListener('change', (e) => {
 document.getElementById('desconto_global')?.addEventListener('change', (e) => {
   e.currentTarget.dataset.userEdited = '1';
   atualizarPillDesconto();
+  document.getElementById('btn-aplicar-todos')?.click();
   saveHeaderSnapshot();
 });
 
@@ -4017,11 +4019,21 @@ async function salvarPedido() {
     }
     
     const cliente_nome = document.getElementById('cliente_nome')?.value || '';
-    const codigo_cliente = document.getElementById('codigo_cliente')?.value || '';
+    let codigo_cliente = document.getElementById('codigo_cliente')?.value || '';
+    if (codigo_cliente === "Não cadastrado") {
+        codigo_cliente = '';
+    }
     
-    if (!codigo_cliente || codigo_cliente === "Não cadastrado") {
-        alert("Atenção: É necessário selecionar um cliente válido para o envio da confirmação do pedido.");
-        return;
+    if (!codigo_cliente) {
+        const confirmMsg = "⚠️ ATENÇÃO:<br><br>" +
+            "O cliente informado não possui um código de cadastro válido (ou não está cadastrado).<br>" +
+            "Isso significa que o sistema NÃO conseguirá enviar o e-mail de confirmação automaticamente.<br><br>" +
+            "Deseja salvar e gerar o pedido mesmo assim?";
+        const proceed = await showOsModal({ title: 'Confirmação', message: confirmMsg, type: 'confirm' });
+        if (!proceed) {
+            document.getElementById('cliente_nome')?.focus();
+            return;
+        }
     }
 
     const mkGlobal = 0;
@@ -4030,7 +4042,7 @@ async function salvarPedido() {
 
     const payload = {
         cliente: cliente_nome,
-        codigo_cliente: codigo_cliente,
+        codigo_cliente: codigo_cliente || null,
         tabela_preco_id: tblId, // Opcional
         observacao: observacao,
         usar_valor_com_frete: true,
