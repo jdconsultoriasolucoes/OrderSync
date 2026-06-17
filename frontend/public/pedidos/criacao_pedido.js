@@ -320,11 +320,18 @@ async function mergeBufferFromPickerIfAny() {
       // 2) Apply Discount (Factor)
       if (fatorGlobal != null) {
         p.fator_comissao = fatorGlobal;
+        p.__fator_codigo = descCode;
+        const selGlobOpt = document.getElementById('desconto_global')?.options;
+        const selGlobIdx = document.getElementById('desconto_global')?.selectedIndex;
+        p.__descricao_fator_label = (selGlobOpt && selGlobIdx >= 0) ? selGlobOpt[selGlobIdx].textContent : '';
       }
 
       // 3) Apply Condition
       if (condCode) {
-        p.plano_pagamento = condCode;
+        p.plano_pagamento_cod = condCode;
+        const selCondOpt = document.getElementById('plano_pagamento')?.options;
+        const selCondIdx = document.getElementById('plano_pagamento')?.selectedIndex;
+        p.plano_pagamento = (selCondOpt && selCondIdx >= 0) ? selCondOpt[selCondIdx].textContent : condCode;
       }
 
       map.set(p.codigo_tabela, { ...(map.get(p.codigo_tabela) || {}), ...p });
@@ -1877,6 +1884,7 @@ async function recalcLinha(tr) {
   // base comercial (sem imposto)
   const results = calcularLinha(item, fator, taxaCond, freteKg);
   let { acrescimoCond, freteValor, descontoValor, precoBase, liquido } = results;
+  item.precoBase = precoBase;
 
   // ✅ OVERRIDE: Se o frete for manual, calcula baseado no R$/Ton (Base)
   if (item.manual_freight) {
@@ -2004,6 +2012,9 @@ async function recalcLinha(tr) {
         // ⚠️ Não zera mais os valores já exibidos
       }
     }
+  } finally {
+    atualizarResumoPedido();
+    if (typeof renderMobileCards === 'function') renderMobileCards();
   }
 }
 
@@ -2200,6 +2211,7 @@ async function originalRecalcTudo() {
 
         // Save state for update step
         item._freteValor = Number(freteValor || 0);
+        item.precoBase = precoBase;
 
         batchItems.push(built.payload);
         rowMap.push({ tr: tr, item: item });
@@ -2228,6 +2240,9 @@ async function originalRecalcTudo() {
           const mapData = rowMap[i];
           applyFiscalToRow(mapData.tr, res, mapData.item);
         });
+
+        // 4. Atualiza totais do resumo imediatamente após o batch
+        if (typeof atualizarResumoPedido === 'function') atualizarResumoPedido();
 
       } catch (err) {
         console.error("Batch recalc failed:", err);
@@ -2908,6 +2923,15 @@ document.addEventListener('DOMContentLoaded', () => {
   });
 
   document.getElementById('btn-aplicar-todos')?.addEventListener('click', () => aplicarFatorGlobal(true));
+
+  // Auto-aplica desconto ao mudar o select (igual à condição de pagamento)
+  document.getElementById('desconto_global')?.addEventListener('change', (e) => {
+    e.currentTarget.dataset.userEdited = '1';
+    atualizarPillDesconto();
+    aplicarFatorGlobal(false); // false = não alerta em caso de seleção vazia
+    if (typeof refreshToolbarEnablement === 'function') refreshToolbarEnablement();
+    if (typeof saveHeaderSnapshot === 'function') saveHeaderSnapshot();
+  });
 
   document.getElementById('plano_pagamento')?.addEventListener('change', (e) => {
     e.currentTarget.dataset.userEdited = '1';
@@ -3861,20 +3885,45 @@ function atualizarResumoPedido() {
         
         const freteUnit = Number(it._freteValor !== undefined ? it._freteValor : 0);
         
-        // Valor sem frete unitário com fallback síncrono
-        let vSF = Number(it.valor_s_frete_markup || it.valor_s_frete || 0);
-        if (vSF <= 0) {
+        // Prioridade 1: valores atualizados pelo batch fiscal (applyFiscalToRow)
+        // _totalComercial = valor com frete e impostos (unitário)
+        // total_sem_frete = valor sem frete (unitário)
+        let vSF = 0;
+        let vCF = 0;
+
+        if (it._totalComercial != null && Number(it._totalComercial) > 0) {
+            vCF = Number(it._totalComercial);
+            vSF = Number(it.total_sem_frete != null ? it.total_sem_frete : Math.max(0, vCF - freteUnit));
+        } else if (it.valor_s_frete_markup != null && Number(it.valor_s_frete_markup) > 0) {
+            // Prioridade 2: valores com markup calculados
+            vSF = Number(it.valor_s_frete_markup);
+            vCF = Number(it.valor_final_markup || (vSF + freteUnit));
+        } else {
+            // Prioridade 3: recalcula comercialmente com a condição/desconto atuais
+            const codPct = it.__fator_codigo || '';
+            const fator = (window.mapaDescontos && window.mapaDescontos[codPct] != null)
+                ? Number(window.mapaDescontos[codPct])
+                : Number(it.fator_comissao || 0);
+
+            const codCond = it.plano_pagamento_cod
+                || (it.plano_pagamento ? String(it.plano_pagamento).split(' - ')[0].trim() : '');
+            const taxaCond = (window.mapaCondicoes && window.mapaCondicoes[codCond] != null)
+                ? Number(window.mapaCondicoes[codCond]) : 0;
+
+            const valor = Number(it.valor || 0);
+            const desconto = valor * fator;
+            const liquido = Math.max(0, valor - desconto);
+            const acrescimo = liquido * taxaCond;
+            const precoBase = liquido + acrescimo;
+
             const mkPct = Number(it.markup || 0);
-            const factor = 1 + (mkPct / 100);
-            vSF = Number(it.precoBase || it.valor || 0) * factor;
-        }
-        
-        // Valor com frete unitário com fallback síncrono
-        let vCF = Number(it.valor_final_markup || it.valor_liquido || 0);
-        if (vCF <= 0) {
+            const factorMk = 1 + (mkPct / 100);
+
+            vSF = precoBase * factorMk;
             vCF = vSF + freteUnit;
         }
         
+        // Acumula por quantidade
         totalSF += vSF * q;
         totalCF += vCF * q;
         freteTotal += freteUnit * q;
@@ -4012,6 +4061,11 @@ async function carregarTabelaBase(e, forceId = null) {
 }
 
 async function salvarPedido() {
+    if (__recalcRunning || __recalcPending) {
+        await showOsModal({ title: 'Aviso', message: 'Aguarde o término do cálculo de impostos para salvar.', type: 'alert' });
+        return;
+    }
+
     const produtosFiltrados = (itens || []).filter(it => Number(it.quantidade || 0) > 0);
     if (produtosFiltrados.length === 0) {
         alert("Adicione produtos ao pedido (com quantidade maior que zero).");
