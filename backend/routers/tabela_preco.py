@@ -397,7 +397,7 @@ def obter_tabela(id_tabela: int):
         if itens:
              codigos = [i.codigo_produto_supra for i in itens if i.codigo_produto_supra]
              if codigos:
-                 # Busca em lote
+                  # Busca em lote
                 rows_status = db.query(ProdutoV2.codigo_supra, ProdutoV2.status_produto).filter(
                     ProdutoV2.codigo_supra.in_(codigos),
                     ProdutoV2.fornecedor == cab.fornecedor

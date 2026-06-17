@@ -112,7 +112,7 @@ function alternarRelatorioUI() {
         divFiltroGrupo.style.display = "none";
         selGrupo.value = ""; // limpa filtro de grupo
         
-        // Cabeçalhos para Vendas por Cliente
+        // Cabeçalhos para Vendas por Cliente com Linha de Totais no Topo
         tableHeaders.innerHTML = `
             <tr>
                 <th>#</th>
@@ -128,12 +128,18 @@ function alternarRelatorioUI() {
                 <th data-sort="valor_sem_frete" class="tar col-money">Valor Sem Frete</th>
                 <th data-sort="valor_com_frete" class="tar col-money">Valor Com Frete</th>
             </tr>
+            <tr style="background-color: #f1f5f9; font-weight: bold; position: sticky; top: 38px; z-index: 14; box-shadow: 0 1px 2px rgba(0,0,0,0.05);">
+                <td colspan="9" style="text-align: left; padding: 10px 16px; font-weight: bold; border-bottom: 2px solid var(--os-border);">Total Acumulado</td>
+                <td class="tar" id="total-peso" style="font-weight: bold; border-bottom: 2px solid var(--os-border);">0 kg</td>
+                <td class="tar col-money" id="total-valor-sem" style="font-weight: bold; border-bottom: 2px solid var(--os-border);">R$ 0,00</td>
+                <td class="tar col-money" id="total-valor-com" style="font-weight: bold; border-bottom: 2px solid var(--os-border);">R$ 0,00</td>
+            </tr>
         `;
     } else {
         txtTitulo.textContent = "Relatório de Vendas por Produto";
         divFiltroGrupo.style.display = "flex";
         
-        // Cabeçalhos para Vendas por Produto
+        // Cabeçalhos para Vendas por Produto com Linha de Totais no Topo
         tableHeaders.innerHTML = `
             <tr>
                 <th>#</th>
@@ -145,6 +151,12 @@ function alternarRelatorioUI() {
                 <th data-sort="peso_liquido_acumulado" class="tar">Peso Líq. Acum (kg)</th>
                 <th data-sort="valor_sem_frete" class="tar col-money">Valor Sem Frete</th>
                 <th data-sort="valor_com_frete" class="tar col-money">Valor Com Frete</th>
+            </tr>
+            <tr style="background-color: #f1f5f9; font-weight: bold; position: sticky; top: 38px; z-index: 14; box-shadow: 0 1px 2px rgba(0,0,0,0.05);">
+                <td colspan="6" style="text-align: left; padding: 10px 16px; font-weight: bold; border-bottom: 2px solid var(--os-border);">Total Acumulado</td>
+                <td class="tar" id="total-peso" style="font-weight: bold; border-bottom: 2px solid var(--os-border);">0 kg</td>
+                <td class="tar col-money" id="total-valor-sem" style="font-weight: bold; border-bottom: 2px solid var(--os-border);">R$ 0,00</td>
+                <td class="tar col-money" id="total-valor-com" style="font-weight: bold; border-bottom: 2px solid var(--os-border);">R$ 0,00</td>
             </tr>
         `;
     }
@@ -297,16 +309,6 @@ function renderizarTabela() {
         });
         
         tbody.innerHTML = html;
-
-        // Rodapé dinâmico Vendas por Cliente (colspan 9 para alinhar totais)
-        tfoot.innerHTML = `
-            <tr>
-                <td colspan="9">Total Acumulado</td>
-                <td class="tar" id="total-peso">${fmtPeso(totalPeso)}</td>
-                <td class="tar col-money" id="total-valor-sem">${fmtMoney(totalSemFrete)}</td>
-                <td class="tar col-money" id="total-valor-com">${fmtMoney(totalComFrete)}</td>
-            </tr>
-        `;
     } else {
         // Relatório de Vendas por Produto
         listagemVendas.forEach((item, index) => {
@@ -330,17 +332,16 @@ function renderizarTabela() {
         });
 
         tbody.innerHTML = html;
-
-        // Rodapé dinâmico Vendas por Produto (colspan 6 para alinhar totais)
-        tfoot.innerHTML = `
-            <tr>
-                <td colspan="6">Total Acumulado</td>
-                <td class="tar" id="total-peso">${fmtPeso(totalPeso)}</td>
-                <td class="tar col-money" id="total-valor-sem">${fmtMoney(totalSemFrete)}</td>
-                <td class="tar col-money" id="total-valor-com">${fmtMoney(totalComFrete)}</td>
-            </tr>
-        `;
     }
+
+    // Atualiza totais na parte superior da tabela (thead)
+    const elPeso = document.getElementById("total-peso");
+    const elSem = document.getElementById("total-valor-sem");
+    const elCom = document.getElementById("total-valor-com");
+    if (elPeso) elPeso.textContent = fmtPeso(totalPeso);
+    if (elSem) elSem.textContent = fmtMoney(totalSemFrete);
+    if (elCom) elCom.textContent = fmtMoney(totalComFrete);
+    tfoot.innerHTML = "";
 }
 
 /**

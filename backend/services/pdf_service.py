@@ -222,21 +222,21 @@ def _desenhar_pdf(pedido: PedidoPdf, buffer: io.BytesIO, sem_validade: bool = Fa
     else:
         data_entrega_str = ""
 
-    if frete_total > 0:
-        frete_str = "R$ " + _br_number(frete_total)
+    if frete_kg > 0:
+        frete_kg_str = "R$ " + _br_number(frete_kg)
     else:
-        frete_str = "R$ 0,00"
+        frete_kg_str = "R$ 0,00"
 
     # Criando a tabela horizontal unificada abrangendo a largura inteira (available_width)
     if sem_validade:
         # Versão Cliente: Mostra apenas a Data de Retirada/Entrega
         bloco2_data = [["", "", "", "", "Data Retirada/Entrega:", data_entrega_str]]
     else:
-        # Versão Vendedor: Mostra Ped. Supra (esquerda), Frete Total (meio) e Data (direita)
+        # Versão Vendedor: Mostra Ped. Supra (esquerda), Frete/KG (meio) e Data (direita)
         ped_supra_val = pedido.pedido_supra or ""
-        bloco2_data = [["Ped. Supra:", ped_supra_val, "Frete Total:", frete_str, "Data Retirada/Entrega:", data_entrega_str]]
+        bloco2_data = [["Ped. Supra:", ped_supra_val, "Frete/KG:", frete_kg_str, "Data Retirada/Entrega:", data_entrega_str]]
 
-    # Proporções alinhando Ped. Supra na esquerda, Frete Total no meio, e Data na direita
+    # Proporções alinhando Ped. Supra na esquerda, Frete/KG no meio, e Data na direita
     col0 = 2.5 * cm
     col1 = 3.5 * cm
     col2 = 2.5 * cm
@@ -254,7 +254,7 @@ def _desenhar_pdf(pedido: PedidoPdf, buffer: io.BytesIO, sem_validade: bool = Fa
         ("VALIGN", (0, 0), (-1, -1), "MIDDLE"),
         ("ALIGN", (0, 0), (-1, -1), "LEFT"),
         ("ALIGN", (0, 0), (0, 0), "RIGHT"),  # "Ped. Supra:" label
-        ("ALIGN", (2, 0), (2, 0), "RIGHT"),  # "Frete Total:" label
+        ("ALIGN", (2, 0), (2, 0), "RIGHT"),  # "Frete/KG:" label
         ("ALIGN", (4, 0), (4, 0), "RIGHT"),  # "Data Retirada/Entrega:" label
     ]
 

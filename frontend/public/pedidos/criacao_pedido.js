@@ -340,6 +340,105 @@ async function mergeBufferFromPickerIfAny() {
   }
 }
 
+async function atualizarPesosBrutosAtuais() {
+  const codigos = Array.from(
+    new Set(
+      (itens || [])
+        .map(x => x.codigo_tabela)
+        .filter(Boolean)
+        .map(c => String(c).trim())
+    )
+  );
+
+  if (!codigos.length) return;
+
+  const codigosSet = new Set(codigos);
+  const mapaPesos = {}; 
+  const PAGE_SIZE = 1000;
+  let page = 1;
+  let total = null;
+
+  while (true) {
+    let url;
+    try {
+      url = new URL(`${API_BASE}/tabela_preco/produtos_filtro`);
+    } catch (e) {
+      break;
+    }
+
+    url.searchParams.set("page", String(page));
+    url.searchParams.set("page_size", String(PAGE_SIZE));
+
+    let resp;
+    try {
+      resp = await fetch(url.toString(), { cache: "no-store" });
+    } catch (e) {
+      break;
+    }
+
+    if (!resp.ok) break;
+
+    let raw;
+    try {
+      raw = await resp.json();
+    } catch (e) {
+      break;
+    }
+
+    const paginado = !Array.isArray(raw) && Array.isArray(raw.items);
+    const arr = paginado ? (raw.items || []) : (Array.isArray(raw) ? raw : []);
+
+    if (paginado) {
+      total = typeof raw.total === "number" ? raw.total : arr.length;
+    }
+
+    for (const p of arr) {
+      const cands = [
+        p.codigo_tabela,
+        p.codigo,
+        p.codigo_produto_supra,
+        p.CODIGO
+      ].map(v => String(v ?? "").trim());
+
+      const chave = cands.find(c => codigosSet.has(c));
+      if (!chave) continue;
+
+      if (Object.prototype.hasOwnProperty.call(mapaPesos, chave)) continue;
+
+      mapaPesos[chave] = Number(p.peso_bruto || 0);
+    }
+
+    if (Object.keys(mapaPesos).length >= codigosSet.size) {
+      break;
+    }
+
+    if (!paginado) break;
+
+    const ja = page * PAGE_SIZE;
+    if (total != null && ja >= total) {
+      break;
+    }
+
+    page += 1;
+    if (page > 50) break;
+  }
+
+  if (!Object.keys(mapaPesos).length) {
+    return;
+  }
+
+  itens = (itens || []).map(it => {
+    const key = String(it.codigo_tabela ?? "").trim();
+    if (key && Object.prototype.hasOwnProperty.call(mapaPesos, key)) {
+      const pb = mapaPesos[key];
+      if (pb > 0) {
+        it.peso_bruto = pb;
+      }
+    }
+    return it;
+  });
+}
+
 async function atualizarPrecosAtuais() {
   // Normaliza os códigos da tabela
   const codigos = Array.from(
@@ -3738,15 +3837,31 @@ function atualizarResumoPedido() {
     itens.forEach(it => {
         const q = Number(it.quantidade !== undefined ? it.quantidade : 0);
         qtdTotal += q;
-        pesoTotal += (Number(it.peso_liquido || 0)) * q;
         
-        // As items have _totalComercial or final markup values which are PER UNIT
-        const vSF = Number(it.valor_s_frete_markup || it.valor_s_frete || it.precoBase || it.valor || 0);
-        const vCF = Number(it.valor_final_markup || it.valor_liquido || it.precoBase || it.valor || 0);
+        const peso = Number(it.peso_liquido || 0);
+        const pesoBruto = Number(it.peso_bruto || 0);
+        const pesoParaFrete = pesoBruto > 0 ? pesoBruto : peso;
+        pesoTotal += pesoParaFrete * q;
+        
+        const freteUnit = Number(it._freteValor !== undefined ? it._freteValor : 0);
+        
+        // Valor sem frete unitário com fallback síncrono
+        let vSF = Number(it.valor_s_frete_markup || it.valor_s_frete || 0);
+        if (vSF <= 0) {
+            const mkPct = Number(it.markup || 0);
+            const factor = 1 + (mkPct / 100);
+            vSF = Number(it.precoBase || it.valor || 0) * factor;
+        }
+        
+        // Valor com frete unitário com fallback síncrono
+        let vCF = Number(it.valor_final_markup || it.valor_liquido || 0);
+        if (vCF <= 0) {
+            vCF = vSF + freteUnit;
+        }
         
         totalSF += vSF * q;
         totalCF += vCF * q;
-        freteTotal += (vCF - vSF) * q;
+        freteTotal += freteUnit * q;
     });
 
     const elQtd = document.getElementById('resumo-qtd-itens');
@@ -3867,6 +3982,7 @@ async function carregarTabelaBase(e, forceId = null) {
                 mapItem.quantidade = 0; // Default
                 return mapItem;
             });
+            await atualizarPesosBrutosAtuais();
             renderTabela();
             await recalcTudo();
         }
