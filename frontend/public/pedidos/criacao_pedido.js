@@ -3330,8 +3330,22 @@ function renderMobileCards() {
   if (!container) return;
 
   // Sync toolbar totals
-  const totalItens = (itens || []).length;
-  const totalValor = itens.reduce((acc, it) => acc + (it._totalComercial || 0), 0);
+  const totalItens = (itens || []).filter(it => Number(it.quantidade || 0) > 0).length;
+  const totalValor = itens.reduce((acc, it) => {
+    const q = Number(it.quantidade || 0);
+    const freteUnit = Number(it._freteValor || 0);
+    let vSF = Number(it.valor_s_frete_markup || it.valor_s_frete || 0);
+    if (vSF <= 0) {
+        const mkPct = Number(it.markup || 0);
+        const factor = 1 + (mkPct / 100);
+        vSF = Number(it.precoBase || it.valor || 0) * factor;
+    }
+    let vCF = Number(it.valor_final_markup || it.valor_liquido || 0);
+    if (vCF <= 0) {
+        vCF = vSF + freteUnit;
+    }
+    return acc + (vCF * q);
+  }, 0);
 
   const elItens = document.getElementById('mobile-total-itens');
   if (elItens) elItens.textContent = `${totalItens} item(s)`;
@@ -3836,7 +3850,9 @@ function atualizarResumoPedido() {
 
     itens.forEach(it => {
         const q = Number(it.quantidade !== undefined ? it.quantidade : 0);
-        qtdTotal += q;
+        if (q > 0) {
+            qtdTotal++;
+        }
         
         const peso = Number(it.peso_liquido || 0);
         pesoTotal += peso * q;
@@ -3994,8 +4010,9 @@ async function carregarTabelaBase(e, forceId = null) {
 }
 
 async function salvarPedido() {
-    if (!itens || itens.length === 0) {
-        alert("Adicione produtos ao pedido.");
+    const produtosFiltrados = (itens || []).filter(it => Number(it.quantidade || 0) > 0);
+    if (produtosFiltrados.length === 0) {
+        alert("Adicione produtos ao pedido (com quantidade maior que zero).");
         return;
     }
     
@@ -4017,7 +4034,7 @@ async function salvarPedido() {
         tabela_preco_id: tblId, // Opcional
         observacao: observacao,
         usar_valor_com_frete: true,
-        produtos: itens.map(it => {
+        produtos: produtosFiltrados.map(it => {
             const q = Number(it.quantidade || 1);
             const vSF = Number(it.valor_s_frete_markup || it.valor_s_frete || it.precoBase || it.valor || 0);
             const vCF = Number(it.valor_final_markup || it.valor_liquido || it.precoBase || it.valor || 0);

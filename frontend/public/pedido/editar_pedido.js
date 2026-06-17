@@ -2224,7 +2224,13 @@ async function salvarTabela() {
     })
     .filter(p => p.codigo_produto_supra && p.descricao_produto);
 
-  console.table(produtos.map(p => ({ id_linha: p.id_linha, codigo: p.codigo_produto_supra, valor: p.valor_produto, plano: p.codigo_plano_pagamento })));
+  const produtosFiltrados = produtos.filter(p => Number(p.quantidade || 0) > 0);
+  if (produtosFiltrados.length === 0) {
+    await showOsModal({ title: 'Aviso', message: 'Adicione pelo menos 1 produto com quantidade maior que zero.', type: 'alert' });
+    return;
+  }
+
+  console.table(produtosFiltrados.map(p => ({ id_linha: p.id_linha, codigo: p.codigo_produto_supra, valor: p.valor_produto, plano: p.codigo_plano_pagamento })));
 
   const fornecedorHeader = inferirFornecedorDaGrade();
   let codigo_cliente = (document.getElementById('codigo_cliente')?.value || '').trim() || null;
@@ -2257,7 +2263,7 @@ async function salvarTabela() {
     pedido_supra, nota_fiscal,
     fornecedor: fornecedorHeader, calcula_st, 
     frete_kg, usar_valor_com_frete,
-    produtos 
+    produtos: produtosFiltrados 
   };
 
   // --- SAFETY CHECK FOR EMAIL ---
@@ -3365,8 +3371,12 @@ function renderMobileCards() {
   if (!container) return;
 
   // Sync toolbar totals
-  const totalItens = (itens || []).length;
-  const totalValor = itens.reduce((acc, it) => acc + (it._totalComercial || 0), 0);
+  const totalItens = (itens || []).filter(it => Number(it.quantidade || 0) > 0).length;
+  const totalValor = itens.reduce((acc, it) => {
+    const q = Number(it.quantidade || 0);
+    const val = it.subtotal_com_f !== undefined ? it.subtotal_com_f : (it._totalComercial || 0) * q;
+    return acc + val;
+  }, 0);
 
   const elItens = document.getElementById('mobile-total-itens');
   if (elItens) elItens.textContent = `${totalItens} item(s)`;
