@@ -3839,9 +3839,7 @@ function atualizarResumoPedido() {
         qtdTotal += q;
         
         const peso = Number(it.peso_liquido || 0);
-        const pesoBruto = Number(it.peso_bruto || 0);
-        const pesoParaFrete = pesoBruto > 0 ? pesoBruto : peso;
-        pesoTotal += pesoParaFrete * q;
+        pesoTotal += peso * q;
         
         const freteUnit = Number(it._freteValor !== undefined ? it._freteValor : 0);
         
