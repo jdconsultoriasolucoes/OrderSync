@@ -894,7 +894,7 @@ def admin_criar_pedido(body: AdminCriarPedidoRequest, db: Session = Depends(get_
             tabela_nome_final = nome_db
             
     params = {
-        "codigo_cliente": (body.codigo_cliente or "")[:80] if body.codigo_cliente else None,
+        "codigo_cliente": (body.codigo_cliente or "")[:80],
         "cliente": body.cliente.strip(),
         "tabela_preco_id": tabela_id_final,
         "tabela_preco_nome": tabela_nome_final,
