@@ -4100,6 +4100,7 @@ async function salvarPedido() {
         tabela_preco_id: tblId, // Opcional
         observacao: observacao,
         usar_valor_com_frete: true,
+        frete_kg: Number(document.getElementById('frete_kg')?.value || 0),
         produtos: produtosFiltrados.map(it => {
             const q = Number(it.quantidade || 1);
             const vSF = Number(it.valor_s_frete_markup || it.valor_s_frete || it.precoBase || it.valor || 0);
@@ -4116,7 +4117,11 @@ async function salvarPedido() {
                 condicao_pagamento: it.plano_pagamento || null,
                 tabela_comissao: it.__descricao_fator_label || null,
                 markup: it.markup || mkGlobal || 0,
-                valor_frete_unitario: Number(it.valor_frete_aplicado || 0)
+                valor_final_markup: Number(it.valor_final_markup || 0),
+                valor_s_frete_markup: Number(it.valor_s_frete_markup || 0),
+                valor_frete_unitario: Number(it.valor_frete_aplicado || 0),
+                manual_freight: !!it.manual_freight,
+                frete_base_ton: Number(it.frete_base_ton || 0)
             };
         })
     };

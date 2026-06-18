@@ -823,13 +823,18 @@ class AdminCriarPedidoItem(BaseModel):
     peso_kg: float
     markup: Optional[float] = 0.0
     valor_frete_unitario: Optional[float] = 0.0
+    manual_freight: Optional[bool] = False
+    frete_base_ton: Optional[float] = 0.0
+    valor_final_markup: Optional[float] = 0.0
+    valor_s_frete_markup: Optional[float] = 0.0
 
 class AdminCriarPedidoRequest(BaseModel):
     cliente: str
-    codigo_cliente: str
+    codigo_cliente: Optional[str] = None
     tabela_preco_id: Optional[str] = None
     observacao: Optional[str] = None
     usar_valor_com_frete: bool = True
+    frete_kg: Optional[float] = 0.0
     produtos: List[AdminCriarPedidoItem]
 
 @router.post("/admin_criar")
@@ -870,7 +875,7 @@ def admin_criar_pedido(body: AdminCriarPedidoRequest, db: Session = Depends(get_
         VALUES (
             :codigo_cliente, :cliente, :tabela_preco_id, :tabela_preco_nome,
             :usar_valor_com_frete, CAST(:itens AS jsonb),
-            :peso_total_kg, :frete_total, 0, :total_sem_frete, :total_com_frete, :total_pedido,
+            :peso_total_kg, :frete_total, :frete_kg, :total_sem_frete, :total_com_frete, :total_pedido,
             :observacoes, 'Orçamento', :confirmado_em,
             'ABERTO', :agora,
             :agora, :agora, :agora
@@ -889,7 +894,7 @@ def admin_criar_pedido(body: AdminCriarPedidoRequest, db: Session = Depends(get_
             tabela_nome_final = nome_db
             
     params = {
-        "codigo_cliente": body.codigo_cliente[:80],
+        "codigo_cliente": (body.codigo_cliente or "")[:80] if body.codigo_cliente else None,
         "cliente": body.cliente.strip(),
         "tabela_preco_id": tabela_id_final,
         "tabela_preco_nome": tabela_nome_final,
@@ -897,6 +902,7 @@ def admin_criar_pedido(body: AdminCriarPedidoRequest, db: Session = Depends(get_
         "itens": json.dumps([i.dict() for i in body.produtos]),
         "peso_total_kg": round(peso_total_kg, 3),
         "frete_total": round(frete_total, 2),
+        "frete_kg": round(float(body.frete_kg or 0), 4),
         "total_sem_frete": round(total_sem_frete, 2),
         "total_com_frete": round(total_com_frete, 2),
         "total_pedido": round(total_pedido, 2),
@@ -914,13 +920,13 @@ def admin_criar_pedido(body: AdminCriarPedidoRequest, db: Session = Depends(get_
             condicao_pagamento, tabela_comissao,
             preco_unit, preco_unit_frt, valor_frete_unitario, quantidade,
             subtotal_sem_f, subtotal_com_f,
-            markup
+            markup, manual_freight, frete_base_ton, valor_final_markup, valor_s_frete_markup
         ) VALUES (
             :id_pedido, :codigo, :nome, :embalagem, :peso_kg,
             :condicao_pagamento, :tabela_comissao,
             :preco_unit, :preco_unit_frt, :valor_frete_unitario, :quantidade,
             :subtotal_sem_f, :subtotal_com_f,
-            :markup
+            :markup, :manual_freight, :frete_base_ton, :valor_final_markup, :valor_s_frete_markup
         )
     """)
     
@@ -944,7 +950,11 @@ def admin_criar_pedido(body: AdminCriarPedidoRequest, db: Session = Depends(get_
             "quantidade": qtd,
             "subtotal_sem_f": round(p_sem * qtd, 2),
             "subtotal_com_f": round(p_com * qtd, 2),
-            "markup": float(it.markup or 0.0)
+            "markup": float(it.markup or 0.0),
+            "manual_freight": bool(getattr(it, "manual_freight", False)),
+            "frete_base_ton": float(it.frete_base_ton or 0.0),
+            "valor_final_markup": float(it.valor_final_markup or 0.0),
+            "valor_s_frete_markup": float(it.valor_s_frete_markup or 0.0)
         })
         
     db.commit()
