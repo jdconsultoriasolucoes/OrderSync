@@ -347,7 +347,9 @@ def listar_pedidos(
           a.nota_fiscal,
           a.data_faturamento
         FROM public.tb_pedidos a
-        LEFT JOIN public.t_cadastro_cliente_v2 c ON c.cadastro_codigo_da_empresa::text = a.codigo_cliente
+        LEFT JOIN public.t_cadastro_cliente_v2 c 
+          ON c.cadastro_codigo_da_empresa::text = a.codigo_cliente 
+          AND a.codigo_cliente != ''
         WHERE {where_clause}
         ORDER BY a.id_pedido DESC
         LIMIT :limit OFFSET :offset
@@ -893,8 +895,12 @@ def admin_criar_pedido(body: AdminCriarPedidoRequest, db: Session = Depends(get_
         if nome_db:
             tabela_nome_final = nome_db
             
+    codigo_str = (body.codigo_cliente or "").strip()
+    if not codigo_str:
+        codigo_str = "Sem Cadastro"
+
     params = {
-        "codigo_cliente": (body.codigo_cliente or "")[:80],
+        "codigo_cliente": codigo_str[:80],
         "cliente": body.cliente.strip(),
         "tabela_preco_id": tabela_id_final,
         "tabela_preco_nome": tabela_nome_final,

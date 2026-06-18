@@ -21,7 +21,9 @@ SELECT
   c.entrega_rota_principal                 AS rota_principal
 FROM public.tb_pedidos a
 JOIN public.tb_tabela_preco b ON a.tabela_preco_id = b.id_tabela
-LEFT JOIN public.t_cadastro_cliente_v2 c ON c.cadastro_codigo_da_empresa::text = a.codigo_cliente
+LEFT JOIN public.t_cadastro_cliente_v2 c 
+  ON c.cadastro_codigo_da_empresa::text = a.codigo_cliente 
+  AND a.codigo_cliente != ''
 WHERE a.created_at >= :from
   AND a.created_at <  :to
   AND (:status_list::text[] IS NULL OR a.status = ANY(:status_list))
@@ -86,7 +88,9 @@ SELECT
   cg.numero_carga AS numero_carga
 FROM public.tb_pedidos a
 LEFT JOIN public.tb_tabela_preco b ON a.tabela_preco_id = b.id_tabela
-LEFT JOIN public.t_cadastro_cliente_v2 c ON c.cadastro_codigo_da_empresa::text = a.codigo_cliente
+LEFT JOIN public.t_cadastro_cliente_v2 c 
+  ON c.cadastro_codigo_da_empresa::text = a.codigo_cliente
+  AND a.codigo_cliente != ''
 LEFT JOIN (
     SELECT cp.numero_pedido, cr.numero_carga
     FROM public.tb_cargas_pedidos cp
