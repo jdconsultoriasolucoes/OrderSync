@@ -16,6 +16,22 @@ body {
   box-sizing: border-box;
 }
 
+/* Sticky action buttons bar */
+.action-buttons-fixed-wrap {
+  position: sticky;
+  top: var(--os-header-height, 56px);
+  z-index: 50;
+  background: #fff;
+  border-bottom: 1px solid var(--os-border);
+  padding: 10px 0 10px 0;
+  margin-bottom: 16px;
+  margin-left: calc(-1 * var(--os-space-3));
+  margin-right: calc(-1 * var(--os-space-3));
+  padding-left: var(--os-space-3);
+  padding-right: var(--os-space-3);
+  box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+}
+
 /* Form container */
 .form-container {
   width: 100%;

@@ -105,58 +105,44 @@ button:disabled {
   cursor: not-allowed;
 }
 
-/* Grid system (Bootstrap row/col compatibility) */
+/* Grid system (CSS Grid 12-column system) */
 .row {
-  display: flex;
-  flex-wrap: wrap;
+  display: grid;
+  grid-template-columns: repeat(12, minmax(0, 1fr));
   gap: var(--os-space-1);
   margin-bottom: 20px;
-  justify-content: space-between;
-}
-
-.row>* {
-  flex: 1;
-  min-width: 0;
 }
 
 .col-1 {
-  flex: 0 1 calc(100%/12 * 1);
-  max-width: calc(100%/12 * 1);
+  grid-column: span 1;
 }
 
 .col-2 {
-  flex: 0 1 calc(100%/12 * 2);
-  max-width: calc(100%/12 * 2);
+  grid-column: span 2;
 }
 
 .col-3 {
-  flex: 0 1 calc(100%/12 * 3);
-  max-width: calc(100%/12 * 3);
+  grid-column: span 3;
 }
 
 .col-4 {
-  flex: 0 1 calc(100%/12 * 4);
-  max-width: calc(100%/12 * 4);
+  grid-column: span 4;
 }
 
 .col-5 {
-  flex: 0 1 calc(100%/12 * 5);
-  max-width: calc(100%/12 * 5);
+  grid-column: span 5;
 }
 
 .col-6 {
-  flex: 0 1 calc(100%/12 * 6);
-  max-width: calc(100%/12 * 6);
+  grid-column: span 6;
 }
 
 .col-8 {
-  flex: 0 1 calc(100%/12 * 8);
-  max-width: calc(100%/12 * 8);
+  grid-column: span 8;
 }
 
 .col-12 {
-  flex: 0 0 100%;
-  max-width: 100%;
+  grid-column: span 12;
 }
 
 /* Dynamic width limit for inputs on large screens to prevent giant fields */
@@ -181,9 +167,13 @@ button:disabled {
     padding-top: calc(var(--os-header-height) + var(--os-space-2));
   }
 
+  .row {
+    grid-template-columns: repeat(12, minmax(0, 1fr));
+  }
+
   .row>[class*="col-"] {
-    flex: 0 0 100%;
-    max-width: 100%;
+    grid-column: span 12 !important;
+    max-width: 100% !important;
   }
 }
 
