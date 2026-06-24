@@ -509,13 +509,6 @@ async function openResumo(id) {
                   <input type="number" id="editValorNota" value="${p.valor_nota || ''}" step="0.01" placeholder="0.00" class="form-select form-select-sm" style="width: 140px; height: 28px; padding: 2px 8px;">
                 </div>
               </div>
-
-              <!-- Lado Direito: Aceite -->
-              <div style="text-align: right; min-width: 120px;">
-                <div style="margin-top: 10px; font-size: 0.8rem; color: #666;">
-                  <b>Aceite em:</b><br>${fmtDate(p.confirmado_em || p.created_at)}
-                </div>
-              </div>
             </div>
 
             <!-- Botão Salvar na Direita -->
