@@ -61,3 +61,6 @@ class PedidoModel(Base):
     nota_fiscal = Column(String)
     pedido_supra = Column(String)
     valor_nota = Column(Float, nullable=True)
+    data_faturamento = Column(DateTime, nullable=True)
+    valor_ajuste = Column(Float, default=0.0)
+
