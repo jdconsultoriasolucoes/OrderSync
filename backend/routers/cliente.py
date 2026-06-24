@@ -1,6 +1,6 @@
 from fastapi import APIRouter, HTTPException, Depends
 from fastapi.responses import StreamingResponse
-from typing import List
+from typing import List, Optional
 import io
 import logging
 from schemas.cliente import ClienteCompleto, ClienteResumo
@@ -142,6 +142,64 @@ def exportar_supra(
         import traceback
         logger.critical(f"Erro inesperado na exportação Supra: {e}", exc_info=True)
         raise HTTPException(status_code=500, detail=f"Erro interno: {traceback.format_exc()}")
+
+
+@router.get("/verificar-duplicado")
+def verificar_duplicado(
+    codigo: Optional[str] = None,
+    cnpj: Optional[str] = None,
+    cpf: Optional[str] = None,
+    exclude_id: Optional[int] = None
+):
+    """
+    Verifica se já existe um cliente cadastrado com o código, CNPJ ou CPF informado.
+    """
+    try:
+        import re
+        from sqlalchemy import or_, func
+        condicoes = []
+        if codigo and codigo.strip():
+            condicoes.append(ClienteModelV2.cadastro_codigo_da_empresa == codigo.strip())
+        if cnpj and cnpj.strip():
+            cnpj_clean = re.sub(r"\D", "", cnpj)
+            condicoes.append(func.regexp_replace(ClienteModelV2.cadastro_cnpj, r"\D", "", "g") == cnpj_clean)
+        if cpf and cpf.strip():
+            cpf_clean = re.sub(r"\D", "", cpf)
+            condicoes.append(func.regexp_replace(ClienteModelV2.cadastro_cpf, r"\D", "", "g") == cpf_clean)
+
+        if not condicoes:
+            return {"duplicado": False}
+
+        with SessionLocal() as db:
+            query = db.query(ClienteModelV2)
+            if exclude_id is not None:
+                query = query.filter(ClienteModelV2.id != exclude_id)
+            
+            existente = query.filter(or_(*condicoes)).first()
+            if existente:
+                if codigo and existente.cadastro_codigo_da_empresa == codigo.strip():
+                    return {
+                        "duplicado": True, 
+                        "campo": "codigo", 
+                        "mensagem": f"Código '{codigo}' já cadastrado para o cliente: {existente.cadastro_nome_cliente}"
+                    }
+                if cnpj and re.sub(r"\D", "", existente.cadastro_cnpj or "") == re.sub(r"\D", "", cnpj):
+                    return {
+                        "duplicado": True, 
+                        "campo": "cnpj", 
+                        "mensagem": f"CNPJ '{cnpj}' já cadastrado para o cliente: {existente.cadastro_nome_cliente}"
+                    }
+                if cpf and re.sub(r"\D", "", existente.cadastro_cpf or "") == re.sub(r"\D", "", cpf):
+                    return {
+                        "duplicado": True, 
+                        "campo": "cpf", 
+                        "mensagem": f"CPF '{cpf}' já cadastrado para o cliente: {existente.cadastro_nome_cliente}"
+                    }
+            
+            return {"duplicado": False}
+    except Exception as e:
+        logger.error(f"Erro ao verificar duplicidade de cliente: {e}")
+        raise HTTPException(status_code=500, detail=f"Erro ao verificar duplicidade: {str(e)}")
 
 
 @router.get("/lookup")

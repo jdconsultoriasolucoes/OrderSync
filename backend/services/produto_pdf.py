@@ -172,6 +172,7 @@ def create_produto(db: Session, produto_in: ProdutoV2Create, imposto_in: Optiona
         nome_produto=obj.nome_produto,
         tipo_giro=obj.tipo_giro,
         estoque_disponivel=obj.estoque_disponivel,
+        estoque_futuro=obj.estoque_futuro,
         unidade=obj.unidade,
         peso=obj.peso,
         peso_bruto=obj.peso_bruto,

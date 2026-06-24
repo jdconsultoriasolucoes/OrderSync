@@ -442,5 +442,34 @@ def run_migrations():
                     db.rollback()
                     logger.error(f"Falha ao adicionar coluna {col}: {e}")
 
+        # 23. Status de Pedido: Carga em formação
+        try:
+            res = db.execute(text("SELECT 1 FROM pedido_status WHERE codigo = 'Carga em formação'")).scalar()
+            if not res:
+                logger.info("Inserindo status Carga em formação em pedido_status...")
+                db.execute(text("""
+                    INSERT INTO public.pedido_status (codigo, rotulo, cor_hex, ordem, ativo)
+                    VALUES ('Carga em formação', 'Carga em formação', '#fef3c7', 7, TRUE)
+                """))
+                db.commit()
+                logger.info("Status Carga em formação inserido com sucesso.")
+        except Exception as e:
+            db.rollback()
+            logger.error(f"Falha ao inserir status Carga em formação: {e}")
+
+        # 24. tb_pedidos: valor_nota
+        try:
+            db.execute(text("SELECT valor_nota FROM tb_pedidos LIMIT 1"))
+        except Exception:
+            db.rollback()
+            logger.info("Adicionando coluna valor_nota em tb_pedidos...")
+            try:
+                db.execute(text("ALTER TABLE tb_pedidos ADD COLUMN valor_nota NUMERIC"))
+                db.commit()
+                logger.info("Coluna valor_nota adicionada com sucesso em tb_pedidos.")
+            except Exception as e:
+                db.rollback()
+                logger.error(f"Falha ao adicionar valor_nota em tb_pedidos: {e}")
+
     logger.info("Todas as migrações concluídas.")
 

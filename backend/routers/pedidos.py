@@ -88,6 +88,7 @@ class PedidoListItem(BaseModel):
     pedido_supra: Optional[str] = None
     nota_fiscal: Optional[str] = None
     data_faturamento: Optional[datetime] = None
+    numero_carga: Optional[str] = None
 
 class ListagemResponse(BaseModel):
     data: List[PedidoListItem]
@@ -148,6 +149,8 @@ class PedidoResumo(BaseModel):
     numero_carga: Optional[int] = None
     pedido_supra: Optional[str] = None
     nota_fiscal: Optional[str] = None
+    valor_nota: Optional[float] = None
+    data_faturamento: Optional[datetime] = None
     created_at: datetime
     itens: List[PedidoItemResumo] = Field(default_factory=list)
 
@@ -169,6 +172,8 @@ class StatusChangeBody(BaseModel):
 class PedidoCamposFaturamento(BaseModel):
     pedido_supra: Optional[str] = None
     nota_fiscal: Optional[str] = None
+    valor_nota: Optional[float] = None
+    data_faturamento: Optional[str] = None  # formato YYYY-MM-DD
 
 class PedidoUpdateItem(BaseModel):
     codigo: str
@@ -222,6 +227,7 @@ def listar_pedidos(
     id_pedido: Optional[int] = Query(None, description="Filtrar por número exato do pedido"),
     pedido_supra: Optional[str] = None,
     nota_fiscal: Optional[str] = None,
+    numero_carga: Optional[str] = None,
     page: int = 1,
     pageSize: int = 25,
     limit: Optional[int] = None,
@@ -243,7 +249,7 @@ def listar_pedidos(
 
     # Só aplica filtro de data se fornecido OU se não houver filtros específicos de busca direta
     # Se id_pedido, pedido_supra ou nota_fiscal estiverem presentes, ignoramos as datas padrão
-    tem_busca_direta = bool(id_pedido or pedido_supra or nota_fiscal)
+    tem_busca_direta = bool(id_pedido or pedido_supra or nota_fiscal or numero_carga)
     
     # Decisão: Só aplicamos datas se:
     # 1. Não há busca direta (ID, Supra, NF)
@@ -316,6 +322,17 @@ def listar_pedidos(
         filtros_sql.append("a.nota_fiscal ILIKE :nota_fiscal_busca")
         params["nota_fiscal_busca"] = f"%{nota_fiscal}%"
 
+    if numero_carga:
+        filtros_sql.append("""
+            EXISTS (
+                SELECT 1 FROM public.tb_cargas_pedidos cp
+                JOIN public.tb_cargas cr ON cr.id = cp.id_carga
+                WHERE cp.numero_pedido::text = a.id_pedido::text
+                  AND cr.numero_carga::text ILIKE :numero_carga_busca
+            )
+        """)
+        params["numero_carga_busca"] = f"%{numero_carga}%"
+
     where_clause = " AND ".join(filtros_sql)
 
     # 6. montar SQL COUNT e LISTAGEM de forma segura
@@ -334,7 +351,6 @@ def listar_pedidos(
           CASE WHEN a.usar_valor_com_frete THEN 'ENTREGA' ELSE 'RETIRADA' END AS modalidade,
           a.total_pedido                            AS valor_total,
           a.status                                  AS status_codigo,
-          a.status                                  AS status_codigo,
           a.tabela_preco_nome                       AS tabela_preco_nome,
           a.fornecedor                              AS fornecedor,
           a.link_url,
@@ -345,11 +361,17 @@ def listar_pedidos(
           c.entrega_rota_principal                 AS rota_principal,
           a.pedido_supra,
           a.nota_fiscal,
-          a.data_faturamento
+          a.data_faturamento,
+          cg2.numero_carga AS numero_carga
         FROM public.tb_pedidos a
         LEFT JOIN public.t_cadastro_cliente_v2 c 
           ON c.cadastro_codigo_da_empresa::text = a.codigo_cliente 
           AND a.codigo_cliente != ''
+        LEFT JOIN (
+          SELECT cp.numero_pedido, cr.numero_carga::text AS numero_carga
+          FROM public.tb_cargas_pedidos cp
+          JOIN public.tb_cargas cr ON cr.id = cp.id_carga
+        ) cg2 ON cg2.numero_pedido::text = a.id_pedido::text
         WHERE {where_clause}
         ORDER BY a.id_pedido DESC
         LIMIT :limit OFFSET :offset
@@ -388,7 +410,8 @@ def listar_pedidos(
             rota_principal     = r.get("rota_principal"),
             pedido_supra       = r.get("pedido_supra"),
             nota_fiscal        = r.get("nota_fiscal"),
-            data_faturamento   = r.get("data_faturamento")
+            data_faturamento   = r.get("data_faturamento"),
+            numero_carga       = r.get("numero_carga")
         )
         for r in rows_raw
     ]
@@ -710,10 +733,17 @@ def atualizar_campos_faturamento(id_pedido: int, body: PedidoCamposFaturamento, 
         pedido.pedido_supra = normalizar_pedido_supra(body.pedido_supra, dt_ref)
     if body.nota_fiscal is not None:
         pedido.nota_fiscal = body.nota_fiscal
+    if body.valor_nota is not None:
+        pedido.valor_nota = body.valor_nota
+    if body.data_faturamento is not None:
+        try:
+            pedido.data_faturamento = datetime.strptime(body.data_faturamento, "%Y-%m-%d")
+        except (ValueError, TypeError):
+            pass
         
     db.add(pedido)
     db.commit()
-    return {"ok": True, "pedido_supra": pedido.pedido_supra, "nota_fiscal": pedido.nota_fiscal}
+    return {"ok": True, "pedido_supra": pedido.pedido_supra, "nota_fiscal": pedido.nota_fiscal, "valor_nota": pedido.valor_nota, "data_faturamento": str(pedido.data_faturamento) if pedido.data_faturamento else None}
 
 # ---------- Ações Extras (Cancelamento / Reenvio) ----------
 

@@ -357,3 +357,113 @@ def renovar_validade_global(payload: RenovarValidadeReq, current_user: UsuarioMo
             db.rollback()
             raise HTTPException(500, f"Erro ao renovar validade: {e}")
 
+
+@router.post(
+    "/importar-estoque",
+    summary="Importar planilha de estoque (.xlsx)",
+    description="Carrega arquivo Excel de estoque, calcula estoque disponível e futuro, e atualiza produtos.",
+)
+async def importar_estoque(
+    file: UploadFile = File(...),
+    current_user: UsuarioModel = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    if not file.filename.lower().endswith(".xlsx"):
+        raise HTTPException(status_code=400, detail="O arquivo precisa ser uma planilha Excel (.xlsx).")
+
+    try:
+        import pandas as pd
+        # Read Excel file using pandas
+        df = pd.read_excel(file.file)
+    except Exception as e:
+        raise HTTPException(status_code=400, detail=f"Erro ao ler arquivo Excel: {e}")
+
+    if df.empty:
+        raise HTTPException(status_code=400, detail="A planilha está vazia.")
+
+    success_count = 0
+    not_found_codes = []
+    total_rows = 0
+
+    from models.produto import ProdutoV2
+
+    for idx, row in df.iterrows():
+        # Skip completely empty rows
+        if row.isnull().all():
+            continue
+
+        # Look up product code: first column or by typical name candidates
+        def get_val_by_name_or_idx(names: list[str], pos: int):
+            for name in names:
+                if name in row:
+                    return row[name]
+            if len(row) > pos:
+                return row.iloc[pos]
+            return None
+
+        codigo_raw = get_val_by_name_or_idx(["Produto", "CODIGO", "CÓDIGO", "Codigo", "Código"], 0)
+        if pd.isna(codigo_raw) or not str(codigo_raw).strip():
+            continue
+
+        codigo_str = str(codigo_raw).strip()
+        total_rows += 1
+
+        def safe_int(val):
+            if pd.isna(val) or val is None:
+                return 0
+            try:
+                return int(float(val))
+            except:
+                return 0
+
+        # Columns F (5), G (6), H (7) positional and header fallback
+        qtd_estoque = safe_int(get_val_by_name_or_idx(["Qt. Estoque", "Qt Estoque", "Qtd Estoque", "Qtd. Estoque"], 5))
+        qtd_pedidos = safe_int(get_val_by_name_or_idx(["Qt. Pedidos Carteira", "Qt. Pedidos", "Qt Pedidos", "Qtd Pedidos"], 6))
+        af_pendentes = safe_int(get_val_by_name_or_idx(["AF Pendentes", "AF Pendente", "AF"], 7))
+
+        estoque_disponivel = qtd_estoque - qtd_pedidos
+        estoque_futuro = estoque_disponivel + af_pendentes
+
+        # Update in database using bulk query update
+        updated = db.query(ProdutoV2).filter(ProdutoV2.codigo_supra == codigo_str).update({
+            ProdutoV2.estoque_disponivel: estoque_disponivel,
+            ProdutoV2.estoque_futuro: estoque_futuro
+        }, synchronize_session=False)
+
+        if updated > 0:
+            success_count += updated
+        else:
+            not_found_codes.append(codigo_str)
+
+        # Salva registro no histórico de ingestão
+        nome_prod = get_val_by_name_or_idx(["Descrição", "DESCRIÇÃO", "Descriçao", "Descricao", "Descrio"], 1)
+        nome_prod_str = str(nome_prod).strip() if not pd.isna(nome_prod) else None
+
+        from models.produto import HistoricoEstoqueV2
+        hist_entry = HistoricoEstoqueV2(
+            codigo_supra=codigo_str,
+            nome_produto=nome_prod_str,
+            qtd_estoque=qtd_estoque,
+            qtd_pedido=qtd_pedidos,
+            af_pendentes=af_pendentes,
+            estoque_disponivel=estoque_disponivel,
+            estoque_futuro=estoque_futuro,
+            nome_arquivo=file.filename,
+            usuario=current_user.email
+        )
+        db.add(hist_entry)
+
+    try:
+        db.commit()
+    except Exception as e:
+        db.rollback()
+        raise HTTPException(500, detail=f"Erro ao salvar atualizações de estoque no banco: {e}")
+
+    return {
+        "sucesso": True,
+        "total_linhas": total_rows,
+        "atualizados": success_count,
+        "nao_encontrados": not_found_codes
+    }
+
+

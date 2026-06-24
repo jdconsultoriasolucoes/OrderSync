@@ -255,6 +255,14 @@ function restoreHeaderSnapshotIfNew(force = false) {
     window.isClienteLivreSelecionado = !!snap.cliente_livre;
     window.currentClientMarkup = Number(snap.currentClientMarkup || 0); // ✅ Restore Markup
 
+    // ---- Restore Safety Net (Global Vault) ----
+    if (snap.cliente) {
+      window.__clientState = {
+        originalName: (snap.cliente || '').trim(),
+        originalCode: (snap.codigo_cliente || '').trim()
+      };
+    }
+
     // ---- Atualizações visuais e locks
     atualizarPillTaxa?.();
     atualizarPillDesconto?.();
@@ -2616,6 +2624,14 @@ async function carregarItens() {
             if (planoEl && h.plano_pagamento) { planoEl.value = h.plano_pagamento; atualizarPillTaxa?.(); }
             const descEl = document.getElementById('desconto_global');
             if (descEl && h.desconto_global) { descEl.value = h.desconto_global; atualizarPillDesconto?.(); }
+
+            // ---- Restore Safety Net (Global Vault) ----
+            if (h.cliente_nome) {
+              window.__clientState = {
+                originalName: (h.cliente_nome || '').trim(),
+                originalCode: (h.codigo_cliente || '').trim()
+              };
+            }
           } catch(eh) { console.warn('Falha ao restaurar header snapshot:', eh); }
         } else if (currentTabelaId) {
           // Fallback: busca do banco se não tiver snapshot
@@ -2659,6 +2675,12 @@ async function carregarItens() {
               if (nomeEl && !nomeEl.value) nomeEl.value = th.observacoes || '';
               if (cliEl2 && !cliEl2.value) cliEl2.value = th.cliente_nome || th.cliente || '';
               if (codEl2 && !codEl2.value) codEl2.value = th.codigo_cliente || '';
+
+              // --- ROBUST SAFETY NET (GLOBAL VAULT) ---
+              window.__clientState = {
+                originalName: (th.cliente_nome || th.cliente || '').trim(),
+                originalCode: (th.codigo_cliente || '').trim()
+              };
               if (document.getElementById('pedido_supra') && !document.getElementById('pedido_supra').value)
                 document.getElementById('pedido_supra').value = th.pedido_supra || '';
               if (document.getElementById('nota_fiscal') && !document.getElementById('nota_fiscal').value)
@@ -2705,6 +2727,12 @@ async function carregarItens() {
     if (cliEl) cliEl.value = t.cliente_nome || t.cliente || '';
     if (codEl) codEl.value = t.codigo_cliente || '';
     if (ramoEl) ramoEl.value = t.ramo_juridico || '';
+
+    // --- ROBUST SAFETY NET (GLOBAL VAULT) ---
+    window.__clientState = {
+      originalName: (t.cliente_nome || t.cliente || '').trim(),
+      originalCode: (t.codigo_cliente || '').trim()
+    };
     if (document.getElementById('pedido_supra')) document.getElementById('pedido_supra').value = t.pedido_supra || '';
     if (document.getElementById('nota_fiscal')) document.getElementById('nota_fiscal').value = t.nota_fiscal || '';
     if (document.getElementById('contato_nome')) document.getElementById('contato_nome').value = t.contato_nome || '';

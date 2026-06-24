@@ -137,7 +137,7 @@ async function renderStandardCargaList(tipo) {
             <th>Nº Carga</th>
             <th>Nome / Descrição</th>
             <th>Data Cadastro</th>
-            ${activeRelatorio === 'historico' ? '<th>Data Faturamento</th>' : ''}
+            ${activeRelatorio === 'historico' ? '<th>Data Carregamento</th>' : ''}
             <th>Ações</th>
         </tr>
     `;
@@ -158,14 +158,14 @@ async function renderStandardCargaList(tipo) {
         let html = "";
         cargas.forEach(c => {
             const dispData = c.data_criacao ? new Date(c.data_criacao).toLocaleDateString('pt-BR') : "-";
-            const dispDataFaturamento = c.data_faturamento ? new Date(c.data_faturamento).toLocaleDateString('pt-BR') : "-";
+            const dispDataCarregamento = c.data_carregamento ? new Date(c.data_carregamento).toLocaleDateString('pt-BR') : "-";
             html += `
                 <tr>
                     <td style="text-align: center;"><input type="checkbox" class="chk-carga-item" value="${c.id}"></td>
                     <td><strong>${c.numero_carga}</strong></td>
                     <td>${c.nome_carga || '-'}</td>
                     <td>${dispData}</td>
-                    ${activeRelatorio === 'historico' ? `<td>${dispDataFaturamento}</td>` : ''}
+                    ${activeRelatorio === 'historico' ? `<td>${dispDataCarregamento}</td>` : ''}
                     <td>
                        <button class="os-btn os-btn-sm os-btn-secondary btn-gerenciar-carga" data-id="${c.id}" data-nome="${c.numero_carga}">${activeRelatorio === 'historico' ? 'Visualizar' : `Gerenciar / Ver ${tipo}`}</button>
                        ${activeRelatorio === 'formacao' ? `<button class="os-btn os-btn-sm os-btn-danger btn-excluir-carga" data-id="${c.id}">Excluir</button>` : ''}
@@ -530,6 +530,10 @@ async function abrirGerenciadorDeCarga(idCarga, numCarga) {
                         ${(activeRelatorio !== 'resumo' && activeRelatorio !== 'historico') ? '<button class="os-btn os-btn-primary os-btn-sm" id="btn-save-carga-header">Salvar Tela</button>' : ''}
                     </div>
                 </div>
+                <div id="totais-peso-header" style="margin-top: 10px; font-size: 13px; font-weight: 700; display: none; gap: 20px; padding-left: 165px;">
+                    <span style="color: #1e40af;">TOTAL P. LÍQ: <span id="span-total-liq-header">0</span> kg</span>
+                    <span style="color: #92400e;">TOTAL P. BRUTO: <span id="span-total-bruto-header">0</span> kg</span>
+                </div>
             </div>
         `;
         }
@@ -614,6 +618,53 @@ async function abrirGerenciadorDeCarga(idCarga, numCarga) {
                     await saveItemsLogic(newBtnItems);
                     carregarPedidosDaCargaAtiva();
                 });
+            }
+        }
+
+        // Botão Confirmar Entrega — visível nos modos romaneio e formacao
+        const btnConfirmarEntrega = document.getElementById('btn-confirmar-entrega');
+        if (btnConfirmarEntrega) {
+            if (activeRelatorio === 'romaneio' || activeRelatorio === 'formacao') {
+                btnConfirmarEntrega.style.display = 'inline-block';
+                const oldBtn = btnConfirmarEntrega;
+                const newBtn = oldBtn.cloneNode(true);
+                oldBtn.parentNode.replaceChild(newBtn, oldBtn);
+
+                newBtn.addEventListener('click', async () => {
+                    if (!confirm('Confirmar a entrega de TODOS os pedidos desta carga? Esta ação irá alterar o status de todos os pedidos para "Faturado Supra" e mover a carga para o Histórico.')) return;
+
+                    const originalText = newBtn.innerHTML;
+                    newBtn.innerHTML = '⏳ Processando...';
+                    newBtn.disabled = true;
+
+                    try {
+                        const resp = await fetch(`${API_BASE}/api/relatorios/cargas/${idCarga}/confirmar-entrega`, {
+                            method: 'POST',
+                            headers: { 'Authorization': `Bearer ${window.Auth ? window.Auth.getToken() : ''}` }
+                        });
+
+                        if (resp.ok) {
+                            newBtn.innerHTML = '✅ Concluído!';
+                            newBtn.style.background = '#15803d';
+                            setTimeout(() => {
+                                // Volta para listagem
+                                renderRelatorioView(activeRelatorio);
+                            }, 1500);
+                        } else {
+                            const errData = await resp.json().catch(() => ({}));
+                            const msg = errData.detail || 'Erro ao confirmar entrega.';
+                            showPremiumAlert(msg, 'warning');
+                            newBtn.innerHTML = originalText;
+                            newBtn.disabled = false;
+                        }
+                    } catch (e) {
+                        alert('Erro de conexão: ' + e.message);
+                        newBtn.innerHTML = originalText;
+                        newBtn.disabled = false;
+                    }
+                });
+            } else {
+                btnConfirmarEntrega.style.display = 'none';
             }
         }
 
@@ -919,7 +970,7 @@ async function carregarResumoProdutosDaCargaAtiva() {
     const tableWrap = tbodyPedidos.closest('.os-table-wrap');
     const theadTable = tableWrap.querySelector('table thead');
 
-    tbodyPedidos.innerHTML = '<tr><td colspan="9" style="text-align:center;">Carregando resumo de produtos...</td></tr>';
+    tbodyPedidos.innerHTML = '<tr><td colspan="7" style="text-align:center;">Carregando resumo de produtos...</td></tr>';
 
     try {
         const resp = await fetch(`${API_BASE}/api/relatorios/cargas/${cargaEmGerenciamento}/resumo-produtos`, {
@@ -938,23 +989,24 @@ async function carregarResumoProdutosDaCargaAtiva() {
         const totalLiqStr = Math.round(totalLiq).toLocaleString('pt-BR');
         const totalBrutoStr = Math.round(totalBruto).toLocaleString('pt-BR');
 
+        // Exibir totais no cabeçalho superior alinhado com "Nº Carga"
+        const elTotais = document.getElementById('totais-peso-header');
+        if (elTotais) {
+            elTotais.style.display = 'flex';
+            document.getElementById('span-total-liq-header').textContent = totalLiqStr;
+            document.getElementById('span-total-bruto-header').textContent = totalBrutoStr;
+        }
+
+        // Nova ordem de colunas: Código | Descrição | Peso EMB. (Peso Líq. UN) | Emb. | Observação | QTD | P. LÍQ ACUM
         theadTable.innerHTML = `
             <tr>
-                <th>Código</th>
+                <th style="width: 100px;">Código</th>
                 <th>Descrição</th>
-                <th>Embalagem</th>
-                <th style="text-align: center;">Quantidade</th>
-                <th>Unidade</th>
-                <th style="text-align: right;">Peso Líq. UN</th>
-                <th style="text-align: right; color: #1e40af;">
-                    Peso Líq. Acum<br>
-                    <span style="font-size: 11px; font-weight: 800; background: #dbeafe; padding: 2px 4px; border-radius: 4px; display: block; margin-top: 4px;">${totalLiqStr} kg</span>
-                </th>
-                <th style="text-align: right;">Peso Br. UN</th>
-                <th style="text-align: right; color: #92400e;">
-                    Peso Br. Acum<br>
-                    <span style="font-size: 11px; font-weight: 800; background: #fef3c7; padding: 2px 4px; border-radius: 4px; display: block; margin-top: 4px;">${totalBrutoStr} kg</span>
-                </th>
+                <th style="text-align: right; width: 100px;">Peso EMB.</th>
+                <th style="width: 80px;">Emb.</th>
+                <th>Observação</th>
+                <th style="text-align: center; width: 80px;">Qtd</th>
+                <th style="text-align: right; width: 120px;">P. Líq Acum</th>
             </tr>
         `;
 
@@ -962,6 +1014,7 @@ async function carregarResumoProdutosDaCargaAtiva() {
             tbodyPedidos.innerHTML = '';
             emptyPedidos.textContent = "Não há produtos faturados para os pedidos desta carga.";
             emptyPedidos.style.display = 'block';
+            if (elTotais) elTotais.style.display = 'none';
             return;
         }
 
@@ -969,24 +1022,18 @@ async function carregarResumoProdutosDaCargaAtiva() {
         let h = "";
         prods.forEach(p => {
             const pesoUnit = p.peso_unitario || 0;
-            const pesoBrutoUnit = p.peso_bruto_unitario || 0;
             const pesoRow = p.peso_liquido_total || 0;
-            const pesoBrutoRow = p.peso_bruto_total || 0;
             const pesoStr = Math.round(pesoUnit).toString();
-            const pesoBrutoStr = Math.round(pesoBrutoUnit).toString();
             const acumStr = Math.round(pesoRow).toString();
-            const acumBrutoStr = Math.round(pesoBrutoRow).toString();
             h += `
                 <tr>
                     <td><strong>${p.codigo || '-'}</strong></td>
                     <td>${p.descricao}</td>
-                    <td>${p.embalagem || '-'}</td>
-                    <td style="text-align: center;">${p.qtd_total}</td>
-                    <td>${p.unidade || 'UN'}</td>
                     <td style="text-align: right;">${pesoStr} kg</td>
+                    <td>${p.embalagem || '-'}</td>
+                    <td></td>
+                    <td style="text-align: center;">${p.qtd_total}</td>
                     <td style="text-align: right;">${acumStr} kg</td>
-                    <td style="text-align: right;">${pesoBrutoStr} kg</td>
-                    <td style="text-align: right;">${acumBrutoStr} kg</td>
                 </tr>
             `;
         });
@@ -996,6 +1043,8 @@ async function carregarResumoProdutosDaCargaAtiva() {
         tbodyPedidos.innerHTML = '';
         emptyPedidos.textContent = "Erro ao carregar o resumo de produtos.";
         emptyPedidos.style.display = 'block';
+        const elTotais = document.getElementById('totais-peso-header');
+        if (elTotais) elTotais.style.display = 'none';
     }
 }
 

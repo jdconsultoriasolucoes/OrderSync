@@ -60,3 +60,4 @@ class PedidoModel(Base):
 
     nota_fiscal = Column(String)
     pedido_supra = Column(String)
+    valor_nota = Column(Float, nullable=True)

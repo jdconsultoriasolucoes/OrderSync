@@ -28,6 +28,7 @@ SELECT
     p.unidade_anterior,
     p.tipo_giro,
     p.estoque_disponivel,
+    p.estoque_futuro,
     p.estoque_ideal,
     p.unidade_embalagem,
     p.codigo_ean,

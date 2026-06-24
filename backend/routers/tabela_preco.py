@@ -52,6 +52,8 @@ def filtrar_produtos_para_tabela_preco(
             SELECT 
                 p.codigo_supra AS codigo_tabela,
                 p.nome_produto AS descricao,
+                p.estoque_disponivel,
+                p.estoque_futuro,
                 CASE 
                     WHEN UPPER(p.embalagem_venda) IN ('SC', 'SACO') THEN 'SACO'
                     WHEN UPPER(p.embalagem_venda) IN ('CX', 'CAIXA') THEN 'CAIXA'
@@ -125,6 +127,8 @@ def obter_ids_filtro(
             SELECT 
                 p.codigo_supra AS codigo_tabela,
                 p.nome_produto AS descricao,
+                p.estoque_disponivel,
+                p.estoque_futuro,
                 CASE 
                     WHEN UPPER(p.embalagem_venda) IN ('SC', 'SACO') THEN 'SACO'
                     WHEN UPPER(p.embalagem_venda) IN ('CX', 'CAIXA') THEN 'CAIXA'
@@ -395,26 +399,33 @@ def obter_tabela(id_tabela: int):
         # Helper: buscar status ATUAL na t_cadastro_produto_v2
         status_map = {}
         if itens:
-             codigos = [i.codigo_produto_supra for i in itens if i.codigo_produto_supra]
-             if codigos:
-                  # Busca em lote
-                rows_status = db.query(ProdutoV2.codigo_supra, ProdutoV2.status_produto).filter(
+            codigos = [i.codigo_produto_supra for i in itens if i.codigo_produto_supra]
+            if codigos:
+                # Busca em lote
+                rows_status = db.query(
+                    ProdutoV2.codigo_supra,
+                    ProdutoV2.status_produto,
+                    ProdutoV2.estoque_disponivel,
+                    ProdutoV2.estoque_futuro
+                ).filter(
                     ProdutoV2.codigo_supra.in_(codigos),
                     ProdutoV2.fornecedor == cab.fornecedor
                 ).all()
                 
                 # Logic to prioritized ATIVO
-                # First pass: map all found statuses
+                # First pass: map all found statuses and stock
                 temp_status = {}
+                stock_map = {} # codigo -> (disponivel, futuro)
                 for r in rows_status:
                     rs = (r.status_produto or "").upper()
                     if r.codigo_supra not in temp_status:
                         temp_status[r.codigo_supra] = rs
+                        stock_map[r.codigo_supra] = (r.estoque_disponivel, r.estoque_futuro)
                     else:
                         # If we already have something that is NOT active, and this one IS active, overwrite.
-                        # If we already have ACTIVE, keep it.
                         if temp_status[r.codigo_supra] != 'ATIVO' and rs == 'ATIVO':
                             temp_status[r.codigo_supra] = 'ATIVO'
+                            stock_map[r.codigo_supra] = (r.estoque_disponivel, r.estoque_futuro)
                 
                 status_map = temp_status
 
@@ -456,7 +467,9 @@ def obter_tabela(id_tabela: int):
                 "valor_s_frete_markup": p.valor_s_frete_markup,
                 "manual_freight": getattr(p, "manual_freight", False),
                 "frete_base_ton": getattr(p, "frete_base_ton", 0),
-                "status_atual": status_map.get(p.codigo_produto_supra, "DESCONHECIDO"), # <--- NOVO
+                "status_atual": status_map.get(p.codigo_produto_supra, "DESCONHECIDO"),
+                "estoque_disponivel": stock_map.get(p.codigo_produto_supra, (None, None))[0],
+                "estoque_futuro": stock_map.get(p.codigo_produto_supra, (None, None))[1],
                 } for p in itens
             ]
         }

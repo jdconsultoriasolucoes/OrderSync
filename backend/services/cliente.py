@@ -371,7 +371,8 @@ def criar_cliente(cliente_data: dict) -> dict:
             
         novo_cliente = _nested_to_flat(cliente_data)
         
-        from sqlalchemy import or_
+        import re
+        from sqlalchemy import or_, func
         
         condicoes = []
         _codigo = novo_cliente.cadastro_codigo_da_empresa
@@ -381,18 +382,20 @@ def criar_cliente(cliente_data: dict) -> dict:
         if _codigo and str(_codigo).strip():
             condicoes.append(ClienteModelV2.cadastro_codigo_da_empresa == _codigo)
         if _cnpj and str(_cnpj).strip():
-            condicoes.append(ClienteModelV2.cadastro_cnpj == _cnpj)
+            _cnpj_clean = re.sub(r"\D", "", _cnpj)
+            condicoes.append(func.regexp_replace(ClienteModelV2.cadastro_cnpj, r"\D", "", "g") == _cnpj_clean)
         if _cpf and str(_cpf).strip():
-            condicoes.append(ClienteModelV2.cadastro_cpf == _cpf)
+            _cpf_clean = re.sub(r"\D", "", _cpf)
+            condicoes.append(func.regexp_replace(ClienteModelV2.cadastro_cpf, r"\D", "", "g") == _cpf_clean)
             
         if condicoes:
             existente = db.query(ClienteModelV2).filter(or_(*condicoes)).first()
             if existente:
                 if _codigo and existente.cadastro_codigo_da_empresa == _codigo:
                     raise BusinessRuleException(f"Já existe um cliente cadastrado com o código {_codigo}")
-                if _cnpj and existente.cadastro_cnpj == _cnpj:
+                if _cnpj and re.sub(r"\D", "", existente.cadastro_cnpj or "") == re.sub(r"\D", "", _cnpj):
                     raise BusinessRuleException(f"Já existe um cliente cadastrado com o CNPJ {_cnpj}")
-                if _cpf and existente.cadastro_cpf == _cpf:
+                if _cpf and re.sub(r"\D", "", existente.cadastro_cpf or "") == re.sub(r"\D", "", _cpf):
                     raise BusinessRuleException(f"Já existe um cliente cadastrado com o CPF {_cpf}")
                     
         novo_cliente.data_criacao = datetime.now()
@@ -426,7 +429,8 @@ def atualizar_cliente(cliente_id: int, cliente_data: dict) -> dict:
         
         novos_dados = _nested_to_flat(cliente_data)
         
-        from sqlalchemy import or_
+        import re
+        from sqlalchemy import or_, func
         
         condicoes = []
         _codigo = novos_dados.cadastro_codigo_da_empresa
@@ -436,9 +440,11 @@ def atualizar_cliente(cliente_id: int, cliente_data: dict) -> dict:
         if _codigo and str(_codigo).strip():
             condicoes.append(ClienteModelV2.cadastro_codigo_da_empresa == _codigo)
         if _cnpj and str(_cnpj).strip():
-            condicoes.append(ClienteModelV2.cadastro_cnpj == _cnpj)
+            _cnpj_clean = re.sub(r"\D", "", _cnpj)
+            condicoes.append(func.regexp_replace(ClienteModelV2.cadastro_cnpj, r"\D", "", "g") == _cnpj_clean)
         if _cpf and str(_cpf).strip():
-            condicoes.append(ClienteModelV2.cadastro_cpf == _cpf)
+            _cpf_clean = re.sub(r"\D", "", _cpf)
+            condicoes.append(func.regexp_replace(ClienteModelV2.cadastro_cpf, r"\D", "", "g") == _cpf_clean)
             
         if condicoes:
             existente = db.query(ClienteModelV2).filter(
@@ -449,9 +455,9 @@ def atualizar_cliente(cliente_id: int, cliente_data: dict) -> dict:
             if existente:
                 if _codigo and existente.cadastro_codigo_da_empresa == _codigo:
                     raise BusinessRuleException(f"Já existe outro cliente usando o código {_codigo}")
-                if _cnpj and existente.cadastro_cnpj == _cnpj:
+                if _cnpj and re.sub(r"\D", "", existente.cadastro_cnpj or "") == re.sub(r"\D", "", _cnpj):
                     raise BusinessRuleException(f"Já existe outro cliente usando o CNPJ {_cnpj}")
-                if _cpf and existente.cadastro_cpf == _cpf:
+                if _cpf and re.sub(r"\D", "", existente.cadastro_cpf or "") == re.sub(r"\D", "", _cpf):
                     raise BusinessRuleException(f"Já existe outro cliente usando o CPF {_cpf}")
         
         for col in ClienteModelV2.__table__.columns:

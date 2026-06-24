@@ -168,6 +168,7 @@ function getFilters() {
   const fPedido = document.getElementById("fPedido")?.value || null;
   const fPedidoSupra = document.getElementById("fPedidoSupra")?.value || null;
   const fNotaFiscal = document.getElementById("fNotaFiscal")?.value || null;
+  const fCarga = document.getElementById("fCarga")?.value || null;
 
   // mesmo que seja um <select> simples, selectedOptions ainda funciona
   const selStatusEl = document.getElementById("fStatus");
@@ -175,14 +176,14 @@ function getFilters() {
     selStatusEl.selectedOptions
   ).map((o) => o.value) : [];
 
-  return { fFrom, fTo, fTabela, fCliente, fFornecedor, selStatus, fPedido, fPedidoSupra, fNotaFiscal };
+  return { fFrom, fTo, fTabela, fCliente, fFornecedor, selStatus, fPedido, fPedidoSupra, fNotaFiscal, fCarga };
 }
 
 async function loadList(page = 1) {
   state.page = page;
   state.pageSize = window.innerWidth <= 768 ? 10 : 25;
 
-  const { fFrom, fTo, fTabela, fCliente, fFornecedor, selStatus, fPedido, fPedidoSupra, fNotaFiscal } = getFilters();
+  const { fFrom, fTo, fTabela, fCliente, fFornecedor, selStatus, fPedido, fPedidoSupra, fNotaFiscal, fCarga } = getFilters();
   let fromISO = toISO(fFrom);
   let toISO_ = toISO(fTo);
 
@@ -216,6 +217,7 @@ async function loadList(page = 1) {
   if (fPedido) params.set("id_pedido", fPedido);
   if (fPedidoSupra) params.set("pedido_supra", fPedidoSupra);
   if (fNotaFiscal) params.set("nota_fiscal", fNotaFiscal);
+  if (fCarga) params.set("numero_carga", fCarga);
 
   params.set("page", state.page);
   params.set("pageSize", state.pageSize);
@@ -318,6 +320,7 @@ function renderTable(rows) {
           <td class="td-status" id="td-status-${id}">${statusHtml}</td>
           <td>${tabela}</td>
           <td>${fornecedor}</td>
+          <td>${row.numero_carga || '---'}</td>
           <td>
             ${link ? `<a href="${link}" target="_blank" class="btn-copy">Link</a>` : '<span class="muted">---</span>'}
           </td>
@@ -474,6 +477,14 @@ async function openResumo(id) {
   const valorAjuste = totalSupra - valorSistema;
 
   el.innerHTML = `
+      <div style="margin-bottom: 12px; display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 8px;">
+        <div style="font-size: 0.78rem; color: #64748b; font-weight: 500;">
+          📅 <b>Data do Pedido:</b> ${fmtDate(p.created_at)}
+          ${p.numero_carga ? ` &nbsp;|&nbsp; 📦 <b>Carga:</b> #${p.numero_carga}` : ''}
+        </div>
+        <div>${getStatusBadge(p.status)}</div>
+      </div>
+
       <div class="stack">
         <div class="kv" style="border-bottom: none; padding-bottom: 0;">
           <div style="flex: 1; background: #fff; border: 1px solid #edf2f7; border-radius: 12px; padding: 16px; box-shadow: 0 2px 4px rgba(0,0,0,0.02);">
@@ -482,18 +493,25 @@ async function openResumo(id) {
               <div>
                 <b>Pedido:</b> ${p.id_pedido}<br>
                 <div style="margin-top: 10px; display: flex; align-items: center; gap: 10px;">
-                  <b style="min-width: 95px; font-size: 0.85rem;">Ped. Supra:</b> 
+                  <b style="min-width: 110px; font-size: 0.85rem;">Ped. Supra:</b> 
                   <input type="text" id="editSupra" value="${p.pedido_supra || ''}" class="form-select form-select-sm" style="width: 140px; height: 28px; padding: 2px 8px;">
                 </div>
                 <div style="margin-top: 8px; display: flex; align-items: center; gap: 10px;">
-                  <b style="min-width: 95px; font-size: 0.85rem;">Nota Fiscal:</b> 
+                  <b style="min-width: 110px; font-size: 0.85rem;">Nota Fiscal:</b> 
                   <input type="text" id="editNF" value="${p.nota_fiscal || ''}" class="form-select form-select-sm" style="width: 140px; height: 28px; padding: 2px 8px;">
+                </div>
+                <div style="margin-top: 8px; display: flex; align-items: center; gap: 10px;">
+                  <b style="min-width: 110px; font-size: 0.85rem;">Data Faturam.:</b> 
+                  <input type="date" id="editDataFat" value="${p.data_faturamento ? String(p.data_faturamento).slice(0,10) : ''}" class="form-select form-select-sm" style="width: 140px; height: 28px; padding: 2px 8px;">
+                </div>
+                <div style="margin-top: 8px; display: flex; align-items: center; gap: 10px;">
+                  <b style="min-width: 110px; font-size: 0.85rem;">Valor da Nota:</b> 
+                  <input type="number" id="editValorNota" value="${p.valor_nota || ''}" step="0.01" placeholder="0.00" class="form-select form-select-sm" style="width: 140px; height: 28px; padding: 2px 8px;">
                 </div>
               </div>
 
-              <!-- Lado Direito: Status e Aceite -->
+              <!-- Lado Direito: Aceite -->
               <div style="text-align: right; min-width: 120px;">
-                ${getStatusBadge(p.status)}<br>
                 <div style="margin-top: 10px; font-size: 0.8rem; color: #666;">
                   <b>Aceite em:</b><br>${fmtDate(p.confirmado_em || p.created_at)}
                 </div>
@@ -617,7 +635,9 @@ async function openResumo(id) {
     btnSave.addEventListener("click", async () => {
       const supra = document.getElementById("editSupra").value;
       const nf = document.getElementById("editNF").value;
-      await saveCamposFaturamento(id, supra, nf, btnSave);
+      const dataFat = document.getElementById("editDataFat")?.value || null;
+      const valorNota = document.getElementById("editValorNota")?.value || null;
+      await saveCamposFaturamento(id, supra, nf, btnSave, dataFat, valorNota ? parseFloat(valorNota) : null);
     });
   }
 
@@ -693,16 +713,20 @@ async function openResumo(id) {
   if (d) d.classList.remove("hidden");
 }
 
-async function saveCamposFaturamento(id, supra, nf, btn) {
+async function saveCamposFaturamento(id, supra, nf, btn, dataFat = null, valorNota = null) {
   const originalText = btn.innerText;
   btn.innerText = "⏳...";
   btn.disabled = true;
 
   try {
+    const body = { pedido_supra: supra, nota_fiscal: nf };
+    if (dataFat) body.data_faturamento = dataFat;
+    if (valorNota !== null) body.valor_nota = valorNota;
+
     const r = await fetch(API.camposFaturamento(id), {
       method: "PATCH",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ pedido_supra: supra, nota_fiscal: nf })
+      body: JSON.stringify(body)
     });
 
     if (r.ok) {
@@ -714,6 +738,8 @@ async function saveCamposFaturamento(id, supra, nf, btn) {
       if (row) {
         row.pedido_supra = supra;
         row.nota_fiscal = nf;
+        if (dataFat) row.data_faturamento = dataFat;
+        if (valorNota !== null) row.valor_nota = valorNota;
       }
       
       // Opcional: recarrega a tabela para atualizar a coluna visualmente

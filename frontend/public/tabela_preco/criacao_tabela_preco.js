@@ -242,6 +242,14 @@ function restoreHeaderSnapshotIfNew(force = false) {
     window.isClienteLivreSelecionado = !!snap.cliente_livre;
     window.currentClientMarkup = Number(snap.currentClientMarkup || 0); // ✅ Restore Markup
 
+    // ---- Restore Safety Net (Global Vault) ----
+    if (snap.cliente) {
+      window.__clientState = {
+        originalName: (snap.cliente || '').trim(),
+        originalCode: (snap.codigo_cliente || '').trim()
+      };
+    }
+
     // ---- Atualizações visuais e locks
     atualizarPillTaxa?.();
     atualizarPillDesconto?.();
@@ -1089,6 +1097,7 @@ async function carregarItens() {
         const t = await r.json();
       document.getElementById('nome_tabela').value = t.nome_tabela || '';
       document.getElementById('cliente_nome').value = t.cliente_nome || t.cliente || '';
+      if (document.getElementById('codigo_cliente')) document.getElementById('codigo_cliente').value = t.codigo_cliente || '';
       document.getElementById('ramo_juridico').value = t.ramo_juridico || '';
       document.getElementById('observacao').value = t.observacao || ''; // ✅ Restore Observação
 

@@ -29,6 +29,7 @@ class ProdutoV2Base(BaseModel):
     tipo_giro: Optional[str] = None
     tipo: Optional[str] = None
     estoque_disponivel: Optional[int] = None
+    estoque_futuro: Optional[int] = None
     unidade: Optional[str] = None
     peso: Optional[float] = None
     peso_bruto: Optional[float] = None

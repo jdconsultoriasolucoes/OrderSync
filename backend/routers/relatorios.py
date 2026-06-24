@@ -159,6 +159,27 @@ def add_pedido_to_carga(carga_id: int, pedido: CargaPedidoCreate, db: Session = 
         observacoes=pedido.observacoes
     )
     db.add(db_item)
+    
+    # Atualiza status do pedido para "Carga em formação"
+    if pedido.numero_pedido.isdigit():
+        db_pedido = db.query(PedidoModel).filter(PedidoModel.id == int(pedido.numero_pedido)).first()
+        if db_pedido:
+            de_status = db_pedido.status
+            db_pedido.status = "Carga em formação"
+            db_pedido.atualizado_em = datetime.utcnow()
+            
+            # Insere evento
+            try:
+                db.execute(text("""
+                    INSERT INTO public.pedido_status_event (id, pedido_id, de_status, para_status, user_id, motivo, metadata, created_at)
+                    VALUES (gen_random_uuid(), :pedido_id, :de_status, 'Carga em formação', 'sistema', 'Pedido vinculado à Carga', '{}'::jsonb, now())
+                """), {
+                    "pedido_id": db_pedido.id,
+                    "de_status": de_status
+                })
+            except Exception:
+                pass
+
     db.commit()
     db.refresh(db_item)
     return {"status": "success", "id_carga_pedido": db_item.id}
@@ -182,6 +203,23 @@ def remove_pedido_from_carga(item_id: int, db: Session = Depends(get_db)):
     if db_item is None:
         raise HTTPException(status_code=404, detail="Item de carga não encontrado")
     
+    # Mudar status do pedido de volta para "Pedido" (se estiver em "Carga em formação")
+    num_ped = db_item.numero_pedido
+    if num_ped.isdigit():
+        db_pedido = db.query(PedidoModel).filter(PedidoModel.id == int(num_ped)).first()
+        if db_pedido and db_pedido.status == "Carga em formação":
+            db_pedido.status = "Pedido"
+            db_pedido.atualizado_em = datetime.utcnow()
+            try:
+                db.execute(text("""
+                    INSERT INTO public.pedido_status_event (id, pedido_id, de_status, para_status, user_id, motivo, metadata, created_at)
+                    VALUES (gen_random_uuid(), :pedido_id, 'Carga em formação', 'Pedido', 'sistema', 'Pedido removido da Carga', '{}'::jsonb, now())
+                """), {
+                    "pedido_id": db_pedido.id
+                })
+            except Exception:
+                pass
+
     db.delete(db_item)
     db.commit()
     return None
@@ -334,6 +372,87 @@ def download_relatorio_completo_pdf(carga_id: int, db: Session = Depends(get_db)
         media_type="application/pdf",
         headers={"Content-Disposition": f"attachment; filename=relatorio_completo_{carga_id}.pdf"}
     )
+
+@router.post("/cargas/{carga_id}/confirmar-entrega")
+def confirmar_entrega_carga(carga_id: int, db: Session = Depends(get_db)):
+    # 1. Busca a carga
+    db_carga = db.query(CargaModel).filter(CargaModel.id == carga_id).first()
+    if not db_carga:
+        raise HTTPException(status_code=404, detail="Carga não encontrada")
+    
+    # 2. Busca todos os pedidos associados a essa carga
+    carga_pedidos = db.query(CargaPedidoModel).filter(CargaPedidoModel.id_carga == carga_id).all()
+    if not carga_pedidos:
+        raise HTTPException(status_code=400, detail="Esta carga não possui pedidos vinculados.")
+
+    # Importa no escopo local para evitar import circular
+    from routers.pedidos import verificar_e_historico_carga
+    
+    pedidos_com_erro = []
+    pedidos_db = []
+    
+    for cp in carga_pedidos:
+        num_ped = cp.numero_pedido
+        if not num_ped.isdigit():
+            continue
+        id_pedido = int(num_ped)
+        
+        # Lock e busca o status do pedido e código da empresa do cliente
+        resultado = db.execute(
+            text("""
+                SELECT p.status, c.cadastro_codigo_da_empresa, p.id_pedido::text as num_pedido_vis
+                FROM public.tb_pedidos p
+                LEFT JOIN public.t_cadastro_cliente_v2 c ON c.cadastro_codigo_da_empresa::text = p.codigo_cliente
+                WHERE p.id_pedido = :id
+            """),
+            {"id": id_pedido}
+        ).first()
+        
+        if not resultado:
+            continue
+            
+        de_status, codigo_empresa, num_pedido_vis = resultado
+        if not codigo_empresa or not str(codigo_empresa).strip():
+            pedidos_com_erro.append(f"Pedido {num_pedido_vis} (Cliente sem código da empresa)")
+        else:
+            pedidos_db.append((id_pedido, de_status))
+            
+    if pedidos_com_erro:
+        raise HTTPException(
+            status_code=400,
+            detail="Não foi possível confirmar a entrega. Os seguintes pedidos possuem problemas:<br>" + "<br>".join(pedidos_com_erro)
+        )
+        
+    # 4. Altera o status de todos os pedidos da carga para "Faturado Supra"
+    for id_pedido, de_status in pedidos_db:
+        # Atualiza o status do pedido e insere a data de faturamento
+        db.execute(text("""
+            UPDATE public.tb_pedidos
+            SET status = 'Faturado Supra',
+                atualizado_em = now(),
+                atualizado_por = 'sistema',
+                data_faturamento = now()
+            WHERE id_pedido = :id_pedido
+        """), {"id_pedido": id_pedido})
+        
+        # Insere evento no histórico
+        try:
+            db.execute(text("""
+                INSERT INTO public.pedido_status_event (id, pedido_id, de_status, para_status, user_id, motivo, metadata, created_at)
+                VALUES (gen_random_uuid(), :pedido_id, :de_status, 'Faturado Supra', 'sistema', 'Entrega de carga confirmada em lote', '{}'::jsonb, now())
+            """), {
+                "pedido_id": id_pedido,
+                "de_status": de_status
+            })
+        except Exception:
+            pass
+            
+    # 5. Move a carga para o histórico
+    db_carga.is_historico = True
+    db_carga.data_faturamento = datetime.utcnow()
+    
+    db.commit()
+    return {"status": "success", "message": "Entrega confirmada com sucesso!"}
 
 
 # ----------------- RELATÓRIO DE VENDAS POR CLIENTE -----------------

@@ -83,6 +83,8 @@ SELECT
   a.link_status,
   a.pedido_supra,
   a.nota_fiscal,
+  a.valor_nota,
+  a.data_faturamento,
   a.created_at,
   a.calcula_st,
   cg.numero_carga AS numero_carga

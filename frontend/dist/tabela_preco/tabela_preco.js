@@ -121,8 +121,16 @@ document.addEventListener("DOMContentLoaded", () => {
     });
 
   // FAB Seleção Massiva
-  document.getElementById("btn-selecionar-todos-massivo")
-    ?.addEventListener("click", selecionarTodosMassivo);
+  const btnMassivo = document.getElementById("btn-selecionar-todos-massivo");
+  btnMassivo?.addEventListener("click", selecionarTodosMassivo);
+
+  // Ocultar se o acesso for através da tela de pedido (criação ou edição)
+  const returnUrl = sessionStorage.getItem('TP_RETURN_URL') || '';
+  if (returnUrl.includes('criacao_pedido.html') || returnUrl.includes('editar_pedido.html')) {
+    if (btnMassivo) {
+      btnMassivo.style.display = 'none';
+    }
+  }
   
   // Checkbox Selecionar Todos na Página
   document.getElementById("chk-selecionar-todos-pagina")

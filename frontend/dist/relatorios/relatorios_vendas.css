@@ -1,5 +1,11 @@
 /* relatorios_vendas.css */
 
+.relatorios-container {
+    max-width: 1800px;
+    width: 98%;
+    margin: 0 auto;
+}
+
 .filtros-grid-panel {
     display: grid;
     grid-template-columns: repeat(4, 1fr);
@@ -22,7 +28,7 @@
 .filtros-actions-container {
     grid-column: 1 / -1;
     display: flex;
-    justify-content: flex-end;
+    justify-content: flex-start;
     align-items: center;
     gap: 12px;
     margin-top: 8px;
@@ -138,4 +144,126 @@
     text-align: right !important;
 }
 
+/* =========================================
+   Layout Top Navigation (Override global)
+   ========================================= */
+.relatorios-top-nav-container {
+    display: flex !important;
+    flex-direction: column !important;
+    gap: var(--os-space-3) !important;
+}
 
+.relatorios-top-nav-container .relatorios-sidebar {
+    position: static !important;
+    width: 100% !important;
+    padding: 0 !important;
+    background: transparent !important;
+    border: none !important;
+    box-shadow: none !important;
+}
+
+.relatorios-top-nav-container .relatorios-menu {
+    flex-direction: row !important;
+    flex-wrap: wrap;
+    gap: 8px;
+    border-bottom: 2px solid var(--os-border);
+    padding-bottom: 8px;
+}
+
+.relatorios-top-nav-container .relatorios-menu button {
+    width: auto !important;
+    padding: 10px 20px !important;
+    background: var(--os-bg-white);
+    border: 1px solid var(--os-border);
+    border-bottom: none;
+    border-radius: var(--os-radius-lg) var(--os-radius-lg) 0 0;
+    color: var(--os-text-secondary);
+    font-weight: 600;
+    transition: all 0.2s ease;
+    margin-bottom: -10px; /* Puxa para cima da borda inferior */
+}
+
+.relatorios-top-nav-container .relatorios-menu button:hover {
+    color: var(--os-primary);
+    background: #f8fafc;
+}
+
+.relatorios-top-nav-container .relatorios-menu button.active {
+    background: var(--os-primary-light);
+    color: var(--os-primary);
+    border-color: rgba(var(--os-primary-rgb), 0.2);
+    box-shadow: 0 -2px 0 var(--os-primary) inset;
+}
+
+/* =========================================
+   Filtros Duplos (Datas)
+   ========================================= */
+.filtro-duplo {
+    grid-column: span 2;
+}
+
+.duplo-inputs {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    align-items: stretch;
+}
+
+.duplo-separador {
+    display: none;
+}
+
+@media (max-width: 600px) {
+    .filtro-duplo {
+        grid-column: span 1;
+    }
+    .duplo-inputs {
+        flex-direction: column;
+        align-items: stretch;
+    }
+    .duplo-separador {
+        display: none;
+    }
+}
+
+/* =========================================
+   Ajuste Fino - Pedido Supra
+   ========================================= */
+.col-pedido-supra {
+    min-width: 120px !important;
+    white-space: nowrap !important;
+}
+
+/* =========================================
+   Layout Filtros em 1 Linha (Desktop)
+   ========================================= */
+@media (min-width: 993px) {
+    .filtros-grid-panel {
+        display: flex !important;
+        flex-wrap: wrap !important;
+        align-items: flex-start !important;
+        justify-content: flex-start;
+        gap: 8px !important;
+        padding-bottom: 4px;
+    }
+    
+    .filtros-grid-panel .filtro-campo {
+        flex: 1;
+        min-width: 110px;
+    }
+    
+    .filtros-grid-panel .filtro-duplo {
+        flex: 1;
+        min-width: 130px;
+    }
+    
+    .duplo-inputs .os-input {
+        padding: 6px 4px !important; /* Mais enxuto horizontalmente */
+    }
+    
+    .filtros-actions-container {
+        width: 100%;
+        margin-top: 16px;
+        padding-top: 12px;
+    }
+}

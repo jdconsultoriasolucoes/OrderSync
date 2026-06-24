@@ -86,7 +86,11 @@ def gerar_pdf_cliente_simplificado(pedido: PedidoPdf) -> bytes:
             ["Data do pedido:", data_pedido_str],
             ["Cliente:", pedido.cliente or "---"],
             ["Validade:", pedido.validade_tabela or "Não se aplica"],
-            ["Data de entrega:", data_entrega_str]
+            [
+                "Data de entrega:" if (pedido.usar_valor_com_frete and float(pedido.frete_total or 0) > 0)
+                else "Data de retirada:",
+                data_entrega_str
+            ]
         ]
         
         # Largura total padronizada: 19cm (mesma da tabela de produtos)

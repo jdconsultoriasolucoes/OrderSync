@@ -421,15 +421,15 @@ def _desenhar_resumo_logic(c, db, carga, produtos, width, height, y_start=None):
         c.drawRightString(width - 0.7*cm, y, f"DATA CARREGAMENTO: {data_str}")
         y -= 0.5*cm
 
-        # Totais no cabeçalho — canto direito, acima da tabela
+        # Totais no cabeçalho — iniciar a informação alinhando com a palavra carga (X = 7.0*cm)
         c.setFont("Helvetica-Bold", 9)
-        c.drawRightString(width - 0.7*cm, y, f"TOTAL P. LÍQ: {_br_number(total_liq, 0)} kg   |   TOTAL P. BRUTO: {_br_number(total_bruto, 0)} kg")
+        c.drawString(7.0*cm, y, f"TOTAL P. LÍQ: {_br_number(total_liq, 0)} kg   |   TOTAL P. BRUTO: {_br_number(total_bruto, 0)} kg")
         y -= 0.8*cm
     else:
         y = y_start
 
-    # Table columns: CÓDIGO | DESCRIÇÃO PRODUTO | Emb. | Peso EMB. | (vaza) | QTD | P. LÍQ ACUM
-    data = [["CÓDIGO", "DESCRIÇÃO PRODUTO", "Emb.", "Peso EMB.", "", "QTD", "P. LÍQ ACUM"]]
+    # Table columns: CÓDIGO | DESCRIÇÃO PRODUTO | Peso EMB. | Emb. | OBSERVAÇÃO | QTD | P. LÍQ ACUM
+    data = [["CÓDIGO", "DESCRIÇÃO PRODUTO", "Peso EMB.", "Emb.", "OBSERVAÇÃO", "QTD", "P. LÍQ ACUM"]]
     
     for p in produtos:
         peso_unit = getattr(p, 'peso_unitario', 0.0) or 0.0
@@ -437,23 +437,24 @@ def _desenhar_resumo_logic(c, db, carga, produtos, width, height, y_start=None):
         data.append([
             str(p.item_codigo),
             str(p.item_nome)[:50],
-            str(p.item_embalagem or ""),
             _br_number(peso_unit, 0),
+            str(p.item_embalagem or ""),
             "",
             str(int(p.qtd_total or 0)),
             _br_number(peso_total, 0),
         ])
 
     # Width distribution for portrait A4 (~21cm width - margins)
-    col_widths = [2.2*cm, 7.7*cm, 1.8*cm, 2.2*cm, 1.5*cm, 1.5*cm, 2.7*cm]
+    # Reduced Peso EMB from 2.2 to 1.6, Emb from 1.8 to 1.2. The saved 1.2cm is added to OBSERVAÇÃO (1.5 + 1.2 = 2.7)
+    col_widths = [2.2*cm, 7.7*cm, 1.6*cm, 1.2*cm, 2.7*cm, 1.5*cm, 2.7*cm]
     table = Table(data, colWidths=col_widths, repeatRows=1)
     style = TableStyle([
         ('BACKGROUND', (0, 0), (-1, 0), SUPRA_BAR),
         ('TEXTCOLOR', (0, 0), (-1, 0), colors.white),
         ('ALIGN', (0, 0), (-1, -1), 'LEFT'),
-        ('ALIGN', (3, 0), (3, -1), 'RIGHT'), # Peso EMB.
-        ('ALIGN', (5, 0), (5, -1), 'CENTER'), # Qtd
-        ('ALIGN', (6, 0), (6, -1), 'RIGHT'), # P. LÍQ ACUM
+        ('ALIGN', (2, 0), (2, -1), 'RIGHT'), # Peso EMB. (now at index 2)
+        ('ALIGN', (5, 0), (5, -1), 'CENTER'), # Qtd (now at index 5)
+        ('ALIGN', (6, 0), (6, -1), 'RIGHT'), # P. LÍQ ACUM (now at index 6)
         ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
         ('FONTSIZE', (0, 0), (-1, -1), 8),
         ('GRID', (0, 0), (-1, -1), 0.5, colors.grey),

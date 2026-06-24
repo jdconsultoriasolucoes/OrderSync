@@ -148,6 +148,8 @@
 
           <button id="btn-renovar-validade" class="ghost" style="color: #f39c12; border-color: #f39c12;">Renovar Validade</button>
           <button id="btn-recalcular-massivo" class="ghost" style="color: #2980b9; border-color: #2980b9;">Recalcular Tabelas</button>
+          <button id="btn-carga-estoque" class="ghost" style="color: #27ae60; border-color: #27ae60;">Carga Estoque</button>
+          <input type="file" id="input-carga-estoque" accept=".xlsx" style="display: none;" />
 
           <!-- Botões de Ação do Formulário -->
           <button id="btn-editar" class="btn-secondary" style="display: none;">Editar</button>
@@ -205,8 +207,8 @@
         </div>
       </div>
 
-      <!-- Unidade / Embalagem / Pesos -->
-      <div class="section-title">Unidade / Embalagem / Pesos</div>
+      <!-- Informações do Produto -->
+      <div class="section-title">Informações do Produto</div>
       <div class="row g-2">
         <div class="col-2">
           <label for="unidade">Unidade Venda</label>
@@ -233,29 +235,35 @@
           <input id="peso_bruto" type="number" step="0.001" />
         </div>
       </div>
-
-      <!-- Estoque / Códigos -->
-      <div class="section-title">Estoque / Códigos</div>
       <div class="row g-2">
-        <div class="col-2">
-          <label for="estoque_disponivel">Estoque Físico</label>
-          <input id="estoque_disponivel" type="number" step="1" min="0" />
-        </div>
-        <div class="col-2">
-          <label for="estoque_ideal">Estoque Ideal</label>
-          <input id="estoque_ideal" type="number" step="1" min="0" />
-        </div>
-        <div class="col-3">
+        <div class="col-4">
           <label for="codigo_ean">Cód. Barra (EAN/GTIN)</label>
           <input id="codigo_ean" type="text" />
         </div>
-        <div class="col-3">
+        <div class="col-4">
           <label for="codigo_embalagem">Cód. Embalagem</label>
           <input id="codigo_embalagem" type="text" />
         </div>
-        <div class="col-2">
+        <div class="col-4">
           <label for="ncm">NCM / SH</label>
           <input id="ncm" type="text" placeholder="NN.NN.NN.NN" />
+        </div>
+      </div>
+
+      <!-- Estoque -->
+      <div class="section-title">Estoque</div>
+      <div class="row g-2">
+        <div class="col-4">
+          <label for="estoque_disponivel">Estoque Disponível</label>
+          <input id="estoque_disponivel" type="number" step="1" min="0" />
+        </div>
+        <div class="col-4">
+          <label for="estoque_futuro">Estoque Futuro</label>
+          <input id="estoque_futuro" type="number" step="1" min="0" />
+        </div>
+        <div class="col-4">
+          <label for="estoque_ideal">Estoque Ideal</label>
+          <input id="estoque_ideal" type="number" step="1" min="0" />
         </div>
       </div>
 
@@ -443,6 +451,44 @@
             <polyline points="10 9 9 9 8 9"></polyline>
           </svg> Baixar Relatório PDF
         </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal de SUCESSO da carga de estoque (NOVA) -->
+  <div id="estoque-success-modal" class="custom-modal hidden">
+    <div class="custom-modal-dialog" style="max-width: 500px;">
+      <div class="custom-modal-header" style="background: #e0f2fe; color: #0369a1;">
+        <div class="custom-modal-title">Carga de Estoque Concluída!</div>
+        <button id="estoque-success-close" class="icon-btn">&times;</button>
+      </div>
+      <div class="custom-modal-body" style="padding: 20px;">
+        <div style="text-align: center; margin: 16px 0;">
+          <div style="font-size: 48px; margin-bottom: 8px;">📦</div>
+          <h3 style="margin: 8px 0; color: #333; font-weight: 600;">Estoque Atualizado</h3>
+          <p style="color: #666; font-size: 14px;">O arquivo Excel de estoque foi processado com sucesso.</p>
+        </div>
+
+        <div style="background: #f9fafb; padding: 16px; border-radius: 8px; font-size: 14px; border: 1px solid #e5e7eb;">
+          <div style="display: flex; justify-content: space-between; margin-bottom: 8px;">
+            <span>Linhas processadas:</span>
+            <strong id="estoque-total">0</strong>
+          </div>
+          <div style="display: flex; justify-content: space-between; color: #059669; margin-bottom: 8px;">
+            <span>Produtos atualizados:</span>
+            <strong id="estoque-atualizados">0</strong>
+          </div>
+          <div id="estoque-div-nao-encontrados" style="display: none; flex-direction: column; color: #dc2626; margin-top: 12px; border-top: 1px solid #e5e7eb; padding-top: 12px;">
+            <div style="display: flex; justify-content: space-between; margin-bottom: 4px;">
+              <span>Códigos não encontrados:</span>
+              <strong id="estoque-nao-encontrados-count">0</strong>
+            </div>
+            <div id="estoque-nao-encontrados-lista" style="max-height: 100px; overflow-y: auto; background: #fef2f2; padding: 8px; border: 1px solid #fca5a5; border-radius: 4px; font-size: 12px; font-family: monospace; white-space: pre-wrap; margin-top: 6px;"></div>
+          </div>
+        </div>
+      </div>
+      <div class="custom-modal-footer" style="background-color: #f9fafb;">
+        <button id="estoque-success-ok" class="primary" style="background-color: #0284c7; border-color: #0284c7; width: 100%;">Entendido</button>
       </div>
     </div>
   </div>

@@ -254,6 +254,7 @@ function readForm() {
     unidade_embalagem: getValue("unidade_embalagem") || null,
 
     estoque_disponivel: getInt("estoque_disponivel"),
+    estoque_futuro: getInt("estoque_futuro"),
     estoque_ideal: getInt("estoque_ideal"),
 
     codigo_ean: getValue("codigo_ean") || null,
@@ -332,6 +333,7 @@ function fillForm(p) {
   set("unidade_embalagem", p.unidade_embalagem);
 
   set("estoque_disponivel", p.estoque_disponivel);
+  set("estoque_futuro", p.estoque_futuro);
   set("estoque_ideal", p.estoque_ideal);
 
   set("codigo_ean", p.codigo_ean);
@@ -803,6 +805,77 @@ async function uploadListaPdf(file) {
   } catch (e) {
     console.error(e);
     toast(e.message || "Erro ao importar PDF.");
+  }
+}
+
+async function uploadEstoqueExcel(file) {
+  if (!file) {
+    toast("Selecione um arquivo Excel.");
+    return;
+  }
+
+  const base = await resolveProdutosEndpoint().catch(() => null);
+  if (!base) {
+    toast("Não consegui resolver o endpoint de produtos.");
+    return;
+  }
+
+  const importBase = base
+    .replace("/produtos_v2", "/produto_v2")
+    .replace("/produtos", "/produto");
+
+  const url = `${importBase}/importar-estoque`;
+
+  const formData = new FormData();
+  formData.append("file", file);
+
+  try {
+    toast("Processando arquivo de estoque...");
+    const res = await fetch(url, {
+      method: "POST",
+      credentials: "include",
+      body: formData,
+    });
+
+    let data = {};
+    try {
+      data = await res.json();
+    } catch (_) {
+      data = {};
+    }
+
+    if (!res.ok) {
+      const msg = data.detail || data.message || res.statusText || "Erro ao processar estoque.";
+      throw new Error(msg);
+    }
+
+    $("estoque-total").textContent = data.total_linhas || 0;
+    $("estoque-atualizados").textContent = data.atualizados || 0;
+
+    const divNaoEncontrados = $("estoque-div-nao-encontrados");
+    const countNaoEncontrados = $("estoque-nao-encontrados-count");
+    const listaNaoEncontrados = $("estoque-nao-encontrados-lista");
+
+    if (data.nao_encontrados && data.nao_encontrados.length > 0) {
+      countNaoEncontrados.textContent = data.nao_encontrados.length;
+      listaNaoEncontrados.textContent = data.nao_encontrados.join(", ");
+      divNaoEncontrados.style.display = "flex";
+    } else {
+      divNaoEncontrados.style.display = "none";
+    }
+
+    showModal("estoque-success-modal");
+    toast("Estoque atualizado com sucesso!");
+
+    if (CURRENT_ID) {
+      const currentBase = await resolveProdutosEndpoint();
+      const updatedProduct = await fetchJSON(`${currentBase}/${CURRENT_ID}`);
+      fillForm(updatedProduct);
+    }
+
+  } catch (e) {
+    console.error(e);
+    alert("Erro na carga de estoque: " + e.message);
   }
 }
 
@@ -1533,10 +1606,39 @@ function setupRecalcularMassivo() {
   });
 }
 
+function setupCargaEstoque() {
+  const btn = $("btn-carga-estoque");
+  const inp = $("input-carga-estoque");
+  if (btn && inp) {
+    btn.addEventListener("click", () => {
+      inp.click();
+    });
+    inp.addEventListener("change", async (e) => {
+      const file = e.target.files[0];
+      if (file) {
+        await uploadEstoqueExcel(file);
+        inp.value = "";
+      }
+    });
+  }
+
+  const closeBtn = $("estoque-success-close");
+  const okBtn = $("estoque-success-ok");
+  const modal = $("estoque-success-modal");
+
+  const hide = () => {
+    if (modal) modal.classList.add("hidden");
+  };
+
+  if (closeBtn) closeBtn.addEventListener("click", hide);
+  if (okBtn) okBtn.addEventListener("click", hide);
+}
+
 document.addEventListener("DOMContentLoaded", () => {
   setupRenovarValidade();
   setupSearchModal();
   setupRecalcularMassivo();
+  setupCargaEstoque();
 });
 
 

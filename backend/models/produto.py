@@ -24,6 +24,7 @@ class ProdutoV2(Base):
 
     # Estoque / unidade / pesos
     estoque_disponivel = Column(Integer)
+    estoque_futuro = Column(Integer)
     unidade = Column(Text)                               # Unidade de venda (atual)
     unidade_anterior = Column(Text)                      # Snapshot unidade anterior
     peso = Column(Numeric(12, 3))                        # Peso Líquido
@@ -89,3 +90,20 @@ class ImpostoV2(Base):
     updated_at = Column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now(), nullable=False)
 
     produto = relationship("ProdutoV2", back_populates="imposto")
+
+
+class HistoricoEstoqueV2(Base):
+    __tablename__ = "t_historico_estoque_v2"
+
+    id = Column(BigInteger, primary_key=True)
+    codigo_supra = Column(Text, nullable=False)
+    nome_produto = Column(Text)
+    qtd_estoque = Column(Integer)
+    qtd_pedido = Column(Integer)
+    af_pendentes = Column(Integer)
+    estoque_disponivel = Column(Integer)
+    estoque_futuro = Column(Integer)
+    data_ingestao = Column(DateTime(timezone=True), server_default=func.now(), nullable=False)
+    nome_arquivo = Column(Text)
+    usuario = Column(Text)
+
