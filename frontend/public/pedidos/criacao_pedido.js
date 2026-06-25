@@ -210,7 +210,8 @@ function getHeaderSnapshot() {
     observacao: val("observacao"),       // ✅ Persist Observação
     cliente_livre: !!window.isClienteLivreSelecionado,
     iva_enabled: !$("iva_st_toggle")?.disabled,
-    currentClientMarkup: window.currentClientMarkup || 0 // ✅ Persist Markup
+    currentClientMarkup: window.currentClientMarkup || 0, // ✅ Persist Markup
+    nome_arquivo_estoque: $("estoque-arquivo-nome")?.textContent !== '--' ? ($("estoque-arquivo-nome")?.textContent || "") : ""
   };
 }
 
@@ -249,6 +250,11 @@ function restoreHeaderSnapshotIfNew(force = false) {
     set('desconto_global', snap.desconto_global || '');
     set('markup_global', snap.markup_global || ''); // ✅ Restore Markup Global
     set('observacao', snap.observacao || '');       // ✅ Restore Observação
+
+    // ---- Restaura origem do estoque se houver no snapshot
+    if (snap.nome_arquivo_estoque) {
+      apresentarOrigemEstoque(snap.nome_arquivo_estoque);
+    }
 
     // ---- IVA_ST e flags do cliente livre
     const ivaChk = document.getElementById('iva_st_toggle');
