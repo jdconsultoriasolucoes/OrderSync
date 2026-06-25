@@ -125,10 +125,14 @@ def gerar_pdf_cliente_simplificado(pedido: PedidoPdf) -> bytes:
     # ==================== PREPARAR DADOS DA TABELA ====================
     
     # Determinar título da coluna de valor
-    if pedido.usar_valor_com_frete:
-        header_valor = "Valor c/ Frete"
+    tem_frete = float(pedido.frete_total or 0) > 0 or float(pedido.frete_kg or 0) > 0
+    if tem_frete:
+        if pedido.usar_valor_com_frete:
+            header_valor = "Valor c/ Frete"
+        else:
+            header_valor = "Valor s/ Frete"
     else:
-        header_valor = "Valor s/ Frete"
+        header_valor = "Valor Unitário"
     
     # Filtrar apenas itens com quantidade > 0
     itens_validos = []
