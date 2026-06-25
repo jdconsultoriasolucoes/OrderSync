@@ -106,6 +106,20 @@ function parseBool(v) {
   return false;
 }
 
+function apresentarOrigemEstoque(nomeArquivo) {
+  const elEstoqueOrigem = document.getElementById('info-estoque-origem');
+  const elArquivoNome = document.getElementById('estoque-arquivo-nome');
+  if (elEstoqueOrigem && elArquivoNome) {
+    if (nomeArquivo) {
+      elArquivoNome.textContent = nomeArquivo;
+      elEstoqueOrigem.style.display = 'inline-flex';
+    } else {
+      elEstoqueOrigem.style.display = 'none';
+    }
+  }
+}
+
+
 function setTabelaIds(id) {
   const v = id != null ? String(id) : '';
   currentTabelaId = v;
@@ -1212,6 +1226,7 @@ async function carregarItens() {
       const r = await fetch(`${API_BASE}/tabela_preco/${id}`);
       if (r.ok) {
         const t = await r.json();
+        apresentarOrigemEstoque(t.nome_arquivo_estoque);
       const elNomeTabela = document.getElementById('nome_tabela');
       if (elNomeTabela) elNomeTabela.value = t.nome_tabela || '';
       const elBaseNome = document.getElementById('tabela_base_nome');
@@ -2749,6 +2764,7 @@ async function onCancelar(e) {
         const r = await fetch(`${API_BASE}/tabela_preco/${encodeURIComponent(sourceTabelaId)}`);
         if (r.ok) {
           const t = await r.json();
+          apresentarOrigemEstoque(t.nome_arquivo_estoque);
 
           // repõe cabeçalho
           const elNomeTabela = document.getElementById('nome_tabela');
@@ -4015,6 +4031,7 @@ async function carregarTabelaBase(e, forceId = null) {
         const r = await fetch(`${API_BASE}/tabela_preco/${id}`);
         if(!r.ok) throw new Error('Tabela não encontrada');
         const data = await r.json();
+        apresentarOrigemEstoque(data.nome_arquivo_estoque);
         
         const inpNome = document.getElementById('tabela_base_nome');
         if (inpNome) {

@@ -49,6 +49,8 @@ class ProdutoV2(Base):
     preco_tonelada_anterior = Column(Numeric(14, 4))     # Snapshot quando preço_tonelada muda
     validade_tabela = Column(Date)                       # "Validade da Tabela Atual a partir de"
     validade_tabela_anterior = Column(Date)              # Snapshot (D-1) quando muda a validade
+    nome_arquivo_estoque = Column(Text)
+
 
     # Desconto por tonelada (R$/t) e período
     desconto_valor_tonelada = Column(Numeric(14, 4))

@@ -6,7 +6,7 @@ from dotenv import load_dotenv
 
 load_dotenv()
 
-DATABASE_URL = os.environ["DATABASE_URL"]  # Render já fornece essa variável no ambiente
+DATABASE_URL = os.getenv("DATABASE_URL", "sqlite:///./test.db")  # Fallback to SQLite for local dev
 
 # opcional: pool_pre_ping=True evita “server closed the connection unexpectedly”
 # Aumentado o pool para aguentar rajadas em ambiente SaaS

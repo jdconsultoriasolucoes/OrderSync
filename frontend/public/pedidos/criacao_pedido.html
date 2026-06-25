@@ -179,14 +179,15 @@
 
           <!-- Buscar Tabela Base (Opcional) -->
           <div class="os-form-group area-nome" style="flex: 1.5; min-width: 250px;">
-            <label class="os-label" for="tabela_base_nome">Buscar Tabela de Preço (Opcional)</label>
+            <label class="os-label" for="tabela_base_nome">&nbsp;</label>
             <div style="display: flex; gap: var(--os-space-1);">
-                <input id="tabela_base_nome" class="os-input" type="text" placeholder="Selecione uma tabela..." readonly style="background-color: var(--os-bg-disabled); cursor: not-allowed; width: 100%;" />
+                <input id="tabela_base_nome" class="os-input" type="text" placeholder="" readonly style="background-color: var(--os-bg-disabled); cursor: not-allowed; width: 100%;" />
                 <input id="tabela_base_id" type="hidden" />
-                <button type="button" id="btn-carregar-tabela" class="os-btn os-btn-secondary" title="Buscar tabela de preço">
-                    <i class="bi bi-search"></i> Buscar Tabela
+                <button type="button" id="btn-carregar-tabela" class="os-btn os-btn-secondary" title="Carregar tabela de preço">
+                    <i class="bi bi-search"></i> Carregar Tabela
                 </button>
             </div>
+
             <div id="tabela_suggestions" class="suggestions"></div>
           </div>
 
@@ -264,7 +265,7 @@
         Produtos do Pedido</h2>
 
       <!-- Resumo Valores (Movido para cima) -->
-      <div style="display: flex; justify-content: flex-start; margin-bottom: 8px; width: 100%;">
+      <div style="display: flex; justify-content: flex-start; align-items: center; gap: var(--os-space-3); margin-bottom: 8px; width: 100%; flex-wrap: wrap;">
           <div style="background: var(--os-surface-hover); padding: 8px 12px; border-radius: var(--os-radius-md); border: 1px solid var(--os-border); min-width: 300px; display: flex; flex-direction: row; gap: var(--os-space-3); align-items: center;">
               <div style="display: flex; flex-direction: column;">
                   <span style="color: var(--os-text-secondary); font-size: 11px;">Total Itens</span>
@@ -287,7 +288,13 @@
                   <strong id="resumo-total-cf" style="color: var(--os-primary); font-size: 14px;">R$ 0,00</strong>
               </div>
           </div>
+          <!-- Origem do Estoque -->
+          <div id="info-estoque-origem" style="background: var(--os-surface-hover); padding: 8px 12px; border-radius: var(--os-radius-md); border: 1px dashed var(--os-border); display: none; align-items: center; gap: 8px; font-size: 12px; color: var(--os-text-secondary);">
+              <i class="bi bi-file-earmark-spreadsheet" style="color: var(--os-primary); font-size: 16px;"></i>
+              <span>Origem do Estoque: <strong id="estoque-arquivo-nome" style="color: var(--os-text); font-weight: 600;">--</strong></span>
+          </div>
       </div>
+
 
       <div class="toolbar desktop-only" id="toolbar-acoes">
         <button id="btn-buscar" class="os-btn os-btn-primary">Buscar Produtos</button>

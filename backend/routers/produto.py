@@ -427,8 +427,10 @@ async def importar_estoque(
         # Update in database using bulk query update
         updated = db.query(ProdutoV2).filter(ProdutoV2.codigo_supra == codigo_str).update({
             ProdutoV2.estoque_disponivel: estoque_disponivel,
-            ProdutoV2.estoque_futuro: estoque_futuro
+            ProdutoV2.estoque_futuro: estoque_futuro,
+            ProdutoV2.nome_arquivo_estoque: file.filename
         }, synchronize_session=False)
+
 
         if updated > 0:
             success_count += updated

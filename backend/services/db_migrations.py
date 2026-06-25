@@ -1,5 +1,8 @@
+import sys
+import os
 import logging
 from sqlalchemy import text
+sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
 from database import SessionLocal
 
 logger = logging.getLogger("ordersync.migrations")
@@ -471,5 +474,22 @@ def run_migrations():
                 db.rollback()
                 logger.error(f"Falha ao adicionar valor_nota em tb_pedidos: {e}")
 
+        # 25. t_cadastro_produto_v2: nome_arquivo_estoque
+        try:
+            db.execute(text("SELECT nome_arquivo_estoque FROM t_cadastro_produto_v2 LIMIT 1"))
+        except Exception:
+            db.rollback()
+            logger.info("Adicionando coluna nome_arquivo_estoque em t_cadastro_produto_v2...")
+            try:
+                db.execute(text("ALTER TABLE t_cadastro_produto_v2 ADD COLUMN nome_arquivo_estoque TEXT"))
+                db.commit()
+                logger.info("Coluna nome_arquivo_estoque adicionada com sucesso em t_cadastro_produto_v2.")
+            except Exception as e:
+                db.rollback()
+                logger.error(f"Falha ao adicionar nome_arquivo_estoque em t_cadastro_produto_v2: {e}")
+
     logger.info("Todas as migrações concluídas.")
 
+
+if __name__ == "__main__":
+    run_migrations()

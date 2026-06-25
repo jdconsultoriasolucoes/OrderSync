@@ -406,26 +406,28 @@ def obter_tabela(id_tabela: int):
                     ProdutoV2.codigo_supra,
                     ProdutoV2.status_produto,
                     ProdutoV2.estoque_disponivel,
-                    ProdutoV2.estoque_futuro
+                    ProdutoV2.estoque_futuro,
+                    ProdutoV2.nome_arquivo_estoque
                 ).filter(
                     ProdutoV2.codigo_supra.in_(codigos),
                     ProdutoV2.fornecedor == cab.fornecedor
                 ).all()
+
                 
                 # Logic to prioritized ATIVO
                 # First pass: map all found statuses and stock
                 temp_status = {}
-                stock_map = {} # codigo -> (disponivel, futuro)
+                stock_map = {} # codigo -> (disponivel, futuro, nome_arquivo_estoque)
                 for r in rows_status:
                     rs = (r.status_produto or "").upper()
                     if r.codigo_supra not in temp_status:
                         temp_status[r.codigo_supra] = rs
-                        stock_map[r.codigo_supra] = (r.estoque_disponivel, r.estoque_futuro)
+                        stock_map[r.codigo_supra] = (r.estoque_disponivel, r.estoque_futuro, getattr(r, "nome_arquivo_estoque", None))
                     else:
                         # If we already have something that is NOT active, and this one IS active, overwrite.
                         if temp_status[r.codigo_supra] != 'ATIVO' and rs == 'ATIVO':
                             temp_status[r.codigo_supra] = 'ATIVO'
-                            stock_map[r.codigo_supra] = (r.estoque_disponivel, r.estoque_futuro)
+                            stock_map[r.codigo_supra] = (r.estoque_disponivel, r.estoque_futuro, getattr(r, "nome_arquivo_estoque", None))
                 
                 status_map = temp_status
 
@@ -433,6 +435,27 @@ def obter_tabela(id_tabela: int):
         calcula_st = any(bool(getattr(p, "calcula_st", False)) for p in itens) or bool(
             getattr(cab, "calcula_st", False)
         )
+
+        # Obter nome do arquivo do estoque da tabela (primeiro que achar)
+        nome_arquivo_estoque = None
+        if stock_map:
+            for val in stock_map.values():
+                if len(val) > 2 and val[2]:
+                    nome_arquivo_estoque = val[2]
+                    break
+
+        # Fallback para o histórico geral de ingestão se nenhum produto na tabela tiver gravado
+        if not nome_arquivo_estoque:
+            try:
+                from models.produto import HistoricoEstoqueV2
+                latest_hist = db.query(HistoricoEstoqueV2.nome_arquivo)\
+                    .filter(HistoricoEstoqueV2.nome_arquivo != None)\
+                    .order_by(HistoricoEstoqueV2.data_ingestao.desc())\
+                    .first()
+                if latest_hist:
+                    nome_arquivo_estoque = latest_hist[0]
+            except Exception:
+                pass
 
         return {
             "id": id_tabela,
@@ -442,6 +465,7 @@ def obter_tabela(id_tabela: int):
             "fornecedor": cab.fornecedor,
             "calcula_st": calcula_st,
             "observacao": getattr(cab, "observacao", ""),
+            "nome_arquivo_estoque": nome_arquivo_estoque,
             "produtos": [
                 {
                 "codigo_produto_supra": p.codigo_produto_supra,     
@@ -468,11 +492,12 @@ def obter_tabela(id_tabela: int):
                 "manual_freight": getattr(p, "manual_freight", False),
                 "frete_base_ton": getattr(p, "frete_base_ton", 0),
                 "status_atual": status_map.get(p.codigo_produto_supra, "DESCONHECIDO"),
-                "estoque_disponivel": stock_map.get(p.codigo_produto_supra, (None, None))[0],
-                "estoque_futuro": stock_map.get(p.codigo_produto_supra, (None, None))[1],
+                "estoque_disponivel": stock_map.get(p.codigo_produto_supra, (None, None, None))[0],
+                "estoque_futuro": stock_map.get(p.codigo_produto_supra, (None, None, None))[1],
                 } for p in itens
             ]
         }
+
     
 
   
