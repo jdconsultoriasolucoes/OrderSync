@@ -131,6 +131,33 @@ def criar_produto_endpoint(payload: ProdutoCreatePayload, current_user: UsuarioM
         db.close()
 
 
+@router.get("/ultimo_estoque_nome")
+def obter_ultimo_estoque_nome():
+    db = SessionLocal()
+    try:
+        from models.produto import HistoricoEstoqueV2
+        latest_hist = db.query(HistoricoEstoqueV2.nome_arquivo)\
+            .filter(HistoricoEstoqueV2.nome_arquivo != None)\
+            .order_by(HistoricoEstoqueV2.data_ingestao.desc())\
+            .first()
+        if latest_hist:
+            return {"nome_arquivo": latest_hist[0]}
+        
+        # Fallback de busca nos produtos
+        from models.produto import ProdutoV2
+        prod = db.query(ProdutoV2.nome_arquivo_estoque)\
+            .filter(ProdutoV2.nome_arquivo_estoque != None)\
+            .first()
+        if prod:
+            return {"nome_arquivo": prod[0]}
+            
+        return {"nome_arquivo": None}
+    except Exception as e:
+        return {"nome_arquivo": None}
+    finally:
+        db.close()
+
+
 @router.get(
     "/{produto_id}",
     response_model=ProdutoV2Out,
@@ -469,30 +496,6 @@ async def importar_estoque(
     }
 
 
-@router.get("/ultimo_estoque_nome")
-def obter_ultimo_estoque_nome():
-    db = SessionLocal()
-    try:
-        from models.produto import HistoricoEstoqueV2
-        latest_hist = db.query(HistoricoEstoqueV2.nome_arquivo)\
-            .filter(HistoricoEstoqueV2.nome_arquivo != None)\
-            .order_by(HistoricoEstoqueV2.data_ingestao.desc())\
-            .first()
-        if latest_hist:
-            return {"nome_arquivo": latest_hist[0]}
-        
-        # Fallback de busca nos produtos
-        from models.produto import ProdutoV2
-        prod = db.query(ProdutoV2.nome_arquivo_estoque)\
-            .filter(ProdutoV2.nome_arquivo_estoque != None)\
-            .first()
-        if prod:
-            return {"nome_arquivo": prod[0]}
-            
-        return {"nome_arquivo": None}
-    except Exception as e:
-        return {"nome_arquivo": None}
-    finally:
-        db.close()
+
 
 

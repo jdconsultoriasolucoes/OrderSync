@@ -159,21 +159,21 @@
 
         <div style="display: flex; flex-direction: column; align-items: flex-end; gap: 4px;">
           <div class="header-info-group">
-            <div class="info-item">
-              <span class="info-label">Validade:</span>
-              <input id="validade_tabela" class="os-input" type="text" readonly tabindex="-1"
-                style="border: none; background: transparent; width: auto; max-width: 120px; padding: 0;" />
+            <div class="info-item" style="display: flex; flex-direction: column; align-items: flex-start; gap: 2px;">
+              <div style="display: flex; align-items: center; gap: 8px;">
+                <span class="info-label">Validade:</span>
+                <input id="validade_tabela" class="os-input" type="text" readonly tabindex="-1"
+                  style="border: none; background: transparent; width: auto; max-width: 120px; padding: 0;" />
+              </div>
+              <div id="info-estoque-origem" style="display: none; font-size: 11px; color: var(--os-text-secondary); margin-left: 68px;">
+                <span id="estoque-arquivo-nome" style="color: var(--os-text-muted); font-weight: 500;">--</span>
+              </div>
             </div>
             <div class="info-item">
               <span class="info-label">Tempo:</span>
               <input id="dias_restantes" class="os-input" type="text" readonly tabindex="-1"
                 style="border: none; background: transparent; width: auto; max-width: 120px; padding: 0;" />
             </div>
-          </div>
-          <!-- Origem do Estoque -->
-          <div id="info-estoque-origem" style="display: none; align-items: center; gap: 6px; font-size: 11px; color: var(--os-text-secondary);">
-              <i class="bi bi-file-earmark-spreadsheet" style="color: var(--os-primary); font-size: 13px;"></i>
-              <span>Origem do Estoque: <strong id="estoque-arquivo-nome" style="color: var(--os-text); font-weight: 500;">--</strong></span>
           </div>
         </div>
         <button id="btn-toggle-header" class="os-btn-icon" title="Ocultar cabeçalho">
