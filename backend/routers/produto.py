@@ -412,7 +412,15 @@ async def importar_estoque(
     not_found_codes = []
     total_rows = 0
 
-    from models.produto import ProdutoV2
+    from models.produto import ProdutoV2, HistoricoEstoqueV2
+
+    # Desativa a flag de histórico ativo para todos os históricos de estoque anteriores
+    try:
+        db.query(HistoricoEstoqueV2).update({HistoricoEstoqueV2.ativo: False}, synchronize_session=False)
+        db.commit()
+    except Exception as e:
+        db.rollback()
+        raise HTTPException(500, detail=f"Erro ao resetar histórico de estoque ativo no banco: {e}")
 
     for idx, row in df.iterrows():
         # Skip completely empty rows
@@ -478,7 +486,8 @@ async def importar_estoque(
             estoque_disponivel=estoque_disponivel,
             estoque_futuro=estoque_futuro,
             nome_arquivo=file.filename,
-            usuario=current_user.email
+            usuario=current_user.email,
+            ativo=True
         )
         db.add(hist_entry)
 

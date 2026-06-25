@@ -1323,6 +1323,8 @@ async function carregarItens() {
         iva_st: Number(p.iva_st ?? 0),
         grupo: p.grupo ?? null,
         departamento: p.departamento ?? null,
+        estoque_disponivel: p.estoque_disponivel !== undefined ? p.estoque_disponivel : null,
+        estoque_futuro: p.estoque_futuro !== undefined ? p.estoque_futuro : null,
 
         // totais que você já exibe na tela
         total_sem_frete: Number(p.valor_s_frete ?? p.total_sem_frete ?? 0),
@@ -1504,11 +1506,11 @@ function criarLinha(item, idx) {
   
   const tdEstDisp = document.createElement('td');
   tdEstDisp.className = 'num';
-  tdEstDisp.textContent = item.estoque_disponivel != null ? item.estoque_disponivel : '—';
+  tdEstDisp.textContent = item.estoque_disponivel != null ? item.estoque_disponivel : 0;
   
   const tdEstFut = document.createElement('td');
   tdEstFut.className = 'num';
-  tdEstFut.textContent = item.estoque_futuro != null ? item.estoque_futuro : '—';
+  tdEstFut.textContent = item.estoque_futuro != null ? item.estoque_futuro : 0;
 
   const tdQtd = document.createElement('td');
   const inpQtd = document.createElement('input');

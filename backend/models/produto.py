@@ -1,7 +1,7 @@
 # models/produto_v2.py
 from sqlalchemy import (
     Column, BigInteger, Integer, Text, Numeric, Date, DateTime,
-    ForeignKey, UniqueConstraint
+    ForeignKey, UniqueConstraint, Boolean
 )
 from sqlalchemy.orm import relationship
 from sqlalchemy.sql import func
@@ -108,4 +108,5 @@ class HistoricoEstoqueV2(Base):
     data_ingestao = Column(DateTime(timezone=True), server_default=func.now(), nullable=False)
     nome_arquivo = Column(Text)
     usuario = Column(Text)
+    ativo = Column(Boolean, default=True, server_default='true')
 

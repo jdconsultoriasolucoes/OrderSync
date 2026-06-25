@@ -52,8 +52,8 @@ def filtrar_produtos_para_tabela_preco(
             SELECT 
                 p.codigo_supra AS codigo_tabela,
                 p.nome_produto AS descricao,
-                p.estoque_disponivel,
-                p.estoque_futuro,
+                CASE WHEN EXISTS(SELECT 1 FROM t_historico_estoque_v2 h WHERE h.codigo_supra = p.codigo_supra AND h.ativo = TRUE) THEN COALESCE(p.estoque_disponivel, 0) ELSE 0 END AS estoque_disponivel,
+                CASE WHEN EXISTS(SELECT 1 FROM t_historico_estoque_v2 h WHERE h.codigo_supra = p.codigo_supra AND h.ativo = TRUE) THEN COALESCE(p.estoque_futuro, 0) ELSE 0 END AS estoque_futuro,
                 CASE 
                     WHEN UPPER(p.embalagem_venda) IN ('SC', 'SACO') THEN 'SACO'
                     WHEN UPPER(p.embalagem_venda) IN ('CX', 'CAIXA') THEN 'CAIXA'
@@ -127,8 +127,8 @@ def obter_ids_filtro(
             SELECT 
                 p.codigo_supra AS codigo_tabela,
                 p.nome_produto AS descricao,
-                p.estoque_disponivel,
-                p.estoque_futuro,
+                CASE WHEN EXISTS(SELECT 1 FROM t_historico_estoque_v2 h WHERE h.codigo_supra = p.codigo_supra AND h.ativo = TRUE) THEN COALESCE(p.estoque_disponivel, 0) ELSE 0 END AS estoque_disponivel,
+                CASE WHEN EXISTS(SELECT 1 FROM t_historico_estoque_v2 h WHERE h.codigo_supra = p.codigo_supra AND h.ativo = TRUE) THEN COALESCE(p.estoque_futuro, 0) ELSE 0 END AS estoque_futuro,
                 CASE 
                     WHEN UPPER(p.embalagem_venda) IN ('SC', 'SACO') THEN 'SACO'
                     WHEN UPPER(p.embalagem_venda) IN ('CX', 'CAIXA') THEN 'CAIXA'
@@ -401,13 +401,18 @@ def obter_tabela(id_tabela: int):
         if itens:
             codigos = [i.codigo_produto_supra for i in itens if i.codigo_produto_supra]
             if codigos:
+                from models.produto import HistoricoEstoqueV2
                 # Busca em lote
                 rows_status = db.query(
                     ProdutoV2.codigo_supra,
                     ProdutoV2.status_produto,
                     ProdutoV2.estoque_disponivel,
                     ProdutoV2.estoque_futuro,
-                    ProdutoV2.nome_arquivo_estoque
+                    ProdutoV2.nome_arquivo_estoque,
+                    db.query(HistoricoEstoqueV2.id).filter(
+                        HistoricoEstoqueV2.codigo_supra == ProdutoV2.codigo_supra,
+                        HistoricoEstoqueV2.ativo == True
+                    ).exists().label("has_active_stock")
                 ).filter(
                     ProdutoV2.codigo_supra.in_(codigos),
                     ProdutoV2.fornecedor == cab.fornecedor
@@ -420,14 +425,17 @@ def obter_tabela(id_tabela: int):
                 stock_map = {} # codigo -> (disponivel, futuro, nome_arquivo_estoque)
                 for r in rows_status:
                     rs = (r.status_produto or "").upper()
+                    # Se o estoque não estiver ativo, forçamos 0 nas quantidades
+                    est_disp = r.estoque_disponivel if getattr(r, "has_active_stock", False) else 0
+                    est_fut = r.estoque_futuro if getattr(r, "has_active_stock", False) else 0
                     if r.codigo_supra not in temp_status:
                         temp_status[r.codigo_supra] = rs
-                        stock_map[r.codigo_supra] = (r.estoque_disponivel, r.estoque_futuro, getattr(r, "nome_arquivo_estoque", None))
+                        stock_map[r.codigo_supra] = (est_disp, est_fut, getattr(r, "nome_arquivo_estoque", None))
                     else:
                         # If we already have something that is NOT active, and this one IS active, overwrite.
                         if temp_status[r.codigo_supra] != 'ATIVO' and rs == 'ATIVO':
                             temp_status[r.codigo_supra] = 'ATIVO'
-                            stock_map[r.codigo_supra] = (r.estoque_disponivel, r.estoque_futuro, getattr(r, "nome_arquivo_estoque", None))
+                            stock_map[r.codigo_supra] = (est_disp, est_fut, getattr(r, "nome_arquivo_estoque", None))
                 
                 status_map = temp_status
 

@@ -526,7 +526,9 @@ async function enviarSelecionados() {
       fornecedor: p.fornecedor || "",
       fator_comissao: 0,
       ipi: Number(p.ipi ?? 0),
-      iva_st: Number(p.iva_st ?? 0)
+      iva_st: Number(p.iva_st ?? 0),
+      estoque_disponivel: p.estoque_disponivel !== undefined ? p.estoque_disponivel : null,
+      estoque_futuro: p.estoque_futuro !== undefined ? p.estoque_futuro : null
     });
   });
 

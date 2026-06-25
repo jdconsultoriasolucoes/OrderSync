@@ -488,6 +488,28 @@ def run_migrations():
                 db.rollback()
                 logger.error(f"Falha ao adicionar nome_arquivo_estoque em t_cadastro_produto_v2: {e}")
 
+        # 26. t_historico_estoque_v2: ativo
+        try:
+            db.execute(text("SELECT ativo FROM t_historico_estoque_v2 LIMIT 1"))
+        except Exception:
+            db.rollback()
+            logger.info("Adicionando coluna ativo em t_historico_estoque_v2...")
+            try:
+                db.execute(text("ALTER TABLE t_historico_estoque_v2 ADD COLUMN ativo BOOLEAN DEFAULT TRUE"))
+                db.execute(text("UPDATE t_historico_estoque_v2 SET ativo = TRUE"))
+                db.commit()
+                logger.info("Coluna ativo adicionada com sucesso em t_historico_estoque_v2.")
+            except Exception as e:
+                db.rollback()
+                logger.error(f"Falha ao adicionar ativo em t_historico_estoque_v2: {e}")
+
+        # Limpeza: remove estoque_ativo de t_cadastro_produto_v2 se existir (no Postgres/Render)
+        try:
+            db.execute(text("ALTER TABLE t_cadastro_produto_v2 DROP COLUMN IF EXISTS estoque_ativo"))
+            db.commit()
+        except Exception:
+            db.rollback()
+
     logger.info("Todas as migrações concluídas.")
 
 
