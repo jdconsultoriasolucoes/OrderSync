@@ -4016,6 +4016,21 @@ document.addEventListener('DOMContentLoaded', () => {
         }
 
         setTimeout(() => carregarTabelaBase(null, pickedId), 100); // Load automaticaly
+    } else {
+        // Se não veio do picker, busca o estoque default para exibir na tela
+        (async () => {
+            try {
+                const r = await fetch(`${API_BASE}/api/produto/ultimo_estoque_nome`);
+                if (r.ok) {
+                    const res = await r.json();
+                    if (res && res.nome_arquivo) {
+                        apresentarOrigemEstoque(res.nome_arquivo);
+                    }
+                }
+            } catch (e) {
+                console.warn("Erro ao carregar origem do estoque default", e);
+            }
+        })();
     }
 });
 
