@@ -396,54 +396,35 @@ def obter_tabela(id_tabela: int):
 
         itens = db.query(TabelaPrecoModel).filter_by(id_tabela=id_tabela, ativo=True).all()
 
-        # Helper: buscar status ATUAL na t_cadastro_produto_v2 e estoque de t_historico_estoque_v2
+        # Helper: buscar status ATUAL e estoque de t_cadastro_produto_v2
+        # A tabela t_cadastro_produto_v2 é atualizada diretamente pelo importar_estoque
         status_map = {}
         stock_map = {}
         if itens:
 
             codigos = [i.codigo_produto_supra for i in itens if i.codigo_produto_supra]
             if codigos:
-                from models.produto import HistoricoEstoqueV2
-
-                # 1) Busca status do produto em ProdutoV2
-                rows_status = db.query(
+                # Busca status + estoque diretamente da tabela de produtos
+                rows_produto = db.query(
                     ProdutoV2.codigo_supra,
                     ProdutoV2.status_produto,
+                    ProdutoV2.estoque_disponivel,
+                    ProdutoV2.estoque_futuro,
+                    ProdutoV2.nome_arquivo_estoque,
                 ).filter(
                     ProdutoV2.codigo_supra.in_(codigos)
                 ).all()
 
-                temp_status = {}
-                for r in rows_status:
+                for r in rows_produto:
                     rs = (r.status_produto or "").upper()
-                    if r.codigo_supra not in temp_status:
-                        temp_status[r.codigo_supra] = rs
-                    else:
-                        # prioriza ATIVO
-                        if temp_status[r.codigo_supra] != 'ATIVO' and rs == 'ATIVO':
-                            temp_status[r.codigo_supra] = 'ATIVO'
-
-                status_map = temp_status
-
-                # 2) Busca estoque DIRETAMENTE de t_historico_estoque_v2 WHERE ativo = True
-                #    (fonte de verdade para o arquivo mais recente importado)
-                stock_map = {}  # codigo -> (disponivel, futuro, nome_arquivo)
-                rows_hist = db.query(
-                    HistoricoEstoqueV2.codigo_supra,
-                    HistoricoEstoqueV2.estoque_disponivel,
-                    HistoricoEstoqueV2.estoque_futuro,
-                    HistoricoEstoqueV2.nome_arquivo,
-                ).filter(
-                    HistoricoEstoqueV2.codigo_supra.in_(codigos),
-                    HistoricoEstoqueV2.ativo == True
-                ).all()
-
-                for h in rows_hist:
-                    stock_map[h.codigo_supra] = (
-                        h.estoque_disponivel or 0,
-                        h.estoque_futuro or 0,
-                        h.nome_arquivo
-                    )
+                    # Prioriza ATIVO se houver duplicatas
+                    if r.codigo_supra not in status_map or (status_map[r.codigo_supra] != 'ATIVO' and rs == 'ATIVO'):
+                        status_map[r.codigo_supra] = rs
+                        stock_map[r.codigo_supra] = (
+                            int(r.estoque_disponivel or 0),
+                            int(r.estoque_futuro or 0),
+                            r.nome_arquivo_estoque
+                        )
 
 
          # se por algum motivo tiver divergência entre linhas, faz um OR
@@ -459,21 +440,17 @@ def obter_tabela(id_tabela: int):
                     nome_arquivo_estoque = val[2]
                     break
 
-        # Fallback para o histórico geral de ingestão se nenhum produto na tabela tiver gravado
+        # Fallback para nome do arquivo via ProdutoV2 (atualizado diretamente pelo importar_estoque)
         if not nome_arquivo_estoque:
             try:
-                from models.produto import HistoricoEstoqueV2
-                latest_hist = db.query(HistoricoEstoqueV2.nome_arquivo)\
-                    .filter(
-                        HistoricoEstoqueV2.nome_arquivo != None,
-                        HistoricoEstoqueV2.ativo == True
-                    )\
-                    .order_by(HistoricoEstoqueV2.data_ingestao.desc())\
+                prod_arq = db.query(ProdutoV2.nome_arquivo_estoque)\
+                    .filter(ProdutoV2.nome_arquivo_estoque != None)\
                     .first()
-                if latest_hist:
-                    nome_arquivo_estoque = latest_hist[0]
+                if prod_arq:
+                    nome_arquivo_estoque = prod_arq[0]
             except Exception:
                 pass
+
 
 
         return {

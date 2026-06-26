@@ -158,6 +158,29 @@ def obter_ultimo_estoque_nome():
         db.close()
 
 
+@router.get("/diag_estoque")
+def diagnostico_estoque():
+    """Endpoint temporário de diagnóstico do estado do estoque no banco."""
+    from models.produto import HistoricoEstoqueV2
+    with SessionLocal() as db:
+        try:
+            total = db.execute(text("SELECT COUNT(*) FROM t_historico_estoque_v2")).scalar()
+            total_ativos = db.execute(text("SELECT COUNT(*) FROM t_historico_estoque_v2 WHERE ativo = TRUE")).scalar()
+            total_inativos = db.execute(text("SELECT COUNT(*) FROM t_historico_estoque_v2 WHERE ativo = FALSE OR ativo IS NULL")).scalar()
+            ultimos = db.execute(text(
+                "SELECT codigo_supra, estoque_disponivel, estoque_futuro, ativo, nome_arquivo, data_ingestao "
+                "FROM t_historico_estoque_v2 ORDER BY data_ingestao DESC LIMIT 10"
+            )).mappings().all()
+            return {
+                "total_registros": total,
+                "total_ativos": total_ativos,
+                "total_inativos": total_inativos,
+                "ultimos_10": [dict(r) for r in ultimos]
+            }
+        except Exception as e:
+            return {"erro": str(e)}
+
+
 @router.get(
     "/{produto_id}",
     response_model=ProdutoV2Out,
