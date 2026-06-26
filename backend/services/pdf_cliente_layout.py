@@ -125,14 +125,10 @@ def gerar_pdf_cliente_simplificado(pedido: PedidoPdf) -> bytes:
     # ==================== PREPARAR DADOS DA TABELA ====================
     
     # Determinar título da coluna de valor
-    tem_frete = float(pedido.frete_total or 0) > 0 or float(pedido.frete_kg or 0) > 0
-    if tem_frete:
-        if pedido.usar_valor_com_frete:
-            header_valor = "Valor c/ Frete"
-        else:
-            header_valor = "Valor s/ Frete"
+    if pedido.usar_valor_com_frete:
+        header_valor = "Valor c/ Frete"
     else:
-        header_valor = "Valor Unitário"
+        header_valor = "Valor s/ Frete"
     
     # Filtrar apenas itens com quantidade > 0
     itens_validos = []
@@ -148,23 +144,37 @@ def gerar_pdf_cliente_simplificado(pedido: PedidoPdf) -> bytes:
     # Determinar se deve mostrar markup (apenas se algum item tiver > 0)
     has_markup = any(float(it.markup or 0) > 0 for it in itens_validos)
     
-    # Cabeçalho da tabela (com abreviações)
-    table_header = [
-        "#",
-        "Código",
-        "Produto",
-        "Embal.",
-        "Qtd",
-        header_valor,
-        "Cond. de\nPagamento"
-    ]
-    if has_markup:
-        table_header.extend(["Markup\n%", "VL. C\nMarkup"])
-    
     # Imports necessários para Paragraph
-    from reportlab.lib.styles import getSampleStyleSheet
+    from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
     from reportlab.platypus import Paragraph
     styles = getSampleStyleSheet()
+    
+    style_header = ParagraphStyle(
+        name="HeaderStyle",
+        parent=styles["Normal"],
+        fontName="Helvetica-Bold",
+        fontSize=8,
+        leading=9,
+        alignment=1,  # Center-aligned
+        textColor=colors.black
+    )
+    
+    # Cabeçalho da tabela (com abreviações e parágrafos autowrap)
+    table_header = [
+        Paragraph("#", style_header),
+        Paragraph("Código", style_header),
+        Paragraph("Produto", style_header),
+        Paragraph("Embal.", style_header),
+        Paragraph("Qtd", style_header),
+        Paragraph(header_valor, style_header),
+        Paragraph("Cond. de<br/>Pagamento", style_header)
+    ]
+    if has_markup:
+        table_header.extend([
+            Paragraph("Markup<br/>%", style_header),
+            Paragraph("VL. C<br/>Markup", style_header)
+        ])
+    
     style_normal = styles["Normal"]
     style_normal.fontSize = 7
     style_normal.leading = 8

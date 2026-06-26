@@ -358,9 +358,24 @@ async function carregarPedido() {
 
           // --- Lógica de Link Expirado ---
           if (info.is_expired) {
-            window.linkExpirado = true; // flag global
-            setMensagem("Este link de pedido está com validade vencida, mas você pode confirmar normalmente.", false);
-            // if (btnConfirmar) btnConfirmar.disabled = true; // REMOVIDO: permitir confirmar mesmo vencido
+            window.linkExpirado = true; // flag global — bloqueia aceite
+
+            // Esconde botões de ação
+            const acoes = document.querySelector('.acoes');
+            if (acoes) acoes.style.display = 'none';
+
+            // Desabilita botão de confirmar por segurança extra
+            if (btnConfirmar) {
+              btnConfirmar.disabled = true;
+              btnConfirmar.style.opacity = '0.5';
+              btnConfirmar.style.cursor = 'not-allowed';
+            }
+
+            // Exibe mensagem clara de expiração
+            setMensagem(
+              '⚠️ Este orçamento está com a validade vencida e não pode mais ser aceito. Entre em contato com a empresa para solicitar um novo link.',
+              false
+            );
           }
 
           // --- Lógica de Pedido Já Confirmado ---
@@ -666,6 +681,12 @@ function showOsModal(options) {
 async function confirmarPedido() {
   let originCode = "";
   let pedidoIdConfirmado = null; // Store ID when confirmed
+
+  // Bloqueia aceite se o link estiver expirado
+  if (window.linkExpirado) {
+    setMensagem('⚠️ Este orçamento está com a validade vencida. Não é possível confirmar. Solicite um novo link à empresa.', false);
+    return;
+  }
 
   try {
     const itens = produtos;

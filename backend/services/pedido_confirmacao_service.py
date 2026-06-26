@@ -68,7 +68,11 @@ def criar_pedido_confirmado(db: Session, tabela_id: int, body: ConfirmarPedidoRe
                 exp = exp.replace(tzinfo=TZ)
             agora_sp = datetime.now(TZ)
             if agora_sp > exp:
-                pass 
+                raise BusinessRuleException(
+                    "Este orçamento está com a validade vencida e não pode mais ser aceito. "
+                    "Entre em contato com a empresa para solicitar um novo link.",
+                    code="LINK_003"
+                )
 
         if int(link_row["tabela_id"]) != int(tabela_id):
             raise BusinessRuleException("O Link fornecido não pertence a esta tabela de preço", code="LINK_002")

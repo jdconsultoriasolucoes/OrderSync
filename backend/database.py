@@ -23,8 +23,11 @@ def _set_timezone(dbapi_connection, connection_record):
     cur = dbapi_connection.cursor()
     try:
         cur.execute("SET TIME ZONE 'America/Sao_Paulo'")
+    except Exception:
+        pass
     finally:
         cur.close()
+
 
 SessionLocal = sessionmaker(bind=engine, autocommit=False, autoflush=False)
 Base = declarative_base()

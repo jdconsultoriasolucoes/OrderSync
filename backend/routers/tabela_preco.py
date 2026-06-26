@@ -414,8 +414,7 @@ def obter_tabela(id_tabela: int):
                         HistoricoEstoqueV2.ativo == True
                     ).exists().label("has_active_stock")
                 ).filter(
-                    ProdutoV2.codigo_supra.in_(codigos),
-                    ProdutoV2.fornecedor == cab.fornecedor
+                    ProdutoV2.codigo_supra.in_(codigos)
                 ).all()
 
                 
@@ -500,8 +499,8 @@ def obter_tabela(id_tabela: int):
                 "manual_freight": getattr(p, "manual_freight", False),
                 "frete_base_ton": getattr(p, "frete_base_ton", 0),
                 "status_atual": status_map.get(p.codigo_produto_supra, "DESCONHECIDO"),
-                "estoque_disponivel": stock_map.get(p.codigo_produto_supra, (None, None, None))[0],
-                "estoque_futuro": stock_map.get(p.codigo_produto_supra, (None, None, None))[1],
+                "estoque_disponivel": stock_map.get(p.codigo_produto_supra, (0, 0, None))[0] or 0,
+                "estoque_futuro": stock_map.get(p.codigo_produto_supra, (0, 0, None))[1] or 0,
                 } for p in itens
             ]
         }
