@@ -402,7 +402,7 @@ def obter_tabela(id_tabela: int):
         stock_map = {}
         if itens:
 
-            codigos = [i.codigo_produto_supra for i in itens if i.codigo_produto_supra]
+            codigos = [str(i.codigo_produto_supra).strip() for i in itens if i.codigo_produto_supra]
             if codigos:
                 # Busca status + estoque diretamente da tabela de produtos
                 rows_produto = db.query(
@@ -417,10 +417,11 @@ def obter_tabela(id_tabela: int):
 
                 for r in rows_produto:
                     rs = (r.status_produto or "").upper()
+                    cod_db = str(r.codigo_supra).strip()
                     # Prioriza ATIVO se houver duplicatas
-                    if r.codigo_supra not in status_map or (status_map[r.codigo_supra] != 'ATIVO' and rs == 'ATIVO'):
-                        status_map[r.codigo_supra] = rs
-                        stock_map[r.codigo_supra] = (
+                    if cod_db not in status_map or (status_map[cod_db] != 'ATIVO' and rs == 'ATIVO'):
+                        status_map[cod_db] = rs
+                        stock_map[cod_db] = (
                             int(r.estoque_disponivel or 0),
                             int(r.estoque_futuro or 0),
                             r.nome_arquivo_estoque
@@ -487,9 +488,10 @@ def obter_tabela(id_tabela: int):
                 "valor_s_frete_markup": p.valor_s_frete_markup,
                 "manual_freight": getattr(p, "manual_freight", False),
                 "frete_base_ton": getattr(p, "frete_base_ton", 0),
-                "status_atual": status_map.get(p.codigo_produto_supra, "DESCONHECIDO"),
-                "estoque_disponivel": stock_map.get(p.codigo_produto_supra, (0, 0, None))[0] or 0,
-                "estoque_futuro": stock_map.get(p.codigo_produto_supra, (0, 0, None))[1] or 0,
+                "status_atual": status_map.get(str(p.codigo_produto_supra).strip() if p.codigo_produto_supra else "", "DESCONHECIDO"),
+                "estoque_disponivel": stock_map.get(str(p.codigo_produto_supra).strip() if p.codigo_produto_supra else "", (0, 0, None))[0] or 0,
+                "estoque_futuro": stock_map.get(str(p.codigo_produto_supra).strip() if p.codigo_produto_supra else "", (0, 0, None))[1] or 0,
+
                 } for p in itens
             ]
         }
