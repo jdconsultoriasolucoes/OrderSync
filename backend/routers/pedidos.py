@@ -440,7 +440,23 @@ def resumo_pedido(id_pedido: int, db: Session = Depends(get_db)):
     frete_tot = float(head_dict.get("frete_total") or 0.0)
     head_dict["usar_valor_com_frete"] = bool(raw_frete) if raw_frete is not None else (frete_tot > 0)
 
+    # Prevenir erros do Pydantic garantindo que campos numéricos obrigatórios não sejam None
+    head_dict["peso_total_kg"] = float(head_dict.get("peso_total_kg") or 0.0)
+    head_dict["frete_total"] = frete_tot
+    head_dict["total_pedido"] = float(head_dict.get("total_pedido") or 0.0)
+    head_dict["cliente"] = head_dict.get("cliente") or "Sem Cadastro"
+    
+    if not head_dict.get("created_at"):
+        head_dict["created_at"] = datetime.now()
+
     itens = db.execute(ITENS_JSON_SQL, {"id_pedido": id_pedido}).scalar() or []
+    
+    # Prevenir que itens venham com campos obrigatórios nulos
+    for it in itens:
+        it["codigo"] = it.get("codigo") or ""
+        it["quantidade"] = float(it.get("quantidade") or 0.0)
+        it["preco_unit"] = float(it.get("preco_unit") or 0.0)
+        
     head_dict["itens"] = itens
     
     # Extract native PDF weight flow dynamically to keep single source of truth
@@ -483,10 +499,14 @@ def atualizar_pedido(
         total_com_frete += float((it.preco_unit_com_frete if it.preco_unit_com_frete is not None else it.preco_unit) or 0) * qtd
 
     frete_total = max(0.0, total_com_frete - total_sem_frete)
-    total_pedido = total_com_frete if body.usar_valor_com_frete else total_sem_frete
+    
+    # Regra: Só marca frete se houver valor de frete no total
+    final_usar_valor_com_frete = True if frete_total > 0.001 else False
+    
+    total_pedido = total_com_frete if final_usar_valor_com_frete else total_sem_frete
 
     # 4. Atualizar o cabeçalho do pedido
-    pedido.usar_valor_com_frete = body.usar_valor_com_frete
+    pedido.usar_valor_com_frete = final_usar_valor_com_frete
     if body.calcula_st is not None:
         pedido.calcula_st = body.calcula_st
     pedido.observacoes = body.observacoes
@@ -895,7 +915,11 @@ def admin_criar_pedido(body: AdminCriarPedidoRequest, db: Session = Depends(get_
         total_com_frete += p_com * qtd
 
     frete_total = max(0.0, total_com_frete - total_sem_frete)
-    total_pedido = total_com_frete if body.usar_valor_com_frete else total_sem_frete
+    
+    # Regra: Só marca frete se houver valor de frete no total
+    final_usar_valor_com_frete = True if frete_total > 0.001 else False
+    
+    total_pedido = total_com_frete if final_usar_valor_com_frete else total_sem_frete
     
     # Insert pedido
     agora = datetime.now()
@@ -931,7 +955,22 @@ def admin_criar_pedido(body: AdminCriarPedidoRequest, db: Session = Depends(get_
             tabela_nome_final = nome_db
             
     codigo_str = (body.codigo_cliente or "").strip()
-    if not codigo_str:
+    
+    # Fallback supremo: Se o código veio vazio (perdido no frontend), mas temos a tabela base,
+    # e o nome do cliente for igual ao da tabela, resgatamos o código original!
+    if not codigo_str and tabela_id_final > 0:
+        row_tab = db.execute(
+            text("SELECT codigo_cliente, cliente FROM tb_tabela_preco WHERE id_tabela = :tid LIMIT 1"), 
+            {"tid": tabela_id_final}
+        ).mappings().first()
+        if row_tab and row_tab["codigo_cliente"]:
+            nome_base = (row_tab["cliente"] or "").strip().lower()
+            nome_front = body.cliente.strip().lower()
+            # Só restaura se o nome não foi totalmente trocado para outro cliente livre
+            if nome_base == nome_front or nome_front.startswith(nome_base) or nome_base.startswith(nome_front):
+                codigo_str = str(row_tab["codigo_cliente"]).strip()
+                
+    if not codigo_str or codigo_str == "Não cadastrado":
         codigo_str = "Sem Cadastro"
 
     params = {
@@ -939,7 +978,7 @@ def admin_criar_pedido(body: AdminCriarPedidoRequest, db: Session = Depends(get_
         "cliente": body.cliente.strip(),
         "tabela_preco_id": tabela_id_final,
         "tabela_preco_nome": tabela_nome_final,
-        "usar_valor_com_frete": body.usar_valor_com_frete,
+        "usar_valor_com_frete": final_usar_valor_com_frete,
         "itens": json.dumps([i.dict() for i in body.produtos]),
         "peso_total_kg": round(peso_total_kg, 3),
         "frete_total": round(frete_total, 2),

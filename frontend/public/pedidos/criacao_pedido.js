@@ -211,7 +211,9 @@ function getHeaderSnapshot() {
     cliente_livre: !!window.isClienteLivreSelecionado,
     iva_enabled: !$("iva_st_toggle")?.disabled,
     currentClientMarkup: window.currentClientMarkup || 0, // ✅ Persist Markup
-    nome_arquivo_estoque: $("estoque-arquivo-nome")?.textContent !== '--' ? ($("estoque-arquivo-nome")?.textContent || "") : ""
+    nome_arquivo_estoque: $("estoque-arquivo-nome")?.textContent !== '--' ? ($("estoque-arquivo-nome")?.textContent || "") : "",
+    originalName: window.__clientState ? window.__clientState.originalName : "",
+    originalCode: window.__clientState ? window.__clientState.originalCode : ""
   };
 }
 
@@ -267,11 +269,22 @@ function restoreHeaderSnapshotIfNew(force = false) {
     window.currentClientMarkup = Number(snap.currentClientMarkup || 0); // ✅ Restore Markup
 
     // ---- Restore Safety Net (Global Vault) ----
-    if (snap.cliente) {
-      window.__clientState = {
-        originalName: (snap.cliente || '').trim(),
-        originalCode: (snap.codigo_cliente || '').trim()
-      };
+    if (snap.iva_enabled != null) {
+      if (document.getElementById('iva_st_toggle')) document.getElementById('iva_st_toggle').disabled = !snap.iva_enabled;
+    }
+    
+    if (snap.originalName || snap.originalCode) {
+        window.__clientState = {
+            loaded: true,
+            originalName: (snap.originalName || '').trim(),
+            originalCode: (snap.originalCode || '').trim()
+        };
+    } else {
+        window.__clientState = {
+            loaded: true,
+            originalName: (snap.cliente || '').trim(),
+            originalCode: (snap.codigo_cliente || '').trim()
+        };
     }
 
     // ---- Atualizações visuais e locks
@@ -4185,6 +4198,18 @@ async function salvarPedido() {
     let codigo_cliente = document.getElementById('codigo_cliente')?.value || '';
     if (codigo_cliente === "Não cadastrado") {
         codigo_cliente = '';
+    }
+    
+    // Fallback de segurança (Global Vault) caso o código tenha se perdido ao trocar de tela/foco
+    if (!codigo_cliente && window.__clientState && window.__clientState.originalCode) {
+        const curName = cliente_nome.trim();
+        if (curName && curName === window.__clientState.originalName) {
+            codigo_cliente = window.__clientState.originalCode;
+            console.warn("Restaurando código do cliente do cofre!");
+            if (document.getElementById('codigo_cliente')) {
+                document.getElementById('codigo_cliente').value = codigo_cliente;
+            }
+        }
     }
     
     if (!codigo_cliente) {
