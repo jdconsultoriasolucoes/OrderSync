@@ -1638,7 +1638,140 @@ document.addEventListener("DOMContentLoaded", () => {
   setupRenovarValidade();
   setupSearchModal();
   setupRecalcularMassivo();
+  setupRecalcularMassivo();
   setupCargaEstoque();
 });
 
 
+// ------------------------------------------------------------------
+// LÓGICA DE ABAS E RELATÓRIO DE ESTOQUE
+// ------------------------------------------------------------------
+
+window.switchTabProduto = function(tabId) {
+  // Esconder todas as abas
+  document.querySelectorAll('.tab-content').forEach(el => el.style.display = 'none');
+  document.querySelectorAll('.tab-btn').forEach(el => {
+    el.classList.remove('active');
+    el.style.borderBottomColor = 'transparent';
+    el.style.color = '#666';
+  });
+
+  // Mostrar a aba desejada
+  const content = document.getElementById(`tab-${tabId}`);
+  if(content) content.style.display = 'block';
+  
+  const btn = document.getElementById(`tab-btn-${tabId}`);
+  if (btn) {
+    btn.classList.add('active');
+    btn.style.borderBottomColor = '#2563eb';
+    btn.style.color = '#2563eb';
+  }
+};
+
+window.gerarRelatorioEstoque = async function() {
+  const filial = document.getElementById('filtro-filial')?.value || '';
+  const divisao = document.getElementById('filtro-divisao')?.value || '';
+  const giro = document.getElementById('filtro-giro')?.value || '';
+  
+  const tbody = document.getElementById('tbody-relatorio');
+  if(!tbody) return;
+  tbody.innerHTML = '<tr><td colspan="6" style="text-align:center;">Carregando...</td></tr>';
+  
+  try {
+    const basePath = typeof API_BASE !== 'undefined' ? API_BASE : 'http://localhost:8000';
+    const url = new URL(`${basePath}/api/produto/relatorio-estoque`);
+    if (divisao) url.searchParams.append('divisao', divisao);
+    if (giro) url.searchParams.append('giro', giro);
+    // Filial ainda não enviamos pois backend não suporta
+
+    const token = localStorage.getItem("ordersync_token");
+    const res = await fetch(url, {
+      headers: { "Authorization": `Bearer ${token}` }
+    });
+
+    if (!res.ok) throw new Error("Erro ao buscar relatório da API");
+    const dados = await res.json();
+    
+    // Armazena no window para exportação (PDF/Excel)
+    window.dadosRelatorioAtual = dados;
+    
+    if (dados.length === 0) {
+      tbody.innerHTML = '<tr><td colspan="6" style="text-align:center;">Nenhum produto encontrado com os filtros informados.</td></tr>';
+      return;
+    }
+
+    tbody.innerHTML = '';
+    dados.forEach(p => {
+      const tr = document.createElement('tr');
+      tr.innerHTML = `
+        <td>${p.codigo_supra || ''}</td>
+        <td>${p.nome_produto || ''}</td>
+        <td class="num">${Number(p.peso_bruto || 0).toFixed(3)}</td>
+        <td class="num">${p.estoque_disponivel || 0}</td>
+        <td class="num">${p.estoque_futuro || 0}</td>
+        <td class="num">${p.estoque_ideal || 0}</td>
+      `;
+      tbody.appendChild(tr);
+    });
+  } catch (e) {
+    console.error(e);
+    tbody.innerHTML = `<tr><td colspan="6" style="text-align:center;color:red;">Erro: ${e.message}</td></tr>`;
+  }
+};
+
+window.exportarExcelEstoque = function() {
+  const dados = window.dadosRelatorioAtual;
+  if (!dados || dados.length === 0) {
+    alert("Gere o relatório primeiro.");
+    return;
+  }
+
+  // Prepara array de objetos para a planilha
+  const exportData = dados.map(p => ({
+    "Código": p.codigo_supra,
+    "Descrição": p.nome_produto,
+    "Peso Emb.": Number(p.peso_bruto || 0),
+    "Est. Disponível": p.estoque_disponivel,
+    "Est. Futuro": p.estoque_futuro,
+    "Est. Ideal": p.estoque_ideal,
+    "Divisão": p.divisao,
+    "Giro": p.tipo_giro
+  }));
+
+  const worksheet = window.XLSX.utils.json_to_sheet(exportData);
+  const workbook = window.XLSX.utils.book_new();
+  window.XLSX.utils.book_append_sheet(workbook, worksheet, "Estoque");
+  window.XLSX.writeFile(workbook, "Relatorio_Estoque.xlsx");
+};
+
+window.exportarPDFEstoque = function() {
+  const dados = window.dadosRelatorioAtual;
+  if (!dados || dados.length === 0) {
+    alert("Gere o relatório primeiro.");
+    return;
+  }
+
+  const { jsPDF } = window.jspdf;
+  const doc = new jsPDF('landscape');
+  
+  doc.text("Relatório de Estoque", 14, 15);
+  
+  const tableData = dados.map(p => [
+    p.codigo_supra,
+    p.nome_produto,
+    Number(p.peso_bruto || 0).toFixed(3),
+    p.estoque_disponivel,
+    p.estoque_futuro,
+    p.estoque_ideal
+  ]);
+  
+  doc.autoTable({
+    startY: 20,
+    head: [['Código', 'Descrição', 'Peso Emb.', 'Est. Disponível', 'Est. Futuro', 'Est. Ideal']],
+    body: tableData,
+    styles: { fontSize: 9 },
+    headStyles: { fillColor: [37, 99, 235] }
+  });
+  
+  doc.save("Relatorio_Estoque.pdf");
+};

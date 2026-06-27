@@ -18,6 +18,11 @@
   <script src="../js/config.js"></script>
   <script src="../js/auth.js"></script>
   <script src="../js/sidebar_control.js"></script>
+  <!-- Bibliotecas para Relatório PDF e Excel -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.28/jspdf.plugin.autotable.min.js"></script>
+  
   <script>
     if (window.Auth) { window.Auth.checkAuth(); }
   </script>
@@ -129,7 +134,15 @@
 
   <!-- ========== MAIN ========== -->
   <div class="page-container">
-    <div class="card" style="margin-top: 20px;">
+    <!-- NOVO TABS MENU -->
+    <div class="tabs-header" style="margin-top: 20px; border-bottom: 1px solid #ddd; margin-bottom: 20px; display: flex; gap: 10px;">
+      <button id="tab-btn-cadastro" class="tab-btn active" onclick="switchTabProduto('cadastro')" style="padding: 10px 20px; background: none; border: none; border-bottom: 2px solid #2563eb; color: #2563eb; font-weight: bold; cursor: pointer; font-size: 14px;">Cadastro de Produto</button>
+      <button id="tab-btn-relatorio" class="tab-btn" onclick="switchTabProduto('relatorio')" style="padding: 10px 20px; background: none; border: none; border-bottom: 2px solid transparent; color: #666; font-weight: bold; cursor: pointer; font-size: 14px;">Relatório de Estoque</button>
+    </div>
+
+    <!-- TAB CADASTRO -->
+    <div id="tab-cadastro" class="tab-content" style="display: block;">
+      <div class="card">
       <div class="header">
         <div class="toolbar">
           <button id="btn-novo-produto" class="btn-primary">+ Novo</button>
@@ -346,6 +359,70 @@
       </div>
 
     </div>
+    </div> <!-- End of tab-cadastro -->
+
+    <!-- TAB RELATÓRIO DE ESTOQUE -->
+    <div id="tab-relatorio" class="tab-content" style="display: none;">
+      <div class="card">
+        <div class="header">
+          <div class="section-title">Filtros do Relatório</div>
+          <div class="toolbar" style="margin-left:auto;">
+            <button class="btn-primary" onclick="window.gerarRelatorioEstoque()">Gerar Relatório</button>
+            <button class="ghost" onclick="window.exportarExcelEstoque()">Exportar Excel</button>
+            <button class="ghost" onclick="window.exportarPDFEstoque()">Imprimir PDF</button>
+          </div>
+        </div>
+        
+        <div class="row g-2" style="margin-bottom: 20px;">
+          <div class="col-3">
+            <label>Filial</label>
+            <select id="filtro-filial">
+              <option value="">Todas</option>
+              <option value="Matriz">Matriz</option>
+              <option value="Filial 1">Filial 1</option>
+            </select>
+          </div>
+          <div class="col-3">
+            <label>Divisão</label>
+            <select id="filtro-divisao">
+              <option value="">Todos</option>
+              <option value="INSUMOS">Insumos</option>
+              <option value="PET">Pet</option>
+            </select>
+          </div>
+          <div class="col-3">
+            <label>Tipo de Giro</label>
+            <select id="filtro-giro">
+              <option value="">Todos</option>
+              <option value="A">Curva A</option>
+              <option value="B">Curva B</option>
+              <option value="C">Curva C</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="table-container" style="max-height: 500px; overflow-y: auto;">
+          <table class="data-table" id="table-relatorio">
+            <thead>
+              <tr>
+                <th>Código</th>
+                <th>Descrição do produto</th>
+                <th class="num">Peso emb.</th>
+                <th class="num">Estoque disponível</th>
+                <th class="num">Estoque futuro</th>
+                <th class="num">Estoque ideal</th>
+              </tr>
+            </thead>
+            <tbody id="tbody-relatorio">
+              <tr>
+                <td colspan="6" style="text-align:center; padding: 20px;">Utilize os filtros e clique em Gerar Relatório</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div> <!-- Fim de tab-relatorio -->
+
   </div>
 
   <!-- Modal de importação de lista de preços -->
