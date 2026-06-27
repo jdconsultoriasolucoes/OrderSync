@@ -365,14 +365,13 @@
     <div id="tab-relatorio" class="tab-content" style="display: none;">
       <div class="card">
         <div class="header">
-          <div class="section-title">Filtros</div>
-          <div class="toolbar" style="margin-left:auto;">
+          <div class="toolbar" style="margin-left:auto; width: 100%; display: flex; justify-content: flex-end; padding-bottom: 15px; border-bottom: 1px solid #eee;">
             <button class="ghost" onclick="window.exportarExcelEstoque()">Exportar Excel</button>
             <button class="ghost" onclick="window.exportarPDFEstoque()">Imprimir PDF</button>
           </div>
         </div>
         
-        <div class="row g-2" style="margin-bottom: 20px;">
+        <div class="row g-2" style="margin-bottom: 20px; margin-top: 10px;">
           <div class="col-3">
             <label>Filial</label>
             <select id="filtro-filial" onchange="window.gerarRelatorioEstoque()">
@@ -401,20 +400,20 @@
         </div>
 
         <div class="table-container" style="max-height: 500px; overflow-y: auto;">
-          <table class="data-table" id="table-relatorio">
-            <thead>
+          <table id="table-relatorio" style="width: 100%; border-collapse: collapse; text-align: center; border: 1px solid #e5e7eb; font-size: 14px;">
+            <thead style="background-color: #f9fafb; border-bottom: 2px solid #e5e7eb;">
               <tr>
-                <th>Código</th>
-                <th>Descrição do produto</th>
-                <th class="num">Peso emb.</th>
-                <th class="num">Estoque disponível</th>
-                <th class="num">Estoque futuro</th>
-                <th class="num">Estoque ideal</th>
+                <th style="padding: 12px; border: 1px solid #e5e7eb; font-weight: bold;">Código</th>
+                <th style="padding: 12px; border: 1px solid #e5e7eb; font-weight: bold; text-align: left;">Descrição do produto</th>
+                <th style="padding: 12px; border: 1px solid #e5e7eb; font-weight: bold;">Peso emb.</th>
+                <th style="padding: 12px; border: 1px solid #e5e7eb; font-weight: bold;">Estoque disponível</th>
+                <th style="padding: 12px; border: 1px solid #e5e7eb; font-weight: bold;">Estoque futuro</th>
+                <th style="padding: 12px; border: 1px solid #e5e7eb; font-weight: bold;">Estoque ideal</th>
               </tr>
             </thead>
             <tbody id="tbody-relatorio">
               <tr>
-                <td colspan="6" style="text-align:center; padding: 20px;">Utilize os filtros e clique em Gerar Relatório</td>
+                <td colspan="6" style="text-align:center; padding: 20px;">Carregando...</td>
               </tr>
             </tbody>
           </table>

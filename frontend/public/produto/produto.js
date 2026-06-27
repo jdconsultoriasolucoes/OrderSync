@@ -1712,13 +1712,17 @@ window.gerarRelatorioEstoque = async function() {
     dados.forEach(p => {
       const tr = document.createElement('tr');
       tr.innerHTML = `
-        <td>${p.codigo_supra || ''}</td>
-        <td>${p.nome_produto || ''}</td>
-        <td class="num">${Number(p.peso_bruto || 0).toFixed(3)}</td>
-        <td class="num">${p.estoque_disponivel || 0}</td>
-        <td class="num">${p.estoque_futuro || 0}</td>
-        <td class="num">${p.estoque_ideal || 0}</td>
+        <td style="padding: 10px; border: 1px solid #e5e7eb;">${p.codigo_supra || ''}</td>
+        <td style="padding: 10px; border: 1px solid #e5e7eb; text-align: left;">${p.nome_produto || ''}</td>
+        <td style="padding: 10px; border: 1px solid #e5e7eb;">${Number(p.peso_bruto || 0).toFixed(2)}</td>
+        <td style="padding: 10px; border: 1px solid #e5e7eb;">${p.estoque_disponivel || 0}</td>
+        <td style="padding: 10px; border: 1px solid #e5e7eb;">${p.estoque_futuro || 0}</td>
+        <td style="padding: 10px; border: 1px solid #e5e7eb;">${p.estoque_ideal || 0}</td>
       `;
+      // Adicionando hover effect manual via JS para dar "cara" melhor
+      tr.onmouseover = () => tr.style.backgroundColor = '#f3f4f6';
+      tr.onmouseout = () => tr.style.backgroundColor = 'transparent';
+      
       tbody.appendChild(tr);
     });
   } catch (e) {
