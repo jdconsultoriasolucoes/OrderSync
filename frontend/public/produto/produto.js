@@ -1694,7 +1694,10 @@ window.gerarRelatorioEstoque = async function() {
       headers: { "Authorization": `Bearer ${token}` }
     });
 
-    if (!res.ok) throw new Error("Erro ao buscar relatório da API");
+    if (!res.ok) {
+      const txt = await res.text();
+      throw new Error(`Erro API (Status ${res.status}): ${txt}`);
+    }
     const dados = await res.json();
     
     // Armazena no window para exportação (PDF/Excel)
