@@ -1202,7 +1202,7 @@ function obterItensDaSessao() {
 
 async function atualizarEstoqueMassivo() {
   if (!itens || itens.length === 0) return;
-  const codigos = Array.from(new Set(itens.map(i => i.codigo_tabela || i.codigo_produto_supra).filter(Boolean)));
+  const codigos = Array.from(new Set(itens.map(i => String(i.codigo_tabela || i.codigo_produto_supra || '').trim()).filter(Boolean)));
   if (codigos.length === 0) return;
 
   try {
@@ -1215,9 +1215,10 @@ async function atualizarEstoqueMassivo() {
     if (r.ok) {
       const stockMap = await r.json();
       let hasStockOrigem = null;
+      console.log("Estoque recebido pela tela principal:", stockMap);
       
       itens.forEach(item => {
-        const cod = item.codigo_tabela || item.codigo_produto_supra;
+        const cod = String(item.codigo_tabela || item.codigo_produto_supra || '').trim();
         if (stockMap[cod]) {
           item.estoque_disponivel = stockMap[cod].estoque_disponivel;
           item.estoque_futuro = stockMap[cod].estoque_futuro;
@@ -1231,9 +1232,10 @@ async function atualizarEstoqueMassivo() {
       if (hasStockOrigem) apresentarOrigemEstoque(hasStockOrigem);
       
       renderTabela(); // Re-renderiza a tela para exibir o estoque recém atualizado
+      console.log("Tabela renderizada com os novos estoques!");
     }
   } catch (err) {
-    console.error("Erro ao atualizar estoque massivo:", err);
+    console.error("Erro ao atualizar estoque massivo na tela principal:", err);
   }
 }
 
