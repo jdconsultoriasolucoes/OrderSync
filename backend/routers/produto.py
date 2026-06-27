@@ -230,9 +230,13 @@ def diagnostico_estoque():
 def gerar_relatorio_estoque(
     divisao: str = Query("", description="Filtro de Divisão (INSUMOS, PET)"),
     giro: str = Query("", description="Filtro de Tipo de Giro (A, B, C)"),
+    familia: str = Query("", description="Filtro de Família"),
+    produto: str = Query("", description="Filtro de Produto (Nome ou Código)"),
     db: Session = Depends(get_db)
 ):
     from models.produto import ProdutoV2
+    from sqlalchemy import or_
+    
     query = db.query(
         ProdutoV2.codigo_supra,
         ProdutoV2.nome_produto,
@@ -249,6 +253,18 @@ def gerar_relatorio_estoque(
     
     if giro:
         query = query.filter(ProdutoV2.tipo_giro == giro)
+        
+    if familia:
+        query = query.filter(ProdutoV2.familia == familia)
+        
+    if produto:
+        termo = f"%{produto}%"
+        query = query.filter(
+            or_(
+                ProdutoV2.nome_produto.ilike(termo),
+                ProdutoV2.codigo_supra.ilike(termo)
+            )
+        )
 
     # Ordenar por descrição para facilitar
     produtos = query.order_by(ProdutoV2.nome_produto.asc()).all()

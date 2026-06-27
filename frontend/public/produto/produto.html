@@ -372,7 +372,11 @@
         </div>
         
         <div class="row g-2" style="margin-bottom: 20px; margin-top: 10px;">
-          <div class="col-3">
+          <div class="col-2">
+            <label>Produto</label>
+            <input type="text" id="filtro-produto" placeholder="Buscar..." onkeyup="if(window.gerarRelatorioEstoque) window.gerarRelatorioEstoque()" style="width: 100%; height: 35px; border: 1px solid #ccc; border-radius: 4px; padding-left: 8px;" />
+          </div>
+          <div class="col-2">
             <label>Filial</label>
             <select id="filtro-filial" onchange="window.gerarRelatorioEstoque()">
               <option value="">Todas</option>
@@ -380,21 +384,22 @@
               <option value="Filial 1">Filial 1</option>
             </select>
           </div>
+          <div class="col-2">
+            <label>Linha</label>
+            <select id="filtro-linha" onchange="window.gerarRelatorioEstoque()">
+              <option value="">Todas</option>
+            </select>
+          </div>
           <div class="col-3">
-            <label>Divisão</label>
-            <select id="filtro-divisao" onchange="window.gerarRelatorioEstoque()">
-              <option value="">Todos</option>
-              <option value="INSUMOS">Insumos</option>
-              <option value="PET">Pet</option>
+            <label>Família</label>
+            <select id="filtro-familia" onchange="window.gerarRelatorioEstoque()">
+              <option value="">Todas</option>
             </select>
           </div>
           <div class="col-3">
             <label>Tipo de Giro</label>
             <select id="filtro-giro" onchange="window.gerarRelatorioEstoque()">
               <option value="">Todos</option>
-              <option value="A">Curva A</option>
-              <option value="B">Curva B</option>
-              <option value="C">Curva C</option>
             </select>
           </div>
         </div>

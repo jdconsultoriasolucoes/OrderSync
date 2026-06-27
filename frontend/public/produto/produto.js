@@ -1182,12 +1182,13 @@ async function loadOptions() {
     fill("status_produto", data.status_produto);
     fill("tipo_giro", data.tipo_giro);
     fill("linha", data.tipo); // Use 'tipo' options for 'linha' select
+    fill("filtro-linha", data.tipo); // Linha no relatório
 
-    // Familia é especial, as vezes o usuario quer digitar uma nova.
-    // Mas se é select, só seleciona. Se for input com datalist...
-    // O html é select.
     fill("familia", data.familia);
-    fill("marca", data.marca); // Populate Group (marca) select with data from t_familia_produtos
+    fill("filtro-familia", data.familia); // Família no relatório
+    fill("marca", data.marca); 
+    
+    fill("filtro-giro", data.tipo_giro); // Giro no relatório
 
     // Fornecedor é input type="text" no HTML? Ou Select?
     // User image shows "Fornecedor" as text input visually (no arrow), but let's check HTML if we can.
@@ -1203,8 +1204,8 @@ async function loadOptions() {
 function setFormState(enabled) {
   // Seleciona todos inputs/selects dentro das áreas de dados
   // Excluindo explicitamente o campo de busca (#search-input) e arquivos
-  // Scoping to .page-container to avoid locking modal inputs
-  const inputs = document.querySelectorAll(".page-container input:not(#search-input):not([type='file']), .page-container select");
+  // Excluindo explicitamente a aba de relatórios e busca
+  const inputs = document.querySelectorAll("#tab-cadastro input:not(#search-input):not([type='file']), #tab-cadastro select");
   inputs.forEach(el => {
     // Ignora inputs hidden se necessário, ou específicos
     el.disabled = !enabled;
@@ -1675,7 +1676,9 @@ window.switchTabProduto = function(tabId) {
 
 window.gerarRelatorioEstoque = async function() {
   const filial = document.getElementById('filtro-filial')?.value || '';
-  const divisao = document.getElementById('filtro-divisao')?.value || '';
+  const linha = document.getElementById('filtro-linha')?.value || '';
+  const familia = document.getElementById('filtro-familia')?.value || '';
+  const produto = document.getElementById('filtro-produto')?.value || '';
   const giro = document.getElementById('filtro-giro')?.value || '';
   
   const tbody = document.getElementById('tbody-relatorio');
@@ -1685,7 +1688,9 @@ window.gerarRelatorioEstoque = async function() {
   try {
     const basePath = typeof API_BASE !== 'undefined' ? API_BASE : 'http://localhost:8000';
     const url = new URL(`${basePath}/api/produto/relatorio-estoque`);
-    if (divisao) url.searchParams.append('divisao', divisao);
+    if (linha) url.searchParams.append('divisao', linha); // Backend mantem nome divisao
+    if (familia) url.searchParams.append('familia', familia);
+    if (produto) url.searchParams.append('produto', produto);
     if (giro) url.searchParams.append('giro', giro);
     // Filial ainda não enviamos pois backend não suporta
 
