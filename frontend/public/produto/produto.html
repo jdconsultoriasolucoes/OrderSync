@@ -365,9 +365,8 @@
     <div id="tab-relatorio" class="tab-content" style="display: none;">
       <div class="card">
         <div class="header">
-          <div class="section-title">Filtros do Relatório</div>
+          <div class="section-title">Filtros</div>
           <div class="toolbar" style="margin-left:auto;">
-            <button class="btn-primary" onclick="window.gerarRelatorioEstoque()">Gerar Relatório</button>
             <button class="ghost" onclick="window.exportarExcelEstoque()">Exportar Excel</button>
             <button class="ghost" onclick="window.exportarPDFEstoque()">Imprimir PDF</button>
           </div>
@@ -376,7 +375,7 @@
         <div class="row g-2" style="margin-bottom: 20px;">
           <div class="col-3">
             <label>Filial</label>
-            <select id="filtro-filial">
+            <select id="filtro-filial" onchange="window.gerarRelatorioEstoque()">
               <option value="">Todas</option>
               <option value="Matriz">Matriz</option>
               <option value="Filial 1">Filial 1</option>
@@ -384,7 +383,7 @@
           </div>
           <div class="col-3">
             <label>Divisão</label>
-            <select id="filtro-divisao">
+            <select id="filtro-divisao" onchange="window.gerarRelatorioEstoque()">
               <option value="">Todos</option>
               <option value="INSUMOS">Insumos</option>
               <option value="PET">Pet</option>
@@ -392,7 +391,7 @@
           </div>
           <div class="col-3">
             <label>Tipo de Giro</label>
-            <select id="filtro-giro">
+            <select id="filtro-giro" onchange="window.gerarRelatorioEstoque()">
               <option value="">Todos</option>
               <option value="A">Curva A</option>
               <option value="B">Curva B</option>

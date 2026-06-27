@@ -1666,6 +1666,11 @@ window.switchTabProduto = function(tabId) {
     btn.style.borderBottomColor = '#2563eb';
     btn.style.color = '#2563eb';
   }
+
+  // Se entrou na aba de relatório, já busca os dados iniciais
+  if (tabId === 'relatorio') {
+    window.gerarRelatorioEstoque();
+  }
 };
 
 window.gerarRelatorioEstoque = async function() {
