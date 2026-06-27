@@ -1206,7 +1206,7 @@ async function atualizarEstoqueMassivo() {
   if (codigos.length === 0) return;
 
   try {
-    const r = await fetch(`${API_BASE}/produto/estoque-lote`, {
+    const r = await fetch(`${API_BASE}/api/produto/estoque-lote`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ codigos })
