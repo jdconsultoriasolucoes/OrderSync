@@ -1787,7 +1787,7 @@ window.exportarPDFEstoque = function() {
     head: [['Código', 'Descrição', 'Peso Emb.', 'Est. Disponível', 'Est. Futuro', 'Est. Ideal']],
     body: tableData,
     styles: { fontSize: 9 },
-    headStyles: { fillColor: [37, 99, 235] }
+    headStyles: { fillColor: [199, 179, 153] } // Bege/Marrom (SUPRA_BAR) usado nos pedidos
   });
   
   doc.save("Relatorio_Estoque.pdf");
