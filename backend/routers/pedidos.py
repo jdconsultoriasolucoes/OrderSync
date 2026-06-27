@@ -435,6 +435,11 @@ def resumo_pedido(id_pedido: int, db: Session = Depends(get_db)):
         if k in head_dict:
             head_dict[k] = to_iso_or_none(head_dict[k])
 
+    # Se a flag for nula (ex: via importação), inferir pela existência de frete financeiro
+    raw_frete = head_dict.get("usar_valor_com_frete")
+    frete_tot = float(head_dict.get("frete_total") or 0.0)
+    head_dict["usar_valor_com_frete"] = bool(raw_frete) if raw_frete is not None else (frete_tot > 0)
+
     itens = db.execute(ITENS_JSON_SQL, {"id_pedido": id_pedido}).scalar() or []
     head_dict["itens"] = itens
     

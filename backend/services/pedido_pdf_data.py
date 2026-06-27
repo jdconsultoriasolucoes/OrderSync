@@ -180,6 +180,10 @@ def carregar_pedido_pdf(db, pedido_id: int) -> PedidoPdf:
     elif head.get("validade_dias"):
         validade_display = f"{head['validade_dias']} dias"
 
+    raw_frete = head.get("usar_valor_com_frete")
+    frete_tot = float(head.get("frete_total") or 0.0)
+    u_frete = bool(raw_frete) if raw_frete is not None else (frete_tot > 0)
+
     return PedidoPdf(
         id_pedido=head["id_pedido"],
         codigo_cliente=final_cod,
@@ -191,7 +195,7 @@ def carregar_pedido_pdf(db, pedido_id: int) -> PedidoPdf:
         frete_total=float(head["frete_total"] or 0),
         frete_kg=float(head.get("frete_kg") or 0),
         validade_tabela=validade_display,
-        usar_valor_com_frete=bool(head.get("usar_valor_com_frete", True)),
+        usar_valor_com_frete=u_frete,
         total_peso_bruto=sum_peso_bru,
         total_peso_liquido=sum_peso_liq,
         total_valor=float(head["total_pedido"] or 0),
