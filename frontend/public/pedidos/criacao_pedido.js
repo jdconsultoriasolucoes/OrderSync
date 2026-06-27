@@ -2882,6 +2882,7 @@ async function onCancelar(e) {
 
           // repõe itens e re-renderiza grade
           itens = Array.isArray(t.produtos) ? t.produtos.map(p => mapBackendItemToFrontend(p, t)) : [];
+          atualizarEstoqueMassivo();
           if (typeof renderTabela === 'function') renderTabela();
           if (typeof recalcTudo === 'function') recalcTudo().catch(() => { });
 
@@ -4155,6 +4156,7 @@ async function carregarTabelaBase(e, forceId = null) {
                 return mapItem;
             });
             await atualizarPesosBrutosAtuais();
+            atualizarEstoqueMassivo();
             renderTabela();
             await recalcTudo();
         }
