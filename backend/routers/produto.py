@@ -226,6 +226,49 @@ def diagnostico_estoque():
             return {"erro": str(e)}
 
 
+@router.get("/relatorio-estoque")
+def gerar_relatorio_estoque(
+    divisao: str = Query("", description="Filtro de Divisão (INSUMOS, PET)"),
+    giro: str = Query("", description="Filtro de Tipo de Giro (A, B, C)"),
+    db: Session = Depends(get_db)
+):
+    from models.produto import ProdutoV2
+    query = db.query(
+        ProdutoV2.codigo_supra,
+        ProdutoV2.nome_produto,
+        ProdutoV2.peso_bruto,
+        ProdutoV2.estoque_disponivel,
+        ProdutoV2.estoque_futuro,
+        ProdutoV2.estoque_ideal,
+        ProdutoV2.tipo,
+        ProdutoV2.tipo_giro
+    ).filter(ProdutoV2.status_produto == 'ATIVO')
+
+    if divisao:
+        query = query.filter(ProdutoV2.tipo == divisao)
+    
+    if giro:
+        query = query.filter(ProdutoV2.tipo_giro == giro)
+
+    # Ordenar por descrição para facilitar
+    produtos = query.order_by(ProdutoV2.nome_produto.asc()).all()
+
+    resultado = []
+    for p in produtos:
+        resultado.append({
+            "codigo_supra": p.codigo_supra,
+            "nome_produto": p.nome_produto,
+            "peso_bruto": float(p.peso_bruto) if p.peso_bruto else 0.0,
+            "estoque_disponivel": int(p.estoque_disponivel or 0),
+            "estoque_futuro": int(p.estoque_futuro or 0),
+            "estoque_ideal": int(p.estoque_ideal or 0),
+            "divisao": p.tipo,
+            "tipo_giro": p.tipo_giro
+        })
+
+    return resultado
+
+
 @router.get(
     "/{produto_id}",
     response_model=ProdutoV2Out,
@@ -571,53 +614,5 @@ async def importar_estoque(
         "atualizados": success_count,
         "nao_encontrados": not_found_codes
     }
-
-
-from fastapi import Query
-
-@router.get("/relatorio-estoque")
-def gerar_relatorio_estoque(
-    divisao: str = Query("", description="Filtro de Divisão (INSUMOS, PET)"),
-    giro: str = Query("", description="Filtro de Tipo de Giro (A, B, C)"),
-    db: Session = Depends(get_db)
-):
-    from models.produto import ProdutoV2
-    query = db.query(
-        ProdutoV2.codigo_supra,
-        ProdutoV2.nome_produto,
-        ProdutoV2.peso_bruto,
-        ProdutoV2.estoque_disponivel,
-        ProdutoV2.estoque_futuro,
-        ProdutoV2.estoque_ideal,
-        ProdutoV2.tipo,
-        ProdutoV2.tipo_giro
-    ).filter(ProdutoV2.status_produto == 'ATIVO')
-
-    if divisao:
-        query = query.filter(ProdutoV2.tipo == divisao)
-    
-    if giro:
-        query = query.filter(ProdutoV2.tipo_giro == giro)
-
-    # Ordenar por descrição para facilitar
-    produtos = query.order_by(ProdutoV2.nome_produto.asc()).all()
-
-    resultado = []
-    for p in produtos:
-        resultado.append({
-            "codigo_supra": p.codigo_supra,
-            "nome_produto": p.nome_produto,
-            "peso_bruto": float(p.peso_bruto) if p.peso_bruto else 0.0,
-            "estoque_disponivel": int(p.estoque_disponivel or 0),
-            "estoque_futuro": int(p.estoque_futuro or 0),
-            "estoque_ideal": int(p.estoque_ideal or 0),
-            "divisao": p.tipo,
-            "tipo_giro": p.tipo_giro
-        })
-
-    return resultado
-
-
-
 
 
