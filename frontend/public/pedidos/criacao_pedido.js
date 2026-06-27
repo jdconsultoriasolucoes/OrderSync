@@ -1233,6 +1233,8 @@ async function atualizarEstoqueMassivo() {
       
       renderTabela(); // Re-renderiza a tela para exibir o estoque recém atualizado
       console.log("Tabela renderizada com os novos estoques!");
+    } else {
+      console.error("❌ Erro na requisição (Status HTTP):", r.status, await r.text());
     }
   } catch (err) {
     console.error("Erro ao atualizar estoque massivo na tela principal:", err);
