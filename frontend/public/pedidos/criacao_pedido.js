@@ -1200,6 +1200,45 @@ function obterItensDaSessao() {
   } catch { return []; }
 }
 
+async function atualizarEstoqueMassivo() {
+  if (!itens || itens.length === 0) return;
+  const codigos = Array.from(new Set(itens.map(i => i.codigo_tabela || i.codigo_produto_supra).filter(Boolean)));
+  if (codigos.length === 0) return;
+
+  try {
+    const r = await fetch(`${API_BASE}/produto/estoque-lote`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ codigos })
+    });
+    
+    if (r.ok) {
+      const stockMap = await r.json();
+      let hasStockOrigem = null;
+      
+      itens.forEach(item => {
+        const cod = item.codigo_tabela || item.codigo_produto_supra;
+        if (stockMap[cod]) {
+          item.estoque_disponivel = stockMap[cod].estoque_disponivel;
+          item.estoque_futuro = stockMap[cod].estoque_futuro;
+          item.status_atual = stockMap[cod].status;
+          if (stockMap[cod].nome_arquivo) {
+            hasStockOrigem = stockMap[cod].nome_arquivo;
+          }
+        }
+      });
+      
+      if (hasStockOrigem) apresentarOrigemEstoque(hasStockOrigem);
+      
+      renderTabela(); // Re-renderiza a tela para exibir o estoque recém atualizado
+    }
+  } catch (err) {
+    console.error("Erro ao atualizar estoque massivo:", err);
+  }
+}
+
+
+
 async function carregarItens() {
   const urlParams = new URLSearchParams(window.location.search);
   let id = urlParams.get('id'); 
@@ -1213,6 +1252,7 @@ async function carregarItens() {
       if (Array.isArray(saved) && saved.length > 0) {
         console.log("carregarItens: Usando memória local (TP_ATUAL)", saved.length, "itens.");
         itens = saved;
+        atualizarEstoqueMassivo();
         renderTabela();
         return;
       }
@@ -1349,8 +1389,12 @@ async function carregarItens() {
         tipo: p.tipo ?? p.grupo ?? p.departamento ?? null
 
       }));
+      
+      // Busca estoque antes do primeiro render final para evitar repintura dupla se for muito rápido,
+      // mas como é async, não bloqueia a lógica
+      atualizarEstoqueMassivo();
+      
       renderTabela();
-      // Removido bloqueio do recálculo para renderização instantânea
       // if (typeof recalcTudo === 'function') {
       //   await Promise.resolve(recalcTudo()).catch(() => { });
       // }

@@ -158,6 +158,51 @@ def obter_ultimo_estoque_nome():
         db.close()
 
 
+class EstoqueLoteRequest(BaseModel):
+    codigos: list[str]
+
+@router.post("/estoque-lote")
+def obter_estoque_lote(payload: EstoqueLoteRequest, db: Session = Depends(get_db)):
+    """Busca o estoque atualizado (disponivel e futuro) de uma lista de códigos."""
+    from models.produto import ProdutoV2
+    
+    # Limpa e formata os códigos enviados
+    codigos = [c.strip() for c in payload.codigos if c and c.strip()]
+    if not codigos:
+        return {}
+
+    # Busca status e estoque diretamente de ProdutoV2
+    rows_produto = db.query(
+        ProdutoV2.codigo_supra,
+        ProdutoV2.status_produto,
+        ProdutoV2.estoque_disponivel,
+        ProdutoV2.estoque_futuro,
+        ProdutoV2.nome_arquivo_estoque,
+    ).filter(
+        ProdutoV2.codigo_supra.in_(codigos)
+    ).all()
+
+    stock_map = {}
+    status_map = {}
+    
+    # Monta mapa com fallback correto para duplos
+    for r in rows_produto:
+        rs = (r.status_produto or "").upper()
+        cod_db = str(r.codigo_supra).strip()
+        
+        if cod_db not in status_map or (status_map[cod_db] != 'ATIVO' and rs == 'ATIVO'):
+            status_map[cod_db] = rs
+            stock_map[cod_db] = {
+                "estoque_disponivel": int(r.estoque_disponivel or 0),
+                "estoque_futuro": int(r.estoque_futuro or 0),
+                "nome_arquivo": r.nome_arquivo_estoque,
+                "status": rs
+            }
+            
+    return stock_map
+
+
+
 @router.get("/diag_estoque")
 def diagnostico_estoque():
     """Endpoint temporário de diagnóstico do estado do estoque no banco."""

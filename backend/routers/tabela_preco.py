@@ -396,21 +396,15 @@ def obter_tabela(id_tabela: int):
 
         itens = db.query(TabelaPrecoModel).filter_by(id_tabela=id_tabela, ativo=True).all()
 
-        # Helper: buscar status ATUAL e estoque de t_cadastro_produto_v2
-        # A tabela t_cadastro_produto_v2 é atualizada diretamente pelo importar_estoque
+        # Helper: buscar status ATUAL de t_cadastro_produto_v2
         status_map = {}
-        stock_map = {}
         if itens:
-
             codigos = [str(i.codigo_produto_supra).strip() for i in itens if i.codigo_produto_supra]
             if codigos:
-                # Busca status + estoque diretamente da tabela de produtos
+                from models.produto import ProdutoV2
                 rows_produto = db.query(
                     ProdutoV2.codigo_supra,
                     ProdutoV2.status_produto,
-                    ProdutoV2.estoque_disponivel,
-                    ProdutoV2.estoque_futuro,
-                    ProdutoV2.nome_arquivo_estoque,
                 ).filter(
                     ProdutoV2.codigo_supra.in_(codigos)
                 ).all()
@@ -418,41 +412,13 @@ def obter_tabela(id_tabela: int):
                 for r in rows_produto:
                     rs = (r.status_produto or "").upper()
                     cod_db = str(r.codigo_supra).strip()
-                    # Prioriza ATIVO se houver duplicatas
                     if cod_db not in status_map or (status_map[cod_db] != 'ATIVO' and rs == 'ATIVO'):
                         status_map[cod_db] = rs
-                        stock_map[cod_db] = (
-                            int(r.estoque_disponivel or 0),
-                            int(r.estoque_futuro or 0),
-                            r.nome_arquivo_estoque
-                        )
 
-
-         # se por algum motivo tiver divergência entre linhas, faz um OR
+        # se por algum motivo tiver divergência entre linhas, faz um OR
         calcula_st = any(bool(getattr(p, "calcula_st", False)) for p in itens) or bool(
             getattr(cab, "calcula_st", False)
         )
-
-        # Obter nome do arquivo do estoque da tabela (primeiro que achar)
-        nome_arquivo_estoque = None
-        if stock_map:
-            for val in stock_map.values():
-                if len(val) > 2 and val[2]:
-                    nome_arquivo_estoque = val[2]
-                    break
-
-        # Fallback para nome do arquivo via ProdutoV2 (atualizado diretamente pelo importar_estoque)
-        if not nome_arquivo_estoque:
-            try:
-                prod_arq = db.query(ProdutoV2.nome_arquivo_estoque)\
-                    .filter(ProdutoV2.nome_arquivo_estoque != None)\
-                    .first()
-                if prod_arq:
-                    nome_arquivo_estoque = prod_arq[0]
-            except Exception:
-                pass
-
-
 
         return {
             "id": id_tabela,
@@ -462,7 +428,6 @@ def obter_tabela(id_tabela: int):
             "fornecedor": cab.fornecedor,
             "calcula_st": calcula_st,
             "observacao": getattr(cab, "observacao", ""),
-            "nome_arquivo_estoque": nome_arquivo_estoque,
             "produtos": [
                 {
                 "codigo_produto_supra": p.codigo_produto_supra,     
@@ -489,8 +454,7 @@ def obter_tabela(id_tabela: int):
                 "manual_freight": getattr(p, "manual_freight", False),
                 "frete_base_ton": getattr(p, "frete_base_ton", 0),
                 "status_atual": status_map.get(str(p.codigo_produto_supra).strip() if p.codigo_produto_supra else "", "DESCONHECIDO"),
-                "estoque_disponivel": stock_map.get(str(p.codigo_produto_supra).strip() if p.codigo_produto_supra else "", (0, 0, None))[0] or 0,
-                "estoque_futuro": stock_map.get(str(p.codigo_produto_supra).strip() if p.codigo_produto_supra else "", (0, 0, None))[1] or 0,
+
 
                 } for p in itens
             ]
