@@ -240,7 +240,7 @@ def gerar_relatorio_estoque(
     query = db.query(
         ProdutoV2.codigo_supra,
         ProdutoV2.nome_produto,
-        ProdutoV2.peso_bruto,
+        ProdutoV2.peso,
         ProdutoV2.estoque_disponivel,
         ProdutoV2.estoque_futuro,
         ProdutoV2.estoque_ideal,
@@ -276,7 +276,7 @@ def gerar_relatorio_estoque(
         resultado.append({
             "codigo_supra": p.codigo_supra,
             "nome_produto": p.nome_produto,
-            "peso_bruto": float(p.peso_bruto) if p.peso_bruto else 0.0,
+            "peso": float(p.peso) if p.peso else 0.0,
             "estoque_disponivel": int(p.estoque_disponivel or 0),
             "estoque_futuro": int(p.estoque_futuro or 0),
             "estoque_ideal": int(p.estoque_ideal or 0),

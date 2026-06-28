@@ -1742,7 +1742,7 @@ window.gerarRelatorioEstoque = async function() {
       tr.innerHTML = `
         <td style="padding: 10px; border: 1px solid #e5e7eb;">${p.codigo_supra || ''}</td>
         <td style="padding: 10px; border: 1px solid #e5e7eb; text-align: left;">${p.nome_produto || ''}</td>
-        <td style="padding: 10px; border: 1px solid #e5e7eb;">${Number(p.peso_bruto || 0).toFixed(2)}</td>
+        <td style="padding: 10px; border: 1px solid #e5e7eb;">${Number(p.peso || 0).toFixed(2)}</td>
         <td style="padding: 10px; border: 1px solid #e5e7eb;">${p.estoque_disponivel || 0}</td>
         <td style="padding: 10px; border: 1px solid #e5e7eb;">${p.estoque_futuro || 0}</td>
         <td style="padding: 10px; border: 1px solid #e5e7eb;">${p.estoque_ideal || 0}</td>
@@ -1775,7 +1775,7 @@ window.exportarExcelEstoque = function() {
     let obj = {
       "Código": p.codigo_supra,
       "Descrição": p.nome_produto,
-      "Peso Emb.": Number(p.peso_bruto || 0),
+      "Peso Líq.": Number(p.peso || 0),
       "Est. Disponível": p.estoque_disponivel,
       "Est. Futuro": p.estoque_futuro,
       "Est. Ideal": p.estoque_ideal,
@@ -1821,7 +1821,7 @@ window.exportarPDFEstoque = function() {
     let row = [
       p.codigo_supra,
       p.nome_produto,
-      Number(p.peso_bruto || 0).toFixed(3),
+      Number(p.peso || 0).toFixed(3),
       p.estoque_disponivel,
       p.estoque_futuro,
       p.estoque_ideal
@@ -1846,7 +1846,7 @@ window.exportarPDFEstoque = function() {
     return row;
   });
   
-  let headCols = ['Código', 'Descrição', 'Peso Emb.', 'Est. Disp.', 'Est. Fut.', 'Est. Ideal'];
+  let headCols = ['Código', 'Descrição', 'Peso Líq.', 'Est. Disp.', 'Est. Fut.', 'Est. Ideal'];
   if (mostrarValores) {
     headCols.push('V. Atual', 'V. Ant.', 'Dif. %');
   }
