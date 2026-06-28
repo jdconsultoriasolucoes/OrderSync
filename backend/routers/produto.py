@@ -245,7 +245,9 @@ def gerar_relatorio_estoque(
         ProdutoV2.estoque_futuro,
         ProdutoV2.estoque_ideal,
         ProdutoV2.tipo,
-        ProdutoV2.tipo_giro
+        ProdutoV2.tipo_giro,
+        ProdutoV2.preco,
+        ProdutoV2.preco_anterior
     ).filter(ProdutoV2.status_produto == 'ATIVO')
 
     if divisao:
@@ -279,7 +281,9 @@ def gerar_relatorio_estoque(
             "estoque_futuro": int(p.estoque_futuro or 0),
             "estoque_ideal": int(p.estoque_ideal or 0),
             "divisao": p.tipo,
-            "tipo_giro": p.tipo_giro
+            "tipo_giro": p.tipo_giro,
+            "preco": float(p.preco) if p.preco else 0.0,
+            "preco_anterior": float(p.preco_anterior) if p.preco_anterior else 0.0
         })
 
     return resultado

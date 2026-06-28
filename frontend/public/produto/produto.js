@@ -1683,7 +1683,10 @@ window.gerarRelatorioEstoque = async function() {
   
   const tbody = document.getElementById('tbody-relatorio');
   if(!tbody) return;
-  tbody.innerHTML = '<tr><td colspan="6" style="text-align:center;">Carregando...</td></tr>';
+  const mostrarValores = document.getElementById('chk-mostrar-valores')?.checked;
+  document.querySelectorAll('.th-valores').forEach(el => el.style.display = mostrarValores ? '' : 'none');
+  const colspan = mostrarValores ? 9 : 6;
+  tbody.innerHTML = `<tr><td colspan="${colspan}" style="text-align:center;">Carregando...</td></tr>`;
   
   try {
     const basePath = typeof API_BASE !== 'undefined' ? API_BASE : 'http://localhost:8000';
@@ -1709,12 +1712,32 @@ window.gerarRelatorioEstoque = async function() {
     window.dadosRelatorioAtual = dados;
     
     if (dados.length === 0) {
-      tbody.innerHTML = '<tr><td colspan="6" style="text-align:center;">Nenhum produto encontrado com os filtros informados.</td></tr>';
+      tbody.innerHTML = `<tr><td colspan="${colspan}" style="text-align:center;">Nenhum produto encontrado com os filtros informados.</td></tr>`;
       return;
     }
 
     tbody.innerHTML = '';
     dados.forEach(p => {
+      let tdValores = '';
+      if (mostrarValores) {
+        const precoAtual = Number(p.preco || 0);
+        const precoAnterior = Number(p.preco_anterior || 0);
+        let difPerc = 0;
+        let difPercFmt = '-';
+        if (precoAnterior > 0) {
+          difPerc = ((precoAtual - precoAnterior) / precoAnterior) * 100;
+          difPercFmt = (difPerc > 0 ? '+' : '') + difPerc.toFixed(2) + '%';
+        }
+        
+        const precoAtualFmt = precoAtual.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+        const precoAnteriorFmt = precoAnterior.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+        tdValores = `
+          <td style="padding: 10px; border: 1px solid #e5e7eb;">R$ ${precoAtualFmt}</td>
+          <td style="padding: 10px; border: 1px solid #e5e7eb;">R$ ${precoAnteriorFmt}</td>
+          <td style="padding: 10px; border: 1px solid #e5e7eb; color: ${difPerc > 0 ? 'green' : (difPerc < 0 && precoAnterior > 0 ? 'red' : 'inherit')};">${difPercFmt}</td>
+        `;
+      }
+
       const tr = document.createElement('tr');
       tr.innerHTML = `
         <td style="padding: 10px; border: 1px solid #e5e7eb;">${p.codigo_supra || ''}</td>
@@ -1723,6 +1746,7 @@ window.gerarRelatorioEstoque = async function() {
         <td style="padding: 10px; border: 1px solid #e5e7eb;">${p.estoque_disponivel || 0}</td>
         <td style="padding: 10px; border: 1px solid #e5e7eb;">${p.estoque_futuro || 0}</td>
         <td style="padding: 10px; border: 1px solid #e5e7eb;">${p.estoque_ideal || 0}</td>
+        ${tdValores}
       `;
       // Adicionando hover effect manual via JS para dar "cara" melhor
       tr.onmouseover = () => tr.style.backgroundColor = '#f3f4f6';
@@ -1732,7 +1756,8 @@ window.gerarRelatorioEstoque = async function() {
     });
   } catch (e) {
     console.error(e);
-    tbody.innerHTML = `<tr><td colspan="6" style="text-align:center;color:red;">Erro: ${e.message}</td></tr>`;
+    const colspan = document.getElementById('chk-mostrar-valores')?.checked ? 9 : 6;
+    tbody.innerHTML = `<tr><td colspan="${colspan}" style="text-align:center;color:red;">Erro: ${e.message}</td></tr>`;
   }
 };
 
@@ -1743,17 +1768,34 @@ window.exportarExcelEstoque = function() {
     return;
   }
 
+  const mostrarValores = document.getElementById('chk-mostrar-valores')?.checked;
+
   // Prepara array de objetos para a planilha
-  const exportData = dados.map(p => ({
-    "Código": p.codigo_supra,
-    "Descrição": p.nome_produto,
-    "Peso Emb.": Number(p.peso_bruto || 0),
-    "Est. Disponível": p.estoque_disponivel,
-    "Est. Futuro": p.estoque_futuro,
-    "Est. Ideal": p.estoque_ideal,
-    "Divisão": p.divisao,
-    "Giro": p.tipo_giro
-  }));
+  const exportData = dados.map(p => {
+    let obj = {
+      "Código": p.codigo_supra,
+      "Descrição": p.nome_produto,
+      "Peso Emb.": Number(p.peso_bruto || 0),
+      "Est. Disponível": p.estoque_disponivel,
+      "Est. Futuro": p.estoque_futuro,
+      "Est. Ideal": p.estoque_ideal,
+      "Divisão": p.divisao,
+      "Giro": p.tipo_giro
+    };
+    
+    if (mostrarValores) {
+      const precoAtual = Number(p.preco || 0);
+      const precoAnterior = Number(p.preco_anterior || 0);
+      let difPerc = null;
+      if (precoAnterior > 0) {
+        difPerc = ((precoAtual - precoAnterior) / precoAnterior) * 100;
+      }
+      obj["V. Atual"] = precoAtual;
+      obj["V. Anterior"] = precoAnterior;
+      obj["Dif. (%)"] = difPerc !== null ? Number(difPerc.toFixed(2)) : '-';
+    }
+    return obj;
+  });
 
   const worksheet = window.XLSX.utils.json_to_sheet(exportData);
   const workbook = window.XLSX.utils.book_new();
@@ -1773,20 +1815,47 @@ window.exportarPDFEstoque = function() {
   
   doc.text("Relatório de Estoque", 14, 15);
   
-  const tableData = dados.map(p => [
-    p.codigo_supra,
-    p.nome_produto,
-    Number(p.peso_bruto || 0).toFixed(3),
-    p.estoque_disponivel,
-    p.estoque_futuro,
-    p.estoque_ideal
-  ]);
+  const mostrarValores = document.getElementById('chk-mostrar-valores')?.checked;
+
+  const tableData = dados.map(p => {
+    let row = [
+      p.codigo_supra,
+      p.nome_produto,
+      Number(p.peso_bruto || 0).toFixed(3),
+      p.estoque_disponivel,
+      p.estoque_futuro,
+      p.estoque_ideal
+    ];
+
+    if (mostrarValores) {
+      const precoAtual = Number(p.preco || 0);
+      const precoAnterior = Number(p.preco_anterior || 0);
+      let difPerc = 0;
+      let difPercStr = '-';
+      if (precoAnterior > 0) {
+        difPerc = ((precoAtual - precoAnterior) / precoAnterior) * 100;
+        difPercStr = (difPerc > 0 ? '+' : '') + difPerc.toFixed(2) + '%';
+      }
+      
+      row.push(
+        precoAtual.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 }),
+        precoAnterior.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 }),
+        difPercStr
+      );
+    }
+    return row;
+  });
   
+  let headCols = ['Código', 'Descrição', 'Peso Emb.', 'Est. Disp.', 'Est. Fut.', 'Est. Ideal'];
+  if (mostrarValores) {
+    headCols.push('V. Atual', 'V. Ant.', 'Dif. %');
+  }
+
   doc.autoTable({
     startY: 20,
-    head: [['Código', 'Descrição', 'Peso Emb.', 'Est. Disponível', 'Est. Futuro', 'Est. Ideal']],
+    head: [headCols],
     body: tableData,
-    styles: { fontSize: 9 },
+    styles: { fontSize: 8 },
     headStyles: { fillColor: [199, 179, 153] } // Bege/Marrom (SUPRA_BAR) usado nos pedidos
   });
   

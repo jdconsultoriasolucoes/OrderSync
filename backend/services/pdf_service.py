@@ -21,6 +21,12 @@ SUPRA_RED = colors.Color(0.78, 0.70, 0.60)       # faixa e cabeçalho da tabela
 SUPRA_DARK = colors.Color(0.1, 0.1, 0.1)        # texto escuro
 SUPRA_BG_LIGHT = colors.Color(0.95, 0.95, 0.95) # fundo clarinho
 
+# Novas Cores Corporativas (Digitação Orçamento)
+HEADER_BG = colors.HexColor("#2D3748")
+HEADER_TEXT = colors.HexColor("#FFFFFF")
+HIGHLIGHT_TEXT = colors.HexColor("#DD6B20")
+TABLE_HEADER_BG = colors.HexColor("#4A5568")
+
 
 def _br_number(value, decimals=2, suffix=""):
     """
@@ -105,17 +111,29 @@ def _desenhar_pdf(pedido: PedidoPdf, buffer: io.BytesIO, sem_validade: bool = Fa
     # Faixa horizontal (header corporativo)
     faixa_h = 1.2 * cm
     faixa_y = top_y - logo_h - 0.2 * cm
-    c.setFillColor(SUPRA_RED)
+    c.setFillColor(HEADER_BG)
     c.rect(margin_x, faixa_y - faixa_h, available_width, faixa_h, stroke=0, fill=1)
 
     # Texto na faixa com número do Pedido do Sistema recolocado
-    c.setFillColor(colors.white)
+    c.setFillColor(HEADER_TEXT)
     c.setFont("Helvetica-Bold", 12)
+    
+    base_text = "DIGITAÇÃO DO ORÇAMENTO "
     c.drawString(
         margin_x + 0.3 * cm,
         faixa_y - faixa_h + 0.62 * cm,
-        f"DIGITAÇÃO DO ORÇAMENTO (Nº: {pedido.id_pedido})"
+        base_text
     )
+    base_w = c.stringWidth(base_text, "Helvetica-Bold", 12)
+    
+    c.setFillColor(HIGHLIGHT_TEXT)
+    c.drawString(
+        margin_x + 0.3 * cm + base_w,
+        faixa_y - faixa_h + 0.62 * cm,
+        f"(Nº: {pedido.id_pedido})"
+    )
+    
+    c.setFillColor(HEADER_TEXT)
 
     # Data / Validade (Bloco direito do header)
     c.setFont("Helvetica", 10)
@@ -342,7 +360,7 @@ def _desenhar_pdf(pedido: PedidoPdf, buffer: io.BytesIO, sem_validade: bool = Fa
 
     itens_table_style = TableStyle(
         [
-            ("BACKGROUND", (0, 0), (-1, 0), SUPRA_RED),
+            ("BACKGROUND", (0, 0), (-1, 0), TABLE_HEADER_BG),
             ("TEXTCOLOR", (0, 0), (-1, 0), colors.white),
             ("FONTNAME", (0, 0), (-1, 0), "Helvetica-Bold"),
             ("FONTSIZE", (0, 0), (-1, 0), 9),
@@ -427,6 +445,7 @@ def _desenhar_pdf(pedido: PedidoPdf, buffer: io.BytesIO, sem_validade: bool = Fa
         ("FONTNAME", (0, 0), (-1, 0), "Helvetica-Bold"),
         ("FONTSIZE", (0, 0), (-1, -1), 8),
         ("VALIGN", (0, 0), (-1, -1), "MIDDLE"),
+        ("TEXTCOLOR", (0, 0), (-1, -1), HIGHLIGHT_TEXT),
     ]))
     
     t_obs = Table([
