@@ -1295,6 +1295,8 @@ async function carregarItens() {
       const elBaseNome = document.getElementById('tabela_base_nome');
       if (elBaseNome) elBaseNome.value = t.nome_tabela || '';
       document.getElementById('cliente_nome').value = t.cliente_nome || t.cliente || '';
+      console.log('DADOS RECEBIDOS (EDIT VIEW):', t);
+      console.log('CLIENTE A SER PREENCHIDO:', t.cliente_nome || t.cliente || '');
       if (document.getElementById('codigo_cliente')) document.getElementById('codigo_cliente').value = t.codigo_cliente || '';
       document.getElementById('ramo_juridico').value = t.ramo_juridico || '';
       document.getElementById('observacao').value = t.observacao || ''; // ✅ Restore Observação
@@ -2840,9 +2842,37 @@ async function onCancelar(e) {
           if (elNomeTabela) elNomeTabela.value = t.nome_tabela || '';
           const elBaseNome = document.getElementById('tabela_base_nome');
           if (elBaseNome) elBaseNome.value = t.nome_tabela || '';
+          console.log('DADOS RECEBIDOS DA TABELA:', t);
+          console.log('CLIENTE A SER PREENCHIDO:', t.cliente_nome || t.cliente || '');
           document.getElementById('cliente_nome').value = t.cliente_nome || t.cliente || '';
           document.getElementById('codigo_cliente').value = t.codigo_cliente || '';
           document.getElementById('ramo_juridico').value = t.ramo_juridico || '';
+
+          if ((t.cliente_nome || t.cliente) && !t.codigo_cliente) {
+              try {
+                  const q = (t.cliente_nome || t.cliente).trim();
+                  const rCli = await fetch(`${API_BASE}/cliente/busca?q=${encodeURIComponent(q)}`);
+                  if (rCli.ok) {
+                      const data = await rCli.json();
+                      const arr = Array.isArray(data) ? data : Array.isArray(data?.results) ? data.results : Array.isArray(data?.clientes) ? data.clientes : (data && data.nome ? [data] : []);
+                      if (arr.length > 0) {
+                          const cli = arr[0];
+                          t.codigo_cliente = cli.codigo ?? cli.id ?? cli.codigo_cliente ?? '';
+                          document.getElementById('codigo_cliente').value = t.codigo_cliente;
+                          console.log("Auto-recuperação do código do cliente realizada com sucesso:", cli.codigo);
+                      }
+                  }
+              } catch (e) {
+                  console.warn("Auto-recuperação do cliente falhou:", e);
+              }
+          }
+
+          if (t.cliente_nome || t.cliente) {
+            window.__clientState = {
+              originalName: (t.cliente_nome || t.cliente || '').trim(),
+              originalCode: (t.codigo_cliente || '').trim()
+            };
+          }
 
           // RESTORE GLOBAL FIELDS
           const first = (Array.isArray(t.produtos) && t.produtos.length) ? t.produtos[0] : null;

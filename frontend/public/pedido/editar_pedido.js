@@ -2431,6 +2431,25 @@ async function onCancelar(e) {
           if (document.getElementById('pedido_supra')) document.getElementById('pedido_supra').value = t.pedido_supra || '';
           if (document.getElementById('nota_fiscal')) document.getElementById('nota_fiscal').value = t.nota_fiscal || '';
 
+          if ((t.cliente_nome || t.cliente) && !t.codigo_cliente) {
+              try {
+                  const q = (t.cliente_nome || t.cliente).trim();
+                  const rCli = await fetch(`${API_BASE}/cliente/busca?q=${encodeURIComponent(q)}`);
+                  if (rCli.ok) {
+                      const data = await rCli.json();
+                      const arr = Array.isArray(data) ? data : Array.isArray(data?.results) ? data.results : Array.isArray(data?.clientes) ? data.clientes : (data && data.nome ? [data] : []);
+                      if (arr.length > 0) {
+                          const cli = arr[0];
+                          t.codigo_cliente = cli.codigo ?? cli.id ?? cli.codigo_cliente ?? '';
+                          document.getElementById('codigo_cliente').value = t.codigo_cliente;
+                          console.log("Auto-recuperação do código do cliente realizada com sucesso:", cli.codigo);
+                      }
+                  }
+              } catch (e) {
+                  console.warn("Auto-recuperação do cliente falhou:", e);
+              }
+          }
+
           if (t.cliente_nome || t.cliente) {
             window.__clientState = {
               originalName: (t.cliente_nome || t.cliente || '').trim(),

@@ -420,11 +420,20 @@ def obter_tabela(id_tabela: int):
             getattr(cab, "calcula_st", False)
         )
 
+        # Busca o codigo_cliente de qualquer linha se o cab estiver nulo
+        cod_cliente = getattr(cab, "codigo_cliente", None) or getattr(cab, "cliente_codigo", None)
+        if not cod_cliente:
+            for item in itens:
+                ic = getattr(item, "codigo_cliente", None) or getattr(item, "cliente_codigo", None)
+                if ic:
+                    cod_cliente = ic
+                    break
+
         return {
             "id": id_tabela,
             "nome_tabela": cab.nome_tabela,
             "cliente": cab.cliente,
-            "codigo_cliente": getattr(cab, "codigo_cliente", None) or getattr(cab, "cliente_codigo", None),
+            "codigo_cliente": cod_cliente,
             "fornecedor": cab.fornecedor,
             "calcula_st": calcula_st,
             "observacao": getattr(cab, "observacao", ""),
