@@ -2431,6 +2431,13 @@ async function onCancelar(e) {
           if (document.getElementById('pedido_supra')) document.getElementById('pedido_supra').value = t.pedido_supra || '';
           if (document.getElementById('nota_fiscal')) document.getElementById('nota_fiscal').value = t.nota_fiscal || '';
 
+          if (t.cliente_nome || t.cliente) {
+            window.__clientState = {
+              originalName: (t.cliente_nome || t.cliente || '').trim(),
+              originalCode: (t.codigo_cliente || '').trim()
+            };
+          }
+
           // RESTORE GLOBAL FIELDS
           const first = (Array.isArray(t.produtos) && t.produtos.length) ? t.produtos[0] : null;
 
