@@ -306,7 +306,7 @@ def get_carga_pedidos_detalhes(carga_id: int, db: Session = Depends(get_db)):
                  SUM(i.quantidade * COALESCE(prod.peso_bruto, prod.peso, 0)) as peso_bruto_total
              FROM tb_pedidos_itens i
              LEFT JOIN (
-                 SELECT codigo_supra, MAX(peso) as peso, MAX(peso_bruto) as peso_bruto 
+                 SELECT codigo_supra, MAX(CAST(peso AS FLOAT)) as peso, MAX(CAST(peso_bruto AS FLOAT)) as peso_bruto 
                  FROM t_cadastro_produto_v2 GROUP BY codigo_supra
              ) prod ON prod.codigo_supra = i.codigo
              GROUP BY id_pedido
