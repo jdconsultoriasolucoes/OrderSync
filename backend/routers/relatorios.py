@@ -170,13 +170,14 @@ def add_pedido_to_carga(carga_id: int, pedido: CargaPedidoCreate, db: Session = 
             
             # Insere evento
             try:
-                db.execute(text("""
-                    INSERT INTO public.pedido_status_event (id, pedido_id, de_status, para_status, user_id, motivo, metadata, created_at)
-                    VALUES (gen_random_uuid(), :pedido_id, :de_status, 'Carga em formação', 'sistema', 'Pedido vinculado à Carga', '{}'::jsonb, now())
-                """), {
-                    "pedido_id": db_pedido.id,
-                    "de_status": de_status
-                })
+                with db.begin_nested():
+                    db.execute(text("""
+                        INSERT INTO public.pedido_status_event (id, pedido_id, de_status, para_status, user_id, motivo, metadata, created_at)
+                        VALUES (gen_random_uuid(), :pedido_id, :de_status, 'Carga em formação', 'sistema', 'Pedido vinculado à Carga', '{}'::jsonb, now())
+                    """), {
+                        "pedido_id": db_pedido.id,
+                        "de_status": de_status
+                    })
             except Exception:
                 pass
 
@@ -211,12 +212,13 @@ def remove_pedido_from_carga(item_id: int, db: Session = Depends(get_db)):
             db_pedido.status = "Pedido"
             db_pedido.atualizado_em = datetime.utcnow()
             try:
-                db.execute(text("""
-                    INSERT INTO public.pedido_status_event (id, pedido_id, de_status, para_status, user_id, motivo, metadata, created_at)
-                    VALUES (gen_random_uuid(), :pedido_id, 'Carga em formação', 'Pedido', 'sistema', 'Pedido removido da Carga', '{}'::jsonb, now())
-                """), {
-                    "pedido_id": db_pedido.id
-                })
+                with db.begin_nested():
+                    db.execute(text("""
+                        INSERT INTO public.pedido_status_event (id, pedido_id, de_status, para_status, user_id, motivo, metadata, created_at)
+                        VALUES (gen_random_uuid(), :pedido_id, 'Carga em formação', 'Pedido', 'sistema', 'Pedido removido da Carga', '{}'::jsonb, now())
+                    """), {
+                        "pedido_id": db_pedido.id
+                    })
             except Exception:
                 pass
 
@@ -437,13 +439,14 @@ def confirmar_entrega_carga(carga_id: int, db: Session = Depends(get_db)):
         
         # Insere evento no histórico
         try:
-            db.execute(text("""
-                INSERT INTO public.pedido_status_event (id, pedido_id, de_status, para_status, user_id, motivo, metadata, created_at)
-                VALUES (gen_random_uuid(), :pedido_id, :de_status, 'Faturado Supra', 'sistema', 'Entrega de carga confirmada em lote', '{}'::jsonb, now())
-            """), {
-                "pedido_id": id_pedido,
-                "de_status": de_status
-            })
+            with db.begin_nested():
+                db.execute(text("""
+                    INSERT INTO public.pedido_status_event (id, pedido_id, de_status, para_status, user_id, motivo, metadata, created_at)
+                    VALUES (gen_random_uuid(), :pedido_id, :de_status, 'Faturado Supra', 'sistema', 'Entrega de carga confirmada em lote', '{}'::jsonb, now())
+                """), {
+                    "pedido_id": id_pedido,
+                    "de_status": de_status
+                })
         except Exception:
             pass
             
