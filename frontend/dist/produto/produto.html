@@ -18,6 +18,13 @@
   <script src="../js/config.js"></script>
   <script src="../js/auth.js"></script>
   <script src="../js/sidebar_control.js"></script>
+  <!-- Bibliotecas para Relatório PDF e Excel -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.28/jspdf.plugin.autotable.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+  <script src="../js/utils_error.js"></script>
+  
   <script>
     if (window.Auth) { window.Auth.checkAuth(); }
   </script>
@@ -129,7 +136,15 @@
 
   <!-- ========== MAIN ========== -->
   <div class="page-container">
-    <div class="card" style="margin-top: 20px;">
+    <!-- NOVO TABS MENU -->
+    <div class="tabs-header" style="margin-top: 20px; border-bottom: 1px solid #ddd; margin-bottom: 20px; display: flex; gap: 10px;">
+      <button id="tab-btn-cadastro" class="tab-btn active" onclick="switchTabProduto('cadastro')" style="padding: 10px 20px; background: none; border: none; border-bottom: 2px solid #2563eb; color: #2563eb; font-weight: bold; cursor: pointer; font-size: 14px;">Cadastro de Produto</button>
+      <button id="tab-btn-relatorio" class="tab-btn" onclick="switchTabProduto('relatorio')" style="padding: 10px 20px; background: none; border: none; border-bottom: 2px solid transparent; color: #666; font-weight: bold; cursor: pointer; font-size: 14px;">Relatório de Estoque</button>
+    </div>
+
+    <!-- TAB CADASTRO -->
+    <div id="tab-cadastro" class="tab-content" style="display: block;">
+      <div class="card">
       <div class="header">
         <div class="toolbar">
           <button id="btn-novo-produto" class="btn-primary">+ Novo</button>
@@ -346,6 +361,83 @@
       </div>
 
     </div>
+    </div> <!-- End of tab-cadastro -->
+
+    <!-- TAB RELATÓRIO DE ESTOQUE -->
+    <div id="tab-relatorio" class="tab-content" style="display: none;">
+      <div class="card">
+        <div class="header">
+          <div class="toolbar" style="margin-left:auto; width: 100%; display: flex; justify-content: flex-end; padding-bottom: 15px; border-bottom: 1px solid #eee;">
+            <button class="ghost" onclick="window.exportarExcelEstoque()">Exportar Excel</button>
+            <button class="ghost" onclick="window.exportarPDFEstoque()">Exportar PDF</button>
+          </div>
+        </div>
+        
+        <div class="row g-2" style="margin-bottom: 20px; margin-top: 10px;">
+          <div class="col-2">
+            <label>Produto</label>
+            <input type="text" id="filtro-produto" placeholder="Buscar..." onkeyup="if(window.gerarRelatorioEstoque) window.gerarRelatorioEstoque()" style="width: 100%; height: 35px; border: 1px solid #ccc; border-radius: 4px; padding-left: 8px;" />
+          </div>
+          <div class="col-2">
+            <label>Filial</label>
+            <select id="filtro-filial" onchange="window.gerarRelatorioEstoque()">
+              <option value="">Todas</option>
+              <option value="Matriz">Matriz</option>
+              <option value="Filial 1">Filial 1</option>
+            </select>
+          </div>
+          <div class="col-2">
+            <label>Linha</label>
+            <select id="filtro-linha" onchange="window.gerarRelatorioEstoque()">
+              <option value="">Todas</option>
+            </select>
+          </div>
+          <div class="col-3">
+            <label>Família</label>
+            <select id="filtro-familia" onchange="window.gerarRelatorioEstoque()">
+              <option value="">Todas</option>
+            </select>
+          </div>
+          <div class="col-3">
+            <label>Tipo de Giro</label>
+            <select id="filtro-giro" onchange="window.gerarRelatorioEstoque()">
+              <option value="">Todos</option>
+            </select>
+          </div>
+          <div class="col-2">
+            <label>&nbsp;</label>
+            <div style="display: flex; align-items: center; height: 38px;">
+              <input type="checkbox" id="chk-mostrar-valores" onchange="window.gerarRelatorioEstoque()" style="margin-right: 5px; cursor: pointer;" />
+              <label for="chk-mostrar-valores" style="margin-bottom: 0; cursor: pointer; font-weight: normal; font-size: 14px;">Exibir Valores</label>
+            </div>
+          </div>
+        </div>
+
+        <div class="table-container" style="max-height: 500px; overflow-y: auto;">
+          <table id="table-relatorio" style="width: 100%; border-collapse: collapse; text-align: center; border: 1px solid #e5e7eb; font-size: 14px;">
+            <thead style="background-color: #f9fafb; border-bottom: 2px solid #e5e7eb;">
+              <tr>
+                <th style="padding: 12px; border: 1px solid #e5e7eb; font-weight: bold;">Código</th>
+                <th style="padding: 12px; border: 1px solid #e5e7eb; font-weight: bold; text-align: left;">Descrição do produto</th>
+                <th style="padding: 12px; border: 1px solid #e5e7eb; font-weight: bold;">Peso líq.</th>
+                <th style="padding: 12px; border: 1px solid #e5e7eb; font-weight: bold;">Estoque disponível</th>
+                <th style="padding: 12px; border: 1px solid #e5e7eb; font-weight: bold;">Estoque futuro</th>
+                <th style="padding: 12px; border: 1px solid #e5e7eb; font-weight: bold;">Estoque ideal</th>
+                <th class="th-valores" style="padding: 12px; border: 1px solid #e5e7eb; font-weight: bold; display: none;">V. Atual (R$)</th>
+                <th class="th-valores" style="padding: 12px; border: 1px solid #e5e7eb; font-weight: bold; display: none;">V. Anterior (R$)</th>
+                <th class="th-valores" style="padding: 12px; border: 1px solid #e5e7eb; font-weight: bold; display: none;">Dif. (%)</th>
+              </tr>
+            </thead>
+            <tbody id="tbody-relatorio">
+              <tr>
+                <td colspan="6" style="text-align:center; padding: 20px;">Carregando...</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div> <!-- Fim de tab-relatorio -->
+
   </div>
 
   <!-- Modal de importação de lista de preços -->

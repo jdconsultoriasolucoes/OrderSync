@@ -115,6 +115,7 @@ def startup_event():
         from models.idempotency import IdempotencyKeyModel
         from models.background_task import BackgroundTaskModel
         from models.automation_config import AutomationConfigModel
+        from models.error_log import ErrorLog
         Base.metadata.create_all(bind=engine)
         
         from services.db_migrations import run_migrations
@@ -274,8 +275,9 @@ app.include_router(catalogo_referencias.router)
 from routers import importacao
 app.include_router(importacao.router)
 
-from routers import profile_config
+from routers import profile_config, error_logs
 app.include_router(profile_config.router)
+app.include_router(error_logs.router)
 
 # ---- Static (se precisar servir arquivos públicos do front) ----
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))

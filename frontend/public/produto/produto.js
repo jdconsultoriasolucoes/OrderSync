@@ -37,20 +37,17 @@ function closeModal(id) {
   const el = $(id);
   if (el) el.classList.add("hidden");
 }
-
-function toast(msg) {
-  const t = $("toast");
-  if (!t) {
+function toast(msg, type = "info") {
+  if (msg === "Handled by ErrorUtils") return;
+  if (window.ErrorUtils) {
+    if (type === "error") {
+      window.ErrorUtils.showError("Aviso", msg);
+    } else {
+      window.ErrorUtils.showSuccess("Aviso", msg);
+    }
+  } else {
     alert(msg);
-    return;
   }
-  t.textContent = msg;
-  t.classList.add("show");
-  t.style.display = "block";
-  setTimeout(() => {
-    t.classList.remove("show");
-    t.style.display = "none";
-  }, 2500);
 }
 
 function debounce(fn, delay = 400) {
@@ -93,6 +90,12 @@ async function fetchJSON(url, options = {}) {
   }
 
   if (!r.ok) {
+    if (window.ErrorUtils) {
+      await window.ErrorUtils.handleApiError({
+        response: { status: r.status, data: data } // Mock as Axios Error format for easy parsing
+      });
+      throw new Error("Handled by ErrorUtils");
+    }
     const msg = data.detail || data.message || r.statusText || "Erro na requisição.";
     const err = new Error(msg);
     err.status = r.status;
@@ -750,7 +753,7 @@ async function uploadListaPdf(file) {
       // Show explicit alert if detail is present, as toasts might be too quick or small for long errors
       if (data.detail) {
         const detailStr = typeof data.detail === 'object' ? JSON.stringify(data.detail, null, 2) : data.detail;
-        alert(`Erro na importação: ${detailStr}`);
+        if (`Erro na importação: ${detailStr}` !== \'Handled by ErrorUtils\') { window.ErrorUtils ? window.ErrorUtils.showError(\'Aviso\', `Erro na importação: ${detailStr}`) : alert(`Erro na importação: ${detailStr}`); };
       }
       throw new Error(msg);
     }
@@ -875,7 +878,7 @@ async function uploadEstoqueExcel(file) {
 
   } catch (e) {
     console.error(e);
-    alert("Erro na carga de estoque: " + e.message);
+    if ("Erro na carga de estoque: " + e.message !== \'Handled by ErrorUtils\') { window.ErrorUtils ? window.ErrorUtils.showError(\'Aviso\', "Erro na carga de estoque: " + e.message) : alert("Erro na carga de estoque: " + e.message); };
   }
 }
 
@@ -903,7 +906,7 @@ async function pollTaskStatus(basePath, taskId) {
           setTimeout(() => {
             closeModal("progress-modal");
             if (data.status === "ERRO") {
-              alert("O recálculo massivo apresentou um erro: " + (data.erro || "Desconhecido"));
+              if ("O recálculo massivo apresentou um erro: " + (data.erro || "Desconhecido" !== \'Handled by ErrorUtils\') { window.ErrorUtils ? window.ErrorUtils.showError(\'Aviso\', "O recálculo massivo apresentou um erro: " + (data.erro || "Desconhecido") : alert("O recálculo massivo apresentou um erro: " + (data.erro || "Desconhecido"); });
             } else {
               toast("Recálculo massivo de tabelas finalizado com sucesso!");
             }
@@ -969,19 +972,19 @@ function setupImportarPdf() {
 
   const doImport = async ({ tipo, validadeISO, file, fornecedor }) => {
     if (!tipo) {
-      alert("Tipo inválido. Use INSUMOS ou PET.");
+      if ("Tipo inválido. Use INSUMOS ou PET." !== \'Handled by ErrorUtils\') { window.ErrorUtils ? window.ErrorUtils.showError(\'Aviso\', "Tipo inválido. Use INSUMOS ou PET.") : alert("Tipo inválido. Use INSUMOS ou PET."); };
       return;
     }
     if (!validadeISO) {
-      alert("Data de validade inválida. Use dd/mm/aaaa ou selecione no calendário.");
+      if ("Data de validade inválida. Use dd/mm/aaaa ou selecione no calendário." !== \'Handled by ErrorUtils\') { window.ErrorUtils ? window.ErrorUtils.showError(\'Aviso\', "Data de validade inválida. Use dd/mm/aaaa ou selecione no calendário.") : alert("Data de validade inválida. Use dd/mm/aaaa ou selecione no calendário."); };
       return;
     }
     if (!fornecedor) {
-      alert("Selecione o fornecedor.");
+      if ("Selecione o fornecedor." !== \'Handled by ErrorUtils\') { window.ErrorUtils ? window.ErrorUtils.showError(\'Aviso\', "Selecione o fornecedor.") : alert("Selecione o fornecedor."); };
       return;
     }
     if (!file) {
-      alert("Selecione um arquivo PDF.");
+      if ("Selecione um arquivo PDF." !== \'Handled by ErrorUtils\') { window.ErrorUtils ? window.ErrorUtils.showError(\'Aviso\', "Selecione um arquivo PDF.") : alert("Selecione um arquivo PDF."); };
       return;
     }
 
@@ -1014,9 +1017,9 @@ function setupImportarPdf() {
         // Show explicit alert if detail is present
         if (data.detail) {
           const detailStr = typeof data.detail === 'object' ? JSON.stringify(data.detail, null, 2) : data.detail;
-          alert(`Erro na importação: ${detailStr}`);
+          if (`Erro na importação: ${detailStr}` !== \'Handled by ErrorUtils\') { window.ErrorUtils ? window.ErrorUtils.showError(\'Aviso\', `Erro na importação: ${detailStr}`) : alert(`Erro na importação: ${detailStr}`); };
         } else {
-          alert(msg);
+          if (msg !== \'Handled by ErrorUtils\') { window.ErrorUtils ? window.ErrorUtils.showError(\'Aviso\', msg) : alert(msg); };
         }
         return;
       }
@@ -1060,7 +1063,7 @@ function setupImportarPdf() {
       return true;
     } catch (err) {
       console.error(err);
-      alert(err.message || "Erro inesperado ao importar PDF.");
+      if (err.message || "Erro inesperado ao importar PDF." !== \'Handled by ErrorUtils\') { window.ErrorUtils ? window.ErrorUtils.showError(\'Aviso\', err.message || "Erro inesperado ao importar PDF.") : alert(err.message || "Erro inesperado ao importar PDF."); };
       return false;
     }
   };
@@ -1130,14 +1133,14 @@ function setupImportarPdf() {
     let tipoRaw = window.prompt("Qual lista será importada? (INSUMOS ou PET)");
     const tipo = normalizeTipo(tipoRaw);
     if (!tipo) {
-      if (tipoRaw != null) alert("Tipo inválido. Use INSUMOS ou PET.");
+      if (tipoRaw != null) if ("Tipo inválido. Use INSUMOS ou PET." !== \'Handled by ErrorUtils\') { window.ErrorUtils ? window.ErrorUtils.showError(\'Aviso\', "Tipo inválido. Use INSUMOS ou PET.") : alert("Tipo inválido. Use INSUMOS ou PET."); };
       return;
     }
 
     let validadeBr = window.prompt("Informe a data de validade da tabela (dd/mm/aaaa):");
     const validadeISO = normalizeValidISO(validadeBr);
     if (!validadeISO) {
-      alert("Data de validade inválida. Use o formato dd/mm/aaaa.");
+      if ("Data de validade inválida. Use o formato dd/mm/aaaa." !== \'Handled by ErrorUtils\') { window.ErrorUtils ? window.ErrorUtils.showError(\'Aviso\', "Data de validade inválida. Use o formato dd/mm/aaaa.") : alert("Data de validade inválida. Use o formato dd/mm/aaaa."); };
       return;
     }
 
@@ -1764,7 +1767,7 @@ window.gerarRelatorioEstoque = async function() {
 window.exportarExcelEstoque = function() {
   const dados = window.dadosRelatorioAtual;
   if (!dados || dados.length === 0) {
-    alert("Gere o relatório primeiro.");
+    if ("Gere o relatório primeiro." !== \'Handled by ErrorUtils\') { window.ErrorUtils ? window.ErrorUtils.showError(\'Aviso\', "Gere o relatório primeiro.") : alert("Gere o relatório primeiro."); };
     return;
   }
 
@@ -1806,7 +1809,7 @@ window.exportarExcelEstoque = function() {
 window.exportarPDFEstoque = function() {
   const dados = window.dadosRelatorioAtual;
   if (!dados || dados.length === 0) {
-    alert("Gere o relatório primeiro.");
+    if ("Gere o relatório primeiro." !== \'Handled by ErrorUtils\') { window.ErrorUtils ? window.ErrorUtils.showError(\'Aviso\', "Gere o relatório primeiro.") : alert("Gere o relatório primeiro."); };
     return;
   }
 

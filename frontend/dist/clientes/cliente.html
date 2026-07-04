@@ -69,8 +69,10 @@
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
 
   <script src="https://unpkg.com/imask"></script>
+  <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
   <script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js"></script>
   <script src="/js/config.js"></script>
+  <script src="/js/utils_error.js"></script>
   <script src="/js/auth.js"></script>
   <script src="/js/sidebar_control.js"></script>
   <script>
@@ -1080,7 +1082,7 @@
             }
           })
             .then((res) => {
-              alert("Cliente salvo com sucesso!");
+              window.ErrorUtils.showSuccess('Salvo', 'Cliente salvo com sucesso!');
               if (res.data && res.data.cadastrocliente && res.data.cadastrocliente.id) {
                 preencherFormularioCliente(res.data);
               } else {
@@ -1088,40 +1090,12 @@
               }
             })
             .catch(erro => {
-              console.error("Erro ao salvar:", erro);
               limparErros();
-              
               if (erro.response && erro.response.status === 401) {
-                alert("Sessão inválida ou expirada. Redirecionando para login.");
-                window.Auth.logout();
-              } else if (erro.response && erro.response.status === 400) {
-                // Erro de Negocio ou Validação Customizada
-                const msg = erro.response?.data?.error?.message || erro.response?.data?.detail;
-                
-                if (Array.isArray(msg)) {
-                  // Erro do Pydantic (Lista)
-                  msg.forEach(m => {
-                    const campo = m.loc[m.loc.length - 1]; // pega o último item da loc (ex: 'cnpj')
-                    marcarErro(campo, m.msg);
-                  });
-                  const container = document.getElementById('global-error-container');
-                  const msgEl = document.getElementById('global-error-message');
-                  if (container && msgEl) {
-                    msgEl.textContent = "Existem erros de preenchimento nos campos destacados abaixo.";
-                    container.style.display = 'flex';
-                  }
-                } else {
-                   // Erro de texto simples
-                   const container = document.getElementById('global-error-container');
-                   const msgEl = document.getElementById('global-error-message');
-                   if (container && msgEl) {
-                     msgEl.textContent = msg || "Erro ao salvar cliente.";
-                     container.style.display = 'flex';
-                     container.scrollIntoView({ behavior: 'smooth', block: 'start' });
-                   }
-                }
+                window.ErrorUtils.showError("Não Autorizado", "Sessão inválida ou expirada. Redirecionando para login.");
+                setTimeout(() => { window.Auth.logout(); }, 2000);
               } else {
-                alert("Erro inesperado ao salvar cliente: " + erro.message);
+                window.ErrorUtils.handleApiError(erro);
               }
             });
         }
@@ -1918,9 +1892,11 @@
                 let val;
                 
                 if (inp.maskInstance && (key === 'valor' || key.includes('limite'))) {
-                    val = inp.maskInstance.typedValue;
+                    let tv = inp.maskInstance.typedValue;
+                    val = (tv === '' || tv === null || tv === undefined) ? null : Number(tv);
                 } else {
                     val = (inp.type === 'number' || inp.tagName === 'SELECT') ? (inp.value || null) : (inp.value?.trim() || null);
+                    if (inp.type === 'number' && val !== null) val = Number(val);
                 }
                 
                 obj[key] = val;

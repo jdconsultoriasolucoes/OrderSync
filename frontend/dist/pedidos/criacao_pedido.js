@@ -211,7 +211,9 @@ function getHeaderSnapshot() {
     cliente_livre: !!window.isClienteLivreSelecionado,
     iva_enabled: !$("iva_st_toggle")?.disabled,
     currentClientMarkup: window.currentClientMarkup || 0, // ✅ Persist Markup
-    nome_arquivo_estoque: $("estoque-arquivo-nome")?.textContent !== '--' ? ($("estoque-arquivo-nome")?.textContent || "") : ""
+    nome_arquivo_estoque: $("estoque-arquivo-nome")?.textContent !== '--' ? ($("estoque-arquivo-nome")?.textContent || "") : "",
+    originalName: window.__clientState ? window.__clientState.originalName : "",
+    originalCode: window.__clientState ? window.__clientState.originalCode : ""
   };
 }
 
@@ -267,11 +269,22 @@ function restoreHeaderSnapshotIfNew(force = false) {
     window.currentClientMarkup = Number(snap.currentClientMarkup || 0); // ✅ Restore Markup
 
     // ---- Restore Safety Net (Global Vault) ----
-    if (snap.cliente) {
-      window.__clientState = {
-        originalName: (snap.cliente || '').trim(),
-        originalCode: (snap.codigo_cliente || '').trim()
-      };
+    if (snap.iva_enabled != null) {
+      if (document.getElementById('iva_st_toggle')) document.getElementById('iva_st_toggle').disabled = !snap.iva_enabled;
+    }
+    
+    if (snap.originalName || snap.originalCode) {
+        window.__clientState = {
+            loaded: true,
+            originalName: (snap.originalName || '').trim(),
+            originalCode: (snap.originalCode || '').trim()
+        };
+    } else {
+        window.__clientState = {
+            loaded: true,
+            originalName: (snap.cliente || '').trim(),
+            originalCode: (snap.codigo_cliente || '').trim()
+        };
     }
 
     // ---- Atualizações visuais e locks
@@ -1200,6 +1213,49 @@ function obterItensDaSessao() {
   } catch { return []; }
 }
 
+async function atualizarEstoqueMassivo() {
+  if (!itens || itens.length === 0) return;
+  const codigos = Array.from(new Set(itens.map(i => String(i.codigo_tabela || i.codigo_produto_supra || '').trim()).filter(Boolean)));
+  if (codigos.length === 0) return;
+
+  try {
+    const r = await fetch(`${API_BASE}/api/produto/estoque-lote`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ codigos })
+    });
+    
+    if (r.ok) {
+      const stockMap = await r.json();
+      let hasStockOrigem = null;
+      console.log("Estoque recebido pela tela principal:", stockMap);
+      
+      itens.forEach(item => {
+        const cod = String(item.codigo_tabela || item.codigo_produto_supra || '').trim();
+        if (stockMap[cod]) {
+          item.estoque_disponivel = stockMap[cod].estoque_disponivel;
+          item.estoque_futuro = stockMap[cod].estoque_futuro;
+          item.status_atual = stockMap[cod].status;
+          if (stockMap[cod].nome_arquivo) {
+            hasStockOrigem = stockMap[cod].nome_arquivo;
+          }
+        }
+      });
+      
+      if (hasStockOrigem) apresentarOrigemEstoque(hasStockOrigem);
+      
+      renderTabela(); // Re-renderiza a tela para exibir o estoque recém atualizado
+      console.log("Tabela renderizada com os novos estoques!");
+    } else {
+      console.error("❌ Erro na requisição (Status HTTP):", r.status, await r.text());
+    }
+  } catch (err) {
+    console.error("Erro ao atualizar estoque massivo na tela principal:", err);
+  }
+}
+
+
+
 async function carregarItens() {
   const urlParams = new URLSearchParams(window.location.search);
   let id = urlParams.get('id'); 
@@ -1213,6 +1269,7 @@ async function carregarItens() {
       if (Array.isArray(saved) && saved.length > 0) {
         console.log("carregarItens: Usando memória local (TP_ATUAL)", saved.length, "itens.");
         itens = saved;
+        atualizarEstoqueMassivo();
         renderTabela();
         return;
       }
@@ -1238,6 +1295,8 @@ async function carregarItens() {
       const elBaseNome = document.getElementById('tabela_base_nome');
       if (elBaseNome) elBaseNome.value = t.nome_tabela || '';
       document.getElementById('cliente_nome').value = t.cliente_nome || t.cliente || '';
+      console.log('DADOS RECEBIDOS (EDIT VIEW):', t);
+      console.log('CLIENTE A SER PREENCHIDO:', t.cliente_nome || t.cliente || '');
       if (document.getElementById('codigo_cliente')) document.getElementById('codigo_cliente').value = t.codigo_cliente || '';
       document.getElementById('ramo_juridico').value = t.ramo_juridico || '';
       document.getElementById('observacao').value = t.observacao || ''; // ✅ Restore Observação
@@ -1349,8 +1408,12 @@ async function carregarItens() {
         tipo: p.tipo ?? p.grupo ?? p.departamento ?? null
 
       }));
+      
+      // Busca estoque antes do primeiro render final para evitar repintura dupla se for muito rápido,
+      // mas como é async, não bloqueia a lógica
+      atualizarEstoqueMassivo();
+      
       renderTabela();
-      // Removido bloqueio do recálculo para renderização instantânea
       // if (typeof recalcTudo === 'function') {
       //   await Promise.resolve(recalcTudo()).catch(() => { });
       // }
@@ -2779,9 +2842,37 @@ async function onCancelar(e) {
           if (elNomeTabela) elNomeTabela.value = t.nome_tabela || '';
           const elBaseNome = document.getElementById('tabela_base_nome');
           if (elBaseNome) elBaseNome.value = t.nome_tabela || '';
+          console.log('DADOS RECEBIDOS DA TABELA:', t);
+          console.log('CLIENTE A SER PREENCHIDO:', t.cliente_nome || t.cliente || '');
           document.getElementById('cliente_nome').value = t.cliente_nome || t.cliente || '';
           document.getElementById('codigo_cliente').value = t.codigo_cliente || '';
           document.getElementById('ramo_juridico').value = t.ramo_juridico || '';
+
+          if ((t.cliente_nome || t.cliente) && !t.codigo_cliente) {
+              try {
+                  const q = (t.cliente_nome || t.cliente).trim();
+                  const rCli = await fetch(`${API_BASE}/cliente/busca?q=${encodeURIComponent(q)}`);
+                  if (rCli.ok) {
+                      const data = await rCli.json();
+                      const arr = Array.isArray(data) ? data : Array.isArray(data?.results) ? data.results : Array.isArray(data?.clientes) ? data.clientes : (data && data.nome ? [data] : []);
+                      if (arr.length > 0) {
+                          const cli = arr[0];
+                          t.codigo_cliente = cli.codigo ?? cli.id ?? cli.codigo_cliente ?? '';
+                          document.getElementById('codigo_cliente').value = t.codigo_cliente;
+                          console.log("Auto-recuperação do código do cliente realizada com sucesso:", cli.codigo);
+                      }
+                  }
+              } catch (e) {
+                  console.warn("Auto-recuperação do cliente falhou:", e);
+              }
+          }
+
+          if (t.cliente_nome || t.cliente) {
+            window.__clientState = {
+              originalName: (t.cliente_nome || t.cliente || '').trim(),
+              originalCode: (t.codigo_cliente || '').trim()
+            };
+          }
 
           // RESTORE GLOBAL FIELDS
           const first = (Array.isArray(t.produtos) && t.produtos.length) ? t.produtos[0] : null;
@@ -2834,6 +2925,7 @@ async function onCancelar(e) {
 
           // repõe itens e re-renderiza grade
           itens = Array.isArray(t.produtos) ? t.produtos.map(p => mapBackendItemToFrontend(p, t)) : [];
+          atualizarEstoqueMassivo();
           if (typeof renderTabela === 'function') renderTabela();
           if (typeof recalcTudo === 'function') recalcTudo().catch(() => { });
 
@@ -4107,6 +4199,7 @@ async function carregarTabelaBase(e, forceId = null) {
                 return mapItem;
             });
             await atualizarPesosBrutosAtuais();
+            atualizarEstoqueMassivo();
             renderTabela();
             await recalcTudo();
         }
@@ -4135,6 +4228,18 @@ async function salvarPedido() {
     let codigo_cliente = document.getElementById('codigo_cliente')?.value || '';
     if (codigo_cliente === "Não cadastrado") {
         codigo_cliente = '';
+    }
+    
+    // Fallback de segurança (Global Vault) caso o código tenha se perdido ao trocar de tela/foco
+    if (!codigo_cliente && window.__clientState && window.__clientState.originalCode) {
+        const curName = cliente_nome.trim();
+        if (curName && curName === window.__clientState.originalName) {
+            codigo_cliente = window.__clientState.originalCode;
+            console.warn("Restaurando código do cliente do cofre!");
+            if (document.getElementById('codigo_cliente')) {
+                document.getElementById('codigo_cliente').value = codigo_cliente;
+            }
+        }
     }
     
     if (!codigo_cliente) {

@@ -37,20 +37,17 @@ function closeModal(id) {
   const el = $(id);
   if (el) el.classList.add("hidden");
 }
-
-function toast(msg) {
-  const t = $("toast");
-  if (!t) {
+function toast(msg, type = "info") {
+  if (msg === "Handled by ErrorUtils") return;
+  if (window.ErrorUtils) {
+    if (type === "error") {
+      window.ErrorUtils.showError("Aviso", msg);
+    } else {
+      window.ErrorUtils.showSuccess("Aviso", msg);
+    }
+  } else {
     alert(msg);
-    return;
   }
-  t.textContent = msg;
-  t.classList.add("show");
-  t.style.display = "block";
-  setTimeout(() => {
-    t.classList.remove("show");
-    t.style.display = "none";
-  }, 2500);
 }
 
 function debounce(fn, delay = 400) {
@@ -93,6 +90,12 @@ async function fetchJSON(url, options = {}) {
   }
 
   if (!r.ok) {
+    if (window.ErrorUtils) {
+      await window.ErrorUtils.handleApiError({
+        response: { status: r.status, data: data } // Mock as Axios Error format for easy parsing
+      });
+      throw new Error("Handled by ErrorUtils");
+    }
     const msg = data.detail || data.message || r.statusText || "Erro na requisição.";
     const err = new Error(msg);
     err.status = r.status;
@@ -750,7 +753,7 @@ async function uploadListaPdf(file) {
       // Show explicit alert if detail is present, as toasts might be too quick or small for long errors
       if (data.detail) {
         const detailStr = typeof data.detail === 'object' ? JSON.stringify(data.detail, null, 2) : data.detail;
-        alert(`Erro na importação: ${detailStr}`);
+        if (`Erro na importação: ${detailStr}` !== \'Handled by ErrorUtils\') { window.ErrorUtils ? window.ErrorUtils.showError(\'Aviso\', `Erro na importação: ${detailStr}`) : alert(`Erro na importação: ${detailStr}`); };
       }
       throw new Error(msg);
     }
@@ -875,7 +878,7 @@ async function uploadEstoqueExcel(file) {
 
   } catch (e) {
     console.error(e);
-    alert("Erro na carga de estoque: " + e.message);
+    if ("Erro na carga de estoque: " + e.message !== \'Handled by ErrorUtils\') { window.ErrorUtils ? window.ErrorUtils.showError(\'Aviso\', "Erro na carga de estoque: " + e.message) : alert("Erro na carga de estoque: " + e.message); };
   }
 }
 
@@ -903,7 +906,7 @@ async function pollTaskStatus(basePath, taskId) {
           setTimeout(() => {
             closeModal("progress-modal");
             if (data.status === "ERRO") {
-              alert("O recálculo massivo apresentou um erro: " + (data.erro || "Desconhecido"));
+              if ("O recálculo massivo apresentou um erro: " + (data.erro || "Desconhecido" !== \'Handled by ErrorUtils\') { window.ErrorUtils ? window.ErrorUtils.showError(\'Aviso\', "O recálculo massivo apresentou um erro: " + (data.erro || "Desconhecido") : alert("O recálculo massivo apresentou um erro: " + (data.erro || "Desconhecido"); });
             } else {
               toast("Recálculo massivo de tabelas finalizado com sucesso!");
             }
@@ -969,19 +972,19 @@ function setupImportarPdf() {
 
   const doImport = async ({ tipo, validadeISO, file, fornecedor }) => {
     if (!tipo) {
-      alert("Tipo inválido. Use INSUMOS ou PET.");
+      if ("Tipo inválido. Use INSUMOS ou PET." !== \'Handled by ErrorUtils\') { window.ErrorUtils ? window.ErrorUtils.showError(\'Aviso\', "Tipo inválido. Use INSUMOS ou PET.") : alert("Tipo inválido. Use INSUMOS ou PET."); };
       return;
     }
     if (!validadeISO) {
-      alert("Data de validade inválida. Use dd/mm/aaaa ou selecione no calendário.");
+      if ("Data de validade inválida. Use dd/mm/aaaa ou selecione no calendário." !== \'Handled by ErrorUtils\') { window.ErrorUtils ? window.ErrorUtils.showError(\'Aviso\', "Data de validade inválida. Use dd/mm/aaaa ou selecione no calendário.") : alert("Data de validade inválida. Use dd/mm/aaaa ou selecione no calendário."); };
       return;
     }
     if (!fornecedor) {
-      alert("Selecione o fornecedor.");
+      if ("Selecione o fornecedor." !== \'Handled by ErrorUtils\') { window.ErrorUtils ? window.ErrorUtils.showError(\'Aviso\', "Selecione o fornecedor.") : alert("Selecione o fornecedor."); };
       return;
     }
     if (!file) {
-      alert("Selecione um arquivo PDF.");
+      if ("Selecione um arquivo PDF." !== \'Handled by ErrorUtils\') { window.ErrorUtils ? window.ErrorUtils.showError(\'Aviso\', "Selecione um arquivo PDF.") : alert("Selecione um arquivo PDF."); };
       return;
     }
 
@@ -1014,9 +1017,9 @@ function setupImportarPdf() {
         // Show explicit alert if detail is present
         if (data.detail) {
           const detailStr = typeof data.detail === 'object' ? JSON.stringify(data.detail, null, 2) : data.detail;
-          alert(`Erro na importação: ${detailStr}`);
+          if (`Erro na importação: ${detailStr}` !== \'Handled by ErrorUtils\') { window.ErrorUtils ? window.ErrorUtils.showError(\'Aviso\', `Erro na importação: ${detailStr}`) : alert(`Erro na importação: ${detailStr}`); };
         } else {
-          alert(msg);
+          if (msg !== \'Handled by ErrorUtils\') { window.ErrorUtils ? window.ErrorUtils.showError(\'Aviso\', msg) : alert(msg); };
         }
         return;
       }
@@ -1060,7 +1063,7 @@ function setupImportarPdf() {
       return true;
     } catch (err) {
       console.error(err);
-      alert(err.message || "Erro inesperado ao importar PDF.");
+      if (err.message || "Erro inesperado ao importar PDF." !== \'Handled by ErrorUtils\') { window.ErrorUtils ? window.ErrorUtils.showError(\'Aviso\', err.message || "Erro inesperado ao importar PDF.") : alert(err.message || "Erro inesperado ao importar PDF."); };
       return false;
     }
   };
@@ -1130,14 +1133,14 @@ function setupImportarPdf() {
     let tipoRaw = window.prompt("Qual lista será importada? (INSUMOS ou PET)");
     const tipo = normalizeTipo(tipoRaw);
     if (!tipo) {
-      if (tipoRaw != null) alert("Tipo inválido. Use INSUMOS ou PET.");
+      if (tipoRaw != null) if ("Tipo inválido. Use INSUMOS ou PET." !== \'Handled by ErrorUtils\') { window.ErrorUtils ? window.ErrorUtils.showError(\'Aviso\', "Tipo inválido. Use INSUMOS ou PET.") : alert("Tipo inválido. Use INSUMOS ou PET."); };
       return;
     }
 
     let validadeBr = window.prompt("Informe a data de validade da tabela (dd/mm/aaaa):");
     const validadeISO = normalizeValidISO(validadeBr);
     if (!validadeISO) {
-      alert("Data de validade inválida. Use o formato dd/mm/aaaa.");
+      if ("Data de validade inválida. Use o formato dd/mm/aaaa." !== \'Handled by ErrorUtils\') { window.ErrorUtils ? window.ErrorUtils.showError(\'Aviso\', "Data de validade inválida. Use o formato dd/mm/aaaa.") : alert("Data de validade inválida. Use o formato dd/mm/aaaa."); };
       return;
     }
 
@@ -1182,12 +1185,13 @@ async function loadOptions() {
     fill("status_produto", data.status_produto);
     fill("tipo_giro", data.tipo_giro);
     fill("linha", data.tipo); // Use 'tipo' options for 'linha' select
+    fill("filtro-linha", data.tipo); // Linha no relatório
 
-    // Familia é especial, as vezes o usuario quer digitar uma nova.
-    // Mas se é select, só seleciona. Se for input com datalist...
-    // O html é select.
     fill("familia", data.familia);
-    fill("marca", data.marca); // Populate Group (marca) select with data from t_familia_produtos
+    fill("filtro-familia", data.familia); // Família no relatório
+    fill("marca", data.marca); 
+    
+    fill("filtro-giro", data.tipo_giro); // Giro no relatório
 
     // Fornecedor é input type="text" no HTML? Ou Select?
     // User image shows "Fornecedor" as text input visually (no arrow), but let's check HTML if we can.
@@ -1203,8 +1207,8 @@ async function loadOptions() {
 function setFormState(enabled) {
   // Seleciona todos inputs/selects dentro das áreas de dados
   // Excluindo explicitamente o campo de busca (#search-input) e arquivos
-  // Scoping to .page-container to avoid locking modal inputs
-  const inputs = document.querySelectorAll(".page-container input:not(#search-input):not([type='file']), .page-container select");
+  // Excluindo explicitamente a aba de relatórios e busca
+  const inputs = document.querySelectorAll("#tab-cadastro input:not(#search-input):not([type='file']), #tab-cadastro select");
   inputs.forEach(el => {
     // Ignora inputs hidden se necessário, ou específicos
     el.disabled = !enabled;
@@ -1638,7 +1642,225 @@ document.addEventListener("DOMContentLoaded", () => {
   setupRenovarValidade();
   setupSearchModal();
   setupRecalcularMassivo();
+  setupRecalcularMassivo();
   setupCargaEstoque();
 });
 
 
+// ------------------------------------------------------------------
+// LÓGICA DE ABAS E RELATÓRIO DE ESTOQUE
+// ------------------------------------------------------------------
+
+window.switchTabProduto = function(tabId) {
+  // Esconder todas as abas
+  document.querySelectorAll('.tab-content').forEach(el => el.style.display = 'none');
+  document.querySelectorAll('.tab-btn').forEach(el => {
+    el.classList.remove('active');
+    el.style.borderBottomColor = 'transparent';
+    el.style.color = '#666';
+  });
+
+  // Mostrar a aba desejada
+  const content = document.getElementById(`tab-${tabId}`);
+  if(content) content.style.display = 'block';
+  
+  const btn = document.getElementById(`tab-btn-${tabId}`);
+  if (btn) {
+    btn.classList.add('active');
+    btn.style.borderBottomColor = '#2563eb';
+    btn.style.color = '#2563eb';
+  }
+
+  // Se entrou na aba de relatório, já busca os dados iniciais
+  if (tabId === 'relatorio') {
+    window.gerarRelatorioEstoque();
+  }
+};
+
+window.gerarRelatorioEstoque = async function() {
+  const filial = document.getElementById('filtro-filial')?.value || '';
+  const linha = document.getElementById('filtro-linha')?.value || '';
+  const familia = document.getElementById('filtro-familia')?.value || '';
+  const produto = document.getElementById('filtro-produto')?.value || '';
+  const giro = document.getElementById('filtro-giro')?.value || '';
+  
+  const tbody = document.getElementById('tbody-relatorio');
+  if(!tbody) return;
+  const mostrarValores = document.getElementById('chk-mostrar-valores')?.checked;
+  document.querySelectorAll('.th-valores').forEach(el => el.style.display = mostrarValores ? '' : 'none');
+  const colspan = mostrarValores ? 9 : 6;
+  tbody.innerHTML = `<tr><td colspan="${colspan}" style="text-align:center;">Carregando...</td></tr>`;
+  
+  try {
+    const basePath = typeof API_BASE !== 'undefined' ? API_BASE : 'http://localhost:8000';
+    const url = new URL(`${basePath}/api/produto/relatorio-estoque`);
+    if (linha) url.searchParams.append('divisao', linha); // Backend mantem nome divisao
+    if (familia) url.searchParams.append('familia', familia);
+    if (produto) url.searchParams.append('produto', produto);
+    if (giro) url.searchParams.append('giro', giro);
+    // Filial ainda não enviamos pois backend não suporta
+
+    const token = localStorage.getItem("ordersync_token");
+    const res = await fetch(url, {
+      headers: { "Authorization": `Bearer ${token}` }
+    });
+
+    if (!res.ok) {
+      const txt = await res.text();
+      throw new Error(`Erro API (Status ${res.status}): ${txt}`);
+    }
+    const dados = await res.json();
+    
+    // Armazena no window para exportação (PDF/Excel)
+    window.dadosRelatorioAtual = dados;
+    
+    if (dados.length === 0) {
+      tbody.innerHTML = `<tr><td colspan="${colspan}" style="text-align:center;">Nenhum produto encontrado com os filtros informados.</td></tr>`;
+      return;
+    }
+
+    tbody.innerHTML = '';
+    dados.forEach(p => {
+      let tdValores = '';
+      if (mostrarValores) {
+        const precoAtual = Number(p.preco || 0);
+        const precoAnterior = Number(p.preco_anterior || 0);
+        let difPerc = 0;
+        let difPercFmt = '-';
+        if (precoAnterior > 0) {
+          difPerc = ((precoAtual - precoAnterior) / precoAnterior) * 100;
+          difPercFmt = (difPerc > 0 ? '+' : '') + difPerc.toFixed(2) + '%';
+        }
+        
+        const precoAtualFmt = precoAtual.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+        const precoAnteriorFmt = precoAnterior.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+        tdValores = `
+          <td style="padding: 10px; border: 1px solid #e5e7eb;">R$ ${precoAtualFmt}</td>
+          <td style="padding: 10px; border: 1px solid #e5e7eb;">R$ ${precoAnteriorFmt}</td>
+          <td style="padding: 10px; border: 1px solid #e5e7eb; color: ${difPerc > 0 ? 'green' : (difPerc < 0 && precoAnterior > 0 ? 'red' : 'inherit')};">${difPercFmt}</td>
+        `;
+      }
+
+      const tr = document.createElement('tr');
+      tr.innerHTML = `
+        <td style="padding: 10px; border: 1px solid #e5e7eb;">${p.codigo_supra || ''}</td>
+        <td style="padding: 10px; border: 1px solid #e5e7eb; text-align: left;">${p.nome_produto || ''}</td>
+        <td style="padding: 10px; border: 1px solid #e5e7eb;">${Number(p.peso || 0).toFixed(2)}</td>
+        <td style="padding: 10px; border: 1px solid #e5e7eb;">${p.estoque_disponivel || 0}</td>
+        <td style="padding: 10px; border: 1px solid #e5e7eb;">${p.estoque_futuro || 0}</td>
+        <td style="padding: 10px; border: 1px solid #e5e7eb;">${p.estoque_ideal || 0}</td>
+        ${tdValores}
+      `;
+      // Adicionando hover effect manual via JS para dar "cara" melhor
+      tr.onmouseover = () => tr.style.backgroundColor = '#f3f4f6';
+      tr.onmouseout = () => tr.style.backgroundColor = 'transparent';
+      
+      tbody.appendChild(tr);
+    });
+  } catch (e) {
+    console.error(e);
+    const colspan = document.getElementById('chk-mostrar-valores')?.checked ? 9 : 6;
+    tbody.innerHTML = `<tr><td colspan="${colspan}" style="text-align:center;color:red;">Erro: ${e.message}</td></tr>`;
+  }
+};
+
+window.exportarExcelEstoque = function() {
+  const dados = window.dadosRelatorioAtual;
+  if (!dados || dados.length === 0) {
+    if ("Gere o relatório primeiro." !== \'Handled by ErrorUtils\') { window.ErrorUtils ? window.ErrorUtils.showError(\'Aviso\', "Gere o relatório primeiro.") : alert("Gere o relatório primeiro."); };
+    return;
+  }
+
+  const mostrarValores = document.getElementById('chk-mostrar-valores')?.checked;
+
+  // Prepara array de objetos para a planilha
+  const exportData = dados.map(p => {
+    let obj = {
+      "Código": p.codigo_supra,
+      "Descrição": p.nome_produto,
+      "Peso Líq.": Number(p.peso || 0),
+      "Est. Disponível": p.estoque_disponivel,
+      "Est. Futuro": p.estoque_futuro,
+      "Est. Ideal": p.estoque_ideal,
+      "Divisão": p.divisao,
+      "Giro": p.tipo_giro
+    };
+    
+    if (mostrarValores) {
+      const precoAtual = Number(p.preco || 0);
+      const precoAnterior = Number(p.preco_anterior || 0);
+      let difPerc = null;
+      if (precoAnterior > 0) {
+        difPerc = ((precoAtual - precoAnterior) / precoAnterior) * 100;
+      }
+      obj["V. Atual"] = precoAtual;
+      obj["V. Anterior"] = precoAnterior;
+      obj["Dif. (%)"] = difPerc !== null ? Number(difPerc.toFixed(2)) : '-';
+    }
+    return obj;
+  });
+
+  const worksheet = window.XLSX.utils.json_to_sheet(exportData);
+  const workbook = window.XLSX.utils.book_new();
+  window.XLSX.utils.book_append_sheet(workbook, worksheet, "Estoque");
+  window.XLSX.writeFile(workbook, "Relatorio_Estoque.xlsx");
+};
+
+window.exportarPDFEstoque = function() {
+  const dados = window.dadosRelatorioAtual;
+  if (!dados || dados.length === 0) {
+    if ("Gere o relatório primeiro." !== \'Handled by ErrorUtils\') { window.ErrorUtils ? window.ErrorUtils.showError(\'Aviso\', "Gere o relatório primeiro.") : alert("Gere o relatório primeiro."); };
+    return;
+  }
+
+  const { jsPDF } = window.jspdf;
+  const doc = new jsPDF('landscape');
+  
+  doc.text("Relatório de Estoque", 14, 15);
+  
+  const mostrarValores = document.getElementById('chk-mostrar-valores')?.checked;
+
+  const tableData = dados.map(p => {
+    let row = [
+      p.codigo_supra,
+      p.nome_produto,
+      Number(p.peso || 0).toFixed(3),
+      p.estoque_disponivel,
+      p.estoque_futuro,
+      p.estoque_ideal
+    ];
+
+    if (mostrarValores) {
+      const precoAtual = Number(p.preco || 0);
+      const precoAnterior = Number(p.preco_anterior || 0);
+      let difPerc = 0;
+      let difPercStr = '-';
+      if (precoAnterior > 0) {
+        difPerc = ((precoAtual - precoAnterior) / precoAnterior) * 100;
+        difPercStr = (difPerc > 0 ? '+' : '') + difPerc.toFixed(2) + '%';
+      }
+      
+      row.push(
+        precoAtual.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 }),
+        precoAnterior.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 }),
+        difPercStr
+      );
+    }
+    return row;
+  });
+  
+  let headCols = ['Código', 'Descrição', 'Peso Líq.', 'Est. Disp.', 'Est. Fut.', 'Est. Ideal'];
+  if (mostrarValores) {
+    headCols.push('V. Atual', 'V. Ant.', 'Dif. %');
+  }
+
+  doc.autoTable({
+    startY: 20,
+    head: [headCols],
+    body: tableData,
+    styles: { fontSize: 8 },
+    headStyles: { fillColor: [199, 179, 153] } // Bege/Marrom (SUPRA_BAR) usado nos pedidos
+  });
+  
+  doc.save("Relatorio_Estoque.pdf");
+};

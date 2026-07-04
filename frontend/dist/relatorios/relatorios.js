@@ -1111,19 +1111,45 @@ function abrirModalBuscaPedidos() {
         });
     }
 
+    // Evento para "Selecionar Todos"
+    const chkSelectAll = document.getElementById('chk-select-all-pedidos');
+    if (chkSelectAll) {
+        chkSelectAll.removeEventListener('change', toggleSelectAllPedidos);
+        chkSelectAll.addEventListener('change', toggleSelectAllPedidos);
+    }
+
     carregarPedidosParaModal();
 
+    function toggleSelectAllPedidos(e) {
+        const checkboxes = document.querySelectorAll('.chk-pedido-item');
+        checkboxes.forEach(chk => chk.checked = e.target.checked);
+    }
     document.getElementById('btn-vincular-selecionados').onclick = async () => {
         const checked = document.querySelectorAll('.chk-pedido-item:checked');
+        if (checked.length === 0) {
+            alert('Por favor, selecione ao menos um pedido para vincular à carga.');
+            return;
+        }
+        
         for (const chk of checked) {
-            await fetch(`${API_BASE}/api/relatorios/cargas/${cargaEmGerenciamento}/pedidos`, {
-                method: "POST",
-                headers: {
-                    "Content-Type": "application/json",
-                    "Authorization": `Bearer ${window.Auth ? window.Auth.getToken() : ''}`
-                },
-                body: JSON.stringify({ numero_pedido: chk.value, ordem_carregamento: 0 })
-            });
+            try {
+                const resp = await fetch(`${API_BASE}/api/relatorios/cargas/${cargaEmGerenciamento}/pedidos`, {
+                    method: "POST",
+                    headers: {
+                        "Content-Type": "application/json",
+                        "Authorization": `Bearer ${window.Auth ? window.Auth.getToken() : ''}`
+                    },
+                    body: JSON.stringify({ numero_pedido: chk.value, ordem_carregamento: 0 })
+                });
+                
+                if (!resp.ok) {
+                    const err = await resp.json();
+                    alert(`Não foi possível vincular o pedido ${chk.value}: ` + (err.detail || 'Erro desconhecido.'));
+                }
+            } catch (e) {
+                console.error("Erro na requisição:", e);
+                alert(`Erro de rede ao vincular o pedido ${chk.value}.`);
+            }
         }
         modal.classList.remove('active');
         carregarPedidosDaCargaAtiva();

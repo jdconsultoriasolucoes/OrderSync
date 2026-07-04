@@ -2469,7 +2469,9 @@ async function salvarTabela() {
     return resp;
   } catch (e) {
     console.error(e);
-    await showOsModal({ title: 'Erro', message: e.message || 'Erro ao salvar a tabela.', type: 'alert' });
+    if (e.message !== "Handled by ErrorUtils") {
+      await showOsModal({ title: 'Erro', message: e.message || 'Erro ao salvar a tabela.', type: 'alert' });
+    }
     return null;
   }
 }
@@ -3146,6 +3148,10 @@ async function salvarTabelaPreco(payload) {
   });
 
   if (!r.ok) {
+    if (window.ErrorUtils) {
+      await window.ErrorUtils.handleApiError(r);
+      throw new Error("Handled by ErrorUtils");
+    }
     const txt = await r.text().catch(() => "");
     if (r.status === 401) throw new Error("Tempo expirado: faça o login");
     // Tenta parsear erro estruturado
