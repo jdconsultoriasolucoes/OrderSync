@@ -371,6 +371,8 @@ def gerar_pdf_resumo_produtos(db, carga_id: int) -> bytes:
             MAX(i.nome) as item_nome,
             SUM(i.quantidade) as qtd_total,
             MAX(i.embalagem) as item_embalagem,
+            MAX(COALESCE(prod.estoque_disponivel, 0)) AS estoque_disponivel,
+            MAX(COALESCE(prod.estoque_futuro, 0)) AS estoque_futuro,
             MAX(CAST(prod.peso AS FLOAT)) AS peso_unitario,
             MAX(CAST(COALESCE(prod.peso_bruto, prod.peso, 0) AS FLOAT)) AS peso_bruto_unitario,
             CAST(SUM(i.quantidade * COALESCE(prod.peso, 0)) AS FLOAT) AS peso_liquido_total,
@@ -379,7 +381,7 @@ def gerar_pdf_resumo_produtos(db, carga_id: int) -> bytes:
         JOIN tb_pedidos p ON cp.numero_pedido = p.id_pedido::text
         JOIN tb_pedidos_itens i ON i.id_pedido = p.id_pedido
         LEFT JOIN (
-            SELECT codigo_supra, MAX(CAST(peso AS FLOAT)) as peso, MAX(CAST(peso_bruto AS FLOAT)) as peso_bruto
+            SELECT codigo_supra, MAX(CAST(peso AS FLOAT)) as peso, MAX(CAST(peso_bruto AS FLOAT)) as peso_bruto, MAX(estoque_disponivel) as estoque_disponivel, MAX(estoque_futuro) as estoque_futuro
             FROM t_cadastro_produto_v2
             GROUP BY codigo_supra
         ) prod ON prod.codigo_supra = i.codigo
@@ -428,12 +430,14 @@ def _desenhar_resumo_logic(c, db, carga, produtos, width, height, y_start=None):
     else:
         y = y_start
 
-    # Table columns: CÓDIGO | DESCRIÇÃO PRODUTO | Peso EMB. | Emb. | OBSERVAÇÃO | QTD | P. LÍQ ACUM
-    data = [["CÓDIGO", "DESCRIÇÃO PRODUTO", "Peso EMB.", "Emb.", "OBSERVAÇÃO", "QTD", "P. LÍQ ACUM"]]
+    # Table columns: CÓDIGO | DESCRIÇÃO PRODUTO | Peso EMB. | Emb. | OBS. | QTD | Estq. Disp | Estq. Ft | P. LÍQ ACUM
+    data = [["CÓDIGO", "DESCRIÇÃO", "Peso EMB.", "Emb.", "OBS.", "QTD", "Estq. Disp", "Estq. Ft", "P. LÍQ"]]
     
     for p in produtos:
         peso_unit = getattr(p, 'peso_unitario', 0.0) or 0.0
         peso_total = getattr(p, 'peso_liquido_total', 0.0) or 0.0
+        estq_disp = getattr(p, 'estoque_disponivel', 0.0) or 0.0
+        estq_ft = getattr(p, 'estoque_futuro', 0.0) or 0.0
         data.append([
             str(p.item_codigo),
             str(p.item_nome)[:50],
@@ -441,12 +445,13 @@ def _desenhar_resumo_logic(c, db, carga, produtos, width, height, y_start=None):
             str(p.item_embalagem or ""),
             "",
             str(int(p.qtd_total or 0)),
+            str(int(estq_disp)),
+            str(int(estq_ft)),
             _br_number(peso_total, 0),
         ])
 
-    # Width distribution for portrait A4 (~21cm width - margins)
-    # Reduced Peso EMB from 2.2 to 1.6, Emb from 1.8 to 1.2. The saved 1.2cm is added to OBSERVAÇÃO (1.5 + 1.2 = 2.7)
-    col_widths = [2.2*cm, 7.7*cm, 1.6*cm, 1.2*cm, 2.7*cm, 1.5*cm, 2.7*cm]
+    # Width distribution for portrait A4 (~19.6cm total)
+    col_widths = [1.8*cm, 6.7*cm, 1.5*cm, 1.0*cm, 1.4*cm, 1.2*cm, 1.7*cm, 1.7*cm, 2.6*cm]
     table = Table(data, colWidths=col_widths, repeatRows=1)
     style = TableStyle([
         ('BACKGROUND', (0, 0), (-1, 0), SUPRA_BAR),

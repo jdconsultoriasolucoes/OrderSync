@@ -997,7 +997,7 @@ async function carregarResumoProdutosDaCargaAtiva() {
             document.getElementById('span-total-bruto-header').textContent = totalBrutoStr;
         }
 
-        // Nova ordem de colunas: Código | Descrição | Peso EMB. (Peso Líq. UN) | Emb. | Observação | QTD | P. LÍQ ACUM
+        // Nova ordem de colunas: Código | Descrição | Peso EMB. (Peso Líq. UN) | Emb. | Observação | QTD | Estq. Disp | Estq. Ft | P. LÍQ ACUM
         theadTable.innerHTML = `
             <tr>
                 <th style="width: 100px;">Código</th>
@@ -1006,6 +1006,8 @@ async function carregarResumoProdutosDaCargaAtiva() {
                 <th style="width: 80px;">Emb.</th>
                 <th>Observação</th>
                 <th style="text-align: center; width: 80px;">Qtd</th>
+                <th style="text-align: center; width: 80px;">Estq. Disp</th>
+                <th style="text-align: center; width: 80px;">Estq. Ft</th>
                 <th style="text-align: right; width: 120px;">P. Líq Acum</th>
             </tr>
         `;
@@ -1025,6 +1027,9 @@ async function carregarResumoProdutosDaCargaAtiva() {
             const pesoRow = p.peso_liquido_total || 0;
             const pesoStr = Math.round(pesoUnit).toString();
             const acumStr = Math.round(pesoRow).toString();
+            const estqDisp = p.estoque_disponivel || 0;
+            const estqFt = p.estoque_futuro || 0;
+            
             h += `
                 <tr>
                     <td><strong>${p.codigo || '-'}</strong></td>
@@ -1033,6 +1038,8 @@ async function carregarResumoProdutosDaCargaAtiva() {
                     <td>${p.embalagem || '-'}</td>
                     <td></td>
                     <td style="text-align: center;">${p.qtd_total}</td>
+                    <td style="text-align: center;">${estqDisp}</td>
+                    <td style="text-align: center;">${estqFt}</td>
                     <td style="text-align: right;">${acumStr} kg</td>
                 </tr>
             `;

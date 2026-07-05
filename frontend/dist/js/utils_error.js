@@ -37,7 +37,8 @@ const ErrorUtils = {
     /**
      * Exibe um modal de erro na tela (requer ação do usuário para fechar)
      */
-    showError: function (title, message) {
+    showError: function (title, message, status_code = null, payload = null) {
+        this.logErrorToBackend(message, status_code, payload);
         if (typeof Swal !== 'undefined') {
             Swal.fire({
                 icon: 'error',
@@ -51,6 +52,33 @@ const ErrorUtils = {
         } else {
             // Fallback caso SweetAlert2 não tenha carregado
             alert(`${title}\n\n${message}`);
+        }
+    },
+
+    /**
+     * Envia o log do erro para o backend
+     */
+    logErrorToBackend: function(message, status_code = null, payload = null) {
+        try {
+            const api = window.API_BASE || "http://127.0.0.1:8000";
+            const token = window.Auth ? window.Auth.getToken() : localStorage.getItem('ordersync_token');
+            const url = `${api}/logs/erro`;
+            const data = {
+                modulo: window.location.pathname,
+                status_code: status_code,
+                mensagem: (message || "").replace(/<[^>]*>?/gm, ''), // remove html tags
+                payload: payload
+            };
+            fetch(url, {
+                method: "POST",
+                headers: {
+                    'Authorization': token ? `Bearer ${token}` : '',
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify(data)
+            }).catch(() => {}); // fire and forget
+        } catch(e) {
+            // ignora se falhar o logger
         }
     },
 
@@ -114,27 +142,27 @@ const ErrorUtils = {
                 
                 errorMessages += '</ul>';
                 
-                this.showError('Erro de Validação (422)', `Os seguintes dados precisam ser corrigidos:<br>${errorMessages}`);
+                this.showError('Erro de Validação (422)', `Os seguintes dados precisam ser corrigidos:<br>${errorMessages}`, status, data);
                 return;
             }
 
             // Tratamento de detalhes em string (400, 401, 403, 404, 500)
             if (data.detail && typeof data.detail === 'string') {
-                this.showError(`Erro ${status}`, data.detail);
+                this.showError(`Erro ${status}`, data.detail, status, data);
                 return;
             }
             
             if (data.message) {
-                this.showError(`Erro ${status}`, data.message);
+                this.showError(`Erro ${status}`, data.message, status, data);
                 return;
             }
 
             // Fallback Genérico JSON
-            this.showError(`Falha (${status})`, 'O servidor retornou um erro, mas nenhuma descrição detalhada foi fornecida.');
+            this.showError(`Falha (${status})`, 'O servidor retornou um erro, mas nenhuma descrição detalhada foi fornecida.', status, data);
             
         } catch (e) {
             console.error("Error parsing API Error:", e, errorOrResponse);
-            this.showError('Erro no Servidor', 'O servidor retornou um formato inesperado ou ocorreu uma falha de rede.');
+            this.showError('Erro no Servidor', 'O servidor retornou um formato inesperado ou ocorreu uma falha de rede.', null, {error: e.toString()});
         }
     }
 };

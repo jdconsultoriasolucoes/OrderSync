@@ -247,6 +247,8 @@ def get_resumo_produtos_carga(carga_id: int, db: Session = Depends(get_db)):
             MAX(i.embalagem) AS embalagem,
             SUM(i.quantidade) AS qtd_total,
             MAX(prod.unidade_medida) AS unidade,
+            MAX(COALESCE(prod.estoque_disponivel, 0)) AS estoque_disponivel,
+            MAX(COALESCE(prod.estoque_futuro, 0)) AS estoque_futuro,
             MAX(CAST(prod.peso AS FLOAT)) AS peso_unitario,
             MAX(CAST(COALESCE(prod.peso_bruto, prod.peso, 0) AS FLOAT)) AS peso_bruto_unitario,
             CAST(SUM(i.quantidade * COALESCE(prod.peso, 0)) AS FLOAT) AS peso_liquido_total,
@@ -255,7 +257,7 @@ def get_resumo_produtos_carga(carga_id: int, db: Session = Depends(get_db)):
         JOIN tb_pedidos p ON cp.numero_pedido = p.id_pedido::text
         JOIN tb_pedidos_itens i ON p.id_pedido = i.id_pedido
         LEFT JOIN (
-            SELECT codigo_supra, MAX(CAST(peso AS FLOAT)) as peso, MAX(CAST(peso_bruto AS FLOAT)) as peso_bruto, MAX(unidade) as unidade_medida
+            SELECT codigo_supra, MAX(CAST(peso AS FLOAT)) as peso, MAX(CAST(peso_bruto AS FLOAT)) as peso_bruto, MAX(unidade) as unidade_medida, MAX(estoque_disponivel) as estoque_disponivel, MAX(estoque_futuro) as estoque_futuro
             FROM t_cadastro_produto_v2
             GROUP BY codigo_supra
         ) prod ON prod.codigo_supra = i.codigo
