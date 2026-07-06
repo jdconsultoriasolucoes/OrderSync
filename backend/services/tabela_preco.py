@@ -104,6 +104,7 @@ def create_tabela(db: Session, body: TabelaSalvar, usuario_email: str) -> Dict[s
         calcula_st_cliente = getattr(body, "calcula_st", False)
 
         logger.info("[create_tabela] header id=%s nome=%s cliente=%s calcula_st=%s", id_tabela, body.nome_tabela, body.cliente, calcula_st_cliente)
+        print(f"!!! [DEBUG_JULIA] CRIANDO TABELA id={id_tabela} | Nome Tabela={body.nome_tabela} | Cliente Recebido={body.cliente} !!!")
 
         inseridos = 0
         processed_codes = set()

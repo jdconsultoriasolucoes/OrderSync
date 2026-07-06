@@ -51,6 +51,7 @@ def gerar_link_code(db, tabela_id: int, com_frete: bool, data_prevista_str: str 
         cod = "Não cadastrado"
 
     cod = cod[:80]
+    print(f"!!! [DEBUG_JULIA] GERANDO LINK code={code} | Tabela ID={tabela_id} | Codigo Cliente={cod} !!!")
     
     link = PedidoLink(
         code=code,

@@ -20,6 +20,7 @@ TZ = ZoneInfo("America/Sao_Paulo")
 
 def criar_pedido_confirmado(db: Session, tabela_id: int, body: ConfirmarPedidoRequest, background_tasks: BackgroundTasks) -> Dict[str, Any]:
     print(f"DEBUG: ConfirmarPedido - OriginCode: '{body.origin_code}' | Cliente: '{body.cliente}'")
+    print(f"!!! [DEBUG_JULIA] CONFIRMANDO PEDIDO via Link | OriginCode: {body.origin_code} | Cliente recebido: {body.cliente} !!!")
     
     # 1) validação básica
     if not body.produtos:
