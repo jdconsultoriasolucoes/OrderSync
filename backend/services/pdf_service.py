@@ -22,10 +22,10 @@ SUPRA_DARK = colors.Color(0.1, 0.1, 0.1)        # texto escuro
 SUPRA_BG_LIGHT = colors.Color(0.95, 0.95, 0.95) # fundo clarinho
 
 # Novas Cores Corporativas (Digitação Orçamento)
-HEADER_BG = colors.HexColor("#2D3748")
+HEADER_BG = colors.HexColor("#006437")
 HEADER_TEXT = colors.HexColor("#FFFFFF")
-HIGHLIGHT_TEXT = colors.HexColor("#DD6B20")
-TABLE_HEADER_BG = colors.HexColor("#4A5568")
+HIGHLIGHT_TEXT = colors.HexColor("#006437")
+TABLE_HEADER_BG = colors.HexColor("#006437")
 
 
 def _br_number(value, decimals=2, suffix=""):
@@ -113,6 +113,10 @@ def _desenhar_pdf(pedido: PedidoPdf, buffer: io.BytesIO, sem_validade: bool = Fa
     faixa_y = top_y - logo_h - 0.2 * cm
     c.setFillColor(HEADER_BG)
     c.rect(margin_x, faixa_y - faixa_h, available_width, faixa_h, stroke=0, fill=1)
+    
+    # Linha de divisão dourada
+    c.setFillColor(colors.HexColor("#b39130"))
+    c.rect(margin_x, faixa_y - faixa_h - 0.05 * cm, available_width, 0.05 * cm, stroke=0, fill=1)
 
     # Texto na faixa com número do Pedido do Sistema recolocado
     c.setFillColor(HEADER_TEXT)
@@ -126,7 +130,7 @@ def _desenhar_pdf(pedido: PedidoPdf, buffer: io.BytesIO, sem_validade: bool = Fa
     )
     base_w = c.stringWidth(base_text, "Helvetica-Bold", 12)
     
-    c.setFillColor(HIGHLIGHT_TEXT)
+    c.setFillColor(colors.HexColor("#b39130"))
     c.drawString(
         margin_x + 0.3 * cm + base_w,
         faixa_y - faixa_h + 0.62 * cm,
@@ -384,7 +388,13 @@ def _desenhar_pdf(pedido: PedidoPdf, buffer: io.BytesIO, sem_validade: bool = Fa
             return y_top
         data_page = [header] + rows
         table = Table(data_page, colWidths=col_widths)
-        table.setStyle(itens_table_style)
+        
+        style = TableStyle(itens_table_style.getCommands())
+        for i in range(1, len(data_page)):
+            if i % 2 == 0:
+                style.add("BACKGROUND", (0, i), (-1, i), colors.HexColor("#f4f9f6"))
+        
+        table.setStyle(style)
         _, table_height = table.wrap(available_width, height)
         table.drawOn(c, itens_x, y_top - table_height)
         return y_top - table_height - 0.5 * cm
