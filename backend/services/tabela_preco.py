@@ -201,14 +201,22 @@ def update_tabela(db: Session, id_tabela: int, body: TabelaSalvar, usuario_email
         # Update Cabeçalho (em todas as linhas)
         for r in existentes:
             r.nome_tabela    = body.nome_tabela
-            r.cliente        = body.cliente
-            # Proteção: só atualiza codigo_cliente se vier preenchido
-            if body.codigo_cliente:
-                r.codigo_cliente = body.codigo_cliente
-            elif not r.codigo_cliente:
-                # Se não tem nada no banco, define padrão
-                r.codigo_cliente = "Não cadastrado"
             
+            # Proteção contra mismatch de cliente:
+            # Se o nome do cliente for alterado, não podemos manter o código do cliente antigo
+            if r.cliente != body.cliente:
+                if body.codigo_cliente:
+                    r.codigo_cliente = body.codigo_cliente
+                else:
+                    r.codigo_cliente = "Não cadastrado"
+            else:
+                # Nome do cliente não mudou. Só atualiza o código se vier preenchido
+                if body.codigo_cliente:
+                    r.codigo_cliente = body.codigo_cliente
+                elif not r.codigo_cliente:
+                    r.codigo_cliente = "Não cadastrado"
+
+            r.cliente        = body.cliente
             r.fornecedor     = body.fornecedor or ""
             r.calcula_st     = calcula_st_cliente
             if hasattr(body, "observacao"):
