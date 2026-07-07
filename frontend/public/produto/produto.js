@@ -1709,7 +1709,7 @@ window.gerarRelatorioEstoque = async function() {
       const txt = await res.text();
       throw new Error(`Erro API (Status ${res.status}): ${txt}`);
     }
-    const dados = await res.json();
+    let dados = await res.json();
     
     const chkEstoqueIdeal = document.getElementById('chk-estoque-ideal')?.checked;
     if (chkEstoqueIdeal) {
