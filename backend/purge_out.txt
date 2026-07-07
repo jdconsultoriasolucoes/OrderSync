@@ -1,0 +1,2 @@
+Tabelas limpas do código da Julia: 0
+Pedidos limpos do código da Julia: 0

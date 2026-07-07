@@ -430,8 +430,8 @@ def _desenhar_resumo_logic(c, db, carga, produtos, width, height, y_start=None):
     else:
         y = y_start
 
-    # Table columns: CÓDIGO | DESCRIÇÃO | Peso EMB. | Emb. | OBS. | QTD | Estq. Disp | Estq. Ft | P. LÍQ
-    data = [["CÓDIGO", "DESCRIÇÃO", "Peso\nEMB.", "Emb.", "OBS.", "QTD", "Estq.\nDisp", "Estq.\nFt", "P. LÍQ"]]
+    # Table columns: CÓDIGO | DESCRIÇÃO | Peso EMB. | Emb. | OBS. | QTD | P. LÍQ
+    data = [["CÓDIGO", "DESCRIÇÃO", "Peso\nEMB.", "Emb.", "OBS.", "QTD", "P. LÍQ"]]
     
     for p in produtos:
         peso_unit = getattr(p, 'peso_unitario', 0.0) or 0.0
@@ -445,20 +445,18 @@ def _desenhar_resumo_logic(c, db, carga, produtos, width, height, y_start=None):
             str(p.item_embalagem or ""),
             "",
             str(int(p.qtd_total or 0)),
-            str(int(estq_disp)),
-            str(int(estq_ft)),
             _br_number(peso_total, 0),
         ])
 
     # Width distribution for portrait A4 (~19.6cm total)
-    col_widths = [1.8*cm, 6.7*cm, 1.5*cm, 1.3*cm, 2.8*cm, 1.2*cm, 1.3*cm, 1.3*cm, 1.7*cm]
+    col_widths = [1.8*cm, 7.5*cm, 1.8*cm, 1.5*cm, 3.8*cm, 1.5*cm, 1.7*cm]
     table = Table(data, colWidths=col_widths, repeatRows=1)
     style = TableStyle([
         ('BACKGROUND', (0, 0), (-1, 0), SUPRA_BAR),
         ('TEXTCOLOR', (0, 0), (-1, 0), colors.white),
         ('ALIGN', (0, 0), (-1, -1), 'LEFT'),
         ('ALIGN', (2, 0), (2, -1), 'CENTER'), # Peso EMB.
-        ('ALIGN', (5, 0), (8, -1), 'CENTER'), # Qtd, Estq. Disp, Estq. Ft, P. LÍQ
+        ('ALIGN', (5, 0), (6, -1), 'CENTER'), # Qtd, P. LÍQ
         ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
         ('FONTSIZE', (0, 0), (-1, -1), 8),
         ('GRID', (0, 0), (-1, -1), 0.5, colors.grey),

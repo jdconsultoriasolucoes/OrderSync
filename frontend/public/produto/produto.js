@@ -1711,6 +1711,11 @@ window.gerarRelatorioEstoque = async function() {
     }
     const dados = await res.json();
     
+    const chkEstoqueIdeal = document.getElementById('chk-estoque-ideal')?.checked;
+    if (chkEstoqueIdeal) {
+      dados = dados.filter(p => Number(p.estoque_ideal || 0) > 0);
+    }
+    
     // Armazena no window para exportação (PDF/Excel)
     window.dadosRelatorioAtual = dados;
     
