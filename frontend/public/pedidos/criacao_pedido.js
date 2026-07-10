@@ -3457,7 +3457,6 @@ function toggleHeader() {
 
 function setupMobileToolbar() {
   // Bind Toolbar Buttons
-  document.getElementById('btn-mobile-list')?.addEventListener('click', () => goToListarTabelas());
 
   document.getElementById('btn-mobile-cancel')?.addEventListener('click', (e) => {
     onCancelar(e);
