@@ -2986,7 +2986,7 @@ async function onCancelar(e) {
 function goToListarTabelas() {
   const ctx = getCtxId();
   clearPickerBridgeFor(ctx);
-  window.location.href = '../pedido/pedido.html';
+  window.location.href = '../tabela_preco/listar_tabelas.html';
 }
 
 
