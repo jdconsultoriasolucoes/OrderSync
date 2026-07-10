@@ -29,6 +29,7 @@ class PedidoPdf(BaseModel):
     # NOVOS
     nome_fantasia: Optional[str] = None
     razao_social: Optional[str] = None # LEGAL NAME (nome_cliente)
+    municipio_entrega: Optional[str] = None
     frete_kg: Optional[float] = None
     validade_tabela: Optional[str] = "Não se aplica"
     usar_valor_com_frete: bool = True  # Indica se pedido usa preço com ou sem frete

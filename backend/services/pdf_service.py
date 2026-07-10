@@ -162,8 +162,8 @@ def _desenhar_pdf(pedido: PedidoPdf, buffer: io.BytesIO, sem_validade: bool = Fa
     # BLOCO 1 - DADOS CLIENTE
     # =======================
     codigo_cliente = pedido.codigo_cliente or ""
-    cliente = pedido.cliente or ""
-    razao_social = pedido.razao_social or pedido.nome_fantasia or ""
+    cliente = pedido.razao_social or pedido.cliente or ""  # Nome Cliente
+    razao_social = pedido.nome_fantasia or ""              # Nome Fantasia
 
     if sem_validade:
         # Layout Cliente: Sem Código do Cliente no Header
@@ -249,24 +249,28 @@ def _desenhar_pdf(pedido: PedidoPdf, buffer: io.BytesIO, sem_validade: bool = Fa
     else:
         frete_kg_str = "R$ 0,00"
 
+    municipio_str = pedido.municipio_entrega or "Não informado"
+
     # Criando a tabela horizontal unificada abrangendo a largura inteira (available_width)
     if sem_validade:
-        # Versão Cliente: Mostra apenas a Data de Retirada/Entrega
-        bloco2_data = [["", "", "", "", "Data Retirada/Entrega:", data_entrega_str]]
+        # Versão Cliente: Mostra apenas Município e Data de Retirada/Entrega
+        bloco2_data = [["", "", "", "", "Município:", municipio_str, "Data Retirada/Entrega:", data_entrega_str]]
     else:
-        # Versão Vendedor: Mostra Ped. Supra (esquerda), Frete/KG (meio) e Data (direita)
+        # Versão Vendedor: Mostra Ped. Supra (esquerda), Frete/KG, Município, e Data (direita)
         ped_supra_val = pedido.pedido_supra or ""
-        bloco2_data = [["Ped. Supra:", ped_supra_val, "Frete/KG:", frete_kg_str, "Data Retirada/Entrega:", data_entrega_str]]
+        bloco2_data = [["Ped. Supra:", ped_supra_val, "Frete/KG:", frete_kg_str, "Município:", municipio_str, "Data Retirada/Entrega:", data_entrega_str]]
 
-    # Proporções alinhando Ped. Supra na esquerda, Frete/KG no meio, e Data na direita
-    col0 = 2.5 * cm
-    col1 = 3.5 * cm
-    col2 = 2.5 * cm
-    col3 = 3.5 * cm
-    col4 = 4.5 * cm
-    col5 = available_width - (col0 + col1 + col2 + col3 + col4)
+    # Proporções alinhando Ped. Supra na esquerda, Frete/KG no meio, Município e Data na direita
+    col0 = 2.0 * cm
+    col1 = 2.5 * cm
+    col2 = 2.0 * cm
+    col3 = 2.5 * cm
+    col4 = 2.0 * cm
+    col5 = 4.0 * cm
+    col6 = 3.5 * cm
+    col7 = available_width - (col0 + col1 + col2 + col3 + col4 + col5 + col6)
 
-    bloco2_col_widths = [col0, col1, col2, col3, col4, col5]
+    bloco2_col_widths = [col0, col1, col2, col3, col4, col5, col6, col7]
 
     bloco2_style = [
         ("BACKGROUND", (0, 0), (-1, -1), SUPRA_BG_LIGHT),
@@ -277,14 +281,15 @@ def _desenhar_pdf(pedido: PedidoPdf, buffer: io.BytesIO, sem_validade: bool = Fa
         ("ALIGN", (0, 0), (-1, -1), "LEFT"),
         ("ALIGN", (0, 0), (0, 0), "RIGHT"),  # "Ped. Supra:" label
         ("ALIGN", (2, 0), (2, 0), "RIGHT"),  # "Frete/KG:" label
-        ("ALIGN", (4, 0), (4, 0), "RIGHT"),  # "Data Retirada/Entrega:" label
+        ("ALIGN", (4, 0), (4, 0), "RIGHT"),  # "Município:" label
+        ("ALIGN", (6, 0), (6, 0), "RIGHT"),  # "Data Retirada/Entrega:" label
     ]
 
     if sem_validade:
-        # Remove fundo das colunas ocultas e aplica grid apenas no bloco de data (colunas 4 e 5)
+        # Remove fundo das colunas ocultas e aplica grid apenas no bloco de município e data
         bloco2_style.append(("BACKGROUND", (0, 0), (3, 0), colors.white))
-        bloco2_style.append(("GRID", (4, 0), (5, 0), 0.5, colors.black))
-        bloco2_style.append(("BOX", (4, 0), (5, 0), 0.5, colors.black))
+        bloco2_style.append(("GRID", (4, 0), (7, 0), 0.5, colors.black))
+        bloco2_style.append(("BOX", (4, 0), (7, 0), 0.5, colors.black))
     else:
         bloco2_style.append(("GRID", (0, 0), (-1, -1), 0.5, colors.black))
         bloco2_style.append(("BOX", (0, 0), (-1, -1), 0.5, colors.black))

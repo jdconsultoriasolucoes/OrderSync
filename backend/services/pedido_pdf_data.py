@@ -13,6 +13,7 @@ def carregar_pedido_pdf(db, pedido_id: int) -> PedidoPdf:
             p.codigo_cliente,
             p.cliente,
             c.cadastro_nome_cliente AS nome_empresarial, /* RAZAO SOCIAL LEGAL V2 */
+            c.entrega_municipio AS municipio_entrega,
 
             CASE
                 WHEN c.cadastro_nome_fantasia IS NULL
@@ -190,6 +191,7 @@ def carregar_pedido_pdf(db, pedido_id: int) -> PedidoPdf:
         cliente=clean_client_name(head["cliente"]) if head.get("cliente") else "",
         nome_fantasia=head.get("nome_fantasia") or "Sem Nome Fantasia",
         razao_social=clean_client_name(head["nome_empresarial"]) if head.get("nome_empresarial") else None,
+        municipio_entrega=head.get("municipio_entrega"),
         data_pedido=head["confirmado_em"],
         data_entrega_ou_retirada=head["data_retirada"],
         frete_total=float(head["frete_total"] or 0),
