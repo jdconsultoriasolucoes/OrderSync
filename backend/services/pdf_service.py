@@ -260,14 +260,14 @@ def _desenhar_pdf(pedido: PedidoPdf, buffer: io.BytesIO, sem_validade: bool = Fa
         ped_supra_val = pedido.pedido_supra or ""
         bloco2_data = [["Ped. Supra:", ped_supra_val, "Frete/KG:", frete_kg_str, "Data Retirada/Entrega:", data_entrega_str, "Município:", municipio_str]]
 
-    # Proporções ajustadas para dar mais espaço ao Município
-    col0 = 1.8 * cm
-    col1 = 2.2 * cm
-    col2 = 1.6 * cm
+    # Proporções ajustadas para não espremer os labels alinhados à direita
+    col0 = 2.1 * cm
+    col1 = 2.0 * cm
+    col2 = 1.8 * cm
     col3 = 2.0 * cm
-    col4 = 3.4 * cm
+    col4 = 3.6 * cm
     col5 = 2.0 * cm
-    col6 = 1.7 * cm
+    col6 = 1.8 * cm
     col7 = available_width - (col0 + col1 + col2 + col3 + col4 + col5 + col6)
 
     bloco2_col_widths = [col0, col1, col2, col3, col4, col5, col6, col7]
