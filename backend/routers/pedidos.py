@@ -1053,3 +1053,32 @@ def admin_criar_pedido(body: AdminCriarPedidoRequest, db: Session = Depends(get_
         "id_pedido": new_id,
         "status": "CRIADO"
     }
+
+@router.delete("/{pedido_id}", status_code=status.HTTP_204_NO_CONTENT)
+def deletar_pedido(pedido_id: int, db: Session = Depends(get_db)):
+    # 1. Verifica se o pedido existe e qual é o seu status
+    result_status = db.execute(text("SELECT status_codigo FROM tb_pedidos WHERE id_pedido = :id"), {"id": pedido_id}).scalar()
+    
+    if not result_status:
+        raise HTTPException(status_code=404, detail="Pedido não encontrado")
+        
+    status_str = str(result_status).strip().upper()
+    if status_str != "CANCELADO":
+        raise HTTPException(status_code=400, detail="Apenas pedidos com status CANCELADO podem ser deletados.")
+
+    try:
+        # 2. Deletar cachês de PDF se existirem (tabela v2)
+        db.execute(text("DELETE FROM t_preco_pedido_pdf_v2 WHERE pedido_id = :id"), {"id": pedido_id})
+        
+        # 3. Deletar os itens do pedido
+        db.execute(text("DELETE FROM tb_pedidos_itens WHERE id_pedido = :id"), {"id": pedido_id})
+        
+        # 4. Deletar o pedido
+        db.execute(text("DELETE FROM tb_pedidos WHERE id_pedido = :id"), {"id": pedido_id})
+        
+        db.commit()
+    except Exception as e:
+        db.rollback()
+        raise HTTPException(status_code=500, detail=f"Erro ao deletar pedido: {str(e)}")
+    
+    return
