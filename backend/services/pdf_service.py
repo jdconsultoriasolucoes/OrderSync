@@ -178,8 +178,8 @@ def _desenhar_pdf(pedido: PedidoPdf, buffer: io.BytesIO, sem_validade: bool = Fa
             label_raz_w, raz_val_w,
         ]
         bloco1_data = [[
-            "Cliente:", cliente[:120],
-            "Razão Social:", razao_social[:80],
+            "Razão Social:", cliente[:120],
+            "Nome Fantasia:", razao_social[:80],
         ]]
     else:
         label_cod_w = 1.4 * cm
@@ -197,8 +197,8 @@ def _desenhar_pdf(pedido: PedidoPdf, buffer: io.BytesIO, sem_validade: bool = Fa
         ]
         bloco1_data = [[
             "Código:", str(codigo_cliente),
-            "Cliente:", cliente[:120],
-            "Razão Social:", razao_social[:80],
+            "Razão Social:", cliente[:120],
+            "Nome Fantasia:", razao_social[:80],
         ]]
 
     style_cmds = [
@@ -216,14 +216,14 @@ def _desenhar_pdf(pedido: PedidoPdf, buffer: io.BytesIO, sem_validade: bool = Fa
 
     if sem_validade:
         style_cmds.extend([
-            ("ALIGN", (0, 0), (0, 0), "RIGHT"),  # "Cliente:"
-            ("ALIGN", (2, 0), (2, 0), "RIGHT"),  # "Razão Social:"
+            ("ALIGN", (0, 0), (0, 0), "RIGHT"),  # "Razão Social:"
+            ("ALIGN", (2, 0), (2, 0), "RIGHT"),  # "Nome Fantasia:"
         ])
     else:
         style_cmds.extend([
             ("ALIGN", (0, 0), (0, 0), "RIGHT"),  # "Código:"
-            ("ALIGN", (2, 0), (2, 0), "RIGHT"),  # "Cliente:"
-            ("ALIGN", (4, 0), (4, 0), "RIGHT"),  # "Razão Social:"
+            ("ALIGN", (2, 0), (2, 0), "RIGHT"),  # "Razão Social:"
+            ("ALIGN", (4, 0), (4, 0), "RIGHT"),  # "Nome Fantasia:"
         ])
 
     bloco1_table = Table(bloco1_data, colWidths=bloco1_col_widths)
@@ -253,21 +253,21 @@ def _desenhar_pdf(pedido: PedidoPdf, buffer: io.BytesIO, sem_validade: bool = Fa
 
     # Criando a tabela horizontal unificada abrangendo a largura inteira (available_width)
     if sem_validade:
-        # Versão Cliente: Mostra apenas Município e Data de Retirada/Entrega
-        bloco2_data = [["", "", "", "", "Município:", municipio_str, "Data Retirada/Entrega:", data_entrega_str]]
+        # Versão Cliente: Mostra apenas Data de Retirada/Entrega e Município
+        bloco2_data = [["", "", "", "", "Data Retirada/Entrega:", data_entrega_str, "Município:", municipio_str]]
     else:
-        # Versão Vendedor: Mostra Ped. Supra (esquerda), Frete/KG, Município, e Data (direita)
+        # Versão Vendedor: Mostra Ped. Supra (esquerda), Frete/KG, Data, e Município (direita)
         ped_supra_val = pedido.pedido_supra or ""
-        bloco2_data = [["Ped. Supra:", ped_supra_val, "Frete/KG:", frete_kg_str, "Município:", municipio_str, "Data Retirada/Entrega:", data_entrega_str]]
+        bloco2_data = [["Ped. Supra:", ped_supra_val, "Frete/KG:", frete_kg_str, "Data Retirada/Entrega:", data_entrega_str, "Município:", municipio_str]]
 
-    # Proporções alinhando Ped. Supra na esquerda, Frete/KG no meio, Município e Data na direita
-    col0 = 2.0 * cm
-    col1 = 2.5 * cm
-    col2 = 2.0 * cm
-    col3 = 2.5 * cm
-    col4 = 2.0 * cm
-    col5 = 4.0 * cm
-    col6 = 3.5 * cm
+    # Proporções ajustadas para dar mais espaço ao Município
+    col0 = 1.8 * cm
+    col1 = 2.2 * cm
+    col2 = 1.6 * cm
+    col3 = 2.0 * cm
+    col4 = 3.4 * cm
+    col5 = 2.0 * cm
+    col6 = 1.7 * cm
     col7 = available_width - (col0 + col1 + col2 + col3 + col4 + col5 + col6)
 
     bloco2_col_widths = [col0, col1, col2, col3, col4, col5, col6, col7]
@@ -281,8 +281,8 @@ def _desenhar_pdf(pedido: PedidoPdf, buffer: io.BytesIO, sem_validade: bool = Fa
         ("ALIGN", (0, 0), (-1, -1), "LEFT"),
         ("ALIGN", (0, 0), (0, 0), "RIGHT"),  # "Ped. Supra:" label
         ("ALIGN", (2, 0), (2, 0), "RIGHT"),  # "Frete/KG:" label
-        ("ALIGN", (4, 0), (4, 0), "RIGHT"),  # "Município:" label
-        ("ALIGN", (6, 0), (6, 0), "RIGHT"),  # "Data Retirada/Entrega:" label
+        ("ALIGN", (4, 0), (4, 0), "RIGHT"),  # "Data Retirada/Entrega:" label
+        ("ALIGN", (6, 0), (6, 0), "RIGHT"),  # "Município:" label
     ]
 
     if sem_validade:
