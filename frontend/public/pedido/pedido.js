@@ -360,6 +360,8 @@ function renderTable(rows) {
       const fornecedor = row.fornecedor ?? row.fornecedor_nome ?? "---";
       const link = row.link_url ?? row.link ?? null;
 
+      const codigoCliente = row.codigo_cliente || "Não cadastrado";
+
       const tr = document.createElement("tr");
       tr.classList.add("row-click");
       tr.dataset.id = id;
@@ -371,6 +373,7 @@ function renderTable(rows) {
           <td>${fmtDateOnly(row.data_faturamento)}</td>
           <td><a href="#" class="lnk-resumo" data-id="${id}">${id}</a></td>
           <td>${row.pedido_supra || '---'}</td>
+          <td class="col-codigo">${codigoCliente}</td>
           <td>${cliente}</td>
           <td><span class="badge badge-gray">${modalidade}</span></td>
           <td class="tar">${fmtMoney(valor)}</td>
@@ -378,9 +381,6 @@ function renderTable(rows) {
           <td>${tabela}</td>
           <td>${fornecedor}</td>
           <td>${row.numero_carga || '---'}</td>
-          <td>
-            ${link ? `<a href="${link}" target="_blank" class="btn-copy">Link</a>` : '<span class="muted">---</span>'}
-          </td>
           <td class="tar td-actions" id="td-actions-${id}">
             
             <button class="os-btn os-btn-secondary os-btn-sm btn-edit-status" data-id="${id}" data-status="${status}">
