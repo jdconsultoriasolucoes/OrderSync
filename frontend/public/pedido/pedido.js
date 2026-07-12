@@ -1268,7 +1268,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 async function deletarPedido(id) {
     try {
         const token = localStorage.getItem("token") || sessionStorage.getItem("token");
-        const res = await fetch(`/api/pedidos/${id}`, {
+        const res = await fetch(`${API_BASE}/api/pedidos/${id}`, {
             method: 'DELETE',
             headers: {
                 "Authorization": `Bearer ${token}`
