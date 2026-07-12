@@ -444,7 +444,7 @@ def resumo_pedido(id_pedido: int, db: Session = Depends(get_db)):
     head_dict["peso_total_kg"] = float(head_dict.get("peso_total_kg") or 0.0)
     head_dict["frete_total"] = frete_tot
     head_dict["total_pedido"] = float(head_dict.get("total_pedido") or 0.0)
-    head_dict["cliente"] = head_dict.get("cliente") or "Sem Cadastro"
+    head_dict["cliente"] = head_dict.get("cliente") or "Não cadastrado"
     
     if not head_dict.get("created_at"):
         head_dict["created_at"] = datetime.now()
@@ -970,8 +970,8 @@ def admin_criar_pedido(body: AdminCriarPedidoRequest, db: Session = Depends(get_
             if nome_base == nome_front or nome_front.startswith(nome_base) or nome_base.startswith(nome_front):
                 codigo_str = str(row_tab["codigo_cliente"]).strip()
                 
-    if not codigo_str or codigo_str == "Não cadastrado":
-        codigo_str = "Sem Cadastro"
+    if not codigo_str or codigo_str == "Sem Cadastro":
+        codigo_str = "Não cadastrado"
 
     params = {
         "codigo_cliente": codigo_str[:80],
