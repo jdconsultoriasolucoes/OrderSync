@@ -1057,7 +1057,7 @@ def admin_criar_pedido(body: AdminCriarPedidoRequest, db: Session = Depends(get_
 @router.delete("/{pedido_id}", status_code=status.HTTP_204_NO_CONTENT)
 def deletar_pedido(pedido_id: int, db: Session = Depends(get_db)):
     # 1. Verifica se o pedido existe e qual é o seu status
-    result_status = db.execute(text("SELECT status_codigo FROM tb_pedidos WHERE id_pedido = :id"), {"id": pedido_id}).scalar()
+    result_status = db.execute(text("SELECT status FROM tb_pedidos WHERE id_pedido = :id"), {"id": pedido_id}).scalar()
     
     if not result_status:
         raise HTTPException(status_code=404, detail="Pedido não encontrado")

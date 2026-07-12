@@ -527,36 +527,37 @@ def get_vendas_cliente(
     if not isinstance(municipios, list): municipios = None
 
     query_str = """
-        SELECT DISTINCT
+        SELECT
             p.id_pedido                             AS numero_pedido,
-            p.pedido_supra                          AS pedido_supra,
-            p.nota_fiscal                           AS danfe,
-            to_char(p.data_faturamento, 'YYYY-MM-DD') AS data_faturamento,
-            p.codigo_cliente                        AS codigo_cliente,
-            COALESCE(c.cadastro_nome_cliente, p.cliente) AS cliente,
-            COALESCE(c.cadastro_nome_fantasia, 'Sem Nome Fantasia') AS nome_fantasia,
-            COALESCE(c.entrega_municipio, 'Sem Município') AS municipio,
-            (
-                SELECT SUM(COALESCE(pr_sub.peso, 0) * pi_sub.quantidade)
-                FROM public.tb_pedidos_itens pi_sub
-                LEFT JOIN public.t_cadastro_produto_v2 pr_sub ON pr_sub.codigo_supra = pi_sub.codigo
-                WHERE pi_sub.id_pedido = p.id_pedido
-            )                                       AS peso_liquido,
-            CASE
-                WHEN COALESCE(p.total_sem_frete, 0) > 0 THEN p.total_sem_frete
-                WHEN COALESCE(p.total_sem_frete, 0) = 0 AND COALESCE(p.total_com_frete, 0) > 0 
-                    THEN p.total_com_frete - (COALESCE(p.peso_total_kg, 0) * COALESCE(p.valor_frete_to, 0) / 1000)
-                ELSE 0
-            END                                     AS valor_sem_frete,
-            CASE
-                WHEN COALESCE(p.total_com_frete, 0) > 0 THEN p.total_com_frete
-                WHEN COALESCE(p.total_com_frete, 0) = 0 AND COALESCE(p.total_sem_frete, 0) > 0 
-                    THEN p.total_sem_frete + (COALESCE(p.peso_total_kg, 0) * COALESCE(p.valor_frete_to, 0) / 1000)
-                ELSE 0
-            END                                     AS valor_com_frete
-        FROM public.tb_pedidos p
+            MAX(p.pedido_supra)                     AS pedido_supra,
+            MAX(p.nota_fiscal)                      AS danfe,
+            to_char(MAX(p.data_faturamento), 'YYYY-MM-DD') AS data_faturamento,
+            MAX(p.codigo_cliente)                   AS codigo_cliente,
+            MAX(COALESCE(c.cadastro_nome_cliente, p.cliente)) AS cliente,
+            MAX(COALESCE(c.cadastro_nome_fantasia, 'Sem Nome Fantasia')) AS nome_fantasia,
+            MAX(COALESCE(c.entrega_municipio, 'Sem Município')) AS municipio,
+            CAST(SUM(COALESCE(pr.peso, 0) * i.quantidade) AS FLOAT) AS peso_liquido,
+            CAST(SUM(
+                CASE
+                    WHEN COALESCE(i.subtotal_sem_f, 0) > 0 THEN i.subtotal_sem_f
+                    WHEN COALESCE(i.subtotal_sem_f, 0) = 0 AND COALESCE(i.subtotal_com_f, 0) > 0 
+                        THEN i.subtotal_com_f - (i.quantidade * COALESCE(NULLIF(pr.peso_bruto, 0), pr.peso, 0) * COALESCE(p.valor_frete_to, 0) / 1000)
+                    ELSE 0
+                END
+            ) AS FLOAT) AS valor_sem_frete,
+            CAST(SUM(
+                CASE
+                    WHEN COALESCE(i.subtotal_com_f, 0) > 0 THEN i.subtotal_com_f
+                    WHEN COALESCE(i.subtotal_com_f, 0) = 0 AND COALESCE(i.subtotal_sem_f, 0) > 0 
+                        THEN i.subtotal_sem_f + (i.quantidade * COALESCE(NULLIF(pr.peso_bruto, 0), pr.peso, 0) * COALESCE(p.valor_frete_to, 0) / 1000)
+                    ELSE 0
+                END
+            ) AS FLOAT) AS valor_com_frete
+        FROM public.tb_pedidos_itens i
+        JOIN public.tb_pedidos p ON p.id_pedido = i.id_pedido
         LEFT JOIN public.t_cadastro_cliente_v2 c ON c.cadastro_codigo_da_empresa::text = p.codigo_cliente
-        WHERE UPPER(p.status) NOT LIKE '%CANCEL%'
+        LEFT JOIN public.t_cadastro_produto_v2 pr ON pr.codigo_supra = i.codigo
+        WHERE i.quantidade > 0 AND UPPER(p.status) NOT LIKE '%CANCEL%'
     """
     
     params = {}
@@ -582,15 +583,7 @@ def get_vendas_cliente(
         params["filiais"] = filiais
         
     if categoria:
-        query_str += """
-            AND EXISTS (
-                SELECT 1 FROM public.tb_pedidos_itens pi_cat
-                JOIN public.t_cadastro_produto_v2 pr_cat ON pi_cat.codigo = pr_cat.codigo_supra
-                WHERE pi_cat.id_pedido = p.id_pedido
-                  AND pi_cat.quantidade > 0
-                  AND UPPER(pr_cat.tipo) = :categoria
-            )
-        """
+        query_str += " AND UPPER(pr.tipo) = :categoria"
         params["categoria"] = categoria.upper()
         
     if status_list:
@@ -601,7 +594,7 @@ def get_vendas_cliente(
         query_str += " AND c.entrega_municipio = ANY(:municipios)"
         params["municipios"] = municipios
         
-    query_str += " ORDER BY p.id_pedido DESC"
+    query_str += " GROUP BY p.id_pedido ORDER BY p.id_pedido DESC"
     
     rows = db.execute(text(query_str), params).mappings().all()
     
