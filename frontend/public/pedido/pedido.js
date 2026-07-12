@@ -360,7 +360,7 @@ function renderTable(rows) {
       const fornecedor = row.fornecedor ?? row.fornecedor_nome ?? "---";
       const link = row.link_url ?? row.link ?? null;
 
-      const codigoCliente = row.codigo_cliente || "Não cadastrado";
+      const codigoCliente = row.cliente_codigo || "Não cadastrado";
 
       const tr = document.createElement("tr");
       tr.classList.add("row-click");
