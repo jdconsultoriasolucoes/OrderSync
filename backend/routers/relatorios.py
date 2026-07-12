@@ -539,18 +539,14 @@ def get_vendas_cliente(
             CAST(SUM(COALESCE(pr.peso, 0) * i.quantidade) AS FLOAT) AS peso_liquido,
             CAST(SUM(
                 CASE
-                    WHEN p.usar_valor_com_frete = true THEN 
-                        COALESCE(i.subtotal_com_f, 0) - (i.quantidade * COALESCE(NULLIF(pr.peso_bruto, 0), pr.peso, 0) * COALESCE(p.valor_frete_to, 0) / 1000)
-                    ELSE 
-                        COALESCE(i.subtotal_sem_f, 0)
+                    WHEN p.usar_valor_com_frete = true THEN 0
+                    ELSE COALESCE(i.subtotal_sem_f, 0)
                 END
             ) AS FLOAT) AS valor_sem_frete,
             CAST(SUM(
                 CASE
-                    WHEN p.usar_valor_com_frete = true THEN 
-                        COALESCE(i.subtotal_com_f, 0)
-                    ELSE 
-                        COALESCE(i.subtotal_sem_f, 0) + (i.quantidade * COALESCE(NULLIF(pr.peso_bruto, 0), pr.peso, 0) * COALESCE(p.valor_frete_to, 0) / 1000)
+                    WHEN p.usar_valor_com_frete = true THEN COALESCE(i.subtotal_com_f, 0)
+                    ELSE 0
                 END
             ) AS FLOAT) AS valor_com_frete
         FROM public.tb_pedidos_itens i
@@ -638,18 +634,14 @@ def get_vendas_produtos(
             CAST(SUM(COALESCE(pr.peso, 0) * i.quantidade) AS FLOAT) AS peso_liquido_acumulado,
             CAST(SUM(
                 CASE
-                    WHEN p.usar_valor_com_frete = true THEN 
-                        COALESCE(i.subtotal_com_f, 0) - (i.quantidade * COALESCE(NULLIF(pr.peso_bruto, 0), pr.peso, 0) * COALESCE(p.valor_frete_to, 0) / 1000)
-                    ELSE 
-                        COALESCE(i.subtotal_sem_f, 0)
+                    WHEN p.usar_valor_com_frete = true THEN 0
+                    ELSE COALESCE(i.subtotal_sem_f, 0)
                 END
             ) AS FLOAT) AS valor_sem_frete,
             CAST(SUM(
                 CASE
-                    WHEN p.usar_valor_com_frete = true THEN 
-                        COALESCE(i.subtotal_com_f, 0)
-                    ELSE 
-                        COALESCE(i.subtotal_sem_f, 0) + (i.quantidade * COALESCE(NULLIF(pr.peso_bruto, 0), pr.peso, 0) * COALESCE(p.valor_frete_to, 0) / 1000)
+                    WHEN p.usar_valor_com_frete = true THEN COALESCE(i.subtotal_com_f, 0)
+                    ELSE 0
                 END
             ) AS FLOAT) AS valor_com_frete
         FROM public.tb_pedidos_itens i
