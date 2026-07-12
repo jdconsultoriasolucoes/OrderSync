@@ -1085,9 +1085,6 @@ def deletar_pedido(pedido_id: int, db: Session = Depends(get_db)):
         except Exception:
             pass
             
-        # 2. Deletar cachês de PDF se existirem (tabela v2)
-        db.execute(text("DELETE FROM t_preco_pedido_pdf_v2 WHERE pedido_id = :id"), {"id": pedido_id})
-        
         # 3. Deletar os itens do pedido
         db.execute(text("DELETE FROM tb_pedidos_itens WHERE id_pedido = :id"), {"id": pedido_id})
         
