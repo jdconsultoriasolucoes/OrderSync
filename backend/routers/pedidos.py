@@ -1067,6 +1067,24 @@ def deletar_pedido(pedido_id: int, db: Session = Depends(get_db)):
         raise HTTPException(status_code=400, detail="Apenas pedidos com status CANCELADO podem ser deletados.")
 
     try:
+        # 1.5 Deletar logs de status (pedido_status_event)
+        try:
+            db.execute(text("DELETE FROM pedido_status_event WHERE pedido_id = :id"), {"id": pedido_id})
+        except Exception:
+            pass # Se a tabela não existir em algum ambiente
+            
+        # 1.6 Deletar vínculo com cargas (tb_cargas_pedidos)
+        try:
+            db.execute(text("DELETE FROM tb_cargas_pedidos WHERE numero_pedido = :str_id"), {"str_id": str(pedido_id)})
+        except Exception:
+            pass
+            
+        # 1.7 Limpar chaves de idempotência (tb_idempotency_keys)
+        try:
+            db.execute(text("DELETE FROM tb_idempotency_keys WHERE id_pedido = :id"), {"id": pedido_id})
+        except Exception:
+            pass
+            
         # 2. Deletar cachês de PDF se existirem (tabela v2)
         db.execute(text("DELETE FROM t_preco_pedido_pdf_v2 WHERE pedido_id = :id"), {"id": pedido_id})
         
