@@ -25,25 +25,10 @@ def create_carga(carga: CargaCreate, db: Session = Depends(get_db)):
         if db_carga:
             raise HTTPException(status_code=400, detail="Número de carga já existe")
 
-    # Criação do Cabeçalho
-    new_carga = CargaModel(
-        nome_carga=carga.nome_carga,
-        numero_carga=carga.numero_carga,
-        id_transporte=carga.id_transporte,
-        data_carregamento=carga.data_carregamento,
-        is_retirada=carga.is_retirada,
-        tipo_retirada=carga.tipo_retirada,
-        retirada_nome_terceiro=carga.retirada_nome_terceiro,
-        retirada_veiculo_temporario_placa=carga.retirada_veiculo_temporario_placa,
-        retirada_veiculo_temporario_modelo=carga.retirada_veiculo_temporario_modelo
-    )
-    db.add(new_carga)
-    db.commit()
-    db.refresh(new_carga)
-
-    # Se numero_carga vier em branco, calculamos o próximo número sequencial visual (Max + 1)
-    if not new_carga.numero_carga:
-        if new_carga.is_retirada:
+    # Calcula o proximo número sequencial antes de inserir no banco para evitar violacoes UNIQUE
+    num_carga = carga.numero_carga
+    if not num_carga:
+        if carga.is_retirada:
             last_carga = db.execute(text("""
                 SELECT numero_carga FROM tb_cargas 
                 WHERE is_retirada = TRUE AND numero_carga ~ '^[0-9]+$' 
@@ -61,10 +46,23 @@ def create_carga(carga: CargaCreate, db: Session = Depends(get_db)):
         proximo = 1
         if last_carga and last_carga[0]:
             proximo = int(last_carga[0]) + 1
-            
-        new_carga.numero_carga = str(proximo)
-        db.commit()
-        db.refresh(new_carga)
+        num_carga = str(proximo)
+
+    # Criação do Cabeçalho
+    new_carga = CargaModel(
+        nome_carga=carga.nome_carga,
+        numero_carga=num_carga,
+        id_transporte=carga.id_transporte,
+        data_carregamento=carga.data_carregamento,
+        is_retirada=carga.is_retirada,
+        tipo_retirada=carga.tipo_retirada,
+        retirada_nome_terceiro=carga.retirada_nome_terceiro,
+        retirada_veiculo_temporario_placa=carga.retirada_veiculo_temporario_placa,
+        retirada_veiculo_temporario_modelo=carga.retirada_veiculo_temporario_modelo
+    )
+    db.add(new_carga)
+    db.commit()
+    db.refresh(new_carga)
 
     # Inserção de itens (Pedidos vinculados à carga)
     if carga.pedidos:
