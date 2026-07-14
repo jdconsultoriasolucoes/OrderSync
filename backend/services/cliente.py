@@ -355,6 +355,18 @@ def obter_cliente(cliente_id: int) -> dict:
     finally:
         db.close()
 
+def obter_cliente_por_codigo(codigo: str) -> dict:
+    db = SessionLocal()
+    try:
+        cliente = db.query(ClienteModelV2).filter(ClienteModelV2.cadastro_codigo_da_empresa == codigo).first()
+        if not cliente and codigo.isdigit():
+            cliente = db.query(ClienteModelV2).filter(ClienteModelV2.id == int(codigo)).first()
+        if cliente:
+            return _flat_to_nested(cliente)
+        return None
+    finally:
+        db.close()
+
 def criar_cliente(cliente_data: dict) -> dict:
     db = SessionLocal()
     try:

@@ -5,6 +5,13 @@
 
 var API_BASE = window.API_BASE || window.location.origin;
 
+function confirmarSaidaDaTela(e) {
+    const msg = "As alterações não salvas serão perdidas. Deseja realmente sair?";
+    e.preventDefault();
+    e.returnValue = msg;
+    return msg;
+}
+
 if (typeof window.relatoriosDict === 'undefined') {
     window.relatoriosDict = {
         "formacao": {
@@ -122,6 +129,7 @@ async function renderRelatorioView(relKey) {
 // -----------------------------------------------------
 
 async function renderStandardCargaList(tipo) {
+    window.removeEventListener('beforeunload', confirmarSaidaDaTela);
     cargaEmGerenciamento = null;
     numCargaAtiva = null;
     document.getElementById('painel-gerenciar-carga').style.display = 'none';
@@ -532,6 +540,8 @@ async function abrirModalConfigurarRetiradaPedido(linkId, numeroPedido, codigoCl
     const modal = document.getElementById('modal-configurar-retirada-pedido');
     modal.classList.add('active');
 
+    let bens = []; // Declarado no escopo da funcao pai para ser visivel no listener
+
     // Limpar e definir inputs ocultos
     document.getElementById('input-config-retirada-item-id').value = linkId || '';
     document.getElementById('input-config-retirada-cliente-codigo').value = codigoCliente || '';
@@ -539,19 +549,47 @@ async function abrirModalConfigurarRetiradaPedido(linkId, numeroPedido, codigoCl
     document.getElementById('input-config-retirada-veiculo-placa').value = currentData.retirada_veiculo_placa || '';
     document.getElementById('input-config-retirada-veiculo-modelo').value = currentData.retirada_veiculo_modelo || '';
 
-    // Reset rádio buttons
-    const respVal = currentData.retirada_tipo || 'CLIENTE';
-    document.querySelector(`input[name="radio-config-retirada-resp"][value="${respVal}"]`).checked = true;
-    document.getElementById('group-config-retirada-nome-terceiro').style.display = respVal === 'TERCEIRO' ? 'block' : 'none';
+    // Reset rádio buttons e habilitar/desabilitar conforme cadastro do cliente
+    const isNaoCadastrado = !codigoCliente || 
+                            codigoCliente.trim() === "" || 
+                            codigoCliente.toLowerCase().includes("nao cadastrado") || 
+                            codigoCliente.toLowerCase().includes("não cadastrado");
 
-    // Determinar se já tem veículo temporário salvo
-    const hasVeiculoSalvo = currentData.retirada_veiculo_modelo || currentData.retirada_veiculo_placa;
-    const hasPlaca = currentData.retirada_veiculo_placa;
-    const veicMode = (hasVeiculoSalvo && hasPlaca) ? 'TEMPORARIO' : 'CADASTRADO';
-    document.querySelector(`input[name="radio-config-retirada-veiculo"][value="${veicMode}"]`).checked = true;
-    
-    document.getElementById('group-config-retirada-veiculo-temporario').style.display = veicMode === 'TEMPORARIO' ? 'block' : 'none';
-    document.getElementById('group-config-retirada-veiculo-cadastrado').style.display = veicMode === 'CADASTRADO' ? 'block' : 'none';
+    const radioRespCliente = document.querySelector('input[name="radio-config-retirada-resp"][value="CLIENTE"]');
+    const radioVeiculoCadastrado = document.querySelector('input[name="radio-config-retirada-veiculo"][value="CADASTRADO"]');
+
+    if (isNaoCadastrado) {
+        radioRespCliente.disabled = true;
+        radioRespCliente.parentElement.style.opacity = "0.5";
+        document.querySelector('input[name="radio-config-retirada-resp"][value="TERCEIRO"]').checked = true;
+        document.getElementById('group-config-retirada-nome-terceiro').style.display = 'block';
+
+        radioVeiculoCadastrado.disabled = true;
+        radioVeiculoCadastrado.parentElement.style.opacity = "0.5";
+        document.querySelector('input[name="radio-config-retirada-veiculo"][value="TEMPORARIO"]').checked = true;
+        document.getElementById('group-config-retirada-veiculo-temporario').style.display = 'block';
+        document.getElementById('group-config-retirada-veiculo-cadastrado').style.display = 'none';
+
+        const selectVeiculo = document.getElementById('select-config-retirada-veiculo-cadastrado');
+        selectVeiculo.innerHTML = '<option value="">Cliente não cadastrado</option>';
+    } else {
+        radioRespCliente.disabled = false;
+        radioRespCliente.parentElement.style.opacity = "1";
+        radioVeiculoCadastrado.disabled = false;
+        radioVeiculoCadastrado.parentElement.style.opacity = "1";
+
+        const respVal = currentData.retirada_tipo || 'CLIENTE';
+        document.querySelector(`input[name="radio-config-retirada-resp"][value="${respVal}"]`).checked = true;
+        document.getElementById('group-config-retirada-nome-terceiro').style.display = respVal === 'TERCEIRO' ? 'block' : 'none';
+
+        const hasVeiculoSalvo = currentData.retirada_veiculo_modelo || currentData.retirada_veiculo_placa;
+        const hasPlaca = currentData.retirada_veiculo_placa;
+        const veicMode = (hasVeiculoSalvo && hasPlaca) ? 'TEMPORARIO' : 'CADASTRADO';
+        document.querySelector(`input[name="radio-config-retirada-veiculo"][value="${veicMode}"]`).checked = true;
+        
+        document.getElementById('group-config-retirada-veiculo-temporario').style.display = veicMode === 'TEMPORARIO' ? 'block' : 'none';
+        document.getElementById('group-config-retirada-veiculo-cadastrado').style.display = veicMode === 'CADASTRADO' ? 'block' : 'none';
+    }
 
     const closeModal = () => modal.classList.remove('active');
     document.getElementById('modal-configurar-retirada-close').onclick = closeModal;
@@ -581,35 +619,37 @@ async function abrirModalConfigurarRetiradaPedido(linkId, numeroPedido, codigoCl
         };
     });
 
-    // Carregar bens móveis do cliente
+    // Carregar bens móveis do cliente (apenas se cadastrado)
     const selectVeiculo = document.getElementById('select-config-retirada-veiculo-cadastrado');
-    selectVeiculo.innerHTML = '<option value="">Carregando veículos...</option>';
-
-    try {
-        const r = await fetch(`${API_BASE}/api/cliente/${codigoCliente}`, {
-            headers: { "Authorization": `Bearer ${window.Auth ? window.Auth.getToken() : ''}` }
-        });
-        if (!r.ok) throw new Error();
-        const cliente = await r.json();
-        const bens = cliente.bens_moveis || [];
-        
-        if (bens.length === 0) {
-            selectVeiculo.innerHTML = '<option value="">Nenhum veículo cadastrado no cliente</option>';
-            document.querySelector('input[name="radio-config-retirada-veiculo"][value="TEMPORARIO"]').checked = true;
-            document.getElementById('group-config-retirada-veiculo-temporario').style.display = 'block';
-            document.getElementById('group-config-retirada-veiculo-cadastrado').style.display = 'none';
-        } else {
-            let opts = '<option value="">Selecione um Veículo do Cliente...</option>';
-            bens.forEach((b, idx) => {
-                const txt = `${b.marca || ''} ${b.modelo || ''}`.trim() || `Veículo #${idx + 1}`;
-                const selected = (txt === currentData.retirada_veiculo_modelo) ? 'selected' : '';
-                opts += `<option value="${txt}" ${selected}>${txt}</option>`;
+    if (!isNaoCadastrado) {
+        selectVeiculo.innerHTML = '<option value="">Carregando veículos...</option>';
+        try {
+            const r = await fetch(`${API_BASE}/api/cliente/${codigoCliente}`, {
+                headers: { "Authorization": `Bearer ${window.Auth ? window.Auth.getToken() : ''}` }
             });
-            selectVeiculo.innerHTML = opts;
+            if (!r.ok) throw new Error();
+            const cliente = await r.json();
+            bens = cliente.bens_moveis || [];
+            
+            if (bens.length === 0) {
+                selectVeiculo.innerHTML = '<option value="">Nenhum veículo cadastrado no cliente</option>';
+                document.querySelector('input[name="radio-config-retirada-veiculo"][value="TEMPORARIO"]').checked = true;
+                document.getElementById('group-config-retirada-veiculo-temporario').style.display = 'block';
+                document.getElementById('group-config-retirada-veiculo-cadastrado').style.display = 'none';
+            } else {
+                let opts = '<option value="">Selecione um Veículo do Cliente...</option>';
+                bens.forEach((b, idx) => {
+                    const txt = `${b.marca || ''} ${b.modelo || ''}`.trim() || `Veículo #${idx + 1}`;
+                    const selected = (txt === currentData.retirada_veiculo_modelo) ? 'selected' : '';
+                    opts += `<option value="${txt}" ${selected}>${txt}</option>`;
+                });
+                selectVeiculo.innerHTML = opts;
+            }
+        } catch(e) {
+            console.error("Erro ao carregar bens moveis:", e);
+            selectVeiculo.innerHTML = '<option value="">Erro ao carregar veículos</option>';
+            bens = [];
         }
-    } catch(e) {
-        console.error("Erro ao carregar bens moveis:", e);
-        selectVeiculo.innerHTML = '<option value="">Erro ao carregar veículos</option>';
     }
 
     const btnSalvar = document.getElementById('btn-salvar-config-retirada');
@@ -635,6 +675,10 @@ async function abrirModalConfigurarRetiradaPedido(linkId, numeroPedido, codigoCl
         }
         if (tipoVeiculo === 'TEMPORARIO' && !placaTemp) {
             alert("Preencha a placa do veículo temporário.");
+            return;
+        }
+        if (tipoVeiculo === 'TEMPORARIO' && !modeloTemp) {
+            alert("Preencha o modelo do veículo temporário.");
             return;
         }
 
@@ -700,6 +744,7 @@ async function abrirModalConfigurarRetiradaPedido(linkId, numeroPedido, codigoCl
 // -----------------------------------------------------
 
 async function abrirGerenciadorDeCarga(idCarga, numCarga) {
+    window.addEventListener('beforeunload', confirmarSaidaDaTela);
     window.cargaEmGerenciamento = idCarga;
     window.numCargaAtiva = numCarga;
     document.getElementById('painel-listagem').style.display = 'none';

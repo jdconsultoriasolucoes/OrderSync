@@ -7,6 +7,7 @@ from schemas.cliente import ClienteCompleto, ClienteResumo
 from services.cliente import (
     listar_clientes,
     obter_cliente,
+    obter_cliente_por_codigo,
     criar_cliente,
     atualizar_cliente,
     deletar_cliente
@@ -223,7 +224,7 @@ def lookup_cliente(query: str):
 
 @router.get("/{codigo_da_empresa}", response_model=ClienteCompleto)
 def get_cliente(codigo_da_empresa: str):
-    cliente = obter_cliente(codigo_da_empresa)
+    cliente = obter_cliente_por_codigo(codigo_da_empresa)
     if not cliente:
         raise HTTPException(status_code=404, detail="Cliente não encontrado")
     return cliente
