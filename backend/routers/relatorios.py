@@ -30,7 +30,12 @@ def create_carga(carga: CargaCreate, db: Session = Depends(get_db)):
         nome_carga=carga.nome_carga,
         numero_carga=carga.numero_carga,
         id_transporte=carga.id_transporte,
-        data_carregamento=carga.data_carregamento
+        data_carregamento=carga.data_carregamento,
+        is_retirada=carga.is_retirada,
+        tipo_retirada=carga.tipo_retirada,
+        retirada_nome_terceiro=carga.retirada_nome_terceiro,
+        retirada_veiculo_temporario_placa=carga.retirada_veiculo_temporario_placa,
+        retirada_veiculo_temporario_modelo=carga.retirada_veiculo_temporario_modelo
     )
     db.add(new_carga)
     db.commit()
@@ -71,13 +76,35 @@ def create_carga(carga: CargaCreate, db: Session = Depends(get_db)):
 
 @router.get("/cargas", response_model=List[CargaResponse])
 def read_cargas(skip: int = 0, limit: int = 100, db: Session = Depends(get_db)):
-    cargas = db.query(CargaModel).filter((CargaModel.is_historico == False) | (CargaModel.is_historico == None)).offset(skip).limit(limit).all()
+    cargas = db.query(CargaModel).filter(
+        ((CargaModel.is_historico == False) | (CargaModel.is_historico == None)) &
+        ((CargaModel.is_retirada == False) | (CargaModel.is_retirada == None))
+    ).offset(skip).limit(limit).all()
     return cargas
 
 @router.get("/cargas/historico", response_model=List[CargaResponse])
 def read_cargas_historico(skip: int = 0, limit: int = 100, db: Session = Depends(get_db)):
-    cargas = db.query(CargaModel).filter(CargaModel.is_historico == True).order_by(CargaModel.data_faturamento.desc()).offset(skip).limit(limit).all()
+    cargas = db.query(CargaModel).filter(
+        (CargaModel.is_historico == True) &
+        ((CargaModel.is_retirada == False) | (CargaModel.is_retirada == None))
+    ).order_by(CargaModel.data_faturamento.desc()).offset(skip).limit(limit).all()
     return cargas
+
+@router.get("/retiradas", response_model=List[CargaResponse])
+def read_retiradas(skip: int = 0, limit: int = 100, db: Session = Depends(get_db)):
+    retiradas = db.query(CargaModel).filter(
+        ((CargaModel.is_historico == False) | (CargaModel.is_historico == None)) &
+        (CargaModel.is_retirada == True)
+    ).offset(skip).limit(limit).all()
+    return retiradas
+
+@router.get("/retiradas/historico", response_model=List[CargaResponse])
+def read_retiradas_historico(skip: int = 0, limit: int = 100, db: Session = Depends(get_db)):
+    retiradas = db.query(CargaModel).filter(
+        (CargaModel.is_historico == True) &
+        (CargaModel.is_retirada == True)
+    ).order_by(CargaModel.data_faturamento.desc()).offset(skip).limit(limit).all()
+    return retiradas
 
 @router.get("/cargas/{carga_id}", response_model=CargaResponse)
 def read_carga(carga_id: int, db: Session = Depends(get_db)):

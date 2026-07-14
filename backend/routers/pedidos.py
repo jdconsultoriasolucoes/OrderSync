@@ -228,6 +228,7 @@ def listar_pedidos(
     pedido_supra: Optional[str] = None,
     nota_fiscal: Optional[str] = None,
     numero_carga: Optional[str] = None,
+    modalidade: Optional[str] = None,
     page: int = 1,
     pageSize: int = 25,
     limit: Optional[int] = None,
@@ -332,6 +333,12 @@ def listar_pedidos(
             )
         """)
         params["numero_carga_busca"] = f"%{numero_carga}%"
+
+    if modalidade:
+        if modalidade.upper() == "ENTREGA":
+            filtros_sql.append("a.usar_valor_com_frete = TRUE")
+        elif modalidade.upper() == "RETIRADA":
+            filtros_sql.append("(a.usar_valor_com_frete = FALSE OR a.usar_valor_com_frete IS NULL)")
 
     where_clause = " AND ".join(filtros_sql)
 

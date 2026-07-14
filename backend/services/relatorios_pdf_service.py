@@ -251,8 +251,9 @@ def gerar_pdf_romaneio(db, carga_id: int) -> bytes:
     width, height = pagesize
 
     # Header Info from drawing
-    # Filial (static or from env as a placeholder for now), CARGA Nº, DATA
-    y = _draw_header(c, width, height, "Romaneio de Entrega")
+    is_ret = bool(carga.get('is_retirada'))
+    titulo_pdf = "Romaneio de Retirada" if is_ret else "Romaneio de Entrega"
+    y = _draw_header(c, width, height, titulo_pdf)
 
     # Header Block
     c.setFillColor(colors.black)
@@ -262,21 +263,45 @@ def gerar_pdf_romaneio(db, carga_id: int) -> bytes:
     # User requested Data do carregamento in header too
     data_carregamento = carga.get('data_carregamento')
     data_str = data_carregamento.strftime('%d/%m/%Y') if data_carregamento else '____/____/____'
-    c.drawRightString(width - 0.7*cm, y, f"DATA CARREGAMENTO: {data_str}")
+    c.drawRightString(width - 0.7*cm, y, f"DATA RETIRADA: {data_str}" if is_ret else f"DATA CARREGAMENTO: {data_str}")
     y -= 0.5*cm
 
     # Totais: calculados aqui
     total_liq_val = sum(p.peso_total_kg or 0 for p in pedidos)
     total_bruto_val = sum(p.peso_bruto_total or 0 for p in pedidos)
 
-    # Bloco de transporte em duas linhas para evitar sobreposições horizontais
+    # Bloco de transporte adaptado para Retirada / Entrega
     c.setFont("Helvetica-Bold", 10)
-    c.drawString(0.7*cm, y, f"TRANSPORTADORA: {carga.get('transportadora') or 'Próprio'}")
-    c.drawRightString(width - 0.7*cm, y, f"TOTAL P. LÍQ: {_br_number(total_liq_val, 0)} kg   |   TOTAL P. BRUTO: {_br_number(total_bruto_val, 0)} kg")
-    y -= 0.55*cm
+    if is_ret:
+        # Lógica de Responsável
+        resp_tipo = carga.get('tipo_retirada') or 'CLIENTE'
+        if resp_tipo.upper() == 'TERCEIRO':
+            nome_responsavel = f"Terceiro - {carga.get('retirada_nome_terceiro') or '-'}"
+        else:
+            nome_responsavel = "Cliente Retira"
+            
+        # Lógica de Veículo
+        placa_temp = carga.get('retirada_veiculo_temporario_placa')
+        modelo_temp = carga.get('retirada_veiculo_temporario_modelo')
+        if placa_temp:
+            veiculo_info = f"{modelo_temp or 'Temporário'} / PLACA: {placa_temp}"
+        else:
+            veiculo_info = f"{carga.get('modelo') or '-'} / PLACA: {carga.get('veiculo_placa') or '-'}"
 
-    c.drawString(0.7*cm, y, f"MOTORISTA: {carga.get('motorista') or '-'}")
-    c.drawRightString(width - 0.7*cm, y, f"VEÍCULO: {carga.get('modelo') or '-'} / PLACA: {carga.get('veiculo_placa') or '-'}")
+        c.drawString(0.7*cm, y, f"TRANSPORTADORA: Retirada Local")
+        c.drawRightString(width - 0.7*cm, y, f"TOTAL P. LÍQ: {_br_number(total_liq_val, 0)} kg   |   TOTAL P. BRUTO: {_br_number(total_bruto_val, 0)} kg")
+        y -= 0.55*cm
+
+        c.drawString(0.7*cm, y, f"RESPONSÁVEL: {nome_responsavel}")
+        c.drawRightString(width - 0.7*cm, y, f"VEÍCULO: {veiculo_info}")
+    else:
+        c.drawString(0.7*cm, y, f"TRANSPORTADORA: {carga.get('transportadora') or 'Próprio'}")
+        c.drawRightString(width - 0.7*cm, y, f"TOTAL P. LÍQ: {_br_number(total_liq_val, 0)} kg   |   TOTAL P. BRUTO: {_br_number(total_bruto_val, 0)} kg")
+        y -= 0.55*cm
+
+        c.drawString(0.7*cm, y, f"MOTORISTA: {carga.get('motorista') or '-'}")
+        c.drawRightString(width - 0.7*cm, y, f"VEÍCULO: {carga.get('modelo') or '-'} / PLACA: {carga.get('veiculo_placa') or '-'}")
+    
     y -= 0.7*cm
 
     # Table columns: CÓDIGO | CLIENTE | N. FANTASIA | MUNICÍPIO | ORDEM | PESO LÍQ. ACUM | OBSERVAÇÕES

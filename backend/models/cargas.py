@@ -14,6 +14,14 @@ class CargaModel(Base):
     is_historico = Column(Boolean, default=False)
     data_faturamento = Column(DateTime, nullable=True)
     faturado_por_id = Column(BigInteger, ForeignKey("t_usuario.id"), nullable=True)
+    
+    # Controle de Retiradas
+    is_retirada = Column(Boolean, default=False)
+    tipo_retirada = Column(String, nullable=True) # Ex: 'CLIENTE' ou 'TERCEIRO'
+    retirada_nome_terceiro = Column(String, nullable=True)
+    retirada_veiculo_temporario_placa = Column(String, nullable=True)
+    retirada_veiculo_temporario_modelo = Column(String, nullable=True)
+
     data_criacao = Column(DateTime, default=datetime.utcnow)
     data_update = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
 

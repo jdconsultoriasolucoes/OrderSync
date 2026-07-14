@@ -28,6 +28,13 @@ class CargaBase(BaseModel):
     numero_carga: Optional[str] = None
     id_transporte: Optional[int] = None
     data_carregamento: Optional[datetime] = None
+    
+    # Campos específicos de Retirada
+    is_retirada: Optional[bool] = False
+    tipo_retirada: Optional[str] = None
+    retirada_nome_terceiro: Optional[str] = None
+    retirada_veiculo_temporario_placa: Optional[str] = None
+    retirada_veiculo_temporario_modelo: Optional[str] = None
 
 class CargaCreate(CargaBase):
     pedidos: Optional[List[CargaPedidoCreate]] = []
@@ -37,6 +44,13 @@ class CargaUpdate(BaseModel):
     numero_carga: Optional[str] = None
     id_transporte: Optional[int] = None
     data_carregamento: Optional[datetime] = None
+    
+    # Campos específicos de Retirada
+    is_retirada: Optional[bool] = None
+    tipo_retirada: Optional[str] = None
+    retirada_nome_terceiro: Optional[str] = None
+    retirada_veiculo_temporario_placa: Optional[str] = None
+    retirada_veiculo_temporario_modelo: Optional[str] = None
 
 class CargaPedidoDetailUpdate(BaseModel):
     ordem_carregamento: Optional[int] = None

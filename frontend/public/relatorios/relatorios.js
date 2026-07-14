@@ -26,6 +26,14 @@ if (typeof window.relatoriosDict === 'undefined') {
         "historico": {
             title: "Histórico de Cargas",
             desc: "Cargas faturadas ou arquivadas."
+        },
+        "retiradas": {
+            title: "Manutenção de Retiradas",
+            desc: "Organizar e agrupar os pedidos de retirada do dia."
+        },
+        "historico-retiradas": {
+            title: "Histórico de Retiradas",
+            desc: "Agrupamentos de retiradas finalizados ou arquivados."
         }
     };
 }
@@ -95,6 +103,10 @@ async function renderRelatorioView(relKey) {
             await renderCaptacaoPedidos();
         } else if (relKey === "historico") {
             await renderHistoricoCargas();
+        } else if (relKey === "retiradas") {
+            await renderRetiradas();
+        } else if (relKey === "historico-retiradas") {
+            await renderHistoricoRetiradas();
         }
     } catch (err) {
         console.error("Erro ao carregar relatório:", err);
@@ -115,35 +127,49 @@ async function renderStandardCargaList(tipo) {
     document.getElementById('painel-gerenciar-carga').style.display = 'none';
     document.getElementById('painel-listagem').style.display = 'block';
 
-    // Remove listener antigo do clone para evitar bugs
-    const oldBtn = document.getElementById("btn-novo");
+    const btnNovoRef = document.getElementById("btn-novo");
+    btnNovoRef.style.display = 'inline-block';
+
+    // Remove listners antigos clonando o botão
+    const oldBtn = btnNovoRef;
     const newBtn = oldBtn.cloneNode(true);
     oldBtn.parentNode.replaceChild(newBtn, oldBtn);
-
-    const btnNovoRef = document.getElementById("btn-novo");
-    btnNovo = btnNovoRef;
-
+    
     if (activeRelatorio === "formacao") {
-        btnNovoRef.textContent = "+ Nova Carga";
-        btnNovoRef.style.display = 'inline-block';
-        btnNovoRef.addEventListener('click', abrirModalNovaCarga);
+        newBtn.textContent = "+ Nova Carga";
+        newBtn.addEventListener('click', abrirModalNovaCarga);
+    } else if (activeRelatorio === "retiradas") {
+        newBtn.textContent = "+ Nova Retirada";
+        newBtn.addEventListener('click', abrirModalNovaRetirada);
     } else {
-        btnNovoRef.style.display = 'none';
+        newBtn.style.display = 'none';
     }
+
+    const isRetTab = activeRelatorio === 'retiradas' || activeRelatorio === 'historico-retiradas';
+    const labelNum = isRetTab ? "Nº Retirada" : "Nº Carga";
+    const labelData = isRetTab ? "Data Retirada" : "Data Carregamento";
 
     thead.innerHTML = `
         <tr>
             <th style="width: 40px; text-align: center;"><input type="checkbox" id="chk-all-cargas"></th>
-            <th>Nº Carga</th>
+            <th>${labelNum}</th>
             <th>Nome / Descrição</th>
             <th>Data Cadastro</th>
-            ${activeRelatorio === 'historico' ? '<th>Data Carregamento</th>' : ''}
+            ${(activeRelatorio === 'historico' || activeRelatorio === 'historico-retiradas') ? `<th>${labelData}</th>` : ''}
             <th>Ações</th>
         </tr>
     `;
 
     try {
-        const urlToFetch = activeRelatorio === 'historico' ? `${API_BASE}/api/relatorios/cargas/historico` : `${API_BASE}/api/relatorios/cargas`;
+        let urlToFetch = `${API_BASE}/api/relatorios/cargas`;
+        if (activeRelatorio === 'historico') {
+            urlToFetch = `${API_BASE}/api/relatorios/cargas/historico`;
+        } else if (activeRelatorio === 'retiradas') {
+            urlToFetch = `${API_BASE}/api/relatorios/retiradas`;
+        } else if (activeRelatorio === 'historico-retiradas') {
+            urlToFetch = `${API_BASE}/api/relatorios/retiradas/historico`;
+        }
+
         const resp = await fetch(urlToFetch, {
             headers: { "Authorization": `Bearer ${window.Auth ? window.Auth.getToken() : ''}` }
         });
@@ -165,10 +191,10 @@ async function renderStandardCargaList(tipo) {
                     <td><strong>${c.numero_carga}</strong></td>
                     <td>${c.nome_carga || '-'}</td>
                     <td>${dispData}</td>
-                    ${activeRelatorio === 'historico' ? `<td>${dispDataCarregamento}</td>` : ''}
+                    ${(activeRelatorio === 'historico' || activeRelatorio === 'historico-retiradas') ? `<td>${dispDataCarregamento}</td>` : ''}
                     <td>
-                       <button class="os-btn os-btn-sm os-btn-secondary btn-gerenciar-carga" data-id="${c.id}" data-nome="${c.numero_carga}">${activeRelatorio === 'historico' ? 'Visualizar' : `Gerenciar / Ver ${tipo}`}</button>
-                       ${activeRelatorio === 'formacao' ? `<button class="os-btn os-btn-sm os-btn-danger btn-excluir-carga" data-id="${c.id}">Excluir</button>` : ''}
+                       <button class="os-btn os-btn-sm os-btn-secondary btn-gerenciar-carga" data-id="${c.id}" data-nome="${c.numero_carga}">${(activeRelatorio === 'historico' || activeRelatorio === 'historico-retiradas') ? 'Visualizar' : `Gerenciar / Ver ${tipo}`}</button>
+                       ${(activeRelatorio === 'formacao' || activeRelatorio === 'retiradas') ? `<button class="os-btn os-btn-sm os-btn-danger btn-excluir-carga" data-id="${c.id}">Excluir</button>` : ''}
                     </td>
                 </tr>
             `;
@@ -185,7 +211,8 @@ async function renderStandardCargaList(tipo) {
 
         document.querySelectorAll('.btn-excluir-carga').forEach(btn => {
             btn.addEventListener('click', async (e) => {
-                if (confirm("Excluir definitivamente esta Carga?")) {
+                const labelConf = activeRelatorio === 'retiradas' ? 'Retirada' : 'Carga';
+                if (confirm(`Excluir definitivamente esta ${labelConf}?`)) {
                     const id = e.target.dataset.id;
                     const row = e.target.closest('tr');
                     await fetch(`${API_BASE}/api/relatorios/cargas/${id}`, {
@@ -206,6 +233,8 @@ async function renderFormacaoCargas() { await renderStandardCargaList("Carga"); 
 async function renderRomaneio() { await renderStandardCargaList("Romaneio"); }
 async function renderResumoProdutos() { await renderStandardCargaList("Resumo"); }
 async function renderHistoricoCargas() { await renderStandardCargaList("Histórico"); }
+async function renderRetiradas() { await renderStandardCargaList("Retirada"); }
+async function renderHistoricoRetiradas() { await renderStandardCargaList("Histórico de Retirada"); }
 
 window.dadosCaptacao = [];
 window.filtrosCaptacao = { geral: "", aprox: "", cliente: "", vendedor: "" };
@@ -443,6 +472,128 @@ function abrirModalNovaCarga() {
     });
 }
 
+async function abrirModalNovaRetirada() {
+    const modal = document.getElementById('modal-nova-retirada');
+    modal.classList.add('active');
+
+    // Limpar campos
+    document.getElementById('input-nova-retirada-nome').value = '';
+    document.getElementById('input-retirada-nome-terceiro').value = '';
+    document.getElementById('input-retirada-veiculo-placa').value = '';
+    document.getElementById('input-retirada-veiculo-modelo').value = '';
+    document.getElementById('group-retirada-nome-terceiro').style.display = 'none';
+    document.getElementById('group-retirada-veiculo-temporario').style.display = 'none';
+    document.getElementById('group-retirada-veiculo-cadastrado').style.display = 'block';
+
+    // Reset de Radios
+    document.querySelector('input[name="radio-retirada-resp"][value="CLIENTE"]').checked = true;
+    document.querySelector('input[name="radio-retirada-veiculo"][value="CADASTRADO"]').checked = true;
+
+    const closeModal = () => modal.classList.remove('active');
+    document.getElementById('modal-nova-retirada-close').onclick = closeModal;
+    document.getElementById('btn-cancelar-nova-retirada').onclick = closeModal;
+
+    // Listeners do tipo de responsavel
+    const radiosResp = document.querySelectorAll('input[name="radio-retirada-resp"]');
+    radiosResp.forEach(r => {
+        r.onchange = (e) => {
+            const val = e.target.value;
+            document.getElementById('group-retirada-nome-terceiro').style.display = val === 'TERCEIRO' ? 'block' : 'none';
+        };
+    });
+
+    // Listeners do tipo de veiculo
+    const radiosVeiculo = document.querySelectorAll('input[name="radio-retirada-veiculo"]');
+    radiosVeiculo.forEach(r => {
+        r.onchange = (e) => {
+            const val = e.target.value;
+            if (val === 'TEMPORARIO') {
+                document.getElementById('group-retirada-veiculo-temporario').style.display = 'block';
+                document.getElementById('group-retirada-veiculo-cadastrado').style.display = 'none';
+            } else {
+                document.getElementById('group-retirada-veiculo-temporario').style.display = 'none';
+                document.getElementById('group-retirada-veiculo-cadastrado').style.display = 'block';
+            }
+        };
+    });
+
+    // Carregar veiculos cadastrados
+    try {
+        const respTransp = await fetch(`${API_BASE}/api/transporte`, {
+            headers: { "Authorization": `Bearer ${window.Auth ? window.Auth.getToken() : ''}` }
+        });
+        const transportes = await respTransp.json();
+        
+        let transpOptions = '<option value="">Selecione um Veículo...</option>';
+        transportes.forEach(t => {
+            transpOptions += `<option value="${t.id}">${t.transportadora} - ${t.motorista} (${t.veiculo_placa})</option>`;
+        });
+        document.getElementById('select-retirada-veiculo-cadastrado').innerHTML = transpOptions;
+    } catch (e) {
+        console.error("Erro ao buscar veiculos cadastrados:", e);
+    }
+
+    const btnSalvar = document.getElementById('btn-salvar-nova-retirada');
+    const newBtnSalvar = btnSalvar.cloneNode(true);
+    btnSalvar.parentNode.replaceChild(newBtnSalvar, btnSalvar);
+
+    newBtnSalvar.addEventListener('click', async () => {
+        const nomeRetirada = document.getElementById('input-nova-retirada-nome').value.trim();
+        if (!nomeRetirada) {
+            alert("Preencha o nome / descrição da retirada.");
+            return;
+        }
+
+        const tipoResp = document.querySelector('input[name="radio-retirada-resp"]:checked').value;
+        const nomeTerceiro = document.getElementById('input-retirada-nome-terceiro').value.trim();
+        if (tipoResp === 'TERCEIRO' && !nomeTerceiro) {
+            alert("Preencha o nome do terceiro autorizado.");
+            return;
+        }
+
+        const tipoVeiculo = document.querySelector('input[name="radio-retirada-veiculo"]:checked').value;
+        const idTransp = document.getElementById('select-retirada-veiculo-cadastrado').value;
+        const placaTemp = document.getElementById('input-retirada-veiculo-placa').value.trim();
+        const modeloTemp = document.getElementById('input-retirada-veiculo-modelo').value.trim();
+
+        if (tipoVeiculo === 'CADASTRADO' && !idTransp) {
+            alert("Selecione um veículo cadastrado.");
+            return;
+        }
+        if (tipoVeiculo === 'TEMPORARIO' && !placaTemp) {
+            alert("Preencha a placa do veículo temporário.");
+            return;
+        }
+
+        const payload = {
+            nome_carga: nomeRetirada,
+            numero_carga: "",
+            is_retirada: true,
+            tipo_retirada: tipoResp,
+            retirada_nome_terceiro: tipoResp === 'TERCEIRO' ? nomeTerceiro : null,
+            retirada_veiculo_temporario_placa: tipoVeiculo === 'TEMPORARIO' ? placaTemp : null,
+            retirada_veiculo_temporario_modelo: tipoVeiculo === 'TEMPORARIO' ? modeloTemp : null,
+            id_transporte: tipoVeiculo === 'CADASTRADO' ? parseInt(idTransp) : null
+        };
+
+        const nwResp = await fetch(`${API_BASE}/api/relatorios/cargas`, {
+            method: "POST",
+            headers: {
+                "Content-Type": "application/json",
+                "Authorization": `Bearer ${window.Auth ? window.Auth.getToken() : ''}`
+            },
+            body: JSON.stringify(payload)
+        });
+
+        if (nwResp.ok) {
+            closeModal();
+            renderRetiradas();
+        } else {
+            alert("Falha ao criar retirada");
+        }
+    });
+}
+
 // -----------------------------------------------------
 // FUNÇÕES DE SUB-TELA "Gerenciar Carga"
 // -----------------------------------------------------
@@ -499,6 +650,54 @@ async function abrirGerenciadorDeCarga(idCarga, numCarga) {
                         <div class="ch-field" style="width: 80px;">
                             <label>Nº Carga</label>
                             <input type="text" class="os-input os-input-sm" value="${numCarga}" disabled>
+                        </div>
+                    </div>
+                </div>
+            `;
+        } else if (activeRelatorio === "retiradas" || activeRelatorio === "historico-retiradas") {
+            let responsavelTexto = "";
+            if (carga.tipo_retirada === 'TERCEIRO') {
+                responsavelTexto = `Terceiro - ${carga.retirada_nome_terceiro || '-'}`;
+            } else {
+                responsavelTexto = "Cliente Retira";
+            }
+            
+            let veiculoTexto = "";
+            if (carga.retirada_veiculo_temporario_placa) {
+                veiculoTexto = `${carga.retirada_veiculo_temporario_modelo || 'Temp'} (${carga.retirada_veiculo_temporario_placa})`;
+            } else if (carga.id_transporte) {
+                const transpObj = transportes.find(t => t.id === carga.id_transporte);
+                veiculoTexto = transpObj ? `${transpObj.modelo || 'Cadastrado'} (${transpObj.veiculo_placa})` : 'Cadastrado';
+            } else {
+                veiculoTexto = "Não definido";
+            }
+
+            uiActiveHeader.style.display = 'block';
+            uiActiveHeader.innerHTML = `
+                <div class="compact-header-container">
+                    <div class="compact-header-info" style="align-items: center; flex-wrap: wrap;">
+                        <div class="ch-field" style="min-width: 120px;">
+                            <label>Filial</label>
+                            <input type="text" class="os-input os-input-sm" value="Matriz SUPRA LOG" disabled>
+                        </div>
+                        <div class="ch-field" style="width: 80px;">
+                            <label>Nº Retirada</label>
+                            <input type="text" class="os-input os-input-sm" value="${numCarga}" disabled>
+                        </div>
+                        <div class="ch-field">
+                            <label>Data Retirada</label>
+                            <input type="date" id="in-header-data" class="os-input os-input-sm" value="${dataCarregamentoVal}" ${(activeRelatorio === 'historico-retiradas') ? 'disabled' : ''}>
+                        </div>
+                        <div class="ch-field" style="min-width: 160px; margin-right: 15px;">
+                            <label>Responsável</label>
+                            <span style="font-size: 12px; font-weight: 600; color: var(--os-text-primary); display: block; padding-top: 6px;">${responsavelTexto}</span>
+                        </div>
+                        <div class="ch-field" style="min-width: 160px; margin-right: 15px;">
+                            <label>Veículo</label>
+                            <span style="font-size: 12px; font-weight: 600; color: var(--os-text-primary); display: block; padding-top: 6px;">${veiculoTexto}</span>
+                        </div>
+                        <div class="ch-actions">
+                            ${(activeRelatorio === 'retiradas') ? '<button class="os-btn os-btn-primary os-btn-sm" id="btn-save-carga-header">Salvar Tela</button>' : ''}
                         </div>
                     </div>
                 </div>
@@ -605,7 +804,7 @@ async function abrirGerenciadorDeCarga(idCarga, numCarga) {
 
         const btnSaveItems = document.getElementById('btn-save-carga-items');
         if (btnSaveItems) {
-            if (window.activeRelatorio !== "formacao") {
+            if (window.activeRelatorio !== "formacao" && window.activeRelatorio !== "retiradas") {
                 btnSaveItems.style.display = "none";
             } else {
                 btnSaveItems.style.display = "inline-block";
@@ -624,14 +823,18 @@ async function abrirGerenciadorDeCarga(idCarga, numCarga) {
         // Botão Confirmar Entrega — visível nos modos romaneio e formacao
         const btnConfirmarEntrega = document.getElementById('btn-confirmar-entrega');
         if (btnConfirmarEntrega) {
-            if (activeRelatorio === 'romaneio' || activeRelatorio === 'formacao') {
+            const isRetTab = activeRelatorio === 'retiradas';
+            if (activeRelatorio === 'romaneio' || activeRelatorio === 'formacao' || isRetTab) {
                 btnConfirmarEntrega.style.display = 'inline-block';
+                btnConfirmarEntrega.textContent = isRetTab ? '✅ Confirmar Retirada' : '✅ Confirmar Entrega';
                 const oldBtn = btnConfirmarEntrega;
                 const newBtn = oldBtn.cloneNode(true);
                 oldBtn.parentNode.replaceChild(newBtn, oldBtn);
 
                 newBtn.addEventListener('click', async () => {
-                    if (!confirm('Confirmar a entrega de TODOS os pedidos desta carga? Esta ação irá alterar o status de todos os pedidos para "Faturado Supra" e mover a carga para o Histórico.')) return;
+                    const labelConf = isRetTab ? 'retirada' : 'carga';
+                    const actionLabel = isRetTab ? 'retirada' : 'entrega';
+                    if (!confirm(`Confirmar a ${actionLabel} de TODOS os pedidos desta ${labelConf}? Esta ação irá alterar o status de todos os pedidos para "Faturado Supra" e mover a ${labelConf} para o Histórico.`)) return;
 
                     const originalText = newBtn.innerHTML;
                     newBtn.innerHTML = '⏳ Processando...';
@@ -679,17 +882,21 @@ async function abrirGerenciadorDeCarga(idCarga, numCarga) {
                 btn.textContent = "Salvando...";
 
                 let ok = true;
-                if (dtEl && trEl) {
+                if (dtEl) {
+                    const payload = {
+                        data_carregamento: dt || null
+                    };
+                    if (trEl) {
+                        payload.id_transporte = parseInt(tr) || null;
+                    }
+
                     const updateResp = await fetch(`${API_BASE}/api/relatorios/cargas/${idCarga}`, {
                         method: 'PUT',
                         headers: {
                             'Content-Type': 'application/json',
                             "Authorization": `Bearer ${window.Auth ? window.Auth.getToken() : ''}`
                         },
-                        body: JSON.stringify({
-                            data_carregamento: dt || null,
-                            id_transporte: parseInt(tr) || null
-                        })
+                        body: JSON.stringify(payload)
                     });
                     
                     if (!updateResp.ok) {
@@ -763,12 +970,13 @@ async function carregarPedidosDaCargaAtiva() {
         const totalBrutoStr = Math.round(totalBruto).toLocaleString('pt-BR');
 
         // Cabeçalho dinâmico baseado no tipo de relatório
-        if (window.activeRelatorio === "formacao") {
+        if (window.activeRelatorio === "formacao" || window.activeRelatorio === "retiradas") {
+            const labelCol = window.activeRelatorio === "retiradas" ? "Retirada" : "Carga";
             tableEl.style.tableLayout = "auto";
             tableEl.style.minWidth = "1400px";
             theadTable.innerHTML = `
                 <tr>
-                    <th style="font-size: 11px; padding: 12px 4px; white-space: nowrap; width: 60px;">Carga</th>
+                    <th style="font-size: 11px; padding: 12px 4px; white-space: nowrap; width: 60px;">${labelCol}</th>
                     <th style="font-size: 11px; padding: 12px 4px; white-space: nowrap; width: 60px;">Pedido</th>
                     <th style="font-size: 11px; padding: 12px 4px; white-space: nowrap; width: 85px; color: #1e40af; text-align: right;">
                         Peso Líq. Acum<br>
@@ -793,7 +1001,7 @@ async function carregarPedidosDaCargaAtiva() {
                     <th style="font-size: 11px; text-align: center; padding: 12px 4px;">&nbsp;</th>
                 </tr>
             `;
-        } else if (window.activeRelatorio === "romaneio" || window.activeRelatorio === "historico") {
+        } else if (window.activeRelatorio === "romaneio" || window.activeRelatorio === "historico" || window.activeRelatorio === "historico-retiradas") {
             tableEl.style.tableLayout = "auto";
             tableEl.style.minWidth = "900px";
             theadTable.innerHTML = `
@@ -862,7 +1070,7 @@ async function carregarPedidosDaCargaAtiva() {
                  statusOptionsHtml += `<option value="${codigo}" ${selected}>${rotulo}</option>`;
             });
 
-            if (window.activeRelatorio === "formacao") {
+            if (window.activeRelatorio === "formacao" || window.activeRelatorio === "retiradas") {
                 // "tabelão" layout
                 h += `
                     <tr>
@@ -886,7 +1094,7 @@ async function carregarPedidosDaCargaAtiva() {
                         </td>
                     </tr>
                 `;
-            } else if (activeRelatorio === "romaneio" || activeRelatorio === "historico") {
+            } else if (activeRelatorio === "romaneio" || activeRelatorio === "historico" || activeRelatorio === "historico-retiradas") {
                 const badgeStatus = (p.status_codigo === "CANCELADO") ? '<span style="color: red; font-size: 10px;">Cancelado</span>' : '<span style="color: green; font-size: 10px;">Faturado</span>';
                 h += `
                     <tr>
@@ -895,13 +1103,13 @@ async function carregarPedidosDaCargaAtiva() {
                         <td style="font-size: 12px;">${p.cliente_nome || '-'}</td>
                         <td style="font-size: 12px;">${p.nome_fantasia || '-'}</td>
                         <td style="font-size: 12px;">${p.municipio || '-'}</td>
-                        <td style="vertical-align: top;"><input type="number" class="os-input os-input-sm in-ordem" value="${p.ordem_carregamento || ''}" data-id="${p.id_carga_pedido}" style="padding: 2px; font-size: 12px; height: 32px; text-align: right; width: 60px;" ${activeRelatorio === 'historico' ? 'disabled' : ''}></td>
+                        <td style="vertical-align: top;"><input type="number" class="os-input os-input-sm in-ordem" value="${p.ordem_carregamento || ''}" data-id="${p.id_carga_pedido}" style="padding: 2px; font-size: 12px; height: 32px; text-align: right; width: 60px;" ${(activeRelatorio === 'historico' || activeRelatorio === 'historico-retiradas') ? 'disabled' : ''}></td>
                         <td style="white-space: nowrap; font-size: 12px; vertical-align: top; text-align: right;">${peso} kg</td>
                         <td style="white-space: nowrap; font-size: 12px; vertical-align: top; text-align: right;">${Math.round(p.peso_bruto_total || 0)} kg</td>
-                        <td style="font-size: 12px; vertical-align: top;">${activeRelatorio === 'historico' ? badgeStatus : `<textarea class="os-input os-input-sm in-obs" data-id="${p.id_carga_pedido}" style="padding: 4px; font-size: 12px; height: 38px; resize: vertical; width: 100%; min-width: 200px;">${p.observacoes || ''}</textarea>`}</td>
+                        <td style="font-size: 12px; vertical-align: top;">${(activeRelatorio === 'historico' || activeRelatorio === 'historico-retiradas') ? badgeStatus : `<textarea class="os-input os-input-sm in-obs" data-id="${p.id_carga_pedido}" style="padding: 4px; font-size: 12px; height: 38px; resize: vertical; width: 100%; min-width: 200px;">${p.observacoes || ''}</textarea>`}</td>
                         <td style="white-space: nowrap; vertical-align: top; padding-top: 4px; text-align: center;">
                             <button onclick="abrirModalDetalhesPedido('${p.id_pedido}')" class="os-btn os-btn-sm os-btn-secondary" title="Ver Produtos do Pedido">Ver</button>
-                            ${activeRelatorio !== 'historico' ? `<button class="os-btn os-btn-sm os-btn-danger btn-remover-pedido-carga" data-id="${p.id_carga_pedido}" title="Remover">&times;</button>` : ''}
+                            ${(activeRelatorio !== 'historico' && activeRelatorio !== 'historico-retiradas') ? `<button class="os-btn os-btn-sm os-btn-danger btn-remover-pedido-carga" data-id="${p.id_carga_pedido}" title="Remover">&times;</button>` : ''}
                         </td>
                     </tr>
                 `;
@@ -1175,7 +1383,8 @@ function carregarPedidosParaModal() {
     const dtFim = dtFimEl ? dtFimEl.value : null;
     const txt = txtBox ? txtBox.value.trim() : "";
 
-    let url = `${API_BASE}/api/pedidos?exclude_status=FATURADO,CANCELADO&pageSize=100`;
+    const mod = activeRelatorio === 'retiradas' ? 'RETIRADA' : 'ENTREGA';
+    let url = `${API_BASE}/api/pedidos?exclude_status=FATURADO,CANCELADO&pageSize=100&modalidade=${mod}`;
     if (dtIni) url += `&from=${dtIni}`;
     if (dtFim) url += `&to=${dtFim}`;
     if (txt) url += `&cliente=${encodeURIComponent(txt)}`;
@@ -1223,20 +1432,21 @@ btnExport.addEventListener('click', () => {
     if (isListagem) {
         const firstChecked = document.querySelector('.chk-carga-item:checked');
         if (!firstChecked) {
-            alert("Você precisa selecionar uma carga (marcar o checkbox) para exportar.");
+            const labelMsg = (activeRelatorio === 'retiradas' || activeRelatorio === 'historico-retiradas') ? 'uma retirada' : 'uma carga';
+            alert(`Você precisa selecionar ${labelMsg} (marcar o checkbox) para exportar.`);
             return;
         }
         cargaId = firstChecked.value;
     } else {
         if (!cargaEmGerenciamento) {
-            alert("Selecione uma carga ou entre em um relatório.");
+            alert("Selecione uma carga/retirada ou entre em um relatório.");
             return;
         }
         cargaId = cargaEmGerenciamento;
     }
 
     if (window.activeRelatorio === "formacao") endpoint = `${API_BASE}/api/relatorios/carga/${cargaId}/pdf`;
-    else if (window.activeRelatorio === "romaneio") endpoint = `${API_BASE}/api/relatorios/romaneio/${cargaId}/pdf`;
+    else if (window.activeRelatorio === "romaneio" || window.activeRelatorio === "retiradas" || window.activeRelatorio === "historico-retiradas") endpoint = `${API_BASE}/api/relatorios/romaneio/${cargaId}/pdf`;
     else if (window.activeRelatorio === "resumo") endpoint = `${API_BASE}/api/relatorios/resumo-produtos/${cargaId}/pdf`;
 
     if (endpoint) {
