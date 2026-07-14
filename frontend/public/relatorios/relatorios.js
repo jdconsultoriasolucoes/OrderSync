@@ -552,8 +552,12 @@ async function abrirModalConfigurarRetiradaPedido(linkId, numeroPedido, codigoCl
     // Reset rádio buttons e habilitar/desabilitar conforme cadastro do cliente
     const isNaoCadastrado = !codigoCliente || 
                             codigoCliente.trim() === "" || 
+                            codigoCliente === "null" ||
+                            codigoCliente === "undefined" ||
                             codigoCliente.toLowerCase().includes("nao cadastrado") || 
-                            codigoCliente.toLowerCase().includes("não cadastrado");
+                            codigoCliente.toLowerCase().includes("não cadastrado") ||
+                            codigoCliente.toLowerCase().includes("nao_cadastrado") ||
+                            codigoCliente.toLowerCase().includes("não_cadastrado");
 
     const radioRespCliente = document.querySelector('input[name="radio-config-retirada-resp"][value="CLIENTE"]');
     const radioVeiculoCadastrado = document.querySelector('input[name="radio-config-retirada-veiculo"][value="CADASTRADO"]');
@@ -621,29 +625,36 @@ async function abrirModalConfigurarRetiradaPedido(linkId, numeroPedido, codigoCl
 
     // Carregar bens móveis do cliente (apenas se cadastrado)
     const selectVeiculo = document.getElementById('select-config-retirada-veiculo-cadastrado');
-    if (!isNaoCadastrado) {
+    if (!isNaoCadastrado && codigoCliente) {
         selectVeiculo.innerHTML = '<option value="">Carregando veículos...</option>';
         try {
-            const r = await fetch(`${API_BASE}/api/cliente/${codigoCliente}`, {
+            const r = await fetch(`${API_BASE}/cliente/${codigoCliente}`, {
                 headers: { "Authorization": `Bearer ${window.Auth ? window.Auth.getToken() : ''}` }
             });
-            if (!r.ok) throw new Error();
-            const cliente = await r.json();
-            bens = cliente.bens_moveis || [];
-            
-            if (bens.length === 0) {
-                selectVeiculo.innerHTML = '<option value="">Nenhum veículo cadastrado no cliente</option>';
+            if (r.ok) {
+                const cliente = await r.json();
+                bens = cliente.bens_moveis || [];
+                
+                if (bens.length === 0) {
+                    selectVeiculo.innerHTML = '<option value="">Nenhum veículo cadastrado no cliente</option>';
+                    document.querySelector('input[name="radio-config-retirada-veiculo"][value="TEMPORARIO"]').checked = true;
+                    document.getElementById('group-config-retirada-veiculo-temporario').style.display = 'block';
+                    document.getElementById('group-config-retirada-veiculo-cadastrado').style.display = 'none';
+                } else {
+                    let opts = '<option value="">Selecione um Veículo do Cliente...</option>';
+                    bens.forEach((b, idx) => {
+                        const txt = `${b.marca || ''} ${b.modelo || ''}`.trim() || `Veículo #${idx + 1}`;
+                        const selected = (txt === currentData.retirada_veiculo_modelo) ? 'selected' : '';
+                        opts += `<option value="${txt}" ${selected}>${txt}</option>`;
+                    });
+                    selectVeiculo.innerHTML = opts;
+                }
+            } else {
+                selectVeiculo.innerHTML = '<option value="">Não foi possível obter veículos do cliente</option>';
                 document.querySelector('input[name="radio-config-retirada-veiculo"][value="TEMPORARIO"]').checked = true;
                 document.getElementById('group-config-retirada-veiculo-temporario').style.display = 'block';
                 document.getElementById('group-config-retirada-veiculo-cadastrado').style.display = 'none';
-            } else {
-                let opts = '<option value="">Selecione um Veículo do Cliente...</option>';
-                bens.forEach((b, idx) => {
-                    const txt = `${b.marca || ''} ${b.modelo || ''}`.trim() || `Veículo #${idx + 1}`;
-                    const selected = (txt === currentData.retirada_veiculo_modelo) ? 'selected' : '';
-                    opts += `<option value="${txt}" ${selected}>${txt}</option>`;
-                });
-                selectVeiculo.innerHTML = opts;
+                bens = [];
             }
         } catch(e) {
             console.error("Erro ao carregar bens moveis:", e);

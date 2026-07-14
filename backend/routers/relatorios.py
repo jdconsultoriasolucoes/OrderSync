@@ -43,13 +43,20 @@ def create_carga(carga: CargaCreate, db: Session = Depends(get_db)):
 
     # Se numero_carga vier em branco, calculamos o próximo número sequencial visual (Max + 1)
     if not new_carga.numero_carga:
-        # Tenta pegar o maior número de carga que seja numérico
-        last_carga = db.execute(text("""
-            SELECT numero_carga FROM tb_cargas 
-            WHERE numero_carga ~ '^[0-9]+$' 
-            ORDER BY CAST(numero_carga AS INTEGER) DESC 
-            LIMIT 1
-        """)).fetchone()
+        if new_carga.is_retirada:
+            last_carga = db.execute(text("""
+                SELECT numero_carga FROM tb_cargas 
+                WHERE is_retirada = TRUE AND numero_carga ~ '^[0-9]+$' 
+                ORDER BY CAST(numero_carga AS INTEGER) DESC 
+                LIMIT 1
+            """)).fetchone()
+        else:
+            last_carga = db.execute(text("""
+                SELECT numero_carga FROM tb_cargas 
+                WHERE (is_retirada = FALSE OR is_retirada IS NULL) AND numero_carga ~ '^[0-9]+$' 
+                ORDER BY CAST(numero_carga AS INTEGER) DESC 
+                LIMIT 1
+            """)).fetchone()
         
         proximo = 1
         if last_carga and last_carga[0]:
