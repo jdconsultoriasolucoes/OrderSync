@@ -224,6 +224,7 @@ def gerar_pdf_romaneio(db, carga_id: int) -> bytes:
             c.cadastro_nome_fantasia as nome_fantasia,
             c.entrega_municipio as cidade,
             p.peso_total_kg,
+            p.status,
             COALESCE(pb.peso_bruto_total, p.peso_total_kg) as peso_bruto_total,
             cp.observacoes as obs_carga,
             cp.retirada_tipo,
@@ -353,7 +354,7 @@ def gerar_pdf_romaneio(db, carga_id: int) -> bytes:
             data_hora_p = Paragraph(data_hora_txt, style_wrapped)
 
             # 2. Status
-            status_p = Paragraph(str(p.status_codigo or "").strip() or "Pendente", style_wrapped)
+            status_p = Paragraph(str(p.status or "").strip() or "Pendente", style_wrapped)
 
             # 3. Pedido (SIS/SUPRA)
             supra_text = str(p.pedido_supra or "").strip()
