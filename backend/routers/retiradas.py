@@ -9,7 +9,7 @@ from models.retiradas import RetiradaModel, RetiradaPedidoModel
 from schemas.retiradas import (
     RetiradaCreate, RetiradaResponse,
     RetiradaPedidoCreate, RetiradaPedidoResponse,
-    RetiradaPedidoDetailUpdate
+    RetiradaPedidoDetailUpdate, RetiradaBase
 )
 
 router = APIRouter(
