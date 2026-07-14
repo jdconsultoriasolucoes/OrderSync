@@ -31,10 +31,15 @@ def create_carga(carga: CargaCreate, db: Session = Depends(get_db)):
         if carga.is_retirada:
             last_carga = db.execute(text("""
                 SELECT numero_carga FROM tb_cargas 
-                WHERE is_retirada = TRUE AND numero_carga ~ '^[0-9]+$' 
-                ORDER BY CAST(numero_carga AS INTEGER) DESC 
+                WHERE is_retirada = TRUE AND numero_carga ~ '^R[0-9]+$' 
+                ORDER BY CAST(SUBSTRING(numero_carga FROM 2) AS INTEGER) DESC 
                 LIMIT 1
             """)).fetchone()
+            
+            proximo = 1
+            if last_carga and last_carga[0]:
+                proximo = int(last_carga[0][1:]) + 1
+            num_carga = f"R{proximo}"
         else:
             last_carga = db.execute(text("""
                 SELECT numero_carga FROM tb_cargas 
@@ -42,11 +47,11 @@ def create_carga(carga: CargaCreate, db: Session = Depends(get_db)):
                 ORDER BY CAST(numero_carga AS INTEGER) DESC 
                 LIMIT 1
             """)).fetchone()
-        
-        proximo = 1
-        if last_carga and last_carga[0]:
-            proximo = int(last_carga[0]) + 1
-        num_carga = str(proximo)
+            
+            proximo = 1
+            if last_carga and last_carga[0]:
+                proximo = int(last_carga[0]) + 1
+            num_carga = str(proximo)
 
     # Criação do Cabeçalho
     new_carga = CargaModel(

@@ -531,7 +531,12 @@ async function abrirModalNovaRetirada() {
             closeModal();
             renderRetiradas();
         } else {
-            alert("Falha ao criar lote de retirada");
+            try {
+                const errData = await nwResp.json();
+                alert("Falha ao criar lote de retirada: " + (errData.detail || JSON.stringify(errData)));
+            } catch(e) {
+                alert("Falha ao criar lote de retirada (Erro " + nwResp.status + ")");
+            }
         }
     });
 }
