@@ -347,7 +347,8 @@ def get_carga_pedidos_detalhes(carga_id: int, db: Session = Depends(get_db)):
             cp.retirada_tipo,
             cp.retirada_nome_terceiro,
             cp.retirada_veiculo_modelo,
-            cp.retirada_veiculo_placa
+            cp.retirada_veiculo_placa,
+            cp.retirada_horario
         FROM tb_cargas_pedidos cp
         JOIN tb_pedidos p ON cp.numero_pedido = p.id_pedido::text
         LEFT JOIN (
@@ -395,7 +396,8 @@ def get_carga_pedidos_detalhes(carga_id: int, db: Session = Depends(get_db)):
                     NULL AS retirada_tipo,
                     NULL AS retirada_nome_terceiro,
                     NULL AS retirada_veiculo_modelo,
-                    NULL AS retirada_veiculo_placa
+                    NULL AS retirada_veiculo_placa,
+                    NULL AS retirada_horario
                 FROM tb_pedidos p
                 LEFT JOIN (
                      SELECT 

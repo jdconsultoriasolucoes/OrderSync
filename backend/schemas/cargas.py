@@ -13,6 +13,7 @@ class CargaPedidoBase(BaseModel):
     retirada_nome_terceiro: Optional[str] = None
     retirada_veiculo_modelo: Optional[str] = None
     retirada_veiculo_placa: Optional[str] = None
+    retirada_horario: Optional[str] = None
 
 class CargaPedidoCreate(CargaPedidoBase):
     pass
@@ -63,6 +64,7 @@ class CargaPedidoDetailUpdate(BaseModel):
     retirada_nome_terceiro: Optional[str] = None
     retirada_veiculo_modelo: Optional[str] = None
     retirada_veiculo_placa: Optional[str] = None
+    retirada_horario: Optional[str] = None
 
 class CargaResponse(CargaBase):
     id: int

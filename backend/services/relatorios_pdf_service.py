@@ -229,7 +229,8 @@ def gerar_pdf_romaneio(db, carga_id: int) -> bytes:
             cp.retirada_tipo,
             cp.retirada_nome_terceiro,
             cp.retirada_veiculo_modelo,
-            cp.retirada_veiculo_placa
+            cp.retirada_veiculo_placa,
+            cp.retirada_horario
         FROM tb_cargas_pedidos cp
         JOIN tb_pedidos p ON cp.numero_pedido = p.id_pedido::text
         LEFT JOIN (
@@ -329,77 +330,142 @@ def gerar_pdf_romaneio(db, carga_id: int) -> bytes:
     style_header_left.fontName = 'Helvetica-Bold'
     style_header_left.alignment = 0  # Left
 
-    codigo_hdr = Paragraph("CÓDIGO", style_header_left)
-    supra_hdr = Paragraph("PEDIDO SUPRA", style_header_left)
-    cliente_hdr = Paragraph("CLIENTE", style_header_left)
-    fantasia_hdr = Paragraph("N. FANTASIA", style_header_left)
-    municipio_hdr = Paragraph("MUNICÍPIO", style_header_left)
-    ordem_hdr = Paragraph("ORDEM", style_header_left)
-    peso_liq_hdr = Paragraph("PESO LÍQ.<br/>ACUM", style_header_col)
-    obs_hdr = Paragraph("OBSERVAÇÕES", style_header_left)
+    if is_ret:
+        # Colunas do romaneio de retirada agrupadas
+        data_hora_hdr = Paragraph("DATA / HORA", style_header_left)
+        status_hdr = Paragraph("STATUS", style_header_left)
+        pedido_hdr = Paragraph("PEDIDO (SIS/SUPRA)", style_header_left)
+        cliente_hdr = Paragraph("CLIENTE", style_header_left)
+        municipio_hdr = Paragraph("MUNICÍPIO", style_header_left)
+        peso_liq_hdr = Paragraph("PESO LÍQ.", style_header_col)
+        veiculo_hdr = Paragraph("VEÍCULO / PLACA", style_header_left)
+        obs_hdr = Paragraph("OBSERVAÇÃO", style_header_left)
 
-    data = [[codigo_hdr, supra_hdr, cliente_hdr, fantasia_hdr, municipio_hdr, ordem_hdr, peso_liq_hdr, obs_hdr]]
+        data = [[data_hora_hdr, status_hdr, pedido_hdr, cliente_hdr, municipio_hdr, peso_liq_hdr, veiculo_hdr, obs_hdr]]
 
-    for p in pedidos:
-        # Normalização do Código do cliente
-        cod = str(p.codigo_cliente or "").strip()
-        if not cod or "nao cadastrado" in cod.lower() or "não cadastrado" in cod.lower():
-            cod = "Não Cadastrado"
+        # Data do lote formatada
+        data_ret_str = data_carregamento.strftime('%d/%m/%Y') if data_carregamento else '---'
+
+        for p in pedidos:
+            # 1. Data/Hora
+            horario = str(p.retirada_horario or "").strip()
+            data_hora_txt = f"{data_ret_str} {horario}" if horario else f"{data_ret_str}"
+            data_hora_p = Paragraph(data_hora_txt, style_wrapped)
+
+            # 2. Status
+            status_p = Paragraph(str(p.status_codigo or "").strip() or "Pendente", style_wrapped)
+
+            # 3. Pedido (SIS/SUPRA)
+            supra_text = str(p.pedido_supra or "").strip()
+            pedido_txt = f"{p.id_pedido} / {supra_text}" if supra_text and supra_text != "---" else f"{p.id_pedido}"
+            pedido_p = Paragraph(pedido_txt, style_wrapped)
+
+            # 4. Cliente
+            cod = str(p.codigo_cliente or "").strip()
+            if not cod or "nao cadastrado" in cod.lower() or "não cadastrado" in cod.lower():
+                cod = "Não Cadastrado"
+            nome_cli = clean_client_name(p.cliente)
+            fantasia = str(p.nome_fantasia or "").strip()
+            cliente_txt = f"{cod} - {nome_cli}"
+            if fantasia:
+                cliente_txt += f" ({fantasia})"
+            cliente_p = Paragraph(cliente_txt, style_wrapped)
+
+            # 5. Município
+            cidade_p = Paragraph(str(p.cidade or ""), style_wrapped)
+
+            # 6. Peso Líquido
+            peso_liq_txt = Paragraph(_br_number(p.peso_total_kg, 0), style_wrapped)
+
+            # 7. Veículo / Placa
+            ret_resp = "Terceiro" if (p.retirada_tipo or "").upper() == "TERCEIRO" else "Cliente"
+            if ret_resp == "Terceiro" and p.retirada_nome_terceiro:
+                ret_resp = f"Terceiro: {p.retirada_nome_terceiro}"
             
-        supra_text = str(p.pedido_supra or "").strip()
-        if not supra_text:
-            supra_text = "---"
-            
-        codigo_p = Paragraph(cod, style_wrapped)
-        supra_p = Paragraph(supra_text, style_wrapped)
-        cliente_p = Paragraph(clean_client_name(p.cliente), style_wrapped)
-        fantasia_p = Paragraph(str(p.nome_fantasia or ""), style_wrapped)
-        cidade_p = Paragraph(str(p.cidade or ""), style_wrapped)
-        obs_text = str(p.obs_carga or "").strip()
-        if is_ret:
-            ret_resp = ""
-            if (p.retirada_tipo or "").upper() == "TERCEIRO":
-                ret_resp = f"Terceiro: {p.retirada_nome_terceiro or '-'}"
-            else:
-                ret_resp = "Cliente Retira"
-                
             ret_veic = ""
             if p.retirada_veiculo_placa:
-                ret_veic = f"Veículo: {p.retirada_veiculo_modelo or ''} ({p.retirada_veiculo_placa})"
+                ret_veic = f"{p.retirada_veiculo_modelo or ''} ({p.retirada_veiculo_placa})"
             elif p.retirada_veiculo_modelo:
-                ret_veic = f"Veículo: {p.retirada_veiculo_modelo}"
+                ret_veic = f"{p.retirada_veiculo_modelo}"
             else:
-                ret_veic = "Veículo: -"
+                ret_veic = "-"
+            veic_txt = f"{ret_resp} | {ret_veic}"
+            veiculo_p = Paragraph(veic_txt, style_wrapped)
 
-            ret_info = f"[{ret_resp} | {ret_veic}]"
-            if obs_text:
-                obs_text = f"{ret_info} - {obs_text}"
-            else:
-                obs_text = ret_info
+            # 8. Observação
+            obs_p = Paragraph(str(p.obs_carga or "").strip() or "---", style_wrapped)
 
-        obs_p = Paragraph(obs_text, style_wrapped)
+            data.append([
+                data_hora_p,
+                status_p,
+                pedido_p,
+                cliente_p,
+                cidade_p,
+                peso_liq_txt,
+                veiculo_p,
+                obs_p
+            ])
 
-        data.append([
-            codigo_p,
-            supra_p,
-            cliente_p,
-            fantasia_p,
-            cidade_p,
-            str(p.ordem_carregamento or ""),
-            _br_number(p.peso_total_kg, 0),
-            obs_p
+        table = Table(data, colWidths=[2.8*cm, 2.0*cm, 2.5*cm, 7.5*cm, 2.5*cm, 1.8*cm, 4.2*cm, 5.0*cm], repeatRows=1)
+        style = TableStyle([
+            ('BACKGROUND', (0, 0), (-1, 0), SUPRA_BAR),
+            ('TEXTCOLOR', (0, 0), (-1, 0), colors.white),
+            ('ALIGN', (0, 0), (-1, -1), 'LEFT'),
+            ('ALIGN', (5, 0), (5, -1), 'RIGHT'),  # Peso Líq (coluna index 5)
+            ('VALIGN', (0, 0), (-1, -1), 'MIDDLE'),
+            ('GRID', (0, 0), (-1, -1), 0.5, colors.grey),
         ])
+    else:
+        # Colunas do romaneio de entrega originais
+        codigo_hdr = Paragraph("CÓDIGO", style_header_left)
+        supra_hdr = Paragraph("PEDIDO SUPRA", style_header_left)
+        cliente_hdr = Paragraph("CLIENTE", style_header_left)
+        fantasia_hdr = Paragraph("N. FANTASIA", style_header_left)
+        municipio_hdr = Paragraph("MUNICÍPIO", style_header_left)
+        ordem_hdr = Paragraph("ORDEM", style_header_left)
+        peso_liq_hdr = Paragraph("PESO LÍQ.<br/>ACUM", style_header_col)
+        obs_hdr = Paragraph("OBSERVAÇÕES", style_header_left)
 
-    # 8 colunas com soma totalizando 28.3*cm (largura máxima da área imprimível do A4 paisagem)
-    table = Table(data, colWidths=[2.8*cm, 2.2*cm, 6.5*cm, 4.0*cm, 2.8*cm, 1.1*cm, 2.1*cm, 6.8*cm], repeatRows=1)
-    style = TableStyle([
-        ('BACKGROUND', (0, 0), (-1, 0), SUPRA_BAR),
-        ('TEXTCOLOR', (0, 0), (-1, 0), colors.white),
-        ('ALIGN', (0, 0), (-1, -1), 'LEFT'),
-        ('ALIGN', (6, 0), (6, -1), 'RIGHT'),  # Peso Líq. (coluna index 6)
-        ('VALIGN', (0, 0), (-1, -1), 'MIDDLE'),
-        ('GRID', (0, 0), (-1, -1), 0.5, colors.grey),
-    ])
+        data = [[codigo_hdr, supra_hdr, cliente_hdr, fantasia_hdr, municipio_hdr, ordem_hdr, peso_liq_hdr, obs_hdr]]
+
+        for p in pedidos:
+            cod = str(p.codigo_cliente or "").strip()
+            if not cod or "nao cadastrado" in cod.lower() or "não cadastrado" in cod.lower():
+                cod = "Não Cadastrado"
+                
+            supra_text = str(p.pedido_supra or "").strip()
+            if not supra_text:
+                supra_text = "---"
+                
+            codigo_p = Paragraph(cod, style_wrapped)
+            supra_p = Paragraph(supra_text, style_wrapped)
+            cliente_p = Paragraph(clean_client_name(p.cliente), style_wrapped)
+            fantasia_p = Paragraph(str(p.nome_fantasia or ""), style_wrapped)
+            cidade_p = Paragraph(str(p.cidade or ""), style_wrapped)
+            obs_text = str(p.obs_carga or "").strip()
+
+            obs_p = Paragraph(obs_text or "---", style_wrapped)
+
+            data.append([
+                codigo_p,
+                supra_p,
+                cliente_p,
+                fantasia_p,
+                cidade_p,
+                str(p.ordem_carregamento or ""),
+                _br_number(p.peso_total_kg, 0),
+                obs_p
+            ])
+
+        table = Table(data, colWidths=[2.8*cm, 2.2*cm, 6.5*cm, 4.0*cm, 2.8*cm, 1.1*cm, 2.1*cm, 6.8*cm], repeatRows=1)
+        style = TableStyle([
+            ('BACKGROUND', (0, 0), (-1, 0), SUPRA_BAR),
+            ('TEXTCOLOR', (0, 0), (-1, 0), colors.white),
+            ('ALIGN', (0, 0), (-1, -1), 'LEFT'),
+            ('ALIGN', (6, 0), (6, -1), 'RIGHT'),  # Peso Líq (coluna index 6)
+            ('VALIGN', (0, 0), (-1, -1), 'MIDDLE'),
+            ('GRID', (0, 0), (-1, -1), 0.5, colors.grey),
+        ])
     for i in range(1, len(data)):
         if i % 2 == 0: style.add('BACKGROUND', (0, i), (-1, i), SUPRA_BG_LIGHT)
     

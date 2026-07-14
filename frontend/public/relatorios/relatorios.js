@@ -163,7 +163,7 @@ async function renderStandardCargaList(tipo) {
             <th>${labelNum}</th>
             <th>Nome / Descrição</th>
             <th>Data Cadastro</th>
-            ${(activeRelatorio === 'historico' || activeRelatorio === 'historico-retiradas') ? `<th>${labelData}</th>` : ''}
+            ${(activeRelatorio === 'historico' || activeRelatorio === 'historico-retiradas' || activeRelatorio === 'retiradas') ? `<th>${labelData}</th>` : ''}
             <th>Ações</th>
         </tr>
     `;
@@ -199,7 +199,7 @@ async function renderStandardCargaList(tipo) {
                     <td><strong>${c.numero_carga}</strong></td>
                     <td>${c.nome_carga || '-'}</td>
                     <td>${dispData}</td>
-                    ${(activeRelatorio === 'historico' || activeRelatorio === 'historico-retiradas') ? `<td>${dispDataCarregamento}</td>` : ''}
+                    ${(activeRelatorio === 'historico' || activeRelatorio === 'historico-retiradas' || activeRelatorio === 'retiradas') ? `<td>${dispDataCarregamento}</td>` : ''}
                     <td>
                        <button class="os-btn os-btn-sm os-btn-secondary btn-gerenciar-carga" data-id="${c.id}" data-nome="${c.numero_carga}">${(activeRelatorio === 'historico' || activeRelatorio === 'historico-retiradas') ? 'Visualizar' : `Gerenciar / Ver ${tipo}`}</button>
                        ${(activeRelatorio === 'formacao' || activeRelatorio === 'retiradas') ? `<button class="os-btn os-btn-sm os-btn-danger btn-excluir-carga" data-id="${c.id}">Excluir</button>` : ''}
@@ -548,6 +548,8 @@ async function abrirModalConfigurarRetiradaPedido(linkId, numeroPedido, codigoCl
     document.getElementById('input-config-retirada-nome-terceiro').value = currentData.retirada_nome_terceiro || '';
     document.getElementById('input-config-retirada-veiculo-placa').value = currentData.retirada_veiculo_placa || '';
     document.getElementById('input-config-retirada-veiculo-modelo').value = currentData.retirada_veiculo_modelo || '';
+    document.getElementById('input-config-retirada-horario').value = currentData.retirada_horario || '';
+    document.getElementById('input-config-retirada-observacoes').value = currentData.observacoes || '';
 
     // Reset rádio buttons e habilitar/desabilitar conforme cadastro do cliente
     const isNaoCadastrado = !codigoCliente || 
@@ -693,11 +695,20 @@ async function abrirModalConfigurarRetiradaPedido(linkId, numeroPedido, codigoCl
             return;
         }
 
+        const horario = document.getElementById('input-config-retirada-horario').value;
+        if (!horario) {
+            alert("Por favor, preencha o Horário Previsto da Retirada.");
+            return;
+        }
+        const obs = document.getElementById('input-config-retirada-observacoes').value.trim();
+
         let payload = {
             retirada_tipo: tipoResp,
             retirada_nome_terceiro: tipoResp === 'TERCEIRO' ? nomeTerceiro : null,
             retirada_veiculo_placa: tipoVeiculo === 'TEMPORARIO' ? placaTemp : null,
-            retirada_veiculo_modelo: tipoVeiculo === 'TEMPORARIO' ? modeloTemp : veiculoClienteSel
+            retirada_veiculo_modelo: tipoVeiculo === 'TEMPORARIO' ? modeloTemp : veiculoClienteSel,
+            retirada_horario: horario,
+            observacoes: obs
         };
 
         newBtnSalvar.textContent = "Salvando...";
@@ -1213,7 +1224,7 @@ async function carregarPedidosDaCargaAtiva() {
                 
                 let btnsAcao = "";
                 if (window.activeRelatorio === "retiradas") {
-                    btnsAcao = `<button class="os-btn os-btn-sm os-btn-primary btn-configurar-retirada-pedido" data-id="${p.id_carga_pedido || ''}" data-numero-pedido="${p.numero_pedido}" data-codigo-cliente="${p.codigo_cliente}" data-nome-cliente="${p.cliente_nome}" data-tipo="${p.retirada_tipo || ''}" data-terceiro="${p.retirada_nome_terceiro || ''}" data-modelo="${p.retirada_veiculo_modelo || ''}" data-placa="${p.retirada_veiculo_placa || ''}" style="margin-right: 5px; padding: 4px 8px; font-size: 11px;" ${window.cargaAtivaReadOnly ? 'disabled' : ''} title="Configurar Retirada">⚙️ Retirada</button>`;
+                    btnsAcao = `<button class="os-btn os-btn-sm os-btn-primary btn-configurar-retirada-pedido" data-id="${p.id_carga_pedido || ''}" data-numero-pedido="${p.numero_pedido}" data-codigo-cliente="${p.codigo_cliente}" data-nome-cliente="${p.cliente_nome}" data-tipo="${p.retirada_tipo || ''}" data-terceiro="${p.retirada_nome_terceiro || ''}" data-modelo="${p.retirada_veiculo_modelo || ''}" data-placa="${p.retirada_veiculo_placa || ''}" data-horario="${p.retirada_horario || ''}" data-observacoes="${p.observacoes || ''}" style="margin-right: 5px; padding: 4px 8px; font-size: 11px;" ${window.cargaAtivaReadOnly ? 'disabled' : ''} title="Configurar Retirada">⚙️ Retirada</button>`;
                 }
                 
                 if (!isSugerido && !window.cargaAtivaReadOnly) {
@@ -1298,7 +1309,9 @@ async function carregarPedidosDaCargaAtiva() {
                     retirada_tipo: b.dataset.tipo,
                     retirada_nome_terceiro: b.dataset.terceiro,
                     retirada_veiculo_modelo: b.dataset.modelo,
-                    retirada_veiculo_placa: b.dataset.placa
+                    retirada_veiculo_placa: b.dataset.placa,
+                    retirada_horario: b.dataset.horario,
+                    observacoes: b.dataset.observacoes
                 };
                 abrirModalConfigurarRetiradaPedido(linkId, numPed, codCli, nomCli, currentData);
             });
