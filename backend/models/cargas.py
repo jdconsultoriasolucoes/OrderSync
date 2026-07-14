@@ -39,6 +39,13 @@ class CargaPedidoModel(Base):
     numero_pedido = Column(String, nullable=False, index=True) # Referência ao pedido na "tb_pedidos"
     ordem_carregamento = Column(Integer, nullable=True)
     observacoes = Column(Text, nullable=True)
+    
+    # Campos específicos de controle de retirada por pedido
+    retirada_tipo = Column(String(50), nullable=True)
+    retirada_nome_terceiro = Column(String(255), nullable=True)
+    retirada_veiculo_modelo = Column(String(255), nullable=True)
+    retirada_veiculo_placa = Column(String(50), nullable=True)
+
     data_criacao = Column(DateTime, default=datetime.utcnow)
 
     carga = relationship("CargaModel", back_populates="pedidos")

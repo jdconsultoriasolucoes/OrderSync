@@ -92,18 +92,26 @@ def read_cargas_historico(skip: int = 0, limit: int = 100, db: Session = Depends
 
 @router.get("/retiradas", response_model=List[CargaResponse])
 def read_retiradas(skip: int = 0, limit: int = 100, db: Session = Depends(get_db)):
+    from datetime import date
+    hoje = date.today()
     retiradas = db.query(CargaModel).filter(
         ((CargaModel.is_historico == False) | (CargaModel.is_historico == None)) &
-        (CargaModel.is_retirada == True)
+        (CargaModel.is_retirada == True) &
+        ((CargaModel.data_carregamento >= hoje) | (CargaModel.data_carregamento == None))
     ).offset(skip).limit(limit).all()
     return retiradas
 
 @router.get("/retiradas/historico", response_model=List[CargaResponse])
 def read_retiradas_historico(skip: int = 0, limit: int = 100, db: Session = Depends(get_db)):
+    from datetime import date
+    hoje = date.today()
     retiradas = db.query(CargaModel).filter(
-        (CargaModel.is_historico == True) &
-        (CargaModel.is_retirada == True)
-    ).order_by(CargaModel.data_faturamento.desc()).offset(skip).limit(limit).all()
+        (CargaModel.is_retirada == True) &
+        (
+            (CargaModel.is_historico == True) |
+            (CargaModel.data_carregamento < hoje)
+        )
+    ).order_by(CargaModel.data_carregamento.desc()).offset(skip).limit(limit).all()
     return retiradas
 
 @router.get("/cargas/{carga_id}", response_model=CargaResponse)
@@ -328,7 +336,11 @@ def get_carga_pedidos_detalhes(carga_id: int, db: Session = Depends(get_db)):
             c.entrega_municipio AS municipio,
             c.entrega_rota_principal AS rota_principal,
             c.entrega_rota_aproximacao AS rota_aproximacao,
-            cp.observacoes
+            cp.observacoes,
+            cp.retirada_tipo,
+            cp.retirada_nome_terceiro,
+            cp.retirada_veiculo_modelo,
+            cp.retirada_veiculo_placa
         FROM tb_cargas_pedidos cp
         JOIN tb_pedidos p ON cp.numero_pedido = p.id_pedido::text
         LEFT JOIN (
@@ -348,8 +360,65 @@ def get_carga_pedidos_detalhes(carga_id: int, db: Session = Depends(get_db)):
     """)
     
     rows = db.execute(sql, {"carga_id": carga_id}).mappings().all()
+    lista_final = [dict(r) for r in rows]
     
-    return [dict(r) for r in rows]
+    if db_carga.is_retirada:
+        ids_vinculados = {str(r["id_pedido"]) for r in lista_final}
+        data_ref = db_carga.data_carregamento.date() if db_carga.data_carregamento else None
+        
+        if data_ref:
+            sql_sugeridos = text("""
+                SELECT 
+                    NULL AS id_carga_pedido,
+                    p.id_pedido::text AS numero_pedido,
+                    NULL AS ordem_carregamento,
+                    p.id_pedido,
+                    p.codigo_cliente,
+                    COALESCE(c.cadastro_nome_cliente, p.cliente) AS cliente_nome,
+                    c.cadastro_nome_fantasia as nome_fantasia,
+                    p.status as status_codigo,
+                    p.fornecedor,
+                    'RETIRADA' as modalidade,
+                    CAST(COALESCE(p.peso_total_kg, 0) AS FLOAT) AS peso_total,
+                    CAST(COALESCE(pb.peso_bruto_total, p.peso_total_kg) AS FLOAT) AS peso_bruto_total,
+                    c.entrega_municipio AS municipio,
+                    c.entrega_rota_principal AS rota_principal,
+                    c.entrega_rota_aproximacao AS rota_aproximacao,
+                    NULL AS observacoes,
+                    NULL AS retirada_tipo,
+                    NULL AS retirada_nome_terceiro,
+                    NULL AS retirada_veiculo_modelo,
+                    NULL AS retirada_veiculo_placa
+                FROM tb_pedidos p
+                LEFT JOIN (
+                     SELECT 
+                         id_pedido,
+                         SUM(i.quantidade * COALESCE(prod.peso_bruto, prod.peso, 0)) as peso_bruto_total
+                     FROM tb_pedidos_itens i
+                     LEFT JOIN (
+                         SELECT codigo_supra, MAX(CAST(peso AS FLOAT)) as peso, MAX(CAST(peso_bruto AS FLOAT)) as peso_bruto 
+                         FROM t_cadastro_produto_v2 GROUP BY codigo_supra
+                     ) prod ON prod.codigo_supra = i.codigo
+                     GROUP BY id_pedido
+                ) pb ON pb.id_pedido = p.id_pedido
+                LEFT JOIN t_cadastro_cliente_v2 c ON c.cadastro_codigo_da_empresa::text = p.codigo_cliente
+                WHERE (p.usar_valor_com_frete = FALSE OR p.usar_valor_com_frete IS NULL)
+                  AND p.status NOT IN ('FATURADO', 'CANCELADO')
+                  AND p.created_at::date = :data_ref
+                  AND NOT EXISTS (
+                      SELECT 1 FROM tb_cargas_pedidos xcp
+                      JOIN tb_cargas xc ON xcp.id_carga = xc.id
+                      WHERE xcp.numero_pedido = p.id_pedido::text
+                        AND xc.is_retirada = TRUE
+                  )
+            """)
+            
+            rows_sugeridos = db.execute(sql_sugeridos, {"data_ref": data_ref}).mappings().all()
+            for r in rows_sugeridos:
+                if str(r["id_pedido"]) not in ids_vinculados:
+                    lista_final.append(dict(r))
+                    
+    return lista_final
 
 # ------------- PDF EXPORT ENDPOINTS -------------
 

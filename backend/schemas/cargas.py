@@ -9,6 +9,10 @@ class CargaPedidoBase(BaseModel):
     numero_pedido: str
     ordem_carregamento: Optional[int] = None
     observacoes: Optional[str] = None
+    retirada_tipo: Optional[str] = None
+    retirada_nome_terceiro: Optional[str] = None
+    retirada_veiculo_modelo: Optional[str] = None
+    retirada_veiculo_placa: Optional[str] = None
 
 class CargaPedidoCreate(CargaPedidoBase):
     pass
@@ -55,6 +59,10 @@ class CargaUpdate(BaseModel):
 class CargaPedidoDetailUpdate(BaseModel):
     ordem_carregamento: Optional[int] = None
     observacoes: Optional[str] = None
+    retirada_tipo: Optional[str] = None
+    retirada_nome_terceiro: Optional[str] = None
+    retirada_veiculo_modelo: Optional[str] = None
+    retirada_veiculo_placa: Optional[str] = None
 
 class CargaResponse(CargaBase):
     id: int

@@ -342,59 +342,81 @@
             <div class="os-modal-body">
                 <div class="os-form-group">
                     <label>Nome / Descrição da Retirada</label>
-                    <input type="text" id="input-nova-retirada-nome" class="os-input" placeholder="Ex: Retirada de Hoje" autocomplete="off">
+                    <input type="text" id="input-nova-retirada-nome" class="os-input" placeholder="Ex: Retiradas de Sexta" autocomplete="off">
                 </div>
-                
                 <div class="os-form-group" style="margin-top: 15px;">
+                    <label>Data da Retirada</label>
+                    <input type="date" id="input-nova-retirada-data" class="os-input">
+                </div>
+            </div>
+            <div class="os-modal-footer">
+                <button class="os-btn os-btn-secondary" id="btn-cancelar-nova-retirada">Cancelar</button>
+                <button class="os-btn os-btn-primary" id="btn-salvar-nova-retirada">Salvar Retirada</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal Configurar Retirada do Pedido -->
+    <div id="modal-configurar-retirada-pedido" class="os-modal-backdrop">
+        <div class="os-modal-dialog" style="max-width: 500px;">
+            <div class="os-modal-header">
+                <h3 class="os-modal-title">Configurar Retirada do Pedido</h3>
+                <button class="os-modal-close" id="modal-configurar-retirada-close">&times;</button>
+            </div>
+            <div class="os-modal-body">
+                <input type="hidden" id="input-config-retirada-item-id">
+                <input type="hidden" id="input-config-retirada-cliente-codigo">
+
+                <div class="os-form-group">
                     <label style="display: block; margin-bottom: 5px; font-weight: 600;">Quem vai retirar?</label>
                     <div style="display: flex; gap: 20px; align-items: center; margin-bottom: 10px;">
                         <label style="cursor: pointer; display: flex; align-items: center; gap: 5px;">
-                            <input type="radio" name="radio-retirada-resp" value="CLIENTE" checked> O próprio Cliente
+                            <input type="radio" name="radio-config-retirada-resp" value="CLIENTE" checked> O próprio Cliente
                         </label>
                         <label style="cursor: pointer; display: flex; align-items: center; gap: 5px;">
-                            <input type="radio" name="radio-retirada-resp" value="TERCEIRO"> Um Terceiro
+                            <input type="radio" name="radio-config-retirada-resp" value="TERCEIRO"> Um Terceiro
                         </label>
                     </div>
                 </div>
 
-                <div class="os-form-group" id="group-retirada-nome-terceiro" style="display: none; margin-top: 10px;">
+                <div class="os-form-group" id="group-config-retirada-nome-terceiro" style="display: none; margin-top: 10px;">
                     <label>Nome do Terceiro Autorizado</label>
-                    <input type="text" id="input-retirada-nome-terceiro" class="os-input" placeholder="Nome completo de quem vai retirar" autocomplete="off">
+                    <input type="text" id="input-config-retirada-nome-terceiro" class="os-input" placeholder="Nome completo de quem vai retirar" autocomplete="off">
                 </div>
 
                 <div class="os-form-group" style="margin-top: 15px;">
                     <label style="display: block; margin-bottom: 5px; font-weight: 600;">Veículo de Retirada</label>
                     <div style="display: flex; gap: 20px; align-items: center; margin-bottom: 10px;">
                         <label style="cursor: pointer; display: flex; align-items: center; gap: 5px;">
-                            <input type="radio" name="radio-retirada-veiculo" value="CADASTRADO" checked> Veículo Cadastrado
+                            <input type="radio" name="radio-config-retirada-veiculo" value="CADASTRADO" checked> Veículo do Cliente
                         </label>
                         <label style="cursor: pointer; display: flex; align-items: center; gap: 5px;">
-                            <input type="radio" name="radio-retirada-veiculo" value="TEMPORARIO"> Veículo Temporário
+                            <input type="radio" name="radio-config-retirada-veiculo" value="TEMPORARIO"> Veículo Temporário
                         </label>
                     </div>
                 </div>
 
-                <div class="os-form-group" id="group-retirada-veiculo-cadastrado" style="margin-top: 10px;">
+                <div class="os-form-group" id="group-config-retirada-veiculo-cadastrado" style="margin-top: 10px;">
                     <label>Selecione o Veículo</label>
-                    <select id="select-retirada-veiculo-cadastrado" class="os-input">
-                        <!-- Preenchido via JS -->
+                    <select id="select-config-retirada-veiculo-cadastrado" class="os-input">
+                        <!-- Preenchido via JS baseado nos bens móveis do cliente -->
                     </select>
                 </div>
 
-                <div id="group-retirada-veiculo-temporario" style="display: none; margin-top: 10px; border: 1px dashed var(--os-border); padding: 12px; border-radius: 6px; background: var(--os-bg-secondary);">
+                <div id="group-config-retirada-veiculo-temporario" style="display: none; margin-top: 10px; border: 1px dashed var(--os-border); padding: 12px; border-radius: 6px; background: var(--os-bg-secondary);">
                     <div class="os-form-group">
                         <label>Placa do Veículo</label>
-                        <input type="text" id="input-retirada-veiculo-placa" class="os-input" placeholder="ABC-1234" autocomplete="off" style="text-transform: uppercase;">
+                        <input type="text" id="input-config-retirada-veiculo-placa" class="os-input" placeholder="ABC-1234" autocomplete="off" style="text-transform: uppercase;">
                     </div>
                     <div class="os-form-group" style="margin-top: 10px;">
                         <label>Modelo do Veículo</label>
-                        <input type="text" id="input-retirada-veiculo-modelo" class="os-input" placeholder="Ex: Fiorino Branca" autocomplete="off">
+                        <input type="text" id="input-config-retirada-veiculo-modelo" class="os-input" placeholder="Ex: Fiorino Branca" autocomplete="off">
                     </div>
                 </div>
             </div>
             <div class="os-modal-footer">
-                <button class="os-btn os-btn-secondary" id="btn-cancelar-nova-retirada">Cancelar</button>
-                <button class="os-btn os-btn-primary" id="btn-salvar-nova-retirada">Salvar Retirada</button>
+                <button class="os-btn os-btn-secondary" id="btn-cancelar-config-retirada">Cancelar</button>
+                <button class="os-btn os-btn-primary" id="btn-salvar-config-retirada">Salvar Configurações</button>
             </div>
         </div>
     </div>

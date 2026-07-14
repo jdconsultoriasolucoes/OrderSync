@@ -476,62 +476,14 @@ async function abrirModalNovaRetirada() {
     const modal = document.getElementById('modal-nova-retirada');
     modal.classList.add('active');
 
-    // Limpar campos
+    // Limpar campos e definir data atual como padrão
     document.getElementById('input-nova-retirada-nome').value = '';
-    document.getElementById('input-retirada-nome-terceiro').value = '';
-    document.getElementById('input-retirada-veiculo-placa').value = '';
-    document.getElementById('input-retirada-veiculo-modelo').value = '';
-    document.getElementById('group-retirada-nome-terceiro').style.display = 'none';
-    document.getElementById('group-retirada-veiculo-temporario').style.display = 'none';
-    document.getElementById('group-retirada-veiculo-cadastrado').style.display = 'block';
-
-    // Reset de Radios
-    document.querySelector('input[name="radio-retirada-resp"][value="CLIENTE"]').checked = true;
-    document.querySelector('input[name="radio-retirada-veiculo"][value="CADASTRADO"]').checked = true;
+    const dateInput = document.getElementById('input-nova-retirada-data');
+    dateInput.value = new Date().toISOString().split('T')[0];
 
     const closeModal = () => modal.classList.remove('active');
     document.getElementById('modal-nova-retirada-close').onclick = closeModal;
     document.getElementById('btn-cancelar-nova-retirada').onclick = closeModal;
-
-    // Listeners do tipo de responsavel
-    const radiosResp = document.querySelectorAll('input[name="radio-retirada-resp"]');
-    radiosResp.forEach(r => {
-        r.onchange = (e) => {
-            const val = e.target.value;
-            document.getElementById('group-retirada-nome-terceiro').style.display = val === 'TERCEIRO' ? 'block' : 'none';
-        };
-    });
-
-    // Listeners do tipo de veiculo
-    const radiosVeiculo = document.querySelectorAll('input[name="radio-retirada-veiculo"]');
-    radiosVeiculo.forEach(r => {
-        r.onchange = (e) => {
-            const val = e.target.value;
-            if (val === 'TEMPORARIO') {
-                document.getElementById('group-retirada-veiculo-temporario').style.display = 'block';
-                document.getElementById('group-retirada-veiculo-cadastrado').style.display = 'none';
-            } else {
-                document.getElementById('group-retirada-veiculo-temporario').style.display = 'none';
-                document.getElementById('group-retirada-veiculo-cadastrado').style.display = 'block';
-            }
-        };
-    });
-
-    // Carregar veiculos cadastrados
-    try {
-        const respTransp = await fetch(`${API_BASE}/api/transporte`, {
-            headers: { "Authorization": `Bearer ${window.Auth ? window.Auth.getToken() : ''}` }
-        });
-        const transportes = await respTransp.json();
-        
-        let transpOptions = '<option value="">Selecione um Veículo...</option>';
-        transportes.forEach(t => {
-            transpOptions += `<option value="${t.id}">${t.transportadora} - ${t.motorista} (${t.veiculo_placa})</option>`;
-        });
-        document.getElementById('select-retirada-veiculo-cadastrado').innerHTML = transpOptions;
-    } catch (e) {
-        console.error("Erro ao buscar veiculos cadastrados:", e);
-    }
 
     const btnSalvar = document.getElementById('btn-salvar-nova-retirada');
     const newBtnSalvar = btnSalvar.cloneNode(true);
@@ -539,29 +491,14 @@ async function abrirModalNovaRetirada() {
 
     newBtnSalvar.addEventListener('click', async () => {
         const nomeRetirada = document.getElementById('input-nova-retirada-nome').value.trim();
+        const dataRetirada = dateInput.value;
+
         if (!nomeRetirada) {
             alert("Preencha o nome / descrição da retirada.");
             return;
         }
-
-        const tipoResp = document.querySelector('input[name="radio-retirada-resp"]:checked').value;
-        const nomeTerceiro = document.getElementById('input-retirada-nome-terceiro').value.trim();
-        if (tipoResp === 'TERCEIRO' && !nomeTerceiro) {
-            alert("Preencha o nome do terceiro autorizado.");
-            return;
-        }
-
-        const tipoVeiculo = document.querySelector('input[name="radio-retirada-veiculo"]:checked').value;
-        const idTransp = document.getElementById('select-retirada-veiculo-cadastrado').value;
-        const placaTemp = document.getElementById('input-retirada-veiculo-placa').value.trim();
-        const modeloTemp = document.getElementById('input-retirada-veiculo-modelo').value.trim();
-
-        if (tipoVeiculo === 'CADASTRADO' && !idTransp) {
-            alert("Selecione um veículo cadastrado.");
-            return;
-        }
-        if (tipoVeiculo === 'TEMPORARIO' && !placaTemp) {
-            alert("Preencha a placa do veículo temporário.");
+        if (!dataRetirada) {
+            alert("Selecione a data da retirada.");
             return;
         }
 
@@ -569,11 +506,8 @@ async function abrirModalNovaRetirada() {
             nome_carga: nomeRetirada,
             numero_carga: "",
             is_retirada: true,
-            tipo_retirada: tipoResp,
-            retirada_nome_terceiro: tipoResp === 'TERCEIRO' ? nomeTerceiro : null,
-            retirada_veiculo_temporario_placa: tipoVeiculo === 'TEMPORARIO' ? placaTemp : null,
-            retirada_veiculo_temporario_modelo: tipoVeiculo === 'TEMPORARIO' ? modeloTemp : null,
-            id_transporte: tipoVeiculo === 'CADASTRADO' ? parseInt(idTransp) : null
+            data_carregamento: dataRetirada,
+            id_transporte: null
         };
 
         const nwResp = await fetch(`${API_BASE}/api/relatorios/cargas`, {
@@ -589,7 +523,174 @@ async function abrirModalNovaRetirada() {
             closeModal();
             renderRetiradas();
         } else {
-            alert("Falha ao criar retirada");
+            alert("Falha ao criar lote de retirada");
+        }
+    });
+}
+
+async function abrirModalConfigurarRetiradaPedido(linkId, numeroPedido, codigoCliente, nomeCliente, currentData) {
+    const modal = document.getElementById('modal-configurar-retirada-pedido');
+    modal.classList.add('active');
+
+    // Limpar e definir inputs ocultos
+    document.getElementById('input-config-retirada-item-id').value = linkId || '';
+    document.getElementById('input-config-retirada-cliente-codigo').value = codigoCliente || '';
+    document.getElementById('input-config-retirada-nome-terceiro').value = currentData.retirada_nome_terceiro || '';
+    document.getElementById('input-config-retirada-veiculo-placa').value = currentData.retirada_veiculo_placa || '';
+    document.getElementById('input-config-retirada-veiculo-modelo').value = currentData.retirada_veiculo_modelo || '';
+
+    // Reset rádio buttons
+    const respVal = currentData.retirada_tipo || 'CLIENTE';
+    document.querySelector(`input[name="radio-config-retirada-resp"][value="${respVal}"]`).checked = true;
+    document.getElementById('group-config-retirada-nome-terceiro').style.display = respVal === 'TERCEIRO' ? 'block' : 'none';
+
+    // Determinar se já tem veículo temporário salvo
+    const hasVeiculoSalvo = currentData.retirada_veiculo_modelo || currentData.retirada_veiculo_placa;
+    const hasPlaca = currentData.retirada_veiculo_placa;
+    const veicMode = (hasVeiculoSalvo && hasPlaca) ? 'TEMPORARIO' : 'CADASTRADO';
+    document.querySelector(`input[name="radio-config-retirada-veiculo"][value="${veicMode}"]`).checked = true;
+    
+    document.getElementById('group-config-retirada-veiculo-temporario').style.display = veicMode === 'TEMPORARIO' ? 'block' : 'none';
+    document.getElementById('group-config-retirada-veiculo-cadastrado').style.display = veicMode === 'CADASTRADO' ? 'block' : 'none';
+
+    const closeModal = () => modal.classList.remove('active');
+    document.getElementById('modal-configurar-retirada-close').onclick = closeModal;
+    document.getElementById('btn-cancelar-config-retirada').onclick = closeModal;
+
+    // Listeners do tipo de responsavel
+    const radiosResp = document.querySelectorAll('input[name="radio-config-retirada-resp"]');
+    radiosResp.forEach(r => {
+        r.onchange = (e) => {
+            const val = e.target.value;
+            document.getElementById('group-config-retirada-nome-terceiro').style.display = val === 'TERCEIRO' ? 'block' : 'none';
+        };
+    });
+
+    // Listeners do tipo de veiculo
+    const radiosVeiculo = document.querySelectorAll('input[name="radio-config-retirada-veiculo"]');
+    radiosVeiculo.forEach(r => {
+        r.onchange = (e) => {
+            const val = e.target.value;
+            if (val === 'TEMPORARIO') {
+                document.getElementById('group-config-retirada-veiculo-temporario').style.display = 'block';
+                document.getElementById('group-config-retirada-veiculo-cadastrado').style.display = 'none';
+            } else {
+                document.getElementById('group-config-retirada-veiculo-temporario').style.display = 'none';
+                document.getElementById('group-config-retirada-veiculo-cadastrado').style.display = 'block';
+            }
+        };
+    });
+
+    // Carregar bens móveis do cliente
+    const selectVeiculo = document.getElementById('select-config-retirada-veiculo-cadastrado');
+    selectVeiculo.innerHTML = '<option value="">Carregando veículos...</option>';
+
+    try {
+        const r = await fetch(`${API_BASE}/api/cliente/${codigoCliente}`, {
+            headers: { "Authorization": `Bearer ${window.Auth ? window.Auth.getToken() : ''}` }
+        });
+        if (!r.ok) throw new Error();
+        const cliente = await r.json();
+        const bens = cliente.bens_moveis || [];
+        
+        if (bens.length === 0) {
+            selectVeiculo.innerHTML = '<option value="">Nenhum veículo cadastrado no cliente</option>';
+            document.querySelector('input[name="radio-config-retirada-veiculo"][value="TEMPORARIO"]').checked = true;
+            document.getElementById('group-config-retirada-veiculo-temporario').style.display = 'block';
+            document.getElementById('group-config-retirada-veiculo-cadastrado').style.display = 'none';
+        } else {
+            let opts = '<option value="">Selecione um Veículo do Cliente...</option>';
+            bens.forEach((b, idx) => {
+                const txt = `${b.marca || ''} ${b.modelo || ''}`.trim() || `Veículo #${idx + 1}`;
+                const selected = (txt === currentData.retirada_veiculo_modelo) ? 'selected' : '';
+                opts += `<option value="${txt}" ${selected}>${txt}</option>`;
+            });
+            selectVeiculo.innerHTML = opts;
+        }
+    } catch(e) {
+        console.error("Erro ao carregar bens moveis:", e);
+        selectVeiculo.innerHTML = '<option value="">Erro ao carregar veículos</option>';
+    }
+
+    const btnSalvar = document.getElementById('btn-salvar-config-retirada');
+    const newBtnSalvar = btnSalvar.cloneNode(true);
+    btnSalvar.parentNode.replaceChild(newBtnSalvar, btnSalvar);
+
+    newBtnSalvar.addEventListener('click', async () => {
+        const tipoResp = document.querySelector('input[name="radio-config-retirada-resp"]:checked').value;
+        const nomeTerceiro = document.getElementById('input-config-retirada-nome-terceiro').value.trim();
+        if (tipoResp === 'TERCEIRO' && !nomeTerceiro) {
+            alert("Preencha o nome do terceiro autorizado.");
+            return;
+        }
+
+        const tipoVeiculo = document.querySelector('input[name="radio-config-retirada-veiculo"]:checked').value;
+        const veiculoClienteSel = selectVeiculo.value;
+        const placaTemp = document.getElementById('input-config-retirada-veiculo-placa').value.trim();
+        const modeloTemp = document.getElementById('input-config-retirada-veiculo-modelo').value.trim();
+
+        if (tipoVeiculo === 'CADASTRADO' && bens.length > 0 && !veiculoClienteSel) {
+            alert("Selecione um veículo cadastrado do cliente.");
+            return;
+        }
+        if (tipoVeiculo === 'TEMPORARIO' && !placaTemp) {
+            alert("Preencha a placa do veículo temporário.");
+            return;
+        }
+
+        let payload = {
+            retirada_tipo: tipoResp,
+            retirada_nome_terceiro: tipoResp === 'TERCEIRO' ? nomeTerceiro : null,
+            retirada_veiculo_placa: tipoVeiculo === 'TEMPORARIO' ? placaTemp : null,
+            retirada_veiculo_modelo: tipoVeiculo === 'TEMPORARIO' ? modeloTemp : veiculoClienteSel
+        };
+
+        newBtnSalvar.textContent = "Salvando...";
+        newBtnSalvar.disabled = true;
+
+        try {
+            let activeLinkId = linkId;
+            if (!activeLinkId) {
+                // Vincula o pedido fisicamente ao lote primeiro
+                const assocResp = await fetch(`${API_BASE}/api/relatorios/cargas/${cargaEmGerenciamento}/pedidos`, {
+                    method: "POST",
+                    headers: {
+                        "Content-Type": "application/json",
+                        "Authorization": `Bearer ${window.Auth ? window.Auth.getToken() : ''}`
+                    },
+                    body: JSON.stringify({ numero_pedido: numeroPedido, ordem_carregamento: 0 })
+                });
+                
+                if (!assocResp.ok) {
+                    const err = await assocResp.json();
+                    alert("Erro ao associar o pedido: " + (err.detail || "Erro desconhecido"));
+                    return;
+                }
+                const assocData = await assocResp.json();
+                activeLinkId = assocData.id_carga_pedido;
+            }
+
+            const putResp = await fetch(`${API_BASE}/api/relatorios/cargas/pedidos/${activeLinkId}`, {
+                method: "PUT",
+                headers: {
+                    "Content-Type": "application/json",
+                    "Authorization": `Bearer ${window.Auth ? window.Auth.getToken() : ''}`
+                },
+                body: JSON.stringify(payload)
+            });
+
+            if (putResp.ok) {
+                closeModal();
+                carregarPedidosDaCargaAtiva();
+            } else {
+                alert("Falha ao salvar configurações de retirada.");
+            }
+        } catch(e) {
+            console.error("Erro ao salvar config:", e);
+            alert("Erro de conexão ao salvar configurações.");
+        } finally {
+            newBtnSalvar.textContent = "Salvar Configurações";
+            newBtnSalvar.disabled = false;
         }
     });
 }
@@ -629,6 +730,11 @@ async function abrirGerenciadorDeCarga(idCarga, numCarga) {
 
         const dataCarregamentoVal = carga.data_carregamento ? carga.data_carregamento.split('T')[0] : "";
 
+        // Regra de Data Passada:
+        const hojeStr = new Date().toISOString().split('T')[0];
+        const isDataPassada = dataCarregamentoVal && dataCarregamentoVal < hojeStr;
+        window.cargaAtivaReadOnly = isDataPassada || activeRelatorio === 'historico-retiradas' || activeRelatorio === 'historico' || activeRelatorio === 'resumo';
+
         let transpOptions = '<option value="">Selecione um Transporte...</option>';
         transportes.forEach(t => {
             const selected = (t.id === carga.id_transporte) ? 'selected' : '';
@@ -645,7 +751,7 @@ async function abrirGerenciadorDeCarga(idCarga, numCarga) {
                     <div class="compact-header-info">
                         <div class="ch-field" style="min-width: 150px;">
                             <label>Filial</label>
-                            <input type="text" id="in-header-filial" class="os-input os-input-sm" value="Carregando..." disabled>
+                            <input type="text" id="in-header-filial" class="os-input os-input-sm" value="${filialFornecedor}" disabled>
                         </div>
                         <div class="ch-field" style="width: 80px;">
                             <label>Nº Carga</label>
@@ -655,23 +761,6 @@ async function abrirGerenciadorDeCarga(idCarga, numCarga) {
                 </div>
             `;
         } else if (activeRelatorio === "retiradas" || activeRelatorio === "historico-retiradas") {
-            let responsavelTexto = "";
-            if (carga.tipo_retirada === 'TERCEIRO') {
-                responsavelTexto = `Terceiro - ${carga.retirada_nome_terceiro || '-'}`;
-            } else {
-                responsavelTexto = "Cliente Retira";
-            }
-            
-            let veiculoTexto = "";
-            if (carga.retirada_veiculo_temporario_placa) {
-                veiculoTexto = `${carga.retirada_veiculo_temporario_modelo || 'Temp'} (${carga.retirada_veiculo_temporario_placa})`;
-            } else if (carga.id_transporte) {
-                const transpObj = transportes.find(t => t.id === carga.id_transporte);
-                veiculoTexto = transpObj ? `${transpObj.modelo || 'Cadastrado'} (${transpObj.veiculo_placa})` : 'Cadastrado';
-            } else {
-                veiculoTexto = "Não definido";
-            }
-
             uiActiveHeader.style.display = 'block';
             uiActiveHeader.innerHTML = `
                 <div class="compact-header-container">
@@ -686,18 +775,10 @@ async function abrirGerenciadorDeCarga(idCarga, numCarga) {
                         </div>
                         <div class="ch-field">
                             <label>Data Retirada</label>
-                            <input type="date" id="in-header-data" class="os-input os-input-sm" value="${dataCarregamentoVal}" ${(activeRelatorio === 'historico-retiradas') ? 'disabled' : ''}>
+                            <input type="date" id="in-header-data" class="os-input os-input-sm" value="${dataCarregamentoVal}" ${window.cargaAtivaReadOnly ? 'disabled' : ''}>
                         </div>
-                        <div class="ch-field" style="min-width: 160px; margin-right: 15px;">
-                            <label>Responsável</label>
-                            <span style="font-size: 12px; font-weight: 600; color: var(--os-text-primary); display: block; padding-top: 6px;">${responsavelTexto}</span>
-                        </div>
-                        <div class="ch-field" style="min-width: 160px; margin-right: 15px;">
-                            <label>Veículo</label>
-                            <span style="font-size: 12px; font-weight: 600; color: var(--os-text-primary); display: block; padding-top: 6px;">${veiculoTexto}</span>
-                        </div>
-                        <div class="ch-actions">
-                            ${(activeRelatorio === 'retiradas') ? '<button class="os-btn os-btn-primary os-btn-sm" id="btn-save-carga-header">Salvar Tela</button>' : ''}
+                        <div class="ch-actions" style="margin-left: auto;">
+                            ${(activeRelatorio === 'retiradas' && !window.cargaAtivaReadOnly) ? '<button class="os-btn os-btn-primary os-btn-sm" id="btn-save-carga-header">Salvar Data</button>' : ''}
                         </div>
                     </div>
                 </div>
@@ -717,16 +798,16 @@ async function abrirGerenciadorDeCarga(idCarga, numCarga) {
                     </div>
                     <div class="ch-field">
                         <label>Data Carregamento</label>
-                        <input type="date" id="in-header-data" class="os-input os-input-sm" value="${dataCarregamentoVal}" min="${new Date().toISOString().split('T')[0]}" ${(activeRelatorio === 'resumo' || activeRelatorio === 'historico') ? 'disabled' : ''}>
+                        <input type="date" id="in-header-data" class="os-input os-input-sm" value="${dataCarregamentoVal}" min="${hojeStr}" ${window.cargaAtivaReadOnly ? 'disabled' : ''}>
                     </div>
                     <div class="ch-field" style="flex: 1;">
                         <label>Transporte</label>
-                        <select id="sel-header-transporte" class="os-input os-input-sm" ${(activeRelatorio === 'resumo' || activeRelatorio === 'historico') ? 'disabled' : ''}>
+                        <select id="sel-header-transporte" class="os-input os-input-sm" ${window.cargaAtivaReadOnly ? 'disabled' : ''}>
                             ${transpOptions}
                         </select>
                     </div>
                     <div class="ch-actions">
-                        ${(activeRelatorio !== 'resumo' && activeRelatorio !== 'historico') ? '<button class="os-btn os-btn-primary os-btn-sm" id="btn-save-carga-header">Salvar Tela</button>' : ''}
+                        ${(!window.cargaAtivaReadOnly) ? '<button class="os-btn os-btn-primary os-btn-sm" id="btn-save-carga-header">Salvar Tela</button>' : ''}
                     </div>
                 </div>
                 <div id="totais-peso-header" style="margin-top: 10px; font-size: 13px; font-weight: 700; display: none; gap: 20px; padding-left: 165px;">
@@ -931,7 +1012,7 @@ async function abrirGerenciadorDeCarga(idCarga, numCarga) {
     const btnBusca = document.getElementById('btn-buscar-pedidos');
     const descSpan = document.querySelector('.relatorio-desc-view');
     
-    if (activeRelatorio === "resumo" || activeRelatorio === "romaneio" || activeRelatorio === "historico") {
+    if (activeRelatorio === "resumo" || activeRelatorio === "romaneio" || activeRelatorio === "historico" || activeRelatorio === "historico-retiradas" || window.cargaAtivaReadOnly) {
         btnBusca.style.display = 'none';
         if (descSpan) descSpan.style.display = 'none';
         
@@ -1071,11 +1152,25 @@ async function carregarPedidosDaCargaAtiva() {
             });
 
             if (window.activeRelatorio === "formacao" || window.activeRelatorio === "retiradas") {
-                // "tabelão" layout
+                const isSugerido = p.id_carga_pedido === null || p.id_carga_pedido === undefined;
+                const badgeSugerido = (window.activeRelatorio === "retiradas" && isSugerido) ? '<span style="font-size: 9px; font-weight: bold; background: #e0f2fe; color: #0369a1; padding: 2px 4px; border-radius: 4px; display: block; margin-top: 4px; text-align: center; width: fit-content; margin-left: auto; margin-right: auto;">Sugerido</span>' : '';
+                
+                let btnsAcao = "";
+                if (window.activeRelatorio === "retiradas") {
+                    btnsAcao = `<button class="os-btn os-btn-sm os-btn-primary btn-configurar-retirada-pedido" data-id="${p.id_carga_pedido || ''}" data-numero-pedido="${p.numero_pedido}" data-codigo-cliente="${p.codigo_cliente}" data-nome-cliente="${p.cliente_nome}" data-tipo="${p.retirada_tipo || ''}" data-terceiro="${p.retirada_nome_terceiro || ''}" data-modelo="${p.retirada_veiculo_modelo || ''}" data-placa="${p.retirada_veiculo_placa || ''}" style="margin-right: 5px; padding: 4px 8px; font-size: 11px;" ${window.cargaAtivaReadOnly ? 'disabled' : ''} title="Configurar Retirada">⚙️ Retirada</button>`;
+                }
+                
+                if (!isSugerido && !window.cargaAtivaReadOnly) {
+                    btnsAcao += `<button class="os-btn os-btn-sm os-btn-danger btn-remover-pedido-carga" data-id="${p.id_carga_pedido}" title="Remover">&times;</button>`;
+                }
+
                 h += `
                     <tr>
                         <td style="font-size: 12px; padding: 12px 4px; white-space: nowrap; width: 60px;">${window.numCargaAtiva || ''}</td>
-                        <td style="font-size: 12px; padding: 12px 4px; white-space: nowrap; width: 60px;"><strong>${p.numero_pedido}</strong></td>
+                        <td style="font-size: 12px; padding: 12px 4px; white-space: nowrap; width: 60px;">
+                            <strong>${p.numero_pedido}</strong>
+                            ${badgeSugerido}
+                        </td>
                         <td style="font-size: 12px; padding: 12px 4px; white-space: nowrap; width: 65px; text-align: right;">${peso} kg</td>
                         <td style="font-size: 12px; padding: 12px 4px; white-space: nowrap; width: 65px; text-align: right;">${Math.round(p.peso_bruto_total || 0)} kg</td>
                         <td style="font-size: 12px; padding: 12px 4px; white-space: nowrap; width: 50px;">${p.codigo_cliente || '-'}</td>
@@ -1085,12 +1180,12 @@ async function carregarPedidosDaCargaAtiva() {
                         <td style="font-size: 12px; padding: 12px 4px; white-space: nowrap;">${p.rota_principal || '-'}</td>
                         <td style="font-size: 12px; padding: 12px 4px; white-space: nowrap;">${p.rota_aproximacao || '-'}</td>
                         <td style="padding: 12px 4px;">
-                            <select class="os-input os-input-sm in-status" data-numero-pedido="${p.numero_pedido}" data-id-pedido="${p.id_pedido}" data-original="${p.status_codigo}" style="font-size: 10px; padding: 4px; height: 26px; width: 100%;">
+                            <select class="os-input os-input-sm in-status" data-numero-pedido="${p.numero_pedido}" data-id-pedido="${p.id_pedido}" data-original="${p.status_codigo}" style="font-size: 10px; padding: 4px; height: 26px; width: 100%;" ${window.cargaAtivaReadOnly ? 'disabled' : ''}>
                                 ${statusOptionsHtml}
                             </select>
                         </td>
                         <td style="white-space: nowrap; padding: 12px 4px; text-align: center;">
-                            <button class="os-btn os-btn-sm os-btn-danger btn-remover-pedido-carga" data-id="${p.id_carga_pedido}" title="Remover">&times;</button>
+                            ${btnsAcao}
                         </td>
                     </tr>
                 `;
@@ -1103,13 +1198,13 @@ async function carregarPedidosDaCargaAtiva() {
                         <td style="font-size: 12px;">${p.cliente_nome || '-'}</td>
                         <td style="font-size: 12px;">${p.nome_fantasia || '-'}</td>
                         <td style="font-size: 12px;">${p.municipio || '-'}</td>
-                        <td style="vertical-align: top;"><input type="number" class="os-input os-input-sm in-ordem" value="${p.ordem_carregamento || ''}" data-id="${p.id_carga_pedido}" style="padding: 2px; font-size: 12px; height: 32px; text-align: right; width: 60px;" ${(activeRelatorio === 'historico' || activeRelatorio === 'historico-retiradas') ? 'disabled' : ''}></td>
+                        <td style="vertical-align: top;"><input type="number" class="os-input os-input-sm in-ordem" value="${p.ordem_carregamento || ''}" data-id="${p.id_carga_pedido}" style="padding: 2px; font-size: 12px; height: 32px; text-align: right; width: 60px;" ${window.cargaAtivaReadOnly ? 'disabled' : ''}></td>
                         <td style="white-space: nowrap; font-size: 12px; vertical-align: top; text-align: right;">${peso} kg</td>
                         <td style="white-space: nowrap; font-size: 12px; vertical-align: top; text-align: right;">${Math.round(p.peso_bruto_total || 0)} kg</td>
-                        <td style="font-size: 12px; vertical-align: top;">${(activeRelatorio === 'historico' || activeRelatorio === 'historico-retiradas') ? badgeStatus : `<textarea class="os-input os-input-sm in-obs" data-id="${p.id_carga_pedido}" style="padding: 4px; font-size: 12px; height: 38px; resize: vertical; width: 100%; min-width: 200px;">${p.observacoes || ''}</textarea>`}</td>
+                        <td style="font-size: 12px; vertical-align: top;">${window.cargaAtivaReadOnly ? badgeStatus : `<textarea class="os-input os-input-sm in-obs" data-id="${p.id_carga_pedido}" style="padding: 4px; font-size: 12px; height: 38px; resize: vertical; width: 100%; min-width: 200px;">${p.observacoes || ''}</textarea>`}</td>
                         <td style="white-space: nowrap; vertical-align: top; padding-top: 4px; text-align: center;">
                             <button onclick="abrirModalDetalhesPedido('${p.id_pedido}')" class="os-btn os-btn-sm os-btn-secondary" title="Ver Produtos do Pedido">Ver</button>
-                            ${(activeRelatorio !== 'historico' && activeRelatorio !== 'historico-retiradas') ? `<button class="os-btn os-btn-sm os-btn-danger btn-remover-pedido-carga" data-id="${p.id_carga_pedido}" title="Remover">&times;</button>` : ''}
+                            ${(!window.cargaAtivaReadOnly) ? `<button class="os-btn os-btn-sm os-btn-danger btn-remover-pedido-carga" data-id="${p.id_carga_pedido}" title="Remover">&times;</button>` : ''}
                         </td>
                     </tr>
                 `;
@@ -1117,15 +1212,17 @@ async function carregarPedidosDaCargaAtiva() {
                 // Caso genérico ou fallbacks
                 h += `
                     <tr>
-                        <td style="width: 80px;"><input type="number" class="os-input os-input-sm in-ordem" value="${p.ordem_carregamento || ''}" data-id="${p.id_carga_pedido}"></td>
+                        <td style="width: 80px;"><input type="number" class="os-input os-input-sm in-ordem" value="${p.ordem_carregamento || ''}" data-id="${p.id_carga_pedido}" ${window.cargaAtivaReadOnly ? 'disabled' : ''}></td>
                         <td><strong>${p.numero_pedido}</strong></td>
                         <td>${p.cliente_nome || '-'}</td>
                         <td>${p.municipio || '-'}</td>
                         <td>${peso}</td>
-                        <td><input type="text" class="os-input os-input-sm in-obs" value="${p.observacoes || ''}" data-id="${p.id_carga_pedido}"></td>
+                        <td><input type="text" class="os-input os-input-sm in-obs" value="${p.observacoes || ''}" data-id="${p.id_carga_pedido}" ${window.cargaAtivaReadOnly ? 'disabled' : ''}></td>
                         <td>
-                            <button class="os-btn os-btn-sm os-btn-primary btn-save-item" data-id="${p.id_carga_pedido}">Salvar</button>
-                            <button class="os-btn os-btn-sm os-btn-danger btn-remover-pedido-carga" data-id="${p.id_carga_pedido}">Remover</button>
+                            ${(!window.cargaAtivaReadOnly) ? `
+                                <button class="os-btn os-btn-sm os-btn-primary btn-save-item" data-id="${p.id_carga_pedido}">Salvar</button>
+                                <button class="os-btn os-btn-sm os-btn-danger btn-remover-pedido-carga" data-id="${p.id_carga_pedido}">Remover</button>
+                            ` : ''}
                         </td>
                     </tr>
                 `;
@@ -1133,7 +1230,23 @@ async function carregarPedidosDaCargaAtiva() {
         });
         tbodyPedidos.innerHTML = h;
 
-        // No row save listeners anymore.
+        // Registrar listeners de configuração de retirada
+        document.querySelectorAll('.btn-configurar-retirada-pedido').forEach(btn => {
+            btn.addEventListener('click', (e) => {
+                const b = e.currentTarget;
+                const linkId = b.dataset.id ? parseInt(b.dataset.id) : null;
+                const numPed = b.dataset.numeroPedido;
+                const codCli = b.dataset.codigoCliente;
+                const nomCli = b.dataset.nomeCliente;
+                const currentData = {
+                    retirada_tipo: b.dataset.tipo,
+                    retirada_nome_terceiro: b.dataset.terceiro,
+                    retirada_veiculo_modelo: b.dataset.modelo,
+                    retirada_veiculo_placa: b.dataset.placa
+                };
+                abrirModalConfigurarRetiradaPedido(linkId, numPed, codCli, nomCli, currentData);
+            });
+        });
 
         document.querySelectorAll('.btn-remover-pedido-carga').forEach(btn => {
             btn.addEventListener('click', async (e) => {
@@ -1154,16 +1267,21 @@ async function carregarPedidosDaCargaAtiva() {
                  const codigo = s.codigo || s.code || s.id || s;
                  const rotulo = s.rotulo || s.label || s.nome || codigo;
                  opts += `<option value="${codigo}">${rotulo}</option>`;
-            });
+             });
             selMassStatus.innerHTML = opts;
 
-            selMassStatus.addEventListener('change', (e) => {
-                const val = e.target.value;
-                if (!val) return;
-                document.querySelectorAll('.in-status').forEach(sel => {
-                    sel.value = val;
+            if (window.cargaAtivaReadOnly) {
+                selMassStatus.disabled = true;
+            } else {
+                selMassStatus.disabled = false;
+                selMassStatus.addEventListener('change', (e) => {
+                    const val = e.target.value;
+                    if (!val) return;
+                    document.querySelectorAll('.in-status').forEach(sel => {
+                        sel.value = val;
+                    });
                 });
-            });
+            }
         }
     } catch (e) {
         console.error(e);

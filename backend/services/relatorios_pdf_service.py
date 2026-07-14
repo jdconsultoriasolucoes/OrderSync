@@ -225,7 +225,11 @@ def gerar_pdf_romaneio(db, carga_id: int) -> bytes:
             c.entrega_municipio as cidade,
             p.peso_total_kg,
             COALESCE(pb.peso_bruto_total, p.peso_total_kg) as peso_bruto_total,
-            cp.observacoes as obs_carga
+            cp.observacoes as obs_carga,
+            cp.retirada_tipo,
+            cp.retirada_nome_terceiro,
+            cp.retirada_veiculo_modelo,
+            cp.retirada_veiculo_placa
         FROM tb_cargas_pedidos cp
         JOIN tb_pedidos p ON cp.numero_pedido = p.id_pedido::text
         LEFT JOIN (
@@ -351,7 +355,29 @@ def gerar_pdf_romaneio(db, carga_id: int) -> bytes:
         cliente_p = Paragraph(clean_client_name(p.cliente), style_wrapped)
         fantasia_p = Paragraph(str(p.nome_fantasia or ""), style_wrapped)
         cidade_p = Paragraph(str(p.cidade or ""), style_wrapped)
-        obs_p = Paragraph(str(p.obs_carga or ""), style_wrapped)
+        obs_text = str(p.obs_carga or "").strip()
+        if is_ret:
+            ret_resp = ""
+            if (p.retirada_tipo or "").upper() == "TERCEIRO":
+                ret_resp = f"Terceiro: {p.retirada_nome_terceiro or '-'}"
+            else:
+                ret_resp = "Cliente Retira"
+                
+            ret_veic = ""
+            if p.retirada_veiculo_placa:
+                ret_veic = f"Veículo: {p.retirada_veiculo_modelo or ''} ({p.retirada_veiculo_placa})"
+            elif p.retirada_veiculo_modelo:
+                ret_veic = f"Veículo: {p.retirada_veiculo_modelo}"
+            else:
+                ret_veic = "Veículo: -"
+
+            ret_info = f"[{ret_resp} | {ret_veic}]"
+            if obs_text:
+                obs_text = f"{ret_info} - {obs_text}"
+            else:
+                obs_text = ret_info
+
+        obs_p = Paragraph(obs_text, style_wrapped)
 
         data.append([
             codigo_p,
