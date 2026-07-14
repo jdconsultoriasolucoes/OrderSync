@@ -1217,7 +1217,6 @@ async function carregarPedidosDaCargaAtiva() {
         }
 
         // Também precisamos da data da carga para exibir na coluna "Data"
-        const isRet = activeRelatorio === 'retiradas' || activeRelatorio === 'historico-retiradas';
         const urlFetchCarga = isRet
             ? `${API_BASE}/api/retiradas/${cargaEmGerenciamento}`
             : `${API_BASE}/api/relatorios/cargas/${cargaEmGerenciamento}`;
