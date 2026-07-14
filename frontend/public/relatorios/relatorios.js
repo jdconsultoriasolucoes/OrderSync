@@ -191,17 +191,22 @@ async function renderStandardCargaList(tipo) {
 
         let html = "";
         cargas.forEach(c => {
+            const isRet = activeRelatorio === 'retiradas' || activeRelatorio === 'historico-retiradas';
+            const numExibir = isRet ? c.numero_retirada : c.numero_carga;
+            const nomeExibir = isRet ? c.nome_retirada : c.nome_carga;
+            const dtCarr = isRet ? c.data_retirada : c.data_carregamento;
+
             const dispData = c.data_criacao ? new Date(c.data_criacao).toLocaleDateString('pt-BR') : "-";
-            const dispDataCarregamento = c.data_carregamento ? new Date(c.data_carregamento).toLocaleDateString('pt-BR') : "-";
+            const dispDataCarregamento = dtCarr ? new Date(dtCarr).toLocaleDateString('pt-BR') : "-";
             html += `
                 <tr>
                     <td style="text-align: center;"><input type="checkbox" class="chk-carga-item" value="${c.id}"></td>
-                    <td><strong>${c.numero_carga}</strong></td>
-                    <td>${c.nome_carga || '-'}</td>
+                    <td><strong>${numExibir || '-'}</strong></td>
+                    <td>${nomeExibir || '-'}</td>
                     <td>${dispData}</td>
                     ${(activeRelatorio === 'historico' || activeRelatorio === 'historico-retiradas' || activeRelatorio === 'retiradas') ? `<td>${dispDataCarregamento}</td>` : ''}
                     <td>
-                       <button class="os-btn os-btn-sm os-btn-secondary btn-gerenciar-carga" data-id="${c.id}" data-nome="${c.numero_carga}">${(activeRelatorio === 'historico' || activeRelatorio === 'historico-retiradas') ? 'Visualizar' : `Gerenciar / Ver ${tipo}`}</button>
+                       <button class="os-btn os-btn-sm os-btn-secondary btn-gerenciar-carga" data-id="${c.id}" data-nome="${numExibir}">${(activeRelatorio === 'historico' || activeRelatorio === 'historico-retiradas') ? 'Visualizar' : `Gerenciar / Ver ${tipo}`}</button>
                        ${(activeRelatorio === 'formacao' || activeRelatorio === 'retiradas') ? `<button class="os-btn os-btn-sm os-btn-danger btn-excluir-carga" data-id="${c.id}">Excluir</button>` : ''}
                     </td>
                 </tr>
