@@ -261,12 +261,13 @@ app.include_router(usuario.router)
 app.include_router(fornecedor.router)
 app.include_router(dashboard.router)
 
-from routers import system_tables, transporte, relatorios, vendedores, catalogo_referencias
+from routers import system_tables, transporte, relatorios, vendedores, catalogo_referencias, retiradas
 app.include_router(system_tables.router)
 
 # ---- Novos Módulos de Relatórios/Logística ----
 app.include_router(transporte.router)
 app.include_router(relatorios.router)
+app.include_router(retiradas.router)
 app.include_router(captacao_pedidos.router, prefix="/captacao-pedidos", tags=["Captacao Pedidos"])
 app.include_router(vendedores.router, prefix="/vendedores", tags=["Vendedores"])
 app.include_router(automation.router)

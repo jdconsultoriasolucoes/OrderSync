@@ -751,3 +751,262 @@ def _desenhar_romaneio_logic(c, carga, pedidos, width, height):
     tw, th = table.wrap(width - 1.4*cm, height)
     table.drawOn(c, 0.7*cm, y - th)
     return y - th
+
+
+def gerar_pdf_romaneio_retirada(db, retirada_id: int) -> bytes:
+    sql_retirada = text("""
+        SELECT * FROM tb_retiradas WHERE id = :rid
+    """)
+    retirada = db.execute(sql_retirada, {"rid": retirada_id}).mappings().first()
+    if not retirada: return None
+
+    sql_pedidos = text("""SELECT 
+            p.id_pedido,
+            p.codigo_cliente,
+            p.pedido_supra,
+            COALESCE(c.cadastro_nome_cliente, p.cliente) AS cliente,
+            c.cadastro_nome_fantasia as nome_fantasia,
+            c.entrega_municipio as cidade,
+            p.peso_total_kg,
+            p.status,
+            COALESCE(pb.peso_bruto_total, p.peso_total_kg) as peso_bruto_total,
+            rp.observacoes as obs_carga,
+            rp.retirada_tipo,
+            rp.retirada_nome_terceiro,
+            rp.retirada_veiculo_modelo,
+            rp.retirada_veiculo_placa,
+            rp.retirada_horario
+        FROM tb_retiradas_pedidos rp
+        JOIN tb_pedidos p ON rp.numero_pedido = p.id_pedido::text
+        LEFT JOIN (
+             SELECT 
+                 id_pedido,
+                 SUM(i.quantidade * COALESCE(prod.peso_bruto, prod.peso, 0)) as peso_bruto_total
+             FROM tb_pedidos_itens i
+             LEFT JOIN (
+                 SELECT codigo_supra, MAX(peso) as peso, MAX(peso_bruto) as peso_bruto 
+                 FROM t_cadastro_produto_v2 GROUP BY codigo_supra
+             ) prod ON prod.codigo_supra = i.codigo
+             GROUP BY id_pedido
+        ) pb ON pb.id_pedido = p.id_pedido
+        LEFT JOIN public.t_cadastro_cliente_v2 c ON c.cadastro_codigo_da_empresa::text = p.codigo_cliente
+        WHERE rp.id_retirada = :rid
+        ORDER BY rp.id
+    """)
+    pedidos = db.execute(sql_pedidos, {"rid": retirada_id}).mappings().all()
+
+    buffer = io.BytesIO()
+    pagesize = landscape(A4)
+    c = canvas.Canvas(buffer, pagesize=pagesize)
+    width, height = pagesize
+
+    titulo_pdf = "ROMANEIO DE RETIRADA"
+    y = _draw_header(c, width, height, titulo_pdf)
+
+    c.setFillColor(colors.black)
+    c.setFont("Helvetica-Bold", 10)
+    
+    data_retirada = retirada.get('data_retirada')
+    data_str = data_retirada.strftime('%d/%m/%Y') if data_retirada else '____/____/____'
+    
+    total_liq_val = sum(p.peso_total_kg or 0 for p in pedidos)
+    total_bruto_val = sum(p.peso_bruto_total or 0 for p in pedidos)
+
+    c.drawString(0.7*cm, y, f"Filial: SUPRA LOG")
+    c.drawString(6.0*cm, y, f"RETIRADA Nº: {retirada.get('numero_retirada') or ''}")
+    c.drawString(11.5*cm, y, f"DATA RETIRADA: {data_str}")
+    c.drawRightString(width - 0.7*cm, y, f"P. LÍQ: {_br_number(total_liq_val, 0)} kg   |   P. BRUTO: {_br_number(total_bruto_val, 0)} kg")
+    y -= 0.6*cm
+    y -= 0.7*cm
+
+    styles = getSampleStyleSheet()
+    style_wrapped = copy(styles["Normal"])
+    style_wrapped.fontSize = 8
+    style_wrapped.leading = 9
+    style_wrapped.textColor = colors.black
+
+    style_header_col = copy(styles["Normal"])
+    style_header_col.fontSize = 8
+    style_header_col.leading = 9
+    style_header_col.textColor = colors.white
+    style_header_col.fontName = 'Helvetica-Bold'
+    style_header_col.alignment = 2  # Right
+
+    style_header_left = copy(styles["Normal"])
+    style_header_left.fontSize = 8
+    style_header_left.leading = 9
+    style_header_left.textColor = colors.white
+    style_header_left.fontName = 'Helvetica-Bold'
+    style_header_left.alignment = 0  # Left
+
+    data_hora_hdr = Paragraph("DATA / HORA", style_header_left)
+    status_hdr = Paragraph("STATUS", style_header_left)
+    pedido_hdr = Paragraph("PEDIDO (SIS/SUPRA)", style_header_left)
+    cliente_hdr = Paragraph("CLIENTE", style_header_left)
+    municipio_hdr = Paragraph("MUNICÍPIO", style_header_left)
+    peso_liq_hdr = Paragraph("PESO LÍQ.", style_header_col)
+    veiculo_hdr = Paragraph("VEÍCULO / PLACA", style_header_left)
+    obs_hdr = Paragraph("OBSERVAÇÃO", style_header_left)
+
+    data = [[data_hora_hdr, status_hdr, pedido_hdr, cliente_hdr, municipio_hdr, peso_liq_hdr, veiculo_hdr, obs_hdr]]
+
+    for p in pedidos:
+        horario = str(p.retirada_horario or "").strip()
+        data_hora_txt = f"{data_str} {horario}" if horario else f"{data_str}"
+        data_hora_p = Paragraph(data_hora_txt, style_wrapped)
+
+        status_p = Paragraph(str(p.status or "").strip() or "Pendente", style_wrapped)
+
+        supra_text = str(p.pedido_supra or "").strip()
+        pedido_txt = f"{p.id_pedido} / {supra_text}" if supra_text and supra_text != "---" else f"{p.id_pedido}"
+        pedido_p = Paragraph(pedido_txt, style_wrapped)
+
+        cod = str(p.codigo_cliente or "").strip()
+        if not cod or "nao cadastrado" in cod.lower() or "não cadastrado" in cod.lower():
+            cod = "Não Cadastrado"
+        nome_cli = clean_client_name(p.cliente)
+        fantasia = str(p.nome_fantasia or "").strip()
+        cliente_txt = f"{cod} - {nome_cli}"
+        if fantasia:
+            cliente_txt += f" ({fantasia})"
+        cliente_p = Paragraph(cliente_txt, style_wrapped)
+
+        cidade_p = Paragraph(str(p.cidade or ""), style_wrapped)
+        peso_liq_txt = Paragraph(_br_number(p.peso_total_kg, 0), style_wrapped)
+
+        ret_resp = "Terceiro" if (p.retirada_tipo or "").upper() == "TERCEIRO" else "Cliente"
+        if ret_resp == "Terceiro" and p.retirada_nome_terceiro:
+            ret_resp = f"Terceiro: {p.retirada_nome_terceiro}"
+        
+        ret_veic = ""
+        if p.retirada_veiculo_placa:
+            ret_veic = f"{p.retirada_veiculo_modelo or ''} ({p.retirada_veiculo_placa})"
+        elif p.retirada_veiculo_modelo:
+            ret_veic = f"{p.retirada_veiculo_modelo}"
+        else:
+            ret_veic = "-"
+        veic_txt = f"{ret_resp} | {ret_veic}"
+        veiculo_p = Paragraph(veic_txt, style_wrapped)
+
+        obs_p = Paragraph(str(p.obs_carga or "").strip() or "---", style_wrapped)
+
+        data.append([
+            data_hora_p,
+            status_p,
+            pedido_p,
+            cliente_p,
+            cidade_p,
+            peso_liq_txt,
+            veiculo_p,
+            obs_p
+        ])
+
+    table = Table(data, colWidths=[2.8*cm, 2.0*cm, 2.5*cm, 7.5*cm, 2.5*cm, 1.8*cm, 4.2*cm, 5.0*cm], repeatRows=1)
+    style = TableStyle([
+        ('BACKGROUND', (0, 0), (-1, 0), SUPRA_BAR),
+        ('TEXTCOLOR', (0, 0), (-1, 0), colors.white),
+        ('ALIGN', (0, 0), (-1, -1), 'LEFT'),
+        ('ALIGN', (5, 0), (5, -1), 'RIGHT'),
+        ('VALIGN', (0, 0), (-1, -1), 'MIDDLE'),
+        ('GRID', (0, 0), (-1, -1), 0.5, colors.grey),
+    ])
+    for i in range(1, len(data)):
+        if i % 2 == 0: style.add('BACKGROUND', (0, i), (-1, i), SUPRA_BG_LIGHT)
+    
+    table.setStyle(style)
+    tw, th = table.wrap(width - 1.4*cm, height)
+    table.drawOn(c, 0.7*cm, y - th)
+
+    c.showPage()
+    c.save()
+    buffer.seek(0)
+    return buffer.read()
+
+
+def gerar_pdf_resumo_produtos_retirada(db, retirada_id: int) -> bytes:
+    sql_resumo = text("""SELECT 
+            i.codigo as item_codigo,
+            MAX(i.nome) as item_nome,
+            SUM(i.quantidade) as qtd_total,
+            MAX(i.embalagem) as item_embalagem,
+            MAX(COALESCE(prod.estoque_disponivel, 0)) AS estoque_disponivel,
+            MAX(COALESCE(prod.estoque_futuro, 0)) AS estoque_futuro,
+            MAX(CAST(prod.peso AS FLOAT)) AS peso_unitario,
+            MAX(CAST(COALESCE(prod.peso_bruto, prod.peso, 0) AS FLOAT)) AS peso_bruto_unitario,
+            CAST(SUM(i.quantidade * COALESCE(prod.peso, 0)) AS FLOAT) AS peso_liquido_total,
+            CAST(SUM(i.quantidade * COALESCE(prod.peso_bruto, prod.peso, 0)) AS FLOAT) AS peso_bruto_total
+        FROM tb_retiradas_pedidos rp
+        JOIN tb_pedidos p ON rp.numero_pedido = p.id_pedido::text
+        JOIN tb_pedidos_itens i ON i.id_pedido = p.id_pedido
+        LEFT JOIN (
+            SELECT codigo_supra, MAX(CAST(peso AS FLOAT)) as peso, MAX(CAST(peso_bruto AS FLOAT)) as peso_bruto, MAX(estoque_disponivel) as estoque_disponivel, MAX(estoque_futuro) as estoque_futuro
+            FROM t_cadastro_produto_v2
+            GROUP BY codigo_supra
+        ) prod ON prod.codigo_supra = i.codigo
+        WHERE rp.id_retirada = :rid
+        GROUP BY i.codigo, i.nome
+        HAVING SUM(i.quantidade) > 0
+        ORDER BY peso_liquido_total DESC""")
+    produtos = db.execute(sql_resumo, {"rid": retirada_id}).mappings().all()
+    retirada = db.execute(text("SELECT * FROM tb_retiradas WHERE id = :rid"), {"rid": retirada_id}).mappings().first()
+    if not retirada: return None
+
+    buffer = io.BytesIO()
+    pagesize = A4
+    c = canvas.Canvas(buffer, pagesize=pagesize)
+    width, height = pagesize
+
+    total_liq = sum(p["peso_liquido_total"] or 0.0 for p in produtos)
+    total_bruto = sum(p["peso_bruto_total"] or 0.0 for p in produtos)
+
+    y = _draw_header(c, width, height, "RESUMO DE PRODUTOS (RETIRADA)")
+    c.setFont("Helvetica-Bold", 10)
+    c.setFillColor(colors.black)
+    c.drawString(0.7*cm, y, f"Filial: SUPRA LOG")
+    c.drawString(7.0*cm, y, f"RETIRADA Nº: {retirada.get('numero_retirada') or ''}")
+    
+    data_retirada = retirada.get('data_retirada')
+    data_str = data_retirada.strftime('%d/%m/%Y') if data_retirada else '____/____/____'
+    c.drawRightString(width - 0.7*cm, y, f"DATA RETIRADA: {data_str}")
+    y -= 0.5*cm
+
+    c.setFont("Helvetica-Bold", 9)
+    c.drawString(7.0*cm, y, f"TOTAL P. LÍQ: {_br_number(total_liq, 0)} kg   |   TOTAL P. BRUTO: {_br_number(total_bruto, 0)} kg")
+    y -= 0.8*cm
+
+    data = [["CÓDIGO", "DESCRIÇÃO", "Peso\nEMB.", "Emb.", "QTD", "P. LÍQ"]]
+    
+    for p in produtos:
+        peso_unit = p["peso_unitario"] or 0.0
+        data.append([
+            p["item_codigo"] or "",
+            p["item_nome"] or "",
+            _br_number(peso_unit, 3),
+            p["item_embalagem"] or "",
+            _br_number(p["qtd_total"], 0),
+            _br_number(p["peso_liquido_total"], 0)
+        ])
+
+    table = Table(data, colWidths=[2.2*cm, 9.8*cm, 1.8*cm, 1.8*cm, 1.8*cm, 2.2*cm], repeatRows=1)
+    style = TableStyle([
+        ('BACKGROUND', (0, 0), (-1, 0), SUPRA_BAR),
+        ('TEXTCOLOR', (0, 0), (-1, 0), colors.white),
+        ('ALIGN', (0, 0), (-1, -1), 'LEFT'),
+        ('ALIGN', (2, 0), (2, -1), 'RIGHT'),
+        ('ALIGN', (4, 0), (5, -1), 'RIGHT'),
+        ('VALIGN', (0, 0), (-1, -1), 'MIDDLE'),
+        ('GRID', (0, 0), (-1, -1), 0.5, colors.grey),
+        ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
+        ('FONTSIZE', (0, 0), (-1, 0), 8),
+    ])
+    for i in range(1, len(data)):
+        if i % 2 == 0: style.add('BACKGROUND', (0, i), (-1, i), SUPRA_BG_LIGHT)
+    
+    table.setStyle(style)
+    tw, th = table.wrap(width - 1.4*cm, height)
+    table.drawOn(c, 0.7*cm, y - th)
+
+    c.showPage()
+    c.save()
+    buffer.seek(0)
+    return buffer.read()

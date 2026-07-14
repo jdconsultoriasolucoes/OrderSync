@@ -173,9 +173,9 @@ async function renderStandardCargaList(tipo) {
         if (activeRelatorio === 'historico') {
             urlToFetch = `${API_BASE}/api/relatorios/cargas/historico`;
         } else if (activeRelatorio === 'retiradas') {
-            urlToFetch = `${API_BASE}/api/relatorios/retiradas`;
+            urlToFetch = `${API_BASE}/api/retiradas`;
         } else if (activeRelatorio === 'historico-retiradas') {
-            urlToFetch = `${API_BASE}/api/relatorios/retiradas/historico`;
+            urlToFetch = `${API_BASE}/api/retiradas/historico`;
         }
 
         const resp = await fetch(urlToFetch, {
@@ -221,9 +221,10 @@ async function renderStandardCargaList(tipo) {
             btn.addEventListener('click', async (e) => {
                 const labelConf = activeRelatorio === 'retiradas' ? 'Retirada' : 'Carga';
                 if (confirm(`Excluir definitivamente esta ${labelConf}?`)) {
-                    const id = e.target.dataset.id;
-                    const row = e.target.closest('tr');
-                    await fetch(`${API_BASE}/api/relatorios/cargas/${id}`, {
+                    const endpointDel = (activeRelatorio === 'retiradas' || activeRelatorio === 'historico-retiradas')
+                        ? `${API_BASE}/api/retiradas/${id}`
+                        : `${API_BASE}/api/relatorios/cargas/${id}`;
+                    await fetch(endpointDel, {
                         method: "DELETE",
                         headers: { "Authorization": `Bearer ${window.Auth ? window.Auth.getToken() : ''}` }
                     });
@@ -511,14 +512,12 @@ async function abrirModalNovaRetirada() {
         }
 
         const payload = {
-            nome_carga: nomeRetirada,
-            numero_carga: "",
-            is_retirada: true,
-            data_carregamento: dataRetirada,
-            id_transporte: null
+            nome_retirada: nomeRetirada,
+            numero_retirada: "",
+            data_retirada: dataRetirada
         };
 
-        const nwResp = await fetch(`${API_BASE}/api/relatorios/cargas`, {
+        const nwResp = await fetch(`${API_BASE}/api/retiradas`, {
             method: "POST",
             headers: {
                 "Content-Type": "application/json",
@@ -721,9 +720,13 @@ async function abrirModalConfigurarRetiradaPedido(linkId, numeroPedido, codigoCl
 
         try {
             let activeLinkId = linkId;
+            const isRet = activeRelatorio === 'retiradas' || activeRelatorio === 'historico-retiradas';
             if (!activeLinkId) {
                 // Vincula o pedido fisicamente ao lote primeiro
-                const assocResp = await fetch(`${API_BASE}/api/relatorios/cargas/${cargaEmGerenciamento}/pedidos`, {
+                const endpointAssoc = isRet 
+                    ? `${API_BASE}/api/retiradas/${cargaEmGerenciamento}/pedidos`
+                    : `${API_BASE}/api/relatorios/cargas/${cargaEmGerenciamento}/pedidos`;
+                const assocResp = await fetch(endpointAssoc, {
                     method: "POST",
                     headers: {
                         "Content-Type": "application/json",
@@ -738,10 +741,13 @@ async function abrirModalConfigurarRetiradaPedido(linkId, numeroPedido, codigoCl
                     return;
                 }
                 const assocData = await assocResp.json();
-                activeLinkId = assocData.id_carga_pedido;
+                activeLinkId = isRet ? assocData.id : assocData.id_carga_pedido;
             }
 
-            const putResp = await fetch(`${API_BASE}/api/relatorios/cargas/pedidos/${activeLinkId}`, {
+            const endpointPut = isRet 
+                ? `${API_BASE}/api/retiradas/pedidos/${activeLinkId}`
+                : `${API_BASE}/api/relatorios/cargas/pedidos/${activeLinkId}`;
+            const putResp = await fetch(endpointPut, {
                 method: "PUT",
                 headers: {
                     "Content-Type": "application/json",
@@ -782,8 +788,12 @@ async function abrirGerenciadorDeCarga(idCarga, numCarga) {
 
     // Carregar Detalhes da Carga e Transportes
     try {
+        const isRet = activeRelatorio === 'retiradas' || activeRelatorio === 'historico-retiradas';
+        const urlFetchCarga = isRet
+            ? `${API_BASE}/api/retiradas/${idCarga}`
+            : `${API_BASE}/api/relatorios/cargas/${idCarga}`;
         const [respCarga, respTransp, respStatus] = await Promise.all([
-            fetch(`${API_BASE}/api/relatorios/cargas/${idCarga}`, {
+            fetch(urlFetchCarga, {
                 headers: { "Authorization": `Bearer ${window.Auth ? window.Auth.getToken() : ''}` }
             }),
             fetch(`${API_BASE}/api/transporte`, {
@@ -796,11 +806,11 @@ async function abrirGerenciadorDeCarga(idCarga, numCarga) {
 
         const carga = await respCarga.json();
         const transportes = await respTransp.json();
-        
         const statusRaw = await respStatus.json();
         window.relatoriosStatusList = Array.isArray(statusRaw) ? statusRaw : (statusRaw.data || statusRaw.items || []);
 
-        const dataCarregamentoVal = carga.data_carregamento ? carga.data_carregamento.split('T')[0] : "";
+        const dtVal = isRet ? carga.data_retirada : carga.data_carregamento;
+        const dataCarregamentoVal = dtVal ? dtVal.split('T')[0] : "";
 
         // Regra de Data Passada:
         const hojeStr = new Date().toISOString().split('T')[0];
@@ -1036,14 +1046,19 @@ async function abrirGerenciadorDeCarga(idCarga, numCarga) {
 
                 let ok = true;
                 if (dtEl) {
-                    const payload = {
-                        data_carregamento: dt || null
-                    };
-                    if (trEl) {
+                    const isRet = activeRelatorio === 'retiradas' || activeRelatorio === 'historico-retiradas';
+                    const payload = isRet 
+                        ? { data_retirada: dt || null }
+                        : { data_carregamento: dt || null };
+                    if (trEl && !isRet) {
                         payload.id_transporte = parseInt(tr) || null;
                     }
 
-                    const updateResp = await fetch(`${API_BASE}/api/relatorios/cargas/${idCarga}`, {
+                    const endpointHeaderPut = isRet
+                        ? `${API_BASE}/api/retiradas/${idCarga}`
+                        : `${API_BASE}/api/relatorios/cargas/${idCarga}`;
+
+                    const updateResp = await fetch(endpointHeaderPut, {
                         method: 'PUT',
                         headers: {
                             'Content-Type': 'application/json',
@@ -1111,7 +1126,11 @@ async function carregarPedidosDaCargaAtiva() {
     tbodyPedidos.innerHTML = `<tr><td colspan="${activeRelatorio === 'resumo' ? 6 : 9}" style="text-align:center;">Carregando pedidos...</td></tr>`;
     
     try {
-        const resp = await fetch(`${API_BASE}/api/relatorios/cargas/${cargaEmGerenciamento}/pedidos-detalhes`, {
+        const isRet = activeRelatorio === 'retiradas' || activeRelatorio === 'historico-retiradas';
+        const urlFetchDet = isRet
+            ? `${API_BASE}/api/retiradas/${cargaEmGerenciamento}/pedidos-detalhes`
+            : `${API_BASE}/api/relatorios/cargas/${cargaEmGerenciamento}/pedidos-detalhes`;
+        const resp = await fetch(urlFetchDet, {
             headers: { "Authorization": `Bearer ${window.Auth ? window.Auth.getToken() : ''}` }
         });
         const ped = await resp.json();
@@ -1198,11 +1217,16 @@ async function carregarPedidosDaCargaAtiva() {
         }
 
         // Também precisamos da data da carga para exibir na coluna "Data"
-        const respCarga = await fetch(`${API_BASE}/api/relatorios/cargas/${cargaEmGerenciamento}`, {
+        const isRet = activeRelatorio === 'retiradas' || activeRelatorio === 'historico-retiradas';
+        const urlFetchCarga = isRet
+            ? `${API_BASE}/api/retiradas/${cargaEmGerenciamento}`
+            : `${API_BASE}/api/relatorios/cargas/${cargaEmGerenciamento}`;
+        const respCarga = await fetch(urlFetchCarga, {
             headers: { "Authorization": `Bearer ${window.Auth ? window.Auth.getToken() : ''}` }
         });
         const cargaInfo = await respCarga.json();
-        const dispDataCarga = cargaInfo.data_carregamento ? new Date(cargaInfo.data_carregamento).toLocaleDateString('pt-BR') : "-";
+        const dtCarga = isRet ? cargaInfo.data_retirada : cargaInfo.data_carregamento;
+        const dispDataCarga = dtCarga ? new Date(dtCarga).toLocaleDateString('pt-BR') : "-";
 
         if (ped.length === 0) {
             tbodyPedidos.innerHTML = '';
@@ -1324,9 +1348,14 @@ async function carregarPedidosDaCargaAtiva() {
 
         document.querySelectorAll('.btn-remover-pedido-carga').forEach(btn => {
             btn.addEventListener('click', async (e) => {
-                if (!confirm("Remover este pedido da carga?")) return;
+                const isRet = activeRelatorio === 'retiradas' || activeRelatorio === 'historico-retiradas';
+                const labelConf = isRet ? 'retirada' : 'carga';
+                if (!confirm(`Remover este pedido da ${labelConf}?`)) return;
                 const linkId = e.currentTarget.dataset.id;
-                await fetch(`${API_BASE}/api/relatorios/cargas/pedidos/${linkId}`, {
+                const endpointRemover = isRet
+                    ? `${API_BASE}/api/retiradas/pedidos/${linkId}`
+                    : `${API_BASE}/api/relatorios/cargas/pedidos/${linkId}`;
+                await fetch(endpointRemover, {
                     method: 'DELETE',
                     headers: { "Authorization": `Bearer ${window.Auth ? window.Auth.getToken() : ''}` }
                 });
@@ -1538,9 +1567,13 @@ function abrirModalBuscaPedidos() {
             return;
         }
         
+        const isRet = activeRelatorio === 'retiradas' || activeRelatorio === 'historico-retiradas';
+        const endpointVinc = isRet 
+            ? `${API_BASE}/api/retiradas/${cargaEmGerenciamento}/pedidos`
+            : `${API_BASE}/api/relatorios/cargas/${cargaEmGerenciamento}/pedidos`;
         for (const chk of checked) {
             try {
-                const resp = await fetch(`${API_BASE}/api/relatorios/cargas/${cargaEmGerenciamento}/pedidos`, {
+                const resp = await fetch(endpointVinc, {
                     method: "POST",
                     headers: {
                         "Content-Type": "application/json",
@@ -1637,8 +1670,13 @@ btnExport.addEventListener('click', () => {
         cargaId = cargaEmGerenciamento;
     }
 
+    const isRetTab = window.activeRelatorio === "retiradas" || window.activeRelatorio === "historico-retiradas";
     if (window.activeRelatorio === "formacao") endpoint = `${API_BASE}/api/relatorios/carga/${cargaId}/pdf`;
-    else if (window.activeRelatorio === "romaneio" || window.activeRelatorio === "retiradas" || window.activeRelatorio === "historico-retiradas") endpoint = `${API_BASE}/api/relatorios/romaneio/${cargaId}/pdf`;
+    else if (window.activeRelatorio === "romaneio" || isRetTab) {
+        endpoint = isRetTab 
+            ? `${API_BASE}/api/retiradas/romaneio/${cargaId}/pdf`
+            : `${API_BASE}/api/relatorios/romaneio/${cargaId}/pdf`;
+    }
     else if (window.activeRelatorio === "resumo") endpoint = `${API_BASE}/api/relatorios/resumo-produtos/${cargaId}/pdf`;
 
     if (endpoint) {
