@@ -490,24 +490,24 @@ def atualizar_cliente(cliente_id: int, cliente_data: dict) -> dict:
         
         # Rotina para atualizar código do cliente em pedidos e tabelas de preços órfãos
         novo_codigo = cliente.cadastro_codigo_da_empresa
-        # Se antes o código era vazio/nulo e agora possui um código válido
-        if (not codigo_antigo or not str(codigo_antigo).strip()) and (novo_codigo and str(novo_codigo).strip()):
+        # Sempre que o cliente possuir um código válido, rodamos o sync para garantir a consistência
+        if novo_codigo and str(novo_codigo).strip():
             if nome_antigo and str(nome_antigo).strip():
-                logger.info(f"Atualizando pedidos e tabelas de preços órfãos para o cliente '{nome_antigo}' com o novo código '{novo_codigo}'")
+                logger.info(f"Atualizando pedidos e tabelas de preços órfãos para o cliente '{nome_antigo}' com o código '{novo_codigo}'")
                 
-                # Atualizar tb_pedidos
+                # Atualizar tb_pedidos (inclui 'Não cadastrado' e 'Nao cadastrado')
                 res_pedidos = db.execute(text("""
                     UPDATE tb_pedidos 
                     SET codigo_cliente = :novo_codigo 
-                    WHERE (codigo_cliente IS NULL OR codigo_cliente = '') 
+                    WHERE (codigo_cliente IS NULL OR codigo_cliente = '' OR LOWER(TRIM(codigo_cliente)) IN ('não cadastrado', 'nao cadastrado')) 
                       AND LOWER(TRIM(cliente)) = LOWER(TRIM(:nome_antigo))
                 """), {"novo_codigo": str(novo_codigo).strip(), "nome_antigo": str(nome_antigo).strip()})
                 
-                # Atualizar tb_tabela_preco
+                # Atualizar tb_tabela_preco (inclui 'Não cadastrado' e 'Nao cadastrado')
                 res_tabelas = db.execute(text("""
                     UPDATE tb_tabela_preco 
                     SET codigo_cliente = :novo_codigo 
-                    WHERE (codigo_cliente IS NULL OR codigo_cliente = '') 
+                    WHERE (codigo_cliente IS NULL OR codigo_cliente = '' OR LOWER(TRIM(codigo_cliente)) IN ('não cadastrado', 'nao cadastrado')) 
                       AND LOWER(TRIM(cliente)) = LOWER(TRIM(:nome_antigo))
                 """), {"novo_codigo": str(novo_codigo).strip(), "nome_antigo": str(nome_antigo).strip()})
                 
