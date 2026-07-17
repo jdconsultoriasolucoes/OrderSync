@@ -34,7 +34,7 @@
     </header>
 
     <!-- ========== SIDEBAR GLOBAL ========== -->
-        <nav class="os-sidebar" id="sidebar">
+            <nav class="os-sidebar" id="sidebar">
         <div class="os-sidebar-section">Menu</div>
         <ul>
             <li><a href="/index.html">
@@ -54,7 +54,30 @@
                     <svg class="os-nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                         <path d="M20.59 13.41l-7.17 7.17a2 2 0 0 1-2.83 0L2 12V2h10l8.59 8.59a2 2 0 0 1 0 2.82z"></path>
                         <line x1="7" y1="7" x2="7.01" y2="7"></line>
-                    </svg> Tabela de Preço
+                    </svg> Criar Tabela
+                </a></li>
+            <li><a href="/tabela_preco/listar_tabelas.html">
+                    <svg class="os-nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <line x1="8" y1="6" x2="21" y2="6" />
+                        <line x1="8" y1="12" x2="21" y2="12" />
+                        <line x1="8" y1="18" x2="21" y2="18" />
+                        <line x1="3" y1="6" x2="3.01" y2="6" />
+                        <line x1="3" y1="12" x2="3.01" y2="12" />
+                        <line x1="3" y1="18" x2="3.01" y2="18" />
+                    </svg> Consultar Tabelas
+                </a></li>
+            <li><a href="/pedidos/criacao_pedido.html">
+                    <svg class="os-nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2" />
+                        <rect x="8" y="2" width="8" height="4" rx="1" ry="1" />
+                        <line x1="12" y1="11" x2="12" y2="17" />
+                        <line x1="9" y1="14" x2="15" y2="14" />
+                    </svg> Criar Pedido
+                </a></li>
+            <li><a href="/pedido/pedido.html">
+                    <svg class="os-nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M6 2L3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z" />
+                    </svg> Consultar Pedidos
                 </a></li>
             <li><a href="/produto/produto.html">
                     <svg class="os-nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
@@ -70,18 +93,13 @@
                         <path d="M16 3.13a4 4 0 0 1 0 7.75" />
                     </svg> Clientes
                 </a></li>
-            <li><a href="/pedido/pedido.html">
-                    <svg class="os-nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                        <path d="M6 2L3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z" />
-                    </svg> Consultar Pedidos
-                </a></li>
             <li><a href="/gerenciar_tabelas/gerenciar_tabelas.html">
                     <svg class="os-nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                         <rect x="3" y="3" width="7" height="7" />
                         <rect x="14" y="3" width="7" height="7" />
                     </svg> Atualizar Catálogo
                 </a></li>
-            <li><a href="/relatorios/relatorios.html" class="active">
+            <li><a href="/relatorios/relatorios.html">
                     <svg class="os-nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                         <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
                         <polyline points="14 2 14 8 20 8" />
@@ -95,7 +113,7 @@
                         <line x1="18" y1="20" x2="18" y2="10"></line>
                         <line x1="12" y1="20" x2="12" y2="4"></line>
                         <line x1="6" y1="20" x2="6" y2="14"></line>
-                    </svg> Relatórios
+                    </svg> Relatórios de Vendas
                 </a></li>
         </ul>
         <div class="os-sidebar-section">Sistema</div>
@@ -104,6 +122,12 @@
                     <svg class="os-nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                         <path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z" />
                     </svg> Configuração E-mail
+                </a></li>
+            <li><a href="/profile/profile.html">
+                    <svg class="os-nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" />
+                        <circle cx="12" cy="7" r="4" />
+                    </svg> Profile
                 </a></li>
             <li><a href="/usuarios.html">
                     <svg class="os-nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
@@ -132,15 +156,32 @@
     <main class="os-main module-relatorios">
         <div class="relatorios-container">
             <aside class="relatorios-sidebar">
-                <h3 class="relatorios-sidebar-title">Relatórios</h3>
-                <ul class="relatorios-menu" id="relatorios-menu">
-                    <li><button data-rel="formacao" class="active">Manutenção de Pedidos / Formação de Cargas</button>
-                    </li>
-                    <li><button data-rel="romaneio">Romaneio</button></li>
-                    <li><button data-rel="resumo">Resumo de Produtos</button></li>
-                    <li><button data-rel="captacao">Relatório p/ Captação de Pedidos</button></li>
-                    <li><button data-rel="historico">Histórico de Cargas</button></li>
-                </ul>
+                <h3 class="relatorios-sidebar-title">Logística</h3>
+                
+                <div class="relatorios-sidebar-group">
+                    <h4 class="relatorios-sidebar-group-title">Entregas</h4>
+                    <ul class="relatorios-menu" id="relatorios-menu-entrega">
+                        <li><button data-rel="formacao" class="active">Manutenção de Cargas</button></li>
+                        <li><button data-rel="romaneio">Romaneio</button></li>
+                        <li><button data-rel="resumo">Resumo de Produtos</button></li>
+                        <li><button data-rel="historico">Histórico de Cargas</button></li>
+                    </ul>
+                </div>
+
+                <div class="relatorios-sidebar-group">
+                    <h4 class="relatorios-sidebar-group-title">Retiradas</h4>
+                    <ul class="relatorios-menu" id="relatorios-menu-retirada">
+                        <li><button data-rel="retiradas">Manutenção de Retiradas</button></li>
+                        <li><button data-rel="historico-retiradas">Histórico de Retiradas</button></li>
+                    </ul>
+                </div>
+
+                <div class="relatorios-sidebar-group">
+                    <h4 class="relatorios-sidebar-group-title">Relatórios</h4>
+                    <ul class="relatorios-menu" id="relatorios-menu-relatorios">
+                        <li><button data-rel="captacao">Captação de Pedidos</button></li>
+                    </ul>
+                </div>
             </aside>
 
             <!-- Coluna 2: Área Principal (Workarea) do Relatório -->
@@ -287,6 +328,105 @@
             <div class="os-modal-footer">
                 <button class="os-btn os-btn-secondary" id="btn-cancelar-nova-carga">Cancelar</button>
                 <button class="os-btn os-btn-primary" id="btn-salvar-nova-carga">Salvar Carga</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal Nova Retirada -->
+    <div id="modal-nova-retirada" class="os-modal-backdrop">
+        <div class="os-modal-dialog" style="max-width: 500px;">
+            <div class="os-modal-header">
+                <h3 class="os-modal-title">Nova Retirada</h3>
+                <button class="os-modal-close" id="modal-nova-retirada-close">&times;</button>
+            </div>
+            <div class="os-modal-body">
+                <div class="os-form-group">
+                    <label>Nome / Descrição da Retirada</label>
+                    <input type="text" id="input-nova-retirada-nome" class="os-input" placeholder="Ex: Retiradas de Sexta" autocomplete="off">
+                </div>
+                <div class="os-form-group" style="margin-top: 15px;">
+                    <label>Data da Retirada</label>
+                    <input type="date" id="input-nova-retirada-data" class="os-input">
+                </div>
+            </div>
+            <div class="os-modal-footer">
+                <button class="os-btn os-btn-secondary" id="btn-cancelar-nova-retirada">Cancelar</button>
+                <button class="os-btn os-btn-primary" id="btn-salvar-nova-retirada">Salvar Retirada</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal Configurar Retirada do Pedido -->
+    <div id="modal-configurar-retirada-pedido" class="os-modal-backdrop">
+        <div class="os-modal-dialog" style="max-width: 500px;">
+            <div class="os-modal-header">
+                <h3 class="os-modal-title">Configurar Retirada do Pedido</h3>
+                <button class="os-modal-close" id="modal-configurar-retirada-close">&times;</button>
+            </div>
+            <div class="os-modal-body">
+                <input type="hidden" id="input-config-retirada-item-id">
+                <input type="hidden" id="input-config-retirada-cliente-codigo">
+
+                <div class="os-form-group">
+                    <label style="display: block; margin-bottom: 5px; font-weight: 600;">Quem vai retirar?</label>
+                    <div style="display: flex; gap: 20px; align-items: center; margin-bottom: 10px;">
+                        <label style="cursor: pointer; display: flex; align-items: center; gap: 5px;">
+                            <input type="radio" name="radio-config-retirada-resp" value="CLIENTE" checked> O próprio Cliente
+                        </label>
+                        <label style="cursor: pointer; display: flex; align-items: center; gap: 5px;">
+                            <input type="radio" name="radio-config-retirada-resp" value="TERCEIRO"> Um Terceiro
+                        </label>
+                    </div>
+                </div>
+
+                <div class="os-form-group" id="group-config-retirada-nome-terceiro" style="display: none; margin-top: 10px;">
+                    <label>Nome do Terceiro Autorizado</label>
+                    <input type="text" id="input-config-retirada-nome-terceiro" class="os-input" placeholder="Nome completo de quem vai retirar" autocomplete="off">
+                </div>
+
+                <div class="os-form-group" style="margin-top: 15px;">
+                    <label style="display: block; margin-bottom: 5px; font-weight: 600;">Veículo de Retirada</label>
+                    <div style="display: flex; gap: 20px; align-items: center; margin-bottom: 10px;">
+                        <label style="cursor: pointer; display: flex; align-items: center; gap: 5px;">
+                            <input type="radio" name="radio-config-retirada-veiculo" value="CADASTRADO" checked> Veículo do Cliente
+                        </label>
+                        <label style="cursor: pointer; display: flex; align-items: center; gap: 5px;">
+                            <input type="radio" name="radio-config-retirada-veiculo" value="TEMPORARIO"> Veículo Temporário
+                        </label>
+                    </div>
+                </div>
+
+                <div class="os-form-group" id="group-config-retirada-veiculo-cadastrado" style="margin-top: 10px;">
+                    <label>Selecione o Veículo</label>
+                    <select id="select-config-retirada-veiculo-cadastrado" class="os-input">
+                        <!-- Preenchido via JS baseado nos bens móveis do cliente -->
+                    </select>
+                </div>
+
+                <div id="group-config-retirada-veiculo-temporario" style="display: none; margin-top: 10px; border: 1px dashed var(--os-border); padding: 12px; border-radius: 6px; background: var(--os-bg-secondary);">
+                    <div class="os-form-group">
+                        <label>Placa do Veículo</label>
+                        <input type="text" id="input-config-retirada-veiculo-placa" class="os-input" placeholder="ABC-1234" autocomplete="off" style="text-transform: uppercase;">
+                    </div>
+                    <div class="os-form-group" style="margin-top: 10px;">
+                        <label>Modelo do Veículo</label>
+                        <input type="text" id="input-config-retirada-veiculo-modelo" class="os-input" placeholder="Ex: Fiorino Branca" autocomplete="off">
+                    </div>
+                </div>
+
+                <div class="os-form-group" style="margin-top: 15px;">
+                    <label style="font-weight: 600;">Horário Previsto da Retirada</label>
+                    <input type="time" id="input-config-retirada-horario" class="os-input">
+                </div>
+
+                <div class="os-form-group" style="margin-top: 15px;">
+                    <label style="font-weight: 600;">Observações do Pedido</label>
+                    <textarea id="input-config-retirada-observacoes" class="os-input" rows="2" placeholder="Observações específicas para este pedido..." style="resize: vertical;"></textarea>
+                </div>
+            </div>
+            <div class="os-modal-footer">
+                <button class="os-btn os-btn-secondary" id="btn-cancelar-config-retirada">Cancelar</button>
+                <button class="os-btn os-btn-primary" id="btn-salvar-config-retirada">Salvar Configurações</button>
             </div>
         </div>
     </div>

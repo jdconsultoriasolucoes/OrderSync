@@ -472,6 +472,10 @@ def atualizar_cliente(cliente_id: int, cliente_data: dict) -> dict:
                 if _cpf and re.sub(r"\D", "", existente.cadastro_cpf or "") == re.sub(r"\D", "", _cpf):
                     raise BusinessRuleException(f"Já existe outro cliente usando o CPF {_cpf}")
         
+        # Guardar valores antigos antes da alteração
+        nome_antigo = cliente.cadastro_nome_cliente
+        codigo_antigo = cliente.cadastro_codigo_da_empresa
+
         for col in ClienteModelV2.__table__.columns:
             key = col.name
             if key == 'id' or key == 'data_criacao':
@@ -483,6 +487,31 @@ def atualizar_cliente(cliente_id: int, cliente_data: dict) -> dict:
                     cliente.data_inativacao = datetime.now()
                 
                 setattr(cliente, key, new_val)
+        
+        # Rotina para atualizar código do cliente em pedidos e tabelas de preços órfãos
+        novo_codigo = cliente.cadastro_codigo_da_empresa
+        # Se antes o código era vazio/nulo e agora possui um código válido
+        if (not codigo_antigo or not str(codigo_antigo).strip()) and (novo_codigo and str(novo_codigo).strip()):
+            if nome_antigo and str(nome_antigo).strip():
+                logger.info(f"Atualizando pedidos e tabelas de preços órfãos para o cliente '{nome_antigo}' com o novo código '{novo_codigo}'")
+                
+                # Atualizar tb_pedidos
+                res_pedidos = db.execute(text("""
+                    UPDATE tb_pedidos 
+                    SET codigo_cliente = :novo_codigo 
+                    WHERE (codigo_cliente IS NULL OR codigo_cliente = '') 
+                      AND LOWER(TRIM(cliente)) = LOWER(TRIM(:nome_antigo))
+                """), {"novo_codigo": str(novo_codigo).strip(), "nome_antigo": str(nome_antigo).strip()})
+                
+                # Atualizar tb_tabela_preco
+                res_tabelas = db.execute(text("""
+                    UPDATE tb_tabela_preco 
+                    SET codigo_cliente = :novo_codigo 
+                    WHERE (codigo_cliente IS NULL OR codigo_cliente = '') 
+                      AND LOWER(TRIM(cliente)) = LOWER(TRIM(:nome_antigo))
+                """), {"novo_codigo": str(novo_codigo).strip(), "nome_antigo": str(nome_antigo).strip()})
+                
+                logger.info(f"Atualização concluída: {res_pedidos.rowcount} pedidos e {res_tabelas.rowcount} tabelas de preços atualizados.")
         
         cliente.data_atualizacao = datetime.now()
         db.commit()

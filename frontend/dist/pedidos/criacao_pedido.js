@@ -2986,7 +2986,7 @@ async function onCancelar(e) {
 function goToListarTabelas() {
   const ctx = getCtxId();
   clearPickerBridgeFor(ctx);
-  window.location.href = 'listar_tabelas.html';
+  window.location.href = '../tabela_preco/listar_tabelas.html';
 }
 
 
@@ -3457,7 +3457,6 @@ function toggleHeader() {
 
 function setupMobileToolbar() {
   // Bind Toolbar Buttons
-  document.getElementById('btn-mobile-list')?.addEventListener('click', () => goToListarTabelas());
 
   document.getElementById('btn-mobile-cancel')?.addEventListener('click', (e) => {
     onCancelar(e);
@@ -3592,6 +3591,11 @@ function renderMobileCards() {
           const mark = item.markup || 0;
           if (parseFloat(inpMark.value) !== mark) inpMark.value = mark.toFixed(2);
         }
+        const inpQtde = card.querySelector('.mobile-input-qtde');
+        if (inpQtde && document.activeElement !== inpQtde) {
+          const qtde = item.quantidade !== undefined ? item.quantidade : 0;
+          if (parseInt(inpQtde.value, 10) !== qtde) inpQtde.value = qtde;
+        }
       }
     });
     return;
@@ -3695,11 +3699,15 @@ function renderMobileCards() {
 
         <div class="header-content ${expandedSet.has(String(idx)) ? 'expanded' : 'collapsed'}">
          <div style="padding-top: 12px;">
-            <!-- Row 1: Vlr Unit | Markup % -->
-            <div class="mobile-grid-2col" style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 12px;">
+            <!-- Row 1: Vlr Unit | Qtde | Markup % -->
+            <div class="mobile-grid-3col" style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 12px; margin-bottom: 12px;">
                 <div class="card-field">
                     <label>Valor Unit.</label>
                     <input type="text" value="${fmtMoney(item.valor)}" disabled style="background: #f8fafc;">
+                </div>
+                <div class="card-field">
+                    <label>Qtde</label>
+                    <input type="number" class="mobile-input-qtde" value="${item.quantidade !== undefined ? item.quantidade : 0}" min="0" step="1" ${markupDisabled ? 'disabled' : ''}>
                 </div>
                 <div class="card-field">
                     <label>Markup %</label>
@@ -3792,6 +3800,20 @@ function renderMobileCards() {
         renderTabela();
         snapshotSelecionadosParaPicker();
         refreshToolbarEnablement();
+      });
+    }
+
+    // Qtde Change
+    const qtdeInput = card.querySelector('.mobile-input-qtde');
+    if (!markupDisabled && qtdeInput) {
+      qtdeInput.addEventListener('change', (e) => {
+        e.stopPropagation();
+        let val = parseInt(e.target.value, 10);
+        if (isNaN(val) || val < 0) val = 0;
+        e.target.value = val;
+        item.quantidade = val;
+        renderTabela();
+        recalcTudo();
       });
     }
 

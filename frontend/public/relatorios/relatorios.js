@@ -280,7 +280,9 @@ async function renderCaptacaoPedidos() {
         </div>
         <div style="flex:1; min-width: 120px;">
             <label style="display:block; font-size: 11px; margin-bottom:4px; font-weight: 600;">Vendedor</label>
-            <input type="text" class="os-input os-input-sm" data-f="vendedor" placeholder="Filtrar..." oninput="filtrarCaptacao(this)">
+            <select class="os-select os-select-sm" id="filtro-vendedor-captacao" data-f="vendedor" onchange="filtrarCaptacao(this)" style="width: 100%;">
+                <option value="">Todos</option>
+            </select>
         </div>
         <div style="flex:1; min-width: 120px;">
             <label style="display:block; font-size: 11px; margin-bottom:4px; font-weight: 600;">Cliente/Cód.</label>
@@ -293,6 +295,32 @@ async function renderCaptacaoPedidos() {
     `;
     const containerTabela = thead.closest('.os-table-wrap');
     containerTabela.parentNode.insertBefore(divFiltros, containerTabela);
+
+    // Carregar vendedores do backend para popular o filtro
+    try {
+        const respVend = await fetch(`${API_BASE}/vendedores`, {
+            headers: { "Authorization": `Bearer ${window.Auth ? window.Auth.getToken() : ''}` }
+        });
+        if (respVend.ok) {
+            const vends = await respVend.json();
+            const selVendedor = document.getElementById('filtro-vendedor-captacao');
+            if (selVendedor) {
+                // Filtra apenas ativos
+                vends.filter(v => v.ativo).forEach(v => {
+                    const opt = document.createElement('option');
+                    opt.value = (v.nome || "").toLowerCase();
+                    opt.textContent = v.nome;
+                    selVendedor.appendChild(opt);
+                });
+                // Restaura filtro anterior se houver
+                if (window.filtrosCaptacao && window.filtrosCaptacao.vendedor) {
+                    selVendedor.value = window.filtrosCaptacao.vendedor;
+                }
+            }
+        }
+    } catch (err) {
+        console.error("Erro ao carregar vendedores:", err);
+    }
 
     window.paginaCaptacao = 1;
 
@@ -782,6 +810,7 @@ async function abrirModalConfigurarRetiradaPedido(linkId, numeroPedido, codigoCl
 // -----------------------------------------------------
 
 async function abrirGerenciadorDeCarga(idCarga, numCarga) {
+    window.sugeridosIgnorados = [];
     window.addEventListener('beforeunload', confirmarSaidaDaTela);
     window.cargaEmGerenciamento = idCarga;
     window.numCargaAtiva = numCarga;
@@ -830,7 +859,7 @@ async function abrirGerenciadorDeCarga(idCarga, numCarga) {
 
         if (activeRelatorio === "formacao") {
             const firstPed = (carga.pedidos_detalhes && carga.pedidos_detalhes.length > 0) ? carga.pedidos_detalhes[0] : null;
-            const filialFornecedor = firstPed ? (firstPed.fornecedor || "Matriz SUPRA LOG") : "Matriz SUPRA LOG";
+            const filialFornecedor = firstPed ? (firstPed.fornecedor || "DISPET DISTRIBUIDORA") : "DISPET DISTRIBUIDORA";
 
             uiActiveHeader.style.display = 'block';
             uiActiveHeader.innerHTML = `
@@ -854,7 +883,7 @@ async function abrirGerenciadorDeCarga(idCarga, numCarga) {
                     <div class="compact-header-info" style="align-items: center; flex-wrap: wrap;">
                         <div class="ch-field" style="min-width: 120px;">
                             <label>Filial</label>
-                            <input type="text" class="os-input os-input-sm" value="Matriz SUPRA LOG" disabled>
+                            <input type="text" class="os-input os-input-sm" value="DISPET DISTRIBUIDORA" disabled>
                         </div>
                         <div class="ch-field" style="width: 80px;">
                             <label>Nº Retirada</label>
@@ -877,7 +906,7 @@ async function abrirGerenciadorDeCarga(idCarga, numCarga) {
                 <div class="compact-header-info">
                     <div class="ch-field" style="min-width: 150px;">
                         <label>Filial</label>
-                        <input type="text" id="in-header-filial" class="os-input os-input-sm" value="Matriz SUPRA LOG" disabled>
+                        <input type="text" id="in-header-filial" class="os-input os-input-sm" value="DISPET DISTRIBUIDORA" disabled>
                     </div>
                     <div class="ch-field" style="width: 80px;">
                         <label>Nº Carga</label>
@@ -1138,7 +1167,18 @@ async function carregarPedidosDaCargaAtiva() {
         const resp = await fetch(urlFetchDet, {
             headers: { "Authorization": `Bearer ${window.Auth ? window.Auth.getToken() : ''}` }
         });
-        const ped = await resp.json();
+        let ped = await resp.json();
+
+        // Filtrar sugeridos ignorados
+        if (window.sugeridosIgnorados && window.sugeridosIgnorados.length > 0) {
+            ped = ped.filter(p => {
+                const isSugerido = p.id_carga_pedido === null || p.id_carga_pedido === undefined;
+                if (isSugerido && window.sugeridosIgnorados.includes(String(p.numero_pedido))) {
+                    return false;
+                }
+                return true;
+            });
+        }
 
         // Calcular totais para os cabeçalhos
         const totalLiq = ped.reduce((sum, p) => sum + (parseFloat(p.peso_total) || 0), 0);
@@ -1218,7 +1258,7 @@ async function carregarPedidosDaCargaAtiva() {
         // Round 3: Atuallizar Filial com o Fornecedor do primeiro pedido (se for Formação de Carga)
         if (activeRelatorio === "formacao" && ped.length > 0) {
             const elFilial = document.getElementById('in-header-filial');
-            if (elFilial) elFilial.value = ped[0].fornecedor || "Matriz SUPRA LOG";
+            if (elFilial) elFilial.value = ped[0].fornecedor || "DISPET DISTRIBUIDORA";
         }
 
         // Também precisamos da data da carga para exibir na coluna "Data"
@@ -1255,21 +1295,39 @@ async function carregarPedidosDaCargaAtiva() {
                 const isSugerido = p.id_carga_pedido === null || p.id_carga_pedido === undefined;
                 const badgeSugerido = (window.activeRelatorio === "retiradas" && isSugerido) ? '<span style="font-size: 9px; font-weight: bold; background: #e0f2fe; color: #0369a1; padding: 2px 4px; border-radius: 4px; display: block; margin-top: 4px; text-align: center; width: fit-content; margin-left: auto; margin-right: auto;">Sugerido</span>' : '';
                 
+                let rowStyle = "";
+                let statusRetBadge = "";
+                if (window.activeRelatorio === "retiradas") {
+                    const temInfos = p.retirada_tipo && p.retirada_tipo.trim() !== "";
+                    if (temInfos) {
+                        rowStyle = 'style="background-color: #f0fdf4;"'; // Verde bem clarinho premium
+                        statusRetBadge = '<span style="font-size: 9px; font-weight: bold; background: #dcfce7; color: #15803d; padding: 2px 4px; border-radius: 4px; display: block; margin-top: 4px; text-align: center; width: fit-content; margin-left: auto; margin-right: auto;">✓ Configurado</span>';
+                    } else {
+                        rowStyle = 'style="background-color: #fffbeb;"'; // Amarelo bem clarinho premium
+                        statusRetBadge = '<span style="font-size: 9px; font-weight: bold; background: #fef3c7; color: #b45309; padding: 2px 4px; border-radius: 4px; display: block; margin-top: 4px; text-align: center; width: fit-content; margin-left: auto; margin-right: auto;">⚠️ Não Configurado</span>';
+                    }
+                }
+
                 let btnsAcao = "";
                 if (window.activeRelatorio === "retiradas") {
                     btnsAcao = `<button class="os-btn os-btn-sm os-btn-primary btn-configurar-retirada-pedido" data-id="${p.id_carga_pedido || ''}" data-numero-pedido="${p.numero_pedido}" data-codigo-cliente="${p.codigo_cliente}" data-nome-cliente="${p.cliente_nome}" data-tipo="${p.retirada_tipo || ''}" data-terceiro="${p.retirada_nome_terceiro || ''}" data-modelo="${p.retirada_veiculo_modelo || ''}" data-placa="${p.retirada_veiculo_placa || ''}" data-horario="${p.retirada_horario || ''}" data-observacoes="${p.observacoes || ''}" style="margin-right: 5px; padding: 4px 8px; font-size: 11px;" ${window.cargaAtivaReadOnly ? 'disabled' : ''} title="Configurar Retirada">⚙️ Retirada</button>`;
                 }
                 
-                if (!isSugerido && !window.cargaAtivaReadOnly) {
-                    btnsAcao += `<button class="os-btn os-btn-sm os-btn-danger btn-remover-pedido-carga" data-id="${p.id_carga_pedido}" title="Remover">&times;</button>`;
+                if (!window.cargaAtivaReadOnly) {
+                    if (isSugerido) {
+                        btnsAcao += `<button class="os-btn os-btn-sm os-btn-danger btn-remover-pedido-sugerido" data-numero-pedido="${p.numero_pedido}" title="Remover">&times;</button>`;
+                    } else {
+                        btnsAcao += `<button class="os-btn os-btn-sm os-btn-danger btn-remover-pedido-carga" data-id="${p.id_carga_pedido}" title="Remover">&times;</button>`;
+                    }
                 }
 
                 h += `
-                    <tr>
+                    <tr ${rowStyle}>
                         <td style="font-size: 12px; padding: 12px 4px; white-space: nowrap; width: 60px;">${window.numCargaAtiva || ''}</td>
                         <td style="font-size: 12px; padding: 12px 4px; white-space: nowrap; width: 60px;">
                             <strong>${p.numero_pedido}</strong>
                             ${badgeSugerido}
+                            ${statusRetBadge}
                         </td>
                         <td style="font-size: 12px; padding: 12px 4px; white-space: nowrap; width: 65px; text-align: right;">${peso} kg</td>
                         <td style="font-size: 12px; padding: 12px 4px; white-space: nowrap; width: 65px; text-align: right;">${Math.round(p.peso_bruto_total || 0)} kg</td>
@@ -1363,6 +1421,16 @@ async function carregarPedidosDaCargaAtiva() {
                     method: 'DELETE',
                     headers: { "Authorization": `Bearer ${window.Auth ? window.Auth.getToken() : ''}` }
                 });
+                carregarPedidosDaCargaAtiva();
+            });
+        });
+
+        document.querySelectorAll('.btn-remover-pedido-sugerido').forEach(btn => {
+            btn.addEventListener('click', (e) => {
+                const numPed = e.currentTarget.dataset.numeroPedido;
+                if (!confirm(`Remover a sugestão do pedido ${numPed} da tela?`)) return;
+                window.sugeridosIgnorados = window.sugeridosIgnorados || [];
+                window.sugeridosIgnorados.push(String(numPed));
                 carregarPedidosDaCargaAtiva();
             });
         });
@@ -1875,7 +1943,7 @@ async function abrirModalDetalhesPedido(idPedido) {
             <!-- Cabeçalho Informativo -->
             <div style="background: var(--os-bg-secondary); padding: 15px; border-radius: 8px; border: 1px solid var(--os-border); margin-bottom: 20px; display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 10px; font-size: 13px;">
                 <div><span style="color: var(--os-text-secondary); font-weight: 600;">Cliente:</span><br> ${p.cliente || '-'}</div>
-                <div><span style="color: var(--os-text-secondary); font-weight: 600;">Filial:</span><br> ${p.fornecedor || 'Matriz SUPRA LOG'}</div>
+                <div><span style="color: var(--os-text-secondary); font-weight: 600;">Filial:</span><br> ${p.fornecedor || 'DISPET DISTRIBUIDORA'}</div>
                 <div><span style="color: var(--os-text-secondary); font-weight: 600;">Modalidade:</span><br> ${p.usar_valor_com_frete === false ? 'RETIRADA' : 'ENTREGA'}</div>
                 <div><span style="color: var(--os-text-secondary); font-weight: 600;">Tabela de Preço:</span><br> ${p.tabela_preco_nome || '-'}</div>
                 <div><span style="color: var(--os-text-secondary); font-weight: 600;">Peso Líq.:</span><br> ${parseFloat((p.peso_liquido_calculado || 0).toFixed(3))} kg</div>

@@ -415,7 +415,7 @@ def run_migrations():
             cnt = db.execute(text("SELECT COUNT(*) FROM tb_filiais")).scalar()
             if cnt == 0:
                 logger.info("Pré-populando tb_filiais...")
-                filiais_set = {"Matriz SUPRA LOG"}
+                filiais_set = {"DISPET DISTRIBUIDORA"}
                 try:
                     rows = db.execute(text("SELECT DISTINCT fornecedor FROM t_cadastro_produto_v2 WHERE fornecedor IS NOT NULL AND fornecedor != ''")).scalars().all()
                     for r in rows:

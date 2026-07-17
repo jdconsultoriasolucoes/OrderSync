@@ -274,13 +274,13 @@ def gerar_pdf_romaneio(db, carga_id: int) -> bytes:
 
     if is_ret:
         # Tudo em uma única linha no topo para economizar espaço
-        c.drawString(0.7*cm, y, f"Filial: SUPRA LOG")
+        c.drawString(0.7*cm, y, f"Filial: DISPET DISTRIBUIDORA")
         c.drawString(6.0*cm, y, f"RETIRADA Nº: {carga.get('numero_carga') or ''}")
         c.drawString(11.5*cm, y, f"DATA RETIRADA: {data_str}")
         c.drawRightString(width - 0.7*cm, y, f"P. LÍQ: {_br_number(total_liq_val, 0)} kg   |   P. BRUTO: {_br_number(total_bruto_val, 0)} kg")
         y -= 0.6*cm
     else:
-        c.drawString(0.7*cm, y, f"Filial: SUPRA LOG")
+        c.drawString(0.7*cm, y, f"Filial: DISPET DISTRIBUIDORA")
         c.drawString(8.0*cm, y, f"CARGA Nº: {carga.get('numero_carga') or ''}")
         c.drawRightString(width - 0.7*cm, y, f"DATA CARREGAMENTO: {data_str}")
         y -= 0.5*cm
@@ -518,7 +518,7 @@ def _desenhar_resumo_logic(c, db, carga, produtos, width, height, y_start=None):
         # Header Info as per drawing 4: Filial | CARGA Nº | DATA
         c.setFont("Helvetica-Bold", 10)
         c.setFillColor(colors.black)
-        c.drawString(0.7*cm, y, f"Filial: SUPRA LOG")
+        c.drawString(0.7*cm, y, f"Filial: DISPET DISTRIBUIDORA")
         c.drawString(7.0*cm, y, f"CARGA Nº: {carga.get('numero_carga') or ''}")
         
         data_carregamento = carga.get('data_carregamento')
@@ -675,7 +675,7 @@ def _desenhar_romaneio_logic(c, carga, pedidos, width, height):
     # Header Info: Filial, CARGA Nº, DATA
     c.setFillColor(colors.black)
     c.setFont("Helvetica-Bold", 10)
-    c.drawString(0.7*cm, y, f"Filial: SUPRA LOG")
+    c.drawString(0.7*cm, y, f"Filial: DISPET DISTRIBUIDORA")
     c.drawString(8.0*cm, y, f"CARGA Nº: {carga.get('numero_carga') or ''}")
     # Fix missing DATA CARREGAMENTO var definition issue
     data_carregamento = carga.get('data_carregamento')
@@ -812,7 +812,7 @@ def gerar_pdf_romaneio_retirada(db, retirada_id: int) -> bytes:
     total_liq_val = sum(p.peso_total_kg or 0 for p in pedidos)
     total_bruto_val = sum(p.peso_bruto_total or 0 for p in pedidos)
 
-    c.drawString(0.7*cm, y, f"Filial: SUPRA LOG")
+    c.drawString(0.7*cm, y, f"Filial: DISPET DISTRIBUIDORA")
     c.drawString(6.0*cm, y, f"RETIRADA Nº: {retirada.get('numero_retirada') or ''}")
     c.drawString(11.5*cm, y, f"DATA RETIRADA: {data_str}")
     c.drawRightString(width - 0.7*cm, y, f"P. LÍQ: {_br_number(total_liq_val, 0)} kg   |   P. BRUTO: {_br_number(total_bruto_val, 0)} kg")
@@ -962,7 +962,7 @@ def gerar_pdf_resumo_produtos_retirada(db, retirada_id: int) -> bytes:
     y = _draw_header(c, width, height, "RESUMO DE PRODUTOS (RETIRADA)")
     c.setFont("Helvetica-Bold", 10)
     c.setFillColor(colors.black)
-    c.drawString(0.7*cm, y, f"Filial: SUPRA LOG")
+    c.drawString(0.7*cm, y, f"Filial: DISPET DISTRIBUIDORA")
     c.drawString(7.0*cm, y, f"RETIRADA Nº: {retirada.get('numero_retirada') or ''}")
     
     data_retirada = retirada.get('data_retirada')

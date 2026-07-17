@@ -12,6 +12,63 @@ const API = {
   camposFaturamento: (id) => `${API_BASE}/api/pedidos/${id}/campos_faturamento`,
 };
 
+function showOsModal(options) {
+  return new Promise((resolve) => {
+    const backdrop = document.createElement('div');
+    backdrop.className = 'os-modal-backdrop active';
+    backdrop.style.zIndex = '99999';
+
+    const dialog = document.createElement('div');
+    dialog.className = 'os-modal-dialog';
+    dialog.style.maxWidth = '400px';
+
+    const header = document.createElement('div');
+    header.className = 'os-modal-header';
+    header.innerHTML = `<h3 class="os-modal-title">${options.title}</h3>
+                        <button class="os-modal-close">&times;</button>`;
+
+    const body = document.createElement('div');
+    body.className = 'os-modal-body';
+    body.innerHTML = `<p style="margin:0;">${options.message}</p>`;
+
+    const footer = document.createElement('div');
+    footer.className = 'os-modal-footer';
+
+    if (options.type === 'confirm') {
+      const btnCancel = document.createElement('button');
+      btnCancel.className = 'os-btn os-btn-secondary';
+      btnCancel.textContent = 'Cancelar';
+
+      const btnOk = document.createElement('button');
+      btnOk.className = 'os-btn os-btn-primary';
+      btnOk.textContent = 'OK';
+
+      footer.appendChild(btnCancel);
+      footer.appendChild(btnOk);
+
+      btnCancel.onclick = () => { document.body.removeChild(backdrop); resolve(false); };
+      btnOk.onclick = () => { document.body.removeChild(backdrop); resolve(true); };
+    } else {
+      const btnOk = document.createElement('button');
+      btnOk.className = 'os-btn os-btn-primary';
+      btnOk.textContent = 'OK';
+      footer.appendChild(btnOk);
+      btnOk.onclick = () => { document.body.removeChild(backdrop); resolve(true); };
+    }
+
+    header.querySelector('.os-modal-close').onclick = () => {
+      document.body.removeChild(backdrop);
+      resolve(false);
+    };
+
+    dialog.appendChild(header);
+    dialog.appendChild(body);
+    dialog.appendChild(footer);
+    backdrop.appendChild(dialog);
+    document.body.appendChild(backdrop);
+  });
+}
+
 let state = {
   page: 1,
   pageSize: 25,
@@ -303,6 +360,8 @@ function renderTable(rows) {
       const fornecedor = row.fornecedor ?? row.fornecedor_nome ?? "---";
       const link = row.link_url ?? row.link ?? null;
 
+      const codigoCliente = row.cliente_codigo || "Não cadastrado";
+
       const tr = document.createElement("tr");
       tr.classList.add("row-click");
       tr.dataset.id = id;
@@ -314,6 +373,7 @@ function renderTable(rows) {
           <td>${fmtDateOnly(row.data_faturamento)}</td>
           <td><a href="#" class="lnk-resumo" data-id="${id}">${id}</a></td>
           <td>${row.pedido_supra || '---'}</td>
+          <td class="col-codigo">${codigoCliente}</td>
           <td>${cliente}</td>
           <td><span class="badge badge-gray">${modalidade}</span></td>
           <td class="tar">${fmtMoney(valor)}</td>
@@ -321,15 +381,13 @@ function renderTable(rows) {
           <td>${tabela}</td>
           <td>${fornecedor}</td>
           <td>${row.numero_carga || '---'}</td>
-          <td>
-            ${link ? `<a href="${link}" target="_blank" class="btn-copy">Link</a>` : '<span class="muted">---</span>'}
-          </td>
           <td class="tar td-actions" id="td-actions-${id}">
             
             <button class="os-btn os-btn-secondary os-btn-sm btn-edit-status" data-id="${id}" data-status="${status}">
                Mudar Status
             </button>
             ${String(status || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toUpperCase() === 'ORCAMENTO' ? `<a href="/pedido/editar_pedido.html?id=${id}&action=edit" class="os-btn os-btn-secondary os-btn-sm" style="margin-left: 5px; text-decoration: none;">Editar Orçamento</a>` : ''}
+            ${String(status || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toUpperCase() === 'CANCELADO' ? `<button class="os-btn os-btn-sm btn-delete-pedido" style="background-color: #dc3545; color: white; border: none; margin-left: 5px;" data-id="${id}">Deletar Pedido</button>` : ''}
 
           </td>
         `;
@@ -397,6 +455,7 @@ function renderCards(rows) {
              ${link ? `<a href="${link}" target="_blank" class="os-btn os-btn-secondary os-btn-sm" style="text-decoration: none;">Link</a>` : ''}
              <button class="os-btn os-btn-secondary os-btn-sm btn-edit-status" data-id="${id}" data-status="${status}" data-is-mobile="true">Mudar Status</button>
              ${String(status || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toUpperCase() === 'ORCAMENTO' ? `<a href="/pedido/editar_pedido.html?id=${id}&action=edit" class="os-btn os-btn-secondary os-btn-sm" style="text-decoration: none;">Editar Orçamento</a>` : ''}
+             ${String(status || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toUpperCase() === 'CANCELADO' ? `<button class="os-btn os-btn-sm btn-delete-pedido" style="background-color: #dc3545; color: white; border: none; margin-top: 5px; width: 100%;" data-id="${id}">Deletar Pedido</button>` : ''}
            </div>
            <div class="os-btn-group">
              <button class="os-btn os-btn-primary os-btn-sm" onclick="openResumo('${id}')" style="min-width: 120px;">Detalhes</button>
@@ -886,6 +945,7 @@ function cancelEditStatus(id, originalStatus, isMobile = false) {
                ${link ? `<a href="${link}" target="_blank" class="btn btn-outline" style="padding: 4px 8px; font-size: 0.8rem; text-decoration: none;">Link</a>` : ''}
                <button class="btn btn-outline-secondary btn-edit-status" data-id="${id}" data-status="${originalStatus}" data-is-mobile="true" style="padding: 4px 8px; font-size: 0.8rem;">Mudar Status</button>
                ${String(originalStatus || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toUpperCase() === 'ORCAMENTO' ? `<a href="/pedido/editar_pedido.html?id=${id}&action=edit" class="btn-sm btn-outline-secondary" style="text-decoration: none;">✏️ Editar Orçamento</a>` : ''}
+               ${String(originalStatus || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toUpperCase() === 'CANCELADO' ? `<button class="btn-sm btn-delete-pedido" style="background-color: #dc3545; color: white; border: none; margin-top: 5px; width: 100%;" data-id="${id}">Deletar Pedido</button>` : ''}
                <button class="btn btn-primary" onclick="openResumo('${id}')" style="padding: 4px 12px; font-size: 0.8rem;">Detalhes</button>
            `;
     } else {
@@ -894,6 +954,7 @@ function cancelEditStatus(id, originalStatus, isMobile = false) {
              Mudar Status
           </button>
           ${String(originalStatus || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toUpperCase() === 'ORCAMENTO' ? `<a href="/pedido/editar_pedido.html?id=${id}&action=edit" class="btn-sm btn-outline-secondary" style="margin-left: 5px; text-decoration: none;">✏️ Editar Orçamento</a>` : ''}
+          ${String(originalStatus || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toUpperCase() === 'CANCELADO' ? `<button class="btn-sm btn-delete-pedido" style="background-color: #dc3545; color: white; border: none; margin-left: 5px;" data-id="${id}">Deletar Pedido</button>` : ''}
         `;
     }
   }
@@ -953,6 +1014,7 @@ async function saveStatus(id, isMobile = false) {
              ${link ? `<a href="${link}" target="_blank" class="os-btn os-btn-secondary os-btn-sm" style="text-decoration: none;">Link</a>` : ''}
              <button class="os-btn os-btn-secondary os-btn-sm btn-edit-status" data-id="${id}" data-status="${newStatus}" data-is-mobile="true">Mudar Status</button>
              ${String(newStatus || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toUpperCase() === 'ORCAMENTO' ? `<a href="/pedido/editar_pedido.html?id=${id}&action=edit" class="os-btn os-btn-secondary os-btn-sm" style="text-decoration: none;">Editar Orçamento</a>` : ''}
+             ${String(newStatus || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toUpperCase() === 'CANCELADO' ? `<button class="os-btn os-btn-sm btn-delete-pedido" style="background-color: #dc3545; color: white; border: none; margin-top: 5px; width: 100%;" data-id="${id}">Deletar Pedido</button>` : ''}
            </div>
            <div class="os-btn-group">
              <button class="os-btn os-btn-primary os-btn-sm" onclick="openResumo('${id}')" style="min-width: 120px;">Detalhes</button>
@@ -964,6 +1026,7 @@ async function saveStatus(id, isMobile = false) {
               Mudar Status
            </button>
            ${String(newStatus || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toUpperCase() === 'ORCAMENTO' ? `<a href="/pedido/editar_pedido.html?id=${id}&action=edit" class="os-btn os-btn-secondary os-btn-sm" style="margin-left: 5px; text-decoration: none;">Editar Orçamento</a>` : ''}
+           ${String(newStatus || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toUpperCase() === 'CANCELADO' ? `<button class="os-btn os-btn-sm btn-delete-pedido" style="background-color: #dc3545; color: white; border: none; margin-left: 5px;" data-id="${id}">Deletar Pedido</button>` : ''}
         `;
     }
     const tr = tdActions.closest(isMobile ? ".order-card" : "tr");
@@ -1123,6 +1186,16 @@ function bindUI() {
        startEditStatus(btnEdit.dataset.id, btnEdit.dataset.status, isMobile); 
        return; 
     }
+
+    // Delete
+    const btnDelete = t.closest(".btn-delete-pedido");
+    if (btnDelete) {
+       const confirmacao = await showOsModal({ title: "Atenção", message: "Tem certeza que deseja deletar este pedido permanentemente? Esta ação não pode ser desfeita.", type: "confirm" });
+       if (confirmacao) {
+           deletarPedido(btnDelete.dataset.id);
+       }
+       return;
+    }
     // Save
     const btnSave = t.closest(".btn-save-status");
     if (btnSave) { 
@@ -1191,4 +1264,25 @@ document.addEventListener('DOMContentLoaded', async () => {
     loadList(1);
   }
 });
+
+async function deletarPedido(id) {
+    try {
+        const token = localStorage.getItem("token") || sessionStorage.getItem("token");
+        const res = await fetch(`${API_BASE}/api/pedidos/${id}`, {
+            method: 'DELETE',
+            headers: {
+                "Authorization": `Bearer ${token}`
+            }
+        });
+        if (!res.ok) {
+            const err = await res.json();
+            throw new Error(err.detail || "Erro ao deletar pedido.");
+        }
+        await showOsModal({ title: "Sucesso", message: "Pedido deletado com sucesso.", type: "alert" });
+        window.location.reload();
+    } catch (error) {
+        console.error("Erro deletarPedido:", error);
+        await showOsModal({ title: "Erro", message: error.message, type: "alert" });
+    }
+}
 
