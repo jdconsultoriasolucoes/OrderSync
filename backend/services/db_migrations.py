@@ -48,7 +48,7 @@ def run_migrations():
                 db.rollback()
                 logger.error(f"Falha ao adicionar colunas em t_usuario: {e}")
 
-        # 3. CadastroCliente: cadastro_periodo_de_compra
+        # 3. CadastroCliente: cadastro_periodo_de_compra, cadastro_status_cadastro
         try:
             db.execute(text("SELECT cadastro_periodo_de_compra FROM t_cadastro_cliente_v2 LIMIT 1"))
         except Exception:
@@ -61,6 +61,20 @@ def run_migrations():
             except Exception as e:
                 db.rollback()
                 logger.error(f"Falha ao adicionar coluna em t_cadastro_cliente_v2: {e}")
+
+        try:
+            db.execute(text("SELECT cadastro_status_cadastro FROM t_cadastro_cliente_v2 LIMIT 1"))
+        except Exception:
+            db.rollback()
+            logger.info("Adicionando coluna cadastro_status_cadastro em t_cadastro_cliente_v2...")
+            try:
+                db.execute(text("ALTER TABLE t_cadastro_cliente_v2 ADD COLUMN cadastro_status_cadastro VARCHAR"))
+                db.commit()
+                logger.info("Coluna cadastro_status_cadastro adicionada com sucesso.")
+            except Exception as e:
+                db.rollback()
+                logger.error(f"Falha ao adicionar coluna cadastro_status_cadastro em t_cadastro_cliente_v2: {e}")
+
 
         # 4. tb_cargas: nome_carga
         try:

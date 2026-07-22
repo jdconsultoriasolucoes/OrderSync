@@ -21,6 +21,7 @@ class ClienteModelV2(Base):
     cadastro_inscricao_estadual = Column(String)
     cadastro_cpf = Column(String)
     cadastro_situacao = Column(String)
+    cadastro_status_cadastro = Column(String)
     # JSONB: lista de strings com até 5 indicações. Ex: ["Fulano", "Ciclano"]
     cadastro_indicacao_cliente = Column(JSONB, default=list)
     cadastro_ramo_de_atividade = Column(String)

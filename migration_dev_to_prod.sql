@@ -270,6 +270,7 @@ CREATE TABLE IF NOT EXISTS t_cadastro_cliente_v2 (
     cadastro_inscricao_estadual VARCHAR,
     cadastro_cpf VARCHAR,
     cadastro_situacao VARCHAR,
+    cadastro_status_cadastro VARCHAR,
     cadastro_indicacao_cliente VARCHAR,
     cadastro_ramo_de_atividade VARCHAR,
     cadastro_atividade_principal VARCHAR,

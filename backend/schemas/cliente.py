@@ -31,6 +31,7 @@ class CadastroCliente(BaseModel):
     inscricao_estadual: Optional[str] = None
     cpf: Optional[str] = None
     situacao: Optional[str] = None
+    status_cadastro: Optional[str] = None
     indicacao_cliente: Optional[str] = None
     ramo_de_atividade: Optional[str] = None
     atividade_principal: Optional[str] = None

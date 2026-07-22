@@ -1,7 +1,7 @@
 from fastapi import APIRouter, Depends
 from sqlalchemy.orm import Session
 from database import SessionLocal
-from data.listas import SITUAÇÃO, RETIRA, TIPO_PESSOA, TIPOS_CLIENTE, SUPERVISOR, ATIVIDADE_PRINCIPAL, ROTA, TIPO_VENDA, TIPO_COMPRA, RAMO_DE_ATIVIDADE
+from data.listas import SITUAÇÃO, STATUS_CADASTRO, RETIRA, TIPO_PESSOA, TIPOS_CLIENTE, SUPERVISOR, ATIVIDADE_PRINCIPAL, ROTA, TIPO_VENDA, TIPO_COMPRA, RAMO_DE_ATIVIDADE
 
 router = APIRouter()
 
@@ -15,6 +15,10 @@ def get_db():
 @router.get("/situacao")
 def get_situacao():
     return SITUAÇÃO
+
+@router.get("/status_cadastro")
+def get_status_cadastro():
+    return STATUS_CADASTRO
 
 @router.get("/retira")
 def get_retira():

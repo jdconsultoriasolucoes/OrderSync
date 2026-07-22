@@ -50,6 +50,7 @@ def _flat_to_nested(model: ClienteModelV2) -> dict:
             "inscricao_estadual": clean_ie(model.cadastro_inscricao_estadual),
             "cpf": model.cadastro_cpf,
             "situacao": model.cadastro_situacao,
+            "status_cadastro": model.cadastro_status_cadastro,
             "data_inativacao": model.data_inativacao.strftime('%Y-%m-%d') if model.data_inativacao else None,
             "indicacao_cliente": None,  # legado mantido; usar indicacoes_clientes
             "ramo_de_atividade": model.cadastro_ramo_de_atividade,
@@ -211,6 +212,7 @@ def _nested_to_flat(data: dict) -> ClienteModelV2:
     model.cadastro_inscricao_estadual = clean_ie(c.get("inscricao_estadual"))
     model.cadastro_cpf = c.get("cpf")
     model.cadastro_situacao = c.get("situacao")
+    model.cadastro_status_cadastro = c.get("status_cadastro")
     model.cadastro_indicacao_cliente = c.get("indicacao_cliente")
     if c.get("data_inativacao"):
         try:

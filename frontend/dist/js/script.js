@@ -30,6 +30,7 @@ function obterDadosFormulario() {
       inscricao_estadual: document.getElementById("inscricao_estadual")?.value || "",
       cpf: document.getElementById("cpf")?.value || "",
       situacao: document.getElementById("situacao")?.value || "",
+      status_cadastro: document.getElementById("status_cadastro")?.value || "",
       indicacao_cliente: document.getElementById("indicacao_cliente")?.value || "",
       ramo_de_atividade: document.getElementById("ramo_de_atividade")?.value || "",
       atividade_principal: document.getElementById("atividade_principal")?.value || ""
@@ -180,6 +181,7 @@ function preencherFormularioCliente(cliente) {
   document.getElementById("inscricao_estadual").value = c.inscricao_estadual || "";
   document.getElementById("cpf").value = c.cpf || "";
   document.getElementById("situacao").value = c.situacao || "";
+  if (document.getElementById("status_cadastro")) document.getElementById("status_cadastro").value = c.status_cadastro || "";
   document.getElementById("indicacao_cliente").value = c.indicacao_cliente || "";
   document.getElementById("ramo_de_atividade").value = c.ramo_de_atividade || "";
   document.getElementById("atividade_principal").value = c.atividade_principal || "";

@@ -1,6 +1,7 @@
 # Arquivo gerado automaticamente com listas fixas para dropdowns
 
 SITUAÇÃO = ["ATIVO", "NÃO ATIVO"]
+STATUS_CADASTRO = ["Ativo", "Prospecto", "Prospecto cadastrando-se", "Inativo"]
 RETIRA = ["Sim", "Não"]
 TIPO_PESSOA = ["Juridica", "Fisica", "Outros"]
 TIPOS_CLIENTE = ["Produtor Rural", "Revenda", "Consumidor Final - Pessoa Fisica", "Consumidor Final - Pessoa Juridica", "Canil", "Vago1"]
