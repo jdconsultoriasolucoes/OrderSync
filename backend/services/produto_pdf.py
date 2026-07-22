@@ -313,7 +313,7 @@ def list_produtos(
         base += " AND familia = :familia"
         params["familia"] = familia
     if fornecedor:
-        base += " AND fornecedor = :fornecedor"
+        base += " AND UPPER(fornecedor) = UPPER(:fornecedor)"
         params["fornecedor"] = fornecedor
     if vigencia_em:
         base += " AND validade_tabela <= :vig"

@@ -69,7 +69,7 @@ def coletar_dados_relatorio_lista(
             COUNT(*)             AS total_itens
         FROM public.t_preco_produto_pdf_v2
         WHERE ativo = TRUE
-          AND fornecedor = :fornecedor
+          AND UPPER(fornecedor) = UPPER(:fornecedor)
           AND lista = :lista
         """
     )
@@ -116,10 +116,10 @@ def coletar_dados_relatorio_lista(
         FROM public.t_cadastro_produto_v2 p
         JOIN public.t_preco_produto_pdf_v2 t
           ON t.ativo       = TRUE
-         AND t.fornecedor  = :fornecedor
+         AND UPPER(t.fornecedor)  = UPPER(:fornecedor)
          AND t.lista       = :lista
          AND t.codigo      = p.codigo_supra
-         AND t.fornecedor  = p.fornecedor
+         AND UPPER(t.fornecedor)  = UPPER(p.fornecedor)
          AND t.lista       = p.tipo
         """
     )
@@ -218,14 +218,14 @@ def coletar_dados_relatorio_lista(
             p.preco          AS preco_ultimo,
             p.preco_tonelada AS preco_ton_ultimo
         FROM public.t_cadastro_produto_v2 p
-        WHERE p.fornecedor = :fornecedor
+        WHERE UPPER(p.fornecedor) = UPPER(:fornecedor)
           AND p.tipo       = :lista
           AND p.status_produto = 'NÃO ATIVO'
           AND p.codigo_supra NOT IN (
                 SELECT codigo
                 FROM public.t_preco_produto_pdf_v2
                 WHERE ativo = TRUE
-                  AND fornecedor = :fornecedor
+                  AND UPPER(fornecedor) = UPPER(:fornecedor)
                   AND lista = :lista
           )
         """

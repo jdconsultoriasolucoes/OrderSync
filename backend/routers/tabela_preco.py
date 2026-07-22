@@ -79,7 +79,7 @@ def filtrar_produtos_para_tabela_preco(
             WHERE p.status_produto = 'ATIVO'
               AND (:grupo IS NULL OR p.marca = :grupo)
               AND (:tipo IS NULL OR UPPER(p.tipo) = UPPER(:tipo))
-              AND (:fornecedor IS NULL OR p.fornecedor = :fornecedor)
+              AND (:fornecedor IS NULL OR UPPER(p.fornecedor) = UPPER(:fornecedor))
               AND (
                     :q IS NULL
                  OR  p.codigo_supra::text ILIKE :like

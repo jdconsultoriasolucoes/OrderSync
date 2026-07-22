@@ -517,13 +517,6 @@ def run_migrations():
                 db.rollback()
                 logger.error(f"Falha ao adicionar ativo em t_historico_estoque_v2: {e}")
 
-        # Limpeza: remove estoque_ativo de t_cadastro_produto_v2 se existir (no Postgres/Render)
-        try:
-            db.execute(text("ALTER TABLE t_cadastro_produto_v2 DROP COLUMN IF EXISTS estoque_ativo"))
-            db.commit()
-        except Exception:
-            db.rollback()
-
     logger.info("Todas as migrações concluídas.")
 
 
