@@ -13,6 +13,10 @@
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
 
+    <!-- jsPDF & AutoTable -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.28/jspdf.plugin.autotable.min.js"></script>
+
     <script src="../js/config.js"></script>
     <script src="../js/auth.js"></script>
     <script src="../js/sidebar_control.js"></script>
@@ -39,6 +43,23 @@
             font-size: 0.75rem;
             margin-left: 4px;
             color: var(--os-primary, #2563eb);
+        }
+
+        @media print {
+            .os-header, .os-sidebar, .os-sidebar-overlay, .filter-row, #btn-limpar-filtros, #btn-exportar-pdf, a.os-btn {
+                display: none !important;
+            }
+            .os-page-container {
+                padding: 0 !important;
+            }
+            .os-card {
+                box-shadow: none !important;
+                border: none !important;
+            }
+            .os-table {
+                width: 100% !important;
+                font-size: 10pt !important;
+            }
         }
     </style>
 </head>
@@ -182,7 +203,14 @@
                     <h3 class="os-card-title">Relatório: Clientes Sem Código da Empresa</h3>
                     <span id="contador-registros" style="font-size: var(--os-text-xs); color: var(--os-text-secondary);">Carregando registros...</span>
                 </div>
-                <div style="display: flex; gap: 8px; align-items: center;">
+                <div style="display: flex; gap: 8px; align-items: center; flex-wrap: wrap;">
+                    <button id="btn-exportar-pdf" class="os-btn os-btn-primary" style="font-size: var(--os-text-xs); padding: 6px 12px; display: inline-flex; align-items: center; gap: 4px;">
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+                            <polyline points="7 10 12 15 17 10"></polyline>
+                            <line x1="12" y1="15" x2="12" y2="3"></line>
+                        </svg> Exportar PDF
+                    </button>
                     <button id="btn-limpar-filtros" class="os-btn os-btn-secondary" style="font-size: var(--os-text-xs); padding: 6px 12px;">Limpar Filtros</button>
                     <a href="../../index.html" class="os-btn os-btn-secondary">Voltar ao Painel</a>
                 </div>
@@ -216,7 +244,7 @@
         </section>
     </div>
 
-    <!-- Script de Carregamento, Filtragem e Ordenação -->
+    <!-- Script de Carregamento, Filtragem, Ordenação e Exportação PDF -->
     <script>
         document.addEventListener("DOMContentLoaded", async () => {
             let clientesData = [];
@@ -226,6 +254,7 @@
             const tbody = document.querySelector("#tabela-clientes-sem-codigo tbody");
             const contadorEl = document.querySelector("#contador-registros");
             const btnLimpar = document.querySelector("#btn-limpar-filtros");
+            const btnExportarPdf = document.querySelector("#btn-exportar-pdf");
             const filterInputs = document.querySelectorAll(".filter-input");
             const headerCols = document.querySelectorAll("#tabela-clientes-sem-codigo th[data-col]");
 
@@ -285,7 +314,6 @@
                     let valA = a[currentSortCol] || "";
                     let valB = b[currentSortCol] || "";
 
-                    // Tratamento numérico para ID se aplicável
                     if (currentSortCol === "id") {
                         const numA = parseInt(valA, 10);
                         const numB = parseInt(valB, 10);
@@ -294,7 +322,6 @@
                         }
                     }
 
-                    // Se valores forem nulos/vazios, posicionar no final
                     if (!valA && valB) return 1;
                     if (valA && !valB) return -1;
 
@@ -391,6 +418,79 @@
                     currentSortCol = "vendedor";
                     currentSortDir = "asc";
                     applyFiltersAndRender();
+                });
+            }
+
+            // Botão Exportar PDF
+            if (btnExportarPdf) {
+                btnExportarPdf.addEventListener("click", () => {
+                    const filtered = getFilteredData();
+                    const sorted = sortData(filtered);
+
+                    if (!sorted || sorted.length === 0) {
+                        alert("Nenhum cliente encontrado para exportação.");
+                        return;
+                    }
+
+                    if (window.jspdf && window.jspdf.jsPDF) {
+                        const { jsPDF } = window.jspdf;
+                        const doc = new jsPDF({ orientation: "landscape", unit: "pt", format: "a4" });
+
+                        const dataHora = new Date().toLocaleString("pt-BR");
+
+                        // Cabeçalho do Documento
+                        doc.setFontSize(14);
+                        doc.setTextColor(37, 99, 235);
+                        doc.text("OrderSync - Relatório: Clientes Sem Código da Empresa", 40, 40);
+
+                        doc.setFontSize(9);
+                        doc.setTextColor(100, 100, 100);
+                        doc.text(`Gerado em: ${dataHora} | Total exibido: ${sorted.length} de ${clientesData.length}`, 40, 55);
+
+                        const tableHead = [["ID", "Nome cliente", "Município", "Status cadastro", "Vendedor", "CNPJ / CPF"]];
+                        const tableBody = sorted.map(c => [
+                            c.id || "N/A",
+                            c.cadastro_nome_cliente || "N/A",
+                            c.municipio || "N/A",
+                            c.status_cadastro || "N/A",
+                            c.vendedor || "N/A",
+                            c.documento || "N/A"
+                        ]);
+
+                        doc.autoTable({
+                            startY: 68,
+                            head: tableHead,
+                            body: tableBody,
+                            theme: "striped",
+                            headStyles: {
+                                fillColor: [37, 99, 235],
+                                textColor: [255, 255, 255],
+                                fontStyle: "bold",
+                                fontSize: 9
+                            },
+                            bodyStyles: {
+                                fontSize: 8,
+                                cellPadding: 5
+                            },
+                            alternateRowStyles: {
+                                fillColor: [249, 250, 251]
+                            },
+                            margin: { top: 68, left: 40, right: 40, bottom: 40 },
+                            didDrawPage: (data) => {
+                                const totalPages = doc.internal.getNumberOfPages();
+                                const currentPage = data.pageNumber;
+                                doc.setFontSize(8);
+                                doc.setTextColor(150, 150, 150);
+                                doc.text(`Página ${currentPage} de ${totalPages}`, data.settings.margin.left, doc.internal.pageSize.height - 20);
+                                doc.text("OrderSync System", doc.internal.pageSize.width - data.settings.margin.right - 80, doc.internal.pageSize.height - 20);
+                            }
+                        });
+
+                        const dateStr = new Date().toISOString().slice(0, 10);
+                        doc.save(`relatorio_clientes_sem_codigo_${dateStr}.pdf`);
+                    } else {
+                        window.print();
+                    }
                 });
             }
         });
