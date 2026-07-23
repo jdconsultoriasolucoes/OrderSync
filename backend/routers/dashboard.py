@@ -501,10 +501,17 @@ def get_clientes_sem_codigo(
     current_user: UsuarioModel = Depends(get_current_user)
 ):
     q = text("""
-        SELECT id, cadastro_nome_cliente, cadastro_cnpj, cadastro_cpf
+        SELECT 
+            id, 
+            cadastro_nome_cliente, 
+            COALESCE(faturamento_municipio, entrega_municipio) AS municipio,
+            cadastro_status_cadastro AS status_cadastro,
+            elaboracao_vendedor AS vendedor,
+            cadastro_cnpj, 
+            cadastro_cpf
         FROM public.t_cadastro_cliente_v2
         WHERE cadastro_codigo_da_empresa IS NULL OR cadastro_codigo_da_empresa = ''
-        ORDER BY id DESC
+        ORDER BY elaboracao_vendedor ASC NULLS LAST, id DESC
     """)
     rows = db.execute(q).mappings().all()
     return {"clientes": [dict(r) for r in rows]}

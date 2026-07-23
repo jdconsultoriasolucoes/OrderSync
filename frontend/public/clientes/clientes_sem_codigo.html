@@ -16,6 +16,31 @@
     <script src="../js/config.js"></script>
     <script src="../js/auth.js"></script>
     <script src="../js/sidebar_control.js"></script>
+
+    <style>
+        .filter-row input {
+            background-color: var(--os-bg-white, #fff);
+            border: 1px solid var(--os-border, #d1d5db);
+            border-radius: 4px;
+            box-shadow: none;
+        }
+        .filter-row input:focus {
+            border-color: var(--os-primary, #2563eb);
+            outline: none;
+        }
+        .os-table th[data-col] {
+            user-select: none;
+            transition: background-color 0.2s;
+        }
+        .os-table th[data-col]:hover {
+            background-color: rgba(0, 0, 0, 0.04);
+        }
+        .sort-icon {
+            font-size: 0.75rem;
+            margin-left: 4px;
+            color: var(--os-primary, #2563eb);
+        }
+    </style>
 </head>
 <body>
     <script>
@@ -31,7 +56,7 @@
         <span class="os-header-title">Clientes Sem Código</span>
     </header>
 
-        <nav class="os-sidebar" id="sidebar">
+    <nav class="os-sidebar" id="sidebar">
         <div class="os-sidebar-section">Menu</div>
         <ul>
             <li><a href="/index.html">
@@ -152,31 +177,58 @@
     <!-- ========== MAIN ========== -->
     <div class="os-page-container" style="padding: var(--os-space-4); padding-top: calc(var(--os-header-height) + var(--os-space-4));">
         <section class="os-card">
-            <div class="os-card-header" style="display: flex; justify-content: space-between; align-items: center;">
-                <h3 class="os-card-title">Relatório: Clientes Sem Código da Empresa</h3>
-                <a href="../../index.html" class="os-btn os-btn-secondary">Voltar ao Painel</a>
+            <div class="os-card-header" style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 1rem;">
+                <div>
+                    <h3 class="os-card-title">Relatório: Clientes Sem Código da Empresa</h3>
+                    <span id="contador-registros" style="font-size: var(--os-text-xs); color: var(--os-text-secondary);">Carregando registros...</span>
+                </div>
+                <div style="display: flex; gap: 8px; align-items: center;">
+                    <button id="btn-limpar-filtros" class="os-btn os-btn-secondary" style="font-size: var(--os-text-xs); padding: 6px 12px;">Limpar Filtros</button>
+                    <a href="../../index.html" class="os-btn os-btn-secondary">Voltar ao Painel</a>
+                </div>
             </div>
 
-            <div class="os-table-wrap" style="margin-top: var(--os-space-4);">
+            <div class="os-table-wrap" style="margin-top: var(--os-space-4); overflow-x: auto;">
                 <table id="tabela-clientes-sem-codigo" class="os-table">
                     <thead>
                         <tr>
-                            <th>ID</th>
-                            <th>Nome do Cliente</th>
-                            <th>CNPJ / CPF</th>
+                            <th data-col="id" style="cursor: pointer; title: Clique para ordenar;">ID <span class="sort-icon"></span></th>
+                            <th data-col="cadastro_nome_cliente" style="cursor: pointer; title: Clique para ordenar;">Nome cliente <span class="sort-icon"></span></th>
+                            <th data-col="municipio" style="cursor: pointer; title: Clique para ordenar;">Municipio <span class="sort-icon"></span></th>
+                            <th data-col="status_cadastro" style="cursor: pointer; title: Clique para ordenar;">Status cadastro <span class="sort-icon"></span></th>
+                            <th data-col="vendedor" style="cursor: pointer; title: Clique para ordenar;">Vendedor <span class="sort-icon">▲</span></th>
+                            <th data-col="documento" style="cursor: pointer; title: Clique para ordenar;">CNPJ/CPF <span class="sort-icon"></span></th>
+                        </tr>
+                        <tr class="filter-row" style="background-color: var(--os-bg, #f9fafb);">
+                            <th><input type="text" class="os-input filter-input" data-filter="id" placeholder="Filtrar ID..." style="width: 100%; font-size: 0.75rem; padding: 4px 6px;"></th>
+                            <th><input type="text" class="os-input filter-input" data-filter="cadastro_nome_cliente" placeholder="Filtrar Nome..." style="width: 100%; font-size: 0.75rem; padding: 4px 6px;"></th>
+                            <th><input type="text" class="os-input filter-input" data-filter="municipio" placeholder="Filtrar Municipio..." style="width: 100%; font-size: 0.75rem; padding: 4px 6px;"></th>
+                            <th><input type="text" class="os-input filter-input" data-filter="status_cadastro" placeholder="Filtrar Status..." style="width: 100%; font-size: 0.75rem; padding: 4px 6px;"></th>
+                            <th><input type="text" class="os-input filter-input" data-filter="vendedor" placeholder="Filtrar Vendedor..." style="width: 100%; font-size: 0.75rem; padding: 4px 6px;"></th>
+                            <th><input type="text" class="os-input filter-input" data-filter="documento" placeholder="Filtrar CNPJ/CPF..." style="width: 100%; font-size: 0.75rem; padding: 4px 6px;"></th>
                         </tr>
                     </thead>
                     <tbody>
-                        <tr><td colspan="3" style="text-align:center;">Carregando...</td></tr>
+                        <tr><td colspan="6" style="text-align:center;">Carregando...</td></tr>
                     </tbody>
                 </table>
             </div>
         </section>
     </div>
 
-    <!-- Loader Script -->
+    <!-- Script de Carregamento, Filtragem e Ordenação -->
     <script>
         document.addEventListener("DOMContentLoaded", async () => {
+            let clientesData = [];
+            let currentSortCol = "vendedor";
+            let currentSortDir = "asc"; // 'asc' ou 'desc'
+
+            const tbody = document.querySelector("#tabela-clientes-sem-codigo tbody");
+            const contadorEl = document.querySelector("#contador-registros");
+            const btnLimpar = document.querySelector("#btn-limpar-filtros");
+            const filterInputs = document.querySelectorAll(".filter-input");
+            const headerCols = document.querySelectorAll("#tabela-clientes-sem-codigo th[data-col]");
+
             try {
                 const apiBase = (window.API_BASE || "") + "/api/dashboard";
                 const token = localStorage.getItem("ordersync_token");
@@ -193,34 +245,153 @@
                 }
 
                 const data = await response.json();
-                const tbody = document.querySelector("#tabela-clientes-sem-codigo tbody");
-                tbody.innerHTML = "";
                 
-                if (data.clientes && data.clientes.length > 0) {
-                    data.clientes.forEach(c => {
+                if (data.clientes && Array.isArray(data.clientes)) {
+                    clientesData = data.clientes.map(c => ({
+                        id: c.id ? String(c.id) : "",
+                        cadastro_nome_cliente: c.cadastro_nome_cliente || "",
+                        municipio: c.municipio || "",
+                        status_cadastro: c.status_cadastro || "",
+                        vendedor: c.vendedor || "",
+                        documento: c.cadastro_cnpj || c.cadastro_cpf || ""
+                    }));
+                }
+
+                applyFiltersAndRender();
+            } catch (error) {
+                console.error(error);
+                if (tbody) tbody.innerHTML = "<tr><td colspan='6' style='text-align:center;color:red;'>Erro ao carregar dados.</td></tr>";
+                if (contadorEl) contadorEl.textContent = "Erro na consulta.";
+            }
+
+            function getFilteredData() {
+                return clientesData.filter(item => {
+                    for (const input of filterInputs) {
+                        const field = input.getAttribute("data-filter");
+                        const val = input.value.trim().toLowerCase();
+                        if (val) {
+                            const itemVal = (item[field] || "").toLowerCase();
+                            if (!itemVal.includes(val)) {
+                                return false;
+                            }
+                        }
+                    }
+                    return true;
+                });
+            }
+
+            function sortData(list) {
+                return list.sort((a, b) => {
+                    let valA = a[currentSortCol] || "";
+                    let valB = b[currentSortCol] || "";
+
+                    // Tratamento numérico para ID se aplicável
+                    if (currentSortCol === "id") {
+                        const numA = parseInt(valA, 10);
+                        const numB = parseInt(valB, 10);
+                        if (!isNaN(numA) && !isNaN(numB)) {
+                            return currentSortDir === "asc" ? numA - numB : numB - numA;
+                        }
+                    }
+
+                    // Se valores forem nulos/vazios, posicionar no final
+                    if (!valA && valB) return 1;
+                    if (valA && !valB) return -1;
+
+                    const comp = valA.localeCompare(valB, "pt-BR", { sensitivity: "base", numeric: true });
+                    return currentSortDir === "asc" ? comp : -comp;
+                });
+            }
+
+            function updateSortIcons() {
+                headerCols.forEach(th => {
+                    const col = th.getAttribute("data-col");
+                    const iconSpan = th.querySelector(".sort-icon");
+                    if (iconSpan) {
+                        if (col === currentSortCol) {
+                            iconSpan.textContent = currentSortDir === "asc" ? "▲" : "▼";
+                        } else {
+                            iconSpan.textContent = "";
+                        }
+                    }
+                });
+            }
+
+            function applyFiltersAndRender() {
+                const filtered = getFilteredData();
+                const sorted = sortData(filtered);
+
+                tbody.innerHTML = "";
+
+                if (contadorEl) {
+                    contadorEl.textContent = `Exibindo ${sorted.length} de ${clientesData.length} cliente(s)`;
+                }
+
+                if (sorted.length > 0) {
+                    sorted.forEach(c => {
                         const tr = document.createElement("tr");
-                        
+
                         const tdId = document.createElement("td");
                         tdId.textContent = c.id || "N/A";
-                        
+
                         const tdNome = document.createElement("td");
                         tdNome.textContent = c.cadastro_nome_cliente || "N/A";
-                        
+
+                        const tdMun = document.createElement("td");
+                        tdMun.textContent = c.municipio || "N/A";
+
+                        const tdStatus = document.createElement("td");
+                        tdStatus.textContent = c.status_cadastro || "N/A";
+
+                        const tdVend = document.createElement("td");
+                        tdVend.textContent = c.vendedor || "N/A";
+
                         const tdDoc = document.createElement("td");
-                        tdDoc.textContent = c.cadastro_cnpj || c.cadastro_cpf || "N/A";
-                        
+                        tdDoc.textContent = c.documento || "N/A";
+
                         tr.appendChild(tdId);
                         tr.appendChild(tdNome);
+                        tr.appendChild(tdMun);
+                        tr.appendChild(tdStatus);
+                        tr.appendChild(tdVend);
                         tr.appendChild(tdDoc);
+
                         tbody.appendChild(tr);
                     });
                 } else {
-                    tbody.innerHTML = "<tr><td colspan='3' style='text-align:center;'>Nenhum cliente encontrado.</td></tr>";
+                    tbody.innerHTML = "<tr><td colspan='6' style='text-align:center;'>Nenhum cliente encontrado.</td></tr>";
                 }
-            } catch (error) {
-                console.error(error);
-                const tbody = document.querySelector("#tabela-clientes-sem-codigo tbody");
-                if(tbody) tbody.innerHTML = "<tr><td colspan='3' style='text-align:center;color:red;'>Erro ao carregar dados.</td></tr>";
+
+                updateSortIcons();
+            }
+
+            // Event Listeners para Filtros
+            filterInputs.forEach(input => {
+                input.addEventListener("input", applyFiltersAndRender);
+            });
+
+            // Event Listeners para Ordenação nos Cabeçalhos
+            headerCols.forEach(th => {
+                th.addEventListener("click", () => {
+                    const col = th.getAttribute("data-col");
+                    if (currentSortCol === col) {
+                        currentSortDir = currentSortDir === "asc" ? "desc" : "asc";
+                    } else {
+                        currentSortCol = col;
+                        currentSortDir = "asc";
+                    }
+                    applyFiltersAndRender();
+                });
+            });
+
+            // Botão Limpar Filtros
+            if (btnLimpar) {
+                btnLimpar.addEventListener("click", () => {
+                    filterInputs.forEach(input => input.value = "");
+                    currentSortCol = "vendedor";
+                    currentSortDir = "asc";
+                    applyFiltersAndRender();
+                });
             }
         });
     </script>
