@@ -386,6 +386,7 @@ function renderTable(rows) {
             <button class="os-btn os-btn-secondary os-btn-sm btn-edit-status" data-id="${id}" data-status="${status}">
                Mudar Status
             </button>
+            <a href="/pedidos/criacao_pedido.html?id_origem=${id}&action=duplicate" class="os-btn os-btn-secondary os-btn-sm" style="margin-left: 5px; text-decoration: none;" title="Duplicar este pedido para outro cliente">📋 Duplicar</a>
             ${String(status || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toUpperCase() === 'ORCAMENTO' ? `<a href="/pedido/editar_pedido.html?id=${id}&action=edit" class="os-btn os-btn-secondary os-btn-sm" style="margin-left: 5px; text-decoration: none;">Editar Orçamento</a>` : ''}
             ${String(status || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toUpperCase() === 'CANCELADO' ? `<button class="os-btn os-btn-sm btn-delete-pedido" style="background-color: #dc3545; color: white; border: none; margin-left: 5px;" data-id="${id}">Deletar Pedido</button>` : ''}
 
@@ -454,6 +455,7 @@ function renderCards(rows) {
            <div class="os-btn-group">
              ${link ? `<a href="${link}" target="_blank" class="os-btn os-btn-secondary os-btn-sm" style="text-decoration: none;">Link</a>` : ''}
              <button class="os-btn os-btn-secondary os-btn-sm btn-edit-status" data-id="${id}" data-status="${status}" data-is-mobile="true">Mudar Status</button>
+             <a href="/pedidos/criacao_pedido.html?id_origem=${id}&action=duplicate" class="os-btn os-btn-secondary os-btn-sm" style="text-decoration: none;" title="Duplicar este pedido para outro cliente">📋 Duplicar</a>
              ${String(status || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toUpperCase() === 'ORCAMENTO' ? `<a href="/pedido/editar_pedido.html?id=${id}&action=edit" class="os-btn os-btn-secondary os-btn-sm" style="text-decoration: none;">Editar Orçamento</a>` : ''}
              ${String(status || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toUpperCase() === 'CANCELADO' ? `<button class="os-btn os-btn-sm btn-delete-pedido" style="background-color: #dc3545; color: white; border: none; margin-top: 5px; width: 100%;" data-id="${id}">Deletar Pedido</button>` : ''}
            </div>
@@ -541,7 +543,10 @@ async function openResumo(id) {
           📅 <b>Data do Pedido:</b> ${fmtDate(p.created_at)}
           ${p.numero_carga ? ` &nbsp;|&nbsp; 📦 <b>Carga:</b> #${p.numero_carga}` : ''}
         </div>
-        <div>${getStatusBadge(p.status)}</div>
+        <div style="display: flex; gap: 8px; align-items: center;">
+          <a href="/pedidos/criacao_pedido.html?id_origem=${p.id_pedido}&action=duplicate" class="os-btn os-btn-secondary os-btn-sm" style="text-decoration: none;" title="Duplicar este pedido para outro cliente">📋 Duplicar Pedido</a>
+          ${getStatusBadge(p.status)}
+        </div>
       </div>
 
       <div class="stack">

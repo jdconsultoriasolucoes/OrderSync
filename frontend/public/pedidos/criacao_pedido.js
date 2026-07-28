@@ -3303,26 +3303,32 @@ document.addEventListener('DOMContentLoaded', () => {
 
     await carregarItens();                       // carrega itens salvos/edição
     const q = new URLSearchParams(location.search);
+    const idOrigemUrl = q.get('id_origem');
     const action = q.get('action') || q.get('mode') || q.get('modo');
-    let modeRestored = false;
-    if (!action) {
-      const ctx = sessionStorage.getItem('TP_CTX_ID') || getCtxId();
-      const ret = sessionStorage.getItem(`TP_RETURN_MODE:${ctx}`);
-      if (ret) {
-        if (ret === MODE.EDIT) setMode(MODE.EDIT);
-        else if (ret === MODE.DUP) setMode(MODE.DUP);
-        else if (ret === MODE.NEW) setMode(MODE.NEW);
-        sessionStorage.removeItem(`TP_RETURN_MODE:${ctx}`);
-        modeRestored = true;
+
+    if (idOrigemUrl) {
+      await carregarPedidoDuplicacao(idOrigemUrl);
+    } else {
+      let modeRestored = false;
+      if (!action) {
+        const ctx = sessionStorage.getItem('TP_CTX_ID') || getCtxId();
+        const ret = sessionStorage.getItem(`TP_RETURN_MODE:${ctx}`);
+        if (ret) {
+          if (ret === MODE.EDIT) setMode(MODE.EDIT);
+          else if (ret === MODE.DUP) setMode(MODE.DUP);
+          else if (ret === MODE.NEW) setMode(MODE.NEW);
+          sessionStorage.removeItem(`TP_RETURN_MODE:${ctx}`);
+          modeRestored = true;
+        }
       }
-    }
-    if (!modeRestored) {
-      if (currentTabelaId) {
-        if (action === 'edit') setMode(MODE.EDIT);
-        else if (action === 'duplicate') onDuplicar();
-        else setMode(MODE.VIEW);
-      } else {
-        setMode(MODE.NEW);
+      if (!modeRestored) {
+        if (currentTabelaId) {
+          if (action === 'edit') setMode(MODE.EDIT);
+          else if (action === 'duplicate') onDuplicar();
+          else setMode(MODE.VIEW);
+        } else {
+          setMode(MODE.NEW);
+        }
       }
     }
 
@@ -4234,6 +4240,102 @@ async function carregarTabelaBase(e, forceId = null) {
     }
 }
 
+async function carregarPedidoDuplicacao(idOrigem) {
+    try {
+        document.body.style.cursor = 'wait';
+        const r = await fetch(`${API_BASE}/api/pedidos/${idOrigem}/resumo`);
+        if (!r.ok) {
+            throw new Error(`Erro ao carregar pedido #${idOrigem} para duplicação`);
+        }
+        const data = await r.json();
+
+        // 1. Limpa cabeçalho de cliente para forçar escolha de novo cliente
+        const elCli = document.getElementById('cliente_nome');
+        if (elCli) elCli.value = '';
+        const elCod = document.getElementById('codigo_cliente');
+        if (elCod) elCod.value = '';
+
+        // 2. Preenche Tabela Base como "Duplicado do pedido #idOrigem" e zera ID da tabela
+        const inpNome = document.getElementById('tabela_base_nome');
+        if (inpNome) {
+            inpNome.value = `Duplicado do pedido #${idOrigem}`;
+        }
+        const inpId = document.getElementById('tabela_base_id');
+        if (inpId) {
+            inpId.value = '';
+        }
+        currentTabelaId = null;
+
+        // 3. Preenche frete_kg, observacao, ST
+        const freteInput = document.getElementById('frete_kg');
+        if (freteInput) {
+            freteInput.value = String(data.frete_kg || 0);
+        }
+        const obsInput = document.getElementById('observacao');
+        if (obsInput) {
+            obsInput.value = data.observacoes || `Duplicado a partir do pedido #${idOrigem}`;
+        }
+        const iva = document.getElementById('iva_st_toggle');
+        if (iva) {
+            iva.checked = !!data.calcula_st;
+        }
+
+        // 4. Copia os produtos do pedido original
+        if (data.itens && data.itens.length > 0) {
+            itens = data.itens.map(it => {
+                const q = Number(it.quantidade || 0);
+                const pSem = Number(it.preco_unit || 0);
+                const pCom = Number(it.preco_unit_frt || pSem);
+                const vFrt = Number(it.valor_frete_unitario || (pCom - pSem));
+
+                return {
+                    id: it.codigo || String(Math.random()),
+                    codigo_tabela: it.codigo || '',
+                    codigo_produto_supra: it.codigo || '',
+                    descricao: it.nome || it.descricao || '',
+                    embalagem: it.embalagem || '',
+                    peso_liquido: Number(it.peso_kg || 0),
+                    peso_bruto: Number(it.peso_kg || 0),
+                    valor: pSem,
+                    valor_s_frete: pSem,
+                    valor_liquido: pCom,
+                    precoBase: pSem,
+                    quantidade: q,
+                    plano_pagamento: it.condicao_pagamento || '',
+                    fator_comissao: it.tabela_comissao || '',
+                    desconto: 0,
+                    acrescimo: 0,
+                    markup: Number(it.markup || 0),
+                    valor_final_markup: Number(it.valor_final_markup || pCom),
+                    valor_s_frete_markup: Number(it.valor_s_frete_markup || pSem),
+                    valor_frete_aplicado: vFrt,
+                    manual_freight: !!it.manual_freight,
+                    frete_base_ton: Number(it.frete_base_ton || 0),
+                    st_retencao_un: 0,
+                    icms_proprio_un: 0,
+                    icms_st_cheio_un: 0,
+                    base_st_calculada: 0,
+                    tem_st: false,
+                    taxa_comissao: 0
+                };
+            });
+
+            await atualizarPesosBrutosAtuais();
+            atualizarEstoqueMassivo();
+            renderTabela();
+            await recalcTudo();
+        }
+
+        if (typeof setMode === 'function') setMode(MODE.DUP);
+        console.log(`[Duplicação] Pedido #${idOrigem} carregado com sucesso.`);
+    } catch(err) {
+        console.error("Erro em carregarPedidoDuplicacao:", err);
+        await showOsModal({ title: 'Erro na Duplicação', message: err.message, type: 'alert' });
+    } finally {
+        document.body.style.cursor = 'default';
+    }
+}
+
 async function salvarPedido() {
     if (__recalcRunning || __recalcPending) {
         await showOsModal({ title: 'Aviso', message: 'Aguarde o término do cálculo de impostos para salvar.', type: 'alert' });
@@ -4277,13 +4379,77 @@ async function salvarPedido() {
     }
 
     const mkGlobal = 0;
-    const tblId = document.getElementById('tabela_base_id')?.value || null;
+    const tblId = document.getElementById('tabela_base_id')?.value || currentTabelaId;
     const observacao = document.getElementById('observacao')?.value || '';
+    const tblNome = document.getElementById('tabela_base_nome')?.value || '';
+    const isDuplicacao = (currentMode === MODE.DUP) || (tblNome && tblNome.startsWith('Duplicado'));
+
+    // SE veio de Tabela de Preço existente e NÃO for duplicação -> Pergunta se deseja atualizar a Tabela de Preço
+    if (tblId && Number(tblId) > 0 && !isDuplicacao) {
+        const msgConfirm = "Houve alterações na estrutura do pedido.<br><br>" +
+            "Deseja atualizar as informações da tabela de preço original com os dados deste pedido?";
+        const querAtualizar = await showOsModal({
+            title: 'Atualizar Tabela de Preço?',
+            message: msgConfirm,
+            type: 'confirm'
+        });
+
+        if (querAtualizar) {
+            try {
+                const freteKgVal = Number(document.getElementById('frete_kg')?.value || 0);
+                const calculaStVal = !!document.getElementById('iva_st_toggle')?.checked;
+                const token = window.Auth && window.Auth.getToken ? window.Auth.getToken() : (localStorage.getItem("token") || "");
+
+                const payloadTabela = {
+                    id_tabela: Number(tblId),
+                    nome_tabela: tblNome || `Tabela #${tblId}`,
+                    cliente: cliente_nome,
+                    codigo_cliente: codigo_cliente,
+                    frete_kg: freteKgVal,
+                    calcula_st: calculaStVal,
+                    observacao: observacao,
+                    produtos: produtosFiltrados.map(it => ({
+                        codigo_produto_supra: it.codigo_tabela || it.codigo || '',
+                        descricao_produto: it.descricao || '',
+                        valor_produto: Number(it.precoBase || it.valor || it.valor_s_frete || 0),
+                        embalagem: it.embalagem || '',
+                        peso_liquido: Number(it.peso_liquido || it.peso_bruto || 0),
+                        codigo_plano_pagamento: it.plano_pagamento || null,
+                        descricao_fator_comissao: it.fator_comissao || null,
+                        markup: Number(it.markup || 0),
+                        valor_final_markup: Number(it.valor_final_markup || 0),
+                        valor_s_frete_markup: Number(it.valor_s_frete_markup || 0),
+                        valor_frete_aplicado: Number(it.valor_frete_aplicado || 0),
+                        frete_kg: freteKgVal,
+                        manual_freight: !!it.manual_freight,
+                        frete_base_ton: Number(it.frete_base_ton || 0)
+                    }))
+                };
+
+                const rUpd = await fetch(`${API_BASE}/tabela_preco/${tblId}`, {
+                    method: 'PUT',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${token}`
+                    },
+                    body: JSON.stringify(payloadTabela)
+                });
+
+                if (!rUpd.ok) {
+                    console.warn("[TabelaPreco] Não foi possível atualizar a tabela de preço:", await rUpd.text());
+                } else {
+                    console.log("[TabelaPreco] Tabela de preço atualizada com sucesso!");
+                }
+            } catch (errUpd) {
+                console.error("Erro ao sincronizar tabela de preço:", errUpd);
+            }
+        }
+    }
 
     const payload = {
         cliente: cliente_nome,
         codigo_cliente: codigo_cliente || null,
-        tabela_preco_id: tblId, // Opcional
+        tabela_preco_id: isDuplicacao ? null : (tblId ? String(tblId) : null),
         observacao: observacao,
         usar_valor_com_frete: true,
         frete_kg: Number(document.getElementById('frete_kg')?.value || 0),
@@ -4293,7 +4459,7 @@ async function salvarPedido() {
             const vCF = Number(it.valor_final_markup || it.valor_liquido || it.precoBase || it.valor || 0);
             
             return {
-                codigo: it.codigo_tabela,
+                codigo: it.codigo_tabela || it.codigo || '',
                 descricao: it.descricao,
                 embalagem: it.embalagem,
                 peso_kg: Number(it.peso_bruto || it.peso_liquido || 0),
@@ -4301,7 +4467,7 @@ async function salvarPedido() {
                 preco_unit: vSF,
                 preco_unit_com_frete: vCF,
                 condicao_pagamento: it.plano_pagamento || null,
-                tabela_comissao: it.__descricao_fator_label || null,
+                tabela_comissao: it.__descricao_fator_label || it.fator_comissao || null,
                 markup: it.markup || mkGlobal || 0,
                 valor_final_markup: Number(it.valor_final_markup || 0),
                 valor_s_frete_markup: Number(it.valor_s_frete_markup || 0),
