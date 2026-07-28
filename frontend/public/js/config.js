@@ -1,8 +1,6 @@
-// Configuração dinâmica da API
+// Configuração dinâmica da API no Ambiente DEV
 // Se estiver rodando localmente (localhost ou 127.0.0.1), aponta para porta 8000
-// Se estiver em produção (Render), aponta para a URL do Backend
+// Se estiver em dev (Render), aponta para a URL do Backend DEV
 window.API_BASE = (location.hostname === 'localhost' || location.hostname === '127.0.0.1')
   ? 'http://127.0.0.1:8000'
-  : (location.hostname.includes('qwcl'))
-    ? 'https://ordersync-backend-59d2.onrender.com'
-    : 'https://ordersync-backend-edjq.onrender.com';
+  : 'https://ordersync-backend-59d2.onrender.com';
