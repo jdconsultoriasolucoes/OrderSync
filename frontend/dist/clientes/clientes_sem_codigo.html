@@ -22,13 +22,13 @@
     <script src="../js/sidebar_control.js"></script>
 
     <style>
-        .filter-row input {
+        .filter-row input, .filter-row select {
             background-color: var(--os-bg-white, #fff);
             border: 1px solid var(--os-border, #d1d5db);
             border-radius: 4px;
             box-shadow: none;
         }
-        .filter-row input:focus {
+        .filter-row input:focus, .filter-row select:focus {
             border-color: var(--os-primary, #2563eb);
             outline: none;
         }
@@ -231,8 +231,16 @@
                             <th><input type="text" class="os-input filter-input" data-filter="id" placeholder="Filtrar ID..." style="width: 100%; font-size: 0.75rem; padding: 4px 6px;"></th>
                             <th><input type="text" class="os-input filter-input" data-filter="cadastro_nome_cliente" placeholder="Filtrar Nome..." style="width: 100%; font-size: 0.75rem; padding: 4px 6px;"></th>
                             <th><input type="text" class="os-input filter-input" data-filter="municipio" placeholder="Filtrar Municipio..." style="width: 100%; font-size: 0.75rem; padding: 4px 6px;"></th>
-                            <th><input type="text" class="os-input filter-input" data-filter="status_cadastro" placeholder="Filtrar Status..." style="width: 100%; font-size: 0.75rem; padding: 4px 6px;"></th>
-                            <th><input type="text" class="os-input filter-input" data-filter="vendedor" placeholder="Filtrar Vendedor..." style="width: 100%; font-size: 0.75rem; padding: 4px 6px;"></th>
+                            <th>
+                                <select class="os-input filter-input" id="filter-status-cadastro" data-filter="status_cadastro" style="width: 100%; font-size: 0.75rem; padding: 4px 6px;">
+                                    <option value="">Todos os Status</option>
+                                </select>
+                            </th>
+                            <th>
+                                <select class="os-input filter-input" id="filter-vendedor" data-filter="vendedor" style="width: 100%; font-size: 0.75rem; padding: 4px 6px;">
+                                    <option value="">Todos os Vendedores</option>
+                                </select>
+                            </th>
                             <th><input type="text" class="os-input filter-input" data-filter="documento" placeholder="Filtrar CNPJ/CPF..." style="width: 100%; font-size: 0.75rem; padding: 4px 6px;"></th>
                         </tr>
                     </thead>
@@ -286,11 +294,45 @@
                     }));
                 }
 
+                populateSelectOptions();
                 applyFiltersAndRender();
             } catch (error) {
                 console.error(error);
                 if (tbody) tbody.innerHTML = "<tr><td colspan='6' style='text-align:center;color:red;'>Erro ao carregar dados.</td></tr>";
                 if (contadorEl) contadorEl.textContent = "Erro na consulta.";
+            }
+
+            function populateSelectOptions() {
+                populateSelect("filter-status-cadastro", "status_cadastro", "Todos os Status");
+                populateSelect("filter-vendedor", "vendedor", "Todos os Vendedores");
+            }
+
+            function populateSelect(selectId, fieldName, defaultOptionText) {
+                const selectEl = document.getElementById(selectId);
+                if (!selectEl) return;
+
+                const currentVal = selectEl.value;
+                const set = new Set();
+                clientesData.forEach(item => {
+                    const v = (item[fieldName] || "").trim();
+                    if (v) set.add(v);
+                });
+
+                const sortedVals = Array.from(set).sort((a, b) => a.localeCompare(b, "pt-BR", { sensitivity: "base" }));
+
+                selectEl.innerHTML = `<option value="">${defaultOptionText}</option>`;
+                sortedVals.forEach(val => {
+                    const opt = document.createElement("option");
+                    opt.value = val;
+                    opt.textContent = val;
+                    selectEl.appendChild(opt);
+                });
+
+                if (currentVal && set.has(currentVal)) {
+                    selectEl.value = currentVal;
+                } else {
+                    selectEl.value = "";
+                }
             }
 
             function getFilteredData() {
@@ -299,9 +341,15 @@
                         const field = input.getAttribute("data-filter");
                         const val = input.value.trim().toLowerCase();
                         if (val) {
-                            const itemVal = (item[field] || "").toLowerCase();
-                            if (!itemVal.includes(val)) {
-                                return false;
+                            const itemVal = (item[field] || "").trim().toLowerCase();
+                            if (input.tagName.toLowerCase() === "select") {
+                                if (itemVal !== val) {
+                                    return false;
+                                }
+                            } else {
+                                if (!itemVal.includes(val)) {
+                                    return false;
+                                }
                             }
                         }
                     }
@@ -395,6 +443,7 @@
             // Event Listeners para Filtros
             filterInputs.forEach(input => {
                 input.addEventListener("input", applyFiltersAndRender);
+                input.addEventListener("change", applyFiltersAndRender);
             });
 
             // Event Listeners para Ordenação nos Cabeçalhos
