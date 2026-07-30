@@ -225,7 +225,8 @@ def gerar_pdf_romaneio(db, carga_id: int) -> bytes:
             c.entrega_municipio as cidade,
             p.peso_total_kg,
             p.status,
-            COALESCE(pb.peso_bruto_total, p.peso_total_kg) as peso_bruto_total,
+            COALESCE(pw.peso_liquido_total, p.peso_total_kg) as peso_liquido_total,
+            COALESCE(pw.peso_bruto_total, pw.peso_liquido_total, p.peso_total_kg) as peso_bruto_total,
             cp.observacoes as obs_carga,
             cp.retirada_tipo,
             cp.retirada_nome_terceiro,
@@ -236,15 +237,16 @@ def gerar_pdf_romaneio(db, carga_id: int) -> bytes:
         JOIN tb_pedidos p ON cp.numero_pedido = p.id_pedido::text
         LEFT JOIN (
              SELECT 
-                 id_pedido,
-                 SUM(i.quantidade * COALESCE(prod.peso_bruto, prod.peso, 0)) as peso_bruto_total
+                 i.id_pedido,
+                 SUM(i.quantidade * COALESCE(CAST(prod.peso AS FLOAT), i.peso_kg, 0)) as peso_liquido_total,
+                 SUM(i.quantidade * COALESCE(CAST(prod.peso_bruto AS FLOAT), CAST(prod.peso AS FLOAT), i.peso_kg, 0)) as peso_bruto_total
              FROM tb_pedidos_itens i
              LEFT JOIN (
-                 SELECT codigo_supra, MAX(peso) as peso, MAX(peso_bruto) as peso_bruto 
+                 SELECT codigo_supra, MAX(CAST(peso AS FLOAT)) as peso, MAX(CAST(peso_bruto AS FLOAT)) as peso_bruto 
                  FROM t_cadastro_produto_v2 GROUP BY codigo_supra
              ) prod ON prod.codigo_supra = i.codigo
-             GROUP BY id_pedido
-        ) pb ON pb.id_pedido = p.id_pedido
+             GROUP BY i.id_pedido
+        ) pw ON pw.id_pedido = p.id_pedido
         LEFT JOIN public.t_cadastro_cliente_v2 c ON c.cadastro_codigo_da_empresa::text = p.codigo_cliente
         WHERE cp.id_carga = :cid
         ORDER BY cp.ordem_carregamento
@@ -269,8 +271,8 @@ def gerar_pdf_romaneio(db, carga_id: int) -> bytes:
     data_str = data_carregamento.strftime('%d/%m/%Y') if data_carregamento else '____/____/____'
     
     # Totais: calculados aqui
-    total_liq_val = sum(p.peso_total_kg or 0 for p in pedidos)
-    total_bruto_val = sum(p.peso_bruto_total or 0 for p in pedidos)
+    total_liq_val = sum(getattr(p, 'peso_liquido_total', 0.0) or getattr(p, 'peso_total_kg', 0.0) or 0.0 for p in pedidos)
+    total_bruto_val = sum(getattr(p, 'peso_bruto_total', 0.0) or getattr(p, 'peso_total_kg', 0.0) or 0.0 for p in pedidos)
 
     if is_ret:
         # Tudo em uma única linha no topo para economizar espaço
@@ -597,21 +599,23 @@ def gerar_pdf_relatorio_completo(db, carga_id: int) -> bytes:
             c.cadastro_nome_fantasia as nome_fantasia,
             c.entrega_municipio as cidade,
             p.peso_total_kg,
-            COALESCE(pb.peso_bruto_total, p.peso_total_kg) as peso_bruto_total,
+            COALESCE(pw.peso_liquido_total, p.peso_total_kg) as peso_liquido_total,
+            COALESCE(pw.peso_bruto_total, pw.peso_liquido_total, p.peso_total_kg) as peso_bruto_total,
             cp.observacoes as obs_carga
         FROM tb_cargas_pedidos cp
         JOIN tb_pedidos p ON cp.numero_pedido = p.id_pedido::text
         LEFT JOIN (
              SELECT 
-                 id_pedido,
-                 SUM(i.quantidade * COALESCE(prod.peso_bruto, prod.peso, 0)) as peso_bruto_total
+                 i.id_pedido,
+                 SUM(i.quantidade * COALESCE(CAST(prod.peso AS FLOAT), i.peso_kg, 0)) as peso_liquido_total,
+                 SUM(i.quantidade * COALESCE(CAST(prod.peso_bruto AS FLOAT), CAST(prod.peso AS FLOAT), i.peso_kg, 0)) as peso_bruto_total
              FROM tb_pedidos_itens i
              LEFT JOIN (
-                 SELECT codigo_supra, MAX(peso) as peso, MAX(peso_bruto) as peso_bruto 
+                 SELECT codigo_supra, MAX(CAST(peso AS FLOAT)) as peso, MAX(CAST(peso_bruto AS FLOAT)) as peso_bruto 
                  FROM t_cadastro_produto_v2 GROUP BY codigo_supra
              ) prod ON prod.codigo_supra = i.codigo
-             GROUP BY id_pedido
-        ) pb ON pb.id_pedido = p.id_pedido
+             GROUP BY i.id_pedido
+        ) pw ON pw.id_pedido = p.id_pedido
         LEFT JOIN public.t_cadastro_cliente_v2 c ON c.cadastro_codigo_da_empresa::text = p.codigo_cliente
         WHERE cp.id_carga = :cid
         ORDER BY cp.ordem_carregamento
@@ -684,8 +688,8 @@ def _desenhar_romaneio_logic(c, carga, pedidos, width, height):
     y -= 0.5*cm
 
     # Calcular totais para o cabeçalho — canto direito
-    t_liq = sum(getattr(p, 'peso_total_kg', 0.0) or 0.0 for p in pedidos)
-    t_bru = sum(getattr(p, 'peso_bruto_total', 0.0) or 0.0 for p in pedidos)
+    t_liq = sum(getattr(p, 'peso_liquido_total', 0.0) or getattr(p, 'peso_total_kg', 0.0) or 0.0 for p in pedidos)
+    t_bru = sum(getattr(p, 'peso_bruto_total', 0.0) or getattr(p, 'peso_total_kg', 0.0) or 0.0 for p in pedidos)
 
     # Bloco de transporte em duas linhas para evitar sobreposições horizontais
     c.setFont("Helvetica-Bold", 10)
@@ -769,7 +773,8 @@ def gerar_pdf_romaneio_retirada(db, retirada_id: int) -> bytes:
             c.entrega_municipio as cidade,
             p.peso_total_kg,
             p.status,
-            COALESCE(pb.peso_bruto_total, p.peso_total_kg) as peso_bruto_total,
+            COALESCE(pw.peso_liquido_total, p.peso_total_kg) as peso_liquido_total,
+            COALESCE(pw.peso_bruto_total, pw.peso_liquido_total, p.peso_total_kg) as peso_bruto_total,
             rp.observacoes as obs_carga,
             rp.retirada_tipo,
             rp.retirada_nome_terceiro,
@@ -780,15 +785,16 @@ def gerar_pdf_romaneio_retirada(db, retirada_id: int) -> bytes:
         JOIN tb_pedidos p ON rp.numero_pedido = p.id_pedido::text
         LEFT JOIN (
              SELECT 
-                 id_pedido,
-                 SUM(i.quantidade * COALESCE(prod.peso_bruto, prod.peso, 0)) as peso_bruto_total
+                 i.id_pedido,
+                 SUM(i.quantidade * COALESCE(CAST(prod.peso AS FLOAT), i.peso_kg, 0)) as peso_liquido_total,
+                 SUM(i.quantidade * COALESCE(CAST(prod.peso_bruto AS FLOAT), CAST(prod.peso AS FLOAT), i.peso_kg, 0)) as peso_bruto_total
              FROM tb_pedidos_itens i
              LEFT JOIN (
-                 SELECT codigo_supra, MAX(peso) as peso, MAX(peso_bruto) as peso_bruto 
+                 SELECT codigo_supra, MAX(CAST(peso AS FLOAT)) as peso, MAX(CAST(peso_bruto AS FLOAT)) as peso_bruto 
                  FROM t_cadastro_produto_v2 GROUP BY codigo_supra
              ) prod ON prod.codigo_supra = i.codigo
-             GROUP BY id_pedido
-        ) pb ON pb.id_pedido = p.id_pedido
+             GROUP BY i.id_pedido
+        ) pw ON pw.id_pedido = p.id_pedido
         LEFT JOIN public.t_cadastro_cliente_v2 c ON c.cadastro_codigo_da_empresa::text = p.codigo_cliente
         WHERE rp.id_retirada = :rid
         ORDER BY rp.id
@@ -809,8 +815,8 @@ def gerar_pdf_romaneio_retirada(db, retirada_id: int) -> bytes:
     data_retirada = retirada.get('data_retirada')
     data_str = data_retirada.strftime('%d/%m/%Y') if data_retirada else '____/____/____'
     
-    total_liq_val = sum(p.peso_total_kg or 0 for p in pedidos)
-    total_bruto_val = sum(p.peso_bruto_total or 0 for p in pedidos)
+    total_liq_val = sum(getattr(p, 'peso_liquido_total', 0.0) or getattr(p, 'peso_total_kg', 0.0) or 0.0 for p in pedidos)
+    total_bruto_val = sum(getattr(p, 'peso_bruto_total', 0.0) or getattr(p, 'peso_total_kg', 0.0) or 0.0 for p in pedidos)
 
     c.drawString(0.7*cm, y, f"Filial: DISPET DISTRIBUIDORA")
     c.drawString(6.0*cm, y, f"RETIRADA Nº: {retirada.get('numero_retirada') or ''}")
