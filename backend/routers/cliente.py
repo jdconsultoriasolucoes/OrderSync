@@ -145,6 +145,56 @@ def exportar_supra(
         raise HTTPException(status_code=500, detail=f"Erro interno: {traceback.format_exc()}")
 
 
+@router.get("/{id}/exportar-recadastro")
+def exportar_recadastro(
+    id: int,
+    format: str = "xlsx",
+    current_user: UsuarioModel = Depends(get_current_user)
+):
+    """
+    Exporta a Ficha de Recadastro V.2026-2 para .xlsx ou HTML/PDF.
+    """
+    try:
+        with SessionLocal() as db:
+            cli = db.query(ClienteModelV2).filter(
+                ClienteModelV2.id == id
+            ).first()
+        
+        if not cli:
+            logger.warning(f"Tentativa de exportação Recadastro para cliente inexistente ID: {id}")
+            raise HTTPException(status_code=404, detail="Cliente não encontrado no banco de dados.")
+
+        from services.excel_recadastro_service import gerar_excel_cliente_recadastro, gerar_nome_arquivo_recadastro
+        
+        if format.lower() == "xlsx":
+            conteudo = gerar_excel_cliente_recadastro(cli)
+            nome_arquivo = gerar_nome_arquivo_recadastro(cli)
+            media_type = "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+            ext = "xlsx"
+        else:
+            from xlsx2html import xlsx2html
+            excel_bytes = gerar_excel_cliente_recadastro(cli)
+            in_stream = io.BytesIO(excel_bytes)
+            out_stream = io.StringIO()
+            xlsx2html(in_stream, out_stream)
+            conteudo = out_stream.getvalue().encode('utf-8')
+            nome_arquivo = "print_recadastro_template"
+            media_type = "text/html"
+            ext = "html"
+
+        headers = {
+            "Content-Disposition": f'attachment; filename="{nome_arquivo}.{ext}"',
+            "Access-Control-Expose-Headers": "Content-Disposition"
+        }
+        return StreamingResponse(io.BytesIO(conteudo), media_type=media_type, headers=headers)
+
+    except Exception as e:
+        import traceback
+        logger.error(f"Erro ao exportar Ficha Recadastro: {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail=f"Erro interno: {str(e)}")
+
+
+
 @router.get("/verificar-duplicado")
 def verificar_duplicado(
     codigo: Optional[str] = None,

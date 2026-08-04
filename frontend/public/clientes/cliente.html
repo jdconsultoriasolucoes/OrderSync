@@ -241,6 +241,8 @@
             style="display: none;">Cancelar</button>
           <button class="btn" id="btn-export-excel" onclick="exportarSupra('xlsx')" type="button"
             style="display: none; background-color: #27ae60; color: #fff;">Exportar Supra (Excel)</button>
+          <button class="btn" id="btn-export-recadastro" onclick="exportarRecadastro('xlsx')" type="button"
+            style="display: none; background-color: #2980b9; color: #fff;">Ficha Recadastro (Excel)</button>
           <button class="btn" id="btn-export-pdf" onclick="exportarSupra('pdf')" type="button"
             style="display: none !important; background-color: #e74c3c; color: #fff;">Exportar Supra (PDF)</button>
         </div>
@@ -925,11 +927,12 @@
           const btnSalvar = document.getElementById("btn-salvar");
           const btnCancelar = document.getElementById("btn-cancelar");
           const btnExpExcel = document.getElementById("btn-export-excel");
+          const btnExpRecadastro = document.getElementById("btn-export-recadastro");
           const btnExpPdf = document.getElementById("btn-export-pdf");
 
           // Helper to show/hide
-          const show = (el) => el.style.display = "inline-block";
-          const hide = (el) => el.style.display = "none";
+          const show = (el) => el && (el.style.display = "inline-block");
+          const hide = (el) => el && (el.style.display = "none");
 
           // Disable/Enable form
           const disableForm = (disabled) => {
@@ -952,6 +955,7 @@
             hide(btnSalvar);
             hide(btnCancelar);
             hide(btnExpExcel);
+            hide(btnExpRecadastro);
             hide(btnExpPdf);
             disableForm(true);
             // Clear form logic typically handles resetting ID to ""
@@ -964,6 +968,7 @@
             hide(btnSalvar);
             hide(btnCancelar);
             show(btnExpExcel);
+            show(btnExpRecadastro);
             hide(btnExpPdf); 
             disableForm(true);
           } else if (mode === 'EDITING' || mode === 'CREATING') {
@@ -975,6 +980,7 @@
             show(btnSalvar);
             show(btnCancelar);
             hide(btnExpExcel);
+            hide(btnExpRecadastro);
             hide(btnExpPdf);
             disableForm(false);
           }
@@ -1277,6 +1283,52 @@
           } catch (error) {
             console.error("Erro na exportação:", error);
             alert("Erro ao exportar: " + error.message);
+          }
+        }
+
+        async function exportarRecadastro(format = 'xlsx') {
+          const idInput = document.getElementById("id");
+          const id = idInput ? idInput.value : "";
+          
+          if (!id) {
+            alert("Salve o cliente primeiro para poder exportar a Ficha Recadastro.");
+            return;
+          }
+
+          const api = window.API_BASE || "http://127.0.0.1:8000";
+          const token = window.Auth ? window.Auth.getToken() : localStorage.getItem('ordersync_token');
+          
+          try {
+            const response = await fetch(`${api}/cliente/${id}/exportar-recadastro?format=${format}`, {
+              headers: {
+                'Authorization': `Bearer ${token}`
+              }
+            });
+
+            if (!response.ok) {
+              const errorData = await response.json();
+              throw new Error(errorData.detail || "Erro ao gerar Ficha Recadastro.");
+            }
+
+            const blob = await response.blob();
+            const url = window.URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            
+            const disposition = response.headers.get('Content-Disposition');
+            let filename = `Recadastro_Cliente_${id}.xlsx`;
+            if (disposition) {
+              const match = disposition.match(/filename="?(.+?)"?$/);
+              if (match && match[1]) filename = match[1];
+            }
+            a.download = filename;
+            document.body.appendChild(a);
+            a.click();
+            window.URL.revokeObjectURL(url);
+            a.remove();
+          } catch (error) {
+            console.error("Erro na exportação do Recadastro:", error);
+            alert("Erro ao exportar Ficha Recadastro: " + error.message);
           }
         }
 
