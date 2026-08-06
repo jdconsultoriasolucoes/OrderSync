@@ -15,9 +15,9 @@
     <script src="https://cdn.jsdelivr.net/npm/fullcalendar@6.1.11/index.global.min.js"></script>
 
     <style>
-        .page-container { display: flex; height: calc(100vh - 60px); }
-        .sidebar { width: 300px; min-width: 300px; flex-shrink: 0; background: white; border-right: 1px solid #e2e8f0; padding: 20px; overflow-y: auto; }
-        .main-content { flex: 1; padding: 20px; background: #f8fafc; overflow-y: auto; }
+        .page-container { display: flex; height: calc(100vh - 60px); width: 100%; overflow: hidden; box-sizing: border-box; }
+        .sidebar { width: 300px; min-width: 300px; flex-shrink: 0; background: white; border-right: 1px solid #e2e8f0; padding: 20px; overflow-y: auto; box-sizing: border-box; }
+        .main-content { flex: 1; min-width: 0; padding: 20px; background: #f8fafc; overflow-y: auto; box-sizing: border-box; }
         
         .section-title { font-weight: 600; font-size: 0.9rem; color: #4a5568; margin-top: 20px; margin-bottom: 10px; text-transform: uppercase; letter-spacing: 0.05em; }
         
