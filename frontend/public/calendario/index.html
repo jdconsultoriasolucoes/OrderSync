@@ -15,7 +15,7 @@
     <script src="https://cdn.jsdelivr.net/npm/fullcalendar@6.1.11/index.global.min.js"></script>
 
     <style>
-        .page-container { display: flex; height: calc(100vh - 60px); width: 100%; overflow: hidden; box-sizing: border-box; }
+        .page-container { display: flex; height: calc(100vh - var(--os-header-height, 64px)); width: 100%; overflow: hidden; box-sizing: border-box; margin-top: var(--os-header-height, 64px); }
         .calendar-sidebar { width: 300px; min-width: 300px; flex-shrink: 0; background: white; border-right: 1px solid #e2e8f0; padding: 20px; overflow-y: auto; box-sizing: border-box; }
         .main-content { flex: 1; min-width: 0; padding: 20px; background: #f8fafc; overflow-y: auto; box-sizing: border-box; }
         
