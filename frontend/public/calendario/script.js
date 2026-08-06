@@ -31,8 +31,9 @@ document.addEventListener('DOMContentLoaded', async () => {
 
 // Mock da API para simplificar. Substituir por chamadas reais via axios/fetch usando o token JWT
 async function apiGet(endpoint) {
-    const token = localStorage.getItem('token');
-    const res = await fetch(`/api/v1${endpoint}`, {
+    const token = localStorage.getItem('ordersync_token');
+    const baseUrl = window.API_BASE || '';
+    const res = await fetch(`${baseUrl}/api/v1${endpoint}`, {
         headers: { 'Authorization': `Bearer ${token}` }
     });
     if (!res.ok) throw new Error('API Error');
@@ -40,8 +41,9 @@ async function apiGet(endpoint) {
 }
 
 async function apiPost(endpoint, data) {
-    const token = localStorage.getItem('token');
-    const res = await fetch(`/api/v1${endpoint}`, {
+    const token = localStorage.getItem('ordersync_token');
+    const baseUrl = window.API_BASE || '';
+    const res = await fetch(`${baseUrl}/api/v1${endpoint}`, {
         method: 'POST',
         headers: { 
             'Authorization': `Bearer ${token}`,
@@ -54,8 +56,9 @@ async function apiPost(endpoint, data) {
 }
 
 async function apiPut(endpoint, data) {
-    const token = localStorage.getItem('token');
-    const res = await fetch(`/api/v1${endpoint}`, {
+    const token = localStorage.getItem('ordersync_token');
+    const baseUrl = window.API_BASE || '';
+    const res = await fetch(`${baseUrl}/api/v1${endpoint}`, {
         method: 'PUT',
         headers: { 
             'Authorization': `Bearer ${token}`,
@@ -68,8 +71,9 @@ async function apiPut(endpoint, data) {
 }
 
 async function apiDelete(endpoint) {
-    const token = localStorage.getItem('token');
-    const res = await fetch(`/api/v1${endpoint}`, {
+    const token = localStorage.getItem('ordersync_token');
+    const baseUrl = window.API_BASE || '';
+    const res = await fetch(`${baseUrl}/api/v1${endpoint}`, {
         method: 'DELETE',
         headers: { 'Authorization': `Bearer ${token}` }
     });
@@ -127,6 +131,17 @@ function renderCalendarSidebar() {
         div.appendChild(span);
         
         if (isOwner) {
+            const shareBtn = document.createElement('button');
+            shareBtn.innerHTML = '&#128101;'; // Ícone de pessoas
+            shareBtn.style.marginLeft = 'auto';
+            shareBtn.style.border = 'none';
+            shareBtn.style.background = 'none';
+            shareBtn.style.cursor = 'pointer';
+            shareBtn.style.fontSize = '12px';
+            shareBtn.title = 'Compartilhar Agenda';
+            shareBtn.onclick = () => openShareModal(cal.id);
+            
+            div.appendChild(shareBtn);
             ownList.appendChild(div);
         } else {
             const badge = document.createElement('span');
@@ -311,5 +326,32 @@ async function deleteEvent() {
         calendarInstance.refetchEvents();
     } catch (e) {
         alert('Erro ao excluir');
+    }
+}
+
+function openShareModal(calId) {
+    document.getElementById('share-calendar-id').value = calId;
+    document.getElementById('share-email').value = '';
+    document.getElementById('share-permission').value = 'read';
+    document.getElementById('modal-share').style.display = 'flex';
+}
+
+async function shareCalendar() {
+    const calId = document.getElementById('share-calendar-id').value;
+    const email = document.getElementById('share-email').value;
+    const perm = document.getElementById('share-permission').value;
+    
+    if (!email) return alert('E-mail é obrigatório');
+    
+    try {
+        await apiPost(`/calendars/${calId}/share`, { 
+            shared_with_email: email,
+            permission_level: perm
+        });
+        closeModal('modal-share');
+        alert('Agenda compartilhada com sucesso!');
+        await loadCalendars();
+    } catch (e) {
+        alert('Erro ao compartilhar. O usuário existe?');
     }
 }
