@@ -280,6 +280,10 @@ from routers import profile_config, error_logs
 app.include_router(profile_config.router)
 app.include_router(error_logs.router)
 
+from routers import calendarios, eventos
+app.include_router(calendarios.router, prefix="/api/v1")
+app.include_router(eventos.router, prefix="/api/v1")
+
 # ---- Static (se precisar servir arquivos públicos do front) ----
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 

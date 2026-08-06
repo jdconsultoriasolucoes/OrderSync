@@ -70,6 +70,20 @@ def create_user(
     db.commit()
     db.refresh(db_user)
     
+    # Criar agenda padrão
+    try:
+        from models.calendario import CalendarModel
+        default_calendar = CalendarModel(
+            user_id=db_user.id,
+            name="Minha Agenda",
+            color="#3182CE",
+            is_default=True
+        )
+        db.add(default_calendar)
+        db.commit()
+    except Exception as e:
+        print(f"Erro ao criar agenda padrão para {usuario.email}: {e}")
+    
     # Enviar E-mail
     try:
         # Link do Frontend (ajustar conforme ambiente)

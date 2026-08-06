@@ -1,0 +1,135 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Calendário — OrderSync</title>
+    
+    <link rel="stylesheet" href="/design-system.css" />
+    <link rel="stylesheet" href="/navbar.css" />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
+    
+    <!-- FullCalendar CSS -->
+    <script src="https://cdn.jsdelivr.net/npm/fullcalendar@6.1.11/index.global.min.js"></script>
+
+    <style>
+        .page-container { display: flex; height: calc(100vh - 60px); }
+        .sidebar { width: 300px; background: white; border-right: 1px solid #e2e8f0; padding: 20px; overflow-y: auto; }
+        .main-content { flex: 1; padding: 20px; background: #f8fafc; overflow-y: auto; }
+        
+        .section-title { font-weight: 600; font-size: 0.9rem; color: #4a5568; margin-top: 20px; margin-bottom: 10px; text-transform: uppercase; letter-spacing: 0.05em; }
+        
+        .calendar-item { display: flex; align-items: center; margin-bottom: 10px; }
+        .calendar-item input[type="checkbox"] { margin-right: 10px; }
+        .color-dot { width: 12px; height: 12px; border-radius: 50%; margin-right: 10px; }
+        .calendar-name { font-size: 0.95rem; color: #2d3748; }
+        .calendar-badge { margin-left: auto; font-size: 0.7rem; padding: 2px 6px; border-radius: 4px; background: #edf2f7; color: #4a5568; }
+
+        .btn-new-cal { width: 100%; padding: 8px; background: #3182CE; color: white; border: none; border-radius: 6px; cursor: pointer; font-weight: 500; }
+        .btn-new-cal:hover { background: #2b6cb0; }
+        
+        #calendar { background: white; padding: 20px; border-radius: 8px; box-shadow: 0 1px 3px rgba(0,0,0,0.1); height: 100%; }
+        
+        .modal { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.5); align-items: center; justify-content: center; z-index: 1000; }
+        .modal-content { background: white; padding: 24px; border-radius: 8px; width: 100%; max-width: 400px; }
+        .modal h3 { margin-top: 0; margin-bottom: 20px; }
+        .form-group { margin-bottom: 15px; }
+        .form-group label { display: block; margin-bottom: 5px; font-weight: 500; font-size: 0.9rem; }
+        .form-group input, .form-group select, .form-group textarea { width: 100%; padding: 8px; border: 1px solid #cbd5e0; border-radius: 4px; box-sizing: border-box; }
+        .modal-actions { display: flex; justify-content: flex-end; gap: 10px; margin-top: 20px; }
+        
+        /* FC Overrides */
+        .fc-event { cursor: pointer; }
+    </style>
+</head>
+<body>
+    <!-- Simulação do Navbar -->
+    <nav class="os-navbar">
+        <div class="os-nav-left">
+            <span class="os-logo">OrderSync</span>
+            <a href="/dashboards.html">Dashboard</a>
+            <a href="/calendario/index.html" class="active">Calendário</a>
+        </div>
+    </nav>
+
+    <div class="page-container">
+        <div class="sidebar">
+            <button class="btn-new-cal" onclick="openNewCalendarModal()">+ Nova Agenda</button>
+            
+            <div class="section-title">Minhas Agendas</div>
+            <div id="own-calendars-list"></div>
+            
+            <div class="section-title">Compartilhadas Comigo</div>
+            <div id="shared-calendars-list"></div>
+        </div>
+        
+        <div class="main-content">
+            <div id="calendar"></div>
+        </div>
+    </div>
+
+    <!-- Modal Nova Agenda -->
+    <div id="modal-new-cal" class="modal">
+        <div class="modal-content">
+            <h3>Nova Agenda</h3>
+            <div class="form-group">
+                <label>Nome</label>
+                <input type="text" id="cal-name" />
+            </div>
+            <div class="form-group">
+                <label>Cor</label>
+                <input type="color" id="cal-color" value="#3182CE" />
+            </div>
+            <div class="modal-actions">
+                <button class="os-btn-secondary" onclick="closeModal('modal-new-cal')">Cancelar</button>
+                <button class="os-btn-primary" onclick="createCalendar()">Salvar</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal Evento -->
+    <div id="modal-event" class="modal">
+        <div class="modal-content">
+            <h3 id="event-modal-title">Novo Evento</h3>
+            <input type="hidden" id="event-id" />
+            <div class="form-group">
+                <label>Título</label>
+                <input type="text" id="event-title" />
+            </div>
+            <div class="form-group">
+                <label>Agenda</label>
+                <select id="event-calendar"></select>
+            </div>
+            <div class="form-group">
+                <label>Início</label>
+                <input type="datetime-local" id="event-start" />
+            </div>
+            <div class="form-group">
+                <label>Fim</label>
+                <input type="datetime-local" id="event-end" />
+            </div>
+            <div class="form-group">
+                <label><input type="checkbox" id="event-allday" /> Dia Inteiro</label>
+            </div>
+            <div class="form-group">
+                <label>Local (Opcional)</label>
+                <input type="text" id="event-location" />
+            </div>
+            <div class="form-group">
+                <label>Descrição</label>
+                <textarea id="event-desc" rows="3"></textarea>
+            </div>
+            <div class="modal-actions">
+                <button id="btn-delete-event" class="os-btn-danger" style="display:none; margin-right:auto;" onclick="deleteEvent()">Excluir</button>
+                <button class="os-btn-secondary" onclick="closeModal('modal-event')">Cancelar</button>
+                <button id="btn-save-event" class="os-btn-primary" onclick="saveEvent()">Salvar</button>
+            </div>
+        </div>
+    </div>
+
+    <script src="/js/api.js"></script>
+    <script src="script.js"></script>
+</body>
+</html>

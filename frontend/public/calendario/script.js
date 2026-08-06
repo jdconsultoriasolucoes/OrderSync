@@ -1,0 +1,315 @@
+let calendarInstance = null;
+let calendars = [];
+let events = [];
+let activeCalendarIds = new Set();
+let currentEventId = null;
+let currentEventPerm = 'read';
+
+document.addEventListener('DOMContentLoaded', async () => {
+    // Inicializar FullCalendar
+    const calendarEl = document.getElementById('calendar');
+    calendarInstance = new FullCalendar.Calendar(calendarEl, {
+        initialView: 'dayGridMonth',
+        headerToolbar: {
+            left: 'prev,next today',
+            center: 'title',
+            right: 'dayGridMonth,timeGridWeek,timeGridDay'
+        },
+        locale: 'pt-br',
+        editable: true,
+        selectable: true,
+        select: handleDateSelect,
+        eventClick: handleEventClick,
+        eventDrop: handleEventDrop,
+        eventResize: handleEventDrop,
+        events: fetchEvents
+    });
+    calendarInstance.render();
+
+    await loadCalendars();
+});
+
+// Mock da API para simplificar. Substituir por chamadas reais via axios/fetch usando o token JWT
+async function apiGet(endpoint) {
+    const token = localStorage.getItem('token');
+    const res = await fetch(`/api/v1${endpoint}`, {
+        headers: { 'Authorization': `Bearer ${token}` }
+    });
+    if (!res.ok) throw new Error('API Error');
+    return res.json();
+}
+
+async function apiPost(endpoint, data) {
+    const token = localStorage.getItem('token');
+    const res = await fetch(`/api/v1${endpoint}`, {
+        method: 'POST',
+        headers: { 
+            'Authorization': `Bearer ${token}`,
+            'Content-Type': 'application/json'
+        },
+        body: JSON.stringify(data)
+    });
+    if (!res.ok) throw new Error('API Error');
+    return res.json();
+}
+
+async function apiPut(endpoint, data) {
+    const token = localStorage.getItem('token');
+    const res = await fetch(`/api/v1${endpoint}`, {
+        method: 'PUT',
+        headers: { 
+            'Authorization': `Bearer ${token}`,
+            'Content-Type': 'application/json'
+        },
+        body: JSON.stringify(data)
+    });
+    if (!res.ok) throw new Error('API Error');
+    return res.json();
+}
+
+async function apiDelete(endpoint) {
+    const token = localStorage.getItem('token');
+    const res = await fetch(`/api/v1${endpoint}`, {
+        method: 'DELETE',
+        headers: { 'Authorization': `Bearer ${token}` }
+    });
+    if (!res.ok) throw new Error('API Error');
+    return res.json();
+}
+
+async function loadCalendars() {
+    try {
+        calendars = await apiGet('/calendars');
+        activeCalendarIds = new Set(calendars.map(c => c.id));
+        renderCalendarSidebar();
+        calendarInstance.refetchEvents();
+    } catch (e) {
+        console.error("Erro ao carregar calendários", e);
+    }
+}
+
+function renderCalendarSidebar() {
+    const ownList = document.getElementById('own-calendars-list');
+    const sharedList = document.getElementById('shared-calendars-list');
+    
+    ownList.innerHTML = '';
+    sharedList.innerHTML = '';
+    
+    const selectCal = document.getElementById('event-calendar');
+    selectCal.innerHTML = '';
+
+    calendars.forEach(cal => {
+        const isOwner = cal.permission_level === 'admin';
+        
+        // Checkbox element
+        const div = document.createElement('div');
+        div.className = 'calendar-item';
+        
+        const cb = document.createElement('input');
+        cb.type = 'checkbox';
+        cb.checked = activeCalendarIds.has(cal.id);
+        cb.onchange = (e) => {
+            if (e.target.checked) activeCalendarIds.add(cal.id);
+            else activeCalendarIds.delete(cal.id);
+            calendarInstance.refetchEvents();
+        };
+        
+        const dot = document.createElement('div');
+        dot.className = 'color-dot';
+        dot.style.backgroundColor = cal.color;
+        
+        const span = document.createElement('span');
+        span.className = 'calendar-name';
+        span.textContent = cal.name;
+        
+        div.appendChild(cb);
+        div.appendChild(dot);
+        div.appendChild(span);
+        
+        if (isOwner) {
+            ownList.appendChild(div);
+        } else {
+            const badge = document.createElement('span');
+            badge.className = 'calendar-badge';
+            badge.textContent = cal.permission_level;
+            div.appendChild(badge);
+            sharedList.appendChild(div);
+        }
+        
+        // Option for select
+        if (cal.permission_level === 'write' || cal.permission_level === 'admin') {
+            const opt = document.createElement('option');
+            opt.value = cal.id;
+            opt.textContent = cal.name;
+            selectCal.appendChild(opt);
+        }
+    });
+}
+
+async function fetchEvents(info, successCallback, failureCallback) {
+    try {
+        const start = info.startStr.split('T')[0];
+        const end = info.endStr.split('T')[0];
+        const rawEvents = await apiGet(`/events?start_date=${start}&end_date=${end}`);
+        
+        const fcEvents = rawEvents
+            .filter(e => activeCalendarIds.has(e.calendar_id))
+            .map(e => ({
+                id: e.id,
+                title: e.title,
+                start: e.start_time,
+                end: e.end_time,
+                allDay: e.is_all_day,
+                backgroundColor: e.calendar_color,
+                borderColor: e.calendar_color,
+                extendedProps: {
+                    calendar_id: e.calendar_id,
+                    description: e.description,
+                    location: e.location,
+                    permission_level: e.permission_level
+                },
+                editable: e.permission_level !== 'read'
+            }));
+            
+        successCallback(fcEvents);
+    } catch (e) {
+        console.error("Erro ao buscar eventos", e);
+        failureCallback(e);
+    }
+}
+
+function handleDateSelect(info) {
+    document.getElementById('event-modal-title').textContent = 'Novo Evento';
+    document.getElementById('event-id').value = '';
+    document.getElementById('event-title').value = '';
+    document.getElementById('event-start').value = info.startStr.slice(0,16);
+    document.getElementById('event-end').value = info.endStr.slice(0,16);
+    document.getElementById('event-allday').checked = info.allDay;
+    document.getElementById('event-location').value = '';
+    document.getElementById('event-desc').value = '';
+    
+    document.getElementById('btn-delete-event').style.display = 'none';
+    document.getElementById('btn-save-event').style.display = 'block';
+    
+    currentEventId = null;
+    currentEventPerm = 'admin'; // Assumindo que criará em um dele
+    
+    document.getElementById('modal-event').style.display = 'flex';
+}
+
+function handleEventClick(info) {
+    const e = info.event;
+    const props = e.extendedProps;
+    
+    document.getElementById('event-modal-title').textContent = 'Editar Evento';
+    document.getElementById('event-id').value = e.id;
+    document.getElementById('event-title').value = e.title;
+    document.getElementById('event-calendar').value = props.calendar_id;
+    
+    const formatDt = (dt) => {
+        if (!dt) return '';
+        const tzOffset = (new Date()).getTimezoneOffset() * 60000;
+        return (new Date(dt - tzOffset)).toISOString().slice(0,16);
+    };
+    
+    document.getElementById('event-start').value = formatDt(e.start);
+    document.getElementById('event-end').value = formatDt(e.end || e.start);
+    document.getElementById('event-allday').checked = e.allDay;
+    document.getElementById('event-location').value = props.location || '';
+    document.getElementById('event-desc').value = props.description || '';
+    
+    currentEventId = e.id;
+    currentEventPerm = props.permission_level;
+    
+    const canEdit = currentEventPerm !== 'read';
+    document.getElementById('btn-save-event').style.display = canEdit ? 'block' : 'none';
+    document.getElementById('btn-delete-event').style.display = canEdit ? 'block' : 'none';
+    
+    // Desabilitar inputs se for read-only
+    const inputs = document.querySelectorAll('#modal-event input, #modal-event select, #modal-event textarea');
+    inputs.forEach(el => el.disabled = !canEdit);
+    
+    document.getElementById('modal-event').style.display = 'flex';
+}
+
+async function handleEventDrop(info) {
+    if (info.event.extendedProps.permission_level === 'read') {
+        info.revert();
+        alert('Você não tem permissão para editar este evento.');
+        return;
+    }
+    
+    try {
+        await apiPut(`/events/${info.event.id}`, {
+            start_time: info.event.start.toISOString(),
+            end_time: info.event.end ? info.event.end.toISOString() : info.event.start.toISOString(),
+            is_all_day: info.event.allDay
+        });
+    } catch (e) {
+        console.error(e);
+        info.revert();
+    }
+}
+
+function closeModal(id) {
+    document.getElementById(id).style.display = 'none';
+}
+
+function openNewCalendarModal() {
+    document.getElementById('cal-name').value = '';
+    document.getElementById('cal-color').value = '#3182CE';
+    document.getElementById('modal-new-cal').style.display = 'flex';
+}
+
+async function createCalendar() {
+    const name = document.getElementById('cal-name').value;
+    const color = document.getElementById('cal-color').value;
+    if (!name) return alert('Nome é obrigatório');
+    
+    try {
+        await apiPost('/calendars', { name, color });
+        closeModal('modal-new-cal');
+        await loadCalendars();
+    } catch (e) {
+        alert('Erro ao criar agenda');
+    }
+}
+
+async function saveEvent() {
+    const data = {
+        title: document.getElementById('event-title').value,
+        calendar_id: document.getElementById('event-calendar').value,
+        start_time: new Date(document.getElementById('event-start').value).toISOString(),
+        end_time: new Date(document.getElementById('event-end').value).toISOString(),
+        is_all_day: document.getElementById('event-allday').checked,
+        location: document.getElementById('event-location').value,
+        description: document.getElementById('event-desc').value
+    };
+    
+    if (!data.title || !data.calendar_id || !data.start_time || !data.end_time) {
+        return alert('Preencha os campos obrigatórios.');
+    }
+    
+    try {
+        if (currentEventId) {
+            await apiPut(`/events/${currentEventId}`, data);
+        } else {
+            await apiPost('/events', data);
+        }
+        closeModal('modal-event');
+        calendarInstance.refetchEvents();
+    } catch (e) {
+        alert('Erro ao salvar evento');
+    }
+}
+
+async function deleteEvent() {
+    if (!confirm('Deseja realmente excluir?')) return;
+    try {
+        await apiDelete(`/events/${currentEventId}`);
+        closeModal('modal-event');
+        calendarInstance.refetchEvents();
+    } catch (e) {
+        alert('Erro ao excluir');
+    }
+}

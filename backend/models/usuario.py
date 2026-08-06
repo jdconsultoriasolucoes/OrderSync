@@ -18,3 +18,4 @@ class UsuarioModel(Base):
     reset_senha_obrigatorio = Column(Boolean, default=False)
     email_verificado = Column(Boolean, default=False)
     token_verificacao = Column(String, nullable=True)
+    email_daily_digest = Column(Boolean, default=True)

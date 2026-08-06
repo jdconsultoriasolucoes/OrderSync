@@ -81,6 +81,16 @@ def start_scheduler():
             name="Verificação de agendamento de prospecção (DB)",
             replace_existing=True
         )
+        
+        # 4. Envio de E-mail de Resumo Matinal: Todo dia às 06:00
+        from services.daily_digest import enviar_resumo_matinal
+        scheduler.add_job(
+            enviar_resumo_matinal,
+            trigger=CronTrigger(hour=6, minute=0),
+            id="resumo_matinal_calendario",
+            name="Envio do resumo matinal de calendário (06:00)",
+            replace_existing=True
+        )
 
         scheduler.start()
         logger.info("Scheduler iniciado com sucesso (Inativação 00:01 | Manutenção 03:00 | Prospecção Dinâmica)")
