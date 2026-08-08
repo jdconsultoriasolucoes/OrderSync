@@ -40,6 +40,7 @@ class EventBase(BaseModel):
     is_all_day: bool = False
     location: Optional[str] = None
     calendar_id: UUID
+    cliente_id: Optional[int] = None
 
 class EventCreate(EventBase):
     pass
@@ -51,6 +52,7 @@ class EventUpdate(BaseModel):
     end_time: Optional[datetime] = None
     is_all_day: Optional[bool] = None
     location: Optional[str] = None
+    cliente_id: Optional[int] = None
 
 class EventResponse(EventBase):
     id: UUID
@@ -64,3 +66,18 @@ class EventWithCalendarResponse(EventResponse):
     calendar_color: Optional[str] = None
     calendar_name: Optional[str] = None
     permission_level: Optional[str] = "admin"
+    cliente_nome: Optional[str] = None
+    cliente_telefone: Optional[str] = None
+
+class EventShareCreate(BaseModel):
+    shared_with_email: str
+    permission_level: str # 'read', 'write'
+
+class EventShareResponse(BaseModel):
+    id: UUID
+    event_id: UUID
+    shared_with_user_id: int
+    permission_level: str
+    created_at: datetime
+
+    model_config = ConfigDict(from_attributes=True)

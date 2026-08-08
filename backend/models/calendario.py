@@ -41,7 +41,20 @@ class EventModel(Base):
     end_time = Column(DateTime(timezone=True), nullable=False, index=True)
     is_all_day = Column(Boolean, default=False)
     location = Column(String(255), nullable=True)
+    cliente_id = Column(BigInteger, ForeignKey("t_cadastro_cliente_v2.id", ondelete="SET NULL"), nullable=True, index=True)
     created_at = Column(DateTime(timezone=True), server_default=func.now())
     updated_at = Column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now())
     
     calendar = relationship("CalendarModel", back_populates="events")
+    shares = relationship("EventShareModel", back_populates="event", cascade="all, delete-orphan")
+
+class EventShareModel(Base):
+    __tablename__ = "event_shares"
+
+    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4, index=True)
+    event_id = Column(UUID(as_uuid=True), ForeignKey("events.id", ondelete="CASCADE"), nullable=False, index=True)
+    shared_with_user_id = Column(BigInteger, ForeignKey("t_usuario.id", ondelete="CASCADE"), nullable=False, index=True)
+    permission_level = Column(String(20), nullable=False) # 'read', 'write'
+    created_at = Column(DateTime(timezone=True), server_default=func.now())
+    
+    event = relationship("EventModel", back_populates="shares")

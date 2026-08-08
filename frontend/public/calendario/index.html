@@ -40,6 +40,13 @@
         .form-group input, .form-group select, .form-group textarea { width: 100%; padding: 8px; border: 1px solid #cbd5e0; border-radius: 4px; box-sizing: border-box; }
         .modal-actions { display: flex; justify-content: flex-end; gap: 10px; margin-top: 20px; }
         
+        .client-info-box { background-color: #ebf8ff; border-left: 4px solid #3182CE; padding: 10px; margin-bottom: 15px; border-radius: 4px; display: none; font-size: 0.9rem; }
+        .client-info-box p { margin: 4px 0; }
+        .autocomplete-container { position: relative; }
+        .autocomplete-list { position: absolute; top: 100%; left: 0; right: 0; background: white; border: 1px solid #cbd5e0; border-radius: 4px; max-height: 150px; overflow-y: auto; z-index: 10; display: none; box-shadow: 0 4px 6px rgba(0,0,0,0.1); }
+        .autocomplete-item { padding: 8px; cursor: pointer; border-bottom: 1px solid #edf2f7; font-size: 0.9rem; }
+        .autocomplete-item:hover { background-color: #ebf8ff; }
+        
         /* FC Overrides */
         .fc-event { cursor: pointer; }
     </style>
@@ -244,13 +251,33 @@
                 <input type="text" id="event-location" />
             </div>
             <div class="form-group">
+                <label>Vincular Cliente (Opcional)</label>
+                <div class="autocomplete-container">
+                    <input type="text" id="event-client-search" placeholder="Digite o nome ou código..." autocomplete="off" />
+                    <input type="hidden" id="event-client-id" />
+                    <div id="client-autocomplete-list" class="autocomplete-list"></div>
+                </div>
+            </div>
+            
+            <div id="event-client-info" class="client-info-box">
+                <p><strong>Cliente:</strong> <span id="client-info-name"></span></p>
+                <p><strong>Telefone:</strong> <span id="client-info-phone"></span></p>
+                <button type="button" class="os-btn-secondary" style="margin-top: 8px; padding: 4px 8px; font-size: 0.8rem;" onclick="removeClientLink()">Remover Vínculo</button>
+            </div>
+            
+            <div class="form-group">
                 <label>Descrição</label>
                 <textarea id="event-desc" rows="3"></textarea>
             </div>
-            <div class="modal-actions">
-                <button id="btn-delete-event" class="os-btn-danger" style="display:none; margin-right:auto;" onclick="deleteEvent()">Excluir</button>
-                <button class="os-btn-secondary" onclick="closeModal('modal-event')">Cancelar</button>
-                <button id="btn-save-event" class="os-btn-primary" onclick="saveEvent()">Salvar</button>
+            <div class="modal-actions" style="justify-content: space-between; flex-wrap: wrap;">
+                <div>
+                    <button id="btn-delete-event" class="os-btn-danger" style="display:none;" onclick="deleteEvent()">Excluir</button>
+                </div>
+                <div style="display: flex; gap: 10px;">
+                    <button id="btn-share-event" class="os-btn-secondary" style="display:none; background-color: #edf2f7; color: #4a5568;" onclick="openShareEventModal()">Compartilhar</button>
+                    <button class="os-btn-secondary" onclick="closeModal('modal-event')">Cancelar</button>
+                    <button id="btn-save-event" class="os-btn-primary" onclick="saveEvent()">Salvar</button>
+                </div>
             </div>
         </div>
     </div>
@@ -275,6 +302,28 @@
             <div class="modal-actions">
                 <button class="os-btn-secondary" onclick="closeModal('modal-share')">Cancelar</button>
                 <button class="os-btn-primary" onclick="shareCalendar()">Compartilhar</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal Compartilhamento de Evento -->
+    <div id="modal-share-event" class="modal">
+        <div class="modal-content">
+            <h3>Compartilhar Evento</h3>
+            <div class="form-group">
+                <label>E-mail do Usuário</label>
+                <input type="email" id="share-event-email" placeholder="email@exemplo.com" />
+            </div>
+            <div class="form-group">
+                <label>Nível de Permissão</label>
+                <select id="share-event-permission">
+                    <option value="read">Leitura (Apenas ver)</option>
+                    <option value="write">Escrita (Editar Evento)</option>
+                </select>
+            </div>
+            <div class="modal-actions">
+                <button class="os-btn-secondary" onclick="closeModal('modal-share-event')">Cancelar</button>
+                <button class="os-btn-primary" onclick="shareEventSubmit()">Compartilhar</button>
             </div>
         </div>
     </div>

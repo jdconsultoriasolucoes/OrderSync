@@ -181,7 +181,10 @@ async function fetchEvents(info, successCallback, failureCallback) {
                     calendar_id: e.calendar_id,
                     description: e.description,
                     location: e.location,
-                    permission_level: e.permission_level
+                    permission_level: e.permission_level,
+                    cliente_id: e.cliente_id,
+                    cliente_nome: e.cliente_nome,
+                    cliente_telefone: e.cliente_telefone
                 },
                 editable: e.permission_level !== 'read'
             }));
@@ -203,6 +206,8 @@ function handleDateSelect(info) {
     document.getElementById('event-location').value = '';
     document.getElementById('event-desc').value = '';
     
+    removeClientLink();
+    document.getElementById('btn-share-event').style.display = 'none';
     document.getElementById('btn-delete-event').style.display = 'none';
     document.getElementById('btn-save-event').style.display = 'block';
     
@@ -233,12 +238,23 @@ function handleEventClick(info) {
     document.getElementById('event-location').value = props.location || '';
     document.getElementById('event-desc').value = props.description || '';
     
+    if (props.cliente_id) {
+        document.getElementById('event-client-id').value = props.cliente_id;
+        document.getElementById('client-info-name').textContent = props.cliente_nome || '-';
+        document.getElementById('client-info-phone').textContent = props.cliente_telefone || '-';
+        document.getElementById('event-client-info').style.display = 'block';
+        document.getElementById('event-client-search').parentElement.style.display = 'none';
+    } else {
+        removeClientLink();
+    }
+    
     currentEventId = e.id;
     currentEventPerm = props.permission_level;
     
     const canEdit = currentEventPerm !== 'read';
     document.getElementById('btn-save-event').style.display = canEdit ? 'block' : 'none';
     document.getElementById('btn-delete-event').style.display = canEdit ? 'block' : 'none';
+    document.getElementById('btn-share-event').style.display = canEdit ? 'block' : 'none';
     
     // Desabilitar inputs se for read-only
     const inputs = document.querySelectorAll('#modal-event input, #modal-event select, #modal-event textarea');
@@ -298,7 +314,8 @@ async function saveEvent() {
         end_time: new Date(document.getElementById('event-end').value).toISOString(),
         is_all_day: document.getElementById('event-allday').checked,
         location: document.getElementById('event-location').value,
-        description: document.getElementById('event-desc').value
+        description: document.getElementById('event-desc').value,
+        cliente_id: document.getElementById('event-client-id').value ? parseInt(document.getElementById('event-client-id').value) : null
     };
     
     if (!data.title || !data.calendar_id || !data.start_time || !data.end_time) {
@@ -353,5 +370,105 @@ async function shareCalendar() {
         await loadCalendars();
     } catch (e) {
         alert('Erro ao compartilhar. O usuário existe?');
+    }
+}
+
+
+// --- Cliente Autocomplete ---
+let searchTimeout = null;
+const searchInput = document.getElementById('event-client-search');
+const autocompleteList = document.getElementById('client-autocomplete-list');
+
+if (searchInput) {
+    searchInput.addEventListener('input', (e) => {
+        clearTimeout(searchTimeout);
+        const query = e.target.value.trim();
+        if (query.length < 3) {
+            autocompleteList.style.display = 'none';
+            return;
+        }
+        searchTimeout = setTimeout(async () => {
+            try {
+                const results = await apiGet(`/cliente/lookup?query=${encodeURIComponent(query)}`);
+                renderAutocomplete(results);
+            } catch (err) {
+                console.error('Erro na busca de clientes', err);
+            }
+        }, 500);
+    });
+}
+
+function renderAutocomplete(results) {
+    autocompleteList.innerHTML = '';
+    if (results.length === 0) {
+        autocompleteList.style.display = 'none';
+        return;
+    }
+    results.forEach(cli => {
+        const div = document.createElement('div');
+        div.className = 'autocomplete-item';
+        div.textContent = `${cli.codigo} - ${cli.nome_fantasia || cli.nome_empresarial}`;
+        div.onclick = async () => {
+            try {
+                // Fetch full client details to get ID and phone
+                const fullCli = await apiGet(`/cliente/${cli.codigo}`);
+                document.getElementById('event-client-id').value = fullCli.id;
+                document.getElementById('client-info-name').textContent = fullCli.cadastro_nome_cliente || fullCli.cadastro_nome_fantasia;
+                document.getElementById('client-info-phone').textContent = fullCli.compras_celular_responsavel || fullCli.legal_celular || '-';
+                
+                document.getElementById('event-client-info').style.display = 'block';
+                searchInput.parentElement.style.display = 'none';
+                autocompleteList.style.display = 'none';
+                searchInput.value = '';
+            } catch (err) {
+                alert('Erro ao buscar detalhes do cliente.');
+            }
+        };
+        autocompleteList.appendChild(div);
+    });
+    autocompleteList.style.display = 'block';
+}
+
+function removeClientLink() {
+    document.getElementById('event-client-id').value = '';
+    document.getElementById('client-info-name').textContent = '';
+    document.getElementById('client-info-phone').textContent = '';
+    document.getElementById('event-client-info').style.display = 'none';
+    if(searchInput) {
+        searchInput.parentElement.style.display = 'block';
+        searchInput.value = '';
+    }
+}
+
+document.addEventListener('click', (e) => {
+    if (autocompleteList && !autocompleteList.contains(e.target) && e.target !== searchInput) {
+        autocompleteList.style.display = 'none';
+    }
+});
+
+// --- Compartilhar Evento ---
+function openShareEventModal() {
+    if (!currentEventId) return;
+    document.getElementById('share-event-email').value = '';
+    document.getElementById('share-event-permission').value = 'read';
+    document.getElementById('modal-share-event').style.display = 'flex';
+}
+
+async function shareEventSubmit() {
+    if (!currentEventId) return;
+    const email = document.getElementById('share-event-email').value;
+    const perm = document.getElementById('share-event-permission').value;
+    
+    if (!email) return alert('E-mail é obrigatório');
+    
+    try {
+        await apiPost(`/events/${currentEventId}/share`, { 
+            shared_with_email: email,
+            permission_level: perm
+        });
+        closeModal('modal-share-event');
+        alert('Evento compartilhado com sucesso!');
+    } catch (e) {
+        alert('Erro ao compartilhar. O usuário existe ou você não tem permissão?');
     }
 }
