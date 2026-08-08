@@ -257,7 +257,40 @@ function handleEventClick(info) {
         listEl.innerHTML = '';
         props.shared_with.forEach(s => {
             const li = document.createElement('li');
-            li.textContent = `${s.email} (${s.permission_level})`;
+            li.style.display = 'flex';
+            li.style.justifyContent = 'space-between';
+            li.style.alignItems = 'center';
+            li.style.marginBottom = '4px';
+            
+            const span = document.createElement('span');
+            span.textContent = `${s.email} (${s.permission_level})`;
+            
+            const delBtn = document.createElement('button');
+            delBtn.innerHTML = '&times;';
+            delBtn.style.color = 'red';
+            delBtn.style.background = 'none';
+            delBtn.style.border = 'none';
+            delBtn.style.cursor = 'pointer';
+            delBtn.style.fontSize = '1.1rem';
+            delBtn.style.fontWeight = 'bold';
+            delBtn.title = 'Remover compartilhamento';
+            delBtn.onclick = async () => {
+                if(!confirm('Remover acesso deste usuário?')) return;
+                try {
+                    await apiDelete(`/events/${e.id}/share/${s.id}`);
+                    calendarInstance.refetchEvents();
+                    closeModal('modal-event');
+                } catch(err) {
+                    alert('Erro ao remover');
+                }
+            };
+            
+            if(currentEventPerm !== 'read') {
+                li.appendChild(span);
+                li.appendChild(delBtn);
+            } else {
+                li.appendChild(span);
+            }
             listEl.appendChild(li);
         });
     } else {
@@ -440,9 +473,9 @@ function renderAutocomplete(results) {
                 });
                 if (!res.ok) throw new Error('API Error');
                 const fullCli = await res.json();
-                document.getElementById('event-client-id').value = fullCli.id;
-                document.getElementById('client-info-name').textContent = fullCli.cadastro_nome_cliente || fullCli.cadastro_nome_fantasia;
-                document.getElementById('client-info-phone').textContent = fullCli.compras_celular_responsavel || fullCli.legal_celular || '-';
+                document.getElementById('event-client-id').value = fullCli.cadastrocliente.id;
+                document.getElementById('client-info-name').textContent = fullCli.cadastrocliente.nome_cliente || fullCli.cadastrocliente.nome_fantasia || '-';
+                document.getElementById('client-info-phone').textContent = (fullCli.responsavel_compras && fullCli.responsavel_compras.celular_responsavel) ? fullCli.responsavel_compras.celular_responsavel : ((fullCli.representante_legal && fullCli.representante_legal.celular_RepresentanteLegal) ? fullCli.representante_legal.celular_RepresentanteLegal : '-');
                 
                 document.getElementById('event-client-info').style.display = 'block';
                 searchInput.parentElement.style.display = 'none';

@@ -120,7 +120,7 @@ def get_events(
         for s in shares_for_ev:
             u = db.query(UsuarioModel).filter(UsuarioModel.id == s.shared_with_user_id).first()
             if u:
-                shared_list.append({"email": u.email, "permission_level": s.permission_level})
+                shared_list.append({"id": str(s.id), "email": u.email, "permission_level": s.permission_level})
         res.shared_with = shared_list
         
         results.append(res)
@@ -168,7 +168,7 @@ def create_event(
     for s in shares_for_ev:
         u = db.query(UsuarioModel).filter(UsuarioModel.id == s.shared_with_user_id).first()
         if u:
-            shared_list.append({"email": u.email, "permission_level": s.permission_level})
+            shared_list.append({"id": str(s.id), "email": u.email, "permission_level": s.permission_level})
     res.shared_with = shared_list
 
     return res
@@ -208,7 +208,7 @@ def update_event(
     for s in shares_for_ev:
         u = db.query(UsuarioModel).filter(UsuarioModel.id == s.shared_with_user_id).first()
         if u:
-            shared_list.append({"email": u.email, "permission_level": s.permission_level})
+            shared_list.append({"id": str(s.id), "email": u.email, "permission_level": s.permission_level})
     res.shared_with = shared_list
 
     return res
@@ -262,3 +262,26 @@ def share_event(
     db.commit()
     db.refresh(new_share)
     return new_share
+
+@router.delete("/{event_id}/share/{share_id}")
+def remove_event_share(
+    event_id: UUID,
+    share_id: UUID,
+    db: Session = Depends(get_db),
+    current_user: UsuarioModel = Depends(get_current_user)
+):
+    event, perm = _check_event_access(db, event_id, current_user.id, "write")
+    if not event or perm == "read":
+        raise HTTPException(status_code=403, detail="Sem permissão para alterar compartilhamentos")
+        
+    share = db.query(EventShareModel).filter(
+        EventShareModel.id == share_id,
+        EventShareModel.event_id == event_id
+    ).first()
+    
+    if not share:
+        raise HTTPException(status_code=404, detail="Compartilhamento não encontrado")
+        
+    db.delete(share)
+    db.commit()
+    return {"message": "Compartilhamento removido com sucesso"}
