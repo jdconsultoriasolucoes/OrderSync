@@ -68,6 +68,7 @@ class EventWithCalendarResponse(EventResponse):
     permission_level: Optional[str] = "admin"
     cliente_nome: Optional[str] = None
     cliente_telefone: Optional[str] = None
+    shared_with: Optional[List[dict]] = []
 
 class EventShareCreate(BaseModel):
     shared_with_email: str

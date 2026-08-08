@@ -114,6 +114,15 @@ def get_events(
                 res.cliente_nome = cliente.cadastro_nome_cliente or cliente.cadastro_nome_fantasia
                 res.cliente_telefone = cliente.compras_celular_responsavel or cliente.legal_celular
                 
+        # Populate shared_with
+        shares_for_ev = db.query(EventShareModel).filter(EventShareModel.event_id == ev.id).all()
+        shared_list = []
+        for s in shares_for_ev:
+            u = db.query(UsuarioModel).filter(UsuarioModel.id == s.shared_with_user_id).first()
+            if u:
+                shared_list.append({"email": u.email, "permission_level": s.permission_level})
+        res.shared_with = shared_list
+        
         results.append(res)
         
     return results
@@ -154,6 +163,14 @@ def create_event(
             res.cliente_nome = cliente.cadastro_nome_cliente or cliente.cadastro_nome_fantasia
             res.cliente_telefone = cliente.compras_celular_responsavel or cliente.legal_celular
             
+    shares_for_ev = db.query(EventShareModel).filter(EventShareModel.event_id == db_event.id).all()
+    shared_list = []
+    for s in shares_for_ev:
+        u = db.query(UsuarioModel).filter(UsuarioModel.id == s.shared_with_user_id).first()
+        if u:
+            shared_list.append({"email": u.email, "permission_level": s.permission_level})
+    res.shared_with = shared_list
+
     return res
 
 @router.put("/{event_id}", response_model=EventWithCalendarResponse)
@@ -186,6 +203,14 @@ def update_event(
             res.cliente_nome = cliente.cadastro_nome_cliente or cliente.cadastro_nome_fantasia
             res.cliente_telefone = cliente.compras_celular_responsavel or cliente.legal_celular
             
+    shares_for_ev = db.query(EventShareModel).filter(EventShareModel.event_id == db_event.id).all()
+    shared_list = []
+    for s in shares_for_ev:
+        u = db.query(UsuarioModel).filter(UsuarioModel.id == s.shared_with_user_id).first()
+        if u:
+            shared_list.append({"email": u.email, "permission_level": s.permission_level})
+    res.shared_with = shared_list
+
     return res
 
 @router.delete("/{event_id}")

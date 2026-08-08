@@ -184,7 +184,8 @@ async function fetchEvents(info, successCallback, failureCallback) {
                     permission_level: e.permission_level,
                     cliente_id: e.cliente_id,
                     cliente_nome: e.cliente_nome,
-                    cliente_telefone: e.cliente_telefone
+                    cliente_telefone: e.cliente_telefone,
+                    shared_with: e.shared_with
                 },
                 editable: e.permission_level !== 'read'
             }));
@@ -207,6 +208,8 @@ function handleDateSelect(info) {
     document.getElementById('event-desc').value = '';
     
     removeClientLink();
+    document.getElementById('event-shared-info').style.display = 'none';
+    document.getElementById('event-shared-list').innerHTML = '';
     document.getElementById('btn-share-event').style.display = 'none';
     document.getElementById('btn-delete-event').style.display = 'none';
     document.getElementById('btn-save-event').style.display = 'block';
@@ -246,6 +249,19 @@ function handleEventClick(info) {
         document.getElementById('event-client-search').parentElement.style.display = 'none';
     } else {
         removeClientLink();
+    }
+    
+    if (props.shared_with && props.shared_with.length > 0) {
+        document.getElementById('event-shared-info').style.display = 'block';
+        const listEl = document.getElementById('event-shared-list');
+        listEl.innerHTML = '';
+        props.shared_with.forEach(s => {
+            const li = document.createElement('li');
+            li.textContent = `${s.email} (${s.permission_level})`;
+            listEl.appendChild(li);
+        });
+    } else {
+        document.getElementById('event-shared-info').style.display = 'none';
     }
     
     currentEventId = e.id;
@@ -389,7 +405,13 @@ if (searchInput) {
         }
         searchTimeout = setTimeout(async () => {
             try {
-                const results = await apiGet(`/cliente/lookup?query=${encodeURIComponent(query)}`);
+                const token = localStorage.getItem('ordersync_token');
+                const baseUrl = window.API_BASE || '';
+                const res = await fetch(`${baseUrl}/cliente/lookup?query=${encodeURIComponent(query)}`, {
+                    headers: { 'Authorization': `Bearer ${token}` }
+                });
+                if (!res.ok) throw new Error('API Error');
+                const results = await res.json();
                 renderAutocomplete(results);
             } catch (err) {
                 console.error('Erro na busca de clientes', err);
@@ -411,7 +433,13 @@ function renderAutocomplete(results) {
         div.onclick = async () => {
             try {
                 // Fetch full client details to get ID and phone
-                const fullCli = await apiGet(`/cliente/${cli.codigo}`);
+                const token = localStorage.getItem('ordersync_token');
+                const baseUrl = window.API_BASE || '';
+                const res = await fetch(`${baseUrl}/cliente/${cli.codigo}`, {
+                    headers: { 'Authorization': `Bearer ${token}` }
+                });
+                if (!res.ok) throw new Error('API Error');
+                const fullCli = await res.json();
                 document.getElementById('event-client-id').value = fullCli.id;
                 document.getElementById('client-info-name').textContent = fullCli.cadastro_nome_cliente || fullCli.cadastro_nome_fantasia;
                 document.getElementById('client-info-phone').textContent = fullCli.compras_celular_responsavel || fullCli.legal_celular || '-';
