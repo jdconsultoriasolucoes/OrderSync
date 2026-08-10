@@ -42,8 +42,12 @@ class EventBase(BaseModel):
     calendar_id: UUID
     cliente_id: Optional[int] = None
 
+class EventShareInput(BaseModel):
+    email: str
+    permission_level: str
+
 class EventCreate(EventBase):
-    shared_with_emails: Optional[List[str]] = []
+    shared_with_users: Optional[List[EventShareInput]] = []
 
 class EventUpdate(BaseModel):
     title: Optional[str] = None
@@ -53,7 +57,7 @@ class EventUpdate(BaseModel):
     is_all_day: Optional[bool] = None
     location: Optional[str] = None
     cliente_id: Optional[int] = None
-    shared_with_emails: Optional[List[str]] = None
+    shared_with_users: Optional[List[EventShareInput]] = None
 
 class EventResponse(EventBase):
     id: UUID

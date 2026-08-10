@@ -152,14 +152,14 @@ def create_event(
     db.commit()
     db.refresh(db_event)
     
-    if event.shared_with_emails:
-        for email in event.shared_with_emails:
-            target_user = db.query(UsuarioModel).filter(UsuarioModel.email == email).first()
+    if event.shared_with_users:
+        for share_input in event.shared_with_users:
+            target_user = db.query(UsuarioModel).filter(UsuarioModel.email == share_input.email).first()
             if target_user:
                 new_share = EventShareModel(
                     event_id=db_event.id,
                     shared_with_user_id=target_user.id,
-                    permission_level="read"
+                    permission_level=share_input.permission_level
                 )
                 db.add(new_share)
         db.commit()
@@ -197,19 +197,19 @@ def update_event(
         raise HTTPException(status_code=403, detail=perm or "Acesso negado")
         
     for var, value in vars(event_update).items():
-        if value is not None and var != "shared_with_emails":
+        if value is not None and var != "shared_with_users":
             setattr(db_event, var, value)
             
-    if event_update.shared_with_emails is not None:
+    if event_update.shared_with_users is not None:
         # Remove existing shares
         db.query(EventShareModel).filter(EventShareModel.event_id == db_event.id).delete()
-        for email in event_update.shared_with_emails:
-            target_user = db.query(UsuarioModel).filter(UsuarioModel.email == email).first()
+        for share_input in event_update.shared_with_users:
+            target_user = db.query(UsuarioModel).filter(UsuarioModel.email == share_input.email).first()
             if target_user:
                 new_share = EventShareModel(
                     event_id=db_event.id,
                     shared_with_user_id=target_user.id,
-                    permission_level="read"
+                    permission_level=share_input.permission_level
                 )
                 db.add(new_share)
 

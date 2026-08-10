@@ -96,7 +96,13 @@ async function loadCalendars() {
 
 async function loadUsers() {
     try {
-        allUsers = await apiGet('/usuarios/lookup');
+        const token = localStorage.getItem('ordersync_token');
+        const baseUrl = window.API_BASE || '';
+        const res = await fetch(`${baseUrl}/usuarios/lookup`, {
+            headers: { 'Authorization': `Bearer ${token}` }
+        });
+        if (!res.ok) throw new Error('API Error');
+        allUsers = await res.json();
         renderUsersList();
     } catch (e) {
         console.error("Erro ao carregar usuários", e);
@@ -139,8 +145,22 @@ function renderUsersList() {
         lbl.style.fontSize = '0.85rem';
         lbl.style.cursor = 'pointer';
         
+        const permSelect = document.createElement('select');
+        permSelect.className = 'share-user-perm';
+        permSelect.id = `share-perm-${u.id}`;
+        permSelect.style.marginLeft = 'auto';
+        permSelect.style.padding = '2px 4px';
+        permSelect.style.fontSize = '0.75rem';
+        permSelect.innerHTML = '<option value="read">Leitura</option><option value="write">Escrita</option>';
+        permSelect.disabled = true;
+
+        cb.onchange = () => {
+            permSelect.disabled = !cb.checked;
+        };
+        
         div.appendChild(cb);
         div.appendChild(lbl);
+        div.appendChild(permSelect);
         listEl.appendChild(div);
     });
 }
@@ -267,7 +287,15 @@ function handleDateSelect(info) {
     document.getElementById('btn-save-event').style.display = 'block';
     
     // Desmarcar todos os usuários
-    document.querySelectorAll('.share-user-checkbox').forEach(cb => cb.checked = false);
+    document.querySelectorAll('.share-user-checkbox').forEach(cb => {
+        cb.checked = false;
+        const id = cb.id.replace('share-user-', '');
+        const permSelect = document.getElementById(`share-perm-${id}`);
+        if (permSelect) {
+            permSelect.value = 'read';
+            permSelect.disabled = true;
+        }
+    });
     
     currentEventId = null;
     currentEventPerm = 'admin'; // Assumindo que criará em um dele
@@ -307,12 +335,28 @@ function handleEventClick(info) {
     }
     
     // Preencher as checkboxes com quem já está compartilhado e listar na box apenas se readonly
-    document.querySelectorAll('.share-user-checkbox').forEach(cb => cb.checked = false);
+    document.querySelectorAll('.share-user-checkbox').forEach(cb => {
+        cb.checked = false;
+        const id = cb.id.replace('share-user-', '');
+        const permSelect = document.getElementById(`share-perm-${id}`);
+        if (permSelect) {
+            permSelect.value = 'read';
+            permSelect.disabled = true;
+        }
+    });
     
     if (props.shared_with && props.shared_with.length > 0) {
         props.shared_with.forEach(s => {
             const cb = Array.from(document.querySelectorAll('.share-user-checkbox')).find(c => c.value === s.email);
-            if (cb) cb.checked = true;
+            if (cb) {
+                cb.checked = true;
+                const id = cb.id.replace('share-user-', '');
+                const permSelect = document.getElementById(`share-perm-${id}`);
+                if (permSelect) {
+                    permSelect.value = s.permission_level;
+                    permSelect.disabled = false;
+                }
+            }
         });
         
         if (currentEventPerm === 'read') {
@@ -390,7 +434,11 @@ async function createCalendar() {
 }
 
 async function saveEvent() {
-    const sharedEmails = Array.from(document.querySelectorAll('.share-user-checkbox:checked')).map(cb => cb.value);
+    const sharedUsers = Array.from(document.querySelectorAll('.share-user-checkbox:checked')).map(cb => {
+        const id = cb.id.replace('share-user-', '');
+        const perm = document.getElementById(`share-perm-${id}`).value;
+        return { email: cb.value, permission_level: perm };
+    });
 
     const data = {
         title: document.getElementById('event-title').value,
@@ -401,7 +449,7 @@ async function saveEvent() {
         location: document.getElementById('event-location').value,
         description: document.getElementById('event-desc').value,
         cliente_id: document.getElementById('event-client-id').value ? parseInt(document.getElementById('event-client-id').value) : null,
-        shared_with_emails: sharedEmails
+        shared_with_users: sharedUsers
     };
     
     if (!data.title || !data.calendar_id || !data.start_time || !data.end_time) {
