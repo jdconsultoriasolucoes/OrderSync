@@ -103,65 +103,102 @@ async function loadUsers() {
         });
         if (!res.ok) throw new Error('API Error');
         allUsers = await res.json();
-        renderUsersList();
     } catch (e) {
         console.error("Erro ao carregar usuários", e);
     }
 }
 
-function renderUsersList() {
-    const listEl = document.getElementById('event-share-users-list');
-    if (!listEl) return;
-    listEl.innerHTML = '';
+function addSharedUser(email, name, permission = 'read') {
+    const container = document.getElementById('event-shared-users-container');
+    if (!container) return;
     
-    // Pegar o próprio email para não exibir
-    const token = localStorage.getItem('ordersync_token');
-    let myEmail = '';
-    if(token) {
-        try {
-            const payload = JSON.parse(atob(token.split('.')[1]));
-            myEmail = payload.sub || '';
-        } catch(e) {}
-    }
+    // Check if already added
+    if (container.querySelector(`[data-email="${email}"]`)) return;
 
-    allUsers.forEach(u => {
-        if (u.email === myEmail) return;
-        
-        const div = document.createElement('div');
-        div.style.marginBottom = '5px';
-        div.style.display = 'flex';
-        div.style.alignItems = 'center';
-        
-        const cb = document.createElement('input');
-        cb.type = 'checkbox';
-        cb.value = u.email;
-        cb.id = `share-user-${u.id}`;
-        cb.className = 'share-user-checkbox';
-        cb.style.marginRight = '8px';
-        
-        const lbl = document.createElement('label');
-        lbl.htmlFor = cb.id;
-        lbl.textContent = `${u.nome || u.email} (${u.email})`;
-        lbl.style.fontSize = '0.85rem';
-        lbl.style.cursor = 'pointer';
-        
-        const permSelect = document.createElement('select');
-        permSelect.className = 'share-user-perm';
-        permSelect.id = `share-perm-${u.id}`;
-        permSelect.style.marginLeft = 'auto';
-        permSelect.style.padding = '2px 4px';
-        permSelect.style.fontSize = '0.75rem';
-        permSelect.innerHTML = '<option value="read">Leitura</option><option value="write">Escrita</option>';
-        permSelect.disabled = true;
+    const div = document.createElement('div');
+    div.style.display = 'flex';
+    div.style.alignItems = 'center';
+    div.style.background = '#edf2f7';
+    div.style.padding = '6px 10px';
+    div.style.borderRadius = '4px';
+    div.dataset.email = email;
+    
+    const span = document.createElement('span');
+    span.textContent = `${name || email} (${email})`;
+    span.style.fontSize = '0.85rem';
+    span.style.flex = '1';
+    
+    const permSelect = document.createElement('select');
+    permSelect.className = 'share-user-perm';
+    permSelect.style.marginLeft = '10px';
+    permSelect.style.padding = '2px 4px';
+    permSelect.style.fontSize = '0.75rem';
+    permSelect.innerHTML = '<option value="read">Leitura</option><option value="write">Escrita</option>';
+    permSelect.value = permission;
+    
+    const removeBtn = document.createElement('button');
+    removeBtn.type = 'button';
+    removeBtn.innerHTML = '&times;';
+    removeBtn.style.color = '#e53e3e';
+    removeBtn.style.background = 'none';
+    removeBtn.style.border = 'none';
+    removeBtn.style.cursor = 'pointer';
+    removeBtn.style.marginLeft = '10px';
+    removeBtn.style.fontSize = '1.1rem';
+    removeBtn.style.fontWeight = 'bold';
+    removeBtn.onclick = () => div.remove();
+    
+    div.appendChild(span);
+    div.appendChild(permSelect);
+    div.appendChild(removeBtn);
+    container.appendChild(div);
+}
 
-        cb.onchange = () => {
-            permSelect.disabled = !cb.checked;
-        };
+// Autocomplete Usuários
+const shareSearchInput = document.getElementById('event-share-search');
+const shareAutocompleteList = document.getElementById('share-autocomplete-list');
+
+if (shareSearchInput) {
+    shareSearchInput.addEventListener('input', (e) => {
+        const query = e.target.value.toLowerCase().trim();
+        shareAutocompleteList.innerHTML = '';
         
-        div.appendChild(cb);
-        div.appendChild(lbl);
-        div.appendChild(permSelect);
-        listEl.appendChild(div);
+        if (query.length < 2) {
+            shareAutocompleteList.style.display = 'none';
+            return;
+        }
+
+        const token = localStorage.getItem('ordersync_token');
+        let myEmail = '';
+        if(token) {
+            try {
+                myEmail = JSON.parse(atob(token.split('.')[1])).sub || '';
+            } catch(err) {}
+        }
+
+        const filtered = allUsers.filter(u => 
+            u.email !== myEmail && 
+            ((u.nome && u.nome.toLowerCase().includes(query)) || u.email.toLowerCase().includes(query))
+        );
+
+        if (filtered.length === 0) {
+            shareAutocompleteList.style.display = 'none';
+            return;
+        }
+
+        filtered.forEach(u => {
+            const div = document.createElement('div');
+            div.className = 'autocomplete-item';
+            div.textContent = `${u.nome || u.email} (${u.email})`;
+            div.onclick = () => {
+                addSharedUser(u.email, u.nome);
+                shareSearchInput.value = '';
+                shareAutocompleteList.style.display = 'none';
+            };
+            shareAutocompleteList.appendChild(div);
+        });
+        
+        shareAutocompleteList.style.display = 'block';
     });
 }
 
@@ -286,16 +323,9 @@ function handleDateSelect(info) {
     document.getElementById('btn-delete-event').style.display = 'none';
     document.getElementById('btn-save-event').style.display = 'block';
     
-    // Desmarcar todos os usuários
-    document.querySelectorAll('.share-user-checkbox').forEach(cb => {
-        cb.checked = false;
-        const id = cb.id.replace('share-user-', '');
-        const permSelect = document.getElementById(`share-perm-${id}`);
-        if (permSelect) {
-            permSelect.value = 'read';
-            permSelect.disabled = true;
-        }
-    });
+    // Limpar usuários compartilhados
+    document.getElementById('event-shared-users-container').innerHTML = '';
+    if (shareSearchInput) shareSearchInput.value = '';
     
     currentEventId = null;
     currentEventPerm = 'admin'; // Assumindo que criará em um dele
@@ -334,29 +364,13 @@ function handleEventClick(info) {
         removeClientLink();
     }
     
-    // Preencher as checkboxes com quem já está compartilhado e listar na box apenas se readonly
-    document.querySelectorAll('.share-user-checkbox').forEach(cb => {
-        cb.checked = false;
-        const id = cb.id.replace('share-user-', '');
-        const permSelect = document.getElementById(`share-perm-${id}`);
-        if (permSelect) {
-            permSelect.value = 'read';
-            permSelect.disabled = true;
-        }
-    });
+    // Limpar e preencher compartilhados
+    document.getElementById('event-shared-users-container').innerHTML = '';
+    if (shareSearchInput) shareSearchInput.value = '';
     
     if (props.shared_with && props.shared_with.length > 0) {
         props.shared_with.forEach(s => {
-            const cb = Array.from(document.querySelectorAll('.share-user-checkbox')).find(c => c.value === s.email);
-            if (cb) {
-                cb.checked = true;
-                const id = cb.id.replace('share-user-', '');
-                const permSelect = document.getElementById(`share-perm-${id}`);
-                if (permSelect) {
-                    permSelect.value = s.permission_level;
-                    permSelect.disabled = false;
-                }
-            }
+            addSharedUser(s.email, '', s.permission_level);
         });
         
         if (currentEventPerm === 'read') {
@@ -386,6 +400,9 @@ function handleEventClick(info) {
     // Desabilitar inputs se for read-only
     const inputs = document.querySelectorAll('#modal-event input, #modal-event select, #modal-event textarea');
     inputs.forEach(el => el.disabled = !canEdit);
+    
+    // Desabilitar botões de remover usuário se read-only
+    document.querySelectorAll('#event-shared-users-container button').forEach(btn => btn.style.display = canEdit ? 'block' : 'none');
     
     document.getElementById('modal-event').style.display = 'flex';
 }
@@ -434,10 +451,10 @@ async function createCalendar() {
 }
 
 async function saveEvent() {
-    const sharedUsers = Array.from(document.querySelectorAll('.share-user-checkbox:checked')).map(cb => {
-        const id = cb.id.replace('share-user-', '');
-        const perm = document.getElementById(`share-perm-${id}`).value;
-        return { email: cb.value, permission_level: perm };
+    const sharedUsers = Array.from(document.getElementById('event-shared-users-container').children).map(div => {
+        const email = div.dataset.email;
+        const perm = div.querySelector('.share-user-perm').value;
+        return { email: email, permission_level: perm };
     });
 
     const data = {
@@ -589,6 +606,9 @@ function removeClientLink() {
 document.addEventListener('click', (e) => {
     if (autocompleteList && !autocompleteList.contains(e.target) && e.target !== searchInput) {
         autocompleteList.style.display = 'none';
+    }
+    if (shareAutocompleteList && !shareAutocompleteList.contains(e.target) && e.target !== shareSearchInput) {
+        shareAutocompleteList.style.display = 'none';
     }
 });
 
