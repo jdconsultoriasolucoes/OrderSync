@@ -4,6 +4,7 @@ let events = [];
 let activeCalendarIds = new Set();
 let currentEventId = null;
 let currentEventPerm = 'read';
+let allUsers = [];
 
 document.addEventListener('DOMContentLoaded', async () => {
     // Inicializar FullCalendar
@@ -27,6 +28,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     calendarInstance.render();
 
     await loadCalendars();
+    await loadUsers();
 });
 
 // Mock da API para simplificar. Substituir por chamadas reais via axios/fetch usando o token JWT
@@ -90,6 +92,57 @@ async function loadCalendars() {
     } catch (e) {
         console.error("Erro ao carregar calendários", e);
     }
+}
+
+async function loadUsers() {
+    try {
+        allUsers = await apiGet('/usuarios/lookup');
+        renderUsersList();
+    } catch (e) {
+        console.error("Erro ao carregar usuários", e);
+    }
+}
+
+function renderUsersList() {
+    const listEl = document.getElementById('event-share-users-list');
+    if (!listEl) return;
+    listEl.innerHTML = '';
+    
+    // Pegar o próprio email para não exibir
+    const token = localStorage.getItem('ordersync_token');
+    let myEmail = '';
+    if(token) {
+        try {
+            const payload = JSON.parse(atob(token.split('.')[1]));
+            myEmail = payload.sub || '';
+        } catch(e) {}
+    }
+
+    allUsers.forEach(u => {
+        if (u.email === myEmail) return;
+        
+        const div = document.createElement('div');
+        div.style.marginBottom = '5px';
+        div.style.display = 'flex';
+        div.style.alignItems = 'center';
+        
+        const cb = document.createElement('input');
+        cb.type = 'checkbox';
+        cb.value = u.email;
+        cb.id = `share-user-${u.id}`;
+        cb.className = 'share-user-checkbox';
+        cb.style.marginRight = '8px';
+        
+        const lbl = document.createElement('label');
+        lbl.htmlFor = cb.id;
+        lbl.textContent = `${u.nome || u.email} (${u.email})`;
+        lbl.style.fontSize = '0.85rem';
+        lbl.style.cursor = 'pointer';
+        
+        div.appendChild(cb);
+        div.appendChild(lbl);
+        listEl.appendChild(div);
+    });
 }
 
 function renderCalendarSidebar() {
@@ -210,9 +263,11 @@ function handleDateSelect(info) {
     removeClientLink();
     document.getElementById('event-shared-info').style.display = 'none';
     document.getElementById('event-shared-list').innerHTML = '';
-    document.getElementById('btn-share-event').style.display = 'none';
     document.getElementById('btn-delete-event').style.display = 'none';
     document.getElementById('btn-save-event').style.display = 'block';
+    
+    // Desmarcar todos os usuários
+    document.querySelectorAll('.share-user-checkbox').forEach(cb => cb.checked = false);
     
     currentEventId = null;
     currentEventPerm = 'admin'; // Assumindo que criará em um dele
@@ -251,48 +306,27 @@ function handleEventClick(info) {
         removeClientLink();
     }
     
+    // Preencher as checkboxes com quem já está compartilhado e listar na box apenas se readonly
+    document.querySelectorAll('.share-user-checkbox').forEach(cb => cb.checked = false);
+    
     if (props.shared_with && props.shared_with.length > 0) {
-        document.getElementById('event-shared-info').style.display = 'block';
-        const listEl = document.getElementById('event-shared-list');
-        listEl.innerHTML = '';
         props.shared_with.forEach(s => {
-            const li = document.createElement('li');
-            li.style.display = 'flex';
-            li.style.justifyContent = 'space-between';
-            li.style.alignItems = 'center';
-            li.style.marginBottom = '4px';
-            
-            const span = document.createElement('span');
-            span.textContent = `${s.email} (${s.permission_level})`;
-            
-            const delBtn = document.createElement('button');
-            delBtn.innerHTML = '&times;';
-            delBtn.style.color = 'red';
-            delBtn.style.background = 'none';
-            delBtn.style.border = 'none';
-            delBtn.style.cursor = 'pointer';
-            delBtn.style.fontSize = '1.1rem';
-            delBtn.style.fontWeight = 'bold';
-            delBtn.title = 'Remover compartilhamento';
-            delBtn.onclick = async () => {
-                if(!confirm('Remover acesso deste usuário?')) return;
-                try {
-                    await apiDelete(`/events/${e.id}/share/${s.id}`);
-                    calendarInstance.refetchEvents();
-                    closeModal('modal-event');
-                } catch(err) {
-                    alert('Erro ao remover');
-                }
-            };
-            
-            if(currentEventPerm !== 'read') {
-                li.appendChild(span);
-                li.appendChild(delBtn);
-            } else {
-                li.appendChild(span);
-            }
-            listEl.appendChild(li);
+            const cb = Array.from(document.querySelectorAll('.share-user-checkbox')).find(c => c.value === s.email);
+            if (cb) cb.checked = true;
         });
+        
+        if (currentEventPerm === 'read') {
+            document.getElementById('event-shared-info').style.display = 'block';
+            const listEl = document.getElementById('event-shared-list');
+            listEl.innerHTML = '';
+            props.shared_with.forEach(s => {
+                const li = document.createElement('li');
+                li.textContent = `${s.email} (${s.permission_level})`;
+                listEl.appendChild(li);
+            });
+        } else {
+            document.getElementById('event-shared-info').style.display = 'none';
+        }
     } else {
         document.getElementById('event-shared-info').style.display = 'none';
     }
@@ -303,7 +337,7 @@ function handleEventClick(info) {
     const canEdit = currentEventPerm !== 'read';
     document.getElementById('btn-save-event').style.display = canEdit ? 'block' : 'none';
     document.getElementById('btn-delete-event').style.display = canEdit ? 'block' : 'none';
-    document.getElementById('btn-share-event').style.display = canEdit ? 'block' : 'none';
+    document.getElementById('event-share-group').style.display = canEdit ? 'block' : 'none';
     
     // Desabilitar inputs se for read-only
     const inputs = document.querySelectorAll('#modal-event input, #modal-event select, #modal-event textarea');
@@ -356,6 +390,8 @@ async function createCalendar() {
 }
 
 async function saveEvent() {
+    const sharedEmails = Array.from(document.querySelectorAll('.share-user-checkbox:checked')).map(cb => cb.value);
+
     const data = {
         title: document.getElementById('event-title').value,
         calendar_id: document.getElementById('event-calendar').value,
@@ -364,7 +400,8 @@ async function saveEvent() {
         is_all_day: document.getElementById('event-allday').checked,
         location: document.getElementById('event-location').value,
         description: document.getElementById('event-desc').value,
-        cliente_id: document.getElementById('event-client-id').value ? parseInt(document.getElementById('event-client-id').value) : null
+        cliente_id: document.getElementById('event-client-id').value ? parseInt(document.getElementById('event-client-id').value) : null,
+        shared_with_emails: sharedEmails
     };
     
     if (!data.title || !data.calendar_id || !data.start_time || !data.end_time) {

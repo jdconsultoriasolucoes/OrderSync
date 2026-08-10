@@ -224,62 +224,79 @@
 
     <!-- Modal Evento -->
     <div id="modal-event" class="modal">
-        <div class="modal-content">
+        <div class="modal-content" style="max-width: 800px;">
             <h3 id="event-modal-title">Novo Evento</h3>
             <input type="hidden" id="event-id" />
-            <div class="form-group">
-                <label>Título</label>
-                <input type="text" id="event-title" />
-            </div>
-            <div class="form-group">
-                <label>Agenda</label>
-                <select id="event-calendar"></select>
-            </div>
-            <div class="form-group">
-                <label>Início</label>
-                <input type="datetime-local" id="event-start" />
-            </div>
-            <div class="form-group">
-                <label>Fim</label>
-                <input type="datetime-local" id="event-end" />
-            </div>
-            <div class="form-group">
-                <label><input type="checkbox" id="event-allday" /> Dia Inteiro</label>
-            </div>
-            <div class="form-group">
-                <label>Local (Opcional)</label>
-                <input type="text" id="event-location" />
-            </div>
-            <div class="form-group">
-                <label>Vincular Cliente (Opcional)</label>
-                <div class="autocomplete-container">
-                    <input type="text" id="event-client-search" placeholder="Digite o nome ou código..." autocomplete="off" />
-                    <input type="hidden" id="event-client-id" />
-                    <div id="client-autocomplete-list" class="autocomplete-list"></div>
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px;">
+                <!-- Coluna 1 -->
+                <div>
+                    <div class="form-group">
+                        <label>Título</label>
+                        <input type="text" id="event-title" />
+                    </div>
+                    <div class="form-group">
+                        <label>Agenda</label>
+                        <select id="event-calendar"></select>
+                    </div>
+                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px;">
+                        <div class="form-group">
+                            <label>Início</label>
+                            <input type="datetime-local" id="event-start" />
+                        </div>
+                        <div class="form-group">
+                            <label>Fim</label>
+                            <input type="datetime-local" id="event-end" />
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <label><input type="checkbox" id="event-allday" /> Dia Inteiro</label>
+                    </div>
+                    <div class="form-group">
+                        <label>Descrição</label>
+                        <textarea id="event-desc" rows="3"></textarea>
+                    </div>
+                </div>
+
+                <!-- Coluna 2 -->
+                <div>
+                    <div class="form-group">
+                        <label>Local (Opcional)</label>
+                        <input type="text" id="event-location" />
+                    </div>
+                    <div class="form-group">
+                        <label>Vincular Cliente (Opcional)</label>
+                        <div class="autocomplete-container">
+                            <input type="text" id="event-client-search" placeholder="Digite o nome ou código..." autocomplete="off" />
+                            <input type="hidden" id="event-client-id" />
+                            <div id="client-autocomplete-list" class="autocomplete-list"></div>
+                        </div>
+                    </div>
+                    
+                    <div id="event-client-info" class="client-info-box">
+                        <p><strong>Cliente:</strong> <span id="client-info-name"></span></p>
+                        <p><strong>Telefone:</strong> <span id="client-info-phone"></span></p>
+                        <button type="button" class="os-btn-secondary" style="margin-top: 8px; padding: 4px 8px; font-size: 0.8rem;" onclick="removeClientLink()">Remover Vínculo</button>
+                    </div>
+
+                    <div class="form-group" id="event-share-group">
+                        <label>Compartilhar com (Opcional)</label>
+                        <div id="event-share-users-list" style="max-height: 120px; overflow-y: auto; border: 1px solid #cbd5e0; border-radius: 4px; padding: 8px;">
+                            <!-- Checkboxes de usuários carregados dinamicamente -->
+                        </div>
+                    </div>
+                    
+                    <div id="event-shared-info" class="client-info-box" style="border-left-color: #48bb78; background-color: #f0fff4; display: none;">
+                        <p style="font-weight: 600; font-size: 0.85rem; text-transform: uppercase; margin-bottom: 8px;">Compartilhado com:</p>
+                        <ul id="event-shared-list" style="margin: 0; padding-left: 20px; font-size: 0.85rem;"></ul>
+                    </div>
                 </div>
             </div>
-            
-            <div id="event-client-info" class="client-info-box">
-                <p><strong>Cliente:</strong> <span id="client-info-name"></span></p>
-                <p><strong>Telefone:</strong> <span id="client-info-phone"></span></p>
-                <button type="button" class="os-btn-secondary" style="margin-top: 8px; padding: 4px 8px; font-size: 0.8rem;" onclick="removeClientLink()">Remover Vínculo</button>
-            </div>
-            
-            <div id="event-shared-info" class="client-info-box" style="border-left-color: #48bb78; background-color: #f0fff4; display: none;">
-                <p style="font-weight: 600; font-size: 0.85rem; text-transform: uppercase; margin-bottom: 8px;">Compartilhado com:</p>
-                <ul id="event-shared-list" style="margin: 0; padding-left: 20px; font-size: 0.85rem;"></ul>
-            </div>
-            
-            <div class="form-group">
-                <label>Descrição</label>
-                <textarea id="event-desc" rows="3"></textarea>
-            </div>
-            <div class="modal-actions" style="justify-content: space-between; flex-wrap: wrap;">
+
+            <div class="modal-actions" style="justify-content: space-between; flex-wrap: wrap; margin-top: 20px;">
                 <div>
                     <button id="btn-delete-event" class="os-btn-danger" style="display:none;" onclick="deleteEvent()">Excluir</button>
                 </div>
                 <div style="display: flex; gap: 10px;">
-                    <button id="btn-share-event" class="os-btn-secondary" style="display:none; background-color: #edf2f7; color: #4a5568;" onclick="openShareEventModal()">Compartilhar</button>
                     <button class="os-btn-secondary" onclick="closeModal('modal-event')">Cancelar</button>
                     <button id="btn-save-event" class="os-btn-primary" onclick="saveEvent()">Salvar</button>
                 </div>

@@ -107,6 +107,13 @@ def list_users(
          
     return db.query(UsuarioModel).all()
 
+@router.get("/lookup", response_model=List[UsuarioPublic])
+def lookup_users(
+    db: Session = Depends(get_db),
+    current_user: UsuarioModel = Depends(get_current_user)
+):
+    return db.query(UsuarioModel).filter(UsuarioModel.ativo == True).all()
+
 @router.post("/me/senha")
 def alterar_minha_senha(
     dados: UsuarioChangePassword,

@@ -43,7 +43,7 @@ class EventBase(BaseModel):
     cliente_id: Optional[int] = None
 
 class EventCreate(EventBase):
-    pass
+    shared_with_emails: Optional[List[str]] = []
 
 class EventUpdate(BaseModel):
     title: Optional[str] = None
@@ -53,6 +53,7 @@ class EventUpdate(BaseModel):
     is_all_day: Optional[bool] = None
     location: Optional[str] = None
     cliente_id: Optional[int] = None
+    shared_with_emails: Optional[List[str]] = None
 
 class EventResponse(EventBase):
     id: UUID
