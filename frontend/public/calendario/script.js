@@ -4,6 +4,7 @@ let events = [];
 let activeCalendarIds = new Set();
 let currentEventId = null;
 let currentEventPerm = 'read';
+let currentEventSharedWith = [];
 let allUsers = [];
 
 document.addEventListener('DOMContentLoaded', async () => {
@@ -329,6 +330,10 @@ function handleDateSelect(info) {
     document.getElementById('event-shared-info').style.display = 'none';
     document.getElementById('event-share-group').style.display = 'block';
     document.getElementById('event-shared-list').innerHTML = '';
+    
+    const shareActions = document.getElementById('share-edit-actions');
+    if(shareActions) shareActions.style.display = 'none';
+    
     document.getElementById('btn-delete-event').style.display = 'none';
     document.getElementById('btn-save-event').style.display = 'block';
     
@@ -345,6 +350,8 @@ function handleDateSelect(info) {
 function handleEventClick(info) {
     const e = info.event;
     const props = e.extendedProps;
+    
+    currentEventSharedWith = props.shared_with || [];
     
     document.getElementById('event-modal-title').textContent = 'Editar Evento';
     document.getElementById('event-id').value = e.id;
@@ -409,6 +416,9 @@ function handleEventClick(info) {
         document.getElementById('event-share-group').style.display = canEdit ? 'block' : 'none';
     }
     
+    const shareActions = document.getElementById('share-edit-actions');
+    if (shareActions) shareActions.style.display = 'none';
+    
     // Desabilitar inputs se for read-only
     const inputs = document.querySelectorAll('#modal-event input, #modal-event select, #modal-event textarea');
     inputs.forEach(el => el.disabled = !canEdit);
@@ -441,6 +451,49 @@ async function handleEventDrop(info) {
 function enableShareEdit() {
     document.getElementById('event-shared-info').style.display = 'none';
     document.getElementById('event-share-group').style.display = 'block';
+    const shareActions = document.getElementById('share-edit-actions');
+    if (shareActions) shareActions.style.display = 'flex';
+}
+
+function cancelShareEdit() {
+    document.getElementById('event-shared-users-container').innerHTML = '';
+    if (shareSearchInput) shareSearchInput.value = '';
+    
+    currentEventSharedWith.forEach(s => {
+        addSharedUser(s.email, '', s.permission_level);
+    });
+    
+    document.getElementById('event-share-group').style.display = 'none';
+    document.getElementById('event-shared-info').style.display = 'block';
+    const shareActions = document.getElementById('share-edit-actions');
+    if (shareActions) shareActions.style.display = 'none';
+}
+
+function confirmShareEdit() {
+    const listEl = document.getElementById('event-shared-list');
+    listEl.innerHTML = '';
+    
+    const sharedUsers = Array.from(document.getElementById('event-shared-users-container').children).map(div => {
+        const email = div.dataset.email;
+        const perm = div.querySelector('.share-user-perm').value;
+        return { email: email, permission_level: perm };
+    });
+    
+    if (sharedUsers.length > 0) {
+        sharedUsers.forEach(s => {
+            const li = document.createElement('li');
+            li.textContent = `${s.email} (${s.permission_level})`;
+            listEl.appendChild(li);
+        });
+        document.getElementById('event-shared-info').style.display = 'block';
+        document.getElementById('event-share-group').style.display = 'none';
+    } else {
+        document.getElementById('event-shared-info').style.display = 'none';
+        document.getElementById('event-share-group').style.display = 'block';
+    }
+    
+    const shareActions = document.getElementById('share-edit-actions');
+    if (shareActions) shareActions.style.display = 'none';
 }
 
 function closeModal(id) {
