@@ -327,6 +327,7 @@ function handleDateSelect(info) {
     
     removeClientLink();
     document.getElementById('event-shared-info').style.display = 'none';
+    document.getElementById('event-share-group').style.display = 'block';
     document.getElementById('event-shared-list').innerHTML = '';
     document.getElementById('btn-delete-event').style.display = 'none';
     document.getElementById('btn-save-event').style.display = 'block';
@@ -380,18 +381,14 @@ function handleEventClick(info) {
             addSharedUser(s.email, '', s.permission_level);
         });
         
-        if (currentEventPerm === 'read') {
-            document.getElementById('event-shared-info').style.display = 'block';
-            const listEl = document.getElementById('event-shared-list');
-            listEl.innerHTML = '';
-            props.shared_with.forEach(s => {
-                const li = document.createElement('li');
-                li.textContent = `${s.email} (${s.permission_level})`;
-                listEl.appendChild(li);
-            });
-        } else {
-            document.getElementById('event-shared-info').style.display = 'none';
-        }
+        document.getElementById('event-shared-info').style.display = 'block';
+        const listEl = document.getElementById('event-shared-list');
+        listEl.innerHTML = '';
+        props.shared_with.forEach(s => {
+            const li = document.createElement('li');
+            li.textContent = `${s.email} (${s.permission_level})`;
+            listEl.appendChild(li);
+        });
     } else {
         document.getElementById('event-shared-info').style.display = 'none';
     }
@@ -402,7 +399,15 @@ function handleEventClick(info) {
     const canEdit = currentEventPerm !== 'read';
     document.getElementById('btn-save-event').style.display = canEdit ? 'block' : 'none';
     document.getElementById('btn-delete-event').style.display = canEdit ? 'block' : 'none';
-    document.getElementById('event-share-group').style.display = canEdit ? 'block' : 'none';
+    
+    const btnEditShares = document.getElementById('btn-edit-shares');
+    if (btnEditShares) btnEditShares.style.display = canEdit ? 'block' : 'none';
+
+    if (props.shared_with && props.shared_with.length > 0) {
+        document.getElementById('event-share-group').style.display = 'none';
+    } else {
+        document.getElementById('event-share-group').style.display = canEdit ? 'block' : 'none';
+    }
     
     // Desabilitar inputs se for read-only
     const inputs = document.querySelectorAll('#modal-event input, #modal-event select, #modal-event textarea');
@@ -431,6 +436,11 @@ async function handleEventDrop(info) {
         console.error(e);
         info.revert();
     }
+}
+
+function enableShareEdit() {
+    document.getElementById('event-shared-info').style.display = 'none';
+    document.getElementById('event-share-group').style.display = 'block';
 }
 
 function closeModal(id) {

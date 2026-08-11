@@ -304,7 +304,10 @@
                     </div>
                     
                     <div id="event-shared-info" class="client-info-box" style="border-left-color: #48bb78; background-color: #f0fff4; display: none;">
-                        <p style="font-weight: 600; font-size: 0.85rem; text-transform: uppercase; margin-bottom: 8px;">Compartilhado com:</p>
+                        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
+                            <p style="font-weight: 600; font-size: 0.85rem; text-transform: uppercase; margin: 0;">Compartilhado com:</p>
+                            <button type="button" id="btn-edit-shares" class="os-btn os-btn-secondary os-btn-sm" style="display: none;" onclick="enableShareEdit()">Editar</button>
+                        </div>
                         <ul id="event-shared-list" style="margin: 0; padding-left: 20px; font-size: 0.85rem;"></ul>
                     </div>
                 </div>
