@@ -124,7 +124,11 @@ function addSharedUser(email, name, permission = 'read') {
     div.dataset.email = email;
     
     const span = document.createElement('span');
-    span.textContent = `${name || email} (${email})`;
+    if (name && name !== email) {
+        span.textContent = `${name} (${email})`;
+    } else {
+        span.textContent = email;
+    }
     span.style.fontSize = '0.85rem';
     span.style.flex = '1';
     
@@ -139,13 +143,10 @@ function addSharedUser(email, name, permission = 'read') {
     const removeBtn = document.createElement('button');
     removeBtn.type = 'button';
     removeBtn.innerHTML = '&times;';
-    removeBtn.style.color = '#e53e3e';
-    removeBtn.style.background = 'none';
-    removeBtn.style.border = 'none';
-    removeBtn.style.cursor = 'pointer';
+    removeBtn.className = 'os-btn os-btn-icon os-btn-sm';
+    removeBtn.style.color = 'var(--os-error)';
     removeBtn.style.marginLeft = '10px';
     removeBtn.style.fontSize = '1.1rem';
-    removeBtn.style.fontWeight = 'bold';
     removeBtn.onclick = () => div.remove();
     
     div.appendChild(span);
@@ -189,7 +190,11 @@ if (shareSearchInput) {
         filtered.forEach(u => {
             const div = document.createElement('div');
             div.className = 'autocomplete-item';
-            div.textContent = `${u.nome || u.email} (${u.email})`;
+            if (u.nome && u.nome !== u.email) {
+                div.textContent = `${u.nome} (${u.email})`;
+            } else {
+                div.textContent = u.email;
+            }
             div.onclick = () => {
                 addSharedUser(u.email, u.nome);
                 shareSearchInput.value = '';
@@ -243,11 +248,9 @@ function renderCalendarSidebar() {
         if (isOwner) {
             const shareBtn = document.createElement('button');
             shareBtn.innerHTML = '&#128101;'; // Ícone de pessoas
+            shareBtn.className = 'os-btn os-btn-icon os-btn-sm';
             shareBtn.style.marginLeft = 'auto';
-            shareBtn.style.border = 'none';
-            shareBtn.style.background = 'none';
-            shareBtn.style.cursor = 'pointer';
-            shareBtn.style.fontSize = '12px';
+            shareBtn.style.fontSize = '14px';
             shareBtn.title = 'Compartilhar Agenda';
             shareBtn.onclick = () => openShareModal(cal.id);
             

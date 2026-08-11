@@ -27,8 +27,6 @@
         .calendar-name { font-size: 0.95rem; color: #2d3748; }
         .calendar-badge { margin-left: auto; font-size: 0.7rem; padding: 2px 6px; border-radius: 4px; background: #edf2f7; color: #4a5568; }
 
-        .btn-new-cal { width: 100%; padding: 8px; background: #3182CE; color: white; border: none; border-radius: 6px; cursor: pointer; font-weight: 500; }
-        .btn-new-cal:hover { background: #2b6cb0; }
         
         #calendar { background: white; padding: 20px; border-radius: 8px; box-shadow: 0 1px 3px rgba(0,0,0,0.1); height: 100%; }
         
@@ -195,7 +193,7 @@
 
     <div class="page-container">
         <div class="calendar-sidebar">
-            <button class="btn-new-cal" onclick="openNewCalendarModal()">+ Nova Agenda</button>
+            <button class="os-btn os-btn-primary" style="width: 100%; justify-content: center;" onclick="openNewCalendarModal()">+ Nova Agenda</button>
             
             <div class="section-title">Minhas Agendas</div>
             <div id="own-calendars-list"></div>
@@ -232,8 +230,8 @@
                 <input type="hidden" id="cal-color" value="#3182CE" />
             </div>
             <div class="modal-actions">
-                <button class="os-btn-secondary" onclick="closeModal('modal-new-cal')">Cancelar</button>
-                <button class="os-btn-primary" onclick="createCalendar()">Salvar</button>
+                <button class="os-btn os-btn-secondary" onclick="closeModal('modal-new-cal')">Cancelar</button>
+                <button class="os-btn os-btn-primary" onclick="createCalendar()">Salvar</button>
             </div>
         </div>
     </div>
@@ -291,7 +289,7 @@
                     <div id="event-client-info" class="client-info-box">
                         <p><strong>Cliente:</strong> <span id="client-info-name"></span></p>
                         <p><strong>Telefone:</strong> <span id="client-info-phone"></span></p>
-                        <button type="button" class="os-btn-secondary" style="margin-top: 8px; padding: 4px 8px; font-size: 0.8rem;" onclick="removeClientLink()">Remover Vínculo</button>
+                        <button type="button" class="os-btn os-btn-secondary os-btn-sm" style="margin-top: 8px;" onclick="removeClientLink()">Remover Vínculo</button>
                     </div>
 
                     <div class="form-group" id="event-share-group">
@@ -314,11 +312,11 @@
 
             <div class="modal-actions" style="justify-content: space-between; flex-wrap: wrap; margin-top: 20px;">
                 <div>
-                    <button id="btn-delete-event" class="os-btn-danger" style="display:none;" onclick="deleteEvent()">Excluir</button>
+                    <button id="btn-delete-event" class="os-btn os-btn-danger" style="display:none;" onclick="deleteEvent()">Excluir</button>
                 </div>
                 <div style="display: flex; gap: 10px;">
-                    <button class="os-btn-secondary" onclick="closeModal('modal-event')">Cancelar</button>
-                    <button id="btn-save-event" class="os-btn-primary" onclick="saveEvent()">Salvar</button>
+                    <button class="os-btn os-btn-secondary" onclick="closeModal('modal-event')">Cancelar</button>
+                    <button id="btn-save-event" class="os-btn os-btn-primary" onclick="saveEvent()">Salvar</button>
                 </div>
             </div>
             </div>
@@ -343,8 +341,8 @@
                 </select>
             </div>
             <div class="modal-actions">
-                <button class="os-btn-secondary" onclick="closeModal('modal-share')">Cancelar</button>
-                <button class="os-btn-primary" onclick="shareCalendar()">Compartilhar</button>
+                <button class="os-btn os-btn-secondary" onclick="closeModal('modal-share')">Cancelar</button>
+                <button class="os-btn os-btn-primary" onclick="shareCalendar()">Compartilhar</button>
             </div>
         </div>
     </div>
@@ -365,8 +363,8 @@
                 </select>
             </div>
             <div class="modal-actions">
-                <button class="os-btn-secondary" onclick="closeModal('modal-share-event')">Cancelar</button>
-                <button class="os-btn-primary" onclick="shareEventSubmit()">Compartilhar</button>
+                <button class="os-btn os-btn-secondary" onclick="closeModal('modal-share-event')">Cancelar</button>
+                <button class="os-btn os-btn-primary" onclick="shareEventSubmit()">Compartilhar</button>
             </div>
         </div>
     </div>
