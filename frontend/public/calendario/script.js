@@ -307,13 +307,18 @@ async function fetchEvents(info, successCallback, failureCallback) {
     }
 }
 
+function selectColor(element) {
+    document.querySelectorAll('.color-swatch').forEach(el => el.classList.remove('selected'));
+    element.classList.add('selected');
+    document.getElementById('cal-color').value = element.dataset.color;
+}
+
 function handleDateSelect(info) {
     document.getElementById('event-modal-title').textContent = 'Novo Evento';
     document.getElementById('event-id').value = '';
     document.getElementById('event-title').value = '';
     document.getElementById('event-start').value = info.startStr.slice(0,16);
     document.getElementById('event-end').value = info.endStr.slice(0,16);
-    document.getElementById('event-allday').checked = info.allDay;
     document.getElementById('event-location').value = '';
     document.getElementById('event-desc').value = '';
     
@@ -350,7 +355,6 @@ function handleEventClick(info) {
     
     document.getElementById('event-start').value = formatDt(e.start);
     document.getElementById('event-end').value = formatDt(e.end || e.start);
-    document.getElementById('event-allday').checked = e.allDay;
     document.getElementById('event-location').value = props.location || '';
     document.getElementById('event-desc').value = props.description || '';
     
@@ -433,6 +437,10 @@ function closeModal(id) {
 function openNewCalendarModal() {
     document.getElementById('cal-name').value = '';
     document.getElementById('cal-color').value = '#3182CE';
+    document.querySelectorAll('.color-swatch').forEach(el => {
+        if(el.dataset.color === '#3182CE') el.classList.add('selected');
+        else el.classList.remove('selected');
+    });
     document.getElementById('modal-new-cal').style.display = 'flex';
 }
 
@@ -462,7 +470,7 @@ async function saveEvent() {
         calendar_id: document.getElementById('event-calendar').value,
         start_time: new Date(document.getElementById('event-start').value).toISOString(),
         end_time: new Date(document.getElementById('event-end').value).toISOString(),
-        is_all_day: document.getElementById('event-allday').checked,
+        is_all_day: false,
         location: document.getElementById('event-location').value,
         description: document.getElementById('event-desc').value,
         cliente_id: document.getElementById('event-client-id').value ? parseInt(document.getElementById('event-client-id').value) : null,

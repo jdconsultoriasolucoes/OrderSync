@@ -49,6 +49,12 @@
         
         /* FC Overrides */
         .fc-event { cursor: pointer; }
+        .fc-toolbar-title { text-transform: capitalize; }
+        
+        .color-picker { display: flex; gap: 8px; margin-top: 5px; flex-wrap: wrap; }
+        .color-swatch { width: 30px; height: 30px; border-radius: 4px; cursor: pointer; border: 2px solid transparent; transition: all 0.2s; }
+        .color-swatch:hover { transform: scale(1.1); }
+        .color-swatch.selected { border-color: #2d3748; box-shadow: 0 0 0 2px #fff inset; transform: scale(1.1); }
     </style>
 </head>
 <body>
@@ -213,7 +219,17 @@
             </div>
             <div class="form-group">
                 <label>Cor</label>
-                <input type="color" id="cal-color" value="#3182CE" />
+                <div class="color-picker">
+                    <div class="color-swatch selected" data-color="#3182CE" style="background-color: #3182CE;" onclick="selectColor(this)"></div>
+                    <div class="color-swatch" data-color="#E53E3E" style="background-color: #E53E3E;" onclick="selectColor(this)"></div>
+                    <div class="color-swatch" data-color="#38A169" style="background-color: #38A169;" onclick="selectColor(this)"></div>
+                    <div class="color-swatch" data-color="#D69E2E" style="background-color: #D69E2E;" onclick="selectColor(this)"></div>
+                    <div class="color-swatch" data-color="#805AD5" style="background-color: #805AD5;" onclick="selectColor(this)"></div>
+                    <div class="color-swatch" data-color="#D53F8C" style="background-color: #D53F8C;" onclick="selectColor(this)"></div>
+                    <div class="color-swatch" data-color="#319795" style="background-color: #319795;" onclick="selectColor(this)"></div>
+                    <div class="color-swatch" data-color="#DD6B20" style="background-color: #DD6B20;" onclick="selectColor(this)"></div>
+                </div>
+                <input type="hidden" id="cal-color" value="#3182CE" />
             </div>
             <div class="modal-actions">
                 <button class="os-btn-secondary" onclick="closeModal('modal-new-cal')">Cancelar</button>
@@ -224,40 +240,40 @@
 
     <!-- Modal Evento -->
     <div id="modal-event" class="modal">
-        <div class="modal-content" style="max-width: 800px;">
-            <h3 id="event-modal-title">Novo Evento</h3>
-            <input type="hidden" id="event-id" />
-            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px;">
-                <!-- Coluna 1 -->
-                <div>
-                    <div class="form-group">
-                        <label>Título</label>
-                        <input type="text" id="event-title" />
-                    </div>
-                    <div class="form-group">
-                        <label>Agenda</label>
-                        <select id="event-calendar"></select>
-                    </div>
-                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px;">
+        <div class="modal-content" style="max-width: 800px; padding: 0; overflow: hidden;">
+            <div style="background-color: #1f2937; padding: 16px 24px;">
+                <h3 id="event-modal-title" style="margin: 0; color: white;">Novo Evento</h3>
+            </div>
+            <div style="padding: 24px;">
+                <input type="hidden" id="event-id" />
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px;">
+                    <!-- Coluna 1 -->
+                    <div>
                         <div class="form-group">
-                            <label>Início</label>
-                            <input type="datetime-local" id="event-start" />
+                            <label>Título</label>
+                            <input type="text" id="event-title" />
                         </div>
                         <div class="form-group">
-                            <label>Fim</label>
-                            <input type="datetime-local" id="event-end" />
+                            <label>Agenda</label>
+                            <select id="event-calendar"></select>
+                        </div>
+                        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px;">
+                            <div class="form-group">
+                                <label>Início</label>
+                                <input type="datetime-local" id="event-start" />
+                            </div>
+                            <div class="form-group">
+                                <label>Fim</label>
+                                <input type="datetime-local" id="event-end" />
+                            </div>
+                        </div>
+                        <div class="form-group">
+                            <label>Descrição</label>
+                            <textarea id="event-desc" rows="3"></textarea>
                         </div>
                     </div>
-                    <div class="form-group">
-                        <label><input type="checkbox" id="event-allday" /> Dia Inteiro</label>
-                    </div>
-                    <div class="form-group">
-                        <label>Descrição</label>
-                        <textarea id="event-desc" rows="3"></textarea>
-                    </div>
-                </div>
 
-                <!-- Coluna 2 -->
+                    <!-- Coluna 2 -->
                 <div>
                     <div class="form-group">
                         <label>Local (Opcional)</label>
@@ -304,6 +320,7 @@
                     <button class="os-btn-secondary" onclick="closeModal('modal-event')">Cancelar</button>
                     <button id="btn-save-event" class="os-btn-primary" onclick="saveEvent()">Salvar</button>
                 </div>
+            </div>
             </div>
         </div>
     </div>
