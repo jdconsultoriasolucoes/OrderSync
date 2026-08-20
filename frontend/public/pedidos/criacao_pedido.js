@@ -3806,6 +3806,12 @@ function renderMobileCards() {
     // Qtde Change
     const qtdeInput = card.querySelector('.mobile-input-qtde');
     if (!markupDisabled && qtdeInput) {
+      qtdeInput.addEventListener('focus', (e) => {
+        if (e.target.value === '0') e.target.value = '';
+      });
+      qtdeInput.addEventListener('blur', (e) => {
+        if (e.target.value === '') e.target.value = '0';
+      });
       qtdeInput.addEventListener('change', (e) => {
         e.stopPropagation();
         let val = parseInt(e.target.value, 10);

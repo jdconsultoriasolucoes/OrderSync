@@ -84,7 +84,6 @@ def filtrar_produtos_para_tabela_preco(
                     :q IS NULL
                  OR  p.codigo_supra::text ILIKE :like
                  OR  p.nome_produto       ILIKE :like
-                 OR  COALESCE(p.marca,'')   ILIKE :like
                  OR  COALESCE(p.unidade,'') ILIKE :like
                  OR  COALESCE(p.tipo,'')  ILIKE :like
               )
@@ -203,7 +202,7 @@ def condicoes_pagamento():
 def filtro_grupo_produto():
     try:
         db = SessionLocal()
-        query = text("select distinct marca as grupo from t_cadastro_produto_v2 WHERE marca IS NOT NULL AND marca != '' order by marca")
+        query = text("select distinct trim(marca) as grupo from t_cadastro_produto_v2 WHERE marca IS NOT NULL AND trim(marca) != '' AND status_produto = 'ATIVO' order by trim(marca)")
         resultado = db.execute(query).fetchall()
         return [{"grupo": row.grupo} for row in resultado]
     finally:

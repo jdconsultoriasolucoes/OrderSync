@@ -208,8 +208,6 @@ function matchesTerm(p, termN) {
   return [
     p.codigo_tabela,
     p.descricao,
-    p.marca,
-    p.grupo,
     p.embalagem
   ].some(v => normText(v).includes(termN));
 }
