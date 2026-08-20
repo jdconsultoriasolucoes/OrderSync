@@ -64,7 +64,7 @@ def gerar_excel_cliente_recadastro(cliente) -> bytes:
 
     try:
         wb = openpyxl.load_workbook(str(TEMPLATE_PATH))
-        ws = wb.active
+        ws = wb.worksheets[0]
     except Exception as e:
         msg = f"Erro ao abrir template Ficha Recadastro: {str(e)}"
         logger.error(msg, exc_info=True)
@@ -191,6 +191,59 @@ def gerar_excel_cliente_recadastro(cliente) -> bytes:
         # A52:B52 Rótulo 'Local e Data' | C52:K52 Valor
         cidade_cliente = _s(cliente.faturamento_municipio) or _s(cliente.entrega_municipio)
         ws["C52"] = f"{cidade_cliente}, {datetime.now().strftime('%d/%m/%Y')}"
+
+        # --- PREENCHIMENTO DA SEGUNDA GUIA (Cadastro Parte 2) ---
+        if len(wb.sheetnames) > 1:
+            ws2 = wb.worksheets[1]
+            
+            # Cabeçalho da Parte 2
+            ws2["E7"] = _s(cliente.cadastro_nome_cliente)
+            ws2["E8"] = _s(cliente.cadastro_codigo_da_empresa)
+            
+            # Referências Comerciais (Linhas 12 a 14)
+            # A12=Empresa, E12=Cidade, G12=Telefone, I12=Contato
+            refs_comerciais = cliente.referencias_comerciais if isinstance(cliente.referencias_comerciais, list) else []
+            for i, ref_c in enumerate(refs_comerciais[:3]):
+                if not isinstance(ref_c, dict): continue
+                row = 12 + i
+                ws2[f"A{row}"] = _s(ref_c.get("empresa"))
+                ws2[f"E{row}"] = _s(ref_c.get("cidade"))
+                ws2[f"G{row}"] = _s(ref_c.get("telefone"))
+                ws2[f"I{row}"] = _s(ref_c.get("contato"))
+
+            # Bens Imóveis (Linhas 18 a 20)
+            # A18=Imóvel, C18=Localização, F18=Área, H18=Valor, J18=Hipotecado
+            bens_imoveis = cliente.bens_imoveis if isinstance(cliente.bens_imoveis, list) else []
+            for i, bem_i in enumerate(bens_imoveis[:3]):
+                if not isinstance(bem_i, dict): continue
+                row = 18 + i
+                ws2[f"A{row}"] = _s(bem_i.get("imovel"))
+                ws2[f"C{row}"] = _s(bem_i.get("localizacao"))
+                ws2[f"F{row}"] = _s(bem_i.get("area"))
+                ws2[f"H{row}"] = _br_number(bem_i.get("valor")) if bem_i.get("valor") else ""
+                ws2[f"J{row}"] = _s(bem_i.get("hipotecado"))
+
+            # Plantel de Animais (Linhas 24 a 26)
+            # A24=Espécie, F24=N Animais, H24=Consumo Diário, J24=Consumo Mensal
+            planteis = cliente.planteis_animais if isinstance(cliente.planteis_animais, list) else []
+            for i, plantel in enumerate(planteis[:3]):
+                if not isinstance(plantel, dict): continue
+                row = 24 + i
+                ws2[f"A{row}"] = _s(plantel.get("especie"))
+                ws2[f"F{row}"] = _s(plantel.get("numero"))
+                ws2[f"H{row}"] = _br_number(plantel.get("consumo_diario")) if plantel.get("consumo_diario") else ""
+                ws2[f"J{row}"] = _br_number(plantel.get("consumo_mensal")) if plantel.get("consumo_mensal") else ""
+
+            # Bens Móveis (Linhas 30 a 32)
+            # A30=Marca, E30=Modelo, G30=Valor, I30=Alienado
+            bens_moveis = cliente.bens_moveis if isinstance(cliente.bens_moveis, list) else []
+            for i, bem_m in enumerate(bens_moveis[:3]):
+                if not isinstance(bem_m, dict): continue
+                row = 30 + i
+                ws2[f"A{row}"] = _s(bem_m.get("marca"))
+                ws2[f"E{row}"] = _s(bem_m.get("modelo"))
+                ws2[f"G{row}"] = _br_number(bem_m.get("valor")) if bem_m.get("valor") else ""
+                ws2[f"I{row}"] = _s(bem_m.get("alienado"))
 
         output = io.BytesIO()
         wb.save(output)
