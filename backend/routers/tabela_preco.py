@@ -77,7 +77,7 @@ def filtrar_produtos_para_tabela_preco(
                 p.validade_tabela
             FROM v_produto_v2_preco p
             WHERE p.status_produto = 'ATIVO'
-              AND (:grupo IS NULL OR p.marca = :grupo)
+              AND (:grupo IS NULL OR REGEXP_REPLACE(trim(p.marca), '\\s+', ' ', 'g') = :grupo)
               AND (:tipo IS NULL OR UPPER(p.tipo) = UPPER(:tipo))
               AND (:fornecedor IS NULL OR UPPER(p.fornecedor) = UPPER(:fornecedor))
               AND (
@@ -202,7 +202,7 @@ def condicoes_pagamento():
 def filtro_grupo_produto():
     try:
         db = SessionLocal()
-        query = text("select distinct trim(marca) as grupo from t_cadastro_produto_v2 WHERE marca IS NOT NULL AND trim(marca) != '' AND status_produto = 'ATIVO' order by trim(marca)")
+        query = text("select distinct REGEXP_REPLACE(trim(marca), '\\s+', ' ', 'g') as grupo from t_cadastro_produto_v2 WHERE marca IS NOT NULL AND trim(marca) != '' AND status_produto = 'ATIVO' order by 1")
         resultado = db.execute(query).fetchall()
         return [{"grupo": row.grupo} for row in resultado]
     finally:

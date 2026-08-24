@@ -141,7 +141,11 @@ async def worker_loop():
                  logger.info("Worker Interrompido (shutdown)")
                  break
                  
-            logger.error(f"Erro catastrófico no Worker Loop: {e}")
+            error_msg = str(e)
+            if "EOF detected" in error_msg or "OperationalError" in error_msg:
+                logger.error(f"Conexão com o banco de dados perdida no Worker Loop. O loop continuará em 5 segundos. Detalhes: {error_msg}")
+            else:
+                logger.error(f"Erro inesperado no Worker Loop: {error_msg}")
             await asyncio.sleep(5)
 
 def start_background_worker():

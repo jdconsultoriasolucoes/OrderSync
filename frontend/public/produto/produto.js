@@ -1677,6 +1677,9 @@ window.switchTabProduto = function(tabId) {
   }
 };
 
+window.currentPageEstoque = 1;
+window.pageSizeEstoque = 50;
+
 window.gerarRelatorioEstoque = async function() {
   const filial = document.getElementById('filtro-filial')?.value || '';
   const linha = document.getElementById('filtro-linha')?.value || '';
@@ -1716,57 +1719,118 @@ window.gerarRelatorioEstoque = async function() {
       dados = dados.filter(p => Number(p.estoque_ideal || 0) > 0);
     }
     
-    // Armazena no window para exportação (PDF/Excel)
+    // Armazena no window para exportação e paginação
     window.dadosRelatorioAtual = dados;
-    
-    if (dados.length === 0) {
-      tbody.innerHTML = `<tr><td colspan="${colspan}" style="text-align:center;">Nenhum produto encontrado com os filtros informados.</td></tr>`;
-      return;
-    }
-
-    tbody.innerHTML = '';
-    dados.forEach(p => {
-      let tdValores = '';
-      if (mostrarValores) {
-        const precoAtual = Number(p.preco || 0);
-        const precoAnterior = Number(p.preco_anterior || 0);
-        let difPerc = 0;
-        let difPercFmt = '-';
-        if (precoAnterior > 0) {
-          difPerc = ((precoAtual - precoAnterior) / precoAnterior) * 100;
-          difPercFmt = (difPerc > 0 ? '+' : '') + difPerc.toFixed(2) + '%';
-        }
-        
-        const precoAtualFmt = precoAtual.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
-        const precoAnteriorFmt = precoAnterior.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
-        tdValores = `
-          <td style="padding: 10px; border: 1px solid #e5e7eb;">R$ ${precoAtualFmt}</td>
-          <td style="padding: 10px; border: 1px solid #e5e7eb;">R$ ${precoAnteriorFmt}</td>
-          <td style="padding: 10px; border: 1px solid #e5e7eb; color: ${difPerc > 0 ? 'green' : (difPerc < 0 && precoAnterior > 0 ? 'red' : 'inherit')};">${difPercFmt}</td>
-        `;
-      }
-
-      const tr = document.createElement('tr');
-      tr.innerHTML = `
-        <td style="padding: 10px; border: 1px solid #e5e7eb;">${p.codigo_supra || ''}</td>
-        <td style="padding: 10px; border: 1px solid #e5e7eb; text-align: left;">${p.nome_produto || ''}</td>
-        <td style="padding: 10px; border: 1px solid #e5e7eb;">${Number(p.peso || 0).toFixed(2)}</td>
-        <td style="padding: 10px; border: 1px solid #e5e7eb;">${p.estoque_disponivel || 0}</td>
-        <td style="padding: 10px; border: 1px solid #e5e7eb;">${p.estoque_futuro || 0}</td>
-        <td style="padding: 10px; border: 1px solid #e5e7eb;">${p.estoque_ideal || 0}</td>
-        ${tdValores}
-      `;
-      // Adicionando hover effect manual via JS para dar "cara" melhor
-      tr.onmouseover = () => tr.style.backgroundColor = '#f3f4f6';
-      tr.onmouseout = () => tr.style.backgroundColor = 'transparent';
-      
-      tbody.appendChild(tr);
-    });
+    window.currentPageEstoque = 1;
+    window.renderTabelaEstoquePaginated();
   } catch (e) {
     console.error(e);
     const colspan = document.getElementById('chk-mostrar-valores')?.checked ? 9 : 6;
     tbody.innerHTML = `<tr><td colspan="${colspan}" style="text-align:center;color:red;">Erro: ${e.message}</td></tr>`;
   }
+};
+
+window.renderTabelaEstoquePaginated = function() {
+  const dados = window.dadosRelatorioAtual || [];
+  const tbody = document.getElementById('tbody-relatorio');
+  if(!tbody) return;
+  const mostrarValores = document.getElementById('chk-mostrar-valores')?.checked;
+  const colspan = mostrarValores ? 9 : 6;
+  
+  if (dados.length === 0) {
+    tbody.innerHTML = `<tr><td colspan="${colspan}" style="text-align:center;">Nenhum produto encontrado com os filtros informados.</td></tr>`;
+    const pagControls = document.getElementById('pagination-controls');
+    if (pagControls) pagControls.style.display = 'none';
+    return;
+  }
+  
+  const pagControls = document.getElementById('pagination-controls');
+  if (pagControls) pagControls.style.display = 'flex';
+  
+  const totalPages = Math.ceil(dados.length / window.pageSizeEstoque) || 1;
+  if (window.currentPageEstoque > totalPages) window.currentPageEstoque = totalPages;
+  if (window.currentPageEstoque < 1) window.currentPageEstoque = 1;
+  
+  const startIdx = (window.currentPageEstoque - 1) * window.pageSizeEstoque;
+  const endIdx = startIdx + window.pageSizeEstoque;
+  const paginatedDados = dados.slice(startIdx, endIdx);
+  
+  tbody.innerHTML = '';
+  paginatedDados.forEach(p => {
+    let tdValores = '';
+    if (mostrarValores) {
+      const precoAtual = Number(p.preco || 0);
+      const precoAnterior = Number(p.preco_anterior || 0);
+      let difPerc = 0;
+      let difPercFmt = '-';
+      if (precoAnterior > 0) {
+        difPerc = ((precoAtual - precoAnterior) / precoAnterior) * 100;
+        difPercFmt = (difPerc > 0 ? '+' : '') + difPerc.toFixed(2) + '%';
+      }
+      
+      const precoAtualFmt = precoAtual.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+      const precoAnteriorFmt = precoAnterior.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+      tdValores = `
+        <td style="padding: 10px; border: 1px solid #e5e7eb;">R$ ${precoAtualFmt}</td>
+        <td style="padding: 10px; border: 1px solid #e5e7eb;">R$ ${precoAnteriorFmt}</td>
+        <td style="padding: 10px; border: 1px solid #e5e7eb; color: ${difPerc > 0 ? 'green' : (difPerc < 0 && precoAnterior > 0 ? 'red' : 'inherit')};">${difPercFmt}</td>
+      `;
+    }
+
+    const tr = document.createElement('tr');
+    tr.innerHTML = `
+      <td style="padding: 10px; border: 1px solid #e5e7eb;">${p.codigo_supra || ''}</td>
+      <td style="padding: 10px; border: 1px solid #e5e7eb; text-align: left;">${p.nome_produto || ''}</td>
+      <td style="padding: 10px; border: 1px solid #e5e7eb;">${Number(p.peso || 0).toFixed(2)}</td>
+      <td style="padding: 10px; border: 1px solid #e5e7eb;">${p.estoque_disponivel || 0}</td>
+      <td style="padding: 10px; border: 1px solid #e5e7eb;">${p.estoque_futuro || 0}</td>
+      <td style="padding: 10px; border: 1px solid #e5e7eb;">${p.estoque_ideal || 0}</td>
+      ${tdValores}
+    `;
+    tr.onmouseover = () => tr.style.backgroundColor = '#f3f4f6';
+    tr.onmouseout = () => tr.style.backgroundColor = 'transparent';
+    
+    tbody.appendChild(tr);
+  });
+  
+  if (pagControls) {
+    const info = document.getElementById('pagination-info');
+    if (info) info.innerText = `Mostrando ${startIdx + 1} até ${Math.min(endIdx, dados.length)} de ${dados.length} produtos`;
+    
+    const btnPrev = document.getElementById('btn-prev-page');
+    const btnNext = document.getElementById('btn-next-page');
+    if (btnPrev) btnPrev.disabled = window.currentPageEstoque === 1;
+    if (btnNext) btnNext.disabled = window.currentPageEstoque === totalPages;
+    
+    const pagesContainer = document.getElementById('pagination-pages');
+    if (pagesContainer) {
+      pagesContainer.innerHTML = '';
+      
+      let startPage = Math.max(1, window.currentPageEstoque - 2);
+      let endPage = Math.min(totalPages, startPage + 4);
+      if (endPage - startPage < 4) {
+          startPage = Math.max(1, endPage - 4);
+      }
+      
+      for (let i = startPage; i <= endPage; i++) {
+          const btn = document.createElement('button');
+          btn.innerText = i;
+          btn.className = i === window.currentPageEstoque ? 'primary' : 'ghost';
+          btn.style.padding = '5px 10px';
+          btn.style.cursor = 'pointer';
+          btn.onclick = () => {
+              window.currentPageEstoque = i;
+              window.renderTabelaEstoquePaginated();
+          };
+          pagesContainer.appendChild(btn);
+      }
+    }
+  }
+};
+
+window.mudarPaginaEstoque = function(delta) {
+  window.currentPageEstoque += delta;
+  window.renderTabelaEstoquePaginated();
 };
 
 window.exportarExcelEstoque = function() {

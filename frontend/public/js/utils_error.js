@@ -157,6 +157,12 @@ const ErrorUtils = {
                 return;
             }
 
+            // Padrão de erro customizado do OrderSyncException: { "error": { "message": "..." } }
+            if (data.error && data.error.message) {
+                this.showError(`Falha (${status})`, data.error.message, status, data);
+                return;
+            }
+
             // Fallback Genérico JSON
             this.showError(`Falha (${status})`, 'O servidor retornou um erro, mas nenhuma descrição detalhada foi fornecida.', status, data);
             

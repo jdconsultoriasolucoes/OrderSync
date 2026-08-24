@@ -406,11 +406,11 @@ def criar_cliente(cliente_data: dict) -> dict:
             existente = db.query(ClienteModelV2).filter(or_(*condicoes)).first()
             if existente:
                 if _codigo and existente.cadastro_codigo_da_empresa == _codigo:
-                    raise BusinessRuleException(f"Já existe um cliente cadastrado com o código {_codigo}")
+                    raise BusinessRuleException(f"Já existe um cliente cadastrado com o código {_codigo} (Cliente: {existente.cadastro_nome_cliente})")
                 if _cnpj and re.sub(r"\D", "", existente.cadastro_cnpj or "") == re.sub(r"\D", "", _cnpj):
-                    raise BusinessRuleException(f"Já existe um cliente cadastrado com o CNPJ {_cnpj}")
+                    raise BusinessRuleException(f"Já existe um cliente cadastrado com o CNPJ {_cnpj} (Cliente: {existente.cadastro_nome_cliente} - Código: {existente.cadastro_codigo_da_empresa or 'Sem Código'})")
                 if _cpf and re.sub(r"\D", "", existente.cadastro_cpf or "") == re.sub(r"\D", "", _cpf):
-                    raise BusinessRuleException(f"Já existe um cliente cadastrado com o CPF {_cpf}")
+                    raise BusinessRuleException(f"Já existe um cliente cadastrado com o CPF {_cpf} (Cliente: {existente.cadastro_nome_cliente} - Código: {existente.cadastro_codigo_da_empresa or 'Sem Código'})")
                     
         novo_cliente.data_criacao = datetime.now()
         db.add(novo_cliente)
@@ -468,11 +468,11 @@ def atualizar_cliente(cliente_id: int, cliente_data: dict) -> dict:
             
             if existente:
                 if _codigo and existente.cadastro_codigo_da_empresa == _codigo:
-                    raise BusinessRuleException(f"Já existe outro cliente usando o código {_codigo}")
+                    raise BusinessRuleException(f"Já existe outro cliente usando o código {_codigo} (Cliente: {existente.cadastro_nome_cliente})")
                 if _cnpj and re.sub(r"\D", "", existente.cadastro_cnpj or "") == re.sub(r"\D", "", _cnpj):
-                    raise BusinessRuleException(f"Já existe outro cliente usando o CNPJ {_cnpj}")
+                    raise BusinessRuleException(f"Já existe outro cliente usando o CNPJ {_cnpj} (Cliente: {existente.cadastro_nome_cliente} - Código: {existente.cadastro_codigo_da_empresa or 'Sem Código'})")
                 if _cpf and re.sub(r"\D", "", existente.cadastro_cpf or "") == re.sub(r"\D", "", _cpf):
-                    raise BusinessRuleException(f"Já existe outro cliente usando o CPF {_cpf}")
+                    raise BusinessRuleException(f"Já existe outro cliente usando o CPF {_cpf} (Cliente: {existente.cadastro_nome_cliente} - Código: {existente.cadastro_codigo_da_empresa or 'Sem Código'})")
         
         # Guardar valores antigos antes da alteração
         nome_antigo = cliente.cadastro_nome_cliente

@@ -474,6 +474,17 @@
             </tbody>
           </table>
         </div>
+
+        <!-- Controles de Paginação -->
+        <div id="pagination-controls" style="display: none; justify-content: space-between; align-items: center; margin-top: 15px; padding: 10px; background: #f9fafb; border: 1px solid #e5e7eb; border-radius: 4px;">
+          <div id="pagination-info" style="font-size: 14px; color: #6b7280;"></div>
+          <div style="display: flex; gap: 5px; flex-wrap: wrap; justify-content: center;">
+            <button id="btn-prev-page" class="ghost" style="padding: 5px 10px; cursor: pointer;" onclick="window.mudarPaginaEstoque(-1)">Anterior</button>
+            <span id="pagination-pages" style="display: flex; gap: 5px; flex-wrap: wrap; justify-content: center;"></span>
+            <button id="btn-next-page" class="ghost" style="padding: 5px 10px; cursor: pointer;" onclick="window.mudarPaginaEstoque(1)">Próxima</button>
+          </div>
+        </div>
+
       </div>
     </div> <!-- Fim de tab-relatorio -->
 
