@@ -275,6 +275,8 @@ class BemMovel(BaseModel):
     modelo: Optional[str] = None
     valor: Optional[float] = None
     alienado: Optional[str] = None
+    placa: Optional[str] = None
+    proprietario: Optional[str] = None
 
 class PlantelAnimal(BaseModel):
     especie: Optional[str] = None

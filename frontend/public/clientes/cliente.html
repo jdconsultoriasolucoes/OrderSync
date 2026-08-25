@@ -829,18 +829,7 @@
           <div id="container-bens_moveis" class="lista-dinamica-container"></div>
           <button type="button" class="btn-add-item" onclick="adicionarItem('bens_moveis', 3)" id="btn-add-bens_moveis">+ Adicionar Bem Móvel</button>
 
-          <div class="item-dinamico-bloco" style="margin-top: 15px;">
-            <div class="form-grid-2col">
-              <div>
-                <label for="placa_veiculo_ElaboracaoCadastro">Placa do Veículo:</label>
-                <input type="text" id="placa_veiculo_ElaboracaoCadastro" name="placa_veiculo_ElaboracaoCadastro" placeholder="AAA-0000" />
-              </div>
-              <div>
-                <label for="proprietario_veiculo_ElaboracaoCadastro">Proprietário do Veículo:</label>
-                <input type="text" id="proprietario_veiculo_ElaboracaoCadastro" name="proprietario_veiculo_ElaboracaoCadastro" />
-              </div>
-            </div>
-          </div>
+
 
           <h2 class="subtitulo" style="margin-top:20px;">Plantel de Animais <span id="contador-planteis_animais" style="font-size: 0.8rem; font-weight: 500; color: #64748b; margin-left: 6px; vertical-align: middle;">(0/3)</span></h2>
           <div id="container-planteis_animais" class="lista-dinamica-container"></div>
@@ -1633,8 +1622,8 @@
               gerente_pet_ElaboracaoCadastro: document.getElementById("gerente_pet_ElaboracaoCadastro")?.value || "",
               pre_posto_ElaboracaoCadastro: document.getElementById("pre_posto_ElaboracaoCadastro")?.value || "",
               local_carregamento_ElaboracaoCadastro: document.getElementById("local_carregamento_ElaboracaoCadastro")?.value || "",
-              placa_veiculo_ElaboracaoCadastro: document.getElementById("placa_veiculo_ElaboracaoCadastro")?.value || "",
-              proprietario_veiculo_ElaboracaoCadastro: document.getElementById("proprietario_veiculo_ElaboracaoCadastro")?.value || ""
+              placa_veiculo_ElaboracaoCadastro: (coletarLista('bens_moveis')[0]?.placa || ""),
+              proprietario_veiculo_ElaboracaoCadastro: (coletarLista('bens_moveis')[0]?.proprietario || "")
             },
             // Listas dinâmicas (JSONB)
             indicacoes_clientes: coletarLista('indicacoes'),
@@ -1714,12 +1703,14 @@
             ]
           },
           bens_moveis: {
-            gridClass: 'form-grid-4col',
+            gridClass: 'form-grid-3col',
             fields: [
-              { key: 'marca',    label: 'Marca',    type: 'text' },
-              { key: 'modelo',   label: 'Modelo',   type: 'text' },
-              { key: 'valor',    label: 'Valor (R$)', type: 'text', attributes: { placeholder: 'R$ 0,00' } },
-              { key: 'alienado', label: 'Alienado', type: 'select', options: ['', 'Sim', 'Não'] }
+              { key: 'marca',        label: 'Marca',                    type: 'text' },
+              { key: 'modelo',       label: 'Modelo',                   type: 'text' },
+              { key: 'valor',        label: 'Valor (R$)',               type: 'text', attributes: { placeholder: 'R$ 0,00' } },
+              { key: 'alienado',     label: 'Alienado',                 type: 'select', options: ['', 'Sim', 'Não'] },
+              { key: 'placa',        label: 'Placa do Veículo',         type: 'text', attributes: { placeholder: 'AAA-0000', oninput: "this.value = this.value.toUpperCase()" } },
+              { key: 'proprietario', label: 'Proprietário do Veículo',  type: 'text' }
             ]
           },
           planteis_animais: {
@@ -2197,16 +2188,36 @@
           setVal("gerente_pet_ElaboracaoCadastro", ed.gerente_pet_ElaboracaoCadastro || "");
           setVal("pre_posto_ElaboracaoCadastro", ed.pre_posto_ElaboracaoCadastro || "");
           setVal("local_carregamento_ElaboracaoCadastro", ed.local_carregamento_ElaboracaoCadastro || "");
-          setVal("placa_veiculo_ElaboracaoCadastro", ed.placa_veiculo_ElaboracaoCadastro || "");
-          setVal("proprietario_veiculo_ElaboracaoCadastro", ed.proprietario_veiculo_ElaboracaoCadastro || "");
-
           // Listas dinâmicas (JSONB)
           renderizarLista('indicacoes', 5, dados.indicacoes_clientes || []);
           renderizarLista('grupos_economicos', 3, dados.grupos_economicos || []);
           renderizarLista('referencias_comerciais', 3, dados.referencias_comerciais || []);
           renderizarLista('referencias_bancarias', 3, dados.referencias_bancarias || []);
           renderizarLista('bens_imoveis', 3, dados.bens_imoveis || []);
-          renderizarLista('bens_moveis', 3, dados.bens_moveis || []);
+
+          let listBensMoveis = dados.bens_moveis || [];
+          if (listBensMoveis.length === 0) {
+            if (ed.placa_veiculo_ElaboracaoCadastro || ed.proprietario_veiculo_ElaboracaoCadastro) {
+              listBensMoveis = [{
+                marca: "",
+                modelo: "",
+                valor: "",
+                alienado: "",
+                placa: ed.placa_veiculo_ElaboracaoCadastro || "",
+                proprietario: ed.proprietario_veiculo_ElaboracaoCadastro || ""
+              }];
+            }
+          } else {
+            if (listBensMoveis[0] && typeof listBensMoveis[0] === 'object') {
+              if (!listBensMoveis[0].placa && ed.placa_veiculo_ElaboracaoCadastro) {
+                listBensMoveis[0].placa = ed.placa_veiculo_ElaboracaoCadastro;
+              }
+              if (!listBensMoveis[0].proprietario && ed.proprietario_veiculo_ElaboracaoCadastro) {
+                listBensMoveis[0].proprietario = ed.proprietario_veiculo_ElaboracaoCadastro;
+              }
+            }
+          }
+          renderizarLista('bens_moveis', 3, listBensMoveis);
           renderizarLista('planteis_animais', 3, dados.planteis_animais || []);
 
           // Bloco: supervisores
