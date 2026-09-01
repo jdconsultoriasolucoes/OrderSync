@@ -87,7 +87,8 @@ from core.security import SECRET_KEY, ALGORITHM, get_password_hash
 RESET_TOKEN_EXPIRE_MINUTES = 15
 
 @router.post("/forgot-password")
-def forgot_password(data: UsuarioForgotPassword, db: Session = Depends(get_db)):
+@limiter.limit("3/minute")
+def forgot_password(request: Request, data: UsuarioForgotPassword, db: Session = Depends(get_db)):
     """
     Gera um token de recuperação e envia por e-mail.
     Sempre retorna 200 para não vazar existência de e-mails.
@@ -130,7 +131,8 @@ def forgot_password(data: UsuarioForgotPassword, db: Session = Depends(get_db)):
     return {"message": "Se o e-mail existir, um link de recuperação foi enviado."}
 
 @router.post("/reset-password")
-def reset_password(data: UsuarioResetSenha, db: Session = Depends(get_db)):
+@limiter.limit("5/minute")
+def reset_password(request: Request, data: UsuarioResetSenha, db: Session = Depends(get_db)):
     """
     Valida token e atualiza senha.
     """

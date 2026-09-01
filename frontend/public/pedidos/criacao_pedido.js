@@ -968,20 +968,12 @@ function setupClienteAutocomplete() {
       if (nomeEl) nomeEl.value = [fmtDoc(c.cnpj), c.nome].filter(Boolean).join(' - ');
       if (codEl) codEl.value = c.codigo ?? '';
       if (ramoEl) ramoEl.value = c.ramo_juridico ?? c.ramo ?? '';
-      window.currentClientMarkup = Number(c.markup || 0); // Sets default markup global
+      window.currentClientMarkup = 0; // Pedidos manuais não utilizam markup
 
       const freteEl = document.getElementById('frete_kg');
       if (freteEl) {
           freteEl.value = String(c.frete_kg ?? c.frete ?? 0);
           freteEl.dispatchEvent(new Event('input', { bubbles: true }));
-      }
-
-      // Apply markup to all existing items
-      if (itens && itens.length > 0) {
-        itens.forEach(it => {
-          it.markup = currentClientMarkup;
-        });
-        renderTabela();
       }
 
       // aplica preferência vinda do cadastro, mas TRAVADO
@@ -4206,9 +4198,8 @@ async function carregarTabelaBase(e, forceId = null) {
 
         const mkInput = document.getElementById('markup_global');
         if (mkInput) {
-            const mkVal = first?.markup ?? 0;
-            mkInput.value = Number(mkVal).toFixed(2);
-            window.currentClientMarkup = Number(mkVal);
+            mkInput.value = '0.00';
+            window.currentClientMarkup = 0;
         }
 
         const cliInput = document.getElementById('cliente_nome');
@@ -4224,6 +4215,9 @@ async function carregarTabelaBase(e, forceId = null) {
             itens = data.produtos.map(p => {
                 const mapItem = mapBackendItemToFrontend(p, data.tabela || {});
                 mapItem.quantidade = 0; // Default
+                mapItem.markup = 0;
+                mapItem.valor_final_markup = 0;
+                mapItem.valor_s_frete_markup = 0;
                 return mapItem;
             });
             await atualizarPesosBrutosAtuais();
@@ -4282,7 +4276,6 @@ async function salvarPedido() {
         }
     }
 
-    const mkGlobal = 0;
     const tblId = document.getElementById('tabela_base_id')?.value || null;
     const observacao = document.getElementById('observacao')?.value || '';
 
@@ -4295,8 +4288,8 @@ async function salvarPedido() {
         frete_kg: Number(document.getElementById('frete_kg')?.value || 0),
         produtos: produtosFiltrados.map(it => {
             const q = Number(it.quantidade || 1);
-            const vSF = Number(it.valor_s_frete_markup || it.valor_s_frete || it.precoBase || it.valor || 0);
-            const vCF = Number(it.valor_final_markup || it.valor_liquido || it.precoBase || it.valor || 0);
+            const vSF = Number(it.total_sem_frete || it.valor_s_frete || it.precoBase || it.valor || 0);
+            const vCF = Number(it._totalComercial || it.valor_liquido || it.precoBase || it.valor || 0);
             
             return {
                 codigo: it.codigo_tabela,
@@ -4308,9 +4301,9 @@ async function salvarPedido() {
                 preco_unit_com_frete: vCF,
                 condicao_pagamento: it.plano_pagamento || null,
                 tabela_comissao: it.__descricao_fator_label || null,
-                markup: it.markup || mkGlobal || 0,
-                valor_final_markup: Number(it.valor_final_markup || 0),
-                valor_s_frete_markup: Number(it.valor_s_frete_markup || 0),
+                markup: 0,
+                valor_final_markup: 0,
+                valor_s_frete_markup: 0,
                 valor_frete_unitario: Number(it.valor_frete_aplicado || 0),
                 manual_freight: !!it.manual_freight,
                 frete_base_ton: Number(it.frete_base_ton || 0)

@@ -34,6 +34,16 @@ async def get_current_user(token: str = Depends(oauth2_scheme), db: Session = De
     user = db.query(UsuarioModel).filter(UsuarioModel.email == email).first()
     if user is None:
         raise credentials_exception
+    
+    # Injeta contexto para Row-Level Security (RLS) no PostgreSQL
+    from sqlalchemy import text
+    try:
+        db.execute(text("SET LOCAL app.current_user_id = :user_id"), {"user_id": str(user.id)})
+        db.execute(text("SET LOCAL app.current_user_role = :role"), {"role": str(user.funcao)})
+    except Exception as e:
+        # Passa silenciosamente caso o banco não seja Postgres (ex: fallback SQLite dev)
+        pass
+        
     return user
 
 async def get_current_user_optional(token: str = Depends(OAuth2PasswordBearer(tokenUrl="token", auto_error=False)), db: Session = Depends(get_db)):
@@ -43,7 +53,15 @@ async def get_current_user_optional(token: str = Depends(OAuth2PasswordBearer(to
         payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
         email: str = payload.get("sub")
         if email:
-            return db.query(UsuarioModel).filter(UsuarioModel.email == email).first()
+            user = db.query(UsuarioModel).filter(UsuarioModel.email == email).first()
+            if user:
+                from sqlalchemy import text
+                try:
+                    db.execute(text("SET LOCAL app.current_user_id = :user_id"), {"user_id": str(user.id)})
+                    db.execute(text("SET LOCAL app.current_user_role = :role"), {"role": str(user.funcao)})
+                except Exception:
+                    pass
+                return user
     except Exception:
         pass
     return None

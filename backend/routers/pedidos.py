@@ -6,6 +6,7 @@ from sqlalchemy.orm import Session
 from sqlalchemy import text
 
 from database import SessionLocal  # usa seu database.py
+from core.rate_limit import limiter
 from services.pedidos import (
     LISTAGEM_SQL, COUNT_SQL, RESUMO_SQL, ITENS_JSON_SQL,
     STATUS_SQL, STATUS_UPDATE_SQL, STATUS_EVENT_INSERT_SQL
@@ -16,6 +17,8 @@ import re
 router = APIRouter(prefix="/api/pedidos", tags=["Pedidos"])
 
 from utils.string_utils import clean_client_name
+from core.deps import get_current_user
+from models.usuario import UsuarioModel
 
 
 def get_db():
@@ -475,12 +478,15 @@ def resumo_pedido(id_pedido: int, db: Session = Depends(get_db)):
     return PedidoResumo(**head_dict)
 
 @router.put("/{id_pedido:int}")
+@limiter.limit("20/minute")
 def atualizar_pedido(
+    request: Request,
     id_pedido: int,
     body: PedidoUpdateRequest,
     db: Session = Depends(get_db),
-    user_id: Optional[str] = Query(None)
+    current_user: UsuarioModel = Depends(get_current_user)
 ):
+    user_id = str(current_user.id)
     from models.pedido import PedidoModel
     import json
     
@@ -679,7 +685,9 @@ def listar_status(db: Session = Depends(get_db)):
     return StatusListResponse(data=data)
 
 @router.post("/{id_pedido}/status")
-def mudar_status(id_pedido: int, body: StatusChangeBody, db: Session = Depends(get_db)):
+@limiter.limit("30/minute")
+def mudar_status(request: Request, id_pedido: int, body: StatusChangeBody, db: Session = Depends(get_db), current_user: UsuarioModel = Depends(get_current_user)):
+    user_id = str(current_user.id)
     # LOCK PESSIMISTA: Evita race condition se 2 pessoas alterarem status do mesmo pedido c/ milissegundos d diferença
     cur = db.execute(text("SELECT status FROM public.tb_pedidos WHERE id_pedido=:id FOR UPDATE"), {"id": id_pedido}).first()
     if not cur:
@@ -728,7 +736,7 @@ def mudar_status(id_pedido: int, body: StatusChangeBody, db: Session = Depends(g
     upd = db.execute(dynamic_status_update, {
         "para_status": body.para, 
         "id_pedido": id_pedido,
-        "user_id": body.user_id
+        "user_id": user_id
     }).first()
     if upd is None:
         raise HTTPException(status_code=400, detail="Falha ao atualizar status")
@@ -740,7 +748,7 @@ def mudar_status(id_pedido: int, body: StatusChangeBody, db: Session = Depends(g
                 "pedido_id": id_pedido,
                 "de_status": de_status,
                 "para_status": body.para,
-                "user_id": body.user_id,
+                "user_id": user_id,
                 "motivo": body.motivo,
                 "metadata": "{}"
             })
@@ -748,13 +756,14 @@ def mudar_status(id_pedido: int, body: StatusChangeBody, db: Session = Depends(g
         pass
 
     if body.para and body.para.lower() in ("faturado supra", "faturado dispet", "cancelado"):
-        verificar_e_historico_carga(db, id_pedido, body.user_id)
+        verificar_e_historico_carga(db, id_pedido, user_id)
 
     db.commit()
     return {"ok": True}
 
 @router.patch("/{id_pedido}/campos_faturamento")
-def atualizar_campos_faturamento(id_pedido: int, body: PedidoCamposFaturamento, db: Session = Depends(get_db)):
+@limiter.limit("20/minute")
+def atualizar_campos_faturamento(request: Request, id_pedido: int, body: PedidoCamposFaturamento, db: Session = Depends(get_db), current_user: UsuarioModel = Depends(get_current_user)):
     from models.pedido import PedidoModel
     pedido = db.query(PedidoModel).filter(PedidoModel.id == id_pedido).first()
     if not pedido:
@@ -783,7 +792,9 @@ from models.pedido import PedidoModel
 from services.email_service import enviar_email_notificacao
 
 @router.post("/{id_pedido}/cancelar")
-def cancelar_pedido(id_pedido: int, db: Session = Depends(get_db), user_id: Optional[str] = Query(None)):
+@limiter.limit("10/minute")
+def cancelar_pedido(request: Request, id_pedido: int, db: Session = Depends(get_db), current_user: UsuarioModel = Depends(get_current_user)):
+    user_id = str(current_user.id)
     """
     Cancela o pedido e registra no histórico (se possível).
     """
@@ -1037,11 +1048,11 @@ def admin_criar_pedido(body: AdminCriarPedidoRequest, db: Session = Depends(get_
             "quantidade": qtd,
             "subtotal_sem_f": round(p_sem * qtd, 2),
             "subtotal_com_f": round(p_com * qtd, 2),
-            "markup": float(it.markup or 0.0),
+            "markup": 0.0,
             "manual_freight": bool(getattr(it, "manual_freight", False)),
             "frete_base_ton": float(it.frete_base_ton or 0.0),
-            "valor_final_markup": float(it.valor_final_markup or 0.0),
-            "valor_s_frete_markup": float(it.valor_s_frete_markup or 0.0)
+            "valor_final_markup": 0.0,
+            "valor_s_frete_markup": 0.0
         })
         
     db.commit()

@@ -24,8 +24,9 @@ logger = logging.getLogger("ordersync.routers.cliente")
 router = APIRouter()
 
 @router.get("/", response_model=List[ClienteCompleto])
-def get_clientes():
+def get_clientes(current_user: UsuarioModel = Depends(get_current_user)):
     try:
+        logger.info(f"[LGPD AUDIT] Usuário {current_user.email} (Role: {current_user.funcao}) acessou a listagem de clientes.")
         return listar_clientes()
     except Exception as e:
         import traceback
@@ -34,8 +35,9 @@ def get_clientes():
         raise HTTPException(status_code=500, detail=f"Erro interno ao listar clientes: {str(e)}")
 
 @router.get("/{codigo_da_empresa}/ultimas_compras")
-def get_ultimas_compras(codigo_da_empresa: str):
+def get_ultimas_compras(codigo_da_empresa: str, current_user: UsuarioModel = Depends(get_current_user)):
     """Retorna as últimas 3 compras (pedidos) de um cliente, incluindo cancelados."""
+    logger.info(f"[LGPD AUDIT] Usuário {current_user.email} consultou últimas compras do cliente {codigo_da_empresa}.")
     try:
         with SessionLocal() as db:
             rows = db.execute(text("""

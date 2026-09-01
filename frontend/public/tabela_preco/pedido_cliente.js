@@ -772,9 +772,9 @@ async function confirmarPedido() {
             peso_kg: x.peso ?? x.peso_kg ?? null,
             valor_frete_unitario: x.valor_frete_unitario || 0,
             manual_freight: !!x.manual_freight,
-            markup: x.markup || 0,
-            valor_final_markup: vMkCom,
-            valor_s_frete_markup: vMkSem
+            markup: 0,
+            valor_final_markup: 0,
+            valor_s_frete_markup: 0
           };
         }),
         observacao,

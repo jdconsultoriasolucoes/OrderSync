@@ -241,9 +241,9 @@ def criar_pedido_confirmado(db: Session, tabela_id: int, body: ConfirmarPedidoRe
             "subtotal_sem_f": round(p_sem * qtd, 2),
             "subtotal_com_f": round(p_com * qtd, 2),
             "manual_freight": bool(it.manual_freight or False),
-            "markup": float(it.markup or 0.0),
-            "valor_final_markup": float(it.valor_final_markup or 0.0),
-            "valor_s_frete_markup": float(it.valor_s_frete_markup or 0.0)
+            "markup": 0.0,
+            "valor_final_markup": 0.0,
+            "valor_s_frete_markup": 0.0
         })
 
     db.commit()

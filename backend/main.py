@@ -197,15 +197,15 @@ async def errors_with_cors(request: Request, call_next):
         resp = await call_next(request)
         if resp.status_code >= 500:
             logger.error(
-                "5xx: %s %s?%s -> %s",
-                request.method, request.url.path, request.url.query, resp.status_code
+                "5xx: %s %s -> %s",
+                request.method, request.url.path, resp.status_code
             )
         return resp
     except HTTPException as e:
         err_id = uuid.uuid4().hex[:8]
         logger.error(
-            "HTTPEXC %s: %s %s?%s\n%s",
-            err_id, request.method, request.url.path, request.url.query,
+            "HTTPEXC %s: %s %s\n%s",
+            err_id, request.method, request.url.path,
             traceback.format_exc()
         )
         body = {"detail": e.detail, "error_id": err_id}
@@ -215,8 +215,8 @@ async def errors_with_cors(request: Request, call_next):
     except Exception as e:
         err_id = uuid.uuid4().hex[:8]
         logger.error(
-            "EXC %s: %s %s?%s\n%s",
-            err_id, request.method, request.url.path, request.url.query,
+            "EXC %s: %s %s\n%s",
+            err_id, request.method, request.url.path,
             traceback.format_exc()
         )
         # Show real error in Dev, generic in Prod (based on ENV)
