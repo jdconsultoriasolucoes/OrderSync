@@ -2,6 +2,7 @@ const API_URL = window.API_BASE || "http://127.0.0.1:8000";
 
 document.addEventListener("DOMContentLoaded", () => {
     carregarUsuarios();
+    carregarOpcoesPerfis();
 
     // Novo Usuário Form
     // Novo/Editar Usuário Form
@@ -86,6 +87,32 @@ document.addEventListener("DOMContentLoaded", () => {
         }
     });
 });
+
+async function carregarOpcoesPerfis() {
+    const select = document.getElementById("input-funcao");
+    if (!select) return;
+    try {
+        const res = await fetch(`${API_URL}/api/perfis/`);
+        if (res.ok) {
+            const perfis = await res.json();
+            select.innerHTML = "";
+            perfis.forEach(p => {
+                const opt = document.createElement("option");
+                // For now, we still send the profile name to backend if backend expects string in funcao, 
+                // but ideally backend should take perfil_id. We'll use nome as value to avoid breaking backend if it expects string, 
+                // or we use id if backend is adapted. Let's send ID if we want, but backend update is needed.
+                // Assuming we use `nome` as value for backward compatibility, or `id` if adapted.
+                // I will update backend to use `perfil_id` or map `funcao` to it later. I will use `p.nome` for now.
+                opt.value = p.nome; 
+                opt.textContent = p.nome;
+                opt.dataset.id = p.id;
+                select.appendChild(opt);
+            });
+        }
+    } catch (e) {
+        console.error("Erro ao carregar perfis para o select", e);
+    }
+}
 
 async function carregarUsuarios() {
     const tbody = document.getElementById("tabela-usuarios");

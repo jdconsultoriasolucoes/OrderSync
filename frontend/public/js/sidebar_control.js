@@ -55,8 +55,7 @@ function applyAccessControl() {
         console.log("[AccessControl] Hiding restricted items for Vendedor.");
 
         // Items to hide: 
-        // 1. Usuarios (Gerenciar Usuarios) -> href="/usuarios.html" or similar
-        // 2. Config Email -> href="/config_email/config_email.html"
+        // 1. Configurações -> href="/configuracoes.html"
 
         const sidebarLinks = document.querySelectorAll("#sidebar ul li a");
 
@@ -65,7 +64,7 @@ function applyAccessControl() {
             if (!href) return;
 
             // Normalize checks
-            if (href.includes("usuarios.html") || href.includes("config_email")) {
+            if (href.includes("configuracoes.html")) {
                 // Hide the parent LI
                 const li = link.closest("li");
                 if (li) {
