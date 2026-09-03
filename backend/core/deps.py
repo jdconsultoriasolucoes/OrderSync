@@ -65,3 +65,33 @@ async def get_current_user_optional(token: str = Depends(OAuth2PasswordBearer(to
     except Exception:
         pass
     return None
+
+class RequirePermission:
+    def __init__(self, modulo: str, acao: str):
+        self.modulo = modulo
+        self.acao = acao
+
+    def __call__(self, current_user: UsuarioModel = Depends(get_current_user), db: Session = Depends(get_db)):
+        # Admin bypass
+        if current_user.perfil and current_user.perfil.is_system and current_user.perfil.nome == "admin":
+            return True
+        if current_user.funcao == "admin": # retrocompatibilidade
+            return True
+            
+        if not current_user.perfil:
+            raise HTTPException(status_code=403, detail="Usuário sem perfil de acesso definido.")
+
+        from models.perfil import PerfilPermissaoModel
+        permissao = db.query(PerfilPermissaoModel).filter_by(
+            perfil_id=current_user.perfil.id, 
+            modulo=self.modulo
+        ).first()
+
+        if not permissao:
+            raise HTTPException(status_code=403, detail=f"Sem acesso ao módulo {self.modulo}.")
+
+        tem_acesso = getattr(permissao, f"pode_{self.acao}", False)
+        if not tem_acesso:
+            raise HTTPException(status_code=403, detail=f"Permissão negada para a ação '{self.acao}' no módulo '{self.modulo}'.")
+        
+        return True

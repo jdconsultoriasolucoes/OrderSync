@@ -1,5 +1,6 @@
 
-from sqlalchemy import Column, Integer, String, Boolean, BigInteger, Sequence, DateTime, func
+from sqlalchemy import Column, Integer, String, Boolean, BigInteger, Sequence, DateTime, func, ForeignKey
+from sqlalchemy.orm import relationship
 from database import Base
 
 class UsuarioModel(Base):
@@ -9,7 +10,8 @@ class UsuarioModel(Base):
     nome = Column(String, nullable=False)
     email = Column(String, unique=True, index=True, nullable=False)
     senha_hash = Column(String, nullable=False)
-    funcao = Column(String, default="vendedor") # admin, gerente, vendedor
+    funcao = Column(String, default="vendedor") # admin, gerente, vendedor (DEPRECATED - manter por retrocompatibilidade)
+    perfil_id = Column(Integer, ForeignKey("tb_perfis.id", ondelete="SET NULL"), nullable=True)
     ativo = Column(Boolean, default=True)
     data_criacao = Column(DateTime, default=func.now())
     data_atualizacao = Column(DateTime, default=func.now(), onupdate=func.now())
@@ -19,3 +21,5 @@ class UsuarioModel(Base):
     email_verificado = Column(Boolean, default=False)
     token_verificacao = Column(String, nullable=True)
     email_daily_digest = Column(Boolean, default=True)
+
+    perfil = relationship("PerfilModel")

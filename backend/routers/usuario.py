@@ -11,7 +11,7 @@ from models.usuario import UsuarioModel
 from schemas.usuario import UsuarioCreate, UsuarioPublic, UsuarioUpdateSenha, UsuarioResetSenha, UsuarioUpdate, UsuarioChangePassword, UsuarioAdminResetSenha
 from core.security import get_password_hash, SECRET_KEY, ALGORITHM, verify_password
 
-from core.deps import get_db, get_current_user, oauth2_scheme
+from core.deps import get_db, get_current_user, oauth2_scheme, RequirePermission
 
 async def get_current_user_role(token: str = Depends(oauth2_scheme)):
     credentials_exception = HTTPException(
@@ -31,16 +31,12 @@ async def get_current_user_role(token: str = Depends(oauth2_scheme)):
 # Router
 router = APIRouter(prefix="/usuarios", tags=["usuarios"])
 
-@router.post("/", response_model=UsuarioPublic)
+@router.post("/", response_model=UsuarioPublic, dependencies=[Depends(RequirePermission("usuarios_e_perfis", "criar"))])
 def create_user(
     usuario: UsuarioCreate, 
     db: Session = Depends(get_db),
     current_user: UsuarioModel = Depends(get_current_user)
 ):
-    # Only Admin or Gerente can create users
-    # Check Role from user object
-    if current_user.funcao not in ["admin", "gerente"]:
-         raise HTTPException(status_code=403, detail="Not authorized to create users")
     
     current_user_email = current_user.email
     # Check existing
@@ -97,13 +93,11 @@ def create_user(
         
     return db_user
 
-@router.get("/", response_model=List[UsuarioPublic])
+@router.get("/", response_model=List[UsuarioPublic], dependencies=[Depends(RequirePermission("usuarios_e_perfis", "visualizar"))])
 def list_users(
     db: Session = Depends(get_db),
-    current_role: str = Depends(get_current_user_role)
+    current_user: UsuarioModel = Depends(get_current_user)
 ):
-    if current_role not in ["admin", "gerente"]:
-         raise HTTPException(status_code=403, detail="Not authorized to list users")
          
     return db.query(UsuarioModel).all()
 
@@ -131,18 +125,14 @@ def alterar_minha_senha(
     db.commit()
     return {"message": "Senha alterada com sucesso"}
 
-@router.post("/{user_id}/reset-senha")
-def resetar_senha_usuario(
-    user_id: int,
+@router.post("/admin-reset-senha", dependencies=[Depends(RequirePermission("usuarios_e_perfis", "editar"))])
+def admin_reset_senha(
     dados: UsuarioAdminResetSenha,
     db: Session = Depends(get_db),
     current_user: UsuarioModel = Depends(get_current_user)
 ):
-    # Only Admin
-    if current_user.funcao != "admin":
-        raise HTTPException(status_code=403, detail="Apenas administradores podem resetar senhas")
     
-    target_user = db.query(UsuarioModel).filter(UsuarioModel.id == user_id).first()
+    target_user = db.query(UsuarioModel).filter(UsuarioModel.id == dados.user_id).first()
     if not target_user:
         raise HTTPException(status_code=404, detail="Usuário não encontrado")
         
@@ -150,16 +140,13 @@ def resetar_senha_usuario(
     db.commit()
     return {"message": f"Senha do usuário {target_user.email} resetada com sucesso"}
 
-@router.put("/{user_id}", response_model=UsuarioPublic)
+@router.put("/{user_id}", response_model=UsuarioPublic, dependencies=[Depends(RequirePermission("usuarios_e_perfis", "editar"))])
 def update_user(
     user_id: int,
     dados: UsuarioUpdate,
     db: Session = Depends(get_db),
     current_user: UsuarioModel = Depends(get_current_user)
 ):
-    # Only Admin
-    if current_user.funcao != "admin":
-        raise HTTPException(status_code=403, detail="Apenas administradores podem editar usuários")
 
     user = db.query(UsuarioModel).filter(UsuarioModel.id == user_id).first()
     if not user:
@@ -174,15 +161,12 @@ def update_user(
     db.refresh(user)
     return user
 
-@router.delete("/{user_id}")
+@router.delete("/{user_id}", dependencies=[Depends(RequirePermission("usuarios_e_perfis", "excluir"))])
 def delete_user(
     user_id: int,
     db: Session = Depends(get_db),
     current_user: UsuarioModel = Depends(get_current_user)
 ):
-    # Only Admin
-    if current_user.funcao != "admin":
-        raise HTTPException(status_code=403, detail="Apenas administradores podem excluir usuários")
 
     user = db.query(UsuarioModel).filter(UsuarioModel.id == user_id).first()
     if not user:
