@@ -116,8 +116,8 @@ async function carregarOpcoesPerfis() {
 
 async function carregarUsuarios() {
     const tbody = document.getElementById("tabela-usuarios");
-    const loading = document.getElementById("loading");
-    const errorMsg = document.getElementById("error-msg");
+    const loading = document.getElementById("loading-usuarios") || document.getElementById("loading");
+    const errorMsg = document.getElementById("error-msg-usuarios") || document.getElementById("error-msg");
 
     tbody.innerHTML = "";
     loading.style.display = "block";
@@ -159,7 +159,8 @@ async function carregarUsuarios() {
 window.abrirModalNovoUsuario = () => {
     document.getElementById("user-id").value = "";
     document.getElementById("form-novo-usuario").reset();
-    document.querySelector(".custom-modal-title").innerText = "Novo Usuário";
+    const titulo = document.getElementById("titulo-modal-usuario") || document.querySelector(".custom-modal-title");
+    if(titulo) titulo.innerText = "Novo Usuário";
     document.getElementById("input-senha").disabled = false;
     document.getElementById("modal-novo").style.display = "flex";
 };
@@ -176,7 +177,8 @@ window.abrirModalEditar = (u) => {
     pwInput.placeholder = "Senha inalterada na edição";
     pwInput.disabled = true;
 
-    document.querySelector(".custom-modal-title").innerText = "Editar Usuário";
+    const titulo = document.getElementById("titulo-modal-usuario") || document.querySelector(".custom-modal-title");
+    if(titulo) titulo.innerText = "Editar Usuário";
     document.getElementById("modal-novo").style.display = "flex";
 };
 
