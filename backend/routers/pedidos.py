@@ -291,9 +291,9 @@ def listar_pedidos(
 
     if status_list:
         placeholders = ", ".join([f":st_{i}" for i in range(len(status_list))])
-        filtros_sql.append(f"a.status IN ({placeholders})")
+        filtros_sql.append(f"UPPER(a.status) IN ({placeholders})")
         for i, status_val in enumerate(status_list):
-            params[f"st_{i}"] = status_val
+            params[f"st_{i}"] = status_val.upper()
 
     if exclude_status:
         ex_status_list = [s.strip() for s in exclude_status.split(",") if s.strip()]
@@ -695,7 +695,8 @@ def mudar_status(request: Request, id_pedido: int, body: StatusChangeBody, db: S
     de_status = cur[0]
 
     # VALIDAÇÃO DE FATURAMENTO: Bloqueia se o cliente não tem código da empresa
-    status_faturamento = {"faturado supra", "faturado dispet"}
+    # Regra: se o status for = a faturado dispet, o codigo do cliente não é obrigatorio.
+    status_faturamento = {"faturado supra"}
     if body.para and body.para.lower() in status_faturamento:
         resultado = db.execute(
             text("""

@@ -531,21 +531,39 @@ async function saveEvent() {
         return { email: email, permission_level: perm };
     });
 
+    const titleInput = document.getElementById('event-title');
+    const calendarInput = document.getElementById('event-calendar');
+    const startInput = document.getElementById('event-start');
+    const endInput = document.getElementById('event-end');
+
+    // Remove red borders
+    titleInput.style.borderColor = '';
+    calendarInput.style.borderColor = '';
+    startInput.style.borderColor = '';
+    endInput.style.borderColor = '';
+
+    let hasError = false;
+
+    if (!titleInput.value) { titleInput.style.borderColor = 'red'; hasError = true; }
+    if (!calendarInput.value) { calendarInput.style.borderColor = 'red'; hasError = true; }
+    if (!startInput.value) { startInput.style.borderColor = 'red'; hasError = true; }
+    if (!endInput.value) { endInput.style.borderColor = 'red'; hasError = true; }
+
+    if (hasError) {
+        return alert('Por favor, preencha todos os campos obrigatórios destacados em vermelho.');
+    }
+
     const data = {
-        title: document.getElementById('event-title').value,
-        calendar_id: document.getElementById('event-calendar').value,
-        start_time: new Date(document.getElementById('event-start').value).toISOString(),
-        end_time: new Date(document.getElementById('event-end').value).toISOString(),
+        title: titleInput.value,
+        calendar_id: calendarInput.value,
+        start_time: new Date(startInput.value).toISOString(),
+        end_time: new Date(endInput.value).toISOString(),
         is_all_day: false,
         location: document.getElementById('event-location').value,
         description: document.getElementById('event-desc').value,
         cliente_id: document.getElementById('event-client-id').value ? parseInt(document.getElementById('event-client-id').value) : null,
         shared_with_users: sharedUsers
     };
-    
-    if (!data.title || !data.calendar_id || !data.start_time || !data.end_time) {
-        return alert('Preencha os campos obrigatórios.');
-    }
     
     try {
         if (currentEventId) {

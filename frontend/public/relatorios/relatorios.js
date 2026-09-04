@@ -156,17 +156,25 @@ async function renderStandardCargaList(tipo) {
     const isRetTab = activeRelatorio === 'retiradas' || activeRelatorio === 'historico-retiradas';
     const labelNum = isRetTab ? "Nº Retirada" : "Nº Carga";
     const labelData = isRetTab ? "Data Retirada" : "Data Carregamento";
+    const labelDesc = isRetTab ? "Observação" : "Nome / Descrição";
 
-    thead.innerHTML = `
-        <tr>
-            <th style="width: 40px; text-align: center;"><input type="checkbox" id="chk-all-cargas"></th>
-            <th>${labelNum}</th>
-            <th>Nome / Descrição</th>
-            <th>Data Cadastro</th>
-            ${(activeRelatorio === 'historico' || activeRelatorio === 'historico-retiradas' || activeRelatorio === 'retiradas') ? `<th>${labelData}</th>` : ''}
-            <th>Ações</th>
-        </tr>
+    let ths = `
+        <th style="width: 40px; text-align: center;"><input type="checkbox" id="chk-all-cargas"></th>
+        <th>${labelNum}</th>
     `;
+    if (!isRetTab) {
+        ths += `<th>${labelDesc}</th>`;
+    }
+    ths += `<th>Data Cadastro</th>`;
+    if (activeRelatorio === 'historico' || activeRelatorio === 'historico-retiradas' || activeRelatorio === 'retiradas') {
+        ths += `<th>${labelData}</th>`;
+    }
+    if (isRetTab) {
+        ths += `<th>${labelDesc}</th>`;
+    }
+    ths += `<th>Ações</th>`;
+
+    thead.innerHTML = `<tr>${ths}</tr>`;
 
     try {
         let urlToFetch = `${API_BASE}/api/relatorios/cargas`;
@@ -198,19 +206,29 @@ async function renderStandardCargaList(tipo) {
 
             const dispData = c.data_criacao ? new Date(c.data_criacao).toLocaleDateString('pt-BR') : "-";
             const dispDataCarregamento = dtCarr ? new Date(dtCarr).toLocaleDateString('pt-BR') : "-";
-            html += `
+            let trHtml = `
                 <tr>
                     <td style="text-align: center;"><input type="checkbox" class="chk-carga-item" value="${c.id}"></td>
                     <td><strong>${numExibir || '-'}</strong></td>
-                    <td>${nomeExibir || '-'}</td>
-                    <td>${dispData}</td>
-                    ${(activeRelatorio === 'historico' || activeRelatorio === 'historico-retiradas' || activeRelatorio === 'retiradas') ? `<td>${dispDataCarregamento}</td>` : ''}
+            `;
+            if (!isRet) {
+                trHtml += `<td>${nomeExibir || '-'}</td>`;
+            }
+            trHtml += `<td>${dispData}</td>`;
+            if (activeRelatorio === 'historico' || activeRelatorio === 'historico-retiradas' || activeRelatorio === 'retiradas') {
+                trHtml += `<td>${dispDataCarregamento}</td>`;
+            }
+            if (isRet) {
+                trHtml += `<td>${nomeExibir || '-'}</td>`;
+            }
+            trHtml += `
                     <td>
-                       <button class="os-btn os-btn-sm os-btn-secondary btn-gerenciar-carga" data-id="${c.id}" data-nome="${numExibir}">${(activeRelatorio === 'historico' || activeRelatorio === 'historico-retiradas') ? 'Visualizar' : `Gerenciar / Ver ${tipo}`}</button>
+                       <button class="os-btn os-btn-sm os-btn-secondary btn-gerenciar-carga" data-id="${c.id}" data-nome="${numExibir}">${(activeRelatorio === 'historico' || activeRelatorio === 'historico-retiradas') ? 'Visualizar' : \`Gerenciar / Ver \${tipo}\`}</button>
                        ${(activeRelatorio === 'formacao' || activeRelatorio === 'retiradas') ? `<button class="os-btn os-btn-sm os-btn-danger btn-excluir-carga" data-id="${c.id}">Excluir</button>` : ''}
                     </td>
                 </tr>
             `;
+            html += trHtml;
         });
         tbody.innerHTML = html;
 
@@ -535,10 +553,7 @@ async function abrirModalNovaRetirada() {
         const nomeRetirada = document.getElementById('input-nova-retirada-nome').value.trim();
         const dataRetirada = dateInput.value;
 
-        if (!nomeRetirada) {
-            alert("Preencha o nome / descrição da retirada.");
-            return;
-        }
+
         if (!dataRetirada) {
             alert("Selecione a data da retirada.");
             return;
@@ -2048,3 +2063,116 @@ function showPremiumAlert(message, type = "warning") {
     document.getElementById("os-premium-alert-ok").addEventListener("click", closeAlert);
     backdrop.addEventListener("click", (e) => { if (e.target === backdrop) closeAlert(); });
 }
+
+// -----------------------------------------------------
+// MODAL EXPORT NOVO (ENTREGAS/RETIRADAS)
+// -----------------------------------------------------
+
+document.addEventListener("DOMContentLoaded", () => {
+    const btnExportNovo = document.getElementById("btn-export-pdf-novo");
+    const modalExportOpcoes = document.getElementById("modal-export-opcoes");
+    const modalExportOpcoesClose = document.getElementById("modal-export-opcoes-close");
+    const btnExportRomaneio = document.getElementById("btn-export-romaneio-novo");
+    const btnExportResumo = document.getElementById("btn-export-resumo-novo");
+
+    if (btnExportNovo) {
+        btnExportNovo.addEventListener('click', () => {
+            // Check if valid state
+            const isListagem = document.getElementById('painel-listagem').style.display !== 'none';
+            const isRetTab = window.activeRelatorio === "retiradas" || window.activeRelatorio === "historico-retiradas";
+            
+            if (isListagem && !isRetTab) {
+                // Entregas: Needs a selected checkbox
+                const firstChecked = document.querySelector('.chk-carga-item:checked');
+                if (!firstChecked) {
+                    alert('Você precisa selecionar uma carga (marcar o checkbox) para exportar.');
+                    return;
+                }
+            } else if (!isListagem && !isRetTab) {
+                // Inside Entregas form
+                if (!window.cargaEmGerenciamento) {
+                    alert("Selecione uma carga ou entre em um relatório.");
+                    return;
+                }
+            }
+            // For Retiradas (Lote), we don't need validation here, it will just get all.
+            
+            // Adjust buttons text based on context
+            if (isRetTab) {
+                btnExportRomaneio.innerHTML = "📄 Exportar Romaneio em Lote";
+                btnExportResumo.innerHTML = "📦 Exportar Resumo em Lote";
+            } else {
+                btnExportRomaneio.innerHTML = "📄 Exportar Romaneio";
+                btnExportResumo.innerHTML = "📦 Exportar Resumo de Produtos";
+            }
+
+            modalExportOpcoes.style.display = "flex";
+        });
+    }
+
+    if (modalExportOpcoesClose) {
+        modalExportOpcoesClose.addEventListener('click', () => {
+            modalExportOpcoes.style.display = "none";
+        });
+    }
+
+    // Helper to get all IDs on screen for Retiradas
+    function getAllRetiradaIdsOnScreen() {
+        // As rows have chk-carga-item with value = id
+        const checkboxes = document.querySelectorAll('.chk-carga-item');
+        const ids = Array.from(checkboxes).map(chk => chk.value).filter(val => val);
+        return ids;
+    }
+
+    function doNovoExport(tipo) {
+        let endpoint = "";
+        const isRetTab = window.activeRelatorio === "retiradas" || window.activeRelatorio === "historico-retiradas";
+        
+        if (isRetTab) {
+            const ids = getAllRetiradaIdsOnScreen();
+            if (ids.length === 0) {
+                alert("Nenhuma retirada encontrada na tela para exportar.");
+                return;
+            }
+            const idsStr = ids.join(',');
+            if (tipo === 'romaneio') {
+                endpoint = `${window.API_BASE}/api/retiradas/romaneio-lote/pdf?ids=${idsStr}`;
+            } else {
+                endpoint = `${window.API_BASE}/api/retiradas/resumo-lote/pdf?ids=${idsStr}`;
+            }
+        } else {
+            // Entregas
+            let cargaId = "";
+            const isListagem = document.getElementById('painel-listagem').style.display !== 'none';
+            if (isListagem) {
+                const firstChecked = document.querySelector('.chk-carga-item:checked');
+                if (firstChecked) cargaId = firstChecked.value;
+            } else {
+                cargaId = window.cargaEmGerenciamento;
+            }
+
+            if (!cargaId) return;
+
+            if (tipo === 'romaneio') {
+                endpoint = `${window.API_BASE}/api/relatorios/romaneio-novo/${cargaId}/pdf`;
+            } else {
+                endpoint = `${window.API_BASE}/api/relatorios/resumo-produtos-novo/${cargaId}/pdf`;
+            }
+        }
+
+        if (endpoint) {
+            const token = window.Auth ? window.Auth.getToken() : '';
+            const sep = endpoint.includes('?') ? '&' : '?';
+            window.open(`${endpoint}${sep}token=${token}`, '_blank');
+        }
+        
+        modalExportOpcoes.style.display = "none";
+    }
+
+    if (btnExportRomaneio) {
+        btnExportRomaneio.addEventListener('click', () => doNovoExport('romaneio'));
+    }
+    if (btnExportResumo) {
+        btnExportResumo.addEventListener('click', () => doNovoExport('resumo'));
+    }
+});

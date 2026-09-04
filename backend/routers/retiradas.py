@@ -313,3 +313,30 @@ def download_resumo_produtos_retirada_pdf(retirada_id: int, db: Session = Depend
         headers={"Content-Disposition": f"attachment; filename=resumo_produtos_retirada_{retirada_id}.pdf"}
     )
 
+@router.get("/romaneio-lote/pdf")
+def download_romaneio_retirada_lote_pdf(ids: str, db: Session = Depends(get_db)):
+    id_list = [int(i.strip()) for i in ids.split(',') if i.strip().isdigit()]
+    pdf_content = relatorios_pdf_service.gerar_pdf_romaneio_retirada_lote(db, id_list)
+    if not pdf_content:
+        raise HTTPException(status_code=404, detail="Nenhuma retirada encontrada")
+    
+    return Response(
+        content=pdf_content,
+        media_type="application/pdf",
+        headers={"Content-Disposition": f"attachment; filename=romaneio_retiradas_lote.pdf"}
+    )
+
+@router.get("/resumo-lote/pdf")
+def download_resumo_retirada_lote_pdf(ids: str, db: Session = Depends(get_db)):
+    id_list = [int(i.strip()) for i in ids.split(',') if i.strip().isdigit()]
+    pdf_content = relatorios_pdf_service.gerar_pdf_resumo_produtos_retirada_lote(db, id_list)
+    if not pdf_content:
+        raise HTTPException(status_code=404, detail="Nenhuma retirada encontrada")
+    
+    return Response(
+        content=pdf_content,
+        media_type="application/pdf",
+        headers={"Content-Disposition": f"attachment; filename=resumo_retiradas_lote.pdf"}
+    )
+
+

@@ -373,12 +373,12 @@ function renderTable(rows) {
           <td>${fmtDateOnly(row.data_faturamento)}</td>
           <td><a href="#" class="lnk-resumo" data-id="${id}">${id}</a></td>
           <td>${row.pedido_supra || '---'}</td>
+          <td>${row.nota_fiscal || '---'}</td>
           <td class="col-codigo">${codigoCliente}</td>
           <td>${cliente}</td>
           <td><span class="badge badge-gray">${modalidade}</span></td>
           <td class="tar">${fmtMoney(valor)}</td>
           <td class="td-status" id="td-status-${id}">${statusHtml}</td>
-          <td>${tabela}</td>
           <td>${fornecedor}</td>
           <td>${row.numero_carga || '---'}</td>
           <td class="tar td-actions" id="td-actions-${id}">

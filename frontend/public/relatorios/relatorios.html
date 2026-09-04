@@ -216,6 +216,15 @@
                                 </svg>
                                 Exportar PDF
                             </button>
+                            <button class="os-btn os-btn-primary" id="btn-export-pdf-novo" style="background-color: #0f172a; border-color: #0f172a;">
+                                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                                    stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                    <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+                                    <polyline points="7 10 12 15 17 10"></polyline>
+                                    <line x1="12" y1="15" x2="12" y2="3"></line>
+                                </svg>
+                                Novo Exportar PDF
+                            </button>
                             <button class="os-btn os-btn-primary" id="btn-novo">+ Novo</button>
                         </div>
                     </div>
@@ -346,17 +355,35 @@
             </div>
             <div class="os-modal-body">
                 <div class="os-form-group">
-                    <label>Nome / Descrição da Retirada</label>
-                    <input type="text" id="input-nova-retirada-nome" class="os-input" placeholder="Ex: Retiradas de Sexta" autocomplete="off">
-                </div>
-                <div class="os-form-group" style="margin-top: 15px;">
                     <label>Data da Retirada</label>
                     <input type="date" id="input-nova-retirada-data" class="os-input">
+                </div>
+                <div class="os-form-group" style="margin-top: 15px;">
+                    <label>Observação</label>
+                    <input type="text" id="input-nova-retirada-nome" class="os-input" placeholder="Ex: Retiradas de Sexta" autocomplete="off">
                 </div>
             </div>
             <div class="os-modal-footer">
                 <button class="os-btn os-btn-secondary" id="btn-cancelar-nova-retirada">Cancelar</button>
                 <button class="os-btn os-btn-primary" id="btn-salvar-nova-retirada">Salvar Retirada</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal Opções de Exportação Novo PDF -->
+    <div id="modal-export-opcoes" class="os-modal-backdrop" style="display: none;">
+        <div class="os-modal-dialog" style="max-width: 400px;">
+            <div class="os-modal-header">
+                <h3 class="os-modal-title">Opções de Exportação</h3>
+                <button class="os-modal-close" id="modal-export-opcoes-close">&times;</button>
+            </div>
+            <div class="os-modal-body" style="display: flex; flex-direction: column; gap: 15px; padding: 20px;">
+                <button class="os-btn os-btn-primary" id="btn-export-romaneio-novo" style="padding: 12px; font-size: 14px;">
+                    📄 Exportar Romaneio
+                </button>
+                <button class="os-btn os-btn-secondary" id="btn-export-resumo-novo" style="padding: 12px; font-size: 14px;">
+                    📦 Exportar Resumo de Produtos
+                </button>
             </div>
         </div>
     </div>

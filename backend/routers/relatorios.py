@@ -473,6 +473,30 @@ def download_resumo_produtos_pdf(carga_id: int, db: Session = Depends(get_db)):
         headers={"Content-Disposition": f"attachment; filename=resumo_produtos_{carga_id}.pdf"}
     )
 
+@router.get("/romaneio-novo/{carga_id}/pdf")
+def download_romaneio_pdf_novo(carga_id: int, db: Session = Depends(get_db)):
+    pdf_content = relatorios_pdf_service.gerar_pdf_romaneio_novo(db, carga_id)
+    if not pdf_content:
+        raise HTTPException(status_code=404, detail="Carga não encontrada")
+    
+    return Response(
+        content=pdf_content,
+        media_type="application/pdf",
+        headers={"Content-Disposition": f"attachment; filename=romaneio_novo_{carga_id}.pdf"}
+    )
+
+@router.get("/resumo-produtos-novo/{carga_id}/pdf")
+def download_resumo_produtos_pdf_novo(carga_id: int, db: Session = Depends(get_db)):
+    pdf_content = relatorios_pdf_service.gerar_pdf_resumo_produtos_novo(db, carga_id)
+    if not pdf_content:
+        raise HTTPException(status_code=404, detail="Carga não encontrada")
+    
+    return Response(
+        content=pdf_content,
+        media_type="application/pdf",
+        headers={"Content-Disposition": f"attachment; filename=resumo_produtos_novo_{carga_id}.pdf"}
+    )
+
 @router.get("/relatorio-completo/{carga_id}/pdf")
 def download_relatorio_completo_pdf(carga_id: int, db: Session = Depends(get_db)):
     pdf_content = relatorios_pdf_service.gerar_pdf_relatorio_completo(db, carga_id)
