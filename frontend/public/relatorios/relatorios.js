@@ -223,7 +223,7 @@ async function renderStandardCargaList(tipo) {
             }
             trHtml += `
                     <td>
-                       <button class="os-btn os-btn-sm os-btn-secondary btn-gerenciar-carga" data-id="${c.id}" data-nome="${numExibir}">${(activeRelatorio === 'historico' || activeRelatorio === 'historico-retiradas') ? 'Visualizar' : \`Gerenciar / Ver \${tipo}\`}</button>
+                       <button class="os-btn os-btn-sm os-btn-secondary btn-gerenciar-carga" data-id="${c.id}" data-nome="${numExibir}">${(activeRelatorio === 'historico' || activeRelatorio === 'historico-retiradas') ? 'Visualizar' : `Gerenciar / Ver ${tipo}`}</button>
                        ${(activeRelatorio === 'formacao' || activeRelatorio === 'retiradas') ? `<button class="os-btn os-btn-sm os-btn-danger btn-excluir-carga" data-id="${c.id}">Excluir</button>` : ''}
                     </td>
                 </tr>

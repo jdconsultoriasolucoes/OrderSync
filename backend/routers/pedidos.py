@@ -291,16 +291,16 @@ def listar_pedidos(
 
     if status_list:
         placeholders = ", ".join([f":st_{i}" for i in range(len(status_list))])
-        filtros_sql.append(f"UPPER(a.status) IN ({placeholders})")
+        filtros_sql.append(f"REPLACE(REPLACE(UPPER(a.status), ' ', ''), '_', '') IN ({placeholders})")
         for i, status_val in enumerate(status_list):
-            params[f"st_{i}"] = status_val.upper()
+            params[f"st_{i}"] = status_val.upper().replace(' ', '').replace('_', '')
 
     if exclude_status:
         ex_status_list = [s.strip() for s in exclude_status.split(",") if s.strip()]
         placeholders_ex = ", ".join([f":ex_st_{i}" for i in range(len(ex_status_list))])
-        filtros_sql.append(f"a.status NOT IN ({placeholders_ex})")
+        filtros_sql.append(f"REPLACE(REPLACE(UPPER(a.status), ' ', ''), '_', '') NOT IN ({placeholders_ex})")
         for i, status_val in enumerate(ex_status_list):
-            params[f"ex_st_{i}"] = status_val
+            params[f"ex_st_{i}"] = status_val.upper().replace(' ', '').replace('_', '')
 
     if tabela_nome:
         filtros_sql.append("a.tabela_preco_nome ILIKE :tabela_nome")
