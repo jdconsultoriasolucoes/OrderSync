@@ -1068,7 +1068,7 @@ def gerar_pdf_romaneio_novo(db, carga_id: int) -> bytes:
             SELECT i.codigo, prod.nome_produto as nome, i.quantidade, prod.unidade
             FROM tb_pedidos_itens i
             LEFT JOIN t_cadastro_produto_v2 prod ON prod.codigo_supra = i.codigo
-            WHERE i.id_pedido = :pid
+            WHERE i.id_pedido = :pid AND i.quantidade > 0
         """)
         itens = db.execute(sql_itens, {"pid": p['id_pedido']}).mappings().all()
         
@@ -1118,7 +1118,7 @@ def gerar_pdf_resumo_produtos_novo(db, carga_id: int) -> bytes:
         FROM tb_cargas_pedidos cp
         JOIN tb_pedidos_itens i ON cp.numero_pedido = i.id_pedido::text
         LEFT JOIN t_cadastro_produto_v2 prod ON prod.codigo_supra = i.codigo
-        WHERE cp.id_carga = :cid
+        WHERE cp.id_carga = :cid AND i.quantidade > 0
         GROUP BY i.codigo, prod.nome_produto, prod.unidade
         ORDER BY prod.nome_produto
     """)
@@ -1231,7 +1231,7 @@ def gerar_pdf_romaneio_retirada_lote(db, retiradas_ids: list) -> bytes:
             FROM tb_retiradas_pedidos rp
             JOIN tb_pedidos_itens i ON rp.numero_pedido = i.id_pedido::text
             LEFT JOIN t_cadastro_produto_v2 prod ON prod.codigo_supra = i.codigo
-            WHERE rp.id_retirada = :rid
+            WHERE rp.id_retirada = :rid AND i.quantidade > 0
         """)
         itens = db.execute(sql_itens, {"rid": ret['id']}).mappings().all()
         
@@ -1285,7 +1285,7 @@ def gerar_pdf_resumo_produtos_retirada_lote(db, retiradas_ids: list) -> bytes:
         FROM tb_retiradas_pedidos rp
         JOIN tb_pedidos_itens i ON rp.numero_pedido = i.id_pedido::text
         LEFT JOIN t_cadastro_produto_v2 prod ON prod.codigo_supra = i.codigo
-        WHERE rp.id_retirada = ANY(:ids)
+        WHERE rp.id_retirada = ANY(:ids) AND i.quantidade > 0
         GROUP BY i.codigo, prod.nome_produto, prod.unidade
         ORDER BY prod.nome_produto
     """)
