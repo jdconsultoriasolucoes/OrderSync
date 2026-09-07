@@ -353,7 +353,7 @@ def confirmar_retirada(retirada_id: int, db: Session = Depends(get_db)):
     pedidos_db = []
     
     for rp in retirada_pedidos:
-        num_ped = str(rp.id_pedido)
+        num_ped = str(rp.numero_pedido)
         if not num_ped.isdigit():
             continue
         id_pedido = int(num_ped)
