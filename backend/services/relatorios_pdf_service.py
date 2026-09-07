@@ -1065,18 +1065,25 @@ def gerar_pdf_romaneio_novo(db, carga_id: int) -> bytes:
         
         # Fetch items
         sql_itens = text("""
-            SELECT i.codigo, prod.nome_produto as nome, i.quantidade, prod.unidade
+            SELECT i.codigo, prod.nome_produto as nome, i.quantidade, prod.unidade,
+                   (i.quantidade * CAST(COALESCE(prod.peso, '0') AS FLOAT)) as peso_liquido
             FROM tb_pedidos_itens i
             LEFT JOIN t_cadastro_produto_v2 prod ON prod.codigo_supra = i.codigo
             WHERE i.id_pedido = :pid AND i.quantidade > 0
+            ORDER BY peso_liquido DESC
         """)
         itens = db.execute(sql_itens, {"pid": p['id_pedido']}).mappings().all()
         
-        data = [["Cód", "Produto", "Qtd", "Unid", "Observações"]]
-        for i in itens:
-            data.append([str(i['codigo']), str(i['nome'] or ''), _br_number(i['quantidade'], 0), str(i['unidade'] or ''), ""])
+        total_peso = sum(i['peso_liquido'] for i in itens)
+        total_peso_str = _br_number(total_peso, 0)
+        total_qtd = sum(i['quantidade'] for i in itens)
+        total_qtd_str = _br_number(total_qtd, 0)
         
-        t = Table(data, colWidths=[1.5*cm, 8.5*cm, 2*cm, 1.5*cm, 5.5*cm])
+        data = [["Cód", "Produto", f"Qtd\nTotal: {total_qtd_str}", "Unid", f"Peso L.\nTotal: {total_peso_str} kg", "Observações"]]
+        for i in itens:
+            data.append([str(i['codigo']), str(i['nome'] or ''), _br_number(i['quantidade'], 0), str(i['unidade'] or ''), f"{_br_number(i['peso_liquido'], 0)} kg", ""])
+        
+        t = Table(data, colWidths=[1.5*cm, 7.5*cm, 1.8*cm, 1.2*cm, 2.2*cm, 4.8*cm])
         t.setStyle(TableStyle([
             ('BACKGROUND', (0,0), (-1,0), SUPRA_BAR),
             ('TEXTCOLOR', (0,0), (-1,0), colors.white),
@@ -1114,13 +1121,14 @@ def gerar_pdf_resumo_produtos_novo(db, carga_id: int) -> bytes:
     y = _draw_header(c, width, height, "Resumo de Produtos", f"Carga #{carga['numero_carga']} | Data: {data_str}")
     
     sql_itens = text("""
-        SELECT i.codigo, prod.nome_produto as nome, SUM(i.quantidade) as qtd, prod.unidade
+        SELECT i.codigo, prod.nome_produto as nome, SUM(i.quantidade) as qtd, prod.unidade,
+               SUM(i.quantidade * CAST(COALESCE(prod.peso, '0') AS FLOAT)) as peso_liquido
         FROM tb_cargas_pedidos cp
         JOIN tb_pedidos_itens i ON cp.numero_pedido = i.id_pedido::text
         LEFT JOIN t_cadastro_produto_v2 prod ON prod.codigo_supra = i.codigo
         WHERE cp.id_carga = :cid AND i.quantidade > 0
         GROUP BY i.codigo, prod.nome_produto, prod.unidade
-        ORDER BY prod.nome_produto
+        ORDER BY peso_liquido DESC
     """)
     itens = db.execute(sql_itens, {"cid": carga_id}).mappings().all()
     
@@ -1132,11 +1140,16 @@ def gerar_pdf_resumo_produtos_novo(db, carga_id: int) -> bytes:
     c.drawString(1.0*cm, y, f"Total de Pedidos nesta Carga: {qtd_pedidos}")
     y -= 0.6*cm
     
-    data = [["Conferido", "Cód", "Descrição do Produto", "Quantidade Total", "Unid"]]
-    for i in itens:
-        data.append(["[   ]", str(i['codigo']), str(i['nome'] or ''), _br_number(i['qtd'], 0), str(i['unidade'] or '')])
+    total_peso = sum(i['peso_liquido'] for i in itens)
+    total_peso_str = _br_number(total_peso, 0)
+    total_qtd = sum(i['qtd'] for i in itens)
+    total_qtd_str = _br_number(total_qtd, 0)
     
-    t = Table(data, colWidths=[2.5*cm, 2*cm, 9.5*cm, 3.5*cm, 1.5*cm])
+    data = [["Conferido", "Cód", "Descrição do Produto", f"Qtd Total:\n{total_qtd_str}", "Unid", f"Peso L.\nTotal: {total_peso_str} kg"]]
+    for i in itens:
+        data.append(["[   ]", str(i['codigo']), str(i['nome'] or ''), _br_number(i['qtd'], 0), str(i['unidade'] or ''), f"{_br_number(i['peso_liquido'], 0)} kg"])
+    
+    t = Table(data, colWidths=[2.5*cm, 1.8*cm, 8.2*cm, 3.2*cm, 1.2*cm, 2.1*cm])
     t.setStyle(TableStyle([
         ('BACKGROUND', (0,0), (-1,0), SUPRA_BAR),
         ('TEXTCOLOR', (0,0), (-1,0), colors.white),
@@ -1281,13 +1294,14 @@ def gerar_pdf_resumo_produtos_retirada_lote(db, retiradas_ids: list) -> bytes:
     y = _draw_header(c, width, height, "Resumo de Retiradas", f"Lote de {len(retiradas_ids)} retiradas")
     
     sql_itens = text("""
-        SELECT i.codigo, prod.nome_produto as nome, SUM(i.quantidade) as qtd, prod.unidade
+        SELECT i.codigo, prod.nome_produto as nome, SUM(i.quantidade) as qtd, prod.unidade,
+               SUM(i.quantidade * CAST(COALESCE(prod.peso, '0') AS FLOAT)) as peso_liquido
         FROM tb_retiradas_pedidos rp
         JOIN tb_pedidos_itens i ON rp.numero_pedido = i.id_pedido::text
         LEFT JOIN t_cadastro_produto_v2 prod ON prod.codigo_supra = i.codigo
         WHERE rp.id_retirada = ANY(:ids) AND i.quantidade > 0
         GROUP BY i.codigo, prod.nome_produto, prod.unidade
-        ORDER BY prod.nome_produto
+        ORDER BY peso_liquido DESC
     """)
     itens = db.execute(sql_itens, {"ids": retiradas_ids}).mappings().all()
     
@@ -1296,11 +1310,16 @@ def gerar_pdf_resumo_produtos_retirada_lote(db, retiradas_ids: list) -> bytes:
     c.drawString(1.0*cm, y, f"Total de Retiradas Neste Lote: {len(retiradas_ids)}")
     y -= 0.6*cm
     
-    data = [["Conferido", "Cód", "Descrição do Produto", "Quantidade Total", "Unid"]]
-    for i in itens:
-        data.append(["[   ]", str(i['codigo']), str(i['nome'] or ''), _br_number(i['qtd'], 0), str(i['unidade'] or '')])
+    total_peso = sum(i['peso_liquido'] for i in itens)
+    total_peso_str = _br_number(total_peso, 0)
+    total_qtd = sum(i['qtd'] for i in itens)
+    total_qtd_str = _br_number(total_qtd, 0)
     
-    t = Table(data, colWidths=[2.5*cm, 2*cm, 9.5*cm, 3.5*cm, 1.5*cm])
+    data = [["Conferido", "Cód", "Descrição do Produto", f"Qtd Total:\n{total_qtd_str}", "Unid", f"Peso L.\nTotal: {total_peso_str} kg"]]
+    for i in itens:
+        data.append(["[   ]", str(i['codigo']), str(i['nome'] or ''), _br_number(i['qtd'], 0), str(i['unidade'] or ''), f"{_br_number(i['peso_liquido'], 0)} kg"])
+    
+    t = Table(data, colWidths=[2.5*cm, 1.8*cm, 8.2*cm, 3.2*cm, 1.2*cm, 2.1*cm])
     t.setStyle(TableStyle([
         ('BACKGROUND', (0,0), (-1,0), SUPRA_BAR),
         ('TEXTCOLOR', (0,0), (-1,0), colors.white),

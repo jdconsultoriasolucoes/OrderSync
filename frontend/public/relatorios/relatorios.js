@@ -1027,20 +1027,32 @@ async function abrirGerenciadorDeCarga(idCarga, numCarga) {
                      );
                 }
 
-                if (id) {
+                if (id && id !== "null" && id !== "undefined" && id.trim() !== "") {
                     const ordem = row.querySelector('.in-ordem') ? row.querySelector('.in-ordem').value : null;
                     const obs = row.querySelector('.in-obs') ? row.querySelector('.in-obs').value : null;
                     const isRet = activeRelatorio === 'retiradas' || activeRelatorio === 'historico-retiradas';
                     const endpoint = isRet 
                         ? `${API_BASE}/api/retiradas/pedidos/${id}`
                         : `${API_BASE}/api/relatorios/cargas/pedidos/${id}`;
+                    
+                    const payload = { observacoes: obs };
+                    if (!isRet) {
+                        payload.ordem_carregamento = parseInt(ordem) || null;
+                    }
+                        
                     ordemPromises.push(fetch(endpoint, {
                         method: 'PUT',
                         headers: {
                             'Content-Type': 'application/json',
                             "Authorization": `Bearer ${window.Auth ? window.Auth.getToken() : ''}`
                         },
-                        body: JSON.stringify({ ordem_carregamento: parseInt(ordem) || null, observacoes: obs })
+                        body: JSON.stringify(payload)
+                    }).then(async res => {
+                        if (!res.ok) throw new Error("Erro ao salvar ordem/observações");
+                        return res;
+                    }).catch(e => {
+                        console.error(e);
+                        return { ok: false, error: e };
                     }));
                 }
             });
@@ -1360,7 +1372,7 @@ async function carregarPedidosDaCargaAtiva() {
             (window.relatoriosStatusList || []).forEach(s => {
                  const codigo = s.codigo || s.code || s.id || s;
                  const rotulo = s.rotulo || s.label || s.nome || codigo;
-                 const selected = (String(codigo) === String(p.status_codigo) || String(rotulo) === String(p.status_codigo)) ? 'selected' : '';
+                 const selected = (String(codigo) === String(p.status_codigo || p.status) || String(rotulo) === String(p.status_codigo || p.status)) ? 'selected' : '';
                  statusOptionsHtml += `<option value="${codigo}" ${selected}>${rotulo}</option>`;
             });
 
@@ -1411,7 +1423,7 @@ async function carregarPedidosDaCargaAtiva() {
                         <td style="font-size: 12px; padding: 12px 4px; white-space: nowrap;">${p.rota_principal || '-'}</td>
                         <td style="font-size: 12px; padding: 12px 4px; white-space: nowrap;">${p.rota_aproximacao || '-'}</td>
                         <td style="padding: 12px 4px;">
-                            <select class="os-input os-input-sm in-status" data-numero-pedido="${p.numero_pedido}" data-id-pedido="${p.id_pedido}" data-original="${p.status_codigo}" style="font-size: 10px; padding: 4px; height: 26px; width: 100%;" ${window.cargaAtivaReadOnly ? 'disabled' : ''}>
+                            <select class="os-input os-input-sm in-status" data-numero-pedido="${p.numero_pedido}" data-id-pedido="${p.id_pedido}" data-original="${p.status_codigo || p.status}" style="font-size: 10px; padding: 4px; height: 26px; width: 100%;" ${window.cargaAtivaReadOnly ? 'disabled' : ''}>
                                 ${statusOptionsHtml}
                             </select>
                         </td>
