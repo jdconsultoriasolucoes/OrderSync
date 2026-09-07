@@ -70,34 +70,19 @@ def create_retirada(retirada: RetiradaCreate, db: Session = Depends(get_db)):
 
 @router.get("", response_model=List[RetiradaResponse])
 def list_retiradas_ativas(db: Session = Depends(get_db)):
-    hoje = datetime.now().date()
-    retiradas = db.query(RetiradaModel).all()
+    retiradas = db.query(RetiradaModel).filter(
+        (RetiradaModel.is_historico == False) | (RetiradaModel.is_historico == None)
+    ).all()
     
-    # Atualiza is_historico dinamicamente para retiradas passadas
-    updated = False
-    for r in retiradas:
-        if r.data_retirada and r.data_retirada.date() < hoje and not r.is_historico:
-            r.is_historico = True
-            updated = True
-    if updated:
-        db.commit()
-        
-    return [r for r in retiradas if not r.is_historico]
+    return retiradas
 
 @router.get("/historico", response_model=List[RetiradaResponse])
 def list_retiradas_historico(db: Session = Depends(get_db)):
-    hoje = datetime.now().date()
-    retiradas = db.query(RetiradaModel).all()
-    
-    updated = False
-    for r in retiradas:
-        if r.data_retirada and r.data_retirada.date() < hoje and not r.is_historico:
-            r.is_historico = True
-            updated = True
-    if updated:
-        db.commit()
+    retiradas = db.query(RetiradaModel).filter(
+        RetiradaModel.is_historico == True
+    ).all()
         
-    return [r for r in retiradas if r.is_historico]
+    return retiradas
 
 @router.get("/{id}", response_model=RetiradaResponse)
 def get_retirada(id: int, db: Session = Depends(get_db)):
@@ -406,7 +391,6 @@ def confirmar_retirada(retirada_id: int, db: Session = Depends(get_db)):
             pass
 
     db_ret.is_historico = True
-    # If RetiradaModel has data_faturamento, we update it. Let's assume it doesn't unless we checked, but wait, relatorios used db_carga.data_faturamento. 
-    # In retiradas, let's just commit.
+    db_ret.data_retirada = datetime.now()
     db.commit()
     return {"status": "success", "message": "Retirada confirmada com sucesso!"}

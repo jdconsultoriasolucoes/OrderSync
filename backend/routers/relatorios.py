@@ -586,7 +586,8 @@ def confirmar_entrega_carga(carga_id: int, db: Session = Depends(get_db)):
             
     # 5. Move a carga para o histórico
     db_carga.is_historico = True
-    db_carga.data_faturamento = datetime.utcnow()
+    db_carga.data_faturamento = datetime.now()
+    db_carga.data_carregamento = datetime.now()
     
     db.commit()
     return {"status": "success", "message": "Entrega confirmada com sucesso!"}

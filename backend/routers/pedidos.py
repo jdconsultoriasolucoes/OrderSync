@@ -668,9 +668,38 @@ def verificar_e_historico_carga(db: Session, id_pedido: int, user_id: Optional[s
                     UPDATE tb_cargas
                     SET is_historico = TRUE,
                         data_faturamento = now(),
+                        data_carregamento = now(),
                         faturado_por_id = :user_id
                     WHERE id = :carga_id
                 """), {"carga_id": carga_id, "user_id": user_id_int})
+
+        # --- MESMA REGRA PARA RETIRADAS ---
+        retiradas = db.execute(text("""
+            SELECT DISTINCT r.id, r.is_historico 
+            FROM tb_retiradas r
+            JOIN tb_retiradas_pedidos rp ON rp.id_retirada = r.id
+            WHERE TRIM(rp.numero_pedido) = :id_pedido AND (r.is_historico IS NULL OR r.is_historico = FALSE)
+        """), {"id_pedido": str(id_pedido).strip()}).fetchall()
+
+        for retirada_row in retiradas:
+            retirada_id = retirada_row[0]
+            # Verifica se TODOS os pedidos dessa retirada estão faturados ou cancelados
+            todos_faturados_ret = db.execute(text("""
+                SELECT COUNT(*) as total_pendente
+                FROM tb_retiradas_pedidos rp
+                JOIN tb_pedidos p ON TRIM(p.id_pedido::text) = TRIM(rp.numero_pedido)
+                WHERE rp.id_retirada = :retirada_id
+                  AND LOWER(TRIM(p.status)) NOT IN ('faturado supra', 'faturado dispet', 'cancelado')
+            """), {"retirada_id": retirada_id}).scalar()
+
+            if todos_faturados_ret == 0:
+                db.execute(text("""
+                    UPDATE tb_retiradas
+                    SET is_historico = TRUE,
+                        data_retirada = now()
+                    WHERE id = :retirada_id
+                """), {"retirada_id": retirada_id})
+
     except Exception as e:
         import traceback
         import logging
