@@ -192,9 +192,46 @@ async function renderStandardCargaList(tipo) {
         if (!resp.ok) throw new Error("Erro");
         const cargas = await resp.json();
 
+        let alertContainer = document.getElementById('alerta-cargas-vencidas');
+        if (!alertContainer) {
+            alertContainer = document.createElement('div');
+            alertContainer.id = 'alerta-cargas-vencidas';
+            const tableWrap = document.querySelector('.os-table-wrap');
+            if (tableWrap) {
+                tableWrap.parentNode.insertBefore(alertContainer, tableWrap);
+            }
+        }
+        alertContainer.innerHTML = "";
+
         if (cargas.length === 0) {
             emptyStateEl.style.display = "block";
             return;
+        }
+
+        cargas.sort((a, b) => b.id - a.id);
+
+        if (activeRelatorio !== 'historico' && activeRelatorio !== 'historico-retiradas' && activeRelatorio !== 'resumo') {
+            const isRetMsg = activeRelatorio === 'retiradas';
+            const labelTipo = isRetMsg ? "Retiradas" : "Cargas";
+            const hojeStrMsg = new Date().toISOString().split('T')[0];
+            let vencidas = 0;
+            let hoje = 0;
+            cargas.forEach(c => {
+                const dtCarr = isRetMsg ? c.data_retirada : c.data_carregamento;
+                if (dtCarr) {
+                    const d = dtCarr.split('T')[0];
+                    if (d < hojeStrMsg) vencidas++;
+                    else if (d === hojeStrMsg) hoje++;
+                }
+            });
+            if (vencidas > 0 || hoje > 0) {
+                let alertMsg = `Atenção: Existem `;
+                if (vencidas > 0) alertMsg += `<strong>${vencidas}</strong> ${labelTipo.toLowerCase()} atrasadas/vencidas`;
+                if (vencidas > 0 && hoje > 0) alertMsg += ` e `;
+                if (hoje > 0) alertMsg += `<strong>${hoje}</strong> ${labelTipo.toLowerCase()} programadas para hoje`;
+                alertMsg += `!`;
+                alertContainer.innerHTML = `<div style="background-color: #fee2e2; border-left: 4px solid #ef4444; color: #b91c1c; padding: 12px 16px; margin-bottom: 16px; border-radius: 4px; font-weight: 500;">${alertMsg}</div>`;
+            }
         }
 
         let html = "";
@@ -206,8 +243,22 @@ async function renderStandardCargaList(tipo) {
 
             const dispData = c.data_criacao ? new Date(c.data_criacao).toLocaleDateString('pt-BR') : "-";
             const dispDataCarregamento = dtCarr ? new Date(dtCarr).toLocaleDateString('pt-BR') : "-";
+
+            let rowStyle = "";
+            if (activeRelatorio !== 'historico' && activeRelatorio !== 'historico-retiradas' && activeRelatorio !== 'resumo') {
+                if (dtCarr) {
+                    const d = dtCarr.split('T')[0];
+                    const hojeStr = new Date().toISOString().split('T')[0];
+                    if (d < hojeStr) {
+                        rowStyle = 'style="background-color: #fca5a5;"'; // destaque vermelho claro
+                    } else if (d === hojeStr) {
+                        rowStyle = 'style="background-color: #fef08a;"'; // destaque amarelo claro
+                    }
+                }
+            }
+
             let trHtml = `
-                <tr>
+                <tr ${rowStyle}>
                     <td style="text-align: center;"><input type="checkbox" class="chk-carga-item" value="${c.id}"></td>
                     <td><strong>${numExibir || '-'}</strong></td>
             `;
@@ -242,6 +293,8 @@ async function renderStandardCargaList(tipo) {
 
         document.querySelectorAll('.btn-excluir-carga').forEach(btn => {
             btn.addEventListener('click', async (e) => {
+                const id = btn.dataset.id;
+                const row = btn.closest('tr');
                 const labelConf = activeRelatorio === 'retiradas' ? 'Retirada' : 'Carga';
                 if (confirm(`Excluir definitivamente esta ${labelConf}?`)) {
                     const endpointDel = (activeRelatorio === 'retiradas' || activeRelatorio === 'historico-retiradas')
@@ -861,10 +914,8 @@ async function abrirGerenciadorDeCarga(idCarga, numCarga) {
         const dtVal = isRet ? carga.data_retirada : carga.data_carregamento;
         const dataCarregamentoVal = dtVal ? dtVal.split('T')[0] : "";
 
-        // Regra de Data Passada:
         const hojeStr = new Date().toISOString().split('T')[0];
-        const isDataPassada = dataCarregamentoVal && dataCarregamentoVal < hojeStr;
-        window.cargaAtivaReadOnly = isDataPassada || activeRelatorio === 'historico-retiradas' || activeRelatorio === 'historico' || activeRelatorio === 'resumo';
+        window.cargaAtivaReadOnly = activeRelatorio === 'historico-retiradas' || activeRelatorio === 'historico' || activeRelatorio === 'resumo';
 
         let transpOptions = '<option value="">Selecione um Transporte...</option>';
         transportes.forEach(t => {
@@ -979,7 +1030,11 @@ async function abrirGerenciadorDeCarga(idCarga, numCarga) {
                 if (id) {
                     const ordem = row.querySelector('.in-ordem') ? row.querySelector('.in-ordem').value : null;
                     const obs = row.querySelector('.in-obs') ? row.querySelector('.in-obs').value : null;
-                    ordemPromises.push(fetch(`${API_BASE}/api/relatorios/cargas/pedidos/${id}`, {
+                    const isRet = activeRelatorio === 'retiradas' || activeRelatorio === 'historico-retiradas';
+                    const endpoint = isRet 
+                        ? `${API_BASE}/api/retiradas/pedidos/${id}`
+                        : `${API_BASE}/api/relatorios/cargas/pedidos/${id}`;
+                    ordemPromises.push(fetch(endpoint, {
                         method: 'PUT',
                         headers: {
                             'Content-Type': 'application/json',
@@ -1053,7 +1108,10 @@ async function abrirGerenciadorDeCarga(idCarga, numCarga) {
                     newBtn.disabled = true;
 
                     try {
-                        const resp = await fetch(`${API_BASE}/api/relatorios/cargas/${idCarga}/confirmar-entrega`, {
+                        const endpointConfirm = isRetTab 
+                            ? `${API_BASE}/api/retiradas/${idCarga}/confirmar` 
+                            : `${API_BASE}/api/relatorios/cargas/${idCarga}/confirmar-entrega`;
+                        const resp = await fetch(endpointConfirm, {
                             method: 'POST',
                             headers: { 'Authorization': `Bearer ${window.Auth ? window.Auth.getToken() : ''}` }
                         });
