@@ -260,7 +260,7 @@
         <button class="tab" onclick="openTab(event, 'cobranca')">Endereço de Cobrança</button>
         <button class="tab" onclick="openTab(event, 'compras')">Compras</button>
         <button class="tab" onclick="openTab(event, 'elaboracao')">Elaboração do Cadastro</button>
-        <button class="tab" onclick="openTab(event, 'outras_informacoes')">Outras Informações</button>
+        <button class="tab" onclick="openTab(event, 'outras_informacoes')" style="line-height: 1.2; text-align: center;">Outras<br>Informações</button>
       </div>
       <form id="formCliente">
         <input type="hidden" id="id" name="id" />
@@ -901,15 +901,16 @@
         </div>
         <div class="tab-content" id="outras_informacoes" style="display: none;">
           <h2 class="subtitulo">Outras Informações</h2>
-          <div class="form-grid-1col" style="margin-bottom: 20px;">
+          <h2 class="subtitulo" style="margin-top:20px;">Veículos de Terceiros <span id="contador-veiculos_terceiros" style="font-size: 0.8rem; font-weight: 500; color: #64748b; margin-left: 6px; vertical-align: middle;">(0/2)</span></h2>
+          <div id="container-veiculos_terceiros" class="lista-dinamica-container"></div>
+          <button type="button" class="btn-add-item" onclick="adicionarItem('veiculos_terceiros', 2)" id="btn-add-veiculos_terceiros">+ Adicionar Veículo de Terceiro</button>
+
+          <div class="form-grid-1col" style="margin-top: 20px; margin-bottom: 20px;">
             <div>
               <label for="outras_observacoes">Observação:</label>
               <textarea id="outras_observacoes" name="outras_informacoes.observacao" rows="4"></textarea>
             </div>
           </div>
-          <h2 class="subtitulo">Veículos de Terceiros</h2>
-          <div id="container-veiculos_terceiros"></div>
-          <button type="button" class="btn" style="background-color: #2980b9; color: white; margin-top: 10px;" onclick="addVeiculoTerceiro()">+ Adicionar Veículo</button>
         </div>
       </form>
 
@@ -1017,6 +1018,7 @@
           renderizarLista('referencias_bancarias', 3, []);
           renderizarLista('bens_imoveis', 3, []);
           renderizarLista('bens_moveis', 3, []);
+          renderizarLista('veiculos_terceiros', 2, []);
           renderizarLista('planteis_animais', 3, []);
           // Auto-preencher campos de Comissão Dispet dinamicamente via profile
           const DISPET_DEFAULT = window._dispetDefault || "";
@@ -1705,6 +1707,14 @@
               { key: 'contato_gerente', label: 'Contato Gerente', type: 'text' }
             ]
           },
+          veiculos_terceiros: {
+            gridClass: 'form-grid-3col',
+            fields: [
+              { key: 'nome_terceiro', label: 'Nome do Terceiro', type: 'text' },
+              { key: 'veiculo',       label: 'Veículo (Modelo)', type: 'text' },
+              { key: 'placa',         label: 'Placa',            type: 'text' }
+            ]
+          },
           bens_imoveis: {
             gridClass: 'form-grid-3col',
             fields: [
@@ -1929,7 +1939,7 @@
               .filter(b => b.querySelector('input[data-key="empresa"]')?.value?.trim()).length;
           }
           
-          const limite = (secao === 'indicacoes') ? 5 : 3;
+          const limite = (secao === 'indicacoes') ? 5 : (secao === 'veiculos_terceiros') ? 2 : 3;
           contador.textContent = `(${total}/${limite})`;
         }
 
@@ -2258,11 +2268,7 @@
 
           const oi = dados.outras_informacoes || {};
           setVal("outras_observacoes", oi.observacao || "");
-          const containerVt = document.getElementById("container-veiculos_terceiros");
-          if (containerVt) {
-            containerVt.innerHTML = "";
-            (oi.veiculos_terceiros || []).forEach(v => addVeiculoTerceiro(v));
-          }
+          renderizarLista('veiculos_terceiros', 2, oi.veiculos_terceiros || []);
 
           setViewState('SELECTED');
         }
@@ -2727,32 +2733,6 @@
           });
         });
 
-        function addVeiculoTerceiro(dados = {}) {
-          const container = document.getElementById('container-veiculos_terceiros');
-          const div = document.createElement('div');
-          div.className = 'item-dinamico-bloco form-grid-3col';
-          div.style.position = 'relative';
-          div.style.marginBottom = '15px';
-          div.style.padding = '10px';
-          div.style.border = '1px solid #ddd';
-          div.style.borderRadius = '5px';
-          div.innerHTML = `
-            <div>
-              <label>Nome do Terceiro:</label>
-              <input type="text" data-key="nome_terceiro" value="${dados.nome_terceiro || ''}" />
-            </div>
-            <div>
-              <label>Veículo (Modelo):</label>
-              <input type="text" data-key="veiculo" value="${dados.veiculo || ''}" />
-            </div>
-            <div>
-              <label>Placa:</label>
-              <input type="text" data-key="placa" value="${dados.placa || ''}" />
-            </div>
-            <button type="button" class="btn btn-remove-item" onclick="this.parentElement.remove()" style="position: absolute; top: -10px; right: -10px; padding: 2px 5px; background: #c0392b; color: #fff; border-radius: 50%; width: 25px; height: 25px;">&times;</button>
-          `;
-          container.appendChild(div);
-        }
       </script>
 
       <!--  <script src="/js/script.js"></script>-->

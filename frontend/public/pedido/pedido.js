@@ -102,6 +102,12 @@ function fmtDate(s) {
 
 function fmtDateOnly(s) {
   if (!s) return "---";
+  // Extrai manualmente a parte da data para evitar bug de fuso horário
+  const str = String(s);
+  const parts = str.split('T')[0].split(' ')[0].split('-');
+  if (parts.length === 3) {
+      return `${parts[2]}/${parts[1]}/${parts[0]}`;
+  }
   const d = new Date(s);
   return d.toLocaleDateString("pt-BR");
 }

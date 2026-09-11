@@ -213,7 +213,8 @@ async function renderStandardCargaList(tipo) {
         if (activeRelatorio !== 'historico' && activeRelatorio !== 'historico-retiradas' && activeRelatorio !== 'resumo') {
             const isRetMsg = activeRelatorio === 'retiradas';
             const labelTipo = isRetMsg ? "Retiradas" : "Cargas";
-            const hojeStrMsg = new Date().toISOString().split('T')[0];
+            const tzOffset = new Date().getTimezoneOffset() * 60000;
+            const hojeStrMsg = new Date(Date.now() - tzOffset).toISOString().split('T')[0];
             let vencidas = 0;
             let hoje = 0;
             cargas.forEach(c => {
@@ -248,11 +249,10 @@ async function renderStandardCargaList(tipo) {
             if (activeRelatorio !== 'historico' && activeRelatorio !== 'historico-retiradas' && activeRelatorio !== 'resumo') {
                 if (dtCarr) {
                     const d = dtCarr.split('T')[0];
-                    const hojeStr = new Date().toISOString().split('T')[0];
-                    if (d < hojeStr) {
-                        rowStyle = 'style="background-color: #fca5a5;"'; // destaque vermelho claro
-                    } else if (d === hojeStr) {
-                        rowStyle = 'style="background-color: #fef08a;"'; // destaque amarelo claro
+                    const tzOffset = new Date().getTimezoneOffset() * 60000;
+                    const hojeStr = new Date(Date.now() - tzOffset).toISOString().split('T')[0];
+                    if (d <= hojeStr) {
+                        rowStyle = 'style="background-color: #fca5a5;"'; // destaque vermelho claro para vencidas e de hoje
                     }
                 }
             }
@@ -1110,7 +1110,7 @@ async function abrirGerenciadorDeCarga(idCarga, numCarga) {
                 const newBtn = oldBtn.cloneNode(true);
                 oldBtn.parentNode.replaceChild(newBtn, oldBtn);
                 newBtn.disabled = false;
-                newBtn.style.background = '';
+                newBtn.className = 'os-btn os-btn-primary';
 
                 newBtn.addEventListener('click', async () => {
                     const labelConf = isRetTab ? 'retirada' : 'carga';
@@ -1270,8 +1270,8 @@ async function carregarPedidosDaCargaAtiva() {
         // Calcular totais para os cabeçalhos
         const totalLiq = ped.reduce((sum, p) => sum + (parseFloat(p.peso_total) || 0), 0);
         const totalBruto = ped.reduce((sum, p) => sum + (parseFloat(p.peso_bruto_total) || 0), 0);
-        const totalLiqStr = Math.round(totalLiq).toLocaleString('pt-BR');
-        const totalBrutoStr = Math.round(totalBruto).toLocaleString('pt-BR');
+        const totalLiqStr = totalLiq.toLocaleString('pt-BR', {minimumFractionDigits: 2, maximumFractionDigits: 2});
+        const totalBrutoStr = totalBruto.toLocaleString('pt-BR', {minimumFractionDigits: 2, maximumFractionDigits: 2});
 
         // Cabeçalho dinâmico baseado no tipo de relatório
         if (window.activeRelatorio === "formacao" || window.activeRelatorio === "retiradas") {
@@ -1368,7 +1368,8 @@ async function carregarPedidosDaCargaAtiva() {
         emptyPedidos.style.display = 'none';
         let h = "";
         ped.forEach(p => {
-            const peso = p.peso_total ? Math.round(p.peso_total).toString() : "0";
+            const peso = (parseFloat(p.peso_total) || 0).toLocaleString('pt-BR', {minimumFractionDigits: 2, maximumFractionDigits: 2});
+            const pesoBruto = (parseFloat(p.peso_bruto_total) || 0).toLocaleString('pt-BR', {minimumFractionDigits: 2, maximumFractionDigits: 2});
 
             let statusOptionsHtml = "";
             (window.relatoriosStatusList || []).forEach(s => {
@@ -1417,7 +1418,7 @@ async function carregarPedidosDaCargaAtiva() {
                             ${statusRetBadge}
                         </td>
                         <td style="font-size: 12px; padding: 12px 4px; white-space: nowrap; width: 65px; text-align: right;">${peso} kg</td>
-                        <td style="font-size: 12px; padding: 12px 4px; white-space: nowrap; width: 65px; text-align: right;">${Math.round(p.peso_bruto_total || 0)} kg</td>
+                        <td style="font-size: 12px; padding: 12px 4px; white-space: nowrap; width: 65px; text-align: right;">${pesoBruto} kg</td>
                         <td style="font-size: 12px; padding: 12px 4px; white-space: nowrap; width: 50px;">${p.codigo_cliente || '-'}</td>
                         <td style="font-size: 12px; padding: 12px 4px; min-width: 200px;">${p.cliente_nome || '-'}</td>
                         <td style="font-size: 12px; padding: 12px 4px; min-width: 150px;">${p.nome_fantasia || '-'}</td>
@@ -1445,7 +1446,7 @@ async function carregarPedidosDaCargaAtiva() {
                         <td style="font-size: 12px;">${p.municipio || '-'}</td>
                         <td style="vertical-align: top;"><input type="number" class="os-input os-input-sm in-ordem" value="${p.ordem_carregamento || ''}" data-id="${p.id_carga_pedido}" style="padding: 2px; font-size: 12px; height: 32px; text-align: right; width: 60px;" ${window.cargaAtivaReadOnly ? 'disabled' : ''}></td>
                         <td style="white-space: nowrap; font-size: 12px; vertical-align: top; text-align: right;">${peso} kg</td>
-                        <td style="white-space: nowrap; font-size: 12px; vertical-align: top; text-align: right;">${Math.round(p.peso_bruto_total || 0)} kg</td>
+                        <td style="white-space: nowrap; font-size: 12px; vertical-align: top; text-align: right;">${pesoBruto} kg</td>
                         <td style="font-size: 12px; vertical-align: top;">${window.cargaAtivaReadOnly ? badgeStatus : `<textarea class="os-input os-input-sm in-obs" data-id="${p.id_carga_pedido}" style="padding: 4px; font-size: 12px; height: 38px; resize: vertical; width: 100%; min-width: 200px;">${p.observacoes || ''}</textarea>`}</td>
                         <td style="white-space: nowrap; vertical-align: top; padding-top: 4px; text-align: center;">
                             <button onclick="abrirModalDetalhesPedido('${p.id_pedido}')" class="os-btn os-btn-sm os-btn-secondary" title="Ver Produtos do Pedido">Ver</button>

@@ -305,6 +305,21 @@ async function fetchEvents(info, successCallback, failureCallback) {
             }));
             
         successCallback(fcEvents);
+        
+        const todayStr = new Date().toISOString().split('T')[0];
+        const todaysEventsCount = fcEvents.filter(e => {
+            if (!e.start) return false;
+            return e.start.startsWith(todayStr);
+        }).length;
+        const badge = document.getElementById('bell-badge');
+        if (badge) {
+            if (todaysEventsCount > 0) {
+                badge.textContent = todaysEventsCount;
+                badge.style.display = 'flex';
+            } else {
+                badge.style.display = 'none';
+            }
+        }
     } catch (e) {
         console.error("Erro ao buscar eventos", e);
         failureCallback(e);
@@ -323,6 +338,7 @@ function handleDateSelect(info) {
     document.getElementById('event-title').value = '';
     document.getElementById('event-date').value = info.startStr.split('T')[0];
     document.getElementById('event-time').value = '09:00';
+    document.getElementById('event-end-time').value = '10:00';
     document.getElementById('event-location').value = '';
     document.getElementById('event-desc').value = '';
     
@@ -366,8 +382,10 @@ function handleEventClick(info) {
     };
     
     const startParts = formatDt(e.start);
+    const endParts = formatDt(e.end);
     document.getElementById('event-date').value = startParts.date;
     document.getElementById('event-time').value = startParts.time;
+    document.getElementById('event-end-time').value = endParts.time;
     document.getElementById('event-location').value = props.location || '';
     document.getElementById('event-desc').value = props.description || '';
     
@@ -536,25 +554,49 @@ async function saveEvent() {
     const titleInput = document.getElementById('event-title');
     const calendarInput = document.getElementById('event-calendar');
     const timeInput = document.getElementById('event-time');
+    const endTimeInput = document.getElementById('event-end-time');
     const dateInput = document.getElementById('event-date');
 
     // Remove red borders
     titleInput.style.borderColor = '';
     calendarInput.style.borderColor = '';
     timeInput.style.borderColor = '';
+    endTimeInput.style.borderColor = '';
 
     let hasError = false;
 
     if (!titleInput.value) { titleInput.style.borderColor = 'red'; hasError = true; }
     if (!calendarInput.value) { calendarInput.style.borderColor = 'red'; hasError = true; }
     if (!timeInput.value) { timeInput.style.borderColor = 'red'; hasError = true; }
+    if (!endTimeInput.value) { endTimeInput.style.borderColor = 'red'; hasError = true; }
 
     if (hasError) {
         return alert('Por favor, preencha todos os campos obrigatórios destacados em vermelho.');
     }
     
     const startDt = new Date(`${dateInput.value}T${timeInput.value}:00`);
-    const endDt = new Date(startDt.getTime() + 60*60*1000); // 1 hora de duracao padrao
+    const endDt = new Date(`${dateInput.value}T${endTimeInput.value}:00`);
+    
+    if (endDt <= startDt) {
+        return alert('A Hora Fim deve ser posterior à Hora Início.');
+    }
+    
+    const currentEvents = calendarInstance.getEvents();
+    const isOverlap = currentEvents.some(e => {
+        if (e.id === currentEventId) return false;
+        if (e.extendedProps.calendar_id == calendarInput.value) {
+            const eStart = e.start;
+            const eEnd = e.end;
+            return (startDt < eEnd && endDt > eStart);
+        }
+        return false;
+    });
+    
+    if (isOverlap) {
+        if (!confirm("Já existe um compromisso neste horário. Tem certeza que deseja marcar?")) {
+            return;
+        }
+    }
 
     const data = {
         title: titleInput.value,
