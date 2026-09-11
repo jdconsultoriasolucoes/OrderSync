@@ -80,6 +80,8 @@ def get_events(
     shared_events = db.query(EventShareModel).filter(EventShareModel.shared_with_user_id == current_user.id).all()
     shared_events_ids = [s.event_id for s in shared_events]
     
+    from datetime import timedelta
+    
     # Busca otimizada por intervalo
     events = db.query(EventModel).filter(
         or_(
@@ -87,7 +89,7 @@ def get_events(
             EventModel.id.in_(shared_events_ids)
         ),
         EventModel.start_time >= start_date,
-        EventModel.start_time <= end_date
+        EventModel.start_time < (end_date + timedelta(days=1))
     ).all()
     
     # Formatar resposta

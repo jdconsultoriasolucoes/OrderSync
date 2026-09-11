@@ -158,12 +158,14 @@ async function loadGlobalNotifications(countOnly = false) {
         if (!resp.ok) throw new Error("Falha");
         
         const events = await resp.json();
+        const hojeDateObj = new Date();
         const hojeEvents = events.filter(e => {
             if (e.start_time) {
-                const parts = e.start_time.split('T')[0].split('-');
-                if (parts.length === 3) {
-                    const eDayStr = `${parts[0]}-${parts[1]}-${parts[2]}`;
-                    return eDayStr === hojeLocal;
+                const d = new Date(e.start_time);
+                if (!isNaN(d.getTime())) {
+                    return d.getDate() === hojeDateObj.getDate() && 
+                           d.getMonth() === hojeDateObj.getMonth() && 
+                           d.getFullYear() === hojeDateObj.getFullYear();
                 }
             }
             return false;
