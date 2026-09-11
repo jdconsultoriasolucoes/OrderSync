@@ -1145,3 +1145,21 @@ def deletar_pedido(pedido_id: int, db: Session = Depends(get_db)):
         raise HTTPException(status_code=500, detail=f"Erro ao deletar pedido: {str(e)}")
     
     return
+    
+class CargaPedidoUpdateAssoc(BaseModel):
+    id_carga: Optional[int] = None
+
+@router.put("/{id_pedido}/carga")
+def update_pedido_carga(id_pedido: int, req: CargaPedidoUpdateAssoc, db: Session = Depends(get_db)):
+    # Remover o pedido de todas as cargas que ele está vinculado atualmente
+    db.execute(text("DELETE FROM public.tb_cargas_pedidos WHERE numero_pedido = :id_pedido"), {"id_pedido": str(id_pedido)})
+    
+    # Adicionar à nova carga se informada
+    if req.id_carga:
+        db.execute(text("""
+            INSERT INTO public.tb_cargas_pedidos (id_carga, numero_pedido, ordem_carregamento)
+            VALUES (:id_carga, :id_pedido, 0)
+        """), {"id_carga": req.id_carga, "id_pedido": str(id_pedido)})
+        
+    db.commit()
+    return {"status": "success"}

@@ -79,6 +79,27 @@ let state = {
   statusList: [] // Cache de status
 };
 
+let activeLoads = [];
+let activeRetiradas = [];
+
+async function carregarCargasAtivas() {
+  try {
+    const [respCargas, respRetiradas] = await Promise.all([
+        fetch(`${API_BASE}/api/relatorios/cargas`, { headers: { 'Authorization': `Bearer ${window.Auth ? window.Auth.getToken() : ''}` } }),
+        fetch(`${API_BASE}/api/relatorios/retiradas`, { headers: { 'Authorization': `Bearer ${window.Auth ? window.Auth.getToken() : ''}` } })
+    ]);
+    
+    if (respCargas.ok) {
+      activeLoads = await respCargas.json();
+    }
+    if (respRetiradas.ok) {
+      activeRetiradas = await respRetiradas.json();
+    }
+  } catch(e) {
+    console.error("Erro ao carregar cargas ativas", e);
+  }
+}
+
 // ---------------------- utils ----------------------
 function fmtMoney(v) {
   if (v == null) return "---";
@@ -368,6 +389,23 @@ function renderTable(rows) {
 
       const codigoCliente = row.cliente_codigo || "Não cadastrado";
 
+      // Determina a lista de cargas correta para a modalidade
+      let optionsList = (modalidade === "RETIRADA") ? activeRetiradas : activeLoads;
+
+      let foundLoad = false;
+      let loadOptions = `<option value="">---</option>`;
+      if (typeof optionsList !== 'undefined' && Array.isArray(optionsList)) {
+          optionsList.forEach(c => {
+              const selected = (String(row.numero_carga) === String(c.numero_carga)) ? 'selected' : '';
+              if (selected) foundLoad = true;
+              loadOptions += `<option value="${c.id}" ${selected}>${c.numero_carga}</option>`;
+          });
+      }
+      if (row.numero_carga && !foundLoad) {
+          loadOptions += `<option value="closed" selected disabled>${row.numero_carga}</option>`;
+      }
+      const cargaHtml = `<select class="form-select form-select-sm" style="min-width: 70px; padding: 2px 4px; font-size: 0.8rem;" data-original-value="${row.numero_carga || ''}" onchange="changeCargaPedido(this, '${id}')">${loadOptions}</select>`;
+
       const tr = document.createElement("tr");
       tr.classList.add("row-click");
       tr.dataset.id = id;
@@ -386,7 +424,7 @@ function renderTable(rows) {
           <td class="tar">${fmtMoney(valor)}</td>
           <td class="td-status" id="td-status-${id}">${statusHtml}</td>
           <td>${fornecedor}</td>
-          <td>${row.numero_carga || '---'}</td>
+          <td>${cargaHtml}</td>
           <td class="tar td-actions" id="td-actions-${id}">
             
             <button class="os-btn os-btn-secondary os-btn-sm btn-edit-status" data-id="${id}" data-status="${status}">
@@ -1256,6 +1294,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 
   bindUI();
   await loadStatus();
+  await carregarCargasAtivas();
 
   // Initial Load
   const pEl = document.getElementById("fPeriodoRapido");
@@ -1292,3 +1331,46 @@ async function deletarPedido(id) {
     }
 }
 
+async function changeCargaPedido(selectEl, idPedido) {
+    const idCarga = selectEl.value;
+    if (idCarga === "closed") return;
+    
+    const originalValue = selectEl.getAttribute('data-original-value') || "";
+    selectEl.disabled = true;
+    try {
+        const r = await fetch(`${API_BASE}/api/pedidos/${idPedido}/carga`, {
+            method: "PUT",
+            headers: { 
+                "Content-Type": "application/json",
+                "Authorization": `Bearer ${window.Auth ? window.Auth.getToken() : ''}`
+            },
+            body: JSON.stringify({ id_carga: idCarga ? parseInt(idCarga) : null })
+        });
+        if (!r.ok) {
+            throw new Error(await r.text());
+        }
+        
+        // Atualiza a tabela
+        const opt = selectEl.options[selectEl.selectedIndex];
+        selectEl.setAttribute('data-original-value', opt.text === "---" ? "" : opt.text);
+        
+        // Update local state if needed
+        const row = state.rows.find(r => String(r.numero_pedido || r.id_pedido || r.id) === String(idPedido));
+        if (row) {
+             row.numero_carga = opt.text === "---" ? null : opt.text;
+        }
+        
+        showPremiumAlert("Carga atualizada com sucesso!", "success");
+    } catch (e) {
+        showPremiumAlert("Erro ao alterar carga: " + e.message, "error");
+        // Reverter seleção
+        for(let i=0; i<selectEl.options.length; i++) {
+            if(selectEl.options[i].text === originalValue || (originalValue === "" && selectEl.options[i].value === "")) {
+                selectEl.selectedIndex = i;
+                break;
+            }
+        }
+    } finally {
+        selectEl.disabled = false;
+    }
+}
