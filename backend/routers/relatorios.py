@@ -8,6 +8,9 @@ from models.cargas import CargaModel, CargaPedidoModel
 from models.pedido import PedidoModel
 from models.transporte import TransporteModel
 from schemas.cargas import CargaCreate, CargaUpdate, CargaResponse, CargaPedidoCreate, CargaPedidoDetailUpdate
+from core.deps import get_current_user
+from models.usuario import UsuarioModel
+from services.auditoria_service import gerar_snapshot_carga
 
 router = APIRouter(
     prefix="/api/relatorios",
@@ -146,7 +149,7 @@ def update_carga(carga_id: int, carga: CargaUpdate, db: Session = Depends(get_db
         if transp and transp.capacidade_kg:
             # Calcula peso bruto total da carga
             q_peso = text("""
-                SELECT COALESCE(SUM(i.quantidade * COALESCE(prod.peso_bruto, prod.peso, 0)), 0) as total_peso
+                SELECT COALESCE(SUM(i.quantidade * COALESCE(prod.peso_bruto, 0)), 0) as total_peso
                 FROM tb_cargas_pedidos cp
                 JOIN tb_pedidos_itens i ON cp.numero_pedido = CAST(i.id_pedido AS VARCHAR)
                 LEFT JOIN (
@@ -295,9 +298,9 @@ def get_resumo_produtos_carga(carga_id: int, db: Session = Depends(get_db)):
             MAX(COALESCE(prod.estoque_disponivel, 0)) AS estoque_disponivel,
             MAX(COALESCE(prod.estoque_futuro, 0)) AS estoque_futuro,
             MAX(CAST(prod.peso AS FLOAT)) AS peso_unitario,
-            MAX(CAST(COALESCE(prod.peso_bruto, prod.peso, 0) AS FLOAT)) AS peso_bruto_unitario,
+            MAX(CAST(COALESCE(prod.peso_bruto, 0) AS FLOAT)) AS peso_bruto_unitario,
             CAST(SUM(i.quantidade * COALESCE(prod.peso, 0)) AS FLOAT) AS peso_liquido_total,
-            CAST(SUM(i.quantidade * COALESCE(prod.peso_bruto, prod.peso, 0)) AS FLOAT) AS peso_bruto_total
+            CAST(SUM(i.quantidade * COALESCE(prod.peso_bruto, 0)) AS FLOAT) AS peso_bruto_total
         FROM tb_cargas_pedidos cp
         JOIN tb_pedidos p ON cp.numero_pedido = p.id_pedido::text
         JOIN tb_pedidos_itens i ON p.id_pedido = i.id_pedido
@@ -342,7 +345,7 @@ def get_carga_pedidos_detalhes(carga_id: int, db: Session = Depends(get_db)):
             p.fornecedor,
             CASE WHEN p.usar_valor_com_frete THEN 'ENTREGA' ELSE 'RETIRADA' END as modalidade,
             CAST(COALESCE(p.peso_total_kg, 0) AS FLOAT) AS peso_total,
-            CAST(COALESCE(pb.peso_bruto_total, p.peso_total_kg) AS FLOAT) AS peso_bruto_total,
+            CAST(COALESCE(pb.peso_bruto_total, 0) AS FLOAT) AS peso_bruto_total,
             c.entrega_municipio AS municipio,
             c.entrega_rota_principal AS rota_principal,
             c.entrega_rota_aproximacao AS rota_aproximacao,
@@ -357,7 +360,7 @@ def get_carga_pedidos_detalhes(carga_id: int, db: Session = Depends(get_db)):
         LEFT JOIN (
              SELECT 
                  id_pedido,
-                 SUM(i.quantidade * COALESCE(prod.peso_bruto, prod.peso, 0)) as peso_bruto_total
+                 SUM(i.quantidade * COALESCE(prod.peso_bruto, 0)) as peso_bruto_total
              FROM tb_pedidos_itens i
              LEFT JOIN (
                  SELECT codigo_supra, MAX(CAST(peso AS FLOAT)) as peso, MAX(CAST(peso_bruto AS FLOAT)) as peso_bruto 
@@ -391,7 +394,7 @@ def get_carga_pedidos_detalhes(carga_id: int, db: Session = Depends(get_db)):
                     p.fornecedor,
                     'RETIRADA' as modalidade,
                     CAST(COALESCE(p.peso_total_kg, 0) AS FLOAT) AS peso_total,
-                    CAST(COALESCE(pb.peso_bruto_total, p.peso_total_kg) AS FLOAT) AS peso_bruto_total,
+                    CAST(COALESCE(pb.peso_bruto_total, 0) AS FLOAT) AS peso_bruto_total,
                     c.entrega_municipio AS municipio,
                     c.entrega_rota_principal AS rota_principal,
                     c.entrega_rota_aproximacao AS rota_aproximacao,
@@ -405,7 +408,7 @@ def get_carga_pedidos_detalhes(carga_id: int, db: Session = Depends(get_db)):
                 LEFT JOIN (
                      SELECT 
                          id_pedido,
-                         SUM(i.quantidade * COALESCE(prod.peso_bruto, prod.peso, 0)) as peso_bruto_total
+                         SUM(i.quantidade * COALESCE(prod.peso_bruto, 0)) as peso_bruto_total
                      FROM tb_pedidos_itens i
                      LEFT JOIN (
                          SELECT codigo_supra, MAX(CAST(peso AS FLOAT)) as peso, MAX(CAST(peso_bruto AS FLOAT)) as peso_bruto 
@@ -510,7 +513,7 @@ def download_relatorio_completo_pdf(carga_id: int, db: Session = Depends(get_db)
     )
 
 @router.post("/cargas/{carga_id}/confirmar-entrega")
-def confirmar_entrega_carga(carga_id: int, db: Session = Depends(get_db)):
+def confirmar_entrega_carga(carga_id: int, db: Session = Depends(get_db), current_user: UsuarioModel = Depends(get_current_user)):
     # 1. Busca a carga
     db_carga = db.query(CargaModel).filter(CargaModel.id == carga_id).first()
     if not db_carga:
@@ -588,6 +591,9 @@ def confirmar_entrega_carga(carga_id: int, db: Session = Depends(get_db)):
     db_carga.is_historico = True
     db_carga.data_faturamento = datetime.now()
     db_carga.data_carregamento = datetime.now()
+    
+    # Gerar snapshot de auditoria
+    gerar_snapshot_carga(db, carga_id, db_carga, carga_pedidos, current_user.email)
     
     db.commit()
     return {"status": "success", "message": "Entrega confirmada com sucesso!"}

@@ -311,6 +311,15 @@ class CanalVendaCliente(BaseModel):
     canal_frost_ElaboracaoCadastro:   Optional[str] = None
     canal_insumos_ElaboracaoCadastro: Optional[str] = None
 
+class VeiculoTerceiro(BaseModel):
+    nome_terceiro: Optional[str] = None
+    veiculo: Optional[str] = None
+    placa: Optional[str] = None
+
+class OutrasInformacoes(BaseModel):
+    observacao: Optional[str] = None
+    veiculos_terceiros: Optional[List[VeiculoTerceiro]] = []
+
 class ClienteCompleto(BaseModel):
     cadastrocliente: CadastroCliente
     responsavel_compras: Optional[ResponsavelCompras] = None
@@ -335,6 +344,7 @@ class ClienteCompleto(BaseModel):
     supervisores: Optional[Supervisores] = None
     comissao_dispet: Optional[ComissaoDispet] = None
     canal_venda_cliente: Optional[CanalVendaCliente] = None
+    outras_informacoes: Optional[OutrasInformacoes] = None
 
 class ClienteResumo(BaseModel):
     id: int

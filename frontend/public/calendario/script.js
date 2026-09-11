@@ -321,8 +321,8 @@ function handleDateSelect(info) {
     document.getElementById('event-modal-title').textContent = 'Novo Evento';
     document.getElementById('event-id').value = '';
     document.getElementById('event-title').value = '';
-    document.getElementById('event-start').value = info.startStr.slice(0,16);
-    document.getElementById('event-end').value = info.endStr.slice(0,16);
+    document.getElementById('event-date').value = info.startStr.split('T')[0];
+    document.getElementById('event-time').value = '09:00';
     document.getElementById('event-location').value = '';
     document.getElementById('event-desc').value = '';
     
@@ -359,13 +359,15 @@ function handleEventClick(info) {
     document.getElementById('event-calendar').value = props.calendar_id;
     
     const formatDt = (dt) => {
-        if (!dt) return '';
+        if (!dt) return { date: '', time: '' };
         const tzOffset = (new Date()).getTimezoneOffset() * 60000;
-        return (new Date(dt - tzOffset)).toISOString().slice(0,16);
+        const iso = (new Date(dt - tzOffset)).toISOString();
+        return { date: iso.split('T')[0], time: iso.split('T')[1].slice(0,5) };
     };
     
-    document.getElementById('event-start').value = formatDt(e.start);
-    document.getElementById('event-end').value = formatDt(e.end || e.start);
+    const startParts = formatDt(e.start);
+    document.getElementById('event-date').value = startParts.date;
+    document.getElementById('event-time').value = startParts.time;
     document.getElementById('event-location').value = props.location || '';
     document.getElementById('event-desc').value = props.description || '';
     
@@ -533,31 +535,32 @@ async function saveEvent() {
 
     const titleInput = document.getElementById('event-title');
     const calendarInput = document.getElementById('event-calendar');
-    const startInput = document.getElementById('event-start');
-    const endInput = document.getElementById('event-end');
+    const timeInput = document.getElementById('event-time');
+    const dateInput = document.getElementById('event-date');
 
     // Remove red borders
     titleInput.style.borderColor = '';
     calendarInput.style.borderColor = '';
-    startInput.style.borderColor = '';
-    endInput.style.borderColor = '';
+    timeInput.style.borderColor = '';
 
     let hasError = false;
 
     if (!titleInput.value) { titleInput.style.borderColor = 'red'; hasError = true; }
     if (!calendarInput.value) { calendarInput.style.borderColor = 'red'; hasError = true; }
-    if (!startInput.value) { startInput.style.borderColor = 'red'; hasError = true; }
-    if (!endInput.value) { endInput.style.borderColor = 'red'; hasError = true; }
+    if (!timeInput.value) { timeInput.style.borderColor = 'red'; hasError = true; }
 
     if (hasError) {
         return alert('Por favor, preencha todos os campos obrigatórios destacados em vermelho.');
     }
+    
+    const startDt = new Date(`${dateInput.value}T${timeInput.value}:00`);
+    const endDt = new Date(startDt.getTime() + 60*60*1000); // 1 hora de duracao padrao
 
     const data = {
         title: titleInput.value,
         calendar_id: calendarInput.value,
-        start_time: new Date(startInput.value).toISOString(),
-        end_time: new Date(endInput.value).toISOString(),
+        start_time: startDt.toISOString(),
+        end_time: endDt.toISOString(),
         is_all_day: false,
         location: document.getElementById('event-location').value,
         description: document.getElementById('event-desc').value,

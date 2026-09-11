@@ -1109,6 +1109,8 @@ async function abrirGerenciadorDeCarga(idCarga, numCarga) {
                 const oldBtn = btnConfirmarEntrega;
                 const newBtn = oldBtn.cloneNode(true);
                 oldBtn.parentNode.replaceChild(newBtn, oldBtn);
+                newBtn.disabled = false;
+                newBtn.style.background = '';
 
                 newBtn.addEventListener('click', async () => {
                     const labelConf = isRetTab ? 'retirada' : 'carga';

@@ -161,3 +161,8 @@ class ClienteModelV2(Base):
 
     criado_por = Column(String, nullable=True)
     atualizado_por = Column(String, nullable=True)
+
+    # 21. Outras Informacoes
+    outras_observacoes = Column(String)
+    outras_veiculos_terceiros = Column(JSONB, default=list)
+

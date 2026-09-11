@@ -251,14 +251,11 @@
                             <label>Agenda</label>
                             <select id="event-calendar"></select>
                         </div>
-                        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px;">
+                        <div style="display: grid; grid-template-columns: 1fr; gap: 10px;">
                             <div class="form-group">
-                                <label>Início</label>
-                                <input type="datetime-local" id="event-start" />
-                            </div>
-                            <div class="form-group">
-                                <label>Fim</label>
-                                <input type="datetime-local" id="event-end" />
+                                <label>Hora do Compromisso</label>
+                                <input type="time" id="event-time" />
+                                <input type="hidden" id="event-date" />
                             </div>
                         </div>
                         <div class="form-group">

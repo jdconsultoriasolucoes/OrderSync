@@ -11,6 +11,9 @@ from schemas.retiradas import (
     RetiradaPedidoCreate, RetiradaPedidoResponse,
     RetiradaPedidoDetailUpdate, RetiradaBase
 )
+from core.deps import get_current_user
+from models.usuario import UsuarioModel
+from services.auditoria_service import gerar_snapshot_retirada
 
 router = APIRouter(
     prefix="/api/retiradas",
@@ -325,7 +328,7 @@ def download_resumo_retirada_lote_pdf(ids: str, db: Session = Depends(get_db)):
     )
 
 @router.post("/{retirada_id}/confirmar")
-def confirmar_retirada(retirada_id: int, db: Session = Depends(get_db)):
+def confirmar_retirada(retirada_id: int, db: Session = Depends(get_db), current_user: UsuarioModel = Depends(get_current_user)):
     db_ret = db.query(RetiradaModel).filter(RetiradaModel.id == retirada_id).first()
     if not db_ret:
         raise HTTPException(status_code=404, detail="Retirada não encontrada")
@@ -392,5 +395,9 @@ def confirmar_retirada(retirada_id: int, db: Session = Depends(get_db)):
 
     db_ret.is_historico = True
     db_ret.data_retirada = datetime.now()
+    
+    # Gerar snapshot de auditoria
+    gerar_snapshot_retirada(db, retirada_id, db_ret, retirada_pedidos, current_user.email)
+    
     db.commit()
     return {"status": "success", "message": "Retirada confirmada com sucesso!"}

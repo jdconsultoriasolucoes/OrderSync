@@ -4,7 +4,7 @@ import json
 from datetime import datetime
 
 # Configurações de Caminho
-INPUT_FILE = r'E:\Projeto Sistema pedidos\Planejamento\Arquivos bases edson\Ingestao\Tb_ingestao_historico_pedido.xlsx'
+INPUT_FILE = r'E:\Projeto Sistema pedidos\Planejamento\Arquivos bases edson\Ingestao\Historico_de_Pedidos_Faturados_ate_08092026.xlsm'
 INCREMENT_FILE = r'E:\Projeto Sistema pedidos\Planejamento\Arquivos bases edson\Ingestao\tabelas_incremento.xlsx'
 OUTPUT_DIR = r'E:\Projeto Sistema pedidos\Planejamento\Arquivos bases edson\Ingestao\Processados'
 
@@ -75,7 +75,17 @@ def processar_historico():
             return None
 
     # 2. Carregar base de histórico
-    df = pd.read_excel(INPUT_FILE, sheet_name='Planilha1')
+    # engine='openpyxl' é necessário para arquivos .xlsm
+    df = pd.read_excel(INPUT_FILE, sheet_name='Banco_Dados', engine='openpyxl')
+    
+    # Filtrar por data (01/06/2026 até a mais recente)
+    print("Filtrando pedidos a partir de 01/06/2026...")
+    df['Emissão'] = pd.to_datetime(df['Emissão'], errors='coerce')
+    data_corte = pd.to_datetime('2026-06-01')
+    
+    qtd_antes = len(df)
+    df = df[df['Emissão'] >= data_corte]
+    print(f"Linhas antes do filtro: {qtd_antes} | Linhas após filtro: {len(df)}")
     
     # 3. Aplicar Regras de Negócio e Cálculos Comerciais
     print("Aplicando descontos e condições de pagamento...")
@@ -109,8 +119,8 @@ def processar_historico():
     itens_lista = []
     
     map_pedido_id = {}
-    next_pedido_id = 1
-    next_item_id = 1
+    next_pedido_id = 111154
+    next_item_id = 165175
     
     grupos = df.groupby('Pedido')
     
@@ -173,7 +183,7 @@ def processar_historico():
             "contato_nome": "",
             "contato_email": "",
             "contato_fone": "",
-            "tabela_preco_id": None,
+            "tabela_preco_id": 0,
             "validade_ate": None,
             "validade_dias": None,
             "data_retirada": None,

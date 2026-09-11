@@ -260,6 +260,7 @@
         <button class="tab" onclick="openTab(event, 'cobranca')">Endereço de Cobrança</button>
         <button class="tab" onclick="openTab(event, 'compras')">Compras</button>
         <button class="tab" onclick="openTab(event, 'elaboracao')">Elaboração do Cadastro</button>
+        <button class="tab" onclick="openTab(event, 'outras_informacoes')">Outras Informações</button>
       </div>
       <form id="formCliente">
         <input type="hidden" id="id" name="id" />
@@ -897,6 +898,18 @@
               <div class="char-counter" id="counter-observacoes_ElaboracaoCadastro">0 / 1000</div>
             </div>
           </div>
+        </div>
+        <div class="tab-content" id="outras_informacoes" style="display: none;">
+          <h2 class="subtitulo">Outras Informações</h2>
+          <div class="form-grid-1col" style="margin-bottom: 20px;">
+            <div>
+              <label for="outras_observacoes">Observação:</label>
+              <textarea id="outras_observacoes" name="outras_informacoes.observacao" rows="4"></textarea>
+            </div>
+          </div>
+          <h2 class="subtitulo">Veículos de Terceiros</h2>
+          <div id="container-veiculos_terceiros"></div>
+          <button type="button" class="btn" style="background-color: #2980b9; color: white; margin-top: 10px;" onclick="addVeiculoTerceiro()">+ Adicionar Veículo</button>
         </div>
       </form>
 
@@ -1646,6 +1659,10 @@
               canal_pet_ElaboracaoCadastro:     document.getElementById("canal_pet_ElaboracaoCadastro")?.value || "",
               canal_frost_ElaboracaoCadastro:   document.getElementById("canal_frost_ElaboracaoCadastro")?.value || "",
               canal_insumos_ElaboracaoCadastro: document.getElementById("canal_insumos_ElaboracaoCadastro")?.value || ""
+            },
+            outras_informacoes: {
+              observacao: document.getElementById("outras_observacoes")?.value || "",
+              veiculos_terceiros: coletarLista('veiculos_terceiros')
             }
           };
         }
@@ -2239,6 +2256,14 @@
           setVal("canal_frost_ElaboracaoCadastro",   cv.canal_frost_ElaboracaoCadastro || "");
           setVal("canal_insumos_ElaboracaoCadastro", cv.canal_insumos_ElaboracaoCadastro || "");
 
+          const oi = dados.outras_informacoes || {};
+          setVal("outras_observacoes", oi.observacao || "");
+          const containerVt = document.getElementById("container-veiculos_terceiros");
+          if (containerVt) {
+            containerVt.innerHTML = "";
+            (oi.veiculos_terceiros || []).forEach(v => addVeiculoTerceiro(v));
+          }
+
           setViewState('SELECTED');
         }
 
@@ -2701,6 +2726,33 @@
               });
           });
         });
+
+        function addVeiculoTerceiro(dados = {}) {
+          const container = document.getElementById('container-veiculos_terceiros');
+          const div = document.createElement('div');
+          div.className = 'item-dinamico-bloco form-grid-3col';
+          div.style.position = 'relative';
+          div.style.marginBottom = '15px';
+          div.style.padding = '10px';
+          div.style.border = '1px solid #ddd';
+          div.style.borderRadius = '5px';
+          div.innerHTML = `
+            <div>
+              <label>Nome do Terceiro:</label>
+              <input type="text" data-key="nome_terceiro" value="${dados.nome_terceiro || ''}" />
+            </div>
+            <div>
+              <label>Veículo (Modelo):</label>
+              <input type="text" data-key="veiculo" value="${dados.veiculo || ''}" />
+            </div>
+            <div>
+              <label>Placa:</label>
+              <input type="text" data-key="placa" value="${dados.placa || ''}" />
+            </div>
+            <button type="button" class="btn btn-remove-item" onclick="this.parentElement.remove()" style="position: absolute; top: -10px; right: -10px; padding: 2px 5px; background: #c0392b; color: #fff; border-radius: 50%; width: 25px; height: 25px;">&times;</button>
+          `;
+          container.appendChild(div);
+        }
       </script>
 
       <!--  <script src="/js/script.js"></script>-->

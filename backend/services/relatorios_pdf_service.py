@@ -1035,7 +1035,7 @@ def gerar_pdf_romaneio_novo(db, carga_id: int) -> bytes:
     
     # 2. Fetch Orders
     sql_pedidos = text("""
-        SELECT p.id_pedido, p.cliente, c.entrega_municipio, c.cadastro_nome_fantasia,
+        SELECT p.id_pedido, p.cliente, p.codigo_cliente, c.cadastro_nome_cliente, c.entrega_municipio, c.cadastro_nome_fantasia,
                c.entrega_endereco, c.entrega_bairro, c.entrega_estado, c.entrega_cep,
                c.recebimento_celular, c.recebimento_nome
         FROM tb_cargas_pedidos cp
@@ -1053,7 +1053,11 @@ def gerar_pdf_romaneio_novo(db, carga_id: int) -> bytes:
         c.setFont("Helvetica-Bold", 10)
         c.setFillColor(SUPRA_TEXT)
         fantasia = f" ({p['cadastro_nome_fantasia']})" if p.get('cadastro_nome_fantasia') else ""
-        c.drawString(1.0*cm, y, f"[Pedido #{p['id_pedido']}] - Cliente: {p['cliente']}{fantasia}")
+        import re
+        nome_cliente = p.get('cadastro_nome_cliente') or p['cliente']
+        nome_cliente = re.sub(r'\s*-\s*\d{2,3}\.\d{3}\.\d{3}.*$', '', nome_cliente)
+        codigo_str = f" [Cód: {p['codigo_cliente']}]" if p.get('codigo_cliente') else ""
+        c.drawString(1.0*cm, y, f"[Pedido #{p['id_pedido']}]{codigo_str} - Cliente: {nome_cliente}{fantasia}")
         y -= 0.5*cm
         c.setFont("Helvetica", 8)
         endereco = f"Endereço: {p['entrega_endereco'] or ''} - {p['entrega_bairro'] or ''}, {p['entrega_municipio'] or ''}/{p['entrega_estado'] or ''} - CEP: {p['entrega_cep'] or ''}"
@@ -1198,7 +1202,7 @@ def gerar_pdf_romaneio_retirada_lote(db, retiradas_ids: list) -> bytes:
         y = _draw_header(c, width, height, "Ordem de Retirada", f"Retirada #{ret['numero_retirada']} | Data: {data_str}")
         
         sql_pedidos = text("""
-            SELECT p.id_pedido, p.cliente, c.entrega_endereco, c.entrega_bairro, c.entrega_municipio, c.entrega_estado, c.entrega_cep, c.recebimento_celular, c.recebimento_nome,
+            SELECT p.id_pedido, p.cliente, p.codigo_cliente, c.cadastro_nome_cliente, c.entrega_endereco, c.entrega_bairro, c.entrega_municipio, c.entrega_estado, c.entrega_cep, c.recebimento_celular, c.recebimento_nome,
                    rp.retirada_nome_terceiro, rp.retirada_veiculo_placa, rp.retirada_veiculo_modelo
             FROM tb_retiradas_pedidos rp
             JOIN tb_pedidos p ON rp.numero_pedido = p.id_pedido::text
@@ -1214,7 +1218,11 @@ def gerar_pdf_romaneio_retirada_lote(db, retiradas_ids: list) -> bytes:
             p = pedidos[0]
             c.setFont("Helvetica-Bold", 10)
             c.setFillColor(SUPRA_TEXT)
-            c.drawString(1.0*cm, y, f"[Pedido #{p['id_pedido']}] - Cliente/Fornecedor: {p['cliente']}")
+            import re
+            nome_cliente = p.get('cadastro_nome_cliente') or p['cliente']
+            nome_cliente = re.sub(r'\s*-\s*\d{2,3}\.\d{3}\.\d{3}.*$', '', nome_cliente)
+            codigo_str = f" [Cód: {p['codigo_cliente']}]" if p.get('codigo_cliente') else ""
+            c.drawString(1.0*cm, y, f"[Pedido #{p['id_pedido']}]{codigo_str} - Cliente/Fornecedor: {nome_cliente}")
             y -= 0.5*cm
             c.setFont("Helvetica", 8)
             endereco = f"Endereço: {p['entrega_endereco'] or ''} - {p['entrega_bairro'] or ''}, {p['entrega_municipio'] or ''}/{p['entrega_estado'] or ''} - CEP: {p['entrega_cep'] or ''}"
