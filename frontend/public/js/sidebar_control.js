@@ -151,11 +151,8 @@ async function loadGlobalNotifications(countOnly = false) {
         const tzOffset = new Date().getTimezoneOffset() * 60000;
         const hojeLocal = new Date(Date.now() - tzOffset).toISOString().split('T')[0];
         
-        const start = hojeLocal + "T00:00:00Z";
-        const end = hojeLocal + "T23:59:59Z";
-        
         const API_BASE = typeof window.API_BASE !== 'undefined' ? window.API_BASE : '';
-        const url = `${API_BASE}/api/calendars/events?start=${start}&end=${end}`;
+        const url = `${API_BASE}/api/v1/events?start_date=${hojeLocal}&end_date=${hojeLocal}`;
         
         const resp = await fetch(url, { headers: { 'Authorization': `Bearer ${token}` } });
         if (!resp.ok) throw new Error("Falha");
