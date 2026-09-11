@@ -17,6 +17,12 @@ document.addEventListener('DOMContentLoaded', async () => {
             center: 'title',
             right: 'dayGridMonth,timeGridWeek,timeGridDay'
         },
+        buttonText: {
+            today: 'Hoje',
+            month: 'Mês',
+            week: 'Semana',
+            day: 'Dia'
+        },
         locale: 'pt-br',
         editable: true,
         selectable: true,

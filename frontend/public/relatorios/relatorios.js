@@ -723,6 +723,12 @@ async function abrirModalConfigurarRetiradaPedido(linkId, numeroPedido, codigoCl
             if (val === 'TEMPORARIO') {
                 document.getElementById('group-config-retirada-veiculo-temporario').style.display = 'block';
                 document.getElementById('group-config-retirada-veiculo-cadastrado').style.display = 'none';
+                
+                document.querySelector('input[name="radio-config-retirada-resp"][value="TERCEIRO"]').checked = true;
+                document.getElementById('group-config-retirada-nome-terceiro').style.display = 'block';
+                if (!document.getElementById('input-config-retirada-nome-terceiro').value) {
+                    document.getElementById('input-config-retirada-nome-terceiro').focus();
+                }
             } else {
                 document.getElementById('group-config-retirada-veiculo-temporario').style.display = 'none';
                 document.getElementById('group-config-retirada-veiculo-cadastrado').style.display = 'block';
@@ -741,19 +747,33 @@ async function abrirModalConfigurarRetiradaPedido(linkId, numeroPedido, codigoCl
             if (r.ok) {
                 const cliente = await r.json();
                 bens = cliente.bens_moveis || [];
+                let terceiros = cliente.outras_veiculos_terceiros || [];
                 
-                if (bens.length === 0) {
+                if (bens.length === 0 && terceiros.length === 0) {
                     selectVeiculo.innerHTML = '<option value="">Nenhum veículo cadastrado no cliente</option>';
                     document.querySelector('input[name="radio-config-retirada-veiculo"][value="TEMPORARIO"]').checked = true;
                     document.getElementById('group-config-retirada-veiculo-temporario').style.display = 'block';
                     document.getElementById('group-config-retirada-veiculo-cadastrado').style.display = 'none';
                 } else {
-                    let opts = '<option value="">Selecione um Veículo do Cliente...</option>';
-                    bens.forEach((b, idx) => {
-                        const txt = `${b.marca || ''} ${b.modelo || ''}`.trim() || `Veículo #${idx + 1}`;
-                        const selected = (txt === currentData.retirada_veiculo_modelo) ? 'selected' : '';
-                        opts += `<option value="${txt}" ${selected}>${txt}</option>`;
-                    });
+                    let opts = '<option value="">Selecione um Veículo Cadastrado...</option>';
+                    if (bens.length > 0) {
+                        opts += '<optgroup label="Bens Móveis (Cliente)">';
+                        bens.forEach((b, idx) => {
+                            const txt = `${b.marca || ''} ${b.modelo || ''}`.trim() || `Veículo #${idx + 1}`;
+                            const selected = (txt === currentData.retirada_veiculo_modelo) ? 'selected' : '';
+                            opts += `<option value="${txt}" data-tipo="CLIENTE" ${selected}>${txt}</option>`;
+                        });
+                        opts += '</optgroup>';
+                    }
+                    if (terceiros.length > 0) {
+                        opts += '<optgroup label="Veículos de Terceiros">';
+                        terceiros.forEach((t, idx) => {
+                            const txt = `${t.veiculo || ''} ${t.placa || ''}`.trim() || `Terceiro #${idx + 1}`;
+                            const selected = (txt === currentData.retirada_veiculo_modelo) ? 'selected' : '';
+                            opts += `<option value="${txt}" data-tipo="TERCEIRO" data-nome="${t.nome_terceiro || ''}" ${selected}>${txt}</option>`;
+                        });
+                        opts += '</optgroup>';
+                    }
                     selectVeiculo.innerHTML = opts;
                 }
             } else {
@@ -769,6 +789,17 @@ async function abrirModalConfigurarRetiradaPedido(linkId, numeroPedido, codigoCl
             bens = [];
         }
     }
+    
+    selectVeiculo.addEventListener('change', (e) => {
+        const opt = e.target.options[e.target.selectedIndex];
+        if (opt && opt.dataset.tipo === 'TERCEIRO') {
+            document.querySelector('input[name="radio-config-retirada-resp"][value="TERCEIRO"]').checked = true;
+            document.getElementById('group-config-retirada-nome-terceiro').style.display = 'block';
+            if (opt.dataset.nome) {
+                document.getElementById('input-config-retirada-nome-terceiro').value = opt.dataset.nome;
+            }
+        }
+    });
 
     const btnSalvar = document.getElementById('btn-salvar-config-retirada');
     const newBtnSalvar = btnSalvar.cloneNode(true);
@@ -787,8 +818,10 @@ async function abrirModalConfigurarRetiradaPedido(linkId, numeroPedido, codigoCl
         const placaTemp = document.getElementById('input-config-retirada-veiculo-placa').value.trim();
         const modeloTemp = document.getElementById('input-config-retirada-veiculo-modelo').value.trim();
 
-        if (tipoVeiculo === 'CADASTRADO' && bens.length > 0 && !veiculoClienteSel) {
-            alert("Selecione um veículo cadastrado do cliente.");
+        const optSelecionada = selectVeiculo.options[selectVeiculo.selectedIndex];
+        const hasOptions = Array.from(selectVeiculo.options).some(o => o.value !== "");
+        if (tipoVeiculo === 'CADASTRADO' && hasOptions && !veiculoClienteSel) {
+            alert("Selecione um veículo cadastrado.");
             return;
         }
         if (tipoVeiculo === 'TEMPORARIO' && !placaTemp) {
