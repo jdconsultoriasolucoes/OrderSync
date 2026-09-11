@@ -607,27 +607,27 @@ def listar_pedidos(
 
     # 8. monta resposta
     rows = [
-        PedidoListItem(
-            numero_pedido      = r["numero_pedido"],
-            data_pedido        = r["data_pedido"],
-            cliente_nome       = clean_client_name(r["cliente_nome"]),
-            cliente_codigo     = r["cliente_codigo"],
-            modalidade         = r["modalidade"],
-            valor_total        = r["valor_total"],
-            status_codigo      = r["status_codigo"],
-            tabela_preco_nome  = r["tabela_preco_nome"],
-            fornecedor         = r["fornecedor"],
-            link_url           = r["link_url"],
-            link_status        = r["link_status"],
-            link_enviado       = r["link_enviado"],
-            peso_total         = float(r["peso_total"] or 0),
-            municipio          = r.get("municipio"),
-            rota_principal     = r.get("rota_principal"),
-            pedido_supra       = r.get("pedido_supra"),
-            nota_fiscal        = r.get("nota_fiscal"),
-            data_faturamento   = r.get("data_faturamento"),
-            numero_carga       = r.get("numero_carga")
-        )
+        {
+            "numero_pedido": r["numero_pedido"],
+            "data_pedido": r["data_pedido"],
+            "cliente_nome": clean_client_name(r["cliente_nome"]),
+            "cliente_codigo": r["cliente_codigo"],
+            "modalidade": r["modalidade"],
+            "valor_total": r["valor_total"],
+            "status_codigo": r["status_codigo"],
+            "tabela_preco_nome": r["tabela_preco_nome"],
+            "fornecedor": r["fornecedor"],
+            "link_url": r["link_url"],
+            "link_status": r["link_status"],
+            "link_enviado": r["link_enviado"],
+            "peso_total": float(r["peso_total"] or 0),
+            "municipio": r.get("municipio"),
+            "rota_principal": r.get("rota_principal"),
+            "pedido_supra": r.get("pedido_supra"),
+            "nota_fiscal": r.get("nota_fiscal"),
+            "data_faturamento": r.get("data_faturamento"),
+            "numero_carga": r.get("numero_carga")
+        }
         for r in rows_raw
     ]
 
