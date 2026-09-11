@@ -401,10 +401,12 @@ function renderTable(rows) {
               loadOptions += `<option value="${c.id}" ${selected}>${c.numero_carga}</option>`;
           });
       }
+      let cargaHtml = "";
       if (row.numero_carga && !foundLoad) {
-          loadOptions += `<option value="closed" selected disabled>${row.numero_carga}</option>`;
+          cargaHtml = `<span style="font-size: 0.8rem; color: #475569; font-weight: 600; background: #e2e8f0; padding: 2px 6px; border-radius: 4px; border: 1px solid #cbd5e1; display: inline-block;">${row.numero_carga} <span style="font-size: 0.7rem; font-weight: normal; color: #64748b;">(Finalizada)</span></span>`;
+      } else {
+          cargaHtml = `<select class="form-select form-select-sm" style="min-width: 70px; padding: 2px 4px; font-size: 0.8rem;" data-original-value="${row.numero_carga || ''}" onchange="changeCargaPedido(this, '${id}')">${loadOptions}</select>`;
       }
-      const cargaHtml = `<select class="form-select form-select-sm" style="min-width: 70px; padding: 2px 4px; font-size: 0.8rem;" data-original-value="${row.numero_carga || ''}" onchange="changeCargaPedido(this, '${id}')">${loadOptions}</select>`;
 
       const tr = document.createElement("tr");
       tr.classList.add("row-click");

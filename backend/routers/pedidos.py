@@ -322,6 +322,201 @@ def listar_pedidos(
         filtros_sql.append("a.pedido_supra ILIKE :pedido_supra_busca")
         params["pedido_supra_busca"] = f"%{pedido_supra}%"
 
+    cliente_celular: Optional[str] = None
+    tabela_preco_nome: Optional[str] = None
+    fornecedor: Optional[str] = None
+    validade_ate: Optional[str] = None
+    validade_dias: Optional[int] = None
+    usar_valor_com_frete: bool
+    calcula_st: Optional[bool] = False
+    frete_kg: Optional[float] = 0.0
+    peso_total_kg: float
+    frete_total: float
+    total_pedido: float
+    valor_ajuste: Optional[float] = 0.0
+    peso_liquido_calculado: Optional[float] = None
+    peso_bruto_calculado: Optional[float] = None
+    observacoes: Optional[str] = None
+    status: str
+    confirmado_em: Optional[datetime] = None
+    cancelado_em: Optional[datetime] = None
+    cancelado_motivo: Optional[str] = None
+    link_url: Optional[str] = None
+    link_primeiro_acesso_em: Optional[datetime] = None
+    link_status: Optional[str] = None
+    numero_carga: Optional[int] = None
+    pedido_supra: Optional[str] = None
+    nota_fiscal: Optional[str] = None
+    valor_nota: Optional[float] = None
+    data_faturamento: Optional[datetime] = None
+    created_at: datetime
+    itens: List[PedidoItemResumo] = Field(default_factory=list)
+
+class StatusEntry(BaseModel):
+    codigo: str
+    rotulo: str
+    cor_hex: Optional[str] = None
+    ordem: Optional[int] = None
+    ativo: Optional[bool] = True
+
+class StatusListResponse(BaseModel):
+    data: List[StatusEntry]
+
+class StatusChangeBody(BaseModel):
+    para: str
+    motivo: Optional[str] = None
+    user_id: Optional[str] = None
+
+class PedidoCamposFaturamento(BaseModel):
+    pedido_supra: Optional[str] = None
+    nota_fiscal: Optional[str] = None
+    valor_nota: Optional[float] = None
+    data_faturamento: Optional[str] = None  # formato YYYY-MM-DD
+
+class PedidoUpdateItem(BaseModel):
+    codigo: str
+    descricao: Optional[str] = None
+    embalagem: Optional[str] = None
+    condicao_pagamento: Optional[str] = None
+    tabela_comissao: Optional[str] = None
+    quantidade: float
+    preco_unit: Optional[float] = None
+    preco_unit_com_frete: Optional[float] = None
+    peso_kg: Optional[float] = None
+    manual_freight: Optional[bool] = False
+    valor_frete_unitario: Optional[float] = 0.0
+    frete_base_ton: Optional[float] = 0.0
+    markup: Optional[float] = 0.0
+    valor_final_markup: Optional[float] = 0.0
+    valor_s_frete_markup: Optional[float] = 0.0
+
+class PedidoUpdateRequest(BaseModel):
+    usar_valor_com_frete: bool = True
+    produtos: List[PedidoUpdateItem]
+    observacoes: Optional[str] = None
+    frete_kg: Optional[float] = 0.0
+    pedido_supra: Optional[str] = None
+    nota_fiscal: Optional[str] = None
+    contato_nome: Optional[str] = None
+    contato_email: Optional[str] = None
+    contato_fone: Optional[str] = None
+    calcula_st: Optional[bool] = False
+
+# ---------- Routes ----------
+def to_iso_or_none(v):
+    if v is None:
+        return None
+    if isinstance(v, (date, datetime)):
+        try:
+            return v.isoformat()
+        except Exception:
+            return str(v)
+    return str(v)
+
+@router.get("", response_model=ListagemResponse)
+def listar_pedidos(
+    from_: Optional[str] = Query(None, alias="from"),  # "YYYY-MM-DD"
+    to_:   Optional[str] = Query(None, alias="to"),    # "YYYY-MM-DD"
+    status: Optional[str] = None,
+    exclude_status: Optional[str] = None,
+    tabela_nome: Optional[str] = None,
+    cliente: Optional[str] = Query(None, description="busca em nome ou código"),
+    fornecedor: Optional[str] = None,
+    id_pedido: Optional[int] = Query(None, description="Filtrar por número exato do pedido"),
+    pedido_supra: Optional[str] = None,
+    nota_fiscal: Optional[str] = None,
+    numero_carga: Optional[str] = None,
+    modalidade: Optional[str] = None,
+    page: int = 1,
+    pageSize: int = 25,
+    limit: Optional[int] = None,
+    offset: Optional[int] = None,
+    db: Session = Depends(get_db)
+):
+    # 1. Paginação
+    limit = pageSize
+    offset = (page - 1) * pageSize
+    if offset < 0:
+        offset = 0
+
+    # 2. Montar dinamicamente os filtros
+    # quebra status em lista (se veio)
+    status_list = [s.strip() for s in status.split(",") if s.strip()] if status else None
+    
+    filtros_sql = []
+    params = {}
+
+    # Só aplica filtro de data se fornecido OU se não houver filtros específicos de busca direta
+    # Se id_pedido, pedido_supra ou nota_fiscal estiverem presentes, ignoramos as datas padrão
+    tem_busca_direta = bool(id_pedido or pedido_supra or nota_fiscal or numero_carga)
+    
+    # Decisão: Só aplicamos datas se:
+    # 1. Não há busca direta (ID, Supra, NF)
+    # 2. OU se o usuário alterou as datas manualmente (comparar com o que seria o padrão no front?)
+    # Na verdade, o mais seguro é: Se tem busca direta, ignoramos datas A MENOS que tenham sido passadas.
+    # Mas como o front sempre passa, vamos ver se o front passou datas que NÃO são o padrão de 30 dias?
+    # Melhor: Se tem busca direta, ignoramos datas por padrão.
+    
+    if (from_ or to_) and not tem_busca_direta:
+        # Se não veio nada e não tem busca direta, aplica o padrão de 30 dias
+        if not from_ or not to_:
+            hoje = datetime.now()
+            inicio = hoje - timedelta(days=30)
+            from_str = inicio.strftime("%Y-%m-%d")
+            to_str   = hoje.strftime("%Y-%m-%d")
+        else:
+            from_str = from_
+            to_str   = to_
+
+        try:
+            from_dt = datetime.strptime(from_str, "%Y-%m-%d").replace(hour=0, minute=0, second=0)
+            limite_to = datetime.strptime(to_str, "%Y-%m-%d").replace(hour=0, minute=0, second=0) + timedelta(days=1)
+            
+            filtros_sql.append("a.created_at >= :from")
+            filtros_sql.append("a.created_at <  :to")
+            params["from"] = from_dt
+            params["to"] = limite_to
+        except ValueError:
+            pass # Ignora erro de formato de data
+    elif (from_ and to_) and tem_busca_direta:
+        # Se tem busca direta E o usuário passou datas, talvez ele queira filtrar por data TAMBÉM?
+        # Por enquanto, se tem busca direta, vamos priorizar a busca global. 
+        # Se quisermos ser super precisos, teríamos que saber se as datas são "padrão".
+        pass
+
+    if status_list:
+        placeholders = ", ".join([f":st_{i}" for i in range(len(status_list))])
+        filtros_sql.append(f"REPLACE(REPLACE(UPPER(a.status), ' ', ''), '_', '') IN ({placeholders})")
+        for i, status_val in enumerate(status_list):
+            params[f"st_{i}"] = status_val.upper().replace(' ', '').replace('_', '')
+
+    if exclude_status:
+        ex_status_list = [s.strip() for s in exclude_status.split(",") if s.strip()]
+        placeholders_ex = ", ".join([f":ex_st_{i}" for i in range(len(ex_status_list))])
+        filtros_sql.append(f"REPLACE(REPLACE(UPPER(a.status), ' ', ''), '_', '') NOT IN ({placeholders_ex})")
+        for i, status_val in enumerate(ex_status_list):
+            params[f"ex_st_{i}"] = status_val.upper().replace(' ', '').replace('_', '')
+
+    if tabela_nome:
+        filtros_sql.append("a.tabela_preco_nome ILIKE :tabela_nome")
+        params["tabela_nome"] = f"%{tabela_nome}%"
+
+    if cliente:
+        filtros_sql.append("(a.cliente ILIKE :cliente_busca OR a.codigo_cliente ILIKE :cliente_busca)")
+        params["cliente_busca"] = f"%{cliente}%"
+
+    if fornecedor:
+        filtros_sql.append("a.fornecedor ILIKE :fornecedor_busca")
+        params["fornecedor_busca"] = f"%{fornecedor}%"
+
+    if id_pedido:
+        filtros_sql.append("a.id_pedido = :id_pedido_filtro")
+        params["id_pedido_filtro"] = id_pedido
+
+    if pedido_supra:
+        filtros_sql.append("a.pedido_supra ILIKE :pedido_supra_busca")
+        params["pedido_supra_busca"] = f"%{pedido_supra}%"
+
     if nota_fiscal:
         filtros_sql.append("a.nota_fiscal ILIKE :nota_fiscal_busca")
         params["nota_fiscal_busca"] = f"%{nota_fiscal}%"
@@ -333,6 +528,11 @@ def listar_pedidos(
                 JOIN public.tb_cargas cr ON cr.id = cp.id_carga
                 WHERE cp.numero_pedido::text = a.id_pedido::text
                   AND cr.numero_carga::text ILIKE :numero_carga_busca
+            ) OR EXISTS (
+                SELECT 1 FROM public.tb_retiradas_pedidos rp
+                JOIN public.tb_retiradas r ON r.id = rp.id_retirada
+                WHERE rp.numero_pedido::text = a.id_pedido::text
+                  AND r.numero_retirada::text ILIKE :numero_carga_busca
             )
         """)
         params["numero_carga_busca"] = f"%{numero_carga}%"
@@ -372,7 +572,7 @@ def listar_pedidos(
           a.pedido_supra,
           a.nota_fiscal,
           a.data_faturamento,
-          cg2.numero_carga AS numero_carga
+          COALESCE(cg2.numero_carga, rg.numero_retirada) AS numero_carga
         FROM public.tb_pedidos a
         LEFT JOIN public.t_cadastro_cliente_v2 c 
           ON c.cadastro_codigo_da_empresa::text = a.codigo_cliente 
@@ -382,6 +582,11 @@ def listar_pedidos(
           FROM public.tb_cargas_pedidos cp
           JOIN public.tb_cargas cr ON cr.id = cp.id_carga
         ) cg2 ON cg2.numero_pedido::text = a.id_pedido::text
+        LEFT JOIN (
+          SELECT rp.numero_pedido, r.numero_retirada::text AS numero_retirada
+          FROM public.tb_retiradas_pedidos rp
+          JOIN public.tb_retiradas r ON r.id = rp.id_retirada
+        ) rg ON rg.numero_pedido::text = a.id_pedido::text
         WHERE {where_clause}
         ORDER BY a.id_pedido DESC
         LIMIT :limit OFFSET :offset
@@ -1148,18 +1353,26 @@ def deletar_pedido(pedido_id: int, db: Session = Depends(get_db)):
     
 class CargaPedidoUpdateAssoc(BaseModel):
     id_carga: Optional[int] = None
+    tipo: Optional[str] = None
 
 @router.put("/{id_pedido}/carga")
 def update_pedido_carga(id_pedido: int, req: CargaPedidoUpdateAssoc, db: Session = Depends(get_db)):
     # Remover o pedido de todas as cargas que ele está vinculado atualmente
     db.execute(text("DELETE FROM public.tb_cargas_pedidos WHERE numero_pedido = :id_pedido"), {"id_pedido": str(id_pedido)})
+    db.execute(text("DELETE FROM public.tb_retiradas_pedidos WHERE numero_pedido = :id_pedido"), {"id_pedido": str(id_pedido)})
     
     # Adicionar à nova carga se informada
     if req.id_carga:
-        db.execute(text("""
-            INSERT INTO public.tb_cargas_pedidos (id_carga, numero_pedido, ordem_carregamento)
-            VALUES (:id_carga, :id_pedido, 0)
-        """), {"id_carga": req.id_carga, "id_pedido": str(id_pedido)})
+        if req.tipo == "RETIRADA":
+            db.execute(text("""
+                INSERT INTO public.tb_retiradas_pedidos (id_retirada, numero_pedido)
+                VALUES (:id_carga, :id_pedido)
+            """), {"id_carga": req.id_carga, "id_pedido": str(id_pedido)})
+        else:
+            db.execute(text("""
+                INSERT INTO public.tb_cargas_pedidos (id_carga, numero_pedido, ordem_carregamento)
+                VALUES (:id_carga, :id_pedido, 0)
+            """), {"id_carga": req.id_carga, "id_pedido": str(id_pedido)})
         
     db.commit()
     return {"status": "success"}

@@ -87,17 +87,22 @@ SELECT
   a.data_faturamento,
   a.created_at,
   a.calcula_st,
-  cg.numero_carga AS numero_carga
+  COALESCE(cg.numero_carga, rg.numero_retirada) AS numero_carga
 FROM public.tb_pedidos a
 LEFT JOIN public.tb_tabela_preco b ON a.tabela_preco_id = b.id_tabela
 LEFT JOIN public.t_cadastro_cliente_v2 c 
   ON c.cadastro_codigo_da_empresa::text = a.codigo_cliente
   AND a.codigo_cliente != ''
 LEFT JOIN (
-    SELECT cp.numero_pedido, cr.numero_carga
+    SELECT cp.numero_pedido, cr.numero_carga::text AS numero_carga
     FROM public.tb_cargas_pedidos cp
     JOIN public.tb_cargas cr ON cr.id = cp.id_carga
 ) cg ON cg.numero_pedido::text = a.id_pedido::text
+LEFT JOIN (
+    SELECT rp.numero_pedido, r.numero_retirada::text AS numero_retirada
+    FROM public.tb_retiradas_pedidos rp
+    JOIN public.tb_retiradas r ON r.id = rp.id_retirada
+) rg ON rg.numero_pedido::text = a.id_pedido::text
 WHERE a.id_pedido = :id_pedido
 """)
 
