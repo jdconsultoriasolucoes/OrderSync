@@ -1269,9 +1269,7 @@ async function carregarPedidosDaCargaAtiva() {
 
         // Calcular totais para os cabeçalhos
         const totalLiq = ped.reduce((sum, p) => sum + (parseFloat(p.peso_total) || 0), 0);
-        const totalBruto = ped.reduce((sum, p) => sum + (parseFloat(p.peso_bruto_total) || 0), 0);
-        const totalLiqStr = totalLiq.toLocaleString('pt-BR', {minimumFractionDigits: 2, maximumFractionDigits: 2});
-        const totalBrutoStr = totalBruto.toLocaleString('pt-BR', {minimumFractionDigits: 2, maximumFractionDigits: 2});
+        const totalLiqStr = totalLiq.toLocaleString('pt-BR', {minimumFractionDigits: 0, maximumFractionDigits: 0});
 
         // Cabeçalho dinâmico baseado no tipo de relatório
         if (window.activeRelatorio === "formacao" || window.activeRelatorio === "retiradas") {
@@ -1285,10 +1283,6 @@ async function carregarPedidosDaCargaAtiva() {
                     <th style="font-size: 11px; padding: 12px 4px; white-space: nowrap; width: 85px; color: #1e40af; text-align: right;">
                         Peso Líq. Acum<br>
                         <span style="font-size: 11px; font-weight: 800; background: #dbeafe; padding: 2px 4px; border-radius: 4px; display: block; margin-top: 4px;">${totalLiqStr} kg</span>
-                    </th>
-                    <th style="font-size: 11px; padding: 12px 4px; white-space: nowrap; width: 85px; color: #92400e; text-align: right;">
-                        Peso Br. Acum<br>
-                        <span style="font-size: 11px; font-weight: 800; background: #fef3c7; padding: 2px 4px; border-radius: 4px; display: block; margin-top: 4px;">${totalBrutoStr} kg</span>
                     </th>
                     <th style="font-size: 11px; padding: 12px 4px; white-space: nowrap; width: 50px;">Cód.</th>
                     <th style="font-size: 11px; padding: 12px 4px; white-space: nowrap;">Cliente</th>
@@ -1319,10 +1313,6 @@ async function carregarPedidosDaCargaAtiva() {
                     <th style="font-size: 11px; color: #1e40af; text-align: right; width: 90px; white-space: normal;">
                         Peso Líq.<br>Acum
                         <span style="font-size: 11px; font-weight: 800; background: #dbeafe; padding: 2px 4px; border-radius: 4px; display: block; margin-top: 4px;">${totalLiqStr} kg</span>
-                    </th>
-                    <th style="font-size: 11px; color: #92400e; text-align: right; width: 90px; white-space: normal;">
-                        Peso Br.<br>Acum
-                        <span style="font-size: 11px; font-weight: 800; background: #fef3c7; padding: 2px 4px; border-radius: 4px; display: block; margin-top: 4px;">${totalBrutoStr} kg</span>
                     </th>
                     <th style="font-size: 11px;">Status</th>
                     <th style="font-size: 11px; width: 55px; white-space: nowrap;">Ações</th>
@@ -1368,8 +1358,7 @@ async function carregarPedidosDaCargaAtiva() {
         emptyPedidos.style.display = 'none';
         let h = "";
         ped.forEach(p => {
-            const peso = (parseFloat(p.peso_total) || 0).toLocaleString('pt-BR', {minimumFractionDigits: 2, maximumFractionDigits: 2});
-            const pesoBruto = (parseFloat(p.peso_bruto_total) || 0).toLocaleString('pt-BR', {minimumFractionDigits: 2, maximumFractionDigits: 2});
+            const peso = (parseFloat(p.peso_total) || 0).toLocaleString('pt-BR', {minimumFractionDigits: 0, maximumFractionDigits: 0});
 
             let statusOptionsHtml = "";
             (window.relatoriosStatusList || []).forEach(s => {
@@ -1418,7 +1407,6 @@ async function carregarPedidosDaCargaAtiva() {
                             ${statusRetBadge}
                         </td>
                         <td style="font-size: 12px; padding: 12px 4px; white-space: nowrap; width: 65px; text-align: right;">${peso} kg</td>
-                        <td style="font-size: 12px; padding: 12px 4px; white-space: nowrap; width: 65px; text-align: right;">${pesoBruto} kg</td>
                         <td style="font-size: 12px; padding: 12px 4px; white-space: nowrap; width: 50px;">${p.codigo_cliente || '-'}</td>
                         <td style="font-size: 12px; padding: 12px 4px; min-width: 200px;">${p.cliente_nome || '-'}</td>
                         <td style="font-size: 12px; padding: 12px 4px; min-width: 150px;">${p.nome_fantasia || '-'}</td>
@@ -1446,7 +1434,6 @@ async function carregarPedidosDaCargaAtiva() {
                         <td style="font-size: 12px;">${p.municipio || '-'}</td>
                         <td style="vertical-align: top;"><input type="number" class="os-input os-input-sm in-ordem" value="${p.ordem_carregamento || ''}" data-id="${p.id_carga_pedido}" style="padding: 2px; font-size: 12px; height: 32px; text-align: right; width: 60px;" ${window.cargaAtivaReadOnly ? 'disabled' : ''}></td>
                         <td style="white-space: nowrap; font-size: 12px; vertical-align: top; text-align: right;">${peso} kg</td>
-                        <td style="white-space: nowrap; font-size: 12px; vertical-align: top; text-align: right;">${pesoBruto} kg</td>
                         <td style="font-size: 12px; vertical-align: top;">${window.cargaAtivaReadOnly ? badgeStatus : `<textarea class="os-input os-input-sm in-obs" data-id="${p.id_carga_pedido}" style="padding: 4px; font-size: 12px; height: 38px; resize: vertical; width: 100%; min-width: 200px;">${p.observacoes || ''}</textarea>`}</td>
                         <td style="white-space: nowrap; vertical-align: top; padding-top: 4px; text-align: center;">
                             <button onclick="abrirModalDetalhesPedido('${p.id_pedido}')" class="os-btn os-btn-sm os-btn-secondary" title="Ver Produtos do Pedido">Ver</button>
