@@ -117,9 +117,6 @@ def startup_event():
         from models.automation_config import AutomationConfigModel
         from models.error_log import ErrorLog
         Base.metadata.create_all(bind=engine)
-        
-        from services.db_migrations import run_migrations
-        run_migrations()
     except Exception as e:
         logger.error(f"[STARTUP] Falha crítica em Migrações: {e}")
 

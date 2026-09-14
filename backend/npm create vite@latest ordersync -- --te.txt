@@ -1,3 +1,0 @@
-npm create vite@latest ordersync -- --template react
-cd ordersync
-npm install6

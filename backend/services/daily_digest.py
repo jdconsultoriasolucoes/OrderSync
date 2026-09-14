@@ -85,7 +85,7 @@ def enviar_resumo_matinal():
         
         agora = datetime.now()
         inicio_dia = agora.replace(hour=0, minute=0, second=0, microsecond=0)
-        fim_dia = agora.replace(hour=23, 59, 59, 999999)
+        fim_dia = agora.replace(hour=23, minute=59, second=59, microsecond=999999)
         data_str = agora.strftime("%d/%m/%Y")
         
         # Link do Frontend (Fallback dev/prod)
