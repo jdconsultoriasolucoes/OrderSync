@@ -3,7 +3,7 @@ from typing import Optional, List
 from datetime import datetime
 
 class RetiradaPedidoBase(BaseModel):
-    numero_pedido: str
+    numero_pedido: Optional[str] = None
     observacoes: Optional[str] = None
     retirada_tipo: Optional[str] = None
     retirada_nome_terceiro: Optional[str] = None
@@ -39,9 +39,9 @@ class RetiradaCreate(RetiradaBase):
 
 class RetiradaResponse(RetiradaBase):
     id: int
-    is_historico: bool
-    data_criacao: datetime
-    data_update: datetime
+    is_historico: Optional[bool] = False
+    data_criacao: Optional[datetime] = None
+    data_update: Optional[datetime] = None
     pedidos: List[RetiradaPedidoResponse] = []
 
     class Config:
