@@ -288,7 +288,12 @@ async function fetchEvents(info, successCallback, failureCallback) {
         const rawEvents = await apiGet(`/events?start_date=${start}&end_date=${end}`);
         
         const fcEvents = rawEvents
-            .filter(e => activeCalendarIds.has(e.calendar_id))
+            .filter(e => {
+                if (calendars.some(c => c.id === e.calendar_id)) {
+                    return activeCalendarIds.has(e.calendar_id);
+                }
+                return true; // Directly shared event, calendar not in user's list
+            })
             .map(e => ({
                 id: e.id,
                 title: e.title,

@@ -396,9 +396,10 @@ function renderTable(rows) {
       let loadOptions = `<option value="">---</option>`;
       if (typeof optionsList !== 'undefined' && Array.isArray(optionsList)) {
           optionsList.forEach(c => {
-              const selected = (String(row.numero_carga) === String(c.numero_carga)) ? 'selected' : '';
+              const num_option = c.numero_carga || c.numero_retirada;
+              const selected = (String(row.numero_carga) === String(num_option)) ? 'selected' : '';
               if (selected) foundLoad = true;
-              loadOptions += `<option value="${c.id}" ${selected}>${c.numero_carga}</option>`;
+              loadOptions += `<option value="${c.id}" ${selected}>${num_option}</option>`;
           });
       }
       let cargaHtml = "";

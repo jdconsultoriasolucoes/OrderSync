@@ -66,10 +66,10 @@ document.addEventListener("DOMContentLoaded", () => {
 
         if (confirm("Confirma o reset de senha?")) {
             try {
-                const res = await fetch(`${API_URL}/usuarios/${id}/reset-senha`, {
+                const res = await fetch(`${API_URL}/usuarios/admin-reset-senha`, {
                     method: "POST",
                     headers: { "Content-Type": "application/json" },
-                    body: JSON.stringify({ senha_nova: senha })
+                    body: JSON.stringify({ user_id: parseInt(id), senha_nova: senha })
                 });
                 if (!res.ok) {
                     const errData = await res.json();

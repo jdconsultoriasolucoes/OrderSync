@@ -80,6 +80,7 @@ class UsuarioResetSenha(BaseModel):
         return validate_strength(v)
 
 class UsuarioAdminResetSenha(BaseModel):
+    user_id: int
     senha_nova: str
 
     @field_validator('senha_nova')

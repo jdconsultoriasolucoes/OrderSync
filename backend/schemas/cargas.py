@@ -21,7 +21,7 @@ class CargaPedidoCreate(CargaPedidoBase):
 class CargaPedidoResponse(CargaPedidoBase):
     id: int
     id_carga: int
-    data_criacao: datetime
+    data_criacao: Optional[datetime] = None
 
     class Config:
         from_attributes = True
@@ -70,8 +70,8 @@ class CargaResponse(CargaBase):
     id: int
     is_historico: Optional[bool] = False
     data_faturamento: Optional[datetime] = None
-    data_criacao: datetime
-    data_update: datetime
+    data_criacao: Optional[datetime] = None
+    data_update: Optional[datetime] = None
     pedidos: List[CargaPedidoResponse] = []
     
     class Config:
