@@ -70,6 +70,11 @@ function fmtData(dateStr) {
     return dateStr;
 }
 
+function limparNomeCliente(nome) {
+    if (!nome) return "-";
+    return nome.replace(/\s*-\s*(\d{2,3}\.\d{3}\.\d{3}(\/\d{4})?-\d{2})$/, '').trim();
+}
+
 document.addEventListener("DOMContentLoaded", async () => {
     // 1. Configurar datas padrão (Início do mês atual até Hoje)
     const hoje = new Date();
@@ -372,7 +377,7 @@ function renderizarTabela() {
                     <td>${item.danfe || "-"}</td>
                     <td>${fmtData(item.data_faturamento)}</td>
                     <td>${item.codigo_cliente || "-"}</td>
-                    <td>${item.cliente || "-"}</td>
+                    <td>${limparNomeCliente(item.cliente)}</td>
                     <td>${item.nome_fantasia || "-"}</td>
                     <td>${item.municipio || "-"}</td>
                     <td class="tar">${fmtPeso(item.peso_liquido)}</td>
@@ -412,7 +417,7 @@ function renderizarTabela() {
                 <tr>
                     <td>${index + 1}</td>
                     <td style="white-space: nowrap;">${item.documento || "-"}</td>
-                    <td>${item.nome_cliente || "-"}</td>
+                    <td>${limparNomeCliente(item.nome_cliente)}</td>
                     <td>${item.municipio || "-"}</td>
                     <td>${item.vendedor || "-"}</td>
                     <td>${fmtData(item.data_ultima_compra)}</td>
@@ -555,17 +560,15 @@ function exportarExcel() {
         return;
     }
 
-    let csv = "";
+    let aoa = [];
     let filename = "";
     
     let totalPeso = 0;
     let totalSemFrete = 0;
     let totalComFrete = 0;
 
-    const clean = (txt) => txt ? String(txt).replace(/;/g, ",").replace(/"/g, '""').trim() : "-";
-
     if (activeReport === "cliente") {
-        csv = "#;Nº Pedido Sistema;Pedido Supra;Danfe;Data Faturamento;Código Cliente;Cliente;Nome Fantasia;Município;Peso Líquido (kg);Valor Sem Frete;Valor Com Frete\n";
+        aoa.push(["#", "Nº Pedido Sistema", "Pedido Supra", "Danfe", "Data Faturamento", "Código Cliente", "Cliente", "Nome Fantasia", "Município", "Peso Líquido (kg)", "Valor Sem Frete", "Valor Com Frete"]);
         filename = "relatorio_vendas_por_cliente";
 
         listagemVendas.forEach((item, index) => {
@@ -577,14 +580,13 @@ function exportarExcel() {
             totalSemFrete += vs;
             totalComFrete += vc;
 
-            csv += `"${index + 1}";"${clean(item.numero_pedido)}";"${clean(item.pedido_supra)}";"${clean(item.danfe)}";"${fmtData(item.data_faturamento)}";"${clean(item.codigo_cliente)}";"${clean(item.cliente)}";"${clean(item.nome_fantasia)}";"${clean(item.municipio)}";"${Math.round(p)}";"${vs.toFixed(2).replace('.', ',')}";"${vc.toFixed(2).replace('.', ',')}"\n`;
+            aoa.push([index + 1, item.numero_pedido || "-", item.pedido_supra || "-", item.danfe || "-", fmtData(item.data_faturamento), item.codigo_cliente || "-", limparNomeCliente(item.cliente), item.nome_fantasia || "-", item.municipio || "-", Math.round(p), vs, vc]);
         });
 
-        csv += `"TOTAL ACUMULADO";"";"";"";"";"";"";"";"";"${Math.round(totalPeso)}";"${totalSemFrete.toFixed(2).replace('.', ',')}";"${totalComFrete.toFixed(2).replace('.', ',')}"\n`;
+        aoa.push(["TOTAL ACUMULADO", "", "", "", "", "", "", "", "", Math.round(totalPeso), totalSemFrete, totalComFrete]);
 
     } else if (activeReport === "produto") {
-        // Vendas por Produto
-        csv = "#;Código Produto;Produto;Embalagem;Peso Líq. Unit. (kg);Quantidade;Peso Líq. Acumulado (kg);Valor Sem Frete;Valor Com Frete\n";
+        aoa.push(["#", "Código Produto", "Produto", "Embalagem", "Peso Líq. Unit. (kg)", "Quantidade", "Peso Líq. Acumulado (kg)", "Valor Sem Frete", "Valor Com Frete"]);
         filename = "relatorio_vendas_por_produto";
 
         listagemVendas.forEach((item, index) => {
@@ -598,26 +600,22 @@ function exportarExcel() {
             totalSemFrete += vs;
             totalComFrete += vc;
 
-            csv += `"${index + 1}";"${clean(item.codigo_produto)}";"${clean(item.produto)}";"${clean(item.embalagem)}";"${Math.round(pu)}";"${q}";"${Math.round(pa)}";"${vs.toFixed(2).replace('.', ',')}";"${vc.toFixed(2).replace('.', ',')}"\n`;
+            aoa.push([index + 1, item.codigo_produto || "-", item.produto || "-", item.embalagem || "-", Math.round(pu), q, Math.round(pa), vs, vc]);
         });
 
-        csv += `"TOTAL ACUMULADO";"";"";"";"";"";"${Math.round(totalPeso)}";"${totalSemFrete.toFixed(2).replace('.', ',')}";"${totalComFrete.toFixed(2).replace('.', ',')}"\n`;
+        aoa.push(["TOTAL ACUMULADO", "", "", "", "", "", Math.round(totalPeso), totalSemFrete, totalComFrete]);
+
     } else if (activeReport === "gerencial") {
-        // Relatório Gerencial
-        csv = "#;CNPJ/CPF;Nome Cliente;Município;Vendedor;Data Última Compra;Observação\n";
+        aoa.push(["#", "CNPJ/CPF", "Nome Cliente", "Município", "Vendedor", "Data Última Compra", "Observação"]);
         filename = "relatorio_gerencial";
 
         listagemVendas.forEach((item, index) => {
-            csv += `"${index + 1}";"${clean(item.documento)}";"${clean(item.nome_cliente)}";"${clean(item.municipio)}";"${clean(item.vendedor)}";"${fmtData(item.data_ultima_compra)}";"${clean(item.observacao)}"\n`;
+            aoa.push([index + 1, item.documento || "-", limparNomeCliente(item.nome_cliente), item.municipio || "-", item.vendedor || "-", fmtData(item.data_ultima_compra), item.observacao || "-"]);
         });
     }
 
-    // Utiliza BOM (\ufeff) para forçar o Excel a interpretar os caracteres especiais em UTF-8 no Windows
-    const blob = new Blob(["\ufeff" + csv], { type: 'text/csv;charset=utf-8;' });
-    const link = document.createElement("a");
-    link.href = URL.createObjectURL(blob);
-    link.download = `${filename}_${new Date().toISOString().slice(0, 10)}.csv`;
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
+    const ws = XLSX.utils.aoa_to_sheet(aoa);
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, "Relatorio");
+    XLSX.writeFile(wb, `${filename}_${new Date().toISOString().slice(0, 10)}.xlsx`);
 }
