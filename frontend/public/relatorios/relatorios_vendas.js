@@ -126,7 +126,7 @@ document.addEventListener("DOMContentLoaded", async () => {
 
     // 7. Auto-filtragem nos inputs e selects
     let debounceTimer;
-    document.querySelectorAll('.filtros-container .os-input, .filtros-container .os-select').forEach(el => {
+    document.querySelectorAll('.filtro-campo .os-input, .filtro-campo .os-select').forEach(el => {
         const evType = (el.tagName === 'SELECT' || el.type === 'date') ? 'change' : 'input';
         el.addEventListener(evType, () => {
             clearTimeout(debounceTimer);
