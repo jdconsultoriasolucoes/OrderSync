@@ -862,8 +862,8 @@ def get_relatorio_gerencial(
     params = {}
     
     if codigo_cliente:
-        query_str += " AND c.cadastro_codigo_da_empresa = :codigo_cliente"
-        params["codigo_cliente"] = codigo_cliente
+        query_str += " AND c.cadastro_codigo_da_empresa::text ILIKE :codigo_cliente"
+        params["codigo_cliente"] = f"%{codigo_cliente}%"
         
     if cnpj_cpf:
         query_str += " AND (c.cadastro_cnpj ILIKE :cnpj_cpf OR c.cadastro_cpf ILIKE :cnpj_cpf)"
@@ -950,8 +950,8 @@ def get_relatorio_gerencial2(
     params = {}
     
     if codigo_cliente:
-        query_str += " AND c.cadastro_codigo_da_empresa = :codigo_cliente"
-        params["codigo_cliente"] = codigo_cliente
+        query_str += " AND c.cadastro_codigo_da_empresa::text ILIKE :codigo_cliente"
+        params["codigo_cliente"] = f"%{codigo_cliente}%"
         
     if cnpj_cpf:
         query_str += " AND (c.cadastro_cnpj ILIKE :cnpj_cpf OR c.cadastro_cpf ILIKE :cnpj_cpf)"

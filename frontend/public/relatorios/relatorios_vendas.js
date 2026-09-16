@@ -411,6 +411,30 @@ async function buscarDadosRelatorio() {
  * Renderiza as linhas na tabela e calcula os totais dinâmicos
  */
 function renderizarTabela() {
+    if (activeReport === "gerencial2") {
+        const mesesSel = document.getElementById("filtro-gerencial2-meses");
+        const qtdeMeses = mesesSel ? parseInt(mesesSel.value) : 12;
+        gerencial2Meses = generateLastXMonths(qtdeMeses);
+        
+        let htmlHeader1 = `<tr>
+            <th rowspan="2" style="width: 40px; min-width: 40px; border-right: 1px solid var(--os-border);">#</th>
+            <th rowspan="2" data-sort="codigo_cliente" style="min-width: 100px; border-right: 1px solid var(--os-border);">Cód. Cliente</th>
+            <th rowspan="2" data-sort="cliente" style="min-width: 250px; border-right: 1px solid var(--os-border);">Cliente</th>`;
+        let htmlHeader2 = `<tr>`;
+        
+        gerencial2Meses.forEach((m, i) => {
+            const [ano, mes] = m.split('-');
+            const borderLeft = "border-left: 2px solid #cbd5e1;";
+            htmlHeader1 += `<th colspan="2" style="text-align: center; border-bottom: 1px solid var(--os-border); background-color: #f8fafc; ${borderLeft}">${mes}/${ano}</th>`;
+            htmlHeader2 += `<th class="tar" style="${borderLeft}">Peso (kg)</th><th class="tar col-money">Valor (R$)</th>`;
+        });
+        
+        htmlHeader1 += `</tr>`;
+        htmlHeader2 += `</tr>`;
+        
+        tableHeaders.innerHTML = htmlHeader1 + htmlHeader2;
+    }
+
     if (listagemVendas.length === 0) {
         emptyStateEl.style.display = "block";
         tfoot.innerHTML = "";
@@ -736,9 +760,12 @@ function exportarExcel() {
             if (row === 1 || row === 2) {
                 // Tenta centralizar e negrito nos cabeçalhos
                 ws[cell].s = { alignment: { horizontal: "center", vertical: "center" }, font: { bold: true } };
-            } else if (typeof ws[cell].v === 'number') {
-                // Formato de número com 2 casas decimais e separador de milhar para pesos e valores
-                ws[cell].z = '#,##0.00';
+            } else {
+                // Centraliza todas as informações e formata números
+                ws[cell].s = { alignment: { horizontal: "center", vertical: "center" } };
+                if (typeof ws[cell].v === 'number') {
+                    ws[cell].z = '#,##0.00';
+                }
             }
         }
         
