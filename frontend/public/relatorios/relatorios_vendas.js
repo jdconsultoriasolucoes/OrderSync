@@ -580,7 +580,7 @@ function exportarExcel() {
 
         csv += `"TOTAL ACUMULADO";"";"";"";"";"";"";"";"";"${Math.round(totalPeso)}";"${totalSemFrete.toFixed(2).replace('.', ',')}";"${totalComFrete.toFixed(2).replace('.', ',')}"\n`;
 
-    } else {
+    } else if (activeReport === "produto") {
         // Vendas por Produto
         csv = "#;Código Produto;Produto;Embalagem;Peso Líq. Unit. (kg);Quantidade;Peso Líq. Acumulado (kg);Valor Sem Frete;Valor Com Frete\n";
         filename = "relatorio_vendas_por_produto";
