@@ -835,4 +835,80 @@ def get_vendas_produtos(
     return [dict(r) for r in rows]
 
 
+@router.get("/gerencial")
+def get_relatorio_gerencial(
+    cnpj_cpf: Optional[str] = Query(None),
+    nome_cliente: Optional[str] = Query(None),
+    municipio: Optional[str] = Query(None),
+    vendedor: Optional[str] = Query(None),
+    data_compra_inicio: Optional[str] = Query(None),
+    data_compra_fim: Optional[str] = Query(None),
+    observacao: Optional[str] = Query(None),
+    db: Session = Depends(get_db)
+):
+    query_str = """
+        SELECT 
+            COALESCE(NULLIF(c.cadastro_cnpj, ''), c.cadastro_cpf) AS documento,
+            c.cadastro_nome_cliente AS nome_cliente,
+            COALESCE(c.faturamento_municipio, c.entrega_municipio) AS municipio,
+            c.elaboracao_vendedor AS vendedor,
+            MAX(p.created_at) AS data_ultima_compra,
+            c.outras_observacoes AS observacao
+        FROM public.t_cadastro_cliente_v2 c
+        LEFT JOIN public.tb_pedidos p ON p.codigo_cliente = c.cadastro_codigo_da_empresa::text
+        WHERE 1=1
+    """
+    params = {}
+    
+    if cnpj_cpf:
+        query_str += " AND (c.cadastro_cnpj ILIKE :cnpj_cpf OR c.cadastro_cpf ILIKE :cnpj_cpf)"
+        params["cnpj_cpf"] = f"%{cnpj_cpf}%"
+    
+    if nome_cliente:
+        query_str += " AND c.cadastro_nome_cliente ILIKE :nome_cliente"
+        params["nome_cliente"] = f"%{nome_cliente}%"
+        
+    if municipio:
+        query_str += " AND COALESCE(c.faturamento_municipio, c.entrega_municipio) = :municipio"
+        params["municipio"] = municipio
+        
+    if vendedor:
+        query_str += " AND c.elaboracao_vendedor = :vendedor"
+        params["vendedor"] = vendedor
+        
+    if observacao:
+        query_str += " AND c.outras_observacoes ILIKE :observacao"
+        params["observacao"] = f"%{observacao}%"
+        
+    query_str += " GROUP BY c.id"
+    
+    having_clauses = []
+    if data_compra_inicio:
+        having_clauses.append("MAX(p.created_at)::date >= CAST(:data_compra_inicio AS DATE)")
+        params["data_compra_inicio"] = data_compra_inicio
+        
+    if data_compra_fim:
+        having_clauses.append("MAX(p.created_at)::date <= CAST(:data_compra_fim AS DATE)")
+        params["data_compra_fim"] = data_compra_fim
+        
+    if having_clauses:
+        query_str += " HAVING " + " AND ".join(having_clauses)
+        
+    query_str += " ORDER BY c.cadastro_nome_cliente ASC"
+    
+    rows = db.execute(text(query_str), params).mappings().all()
+    
+    return [dict(r) for r in rows]
 
+@router.get("/gerencial/filtros")
+def get_filtros_gerencial(db: Session = Depends(get_db)):
+    q_mun = text("SELECT DISTINCT COALESCE(faturamento_municipio, entrega_municipio) FROM public.t_cadastro_cliente_v2 WHERE COALESCE(faturamento_municipio, entrega_municipio) IS NOT NULL AND COALESCE(faturamento_municipio, entrega_municipio) != '' ORDER BY 1")
+    q_vend = text("SELECT DISTINCT elaboracao_vendedor FROM public.t_cadastro_cliente_v2 WHERE elaboracao_vendedor IS NOT NULL AND elaboracao_vendedor != '' ORDER BY 1")
+    
+    municipios = [r[0] for r in db.execute(q_mun).all()]
+    vendedores = [r[0] for r in db.execute(q_vend).all()]
+    
+    return {
+        "municipios": municipios,
+        "vendedores": vendedores
+    }

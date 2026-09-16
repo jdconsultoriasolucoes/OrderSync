@@ -17,6 +17,15 @@ const selMunicipio = document.getElementById("filtro-municipio");
 const selGrupo = document.getElementById("filtro-grupo");
 const divFiltroGrupo = document.getElementById("campo-filtro-grupo");
 
+// Elementos Filtro Gerencial
+const inGerencialDoc = document.getElementById("filtro-gerencial-documento");
+const inGerencialNome = document.getElementById("filtro-gerencial-nome");
+const selGerencialMun = document.getElementById("filtro-gerencial-municipio");
+const selGerencialVend = document.getElementById("filtro-gerencial-vendedor");
+const inGerencialDataInicio = document.getElementById("filtro-gerencial-data-inicio");
+const inGerencialDataFim = document.getElementById("filtro-gerencial-data-fim");
+const inGerencialObs = document.getElementById("filtro-gerencial-observacao");
+
 const btnFiltrar = document.getElementById("btn-filtrar");
 const btnLimpar = document.getElementById("btn-limpar-filtros");
 const btnExportar = document.getElementById("btn-exportar-excel");
@@ -29,7 +38,7 @@ const emptyStateEl = document.getElementById("empty-state");
 
 const txtTitulo = document.getElementById("titulo-relatorio-principal");
 
-const menuButtons = document.querySelectorAll("#relatorios-menu-vendas button");
+const menuButtons = document.querySelectorAll(".relatorios-menu button");
 
 // State
 let activeReport = "cliente"; // "cliente" ou "produto"
@@ -107,10 +116,22 @@ document.addEventListener("DOMContentLoaded", async () => {
  * Altera cabeçalhos, títulos e visibilidade dos filtros conforme relatório ativo
  */
 function alternarRelatorioUI() {
+    // Alterna a visibilidade dos campos de filtro
+    const todosFiltros = document.querySelectorAll(".filtro-campo");
+    todosFiltros.forEach(f => {
+        if (f.classList.contains("filtro-gerencial")) {
+            f.style.display = activeReport === "gerencial" ? "flex" : "none";
+        } else {
+            if (f.id === "campo-filtro-grupo") {
+                f.style.display = activeReport === "produto" ? "flex" : "none";
+            } else {
+                f.style.display = activeReport === "gerencial" ? "none" : "flex";
+            }
+        }
+    });
+
     if (activeReport === "cliente") {
         txtTitulo.textContent = "Relatório de Vendas por Cliente";
-        divFiltroGrupo.style.display = "none";
-        selGrupo.value = ""; // limpa filtro de grupo
         
         // Cabeçalhos para Vendas por Cliente com Linha de Totais no Topo
         tableHeaders.innerHTML = `
@@ -135,9 +156,8 @@ function alternarRelatorioUI() {
                 <td class="tar col-money" id="total-valor-com" style="font-weight: bold; border-bottom: 2px solid var(--os-border);">R$ 0,00</td>
             </tr>
         `;
-    } else {
+    } else if (activeReport === "produto") {
         txtTitulo.textContent = "Relatório de Vendas por Produto";
-        divFiltroGrupo.style.display = "flex";
         
         // Cabeçalhos para Vendas por Produto com Linha de Totais no Topo
         tableHeaders.innerHTML = `
@@ -157,6 +177,21 @@ function alternarRelatorioUI() {
                 <td class="tar" id="total-peso" style="font-weight: bold; border-bottom: 2px solid var(--os-border);">0 kg</td>
                 <td class="tar col-money" id="total-valor-sem" style="font-weight: bold; border-bottom: 2px solid var(--os-border);">R$ 0,00</td>
                 <td class="tar col-money" id="total-valor-com" style="font-weight: bold; border-bottom: 2px solid var(--os-border);">R$ 0,00</td>
+            </tr>
+        `;
+    } else if (activeReport === "gerencial") {
+        txtTitulo.textContent = "Relatório Gerencial";
+        
+        // Cabeçalhos para Relatório Gerencial
+        tableHeaders.innerHTML = `
+            <tr>
+                <th>#</th>
+                <th data-sort="documento">CNPJ/CPF</th>
+                <th data-sort="nome_cliente">Nome Cliente</th>
+                <th data-sort="municipio">Município</th>
+                <th data-sort="vendedor">Vendedor</th>
+                <th data-sort="data_ultima_compra">Data Última Compra</th>
+                <th data-sort="observacao">Observação</th>
             </tr>
         `;
     }
@@ -217,6 +252,30 @@ async function carregarFiltrosMetadata() {
                 selGrupo.appendChild(opt);
             });
         }
+        
+        // Popular Filtros Gerenciais
+        const respGerencial = await fetch(`${API_BASE}/api/relatorios/gerencial/filtros`, {
+            headers: { "Authorization": `Bearer ${token}` }
+        });
+        if (respGerencial.ok) {
+            const dataG = await respGerencial.json();
+            if (dataG.municipios) {
+                dataG.municipios.forEach(m => {
+                    const opt = document.createElement("option");
+                    opt.value = m;
+                    opt.textContent = m;
+                    selGerencialMun.appendChild(opt);
+                });
+            }
+            if (dataG.vendedores) {
+                dataG.vendedores.forEach(v => {
+                    const opt = document.createElement("option");
+                    opt.value = v;
+                    opt.textContent = v;
+                    selGerencialVend.appendChild(opt);
+                });
+            }
+        }
     } catch (err) {
         console.error("Falha ao carregar metadados dos filtros:", err);
     }
@@ -233,18 +292,31 @@ async function buscarDadosRelatorio() {
 
     // Constroi query string
     const queryParams = new URLSearchParams();
-    if (inDataInicio.value) queryParams.append("data_inicio", inDataInicio.value);
-    if (inDataFim.value) queryParams.append("data_fim", inDataFim.value);
-    if (inFaturamentoInicio.value) queryParams.append("faturamento_inicio", inFaturamentoInicio.value);
-    if (inFaturamentoFim.value) queryParams.append("faturamento_fim", inFaturamentoFim.value);
-    if (selFilial.value) queryParams.append("filiais", selFilial.value);
-    if (selCategoria.value) queryParams.append("categoria", selCategoria.value);
-    if (selStatus.value) queryParams.append("status_list", selStatus.value);
-    if (selMunicipio.value) queryParams.append("municipios", selMunicipio.value);
-    if (activeReport === "produto" && selGrupo.value) queryParams.append("grupos", selGrupo.value);
+    
+    if (activeReport === "gerencial") {
+        if (inGerencialDoc.value) queryParams.append("cnpj_cpf", inGerencialDoc.value);
+        if (inGerencialNome.value) queryParams.append("nome_cliente", inGerencialNome.value);
+        if (selGerencialMun.value) queryParams.append("municipio", selGerencialMun.value);
+        if (selGerencialVend.value) queryParams.append("vendedor", selGerencialVend.value);
+        if (inGerencialDataInicio.value) queryParams.append("data_compra_inicio", inGerencialDataInicio.value);
+        if (inGerencialDataFim.value) queryParams.append("data_compra_fim", inGerencialDataFim.value);
+        if (inGerencialObs.value) queryParams.append("observacao", inGerencialObs.value);
+    } else {
+        if (inDataInicio.value) queryParams.append("data_inicio", inDataInicio.value);
+        if (inDataFim.value) queryParams.append("data_fim", inDataFim.value);
+        if (inFaturamentoInicio.value) queryParams.append("faturamento_inicio", inFaturamentoInicio.value);
+        if (inFaturamentoFim.value) queryParams.append("faturamento_fim", inFaturamentoFim.value);
+        if (selFilial.value) queryParams.append("filiais", selFilial.value);
+        if (selCategoria.value) queryParams.append("categoria", selCategoria.value);
+        if (selStatus.value) queryParams.append("status_list", selStatus.value);
+        if (selMunicipio.value) queryParams.append("municipios", selMunicipio.value);
+        if (activeReport === "produto" && selGrupo.value) queryParams.append("grupos", selGrupo.value);
+    }
 
     // Seleciona endpoint conforme relatório ativo
-    const endpoint = activeReport === "cliente" ? "vendas_cliente" : "vendas_produtos";
+    let endpoint = "vendas_cliente";
+    if (activeReport === "produto") endpoint = "vendas_produtos";
+    else if (activeReport === "gerencial") endpoint = "gerencial";
 
     try {
         const token = window.Auth ? window.Auth.getToken() : '';
@@ -331,6 +403,22 @@ function renderizarTabela() {
             `;
         });
 
+        tbody.innerHTML = html;
+    } else if (activeReport === "gerencial") {
+        listagemVendas.forEach((item, index) => {
+            html += `
+                <tr>
+                    <td>${index + 1}</td>
+                    <td>${item.documento || "-"}</td>
+                    <td>${item.nome_cliente || "-"}</td>
+                    <td>${item.municipio || "-"}</td>
+                    <td>${item.vendedor || "-"}</td>
+                    <td>${fmtData(item.data_ultima_compra)}</td>
+                    <td>${item.observacao || "-"}</td>
+                </tr>
+            `;
+        });
+        
         tbody.innerHTML = html;
     }
 
@@ -444,6 +532,14 @@ async function limparTodosFiltros() {
     selStatus.value = "";
     selMunicipio.value = "";
     selGrupo.value = "";
+    
+    inGerencialDoc.value = "";
+    inGerencialNome.value = "";
+    selGerencialMun.value = "";
+    selGerencialVend.value = "";
+    inGerencialDataInicio.value = "";
+    inGerencialDataFim.value = "";
+    inGerencialObs.value = "";
 
     await buscarDadosRelatorio();
 }
@@ -504,6 +600,14 @@ function exportarExcel() {
         });
 
         csv += `"TOTAL ACUMULADO";"";"";"";"";"";"${Math.round(totalPeso)}";"${totalSemFrete.toFixed(2).replace('.', ',')}";"${totalComFrete.toFixed(2).replace('.', ',')}"\n`;
+    } else if (activeReport === "gerencial") {
+        // Relatório Gerencial
+        csv = "#;CNPJ/CPF;Nome Cliente;Município;Vendedor;Data Última Compra;Observação\n";
+        filename = "relatorio_gerencial";
+
+        listagemVendas.forEach((item, index) => {
+            csv += `"${index + 1}";"${clean(item.documento)}";"${clean(item.nome_cliente)}";"${clean(item.municipio)}";"${clean(item.vendedor)}";"${fmtData(item.data_ultima_compra)}";"${clean(item.observacao)}"\n`;
+        });
     }
 
     // Utiliza BOM (\ufeff) para forçar o Excel a interpretar os caracteres especiais em UTF-8 no Windows

@@ -123,7 +123,7 @@
                         <line x1="18" y1="20" x2="18" y2="10"></line>
                         <line x1="12" y1="20" x2="12" y2="4"></line>
                         <line x1="6" y1="20" x2="6" y2="14"></line>
-                    </svg> Relatórios de Vendas
+                    </svg> Relatórios
                 </a></li>
         </ul>
         <div class="os-sidebar-section">Sistema</div>
@@ -163,9 +163,15 @@
         <div class="relatorios-container relatorios-top-nav-container">
             <!-- Sidebar Interna dos Relatórios (agora no topo) -->
             <aside class="relatorios-sidebar">
+                <div class="relatorios-topico" style="font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.05em; font-weight: 600; color: var(--os-text-muted); padding: 8px 12px; margin-top: 8px;">Relatórios de Vendas</div>
                 <ul class="relatorios-menu" id="relatorios-menu-vendas">
                     <li><button data-report="cliente" class="active">Vendas por Cliente</button></li>
                     <li><button data-report="produto">Vendas por Produto</button></li>
+                </ul>
+                
+                <div class="relatorios-topico" style="font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.05em; font-weight: 600; color: var(--os-text-muted); padding: 8px 12px; margin-top: 16px;">Relatórios Gerenciais</div>
+                <ul class="relatorios-menu" id="relatorios-menu-gerenciais">
+                    <li><button data-report="gerencial">Relatório Gerencial</button></li>
                 </ul>
             </aside>
 
@@ -240,6 +246,46 @@
                             <option value="">Todos os Grupos</option>
                         </select>
                     </div>
+
+                    <!-- Filtros Relatório Gerencial -->
+                    <div class="filtro-campo filtro-gerencial" style="display: none;">
+                        <label class="os-label">CNPJ/CPF</label>
+                        <input type="text" id="filtro-gerencial-documento" class="os-input" placeholder="Pesquisar documento">
+                    </div>
+
+                    <div class="filtro-campo filtro-gerencial" style="display: none;">
+                        <label class="os-label">Nome Cliente</label>
+                        <input type="text" id="filtro-gerencial-nome" class="os-input" placeholder="Pesquisar cliente">
+                    </div>
+
+                    <div class="filtro-campo filtro-gerencial" style="display: none;">
+                        <label class="os-label">Município</label>
+                        <select id="filtro-gerencial-municipio" class="os-select">
+                            <option value="">Todos os Municípios</option>
+                        </select>
+                    </div>
+
+                    <div class="filtro-campo filtro-gerencial" style="display: none;">
+                        <label class="os-label">Vendedor</label>
+                        <select id="filtro-gerencial-vendedor" class="os-select">
+                            <option value="">Todos os Vendedores</option>
+                        </select>
+                    </div>
+
+                    <div class="filtro-campo filtro-duplo filtro-gerencial" style="display: none;">
+                        <label class="os-label">Data da Última Compra</label>
+                        <div class="duplo-inputs">
+                            <input type="date" id="filtro-gerencial-data-inicio" class="os-input" title="De">
+                            <span class="duplo-separador">até</span>
+                            <input type="date" id="filtro-gerencial-data-fim" class="os-input" title="Até">
+                        </div>
+                    </div>
+
+                    <div class="filtro-campo filtro-gerencial" style="display: none;">
+                        <label class="os-label">Observação</label>
+                        <input type="text" id="filtro-gerencial-observacao" class="os-input" placeholder="Pesquisar observação">
+                    </div>
+
                     
                     <!-- Botões de Ação do Filtro -->
                     <div class="filtros-actions-container">
