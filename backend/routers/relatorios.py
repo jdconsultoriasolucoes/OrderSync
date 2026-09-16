@@ -933,10 +933,16 @@ def get_relatorio_gerencial2(
             c.cadastro_codigo_da_empresa AS codigo_cliente,
             c.cadastro_nome_cliente AS cliente,
             TO_CHAR(DATE_TRUNC('month', p.created_at), 'YYYY-MM') AS mes_ano,
-            SUM(p.peso_total_kg) AS peso,
+            SUM(COALESCE(pb.peso_liquido, 0)) AS peso,
             SUM(p.total_pedido) AS valor
         FROM public.tb_pedidos p
         JOIN public.t_cadastro_cliente_v2 c ON p.codigo_cliente = c.cadastro_codigo_da_empresa
+        LEFT JOIN (
+            SELECT i.id_pedido, SUM(i.quantidade * COALESCE(CAST(pr.peso AS FLOAT), 0)) as peso_liquido
+            FROM public.tb_pedidos_itens i
+            LEFT JOIN public.t_cadastro_produto_v2 pr ON pr.codigo_supra = i.codigo
+            GROUP BY i.id_pedido
+        ) pb ON pb.id_pedido = p.id_pedido
         WHERE p.created_at >= DATE_TRUNC('month', CURRENT_DATE) - INTERVAL '{meses - 1} months'
           AND p.status != 'Cancelado'
     """

@@ -27,7 +27,6 @@ const inGerencialDataInicio = document.getElementById("filtro-gerencial-data-ini
 const inGerencialDataFim = document.getElementById("filtro-gerencial-data-fim");
 const inGerencialObs = document.getElementById("filtro-gerencial-observacao");
 
-const btnFiltrar = document.getElementById("btn-filtrar");
 const btnLimpar = document.getElementById("btn-limpar-filtros");
 const btnExportar = document.getElementById("btn-exportar-excel");
 
@@ -122,9 +121,20 @@ document.addEventListener("DOMContentLoaded", async () => {
     await buscarDadosRelatorio();
 
     // 6. Registrar Listeners de Ações
-    btnFiltrar.addEventListener("click", buscarDadosRelatorio);
     btnLimpar.addEventListener("click", limparTodosFiltros);
     btnExportar.addEventListener("click", exportarExcel);
+
+    // 7. Auto-filtragem nos inputs e selects
+    let debounceTimer;
+    document.querySelectorAll('.filtros-container .os-input, .filtros-container .os-select').forEach(el => {
+        const evType = (el.tagName === 'SELECT' || el.type === 'date') ? 'change' : 'input';
+        el.addEventListener(evType, () => {
+            clearTimeout(debounceTimer);
+            debounceTimer = setTimeout(() => {
+                buscarDadosRelatorio();
+            }, 600);
+        });
+    });
 });
 
 /**
@@ -219,9 +229,9 @@ function alternarRelatorioUI() {
         gerencial2Meses = generateLastXMonths(qtdeMeses);
         
         let htmlHeader1 = `<tr>
-            <th rowspan="2" style="width: 40px; min-width: 40px;">#</th>
-            <th rowspan="2" data-sort="codigo_cliente" style="min-width: 100px;">Cód. Cliente</th>
-            <th rowspan="2" data-sort="cliente" style="min-width: 250px;">Cliente</th>`;
+            <th rowspan="2" style="width: 40px; min-width: 40px; border-right: 1px solid var(--os-border);">#</th>
+            <th rowspan="2" data-sort="codigo_cliente" style="min-width: 100px; border-right: 1px solid var(--os-border);">Cód. Cliente</th>
+            <th rowspan="2" data-sort="cliente" style="min-width: 250px; border-right: 1px solid var(--os-border);">Cliente</th>`;
         let htmlHeader2 = `<tr>`;
         
         gerencial2Meses.forEach((m, i) => {
@@ -479,9 +489,9 @@ function renderizarTabela() {
     } else if (activeReport === "gerencial2") {
         listagemVendas.forEach((item, index) => {
             html += `<tr>
-                <td>${index + 1}</td>
-                <td>${item.codigo_cliente || "-"}</td>
-                <td>${limparNomeCliente(item.cliente)}</td>`;
+                <td style="border-right: 1px solid var(--os-border);">${index + 1}</td>
+                <td style="border-right: 1px solid var(--os-border);">${item.codigo_cliente || "-"}</td>
+                <td style="border-right: 1px solid var(--os-border);">${limparNomeCliente(item.cliente)}</td>`;
             
             gerencial2Meses.forEach(m => {
                 const borderLeft = "border-left: 2px solid #cbd5e1;";
@@ -679,11 +689,12 @@ function exportarExcel() {
             aoa.push([index + 1, fmtDoc(item.documento) || "-", limparNomeCliente(item.nome_cliente), item.municipio || "-", item.vendedor || "-", fmtData(item.data_ultima_compra), item.observacao || "-"]);
         });
     } else if (activeReport === "gerencial2") {
-        let row1 = ["#", "Cód. Cliente", "Cliente"];
-        let row2 = ["", "", ""];
+        let row1 = ["Cód. Cliente", "Cliente"];
+        let row2 = ["", ""];
         
         gerencial2Meses.forEach(m => {
-            row1.push(m, "");
+            const [ano, mes] = m.split('-');
+            row1.push(`${mes}/${ano}`, "");
             row2.push("Peso (kg)", "Valor (R$)");
         });
         
@@ -691,7 +702,7 @@ function exportarExcel() {
         filename = "relatorio_gerencial2_evolucao";
         
         listagemVendas.forEach((item, index) => {
-            let row = [index + 1, item.codigo_cliente || "-", limparNomeCliente(item.cliente)];
+            let row = [item.codigo_cliente || "-", limparNomeCliente(item.cliente)];
             gerencial2Meses.forEach(m => {
                 row.push(item.meses?.[m]?.peso || 0);
                 row.push(item.meses?.[m]?.valor || 0);
@@ -706,15 +717,36 @@ function exportarExcel() {
     if (activeReport === "gerencial2") {
         ws['!merges'] = [
             { s: {r:0, c:0}, e: {r:1, c:0} },
-            { s: {r:0, c:1}, e: {r:1, c:1} },
-            { s: {r:0, c:2}, e: {r:1, c:2} }
+            { s: {r:0, c:1}, e: {r:1, c:1} }
         ];
         
-        let cIndex = 3;
+        let cIndex = 2;
         gerencial2Meses.forEach(m => {
             ws['!merges'].push({ s: {r:0, c:cIndex}, e: {r:0, c:cIndex+1} });
             cIndex += 2;
         });
+        
+        // Formatação (SheetJS open-source ignora cores, mas aceita number format `z` e as vezes alignment `s`)
+        for (let cell in ws) {
+            if (cell[0] === '!') continue;
+            
+            const row = parseInt(cell.replace(/\D/g, ''));
+            if (!ws[cell].s) ws[cell].s = {};
+            
+            if (row === 1 || row === 2) {
+                // Tenta centralizar e negrito nos cabeçalhos
+                ws[cell].s = { alignment: { horizontal: "center", vertical: "center" }, font: { bold: true } };
+            } else if (typeof ws[cell].v === 'number') {
+                // Formato de número com 2 casas decimais e separador de milhar para pesos e valores
+                ws[cell].z = '#,##0.00';
+            }
+        }
+        
+        // Configura largura das colunas
+        ws['!cols'] = [{ wch: 15 }, { wch: 45 }]; // Cód Cliente e Cliente
+        for (let i = 0; i < gerencial2Meses.length * 2; i++) {
+            ws['!cols'].push({ wch: 15 }); // Peso e Valor
+        }
     }
 
     const wb = XLSX.utils.book_new();
