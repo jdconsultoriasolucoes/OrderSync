@@ -61,7 +61,9 @@ function fmtPeso(val) {
 
 function fmtData(dateStr) {
     if (!dateStr) return "-";
-    const parts = dateStr.split('-');
+    // Extrai apenas a data se vier com formato ISO
+    const onlyDate = dateStr.split('T')[0];
+    const parts = onlyDate.split('-');
     if (parts.length === 3) {
         return `${parts[2]}/${parts[1]}/${parts[0]}`;
     }
@@ -186,7 +188,7 @@ function alternarRelatorioUI() {
         tableHeaders.innerHTML = `
             <tr>
                 <th>#</th>
-                <th data-sort="documento">CNPJ/CPF</th>
+                <th data-sort="documento" style="white-space: nowrap;">CNPJ/CPF</th>
                 <th data-sort="nome_cliente">Nome Cliente</th>
                 <th data-sort="municipio">Município</th>
                 <th data-sort="vendedor">Vendedor</th>
@@ -409,7 +411,7 @@ function renderizarTabela() {
             html += `
                 <tr>
                     <td>${index + 1}</td>
-                    <td>${item.documento || "-"}</td>
+                    <td style="white-space: nowrap;">${item.documento || "-"}</td>
                     <td>${item.nome_cliente || "-"}</td>
                     <td>${item.municipio || "-"}</td>
                     <td>${item.vendedor || "-"}</td>
