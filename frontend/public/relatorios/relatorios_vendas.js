@@ -381,7 +381,7 @@ function renderizarTabela() {
         });
         
         tbody.innerHTML = html;
-    } else {
+    } else if (activeReport === "produto") {
         // Relatório de Vendas por Produto
         listagemVendas.forEach((item, index) => {
             totalPeso += parseFloat(item.peso_liquido_acumulado || 0);
