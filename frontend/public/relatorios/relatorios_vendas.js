@@ -219,15 +219,16 @@ function alternarRelatorioUI() {
         gerencial2Meses = generateLastXMonths(qtdeMeses);
         
         let htmlHeader1 = `<tr>
-            <th rowspan="2">#</th>
-            <th rowspan="2" data-sort="codigo_cliente">Cód. Cliente</th>
-            <th rowspan="2" data-sort="cliente">Cliente</th>`;
+            <th rowspan="2" style="width: 40px; min-width: 40px;">#</th>
+            <th rowspan="2" data-sort="codigo_cliente" style="min-width: 100px;">Cód. Cliente</th>
+            <th rowspan="2" data-sort="cliente" style="min-width: 250px;">Cliente</th>`;
         let htmlHeader2 = `<tr>`;
         
-        gerencial2Meses.forEach(m => {
+        gerencial2Meses.forEach((m, i) => {
             const [ano, mes] = m.split('-');
-            htmlHeader1 += `<th colspan="2" style="text-align: center; border-bottom: 1px solid var(--os-border); background-color: #f8fafc;">${mes}/${ano}</th>`;
-            htmlHeader2 += `<th class="tar">Peso (kg)</th><th class="tar col-money">Valor (R$)</th>`;
+            const borderLeft = "border-left: 2px solid #cbd5e1;";
+            htmlHeader1 += `<th colspan="2" style="text-align: center; border-bottom: 1px solid var(--os-border); background-color: #f8fafc; ${borderLeft}">${mes}/${ano}</th>`;
+            htmlHeader2 += `<th class="tar" style="${borderLeft}">Peso (kg)</th><th class="tar col-money">Valor (R$)</th>`;
         });
         
         htmlHeader1 += `</tr>`;
@@ -285,12 +286,6 @@ async function carregarFiltrosMetadata() {
                 optG.value = m;
                 optG.textContent = m;
                 selGerencialMun.appendChild(optG);
-                
-                const optG2 = document.createElement("option");
-                optG2.value = m;
-                optG2.textContent = m;
-                const selG2Mun = document.getElementById("filtro-gerencial2-municipio");
-                if(selG2Mun) selG2Mun.appendChild(optG2);
             });
         }
 
@@ -324,12 +319,6 @@ async function carregarFiltrosMetadata() {
                     opt.value = v;
                     opt.textContent = v;
                     selGerencialVend.appendChild(opt);
-                    
-                    const optG2 = document.createElement("option");
-                    optG2.value = v;
-                    optG2.textContent = v;
-                    const selG2Vend = document.getElementById("filtro-gerencial2-vendedor");
-                    if (selG2Vend) selG2Vend.appendChild(optG2);
                 });
             }
         }
@@ -361,17 +350,11 @@ async function buscarDadosRelatorio() {
         if (inGerencialObs.value) queryParams.append("observacao", inGerencialObs.value);
     } else if (activeReport === "gerencial2") {
         const inG2Cod = document.getElementById("filtro-gerencial2-codigo");
-        const inG2Doc = document.getElementById("filtro-gerencial2-documento");
         const inG2Nome = document.getElementById("filtro-gerencial2-nome");
-        const selG2Mun = document.getElementById("filtro-gerencial2-municipio");
-        const selG2Vend = document.getElementById("filtro-gerencial2-vendedor");
         const selG2Meses = document.getElementById("filtro-gerencial2-meses");
         
         if (inG2Cod && inG2Cod.value) queryParams.append("codigo_cliente", inG2Cod.value);
-        if (inG2Doc && inG2Doc.value) queryParams.append("cnpj_cpf", inG2Doc.value);
         if (inG2Nome && inG2Nome.value) queryParams.append("nome_cliente", inG2Nome.value);
-        if (selG2Mun && selG2Mun.value) queryParams.append("municipio", selG2Mun.value);
-        if (selG2Vend && selG2Vend.value) queryParams.append("vendedor", selG2Vend.value);
         if (selG2Meses && selG2Meses.value) queryParams.append("meses", selG2Meses.value);
     } else {
         if (inDataInicio.value) queryParams.append("data_inicio", inDataInicio.value);
@@ -501,9 +484,10 @@ function renderizarTabela() {
                 <td>${limparNomeCliente(item.cliente)}</td>`;
             
             gerencial2Meses.forEach(m => {
+                const borderLeft = "border-left: 2px solid #cbd5e1;";
                 const p = item.meses?.[m]?.peso || 0;
                 const v = item.meses?.[m]?.valor || 0;
-                html += `<td class="tar">${fmtPeso(p).replace(' kg','')}</td><td class="tar col-money">${fmtMoney(v)}</td>`;
+                html += `<td class="tar" style="${borderLeft}">${fmtPeso(p).replace(' kg','')}</td><td class="tar col-money">${fmtMoney(v)}</td>`;
             });
             html += `</tr>`;
         });
