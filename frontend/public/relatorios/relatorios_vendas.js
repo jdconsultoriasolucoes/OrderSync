@@ -18,6 +18,7 @@ const selGrupo = document.getElementById("filtro-grupo");
 const divFiltroGrupo = document.getElementById("campo-filtro-grupo");
 
 // Elementos Filtro Gerencial
+const inGerencialCodigo = document.getElementById("filtro-gerencial-codigo");
 const inGerencialDoc = document.getElementById("filtro-gerencial-documento");
 const inGerencialNome = document.getElementById("filtro-gerencial-nome");
 const selGerencialMun = document.getElementById("filtro-gerencial-municipio");
@@ -75,6 +76,13 @@ function limparNomeCliente(nome) {
     return nome.replace(/\s*-\s*(\d{2,3}\.\d{3}\.\d{3}(\/\d{4})?-\d{2})$/, '').trim();
 }
 
+function fmtDoc(s) {
+    const d = String(s || '').replace(/\D/g, '');
+    if (d.length === 14) return d.replace(/^(\d{2})(\d{3})(\d{3})(\d{4})(\d{2})$/, '$1.$2.$3/$4-$5');
+    if (d.length === 11) return d.replace(/^(\d{3})(\d{3})(\d{3})(\d{2})$/, '$1.$2.$3-$4');
+    return s || '';
+}
+
 document.addEventListener("DOMContentLoaded", async () => {
     // 1. Configurar datas padrão (Início do mês atual até Hoje)
     const hoje = new Date();
@@ -127,12 +135,14 @@ function alternarRelatorioUI() {
     const todosFiltros = document.querySelectorAll(".filtro-campo");
     todosFiltros.forEach(f => {
         if (f.classList.contains("filtro-gerencial")) {
-            f.style.display = activeReport === "gerencial" ? "flex" : "none";
+            f.style.display = (activeReport === "gerencial") ? "flex" : "none";
+        } else if (f.classList.contains("filtro-gerencial2")) {
+            f.style.display = (activeReport === "gerencial2") ? "flex" : "none";
         } else {
             if (f.id === "campo-filtro-grupo") {
                 f.style.display = activeReport === "produto" ? "flex" : "none";
             } else {
-                f.style.display = activeReport === "gerencial" ? "none" : "flex";
+                f.style.display = (activeReport === "gerencial" || activeReport === "gerencial2") ? "none" : "flex";
             }
         }
     });
@@ -201,6 +211,29 @@ function alternarRelatorioUI() {
                 <th data-sort="observacao">Observação</th>
             </tr>
         `;
+    } else if (activeReport === "gerencial2") {
+        txtTitulo.textContent = "Relatório Gerencial 2 - Evolução de Vendas";
+        
+        const mesesSel = document.getElementById("filtro-gerencial2-meses");
+        const qtdeMeses = mesesSel ? parseInt(mesesSel.value) : 12;
+        gerencial2Meses = generateLastXMonths(qtdeMeses);
+        
+        let htmlHeader1 = `<tr>
+            <th rowspan="2">#</th>
+            <th rowspan="2" data-sort="codigo_cliente">Cód. Cliente</th>
+            <th rowspan="2" data-sort="cliente">Cliente</th>`;
+        let htmlHeader2 = `<tr>`;
+        
+        gerencial2Meses.forEach(m => {
+            const [ano, mes] = m.split('-');
+            htmlHeader1 += `<th colspan="2" style="text-align: center; border-bottom: 1px solid var(--os-border); background-color: #f8fafc;">${mes}/${ano}</th>`;
+            htmlHeader2 += `<th class="tar">Peso (kg)</th><th class="tar col-money">Valor (R$)</th>`;
+        });
+        
+        htmlHeader1 += `</tr>`;
+        htmlHeader2 += `</tr>`;
+        
+        tableHeaders.innerHTML = htmlHeader1 + htmlHeader2;
     }
 
     // Registrar clique de ordenação interativa nas novas colunas injetadas
@@ -247,6 +280,17 @@ async function carregarFiltrosMetadata() {
                 opt.value = m;
                 opt.textContent = m;
                 selMunicipio.appendChild(opt);
+                
+                const optG = document.createElement("option");
+                optG.value = m;
+                optG.textContent = m;
+                selGerencialMun.appendChild(optG);
+                
+                const optG2 = document.createElement("option");
+                optG2.value = m;
+                optG2.textContent = m;
+                const selG2Mun = document.getElementById("filtro-gerencial2-municipio");
+                if(selG2Mun) selG2Mun.appendChild(optG2);
             });
         }
 
@@ -280,6 +324,12 @@ async function carregarFiltrosMetadata() {
                     opt.value = v;
                     opt.textContent = v;
                     selGerencialVend.appendChild(opt);
+                    
+                    const optG2 = document.createElement("option");
+                    optG2.value = v;
+                    optG2.textContent = v;
+                    const selG2Vend = document.getElementById("filtro-gerencial2-vendedor");
+                    if (selG2Vend) selG2Vend.appendChild(optG2);
                 });
             }
         }
@@ -301,6 +351,7 @@ async function buscarDadosRelatorio() {
     const queryParams = new URLSearchParams();
     
     if (activeReport === "gerencial") {
+        if (inGerencialCodigo.value) queryParams.append("codigo_cliente", inGerencialCodigo.value);
         if (inGerencialDoc.value) queryParams.append("cnpj_cpf", inGerencialDoc.value);
         if (inGerencialNome.value) queryParams.append("nome_cliente", inGerencialNome.value);
         if (selGerencialMun.value) queryParams.append("municipio", selGerencialMun.value);
@@ -308,6 +359,20 @@ async function buscarDadosRelatorio() {
         if (inGerencialDataInicio.value) queryParams.append("data_compra_inicio", inGerencialDataInicio.value);
         if (inGerencialDataFim.value) queryParams.append("data_compra_fim", inGerencialDataFim.value);
         if (inGerencialObs.value) queryParams.append("observacao", inGerencialObs.value);
+    } else if (activeReport === "gerencial2") {
+        const inG2Cod = document.getElementById("filtro-gerencial2-codigo");
+        const inG2Doc = document.getElementById("filtro-gerencial2-documento");
+        const inG2Nome = document.getElementById("filtro-gerencial2-nome");
+        const selG2Mun = document.getElementById("filtro-gerencial2-municipio");
+        const selG2Vend = document.getElementById("filtro-gerencial2-vendedor");
+        const selG2Meses = document.getElementById("filtro-gerencial2-meses");
+        
+        if (inG2Cod && inG2Cod.value) queryParams.append("codigo_cliente", inG2Cod.value);
+        if (inG2Doc && inG2Doc.value) queryParams.append("cnpj_cpf", inG2Doc.value);
+        if (inG2Nome && inG2Nome.value) queryParams.append("nome_cliente", inG2Nome.value);
+        if (selG2Mun && selG2Mun.value) queryParams.append("municipio", selG2Mun.value);
+        if (selG2Vend && selG2Vend.value) queryParams.append("vendedor", selG2Vend.value);
+        if (selG2Meses && selG2Meses.value) queryParams.append("meses", selG2Meses.value);
     } else {
         if (inDataInicio.value) queryParams.append("data_inicio", inDataInicio.value);
         if (inDataFim.value) queryParams.append("data_fim", inDataFim.value);
@@ -324,6 +389,7 @@ async function buscarDadosRelatorio() {
     let endpoint = "vendas_cliente";
     if (activeReport === "produto") endpoint = "vendas_produtos";
     else if (activeReport === "gerencial") endpoint = "gerencial";
+    else if (activeReport === "gerencial2") endpoint = "gerencial2";
 
     try {
         const token = window.Auth ? window.Auth.getToken() : '';
@@ -416,7 +482,7 @@ function renderizarTabela() {
             html += `
                 <tr>
                     <td>${index + 1}</td>
-                    <td style="white-space: nowrap;">${item.documento || "-"}</td>
+                    <td style="white-space: nowrap;">${fmtDoc(item.documento) || "-"}</td>
                     <td>${limparNomeCliente(item.nome_cliente)}</td>
                     <td>${item.municipio || "-"}</td>
                     <td>${item.vendedor || "-"}</td>
@@ -426,6 +492,21 @@ function renderizarTabela() {
             `;
         });
         
+        tbody.innerHTML = html;
+    } else if (activeReport === "gerencial2") {
+        listagemVendas.forEach((item, index) => {
+            html += `<tr>
+                <td>${index + 1}</td>
+                <td>${item.codigo_cliente || "-"}</td>
+                <td>${limparNomeCliente(item.cliente)}</td>`;
+            
+            gerencial2Meses.forEach(m => {
+                const p = item.meses?.[m]?.peso || 0;
+                const v = item.meses?.[m]?.valor || 0;
+                html += `<td class="tar">${fmtPeso(p).replace(' kg','')}</td><td class="tar col-money">${fmtMoney(v)}</td>`;
+            });
+            html += `</tr>`;
+        });
         tbody.innerHTML = html;
     }
 
@@ -540,6 +621,7 @@ async function limparTodosFiltros() {
     selMunicipio.value = "";
     selGrupo.value = "";
     
+    inGerencialCodigo.value = "";
     inGerencialDoc.value = "";
     inGerencialNome.value = "";
     selGerencialMun.value = "";
@@ -610,12 +692,62 @@ function exportarExcel() {
         filename = "relatorio_gerencial";
 
         listagemVendas.forEach((item, index) => {
-            aoa.push([index + 1, item.documento || "-", limparNomeCliente(item.nome_cliente), item.municipio || "-", item.vendedor || "-", fmtData(item.data_ultima_compra), item.observacao || "-"]);
+            aoa.push([index + 1, fmtDoc(item.documento) || "-", limparNomeCliente(item.nome_cliente), item.municipio || "-", item.vendedor || "-", fmtData(item.data_ultima_compra), item.observacao || "-"]);
+        });
+    } else if (activeReport === "gerencial2") {
+        let row1 = ["#", "Cód. Cliente", "Cliente"];
+        let row2 = ["", "", ""];
+        
+        gerencial2Meses.forEach(m => {
+            row1.push(m, "");
+            row2.push("Peso (kg)", "Valor (R$)");
+        });
+        
+        aoa.push(row1, row2);
+        filename = "relatorio_gerencial2_evolucao";
+        
+        listagemVendas.forEach((item, index) => {
+            let row = [index + 1, item.codigo_cliente || "-", limparNomeCliente(item.cliente)];
+            gerencial2Meses.forEach(m => {
+                row.push(item.meses?.[m]?.peso || 0);
+                row.push(item.meses?.[m]?.valor || 0);
+            });
+            aoa.push(row);
         });
     }
 
     const ws = XLSX.utils.aoa_to_sheet(aoa);
+
+    // Apply merges for gerencial2
+    if (activeReport === "gerencial2") {
+        ws['!merges'] = [
+            { s: {r:0, c:0}, e: {r:1, c:0} },
+            { s: {r:0, c:1}, e: {r:1, c:1} },
+            { s: {r:0, c:2}, e: {r:1, c:2} }
+        ];
+        
+        let cIndex = 3;
+        gerencial2Meses.forEach(m => {
+            ws['!merges'].push({ s: {r:0, c:cIndex}, e: {r:0, c:cIndex+1} });
+            cIndex += 2;
+        });
+    }
+
     const wb = XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(wb, ws, "Relatorio");
     XLSX.writeFile(wb, `${filename}_${new Date().toISOString().slice(0, 10)}.xlsx`);
+}
+
+let gerencial2Meses = [];
+function generateLastXMonths(x) {
+    let months = [];
+    const date = new Date();
+    date.setDate(1);
+    for (let i = x - 1; i >= 0; i--) {
+        const d = new Date(date.getFullYear(), date.getMonth() - i, 1);
+        const y = d.getFullYear();
+        const m = String(d.getMonth() + 1).padStart(2, '0');
+        months.push(`${y}-${m}`);
+    }
+    return months;
 }

@@ -275,6 +275,13 @@
                 const apiBase = (window.API_BASE || "") + "/api/dashboard";
                 const token = localStorage.getItem("ordersync_token");
 
+                function fmtDoc(s) {
+                    const d = String(s || '').replace(/\D/g, '');
+                    if (d.length === 14) return d.replace(/^(\d{2})(\d{3})(\d{3})(\d{4})(\d{2})$/, '$1.$2.$3/$4-$5');
+                    if (d.length === 11) return d.replace(/^(\d{3})(\d{3})(\d{3})(\d{2})$/, '$1.$2.$3-$4');
+                    return s || '';
+                }
+
                 const response = await fetch(`${apiBase}/clientes_sem_codigo`, {
                     method: "GET",
                     headers: {
@@ -427,7 +434,7 @@
                         tdVend.textContent = c.vendedor || "N/A";
 
                         const tdDoc = document.createElement("td");
-                        tdDoc.textContent = c.documento || "N/A";
+                        tdDoc.textContent = fmtDoc(c.documento) || "N/A";
 
                         tr.appendChild(tdId);
                         tr.appendChild(tdNome);
@@ -508,7 +515,7 @@
                             c.municipio || "N/A",
                             c.status_cadastro || "N/A",
                             c.vendedor || "N/A",
-                            c.documento || "N/A"
+                            fmtDoc(c.documento) || "N/A"
                         ]);
 
                         doc.autoTable({

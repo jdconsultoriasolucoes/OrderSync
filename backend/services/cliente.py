@@ -213,9 +213,12 @@ def _nested_to_flat(data: dict) -> ClienteModelV2:
     model.cadastro_limite_credito = c.get("limite_credito")
     model.cadastro_nome_cliente = c.get("nome_cliente")
     model.cadastro_nome_fantasia = c.get("nome_fantasia")
-    model.cadastro_cnpj = c.get("cnpj")
+    import re
+    _cnpj = c.get("cnpj")
+    model.cadastro_cnpj = re.sub(r"\D", "", _cnpj) if _cnpj else None
     model.cadastro_inscricao_estadual = clean_ie(c.get("inscricao_estadual"))
-    model.cadastro_cpf = c.get("cpf")
+    _cpf = c.get("cpf")
+    model.cadastro_cpf = re.sub(r"\D", "", _cpf) if _cpf else None
     model.cadastro_situacao = c.get("situacao")
     model.cadastro_status_cadastro = c.get("status_cadastro")
     model.cadastro_indicacao_cliente = c.get("indicacao_cliente")

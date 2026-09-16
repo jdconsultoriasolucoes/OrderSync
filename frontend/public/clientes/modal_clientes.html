@@ -51,6 +51,13 @@
   <script>
     let clientes = [];
 
+    function fmtDoc(s) {
+      const d = String(s || '').replace(/\D/g, '');
+      if (d.length === 14) return d.replace(/^(\d{2})(\d{3})(\d{3})(\d{4})(\d{2})$/, '$1.$2.$3/$4-$5');
+      if (d.length === 11) return d.replace(/^(\d{3})(\d{3})(\d{3})(\d{2})$/, '$1.$2.$3-$4');
+      return s || '';
+    }
+
     // Carrega os clientes do backend
     const token = localStorage.getItem('ordersync_token');
     const api = window.API_BASE || "http://127.0.0.1:8000";
@@ -81,8 +88,8 @@
         tr.innerHTML = `
           <td>${cliente.cadastrocliente?.id || ''}</td>
           <td>${cliente.cadastrocliente?.nome_cliente || ''}</td>
-          <td>${cliente.cadastrocliente?.cpf || ''}</td>
-          <td>${cliente.cadastrocliente?.cnpj || ''}</td>
+          <td>${fmtDoc(cliente.cadastrocliente?.cpf)}</td>
+          <td>${fmtDoc(cliente.cadastrocliente?.cnpj)}</td>
           <td>${cliente.responsavel_compras?.email_resposavel || ''}</td>
           <td>${cliente.endereco_entrega?.estado_EnderecoEntrega || ''}</td>
           <td>${cliente.cadastrocliente?.ativo ? 'Sim' : 'Não'}</td>

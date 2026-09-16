@@ -175,6 +175,7 @@
                     <h4 class="relatorios-sidebar-group-title">Relatórios Gerenciais</h4>
                     <ul class="relatorios-menu" id="relatorios-menu-gerenciais">
                         <li><button data-report="gerencial">Relatório Gerencial</button></li>
+                        <li><button data-report="gerencial2">Relatório Gerencial 2</button></li>
                     </ul>
                 </div>
             </aside>
@@ -253,6 +254,11 @@
 
                     <!-- Filtros Relatório Gerencial -->
                     <div class="filtro-campo filtro-gerencial" style="display: none;">
+                        <label class="os-label">Cód. Cliente</label>
+                        <input type="text" id="filtro-gerencial-codigo" class="os-input" placeholder="Pesquisar código">
+                    </div>
+
+                    <div class="filtro-campo filtro-gerencial" style="display: none;">
                         <label class="os-label">CNPJ/CPF</label>
                         <input type="text" id="filtro-gerencial-documento" class="os-input" placeholder="Pesquisar documento">
                     </div>
@@ -288,6 +294,45 @@
                     <div class="filtro-campo filtro-gerencial" style="display: none;">
                         <label class="os-label">Observação</label>
                         <input type="text" id="filtro-gerencial-observacao" class="os-input" placeholder="Pesquisar observação">
+                    </div>
+
+                    <!-- Filtros Relatório Gerencial 2 -->
+                    <div class="filtro-campo filtro-gerencial2" style="display: none;">
+                        <label class="os-label">Período de Análise</label>
+                        <select id="filtro-gerencial2-meses" class="os-select">
+                            <option value="12">Últimos 12 Meses</option>
+                            <option value="6">Últimos 6 Meses</option>
+                            <option value="3">Últimos 3 Meses</option>
+                        </select>
+                    </div>
+
+                    <div class="filtro-campo filtro-gerencial2" style="display: none;">
+                        <label class="os-label">Cód. Cliente</label>
+                        <input type="text" id="filtro-gerencial2-codigo" class="os-input" placeholder="Pesquisar código">
+                    </div>
+
+                    <div class="filtro-campo filtro-gerencial2" style="display: none;">
+                        <label class="os-label">CNPJ/CPF</label>
+                        <input type="text" id="filtro-gerencial2-documento" class="os-input" placeholder="Pesquisar documento">
+                    </div>
+
+                    <div class="filtro-campo filtro-gerencial2" style="display: none;">
+                        <label class="os-label">Nome Cliente</label>
+                        <input type="text" id="filtro-gerencial2-nome" class="os-input" placeholder="Pesquisar cliente">
+                    </div>
+
+                    <div class="filtro-campo filtro-gerencial2" style="display: none;">
+                        <label class="os-label">Município</label>
+                        <select id="filtro-gerencial2-municipio" class="os-select">
+                            <option value="">Todos os Municípios</option>
+                        </select>
+                    </div>
+
+                    <div class="filtro-campo filtro-gerencial2" style="display: none;">
+                        <label class="os-label">Vendedor</label>
+                        <select id="filtro-gerencial2-vendedor" class="os-select">
+                            <option value="">Todos os Vendedores</option>
+                        </select>
                     </div>
 
                     

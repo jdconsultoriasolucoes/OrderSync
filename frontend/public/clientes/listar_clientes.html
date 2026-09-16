@@ -307,6 +307,13 @@
         let currentPage = 1;
         const itemsPerPage = 20;
 
+        function fmtDoc(s) {
+            const d = String(s || '').replace(/\D/g, '');
+            if (d.length === 14) return d.replace(/^(\d{2})(\d{3})(\d{3})(\d{4})(\d{2})$/, '$1.$2.$3/$4-$5');
+            if (d.length === 11) return d.replace(/^(\d{3})(\d{3})(\d{3})(\d{2})$/, '$1.$2.$3-$4');
+            return s || '';
+        }
+
         // Carrega os clientes do backend
         const token = localStorage.getItem('ordersync_token');
         const api = window.API_BASE || "http://127.0.0.1:8000";
@@ -351,8 +358,8 @@
                 tr.innerHTML = `
           <td data-label="ID">${cliente.cadastrocliente?.id || ''}</td>
           <td data-label="Nome">${cliente.cadastrocliente?.nome_cliente || ''} <span class="mobile-chevron">▼</span></td>
-          <td data-label="CPF">${cliente.cadastrocliente?.cpf || ''}</td>
-          <td data-label="CNPJ">${cliente.cadastrocliente?.cnpj || ''}</td>
+          <td data-label="CPF">${fmtDoc(cliente.cadastrocliente?.cpf)}</td>
+          <td data-label="CNPJ">${fmtDoc(cliente.cadastrocliente?.cnpj)}</td>
           <td data-label="Email">${cliente.responsavel_compras?.email_resposavel || ''}</td>
           <td data-label="Estado">${cliente.endereco_entrega?.estado_EnderecoEntrega || ''}</td>
           <td data-label="Ativo"><span class="os-badge ${cliente.cadastrocliente?.ativo ? 'os-badge-success' : 'os-badge-error'}">${cliente.cadastrocliente?.ativo ? 'Sim' : 'Não'}</span></td>

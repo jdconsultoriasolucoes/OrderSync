@@ -837,6 +837,7 @@ def get_vendas_produtos(
 
 @router.get("/gerencial")
 def get_relatorio_gerencial(
+    codigo_cliente: Optional[str] = Query(None),
     cnpj_cpf: Optional[str] = Query(None),
     nome_cliente: Optional[str] = Query(None),
     municipio: Optional[str] = Query(None),
@@ -860,6 +861,10 @@ def get_relatorio_gerencial(
     """
     params = {}
     
+    if codigo_cliente:
+        query_str += " AND c.cadastro_codigo_da_empresa = :codigo_cliente"
+        params["codigo_cliente"] = codigo_cliente
+        
     if cnpj_cpf:
         query_str += " AND (c.cadastro_cnpj ILIKE :cnpj_cpf OR c.cadastro_cpf ILIKE :cnpj_cpf)"
         params["cnpj_cpf"] = f"%{cnpj_cpf}%"
@@ -912,3 +917,70 @@ def get_filtros_gerencial(db: Session = Depends(get_db)):
         "municipios": municipios,
         "vendedores": vendedores
     }
+
+@router.get("/gerencial2")
+def get_relatorio_gerencial2(
+    codigo_cliente: Optional[str] = Query(None),
+    cnpj_cpf: Optional[str] = Query(None),
+    nome_cliente: Optional[str] = Query(None),
+    vendedor: Optional[str] = Query(None),
+    meses: int = Query(12),
+    db: Session = Depends(get_db)
+):
+    # Using PostgreSQL syntax: DATE_TRUNC and TO_CHAR
+    query_str = f"""
+        SELECT 
+            c.cadastro_codigo_da_empresa AS codigo_cliente,
+            c.cadastro_nome_cliente AS cliente,
+            TO_CHAR(DATE_TRUNC('month', p.created_at), 'YYYY-MM') AS mes_ano,
+            SUM(p.peso_total_kg) AS peso,
+            SUM(p.total_pedido) AS valor
+        FROM public.tb_pedidos p
+        JOIN public.t_cadastro_cliente_v2 c ON p.codigo_cliente = c.cadastro_codigo_da_empresa
+        WHERE p.created_at >= DATE_TRUNC('month', CURRENT_DATE) - INTERVAL '{meses - 1} months'
+          AND p.status != 'Cancelado'
+    """
+    
+    params = {}
+    
+    if codigo_cliente:
+        query_str += " AND c.cadastro_codigo_da_empresa = :codigo_cliente"
+        params["codigo_cliente"] = codigo_cliente
+        
+    if cnpj_cpf:
+        query_str += " AND (c.cadastro_cnpj ILIKE :cnpj_cpf OR c.cadastro_cpf ILIKE :cnpj_cpf)"
+        params["cnpj_cpf"] = f"%{cnpj_cpf}%"
+        
+    if nome_cliente:
+        query_str += " AND c.cadastro_nome_cliente ILIKE :nome_cliente"
+        params["nome_cliente"] = f"%{nome_cliente}%"
+        
+    if vendedor:
+        query_str += " AND c.elaboracao_vendedor = :vendedor"
+        params["vendedor"] = vendedor
+        
+    query_str += """
+        GROUP BY 1, 2, 3
+        ORDER BY c.cadastro_nome_cliente, mes_ano
+    """
+    
+    rows = db.execute(text(query_str), params).mappings().all()
+    
+    data = {}
+    for r in rows:
+        cod = r["codigo_cliente"]
+        # Ensure cod is string and not None, fallback to id if needed but we joined on codigo_da_empresa
+        if not cod:
+            continue
+        if cod not in data:
+            data[cod] = {
+                "codigo_cliente": cod,
+                "cliente": r["cliente"],
+                "meses": {}
+            }
+        data[cod]["meses"][r["mes_ano"]] = {
+            "peso": float(r["peso"] or 0),
+            "valor": float(r["valor"] or 0)
+        }
+        
+    return list(data.values())
