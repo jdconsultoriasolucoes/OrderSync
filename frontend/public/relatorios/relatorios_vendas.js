@@ -186,11 +186,13 @@ function alternarRelatorioUI() {
             f.style.display = (activeReport === "gerencial") ? "flex" : "none";
         } else if (f.classList.contains("filtro-gerencial2")) {
             f.style.display = (activeReport === "gerencial2") ? "flex" : "none";
+        } else if (f.classList.contains("filtro-gerencial3")) {
+            f.style.display = (activeReport === "gerencial3") ? "flex" : "none";
         } else {
             if (f.id === "campo-filtro-grupo") {
                 f.style.display = activeReport === "produto" ? "flex" : "none";
             } else {
-                f.style.display = (activeReport === "gerencial" || activeReport === "gerencial2") ? "none" : "flex";
+                f.style.display = (activeReport === "gerencial" || activeReport === "gerencial2" || activeReport === "gerencial3") ? "none" : "flex";
             }
         }
     });
