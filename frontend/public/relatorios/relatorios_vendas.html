@@ -200,33 +200,7 @@
                             <input type="date" id="filtro-data-fim" class="os-input" title="Abertura Até">
                         </div>
                     </div>
-                    
-                    <!-- 2. Filial -->
-                    <div class="filtro-campo">
-                        <label class="os-label">Filial (Fornecedor)</label>
-                        <select id="filtro-filial" class="os-select">
-                            <option value="">Todas as Filiais</option>
-                        </select>
-                    </div>
-                    
-                    <!-- 3. Categoria -->
-                    <div class="filtro-campo">
-                        <label class="os-label">Categoria</label>
-                        <select id="filtro-categoria" class="os-select">
-                            <option value="">Todas as Categorias</option>
-                            <option value="INSUMOS">Insumos</option>
-                            <option value="PET">Pets</option>
-                        </select>
-                    </div>
-                    
-                    <!-- 4. Município -->
-                    <div class="filtro-campo">
-                        <label class="os-label">Município</label>
-                        <select id="filtro-municipio" class="os-select">
-                            <option value="">Todos os Municípios</option>
-                        </select>
-                    </div>
-                    
+
                     <!-- 5. Status do Pedido -->
                     <div class="filtro-campo">
                         <label class="os-label">Status do Pedido</label>
@@ -324,64 +298,68 @@
                     </div>
 
                     <!-- Filtros Relatório Gerencial 3 -->
-                    <div class="filtro-campo filtro-gerencial3" style="display: none;">
-                        <label class="os-label">Período de Análise</label>
-                        <select id="filtro-gerencial3-meses" class="os-select">
-                            <option value="12">Últimos 12 Meses</option>
-                            <option value="6">Últimos 6 Meses</option>
-                            <option value="3">Últimos 3 Meses</option>
-                        </select>
+                    <div class="filtro-campo filtro-duplo filtro-gerencial3" style="display: none;">
+                        <label class="os-label">Período / Status</label>
+                        <div class="duplo-inputs">
+                            <select id="filtro-gerencial3-meses" class="os-select" title="Período de Análise">
+                                <option value="12">Últimos 12 Meses</option>
+                                <option value="6">Últimos 6 Meses</option>
+                                <option value="3">Últimos 3 Meses</option>
+                            </select>
+                            <select id="filtro-gerencial3-status" class="os-select" title="Status do Cadastro">
+                                <option value="">Todos Status</option>
+                            </select>
+                        </div>
                     </div>
-                    <div class="filtro-campo filtro-gerencial3" style="display: none;">
-                        <label class="os-label">Cód. Cliente</label>
-                        <input type="text" id="filtro-gerencial3-codigo" class="os-input" placeholder="Pesquisar código">
+                    
+                    <div class="filtro-campo filtro-duplo filtro-gerencial3" style="display: none;">
+                        <label class="os-label">Cliente</label>
+                        <div class="duplo-inputs">
+                            <input type="text" id="filtro-gerencial3-codigo" class="os-input" placeholder="Cód." style="max-width: 80px;">
+                            <input type="text" id="filtro-gerencial3-nome" class="os-input" placeholder="Nome do Cliente">
+                        </div>
                     </div>
-                    <div class="filtro-campo filtro-gerencial3" style="display: none;">
-                        <label class="os-label">Nome Cliente</label>
-                        <input type="text" id="filtro-gerencial3-nome" class="os-input" placeholder="Pesquisar cliente">
+
+                    <div class="filtro-campo filtro-duplo filtro-gerencial3" style="display: none;">
+                        <label class="os-label">Rotas (Geral / Aprox.)</label>
+                        <div class="duplo-inputs">
+                            <input type="text" id="filtro-gerencial3-rotag" class="os-input" placeholder="Geral">
+                            <input type="text" id="filtro-gerencial3-rotaa" class="os-input" placeholder="Aprox.">
+                        </div>
                     </div>
+
                     <div class="filtro-campo filtro-gerencial3" style="display: none;">
                         <label class="os-label">Filial</label>
                         <select id="filtro-gerencial3-filial" class="os-select">
-                            <option value="">Todas as Filiais</option>
+                            <option value="">Todas</option>
                         </select>
                     </div>
+
                     <div class="filtro-campo filtro-gerencial3" style="display: none;">
                         <label class="os-label">Categoria</label>
                         <select id="filtro-gerencial3-categoria" class="os-select">
-                            <option value="">Todas as Categorias</option>
+                            <option value="">Todas</option>
                             <option value="INSUMOS">Insumos</option>
                             <option value="PET">Pets</option>
                         </select>
                     </div>
+
                     <div class="filtro-campo filtro-gerencial3" style="display: none;">
                         <label class="os-label">Vendedor</label>
                         <select id="filtro-gerencial3-vendedor" class="os-select">
-                            <option value="">Todos os Vendedores</option>
+                            <option value="">Todos</option>
                         </select>
                     </div>
+                    
                     <div class="filtro-campo filtro-gerencial3" style="display: none;">
                         <label class="os-label">Município</label>
                         <select id="filtro-gerencial3-municipio" class="os-select">
-                            <option value="">Todos os Municípios</option>
+                            <option value="">Todos</option>
                         </select>
                     </div>
+                    
                     <div class="filtro-campo filtro-gerencial3" style="display: none;">
-                        <label class="os-label">Rota Geral</label>
-                        <input type="text" id="filtro-gerencial3-rotag" class="os-input" placeholder="Rota principal">
-                    </div>
-                    <div class="filtro-campo filtro-gerencial3" style="display: none;">
-                        <label class="os-label">Rota Aproximação</label>
-                        <input type="text" id="filtro-gerencial3-rotaa" class="os-input" placeholder="Rota de aproximação">
-                    </div>
-                    <div class="filtro-campo filtro-gerencial3" style="display: none;">
-                        <label class="os-label">Status do Cadastro</label>
-                        <select id="filtro-gerencial3-status" class="os-select">
-                            <option value="">Todos os Status</option>
-                        </select>
-                    </div>
-                    <div class="filtro-campo filtro-gerencial3" style="display: none;">
-                        <label class="os-label">Tipo de Entrega</label>
+                        <label class="os-label">Entrega</label>
                         <select id="filtro-gerencial3-tipo-entrega" class="os-select">
                             <option value="">Todos</option>
                             <option value="ENTREGA">Entrega</option>
