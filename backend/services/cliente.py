@@ -75,7 +75,6 @@ def _flat_to_nested(model: ClienteModelV2) -> dict:
             "municipio_faturamento": model.faturamento_municipio,
             "estado_faturamento": model.faturamento_estado,
             "email_danfe_faturamento": model.faturamento_email_danfe,
-            "tipo_entrega_faturamento": model.faturamento_tipo_entrega,
         },
         "representante_legal": {
             "nome_RepresentanteLegal": model.legal_nome,
@@ -94,6 +93,7 @@ def _flat_to_nested(model: ClienteModelV2) -> dict:
             "rota_principal_EnderecoEntrega": model.entrega_rota_principal,
             "rota_de_aproximacao_EnderecoEntrega": model.entrega_rota_aproximacao,
             "observacao_motorista_EnderecoEntrega": model.entrega_observacao_motorista,
+            "tipo_entrega_EnderecoEntrega": model.entrega_tipo_entrega,
         },
         "responsavel_recebimento": {
             "nome_ResponsavelRecebimento": model.recebimento_nome,
@@ -247,7 +247,6 @@ def _nested_to_flat(data: dict) -> ClienteModelV2:
     model.faturamento_municipio = ef.get("municipio_faturamento")
     model.faturamento_estado = ef.get("estado_faturamento")
     model.faturamento_email_danfe = ef.get("email_danfe_faturamento")
-    model.faturamento_tipo_entrega = ef.get("tipo_entrega_faturamento")
 
     model.legal_nome = rl.get("nome_RepresentanteLegal")
     model.legal_celular = rl.get("celular_RepresentanteLegal")
@@ -264,6 +263,7 @@ def _nested_to_flat(data: dict) -> ClienteModelV2:
     model.entrega_rota_principal = ee.get("rota_principal_EnderecoEntrega")
     model.entrega_rota_aproximacao = ee.get("rota_de_aproximacao_EnderecoEntrega")
     model.entrega_observacao_motorista = ee.get("observacao_motorista_EnderecoEntrega")
+    model.entrega_tipo_entrega = ee.get("tipo_entrega_EnderecoEntrega")
 
     model.recebimento_nome = rr.get("nome_ResponsavelRecebimento")
     model.recebimento_celular = rr.get("celular_ResponsavelRecebimento")

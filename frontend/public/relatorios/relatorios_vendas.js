@@ -264,9 +264,7 @@ function alternarRelatorioUI() {
         txtTitulo.textContent = "Relatório Gerencial 3";
         tableHeaders.innerHTML = ""; // Será preenchido na renderização, igual ao gerencial2
     } else 
-    if (activeReport === "gerencial3") {
-        ws['!merges'] = [
-            { s: {r:0, c:0}, e: {r:1, c:0} },
+    , e: {r:1, c:0} },
             { s: {r:0, c:1}, e: {r:1, c:1} },
             { s: {r:0, c:2}, e: {r:1, c:2} },
             { s: {r:0, c:3}, e: {r:1, c:3} }
@@ -279,9 +277,7 @@ function alternarRelatorioUI() {
     }
 
     
-    if (activeReport === "gerencial3") {
-        ws['!cols'] = [
-            { wch: 15 },
+    ,
             { wch: 40 },
             { wch: 15 },
             { wch: 15 }
@@ -418,30 +414,6 @@ async function carregarFiltrosMetadata() {
             }
         }
     
-            if (dataG.vendedores && selG3Vendedor) {
-                dataG.vendedores.forEach(v => {
-                    const opt = document.createElement("option");
-                    opt.value = v;
-                    opt.textContent = v;
-                    selG3Vendedor.appendChild(opt);
-                });
-            }
-            if (dataG.municipios && selG3Municipio) {
-                dataG.municipios.forEach(m => {
-                    const opt = document.createElement("option");
-                    opt.value = m;
-                    opt.textContent = m;
-                    selG3Municipio.appendChild(opt);
-                });
-            }
-            if (dataG.status_cadastro && selG3Status) {
-                dataG.status_cadastro.forEach(s => {
-                    const opt = document.createElement("option");
-                    opt.value = s;
-                    opt.textContent = s;
-                    selG3Status.appendChild(opt);
-                });
-            }
 
         } catch (err) {
         console.error("Falha ao carregar metadados dos filtros:", err);
@@ -474,9 +446,7 @@ async function buscarDadosRelatorio() {
         txtTitulo.textContent = "Relatório Gerencial 3";
         tableHeaders.innerHTML = ""; // Será preenchido na renderização, igual ao gerencial2
     } else 
-    if (activeReport === "gerencial3") {
-        ws['!merges'] = [
-            { s: {r:0, c:0}, e: {r:1, c:0} },
+    , e: {r:1, c:0} },
             { s: {r:0, c:1}, e: {r:1, c:1} },
             { s: {r:0, c:2}, e: {r:1, c:2} },
             { s: {r:0, c:3}, e: {r:1, c:3} }
@@ -489,9 +459,7 @@ async function buscarDadosRelatorio() {
     }
 
     
-    if (activeReport === "gerencial3") {
-        ws['!cols'] = [
-            { wch: 15 },
+    ,
             { wch: 40 },
             { wch: 15 },
             { wch: 15 }
@@ -544,30 +512,6 @@ async function buscarDadosRelatorio() {
 
         renderizarTabela();
     
-            if (dataG.vendedores && selG3Vendedor) {
-                dataG.vendedores.forEach(v => {
-                    const opt = document.createElement("option");
-                    opt.value = v;
-                    opt.textContent = v;
-                    selG3Vendedor.appendChild(opt);
-                });
-            }
-            if (dataG.municipios && selG3Municipio) {
-                dataG.municipios.forEach(m => {
-                    const opt = document.createElement("option");
-                    opt.value = m;
-                    opt.textContent = m;
-                    selG3Municipio.appendChild(opt);
-                });
-            }
-            if (dataG.status_cadastro && selG3Status) {
-                dataG.status_cadastro.forEach(s => {
-                    const opt = document.createElement("option");
-                    opt.value = s;
-                    opt.textContent = s;
-                    selG3Status.appendChild(opt);
-                });
-            }
 
         } catch (err) {
         console.error(`Falha ao buscar relatório de ${activeReport}:`, err);
@@ -582,9 +526,7 @@ async function buscarDadosRelatorio() {
  */
 function renderizarTabela() {
     
-    if (activeReport === "gerencial3") {
-        ws['!merges'] = [
-            { s: {r:0, c:0}, e: {r:1, c:0} },
+    , e: {r:1, c:0} },
             { s: {r:0, c:1}, e: {r:1, c:1} },
             { s: {r:0, c:2}, e: {r:1, c:2} },
             { s: {r:0, c:3}, e: {r:1, c:3} }
@@ -597,9 +539,7 @@ function renderizarTabela() {
     }
 
     
-    if (activeReport === "gerencial3") {
-        ws['!cols'] = [
-            { wch: 15 },
+    ,
             { wch: 40 },
             { wch: 15 },
             { wch: 15 }
@@ -712,9 +652,7 @@ function renderizarTabela() {
         txtTitulo.textContent = "Relatório Gerencial 3";
         tableHeaders.innerHTML = ""; // Será preenchido na renderização, igual ao gerencial2
     } else 
-    if (activeReport === "gerencial3") {
-        ws['!merges'] = [
-            { s: {r:0, c:0}, e: {r:1, c:0} },
+    , e: {r:1, c:0} },
             { s: {r:0, c:1}, e: {r:1, c:1} },
             { s: {r:0, c:2}, e: {r:1, c:2} },
             { s: {r:0, c:3}, e: {r:1, c:3} }
@@ -727,9 +665,7 @@ function renderizarTabela() {
     }
 
     
-    if (activeReport === "gerencial3") {
-        ws['!cols'] = [
-            { wch: 15 },
+    ,
             { wch: 40 },
             { wch: 15 },
             { wch: 15 }

@@ -385,6 +385,9 @@ def listar_pedidos(
     count_sql = text(f"""
         SELECT COUNT(*) AS total
         FROM public.tb_pedidos a
+        LEFT JOIN public.t_cadastro_cliente_v2 c 
+          ON c.cadastro_codigo_da_empresa::text = a.codigo_cliente 
+          AND a.codigo_cliente != ''
         WHERE {where_clause}
     """)
 

@@ -472,15 +472,6 @@
               <label for="email_danfe_faturamento">E-mail para DANFE:</label>
               <input type="text" id="email_danfe_faturamento" name="email_danfe_faturamento" />
             </div>
-            <div class="form-group">
-              <label for="tipo_entrega_faturamento">Tipo de Entrega:</label>
-              <select id="tipo_entrega_faturamento" name="tipo_entrega_faturamento">
-                <option value="">Selecione</option>
-                <option value="Entrega">Entrega</option>
-                <option value="Retira">Retira</option>
-                <option value="Ambos">Ambos</option>
-              </select>
-            </div>
           </div>
 
           <h2 class="subtitulo">Representante Legal</h2>
@@ -1575,7 +1566,7 @@
               municipio_faturamento: document.getElementById("municipio_faturamento")?.value || "",
               estado_faturamento: document.getElementById("estado_faturamento")?.value || "",
               email_danfe_faturamento: document.getElementById("email_danfe_faturamento")?.value || "",
-              tipo_entrega_faturamento: document.getElementById("tipo_entrega_faturamento")?.value || ""
+              
             },
             representante_legal: {
               nome_RepresentanteLegal: document.getElementById("nome_RepresentanteLegal")?.value || "",
@@ -1593,7 +1584,8 @@
               estado_EnderecoEntrega: document.getElementById("estado_EnderecoEntrega")?.value || "",
               rota_principal_EnderecoEntrega: document.getElementById("rota_principal_EnderecoEntrega")?.value || "",
               rota_de_aproximacao_EnderecoEntrega: document.getElementById("rota_de_aproximacao_EnderecoEntrega")?.value || "",
-              observacao_motorista_EnderecoEntrega: document.getElementById("observacao_motorista_EnderecoEntrega")?.value || ""
+              observacao_motorista_EnderecoEntrega: document.getElementById("observacao_motorista_EnderecoEntrega")?.value || "",
+              tipo_entrega_EnderecoEntrega: document.getElementById("tipo_entrega_EnderecoEntrega")?.value || ""
             },
             responsavel_recebimento: {
               nome_ResponsavelRecebimento: document.getElementById("nome_ResponsavelRecebimento")?.value || "",
@@ -2145,7 +2137,7 @@
           setVal("municipio_faturamento", ef.municipio_faturamento || "");
           setVal("estado_faturamento", ef.estado_faturamento || "");
           setVal("email_danfe_faturamento", ef.email_danfe_faturamento || "");
-          setVal("tipo_entrega_faturamento", ef.tipo_entrega_faturamento || "");
+          
 
           // Bloco: representante_legal
           const rl = dados.representante_legal || {};
@@ -2166,6 +2158,7 @@
           setVal("rota_principal_EnderecoEntrega", ee.rota_principal_EnderecoEntrega || "");
           setVal("rota_de_aproximacao_EnderecoEntrega", ee.rota_de_aproximacao_EnderecoEntrega || "");
           setVal("observacao_motorista_EnderecoEntrega", ee.observacao_motorista_EnderecoEntrega || "");
+          setVal("tipo_entrega_EnderecoEntrega", ee.tipo_entrega_EnderecoEntrega || "");
 
           // Bloco: responsavel_recebimento
           const rr = dados.responsavel_recebimento || {};

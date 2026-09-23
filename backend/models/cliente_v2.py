@@ -47,7 +47,7 @@ class ClienteModelV2(Base):
     faturamento_municipio = Column(String)
     faturamento_estado = Column(String)
     faturamento_email_danfe = Column(String)
-    faturamento_tipo_entrega = Column(String)
+    entrega_tipo_entrega = Column(String)
 
     # 4. RepresentanteLegal
     legal_nome = Column(String)
