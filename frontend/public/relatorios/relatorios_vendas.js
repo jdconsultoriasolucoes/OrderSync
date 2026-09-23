@@ -532,6 +532,32 @@ function renderizarTabela() {
         tableHeaders.innerHTML = htmlHeader1 + htmlHeader2;
     }
 
+    if (activeReport === "gerencial3") {
+        const mesesSel = document.getElementById("filtro-gerencial3-meses");
+        const qtdeMeses = mesesSel ? parseInt(mesesSel.value) : 12;
+        gerencial3Meses = generateLastXMonths(qtdeMeses);
+        
+        let htmlHeader1 = `<tr>
+            <th rowspan="2" style="width: 40px; min-width: 40px; border-right: 1px solid var(--os-border);">#</th>
+            <th rowspan="2" data-sort="codigo_cliente" style="min-width: 100px; border-right: 1px solid var(--os-border);">Cód. Cliente</th>
+            <th rowspan="2" data-sort="cliente" style="min-width: 250px; border-right: 1px solid var(--os-border);">Cliente</th>
+            <th rowspan="2" data-sort="data_ultima_compra_geral" style="min-width: 120px; border-right: 1px solid var(--os-border);">Data Última Compra</th>
+            <th rowspan="2" data-sort="previsao_proxima_compra" style="min-width: 150px; border-right: 1px solid var(--os-border);">Previsão Próxima Compra</th>`;
+        let htmlHeader2 = `<tr>`;
+        
+        gerencial3Meses.forEach((m, i) => {
+            const [ano, mes] = m.split('-');
+            const borderLeft = "border-left: 2px solid #cbd5e1;";
+            htmlHeader1 += `<th colspan="2" style="text-align: center; border-bottom: 1px solid var(--os-border); background-color: #f8fafc; ${borderLeft}">${mes}/${ano}</th>`;
+            htmlHeader2 += `<th class="tar" style="${borderLeft}">Peso (kg)</th><th class="tar col-money">Valor (R$)</th>`;
+        });
+        
+        htmlHeader1 += `</tr>`;
+        htmlHeader2 += `</tr>`;
+        
+        tableHeaders.innerHTML = htmlHeader1 + htmlHeader2;
+    }
+
     if (listagemVendas.length === 0) {
         emptyStateEl.style.display = "block";
         tfoot.innerHTML = "";
@@ -607,9 +633,6 @@ function renderizarTabela() {
         });
         
         tbody.innerHTML = html;
-    } else if (activeReport === "gerencial3") {
-        txtTitulo.textContent = "Relatório Gerencial 3";
-        tableHeaders.innerHTML = ""; // Será preenchido na renderização, igual ao gerencial2
     }
 
     if (activeReport === "gerencial2") {
@@ -620,6 +643,26 @@ function renderizarTabela() {
                 <td style="border-right: 1px solid var(--os-border);">${limparNomeCliente(item.cliente)}</td>`;
             
             gerencial2Meses.forEach(m => {
+                const borderLeft = "border-left: 2px solid #cbd5e1;";
+                const p = item.meses?.[m]?.peso || 0;
+                const v = item.meses?.[m]?.valor || 0;
+                html += `<td class="tar" style="${borderLeft}">${fmtPeso(p).replace(' kg','')}</td><td class="tar col-money">${fmtMoney(v)}</td>`;
+            });
+            html += `</tr>`;
+        });
+        tbody.innerHTML = html;
+    }
+
+    if (activeReport === "gerencial3") {
+        listagemVendas.forEach((item, index) => {
+            html += `<tr>
+                <td style="border-right: 1px solid var(--os-border);">${index + 1}</td>
+                <td style="border-right: 1px solid var(--os-border);">${item.codigo_cliente || "-"}</td>
+                <td style="border-right: 1px solid var(--os-border);">${limparNomeCliente(item.cliente)}</td>
+                <td style="border-right: 1px solid var(--os-border); text-align: center;">${fmtData(item.data_ultima_compra_geral)}</td>
+                <td style="border-right: 1px solid var(--os-border); text-align: center;">${fmtData(item.previsao_proxima_compra)}</td>`;
+            
+            gerencial3Meses.forEach(m => {
                 const borderLeft = "border-left: 2px solid #cbd5e1;";
                 const p = item.meses?.[m]?.peso || 0;
                 const v = item.meses?.[m]?.valor || 0;
@@ -827,38 +870,7 @@ function exportarExcel() {
         listagemVendas.forEach((item, index) => {
             aoa.push([index + 1, fmtDoc(item.documento) || "-", limparNomeCliente(item.nome_cliente), item.municipio || "-", item.vendedor || "-", fmtData(item.data_ultima_compra), item.observacao || "-"]);
         });
-    } else if (activeReport === "gerencial3") {
-        txtTitulo.textContent = "Relatório Gerencial 3";
-        tableHeaders.innerHTML = ""; // Será preenchido na renderização, igual ao gerencial2
-    } else 
-    if (activeReport === "gerencial3") {
-        ws['!merges'] = [
-            { s: {r:0, c:0}, e: {r:1, c:0} },
-            { s: {r:0, c:1}, e: {r:1, c:1} },
-            { s: {r:0, c:2}, e: {r:1, c:2} },
-            { s: {r:0, c:3}, e: {r:1, c:3} }
-        ];
-        let cIndex = 4;
-        gerencial3Meses.forEach(m => {
-            ws['!merges'].push({ s: {r:0, c:cIndex}, e: {r:0, c:cIndex+1} });
-            cIndex += 2;
-        });
-    }
-
-    
-    if (activeReport === "gerencial3") {
-        ws['!cols'] = [
-            { wch: 15 },
-            { wch: 40 },
-            { wch: 15 },
-            { wch: 15 }
-        ];
-        for (let i = 0; i < gerencial3Meses.length * 2; i++) {
-            ws['!cols'].push({ wch: 15 }); // Peso e Valor
-        }
-    }
-
-    if (activeReport === "gerencial2") {
+    } else if (activeReport === "gerencial2") {
         let row1 = ["Cód. Cliente", "Cliente"];
         let row2 = ["", ""];
         
@@ -879,39 +891,32 @@ function exportarExcel() {
             });
             aoa.push(row);
         });
+    } else if (activeReport === "gerencial3") {
+        let row1 = ["Cód. Cliente", "Cliente", "Data Última Compra", "Previsão Próxima Compra"];
+        let row2 = ["", "", "", ""];
+        
+        gerencial3Meses.forEach(m => {
+            const [ano, mes] = m.split('-');
+            row1.push(`${mes}/${ano}`, "");
+            row2.push("Peso (kg)", "Valor (R$)");
+        });
+        
+        aoa.push(row1, row2);
+        filename = "relatorio_gerencial3_evolucao";
+        
+        listagemVendas.forEach((item, index) => {
+            let row = [item.codigo_cliente || "-", limparNomeCliente(item.cliente), fmtData(item.data_ultima_compra_geral), fmtData(item.previsao_proxima_compra)];
+            gerencial3Meses.forEach(m => {
+                row.push(item.meses?.[m]?.peso || 0);
+                row.push(item.meses?.[m]?.valor || 0);
+            });
+            aoa.push(row);
+        });
     }
 
     const ws = XLSX.utils.aoa_to_sheet(aoa);
 
     // Apply merges for gerencial2
-    
-    if (activeReport === "gerencial3") {
-        ws['!merges'] = [
-            { s: {r:0, c:0}, e: {r:1, c:0} },
-            { s: {r:0, c:1}, e: {r:1, c:1} },
-            { s: {r:0, c:2}, e: {r:1, c:2} },
-            { s: {r:0, c:3}, e: {r:1, c:3} }
-        ];
-        let cIndex = 4;
-        gerencial3Meses.forEach(m => {
-            ws['!merges'].push({ s: {r:0, c:cIndex}, e: {r:0, c:cIndex+1} });
-            cIndex += 2;
-        });
-    }
-
-    
-    if (activeReport === "gerencial3") {
-        ws['!cols'] = [
-            { wch: 15 },
-            { wch: 40 },
-            { wch: 15 },
-            { wch: 15 }
-        ];
-        for (let i = 0; i < gerencial3Meses.length * 2; i++) {
-            ws['!cols'].push({ wch: 15 }); // Peso e Valor
-        }
-    }
-
     if (activeReport === "gerencial2") {
         ws['!merges'] = [
             { s: {r:0, c:0}, e: {r:1, c:0} },
@@ -924,7 +929,6 @@ function exportarExcel() {
             cIndex += 2;
         });
         
-        // Formatação (SheetJS open-source ignora cores, mas aceita number format `z` e as vezes alignment `s`)
         for (let cell in ws) {
             if (cell[0] === '!') continue;
             
@@ -932,20 +936,45 @@ function exportarExcel() {
             if (!ws[cell].s) ws[cell].s = {};
             
             if (row === 1 || row === 2) {
-                // Tenta centralizar e negrito nos cabeçalhos
                 ws[cell].s = { alignment: { horizontal: "center", vertical: "center" }, font: { bold: true } };
-            } else {
-                // Centraliza todas as informações e formata números
-                ws[cell].s = { alignment: { horizontal: "center", vertical: "center" } };
-                if (typeof ws[cell].v === 'number') {
-                    ws[cell].z = '#,##0.00';
-                }
+            } else if (typeof ws[cell].v === 'number') {
+                ws[cell].z = '#,##0.00';
             }
         }
         
-        // Configura largura das colunas
         ws['!cols'] = [{ wch: 15 }, { wch: 45 }]; // Cód Cliente e Cliente
         for (let i = 0; i < gerencial2Meses.length * 2; i++) {
+            ws['!cols'].push({ wch: 15 }); // Peso e Valor
+        }
+    } else if (activeReport === "gerencial3") {
+        ws['!merges'] = [
+            { s: {r:0, c:0}, e: {r:1, c:0} },
+            { s: {r:0, c:1}, e: {r:1, c:1} },
+            { s: {r:0, c:2}, e: {r:1, c:2} },
+            { s: {r:0, c:3}, e: {r:1, c:3} }
+        ];
+        
+        let cIndex = 4;
+        gerencial3Meses.forEach(m => {
+            ws['!merges'].push({ s: {r:0, c:cIndex}, e: {r:0, c:cIndex+1} });
+            cIndex += 2;
+        });
+        
+        for (let cell in ws) {
+            if (cell[0] === '!') continue;
+            
+            const row = parseInt(cell.replace(/\D/g, ''));
+            if (!ws[cell].s) ws[cell].s = {};
+            
+            if (row === 1 || row === 2) {
+                ws[cell].s = { alignment: { horizontal: "center", vertical: "center" }, font: { bold: true } };
+            } else if (typeof ws[cell].v === 'number') {
+                ws[cell].z = '#,##0.00';
+            }
+        }
+        
+        ws['!cols'] = [{ wch: 15 }, { wch: 45 }, { wch: 20 }, { wch: 20 }];
+        for (let i = 0; i < gerencial3Meses.length * 2; i++) {
             ws['!cols'].push({ wch: 15 }); // Peso e Valor
         }
     }
