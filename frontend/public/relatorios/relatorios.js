@@ -1689,13 +1689,20 @@ function abrirModalBuscaPedidos() {
 
     // Auto-search on typing
     const txtBox = document.getElementById('input-busca-pedido-livre');
-    if (txtBox) {
-        txtBox.removeEventListener('input', carregarPedidosParaModal);
-        txtBox.addEventListener('input', () => {
-            clearTimeout(txtBox.searchTimeout);
-            txtBox.searchTimeout = setTimeout(() => carregarPedidosParaModal(), 400);
-        });
-    }
+    const boxMun = document.getElementById('input-busca-pedido-municipio');
+    const boxRotaP = document.getElementById('input-busca-pedido-rota-p');
+    const boxRotaA = document.getElementById('input-busca-pedido-rota-a');
+    const inputsBusca = [txtBox, boxMun, boxRotaP, boxRotaA];
+
+    inputsBusca.forEach(box => {
+        if (box) {
+            box.removeEventListener('input', carregarPedidosParaModal);
+            box.addEventListener('input', () => {
+                clearTimeout(box.searchTimeout);
+                box.searchTimeout = setTimeout(() => carregarPedidosParaModal(), 400);
+            });
+        }
+    });
 
     // Auto-search on date changes
     if (dtIniEl) {
@@ -1723,6 +1730,13 @@ function abrirModalBuscaPedidos() {
                  dtFimEl.value = hoje.toISOString().slice(0, 10);
              }
              if (txtBox) txtBox.value = "";
+             const boxMun = document.getElementById('input-busca-pedido-municipio');
+             const boxRotaP = document.getElementById('input-busca-pedido-rota-p');
+             const boxRotaA = document.getElementById('input-busca-pedido-rota-a');
+             if (boxMun) boxMun.value = "";
+             if (boxRotaP) boxRotaP.value = "";
+             if (boxRotaA) boxRotaA.value = "";
+             
              carregarPedidosParaModal();
         });
     }
@@ -1787,12 +1801,19 @@ function carregarPedidosParaModal() {
     const dtIni = dtIniEl ? dtIniEl.value : null;
     const dtFim = dtFimEl ? dtFimEl.value : null;
     const txt = txtBox ? txtBox.value.trim() : "";
+    
+    const municipio = document.getElementById('input-busca-pedido-municipio')?.value.trim() || "";
+    const rotaP = document.getElementById('input-busca-pedido-rota-p')?.value.trim() || "";
+    const rotaA = document.getElementById('input-busca-pedido-rota-a')?.value.trim() || "";
 
     const mod = activeRelatorio === 'retiradas' ? 'RETIRADA' : 'ENTREGA';
-    let url = `${API_BASE}/api/pedidos?exclude_status=FATURADO,CANCELADO&pageSize=100&modalidade=${mod}`;
+    let url = `${API_BASE}/api/pedidos?exclude_status=FATURADO,FATURADO SUPRA,CANCELADO&pageSize=100&modalidade=${mod}&sem_carga=true`;
     if (dtIni) url += `&from=${dtIni}`;
     if (dtFim) url += `&to=${dtFim}`;
     if (txt) url += `&cliente=${encodeURIComponent(txt)}`;
+    if (municipio) url += `&municipio=${encodeURIComponent(municipio)}`;
+    if (rotaP) url += `&rota_principal=${encodeURIComponent(rotaP)}`;
+    if (rotaA) url += `&rota_aproximacao=${encodeURIComponent(rotaA)}`;
 
     fetch(url, {
         headers: { "Authorization": `Bearer ${window.Auth ? window.Auth.getToken() : ''}` }

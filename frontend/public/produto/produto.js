@@ -970,7 +970,7 @@ function setupImportarPdf() {
     return parseDateBrToISO(s);
   };
 
-  const doImport = async ({ tipo, validadeISO, file, fornecedor }) => {
+  const doImport = async ({ tipo, validadeISO, file, fornecedor, atualizar_tabelas }) => {
     if (!tipo) {
       if ("Tipo inválido. Use INSUMOS ou PET." !== 'Handled by ErrorUtils') { window.ErrorUtils ? window.ErrorUtils.showError('Aviso', "Tipo inválido. Use INSUMOS ou PET.") : alert("Tipo inválido. Use INSUMOS ou PET."); };
       return;
@@ -1005,6 +1005,7 @@ function setupImportarPdf() {
       formData.append("tipo_lista", tipo);
       formData.append("validade_tabela", validadeISO); // yyyy-mm-dd
       formData.append("fornecedor", fornecedor);
+      formData.append("atualizar_tabelas", atualizarTabelas);
       formData.append("file", file);
 
       const resp = await fetch(url, { method: "POST", body: formData });
@@ -1073,6 +1074,7 @@ function setupImportarPdf() {
   const modalTipo = $("import_tipo_lista");
   const modalValidade = $("import_validade");
   const modalArquivo = $("import_arquivo");
+  const modalAtualizar = $("import_atualizar_tabelas");
   const modalConfirm = $("import-confirm");
   const modalCancel = $("import-cancel");
   const modalClose = $("import-close");
@@ -1105,8 +1107,9 @@ function setupImportarPdf() {
         const validadeISO = normalizeValidISO(modalValidade.value);
         const file = modalArquivo.files?.[0];
         const fornecedor = $("import_fornecedor")?.value;
+        const atualizar_tabelas = modalAtualizar?.value;
 
-        const ok = await doImport({ tipo, validadeISO, file, fornecedor });
+        const ok = await doImport({ tipo, validadeISO, file, fornecedor, atualizar_tabelas });
         if (ok) {
           // opcional: fecha e reseta se deu certo
           modalArquivo.value = "";

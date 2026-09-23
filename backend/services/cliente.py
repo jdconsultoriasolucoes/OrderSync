@@ -75,6 +75,7 @@ def _flat_to_nested(model: ClienteModelV2) -> dict:
             "municipio_faturamento": model.faturamento_municipio,
             "estado_faturamento": model.faturamento_estado,
             "email_danfe_faturamento": model.faturamento_email_danfe,
+            "tipo_entrega_faturamento": model.faturamento_tipo_entrega,
         },
         "representante_legal": {
             "nome_RepresentanteLegal": model.legal_nome,
@@ -246,6 +247,7 @@ def _nested_to_flat(data: dict) -> ClienteModelV2:
     model.faturamento_municipio = ef.get("municipio_faturamento")
     model.faturamento_estado = ef.get("estado_faturamento")
     model.faturamento_email_danfe = ef.get("email_danfe_faturamento")
+    model.faturamento_tipo_entrega = ef.get("tipo_entrega_faturamento")
 
     model.legal_nome = rl.get("nome_RepresentanteLegal")
     model.legal_celular = rl.get("celular_RepresentanteLegal")

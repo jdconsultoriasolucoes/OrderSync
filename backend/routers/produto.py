@@ -368,6 +368,7 @@ async def importar_lista(
     background_tasks: BackgroundTasks,
     tipo_lista: str = Form(..., description="Tipo de lista: INSUMOS ou PET"),
     fornecedor: Optional[str] = Form(None, description="Nome do fornecedor (opcional, sobrescreve detecção)"),
+    atualizar_tabelas: Optional[str] = Form("sim", description="Atualizar tabelas sim ou nao"),
     validade_tabela: Optional[str] = Form(None),
     file: UploadFile = File(...),
     # Note: Using Depends in Form/File upload might be tricky if not done right, 
@@ -439,7 +440,7 @@ async def importar_lista(
         codigos_alterados.extend(g.get("codigos_alterados", []))
         
     task_id = None
-    if codigos_alterados:
+    if codigos_alterados and atualizar_tabelas == "sim":
         task_id = str(uuid.uuid4())
         nova_tarefa = BackgroundTaskModel(
             task_id=task_id,

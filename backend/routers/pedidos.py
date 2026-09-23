@@ -202,6 +202,8 @@ class PedidoUpdateRequest(BaseModel):
     frete_kg: Optional[float] = 0.0
     pedido_supra: Optional[str] = None
     nota_fiscal: Optional[str] = None
+    data_faturamento: Optional[str] = None
+    valor_nota: Optional[float] = None
     contato_nome: Optional[str] = None
     contato_email: Optional[str] = None
     contato_fone: Optional[str] = None
@@ -232,6 +234,10 @@ def listar_pedidos(
     nota_fiscal: Optional[str] = None,
     numero_carga: Optional[str] = None,
     modalidade: Optional[str] = None,
+    municipio: Optional[str] = None,
+    rota_principal: Optional[str] = None,
+    rota_aproximacao: Optional[str] = None,
+    sem_carga: Optional[bool] = False,
     page: int = 1,
     pageSize: int = 25,
     limit: Optional[int] = None,
@@ -349,6 +355,29 @@ def listar_pedidos(
             filtros_sql.append("a.usar_valor_com_frete = TRUE")
         elif modalidade.upper() == "RETIRADA":
             filtros_sql.append("(a.usar_valor_com_frete = FALSE OR a.usar_valor_com_frete IS NULL)")
+
+    if municipio:
+        filtros_sql.append("c.entrega_municipio ILIKE :municipio_busca")
+        params["municipio_busca"] = f"%{municipio}%"
+        
+    if rota_principal:
+        filtros_sql.append("c.entrega_rota_principal ILIKE :rota_principal_busca")
+        params["rota_principal_busca"] = f"%{rota_principal}%"
+        
+    if rota_aproximacao:
+        filtros_sql.append("c.entrega_rota_aproximacao ILIKE :rota_aproximacao_busca")
+        params["rota_aproximacao_busca"] = f"%{rota_aproximacao}%"
+
+    if sem_carga:
+        filtros_sql.append("""
+            NOT EXISTS (
+                SELECT 1 FROM public.tb_cargas_pedidos cp
+                WHERE cp.numero_pedido::text = a.id_pedido::text
+            ) AND NOT EXISTS (
+                SELECT 1 FROM public.tb_retiradas_pedidos rp
+                WHERE rp.numero_pedido::text = a.id_pedido::text
+            )
+        """)
 
     where_clause = " AND ".join(filtros_sql)
 
@@ -540,6 +569,14 @@ def atualizar_pedido(
         dt_ref = pedido.confirmado_em or pedido.created_at or datetime.now()
         pedido.pedido_supra = normalizar_pedido_supra(body.pedido_supra, dt_ref)
     pedido.nota_fiscal = body.nota_fiscal
+    if body.data_faturamento:
+        try:
+            pedido.data_faturamento = datetime.fromisoformat(body.data_faturamento)
+        except ValueError:
+            pass # Keep previous or ignore if invalid date format
+    if body.valor_nota is not None:
+        pedido.valor_nota = body.valor_nota
+        
     if body.contato_nome is not None: pedido.contato_nome = body.contato_nome
     if body.contato_email is not None: pedido.contato_email = body.contato_email
     if body.contato_fone is not None: pedido.contato_fone = body.contato_fone
@@ -548,6 +585,11 @@ def atualizar_pedido(
     pedido.total_sem_frete = round(total_sem_frete, 2)
     pedido.total_com_frete = round(total_com_frete, 2)
     pedido.total_pedido = round(total_pedido, 2)
+    
+    # Check rule for "Faturado Supra"
+    if status_atual != "FATURADO SUPRA" and status_atual != "CANCELADO":
+        if (pedido.pedido_supra and pedido.nota_fiscal and pedido.data_faturamento and pedido.valor_nota is not None):
+            pedido.status = "Faturado Supra"
     pedido.atualizado_em = datetime.now()
     
     db.add(pedido)

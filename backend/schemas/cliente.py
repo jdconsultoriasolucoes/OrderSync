@@ -87,6 +87,7 @@ class EnderecoFaturamento(BaseModel):
     municipio_faturamento: Optional[str] = None
     estado_faturamento: Optional[str] = None
     email_danfe_faturamento: Optional[str] = None
+    tipo_entrega_faturamento: Optional[str] = None
 
 #    @field_validator("email_danfe_faturamento")
 #    def email_valido(cls, v):

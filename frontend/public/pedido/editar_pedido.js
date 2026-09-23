@@ -2140,6 +2140,8 @@ async function salvarTabela() {
   const cliente       = (elCli?.value || '').trim();
   const pedido_supra  = document.getElementById('pedido_supra')?.value.trim() || '';
   const nota_fiscal   = document.getElementById('nota_fiscal')?.value.trim() || '';
+  const data_faturamento = document.getElementById('data_faturamento')?.value.trim() || null;
+  const valor_nota    = document.getElementById('valor_nota')?.value.trim() ? Number(document.getElementById('valor_nota').value.replace(',', '.')) : null;
   const frete_kg      = Number(elFrt?.value || 0);
   const ramo_juridico = elRam?.value || null;
 
@@ -2268,7 +2270,7 @@ async function salvarTabela() {
     cliente: cliente || '', 
     codigo_cliente, 
     ramo_juridico, 
-    pedido_supra, nota_fiscal,
+    pedido_supra, nota_fiscal, data_faturamento, valor_nota,
     fornecedor: fornecedorHeader, calcula_st, 
     frete_kg, usar_valor_com_frete,
     produtos: produtosFiltrados 
@@ -3313,6 +3315,8 @@ async function salvarPedido(payload) {
       frete_kg: payload.frete_kg || 0,
       pedido_supra: payload.pedido_supra || null,
       nota_fiscal: payload.nota_fiscal || null,
+      data_faturamento: payload.data_faturamento || null,
+      valor_nota: payload.valor_nota || null,
       contato_nome: payload.contato_nome || null,
       contato_email: payload.contato_email || null,
       contato_fone: payload.contato_fone || null,

@@ -483,10 +483,26 @@
                             <input type="date" id="input-busca-pedido-data-fim" class="os-input">
                         </div>
                     </div>
-                    <div style="flex:1">
-                        <label>Filtro Rápido (Cliente/Código):</label>
-                        <input type="text" id="input-busca-pedido-livre" class="os-input"
-                            placeholder="Digite para filtrar a lista abaixo..." autocomplete="off">
+                    <div style="flex:1; display: flex; flex-direction: column; gap: 10px;">
+                        <div>
+                            <label>Filtro Rápido (Cliente/Código):</label>
+                            <input type="text" id="input-busca-pedido-livre" class="os-input"
+                                placeholder="Digite para filtrar a lista abaixo..." autocomplete="off">
+                        </div>
+                        <div style="display: flex; gap: 10px;">
+                            <div style="flex: 1;">
+                                <label>Município:</label>
+                                <input type="text" id="input-busca-pedido-municipio" class="os-input" placeholder="Filtrar por Município">
+                            </div>
+                            <div style="flex: 1;">
+                                <label>Rota Principal:</label>
+                                <input type="text" id="input-busca-pedido-rota-p" class="os-input" placeholder="Filtrar Rota Principal">
+                            </div>
+                            <div style="flex: 1;">
+                                <label>Rota Aprox.:</label>
+                                <input type="text" id="input-busca-pedido-rota-a" class="os-input" placeholder="Filtrar Rota Aprox.">
+                            </div>
+                        </div>
                     </div>
                     <div style="flex: 0 0 auto; display: flex; gap: 8px;">
                         <button class="os-btn os-btn-secondary" id="btn-limpar-busca-pedidos" style="height: 38px;">Limpar Filtros</button>

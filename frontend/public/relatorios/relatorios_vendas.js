@@ -26,6 +26,7 @@ const selGerencialVend = document.getElementById("filtro-gerencial-vendedor");
 const inGerencialDataInicio = document.getElementById("filtro-gerencial-data-inicio");
 const inGerencialDataFim = document.getElementById("filtro-gerencial-data-fim");
 const inGerencialObs = document.getElementById("filtro-gerencial-observacao");
+const selGerencialStatus = document.getElementById("filtro-gerencial-status");
 
 const btnLimpar = document.getElementById("btn-limpar-filtros");
 const btnExportar = document.getElementById("btn-exportar-excel");
@@ -39,6 +40,19 @@ const emptyStateEl = document.getElementById("empty-state");
 const txtTitulo = document.getElementById("titulo-relatorio-principal");
 
 const menuButtons = document.querySelectorAll(".relatorios-menu button");
+
+// Elementos Filtro Gerencial 3
+const inG3Cod = document.getElementById("filtro-gerencial3-codigo");
+const inG3Nome = document.getElementById("filtro-gerencial3-nome");
+const selG3Meses = document.getElementById("filtro-gerencial3-meses");
+const selG3Filial = document.getElementById("filtro-gerencial3-filial");
+const selG3Categoria = document.getElementById("filtro-gerencial3-categoria");
+const selG3Vendedor = document.getElementById("filtro-gerencial3-vendedor");
+const selG3Municipio = document.getElementById("filtro-gerencial3-municipio");
+const inG3RotaG = document.getElementById("filtro-gerencial3-rotag");
+const inG3RotaA = document.getElementById("filtro-gerencial3-rotaa");
+const selG3Status = document.getElementById("filtro-gerencial3-status");
+const selG3TipoEntrega = document.getElementById("filtro-gerencial3-tipo-entrega");
 
 // State
 let activeReport = "cliente"; // "cliente" ou "produto"
@@ -107,7 +121,19 @@ document.addEventListener("DOMContentLoaded", async () => {
             sortState = { col: null, desc: false }; // reseta ordenação
             
             alternarRelatorioUI();
-            await buscarDadosRelatorio();
+            
+    if (inG3Cod) inG3Cod.value = "";
+    if (inG3Nome) inG3Nome.value = "";
+    if (selG3Filial) selG3Filial.value = "";
+    if (selG3Categoria) selG3Categoria.value = "";
+    if (selG3Vendedor) selG3Vendedor.value = "";
+    if (selG3Municipio) selG3Municipio.value = "";
+    if (inG3RotaG) inG3RotaG.value = "";
+    if (inG3RotaA) inG3RotaA.value = "";
+    if (selG3Status) selG3Status.value = "";
+    if (selG3TipoEntrega) selG3TipoEntrega.value = "";
+
+    await buscarDadosRelatorio();
         });
     });
 
@@ -118,6 +144,18 @@ document.addEventListener("DOMContentLoaded", async () => {
     alternarRelatorioUI();
 
     // 5. Executar primeira busca automática
+    
+    if (inG3Cod) inG3Cod.value = "";
+    if (inG3Nome) inG3Nome.value = "";
+    if (selG3Filial) selG3Filial.value = "";
+    if (selG3Categoria) selG3Categoria.value = "";
+    if (selG3Vendedor) selG3Vendedor.value = "";
+    if (selG3Municipio) selG3Municipio.value = "";
+    if (inG3RotaG) inG3RotaG.value = "";
+    if (inG3RotaA) inG3RotaA.value = "";
+    if (selG3Status) selG3Status.value = "";
+    if (selG3TipoEntrega) selG3TipoEntrega.value = "";
+
     await buscarDadosRelatorio();
 
     // 6. Registrar Listeners de Ações
@@ -215,13 +253,45 @@ function alternarRelatorioUI() {
                 <th>#</th>
                 <th data-sort="documento" style="white-space: nowrap;">CNPJ/CPF</th>
                 <th data-sort="nome_cliente">Nome Cliente</th>
+                <th data-sort="atividade_principal">Atividade Principal</th>
                 <th data-sort="municipio">Município</th>
                 <th data-sort="vendedor">Vendedor</th>
                 <th data-sort="data_ultima_compra">Data Última Compra</th>
                 <th data-sort="observacao">Observação</th>
             </tr>
         `;
-    } else if (activeReport === "gerencial2") {
+    } else if (activeReport === "gerencial3") {
+        txtTitulo.textContent = "Relatório Gerencial 3";
+        tableHeaders.innerHTML = ""; // Será preenchido na renderização, igual ao gerencial2
+    } else 
+    if (activeReport === "gerencial3") {
+        ws['!merges'] = [
+            { s: {r:0, c:0}, e: {r:1, c:0} },
+            { s: {r:0, c:1}, e: {r:1, c:1} },
+            { s: {r:0, c:2}, e: {r:1, c:2} },
+            { s: {r:0, c:3}, e: {r:1, c:3} }
+        ];
+        let cIndex = 4;
+        gerencial3Meses.forEach(m => {
+            ws['!merges'].push({ s: {r:0, c:cIndex}, e: {r:0, c:cIndex+1} });
+            cIndex += 2;
+        });
+    }
+
+    
+    if (activeReport === "gerencial3") {
+        ws['!cols'] = [
+            { wch: 15 },
+            { wch: 40 },
+            { wch: 15 },
+            { wch: 15 }
+        ];
+        for (let i = 0; i < gerencial3Meses.length * 2; i++) {
+            ws['!cols'].push({ wch: 15 }); // Peso e Valor
+        }
+    }
+
+    if (activeReport === "gerencial2") {
         txtTitulo.textContent = "Relatório Gerencial 2 - Evolução de Vendas";
         
         const mesesSel = document.getElementById("filtro-gerencial2-meses");
@@ -271,6 +341,13 @@ async function carregarFiltrosMetadata() {
                 opt.value = f;
                 opt.textContent = f;
                 selFilial.appendChild(opt);
+                    if (selG3Filial) {
+                        const opt3 = document.createElement("option");
+                        opt3.value = f;
+                        opt3.textContent = f;
+                        selG3Filial.appendChild(opt3);
+                    }
+
             });
         }
 
@@ -331,8 +408,42 @@ async function carregarFiltrosMetadata() {
                     selGerencialVend.appendChild(opt);
                 });
             }
+            if (dataG.status_cadastro && selGerencialStatus) {
+                dataG.status_cadastro.forEach(s => {
+                    const opt = document.createElement("option");
+                    opt.value = s;
+                    opt.textContent = s;
+                    selGerencialStatus.appendChild(opt);
+                });
+            }
         }
-    } catch (err) {
+    
+            if (dataG.vendedores && selG3Vendedor) {
+                dataG.vendedores.forEach(v => {
+                    const opt = document.createElement("option");
+                    opt.value = v;
+                    opt.textContent = v;
+                    selG3Vendedor.appendChild(opt);
+                });
+            }
+            if (dataG.municipios && selG3Municipio) {
+                dataG.municipios.forEach(m => {
+                    const opt = document.createElement("option");
+                    opt.value = m;
+                    opt.textContent = m;
+                    selG3Municipio.appendChild(opt);
+                });
+            }
+            if (dataG.status_cadastro && selG3Status) {
+                dataG.status_cadastro.forEach(s => {
+                    const opt = document.createElement("option");
+                    opt.value = s;
+                    opt.textContent = s;
+                    selG3Status.appendChild(opt);
+                });
+            }
+
+        } catch (err) {
         console.error("Falha ao carregar metadados dos filtros:", err);
     }
 }
@@ -358,7 +469,39 @@ async function buscarDadosRelatorio() {
         if (inGerencialDataInicio.value) queryParams.append("data_compra_inicio", inGerencialDataInicio.value);
         if (inGerencialDataFim.value) queryParams.append("data_compra_fim", inGerencialDataFim.value);
         if (inGerencialObs.value) queryParams.append("observacao", inGerencialObs.value);
-    } else if (activeReport === "gerencial2") {
+        if (selGerencialStatus && selGerencialStatus.value) queryParams.append("status_cadastro", selGerencialStatus.value);
+    } else if (activeReport === "gerencial3") {
+        txtTitulo.textContent = "Relatório Gerencial 3";
+        tableHeaders.innerHTML = ""; // Será preenchido na renderização, igual ao gerencial2
+    } else 
+    if (activeReport === "gerencial3") {
+        ws['!merges'] = [
+            { s: {r:0, c:0}, e: {r:1, c:0} },
+            { s: {r:0, c:1}, e: {r:1, c:1} },
+            { s: {r:0, c:2}, e: {r:1, c:2} },
+            { s: {r:0, c:3}, e: {r:1, c:3} }
+        ];
+        let cIndex = 4;
+        gerencial3Meses.forEach(m => {
+            ws['!merges'].push({ s: {r:0, c:cIndex}, e: {r:0, c:cIndex+1} });
+            cIndex += 2;
+        });
+    }
+
+    
+    if (activeReport === "gerencial3") {
+        ws['!cols'] = [
+            { wch: 15 },
+            { wch: 40 },
+            { wch: 15 },
+            { wch: 15 }
+        ];
+        for (let i = 0; i < gerencial3Meses.length * 2; i++) {
+            ws['!cols'].push({ wch: 15 }); // Peso e Valor
+        }
+    }
+
+    if (activeReport === "gerencial2") {
         const inG2Cod = document.getElementById("filtro-gerencial2-codigo");
         const inG2Nome = document.getElementById("filtro-gerencial2-nome");
         const selG2Meses = document.getElementById("filtro-gerencial2-meses");
@@ -383,6 +526,7 @@ async function buscarDadosRelatorio() {
     if (activeReport === "produto") endpoint = "vendas_produtos";
     else if (activeReport === "gerencial") endpoint = "gerencial";
     else if (activeReport === "gerencial2") endpoint = "gerencial2";
+    else if (activeReport === "gerencial3") endpoint = "gerencial3";
 
     try {
         const token = window.Auth ? window.Auth.getToken() : '';
@@ -399,7 +543,33 @@ async function buscarDadosRelatorio() {
         }
 
         renderizarTabela();
-    } catch (err) {
+    
+            if (dataG.vendedores && selG3Vendedor) {
+                dataG.vendedores.forEach(v => {
+                    const opt = document.createElement("option");
+                    opt.value = v;
+                    opt.textContent = v;
+                    selG3Vendedor.appendChild(opt);
+                });
+            }
+            if (dataG.municipios && selG3Municipio) {
+                dataG.municipios.forEach(m => {
+                    const opt = document.createElement("option");
+                    opt.value = m;
+                    opt.textContent = m;
+                    selG3Municipio.appendChild(opt);
+                });
+            }
+            if (dataG.status_cadastro && selG3Status) {
+                dataG.status_cadastro.forEach(s => {
+                    const opt = document.createElement("option");
+                    opt.value = s;
+                    opt.textContent = s;
+                    selG3Status.appendChild(opt);
+                });
+            }
+
+        } catch (err) {
         console.error(`Falha ao buscar relatório de ${activeReport}:`, err);
         tbody.innerHTML = `<tr><td colspan="10" style="text-align: center; color: var(--os-error); font-weight: 600;">Falha ao carregar dados do relatório.</td></tr>`;
     } finally {
@@ -411,6 +581,34 @@ async function buscarDadosRelatorio() {
  * Renderiza as linhas na tabela e calcula os totais dinâmicos
  */
 function renderizarTabela() {
+    
+    if (activeReport === "gerencial3") {
+        ws['!merges'] = [
+            { s: {r:0, c:0}, e: {r:1, c:0} },
+            { s: {r:0, c:1}, e: {r:1, c:1} },
+            { s: {r:0, c:2}, e: {r:1, c:2} },
+            { s: {r:0, c:3}, e: {r:1, c:3} }
+        ];
+        let cIndex = 4;
+        gerencial3Meses.forEach(m => {
+            ws['!merges'].push({ s: {r:0, c:cIndex}, e: {r:0, c:cIndex+1} });
+            cIndex += 2;
+        });
+    }
+
+    
+    if (activeReport === "gerencial3") {
+        ws['!cols'] = [
+            { wch: 15 },
+            { wch: 40 },
+            { wch: 15 },
+            { wch: 15 }
+        ];
+        for (let i = 0; i < gerencial3Meses.length * 2; i++) {
+            ws['!cols'].push({ wch: 15 }); // Peso e Valor
+        }
+    }
+
     if (activeReport === "gerencial2") {
         const mesesSel = document.getElementById("filtro-gerencial2-meses");
         const qtdeMeses = mesesSel ? parseInt(mesesSel.value) : 12;
@@ -510,7 +708,38 @@ function renderizarTabela() {
         });
         
         tbody.innerHTML = html;
-    } else if (activeReport === "gerencial2") {
+    } else if (activeReport === "gerencial3") {
+        txtTitulo.textContent = "Relatório Gerencial 3";
+        tableHeaders.innerHTML = ""; // Será preenchido na renderização, igual ao gerencial2
+    } else 
+    if (activeReport === "gerencial3") {
+        ws['!merges'] = [
+            { s: {r:0, c:0}, e: {r:1, c:0} },
+            { s: {r:0, c:1}, e: {r:1, c:1} },
+            { s: {r:0, c:2}, e: {r:1, c:2} },
+            { s: {r:0, c:3}, e: {r:1, c:3} }
+        ];
+        let cIndex = 4;
+        gerencial3Meses.forEach(m => {
+            ws['!merges'].push({ s: {r:0, c:cIndex}, e: {r:0, c:cIndex+1} });
+            cIndex += 2;
+        });
+    }
+
+    
+    if (activeReport === "gerencial3") {
+        ws['!cols'] = [
+            { wch: 15 },
+            { wch: 40 },
+            { wch: 15 },
+            { wch: 15 }
+        ];
+        for (let i = 0; i < gerencial3Meses.length * 2; i++) {
+            ws['!cols'].push({ wch: 15 }); // Peso e Valor
+        }
+    }
+
+    if (activeReport === "gerencial2") {
         listagemVendas.forEach((item, index) => {
             html += `<tr>
                 <td style="border-right: 1px solid var(--os-border);">${index + 1}</td>
@@ -647,6 +876,19 @@ async function limparTodosFiltros() {
     inGerencialDataInicio.value = "";
     inGerencialDataFim.value = "";
     inGerencialObs.value = "";
+    if (selGerencialStatus) selGerencialStatus.value = "";
+
+    
+    if (inG3Cod) inG3Cod.value = "";
+    if (inG3Nome) inG3Nome.value = "";
+    if (selG3Filial) selG3Filial.value = "";
+    if (selG3Categoria) selG3Categoria.value = "";
+    if (selG3Vendedor) selG3Vendedor.value = "";
+    if (selG3Municipio) selG3Municipio.value = "";
+    if (inG3RotaG) inG3RotaG.value = "";
+    if (inG3RotaA) inG3RotaA.value = "";
+    if (selG3Status) selG3Status.value = "";
+    if (selG3TipoEntrega) selG3TipoEntrega.value = "";
 
     await buscarDadosRelatorio();
 }
@@ -712,7 +954,38 @@ function exportarExcel() {
         listagemVendas.forEach((item, index) => {
             aoa.push([index + 1, fmtDoc(item.documento) || "-", limparNomeCliente(item.nome_cliente), item.municipio || "-", item.vendedor || "-", fmtData(item.data_ultima_compra), item.observacao || "-"]);
         });
-    } else if (activeReport === "gerencial2") {
+    } else if (activeReport === "gerencial3") {
+        txtTitulo.textContent = "Relatório Gerencial 3";
+        tableHeaders.innerHTML = ""; // Será preenchido na renderização, igual ao gerencial2
+    } else 
+    if (activeReport === "gerencial3") {
+        ws['!merges'] = [
+            { s: {r:0, c:0}, e: {r:1, c:0} },
+            { s: {r:0, c:1}, e: {r:1, c:1} },
+            { s: {r:0, c:2}, e: {r:1, c:2} },
+            { s: {r:0, c:3}, e: {r:1, c:3} }
+        ];
+        let cIndex = 4;
+        gerencial3Meses.forEach(m => {
+            ws['!merges'].push({ s: {r:0, c:cIndex}, e: {r:0, c:cIndex+1} });
+            cIndex += 2;
+        });
+    }
+
+    
+    if (activeReport === "gerencial3") {
+        ws['!cols'] = [
+            { wch: 15 },
+            { wch: 40 },
+            { wch: 15 },
+            { wch: 15 }
+        ];
+        for (let i = 0; i < gerencial3Meses.length * 2; i++) {
+            ws['!cols'].push({ wch: 15 }); // Peso e Valor
+        }
+    }
+
+    if (activeReport === "gerencial2") {
         let row1 = ["Cód. Cliente", "Cliente"];
         let row2 = ["", ""];
         
@@ -738,6 +1011,34 @@ function exportarExcel() {
     const ws = XLSX.utils.aoa_to_sheet(aoa);
 
     // Apply merges for gerencial2
+    
+    if (activeReport === "gerencial3") {
+        ws['!merges'] = [
+            { s: {r:0, c:0}, e: {r:1, c:0} },
+            { s: {r:0, c:1}, e: {r:1, c:1} },
+            { s: {r:0, c:2}, e: {r:1, c:2} },
+            { s: {r:0, c:3}, e: {r:1, c:3} }
+        ];
+        let cIndex = 4;
+        gerencial3Meses.forEach(m => {
+            ws['!merges'].push({ s: {r:0, c:cIndex}, e: {r:0, c:cIndex+1} });
+            cIndex += 2;
+        });
+    }
+
+    
+    if (activeReport === "gerencial3") {
+        ws['!cols'] = [
+            { wch: 15 },
+            { wch: 40 },
+            { wch: 15 },
+            { wch: 15 }
+        ];
+        for (let i = 0; i < gerencial3Meses.length * 2; i++) {
+            ws['!cols'].push({ wch: 15 }); // Peso e Valor
+        }
+    }
+
     if (activeReport === "gerencial2") {
         ws['!merges'] = [
             { s: {r:0, c:0}, e: {r:1, c:0} },
@@ -782,6 +1083,7 @@ function exportarExcel() {
 }
 
 let gerencial2Meses = [];
+let gerencial3Meses = [];
 function generateLastXMonths(x) {
     let months = [];
     const date = new Date();
