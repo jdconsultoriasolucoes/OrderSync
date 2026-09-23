@@ -263,28 +263,6 @@ function alternarRelatorioUI() {
     } else if (activeReport === "gerencial3") {
         txtTitulo.textContent = "Relatório Gerencial 3";
         tableHeaders.innerHTML = ""; // Será preenchido na renderização, igual ao gerencial2
-    } else 
-    , e: {r:1, c:0} },
-            { s: {r:0, c:1}, e: {r:1, c:1} },
-            { s: {r:0, c:2}, e: {r:1, c:2} },
-            { s: {r:0, c:3}, e: {r:1, c:3} }
-        ];
-        let cIndex = 4;
-        gerencial3Meses.forEach(m => {
-            ws['!merges'].push({ s: {r:0, c:cIndex}, e: {r:0, c:cIndex+1} });
-            cIndex += 2;
-        });
-    }
-
-    
-    ,
-            { wch: 40 },
-            { wch: 15 },
-            { wch: 15 }
-        ];
-        for (let i = 0; i < gerencial3Meses.length * 2; i++) {
-            ws['!cols'].push({ wch: 15 }); // Peso e Valor
-        }
     }
 
     if (activeReport === "gerencial2") {
@@ -445,28 +423,6 @@ async function buscarDadosRelatorio() {
     } else if (activeReport === "gerencial3") {
         txtTitulo.textContent = "Relatório Gerencial 3";
         tableHeaders.innerHTML = ""; // Será preenchido na renderização, igual ao gerencial2
-    } else 
-    , e: {r:1, c:0} },
-            { s: {r:0, c:1}, e: {r:1, c:1} },
-            { s: {r:0, c:2}, e: {r:1, c:2} },
-            { s: {r:0, c:3}, e: {r:1, c:3} }
-        ];
-        let cIndex = 4;
-        gerencial3Meses.forEach(m => {
-            ws['!merges'].push({ s: {r:0, c:cIndex}, e: {r:0, c:cIndex+1} });
-            cIndex += 2;
-        });
-    }
-
-    
-    ,
-            { wch: 40 },
-            { wch: 15 },
-            { wch: 15 }
-        ];
-        for (let i = 0; i < gerencial3Meses.length * 2; i++) {
-            ws['!cols'].push({ wch: 15 }); // Peso e Valor
-        }
     }
 
     if (activeReport === "gerencial2") {
@@ -526,28 +482,7 @@ async function buscarDadosRelatorio() {
  */
 function renderizarTabela() {
     
-    , e: {r:1, c:0} },
-            { s: {r:0, c:1}, e: {r:1, c:1} },
-            { s: {r:0, c:2}, e: {r:1, c:2} },
-            { s: {r:0, c:3}, e: {r:1, c:3} }
-        ];
-        let cIndex = 4;
-        gerencial3Meses.forEach(m => {
-            ws['!merges'].push({ s: {r:0, c:cIndex}, e: {r:0, c:cIndex+1} });
-            cIndex += 2;
-        });
-    }
-
     
-    ,
-            { wch: 40 },
-            { wch: 15 },
-            { wch: 15 }
-        ];
-        for (let i = 0; i < gerencial3Meses.length * 2; i++) {
-            ws['!cols'].push({ wch: 15 }); // Peso e Valor
-        }
-    }
 
     if (activeReport === "gerencial2") {
         const mesesSel = document.getElementById("filtro-gerencial2-meses");
@@ -651,28 +586,6 @@ function renderizarTabela() {
     } else if (activeReport === "gerencial3") {
         txtTitulo.textContent = "Relatório Gerencial 3";
         tableHeaders.innerHTML = ""; // Será preenchido na renderização, igual ao gerencial2
-    } else 
-    , e: {r:1, c:0} },
-            { s: {r:0, c:1}, e: {r:1, c:1} },
-            { s: {r:0, c:2}, e: {r:1, c:2} },
-            { s: {r:0, c:3}, e: {r:1, c:3} }
-        ];
-        let cIndex = 4;
-        gerencial3Meses.forEach(m => {
-            ws['!merges'].push({ s: {r:0, c:cIndex}, e: {r:0, c:cIndex+1} });
-            cIndex += 2;
-        });
-    }
-
-    
-    ,
-            { wch: 40 },
-            { wch: 15 },
-            { wch: 15 }
-        ];
-        for (let i = 0; i < gerencial3Meses.length * 2; i++) {
-            ws['!cols'].push({ wch: 15 }); // Peso e Valor
-        }
     }
 
     if (activeReport === "gerencial2") {
