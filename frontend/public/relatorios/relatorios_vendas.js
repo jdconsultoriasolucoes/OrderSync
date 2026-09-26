@@ -264,7 +264,30 @@ function alternarRelatorioUI() {
         `;
     } else if (activeReport === "gerencial3") {
         txtTitulo.textContent = "Relatório Gerencial 3";
-        tableHeaders.innerHTML = ""; // Será preenchido na renderização, igual ao gerencial2
+        
+        const mesesSel = document.getElementById("filtro-gerencial3-meses");
+        const qtdeMeses = mesesSel ? parseInt(mesesSel.value) : 12;
+        gerencial3Meses = generateLastXMonths(qtdeMeses);
+        
+        let htmlHeader1 = `<tr>
+            <th rowspan="2" style="width: 40px; min-width: 40px; border-right: 1px solid var(--os-border);">#</th>
+            <th rowspan="2" data-sort="codigo_cliente" style="min-width: 100px; border-right: 1px solid var(--os-border);">Cód. Cliente</th>
+            <th rowspan="2" data-sort="cliente" style="min-width: 250px; border-right: 1px solid var(--os-border);">Cliente</th>
+            <th rowspan="2" data-sort="data_ultima_compra_geral" style="min-width: 120px; border-right: 1px solid var(--os-border);">Data Última Compra</th>
+            <th rowspan="2" data-sort="previsao_proxima_compra" style="min-width: 150px; border-right: 1px solid var(--os-border);">Previsão Próxima Compra</th>`;
+        let htmlHeader2 = `<tr>`;
+        
+        gerencial3Meses.forEach((m, i) => {
+            const [ano, mes] = m.split('-');
+            const borderLeft = "border-left: 2px solid #cbd5e1;";
+            htmlHeader1 += `<th colspan="2" style="text-align: center; border-bottom: 1px solid var(--os-border); background-color: #f8fafc; ${borderLeft}">${mes}/${ano}</th>`;
+            htmlHeader2 += `<th class="tar" style="${borderLeft}">Peso (kg)</th><th class="tar col-money">Valor (R$)</th>`;
+        });
+        
+        htmlHeader1 += `</tr>`;
+        htmlHeader2 += `</tr>`;
+        
+        tableHeaders.innerHTML = htmlHeader1 + htmlHeader2;
     }
 
     if (activeReport === "gerencial2") {
@@ -313,56 +336,58 @@ async function carregarFiltrosMetadata() {
         // Popular Filiais
         if (data.filiais) {
             data.filiais.forEach(f => {
-                const opt = document.createElement("option");
-                opt.value = f;
-                opt.textContent = f;
-                selFilial.appendChild(opt);
-                    if (selG3Filial) {
-                        const opt3 = document.createElement("option");
-                        opt3.value = f;
-                        opt3.textContent = f;
-                        selG3Filial.appendChild(opt3);
-                    }
-
+                if (selFilial) {
+                    const opt = document.createElement("option");
+                    opt.value = f;
+                    opt.textContent = f;
+                    selFilial.appendChild(opt);
+                }
+                if (selG3Filial) {
+                    const opt3 = document.createElement("option");
+                    opt3.value = f;
+                    opt3.textContent = f;
+                    selG3Filial.appendChild(opt3);
+                }
             });
         }
 
         // Popular Status
         if (data.status) {
             data.status.forEach(s => {
-                const opt = document.createElement("option");
-                opt.value = s;
-                opt.textContent = s;
-                selStatus.appendChild(opt);
+                if (selStatus) {
+                    const opt = document.createElement("option");
+                    opt.value = s;
+                    opt.textContent = s;
+                    selStatus.appendChild(opt);
+                }
             });
         }
 
-        // Popular Municípios
+        // Popular Municípios de Vendas (para relatório de vendas)
         if (data.municipios) {
             data.municipios.forEach(m => {
-                const opt = document.createElement("option");
-                opt.value = m;
-                opt.textContent = m;
-                selMunicipio.appendChild(opt);
-                
-                const optG = document.createElement("option");
-                optG.value = m;
-                optG.textContent = m;
-                selGerencialMun.appendChild(optG);
+                if (selMunicipio) {
+                    const opt = document.createElement("option");
+                    opt.value = m;
+                    opt.textContent = m;
+                    selMunicipio.appendChild(opt);
+                }
             });
         }
 
         // Popular Grupos
         if (data.grupos) {
             data.grupos.forEach(g => {
-                const opt = document.createElement("option");
-                opt.value = g;
-                opt.textContent = g;
-                selGrupo.appendChild(opt);
+                if (selGrupo) {
+                    const opt = document.createElement("option");
+                    opt.value = g;
+                    opt.textContent = g;
+                    selGrupo.appendChild(opt);
+                }
             });
         }
         
-        // Popular Filtros Gerenciais
+        // Popular Filtros Gerenciais (Municípios de clientes, Vendedores e Status de Cadastro)
         const respGerencial = await fetch(`${API_BASE}/api/relatorios/gerencial/filtros`, {
             headers: { "Authorization": `Bearer ${token}` }
         });
@@ -370,32 +395,54 @@ async function carregarFiltrosMetadata() {
             const dataG = await respGerencial.json();
             if (dataG.municipios) {
                 dataG.municipios.forEach(m => {
-                    const opt = document.createElement("option");
-                    opt.value = m;
-                    opt.textContent = m;
-                    selGerencialMun.appendChild(opt);
+                    if (selGerencialMun) {
+                        const opt = document.createElement("option");
+                        opt.value = m;
+                        opt.textContent = m;
+                        selGerencialMun.appendChild(opt);
+                    }
+                    if (selG3Municipio) {
+                        const opt3 = document.createElement("option");
+                        opt3.value = m;
+                        opt3.textContent = m;
+                        selG3Municipio.appendChild(opt3);
+                    }
                 });
             }
             if (dataG.vendedores) {
                 dataG.vendedores.forEach(v => {
-                    const opt = document.createElement("option");
-                    opt.value = v;
-                    opt.textContent = v;
-                    selGerencialVend.appendChild(opt);
+                    if (selGerencialVend) {
+                        const opt = document.createElement("option");
+                        opt.value = v;
+                        opt.textContent = v;
+                        selGerencialVend.appendChild(opt);
+                    }
+                    if (selG3Vendedor) {
+                        const opt3 = document.createElement("option");
+                        opt3.value = v;
+                        opt3.textContent = v;
+                        selG3Vendedor.appendChild(opt3);
+                    }
                 });
             }
-            if (dataG.status_cadastro && selGerencialStatus) {
+            if (dataG.status_cadastro) {
                 dataG.status_cadastro.forEach(s => {
-                    const opt = document.createElement("option");
-                    opt.value = s;
-                    opt.textContent = s;
-                    selGerencialStatus.appendChild(opt);
+                    if (selGerencialStatus) {
+                        const opt = document.createElement("option");
+                        opt.value = s;
+                        opt.textContent = s;
+                        selGerencialStatus.appendChild(opt);
+                    }
+                    if (selG3Status) {
+                        const opt3 = document.createElement("option");
+                        opt3.value = s;
+                        opt3.textContent = s;
+                        selG3Status.appendChild(opt3);
+                    }
                 });
             }
         }
-    
-
-        } catch (err) {
+    } catch (err) {
         console.error("Falha ao carregar metadados dos filtros:", err);
     }
 }
@@ -990,7 +1037,7 @@ function generateLastXMonths(x) {
     let months = [];
     const date = new Date();
     date.setDate(1);
-    for (let i = x - 1; i >= 0; i--) {
+    for (let i = 0; i < x; i++) {
         const d = new Date(date.getFullYear(), date.getMonth() - i, 1);
         const y = d.getFullYear();
         const m = String(d.getMonth() + 1).padStart(2, '0');

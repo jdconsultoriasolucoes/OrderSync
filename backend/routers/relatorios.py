@@ -1010,6 +1010,7 @@ def get_relatorio_gerencial3(
     categoria: Optional[str] = Query(None),
     municipio: Optional[str] = Query(None),
     rota_geral: Optional[str] = Query(None),
+    rota_principal: Optional[str] = Query(None),
     rota_aproximacao: Optional[str] = Query(None),
     status_cadastro: Optional[str] = Query(None),
     tipo_entrega: Optional[str] = Query(None),
@@ -1062,17 +1063,18 @@ def get_relatorio_gerencial3(
         
     if categoria:
         if categoria.upper() == 'INSUMOS':
-            query_str += " AND tb_preco.nome_tabela ILIKE '%INSUMOS%'"
+            query_str += " AND (tb_preco.nome_tabela ILIKE '%INSUMOS%' OR p.fornecedor ILIKE '%INSUMOS%')"
         elif categoria.upper() == 'PET':
-            query_str += " AND tb_preco.nome_tabela ILIKE '%PET%'"
+            query_str += " AND (tb_preco.nome_tabela ILIKE '%PET%' OR p.fornecedor ILIKE '%PET%')"
 
     if municipio:
         query_str += " AND COALESCE(c.faturamento_municipio, c.entrega_municipio) = :municipio"
         params['municipio'] = municipio
 
-    if rota_geral:
+    rota_geral_val = rota_principal or rota_geral
+    if rota_geral_val:
         query_str += " AND c.entrega_rota_principal ILIKE :rota_geral"
-        params['rota_geral'] = f"%{rota_geral}%"
+        params['rota_geral'] = f"%{rota_geral_val}%"
 
     if rota_aproximacao:
         query_str += " AND c.entrega_rota_aproximacao ILIKE :rota_aproximacao"
@@ -1083,8 +1085,8 @@ def get_relatorio_gerencial3(
         params['status_cadastro'] = status_cadastro
         
     if tipo_entrega:
-        query_str += " AND c.faturamento_tipo_entrega = :tipo_entrega"
-        params['tipo_entrega'] = tipo_entrega
+        query_str += " AND c.entrega_tipo_entrega ILIKE :tipo_entrega"
+        params['tipo_entrega'] = f"%{tipo_entrega}%"
         
     query_str += '''
         GROUP BY 1, 2, 3, 4

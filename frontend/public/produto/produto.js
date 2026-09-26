@@ -1005,7 +1005,7 @@ function setupImportarPdf() {
       formData.append("tipo_lista", tipo);
       formData.append("validade_tabela", validadeISO); // yyyy-mm-dd
       formData.append("fornecedor", fornecedor);
-      formData.append("atualizar_tabelas", atualizarTabelas);
+      formData.append("atualizar_tabelas", atualizar_tabelas || "sim");
       formData.append("file", file);
 
       const resp = await fetch(url, { method: "POST", body: formData });
