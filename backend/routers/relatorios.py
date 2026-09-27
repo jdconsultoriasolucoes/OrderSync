@@ -1089,20 +1089,21 @@ def get_relatorio_gerencial3(
             c.cadastro_nome_cliente AS cliente,
             c.ultimas_compras_previsao_proxima AS previsao_proxima_compra,
             TO_CHAR(DATE_TRUNC('month', p.created_at), 'YYYY-MM') AS mes_ano,
-            SUM(COALESCE(pb.peso_liquido, 0)) AS peso,
-            SUM(p.total_pedido) AS valor,
+            CAST(SUM(COALESCE(CAST(pr.peso AS FLOAT), 0) * i.quantidade) AS FLOAT) AS peso,
+            CAST(SUM(
+                CASE
+                    WHEN p.usar_valor_com_frete = true THEN COALESCE(i.subtotal_com_f, i.preco_unitario * i.quantidade, 0)
+                    ELSE COALESCE(i.subtotal_sem_f, i.preco_unitario * i.quantidade, 0)
+                END
+            ) AS FLOAT) AS valor,
             MAX(p.created_at) AS data_ultima_compra_mes
-        FROM public.tb_pedidos p
-        JOIN public.t_cadastro_cliente_v2 c ON p.codigo_cliente = c.cadastro_codigo_da_empresa
-        LEFT JOIN (
-            SELECT i.id_pedido, SUM(i.quantidade * COALESCE(CAST(pr.peso AS FLOAT), 0)) as peso_liquido
-            FROM public.tb_pedidos_itens i
-            LEFT JOIN public.t_cadastro_produto_v2 pr ON pr.codigo_supra = i.codigo
-            GROUP BY i.id_pedido
-        ) pb ON pb.id_pedido = p.id_pedido
-        LEFT JOIN public.tb_tabela_preco tb_preco ON p.tabela_preco_id = tb_preco.id_tabela
+        FROM public.tb_pedidos_itens i
+        JOIN public.tb_pedidos p ON p.id_pedido = i.id_pedido
+        JOIN public.t_cadastro_cliente_v2 c ON c.cadastro_codigo_da_empresa::text = p.codigo_cliente::text
+        LEFT JOIN public.t_cadastro_produto_v2 pr ON pr.codigo_supra = i.codigo
         WHERE p.created_at >= DATE_TRUNC('month', CURRENT_DATE) - INTERVAL '{meses_str} months'
-          AND p.status != 'Cancelado'
+          AND UPPER(p.status) NOT LIKE '%CANCEL%'
+          AND i.quantidade > 0
     '''
     
     params = {}
@@ -1129,10 +1130,9 @@ def get_relatorio_gerencial3(
         params['filial'] = f"%{filial}%"
         
     if categoria:
-        if categoria.upper() == 'INSUMOS':
-            query_str += " AND (tb_preco.nome_tabela ILIKE '%INSUMOS%' OR p.fornecedor ILIKE '%INSUMOS%')"
-        elif categoria.upper() == 'PET':
-            query_str += " AND (tb_preco.nome_tabela ILIKE '%PET%' OR p.fornecedor ILIKE '%PET%')"
+        query_str += " AND (UPPER(pr.tipo) = :categoria OR UPPER(COALESCE(pr.tipo, '')) LIKE :categoria_like)"
+        params['categoria'] = categoria.upper()
+        params['categoria_like'] = f"%{categoria.upper()}%"
 
     if municipio:
         query_str += " AND COALESCE(c.faturamento_municipio, c.entrega_municipio) = :municipio"
