@@ -913,17 +913,83 @@ def get_relatorio_gerencial(
 
 @router.get("/gerencial/filtros")
 def get_filtros_gerencial(db: Session = Depends(get_db)):
-    q_mun = text("SELECT DISTINCT COALESCE(faturamento_municipio, entrega_municipio) FROM public.t_cadastro_cliente_v2 WHERE COALESCE(faturamento_municipio, entrega_municipio) IS NOT NULL AND COALESCE(faturamento_municipio, entrega_municipio) != '' ORDER BY 1")
-    q_vend = text("SELECT DISTINCT elaboracao_vendedor FROM public.t_cadastro_cliente_v2 WHERE elaboracao_vendedor IS NOT NULL AND elaboracao_vendedor != '' ORDER BY 1")
-    q_status = text("SELECT DISTINCT cadastro_status_cadastro FROM public.t_cadastro_cliente_v2 WHERE cadastro_status_cadastro IS NOT NULL AND cadastro_status_cadastro != '' ORDER BY 1")
+    # 1. Municípios de Clientes
+    q_mun = text("""
+        SELECT DISTINCT COALESCE(faturamento_municipio, entrega_municipio) 
+        FROM public.t_cadastro_cliente_v2 
+        WHERE COALESCE(faturamento_municipio, entrega_municipio) IS NOT NULL 
+          AND TRIM(COALESCE(faturamento_municipio, entrega_municipio)) != '' 
+        ORDER BY 1
+    """)
     
-    municipios = [r[0] for r in db.execute(q_mun).all()]
-    vendedores = [r[0] for r in db.execute(q_vend).all()]
-    status_cadastro = [r[0] for r in db.execute(q_status).all()]
+    # 2. Vendedores - Buscar do Catálogo (tb_vendedores) e complementar com clientes
+    vendedores = []
+    try:
+        q_vend_cat = text("SELECT DISTINCT nome FROM public.tb_vendedores WHERE nome IS NOT NULL AND TRIM(nome) != '' ORDER BY 1")
+        vendedores = [r[0].strip() for r in db.execute(q_vend_cat).all() if r[0] and r[0].strip()]
+    except Exception:
+        pass
+    if not vendedores:
+        try:
+            q_vend = text("SELECT DISTINCT elaboracao_vendedor FROM public.t_cadastro_cliente_v2 WHERE elaboracao_vendedor IS NOT NULL AND TRIM(elaboracao_vendedor) != '' ORDER BY 1")
+            vendedores = [r[0].strip() for r in db.execute(q_vend).all() if r[0] and r[0].strip()]
+        except Exception:
+            pass
+            
+    # 3. Filiais - Buscar do Catálogo (tb_filiais)
+    filiais = []
+    try:
+        q_fil = text("SELECT DISTINCT filial FROM public.tb_filiais WHERE filial IS NOT NULL AND TRIM(filial) != '' ORDER BY 1")
+        filiais = [r[0].strip() for r in db.execute(q_fil).all() if r[0] and r[0].strip()]
+    except Exception:
+        pass
+    if not filiais:
+        try:
+            q_fil_prod = text("SELECT DISTINCT fornecedor FROM public.t_cadastro_produto_v2 WHERE fornecedor IS NOT NULL AND TRIM(fornecedor) != '' ORDER BY 1")
+            filiais = [r[0].strip() for r in db.execute(q_fil_prod).all() if r[0] and r[0].strip()]
+        except Exception:
+            pass
+
+    # 4. Rotas - Buscar do Catálogo (tb_municipio_rota) e complementar com clientes
+    rotas_set = set()
+    try:
+        q_rotas_cat = text("SELECT DISTINCT rota FROM public.tb_municipio_rota WHERE rota IS NOT NULL ORDER BY rota")
+        for r in db.execute(q_rotas_cat).all():
+            if r[0] is not None and str(r[0]).strip():
+                rotas_set.add(str(r[0]).strip())
+    except Exception:
+        pass
+    try:
+        q_rotas_cli = text("""
+            SELECT DISTINCT entrega_rota_principal FROM public.t_cadastro_cliente_v2 WHERE entrega_rota_principal IS NOT NULL AND TRIM(entrega_rota_principal) != ''
+            UNION
+            SELECT DISTINCT entrega_rota_aproximacao FROM public.t_cadastro_cliente_v2 WHERE entrega_rota_aproximacao IS NOT NULL AND TRIM(entrega_rota_aproximacao) != ''
+        """)
+        for r in db.execute(q_rotas_cli).all():
+            if r[0] is not None and str(r[0]).strip():
+                rotas_set.add(str(r[0]).strip())
+    except Exception:
+        pass
+        
+    def rota_sort_key(val):
+        try:
+            return (0, int(val))
+        except ValueError:
+            return (1, str(val))
+            
+    rotas = sorted(list(rotas_set), key=rota_sort_key)
+    
+    # 5. Status do Cadastro
+    q_status = text("SELECT DISTINCT cadastro_status_cadastro FROM public.t_cadastro_cliente_v2 WHERE cadastro_status_cadastro IS NOT NULL AND TRIM(cadastro_status_cadastro) != '' ORDER BY 1")
+    
+    municipios = [r[0].strip() for r in db.execute(q_mun).all() if r[0] and r[0].strip()]
+    status_cadastro = [r[0].strip() for r in db.execute(q_status).all() if r[0] and r[0].strip()]
     
     return {
         "municipios": municipios,
         "vendedores": vendedores,
+        "filiais": filiais,
+        "rotas": rotas,
         "status_cadastro": status_cadastro
     }
 
@@ -1054,12 +1120,13 @@ def get_relatorio_gerencial3(
         params['nome_cliente'] = f"%{nome_cliente}%"
         
     if vendedor:
-        query_str += " AND c.elaboracao_vendedor = :vendedor"
-        params['vendedor'] = vendedor
+        query_str += " AND (c.elaboracao_vendedor ILIKE :vendedor OR c.elaboracao_vendedor = :vendedor_exact)"
+        params['vendedor'] = f"%{vendedor}%"
+        params['vendedor_exact'] = vendedor
 
     if filial:
-        query_str += " AND p.fornecedor = :filial"
-        params['filial'] = filial
+        query_str += " AND (p.fornecedor ILIKE :filial OR c.compras_filial_resposavel ILIKE :filial)"
+        params['filial'] = f"%{filial}%"
         
     if categoria:
         if categoria.upper() == 'INSUMOS':
@@ -1073,12 +1140,14 @@ def get_relatorio_gerencial3(
 
     rota_geral_val = rota_principal or rota_geral
     if rota_geral_val:
-        query_str += " AND c.entrega_rota_principal ILIKE :rota_geral"
-        params['rota_geral'] = f"%{rota_geral_val}%"
+        query_str += " AND (c.entrega_rota_principal::text = :rota_geral OR c.entrega_rota_principal ILIKE :rota_geral_like)"
+        params['rota_geral'] = str(rota_geral_val)
+        params['rota_geral_like'] = f"%{rota_geral_val}%"
 
     if rota_aproximacao:
-        query_str += " AND c.entrega_rota_aproximacao ILIKE :rota_aproximacao"
-        params['rota_aproximacao'] = f"%{rota_aproximacao}%"
+        query_str += " AND (c.entrega_rota_aproximacao::text = :rota_aproximacao OR c.entrega_rota_aproximacao ILIKE :rota_aproximacao_like)"
+        params['rota_aproximacao'] = str(rota_aproximacao)
+        params['rota_aproximacao_like'] = f"%{rota_aproximacao}%"
 
     if status_cadastro:
         query_str += " AND c.cadastro_status_cadastro = :status_cadastro"
@@ -1116,7 +1185,6 @@ def get_relatorio_gerencial3(
         }
         dt_mes = r['data_ultima_compra_mes']
         if dt_mes:
-            # Need to compare datetime correctly
             current_max = data[cod]['data_ultima_compra_geral']
             if not current_max or dt_mes > current_max:
                 data[cod]['data_ultima_compra_geral'] = dt_mes

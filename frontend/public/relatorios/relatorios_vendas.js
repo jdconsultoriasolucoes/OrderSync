@@ -49,8 +49,8 @@ const selG3Filial = document.getElementById("filtro-gerencial3-filial");
 const selG3Categoria = document.getElementById("filtro-gerencial3-categoria");
 const selG3Vendedor = document.getElementById("filtro-gerencial3-vendedor");
 const selG3Municipio = document.getElementById("filtro-gerencial3-municipio");
-const inG3RotaG = document.getElementById("filtro-gerencial3-rotag");
-const inG3RotaA = document.getElementById("filtro-gerencial3-rotaa");
+const selG3RotaG = document.getElementById("filtro-gerencial3-rotag");
+const selG3RotaA = document.getElementById("filtro-gerencial3-rotaa");
 const selG3Status = document.getElementById("filtro-gerencial3-status");
 const selG3TipoEntrega = document.getElementById("filtro-gerencial3-tipo-entrega");
 
@@ -74,14 +74,33 @@ function fmtPeso(val) {
 }
 
 function fmtData(dateStr) {
-    if (!dateStr) return "-";
-    // Extrai apenas a data se vier com formato ISO
-    const onlyDate = dateStr.split('T')[0];
-    const parts = onlyDate.split('-');
-    if (parts.length === 3) {
-        return `${parts[2]}/${parts[1]}/${parts[0]}`;
+    if (!dateStr || dateStr === "None" || dateStr === "null") return "-";
+    if (typeof dateStr !== "string") {
+        try {
+            dateStr = dateStr.toISOString();
+        } catch(e) {
+            dateStr = String(dateStr);
+        }
     }
-    return dateStr;
+    // Remove qualquer porção de hora (T00:00:00 ou espaço 00:00:00)
+    const clean = dateStr.trim().split('T')[0].split(' ')[0];
+    if (clean.includes('-')) {
+        const parts = clean.split('-');
+        if (parts.length === 3) {
+            const y = parts[0].padStart(4, '0');
+            const m = parts[1].padStart(2, '0');
+            const d = parts[2].padStart(2, '0');
+            if (parts[0].length === 4) {
+                return `${d}/${m}/${y}`;
+            }
+        }
+    } else if (clean.includes('/')) {
+        const parts = clean.split('/');
+        if (parts.length === 3) {
+            return `${parts[0].padStart(2, '0')}/${parts[1].padStart(2, '0')}/${parts[2]}`;
+        }
+    }
+    return clean || "-";
 }
 
 function limparNomeCliente(nome) {
@@ -128,8 +147,8 @@ document.addEventListener("DOMContentLoaded", async () => {
     if (selG3Categoria) selG3Categoria.value = "";
     if (selG3Vendedor) selG3Vendedor.value = "";
     if (selG3Municipio) selG3Municipio.value = "";
-    if (inG3RotaG) inG3RotaG.value = "";
-    if (inG3RotaA) inG3RotaA.value = "";
+    if (selG3RotaG) selG3RotaG.value = "";
+    if (selG3RotaA) selG3RotaA.value = "";
     if (selG3Status) selG3Status.value = "";
     if (selG3TipoEntrega) selG3TipoEntrega.value = "";
 
@@ -151,8 +170,8 @@ document.addEventListener("DOMContentLoaded", async () => {
     if (selG3Categoria) selG3Categoria.value = "";
     if (selG3Vendedor) selG3Vendedor.value = "";
     if (selG3Municipio) selG3Municipio.value = "";
-    if (inG3RotaG) inG3RotaG.value = "";
-    if (inG3RotaA) inG3RotaA.value = "";
+    if (selG3RotaG) selG3RotaG.value = "";
+    if (selG3RotaA) selG3RotaA.value = "";
     if (selG3Status) selG3Status.value = "";
     if (selG3TipoEntrega) selG3TipoEntrega.value = "";
 
@@ -273,8 +292,8 @@ function alternarRelatorioUI() {
             <th rowspan="2" style="width: 40px; min-width: 40px; border-right: 1px solid var(--os-border);">#</th>
             <th rowspan="2" data-sort="codigo_cliente" style="min-width: 100px; border-right: 1px solid var(--os-border);">Cód. Cliente</th>
             <th rowspan="2" data-sort="cliente" style="min-width: 250px; border-right: 1px solid var(--os-border);">Cliente</th>
-            <th rowspan="2" data-sort="data_ultima_compra_geral" style="min-width: 120px; border-right: 1px solid var(--os-border);">Data Última Compra</th>
-            <th rowspan="2" data-sort="previsao_proxima_compra" style="min-width: 150px; border-right: 1px solid var(--os-border);">Previsão Próxima Compra</th>`;
+            <th rowspan="2" data-sort="previsao_proxima_compra" style="min-width: 150px; border-right: 1px solid var(--os-border);">Previsão Próxima Compra</th>
+            <th rowspan="2" data-sort="data_ultima_compra_geral" style="min-width: 120px; border-right: 1px solid var(--os-border);">Data Última Compra</th>`;
         let htmlHeader2 = `<tr>`;
         
         gerencial3Meses.forEach((m, i) => {
@@ -387,7 +406,7 @@ async function carregarFiltrosMetadata() {
             });
         }
         
-        // Popular Filtros Gerenciais (Municípios de clientes, Vendedores e Status de Cadastro)
+        // Popular Filtros Gerenciais (Municípios de clientes, Vendedores, Filiais, Rotas e Status de Cadastro)
         const respGerencial = await fetch(`${API_BASE}/api/relatorios/gerencial/filtros`, {
             headers: { "Authorization": `Bearer ${token}` }
         });
@@ -422,6 +441,32 @@ async function carregarFiltrosMetadata() {
                         opt3.value = v;
                         opt3.textContent = v;
                         selG3Vendedor.appendChild(opt3);
+                    }
+                });
+            }
+            if (dataG.filiais) {
+                dataG.filiais.forEach(f => {
+                    if (selG3Filial) {
+                        const opt3 = document.createElement("option");
+                        opt3.value = f;
+                        opt3.textContent = f;
+                        selG3Filial.appendChild(opt3);
+                    }
+                });
+            }
+            if (dataG.rotas) {
+                dataG.rotas.forEach(r => {
+                    if (selG3RotaG) {
+                        const optG = document.createElement("option");
+                        optG.value = r;
+                        optG.textContent = `Rota ${r}`;
+                        selG3RotaG.appendChild(optG);
+                    }
+                    if (selG3RotaA) {
+                        const optA = document.createElement("option");
+                        optA.value = r;
+                        optA.textContent = `Rota ${r}`;
+                        selG3RotaA.appendChild(optA);
                     }
                 });
             }
@@ -488,8 +533,8 @@ async function buscarDadosRelatorio() {
         const selG3Categoria = document.getElementById("filtro-gerencial3-categoria");
         const selG3Vendedor = document.getElementById("filtro-gerencial3-vendedor");
         const selG3Municipio = document.getElementById("filtro-gerencial3-municipio");
-        const inG3RotaG = document.getElementById("filtro-gerencial3-rotag");
-        const inG3RotaA = document.getElementById("filtro-gerencial3-rotaa");
+        const selG3RotaG = document.getElementById("filtro-gerencial3-rotag");
+        const selG3RotaA = document.getElementById("filtro-gerencial3-rotaa");
         const selG3Status = document.getElementById("filtro-gerencial3-status");
         const selG3TipoEntrega = document.getElementById("filtro-gerencial3-tipo-entrega");
 
@@ -500,8 +545,8 @@ async function buscarDadosRelatorio() {
         if (selG3Categoria && selG3Categoria.value) queryParams.append("categoria", selG3Categoria.value);
         if (selG3Vendedor && selG3Vendedor.value) queryParams.append("vendedor", selG3Vendedor.value);
         if (selG3Municipio && selG3Municipio.value) queryParams.append("municipio", selG3Municipio.value);
-        if (inG3RotaG && inG3RotaG.value) queryParams.append("rota_principal", inG3RotaG.value);
-        if (inG3RotaA && inG3RotaA.value) queryParams.append("rota_aproximacao", inG3RotaA.value);
+        if (selG3RotaG && selG3RotaG.value) queryParams.append("rota_principal", selG3RotaG.value);
+        if (selG3RotaA && selG3RotaA.value) queryParams.append("rota_aproximacao", selG3RotaA.value);
         if (selG3Status && selG3Status.value) queryParams.append("status_cadastro", selG3Status.value);
         if (selG3TipoEntrega && selG3TipoEntrega.value) queryParams.append("tipo_entrega", selG3TipoEntrega.value);
     } else {
@@ -588,8 +633,8 @@ function renderizarTabela() {
             <th rowspan="2" style="width: 40px; min-width: 40px; border-right: 1px solid var(--os-border);">#</th>
             <th rowspan="2" data-sort="codigo_cliente" style="min-width: 100px; border-right: 1px solid var(--os-border);">Cód. Cliente</th>
             <th rowspan="2" data-sort="cliente" style="min-width: 250px; border-right: 1px solid var(--os-border);">Cliente</th>
-            <th rowspan="2" data-sort="data_ultima_compra_geral" style="min-width: 120px; border-right: 1px solid var(--os-border);">Data Última Compra</th>
-            <th rowspan="2" data-sort="previsao_proxima_compra" style="min-width: 150px; border-right: 1px solid var(--os-border);">Previsão Próxima Compra</th>`;
+            <th rowspan="2" data-sort="previsao_proxima_compra" style="min-width: 150px; border-right: 1px solid var(--os-border);">Previsão Próxima Compra</th>
+            <th rowspan="2" data-sort="data_ultima_compra_geral" style="min-width: 120px; border-right: 1px solid var(--os-border);">Data Última Compra</th>`;
         let htmlHeader2 = `<tr>`;
         
         gerencial3Meses.forEach((m, i) => {
@@ -706,8 +751,8 @@ function renderizarTabela() {
                 <td style="border-right: 1px solid var(--os-border);">${index + 1}</td>
                 <td style="border-right: 1px solid var(--os-border);">${item.codigo_cliente || "-"}</td>
                 <td style="border-right: 1px solid var(--os-border);">${limparNomeCliente(item.cliente)}</td>
-                <td style="border-right: 1px solid var(--os-border); text-align: center;">${fmtData(item.data_ultima_compra_geral)}</td>
-                <td style="border-right: 1px solid var(--os-border); text-align: center;">${fmtData(item.previsao_proxima_compra)}</td>`;
+                <td style="border-right: 1px solid var(--os-border); text-align: center;">${fmtData(item.previsao_proxima_compra)}</td>
+                <td style="border-right: 1px solid var(--os-border); text-align: center;">${fmtData(item.data_ultima_compra_geral)}</td>`;
             
             gerencial3Meses.forEach(m => {
                 const borderLeft = "border-left: 2px solid #cbd5e1;";
@@ -848,8 +893,8 @@ async function limparTodosFiltros() {
     if (selG3Categoria) selG3Categoria.value = "";
     if (selG3Vendedor) selG3Vendedor.value = "";
     if (selG3Municipio) selG3Municipio.value = "";
-    if (inG3RotaG) inG3RotaG.value = "";
-    if (inG3RotaA) inG3RotaA.value = "";
+    if (selG3RotaG) selG3RotaG.value = "";
+    if (selG3RotaA) selG3RotaA.value = "";
     if (selG3Status) selG3Status.value = "";
     if (selG3TipoEntrega) selG3TipoEntrega.value = "";
 
@@ -939,7 +984,7 @@ function exportarExcel() {
             aoa.push(row);
         });
     } else if (activeReport === "gerencial3") {
-        let row1 = ["Cód. Cliente", "Cliente", "Data Última Compra", "Previsão Próxima Compra"];
+        let row1 = ["Cód. Cliente", "Cliente", "Previsão Próxima Compra", "Data Última Compra"];
         let row2 = ["", "", "", ""];
         
         gerencial3Meses.forEach(m => {
@@ -952,7 +997,7 @@ function exportarExcel() {
         filename = "relatorio_gerencial3_evolucao";
         
         listagemVendas.forEach((item, index) => {
-            let row = [item.codigo_cliente || "-", limparNomeCliente(item.cliente), fmtData(item.data_ultima_compra_geral), fmtData(item.previsao_proxima_compra)];
+            let row = [item.codigo_cliente || "-", limparNomeCliente(item.cliente), fmtData(item.previsao_proxima_compra), fmtData(item.data_ultima_compra_geral)];
             gerencial3Meses.forEach(m => {
                 row.push(item.meses?.[m]?.peso || 0);
                 row.push(item.meses?.[m]?.valor || 0);
