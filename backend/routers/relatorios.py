@@ -1089,11 +1089,11 @@ def get_relatorio_gerencial3(
             c.cadastro_nome_cliente AS cliente,
             c.ultimas_compras_previsao_proxima AS previsao_proxima_compra,
             TO_CHAR(DATE_TRUNC('month', p.created_at), 'YYYY-MM') AS mes_ano,
-            CAST(SUM(COALESCE(CAST(pr.peso AS FLOAT), 0) * i.quantidade) AS FLOAT) AS peso,
+            CAST(SUM(COALESCE(pr.peso, 0) * i.quantidade) AS FLOAT) AS peso,
             CAST(SUM(
                 CASE
-                    WHEN p.usar_valor_com_frete = true THEN COALESCE(i.subtotal_com_f, i.preco_unitario * i.quantidade, 0)
-                    ELSE COALESCE(i.subtotal_sem_f, i.preco_unitario * i.quantidade, 0)
+                    WHEN p.usar_valor_com_frete = true THEN COALESCE(i.subtotal_com_f, 0)
+                    ELSE COALESCE(i.subtotal_sem_f, 0)
                 END
             ) AS FLOAT) AS valor,
             MAX(p.created_at) AS data_ultima_compra_mes
@@ -1186,7 +1186,7 @@ def get_relatorio_gerencial3(
         dt_mes = r['data_ultima_compra_mes']
         if dt_mes:
             current_max = data[cod]['data_ultima_compra_geral']
-            if not current_max or dt_mes > current_max:
+            if not current_max or str(dt_mes) > str(current_max):
                 data[cod]['data_ultima_compra_geral'] = dt_mes
                 
     return list(data.values())
