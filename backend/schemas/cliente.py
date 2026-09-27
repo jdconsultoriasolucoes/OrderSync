@@ -128,6 +128,7 @@ class EnderecoEntrega(BaseModel):
     rota_principal_EnderecoEntrega: Optional[str] = None
     rota_de_aproximacao_EnderecoEntrega: Optional[str] = None
     observacao_motorista_EnderecoEntrega: Optional[str] = None
+    tipo_entrega_EnderecoEntrega: Optional[str] = None
 
 class ResponsavelRecebimento(BaseModel):
     nome_ResponsavelRecebimento: Optional[str] = None
