@@ -2,7 +2,8 @@ from fastapi import APIRouter, Depends, HTTPException, status, Query
 from sqlalchemy.orm import Session
 from sqlalchemy import func, text
 from typing import List, Optional
-from datetime import datetime
+from datetime import datetime, timedelta, date
+import re
 from database import get_db
 from models.cargas import CargaModel, CargaPedidoModel
 from models.pedido import PedidoModel
@@ -1200,5 +1201,35 @@ def get_relatorio_gerencial3(
             current_max = data[cod]['data_ultima_compra_geral']
             if not current_max or str(dt_mes) > str(current_max):
                 data[cod]['data_ultima_compra_geral'] = dt_mes
+                
+    # Cálculo dinâmico: Previsão Próxima Compra = Data Última Compra + Período de Compra (em dias)
+    for item in data.values():
+        dt_ult = item['data_ultima_compra_geral']
+        periodo_raw = item.get('periodo_de_compra')
+        
+        dias = 0
+        if periodo_raw:
+            nums = re.findall(r'\d+', str(periodo_raw))
+            if nums:
+                dias = int(nums[0])
+                
+        if dt_ult and dias > 0:
+            if isinstance(dt_ult, str):
+                try:
+                    dt_obj = datetime.fromisoformat(dt_ult.replace('Z', ''))
+                except Exception:
+                    try:
+                        dt_obj = datetime.strptime(dt_ult[:10], '%Y-%m-%d')
+                    except Exception:
+                        dt_obj = None
+            elif isinstance(dt_ult, datetime):
+                dt_obj = dt_ult
+            elif isinstance(dt_ult, date):
+                dt_obj = datetime(dt_ult.year, dt_ult.month, dt_ult.day)
+            else:
+                dt_obj = None
+                
+            if dt_obj:
+                item['previsao_proxima_compra'] = (dt_obj + timedelta(days=dias)).strftime('%Y-%m-%d')
                 
     return list(data.values())
