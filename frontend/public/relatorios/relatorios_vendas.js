@@ -642,8 +642,9 @@ function renderizarTabela() {
             <th rowspan="2" style="width: 40px; min-width: 40px; border-right: 1px solid var(--os-border);">#</th>
             <th rowspan="2" data-sort="codigo_cliente" style="min-width: 100px; border-right: 1px solid var(--os-border);">Cód. Cliente</th>
             <th rowspan="2" data-sort="cliente" style="min-width: 250px; border-right: 1px solid var(--os-border);">Cliente</th>
-            <th rowspan="2" data-sort="previsao_proxima_compra" style="min-width: 150px; border-right: 1px solid var(--os-border);">Previsão Próxima Compra</th>
-            <th rowspan="2" data-sort="data_ultima_compra_geral" style="min-width: 120px; border-right: 1px solid var(--os-border);">Data Última Compra</th>`;
+            <th rowspan="2" data-sort="periodo_de_compra" style="min-width: 140px; border-right: 1px solid var(--os-border); text-align: center;">Período de Compra (Em dias)</th>
+            <th rowspan="2" data-sort="previsao_proxima_compra" style="min-width: 150px; border-right: 1px solid var(--os-border); text-align: center;">Previsão Próxima Compra</th>
+            <th rowspan="2" data-sort="data_ultima_compra_geral" style="min-width: 120px; border-right: 1px solid var(--os-border); text-align: center;">Data Última Compra</th>`;
         let htmlHeader2 = `<tr>`;
         
         gerencial3Meses.forEach((m, i) => {
@@ -783,6 +784,9 @@ function renderizarTabela() {
     if (elSem) elSem.textContent = fmtMoney(totalSemFrete);
     if (elCom) elCom.textContent = fmtMoney(totalComFrete);
     tfoot.innerHTML = "";
+    if (activeReport === "gerencial2" || activeReport === "gerencial3") {
+        registrarOrdenacaoTabela();
+    }
 }
 
 /**
