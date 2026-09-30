@@ -292,8 +292,9 @@ function alternarRelatorioUI() {
             <th rowspan="2" style="width: 40px; min-width: 40px; border-right: 1px solid var(--os-border);">#</th>
             <th rowspan="2" data-sort="codigo_cliente" style="min-width: 100px; border-right: 1px solid var(--os-border);">Cód. Cliente</th>
             <th rowspan="2" data-sort="cliente" style="min-width: 250px; border-right: 1px solid var(--os-border);">Cliente</th>
-            <th rowspan="2" data-sort="previsao_proxima_compra" style="min-width: 150px; border-right: 1px solid var(--os-border);">Previsão Próxima Compra</th>
-            <th rowspan="2" data-sort="data_ultima_compra_geral" style="min-width: 120px; border-right: 1px solid var(--os-border);">Data Última Compra</th>`;
+            <th rowspan="2" data-sort="periodo_de_compra" style="min-width: 140px; border-right: 1px solid var(--os-border); text-align: center;">Período de Compra (Em dias)</th>
+            <th rowspan="2" data-sort="previsao_proxima_compra" style="min-width: 150px; border-right: 1px solid var(--os-border); text-align: center;">Previsão Próxima Compra</th>
+            <th rowspan="2" data-sort="data_ultima_compra_geral" style="min-width: 120px; border-right: 1px solid var(--os-border); text-align: center;">Data Última Compra</th>`;
         let htmlHeader2 = `<tr>`;
         
         gerencial3Meses.forEach((m, i) => {
@@ -454,20 +455,28 @@ async function carregarFiltrosMetadata() {
                     }
                 });
             }
-            if (dataG.rotas) {
-                dataG.rotas.forEach(r => {
-                    if (selG3RotaG) {
-                        const optG = document.createElement("option");
-                        optG.value = r;
-                        optG.textContent = `Rota ${r}`;
-                        selG3RotaG.appendChild(optG);
-                    }
-                    if (selG3RotaA) {
-                        const optA = document.createElement("option");
-                        optA.value = r;
-                        optA.textContent = `Rota ${r}`;
-                        selG3RotaA.appendChild(optA);
-                    }
+            const rotasGeral = dataG.rotas_geral || dataG.rotas || [];
+            if (selG3RotaG) {
+                while (selG3RotaG.options.length > 1) {
+                    selG3RotaG.remove(1);
+                }
+                rotasGeral.forEach(r => {
+                    const optG = document.createElement("option");
+                    optG.value = r;
+                    optG.textContent = isNaN(r) ? r : `Rota ${r}`;
+                    selG3RotaG.appendChild(optG);
+                });
+            }
+            if (selG3RotaA) {
+                while (selG3RotaA.options.length > 1) {
+                    selG3RotaA.remove(1);
+                }
+                const rotasAprox = dataG.rotas_aproximacao || [];
+                rotasAprox.forEach(r => {
+                    const optA = document.createElement("option");
+                    optA.value = r;
+                    optA.textContent = isNaN(r) ? r : `Rota ${r}`;
+                    selG3RotaA.appendChild(optA);
                 });
             }
             if (dataG.status_cadastro) {
@@ -751,6 +760,7 @@ function renderizarTabela() {
                 <td style="border-right: 1px solid var(--os-border);">${index + 1}</td>
                 <td style="border-right: 1px solid var(--os-border);">${item.codigo_cliente || "-"}</td>
                 <td style="border-right: 1px solid var(--os-border);">${limparNomeCliente(item.cliente)}</td>
+                <td style="border-right: 1px solid var(--os-border); text-align: center;">${item.periodo_de_compra || "-"}</td>
                 <td style="border-right: 1px solid var(--os-border); text-align: center;">${fmtData(item.previsao_proxima_compra)}</td>
                 <td style="border-right: 1px solid var(--os-border); text-align: center;">${fmtData(item.data_ultima_compra_geral)}</td>`;
             
@@ -984,8 +994,8 @@ function exportarExcel() {
             aoa.push(row);
         });
     } else if (activeReport === "gerencial3") {
-        let row1 = ["Cód. Cliente", "Cliente", "Previsão Próxima Compra", "Data Última Compra"];
-        let row2 = ["", "", "", ""];
+        let row1 = ["Cód. Cliente", "Cliente", "Período de Compra (Em dias)", "Previsão Próxima Compra", "Data Última Compra"];
+        let row2 = ["", "", "", "", ""];
         
         gerencial3Meses.forEach(m => {
             const [ano, mes] = m.split('-');
@@ -997,7 +1007,13 @@ function exportarExcel() {
         filename = "relatorio_gerencial3_evolucao";
         
         listagemVendas.forEach((item, index) => {
-            let row = [item.codigo_cliente || "-", limparNomeCliente(item.cliente), fmtData(item.previsao_proxima_compra), fmtData(item.data_ultima_compra_geral)];
+            let row = [
+                item.codigo_cliente || "-", 
+                limparNomeCliente(item.cliente), 
+                item.periodo_de_compra || "-",
+                fmtData(item.previsao_proxima_compra), 
+                fmtData(item.data_ultima_compra_geral)
+            ];
             gerencial3Meses.forEach(m => {
                 row.push(item.meses?.[m]?.peso || 0);
                 row.push(item.meses?.[m]?.valor || 0);
@@ -1043,10 +1059,11 @@ function exportarExcel() {
             { s: {r:0, c:0}, e: {r:1, c:0} },
             { s: {r:0, c:1}, e: {r:1, c:1} },
             { s: {r:0, c:2}, e: {r:1, c:2} },
-            { s: {r:0, c:3}, e: {r:1, c:3} }
+            { s: {r:0, c:3}, e: {r:1, c:3} },
+            { s: {r:0, c:4}, e: {r:1, c:4} }
         ];
         
-        let cIndex = 4;
+        let cIndex = 5;
         gerencial3Meses.forEach(m => {
             ws['!merges'].push({ s: {r:0, c:cIndex}, e: {r:0, c:cIndex+1} });
             cIndex += 2;
@@ -1065,7 +1082,13 @@ function exportarExcel() {
             }
         }
         
-        ws['!cols'] = [{ wch: 15 }, { wch: 45 }, { wch: 20 }, { wch: 20 }];
+        ws['!cols'] = [
+            { wch: 15 }, // Cód. Cliente
+            { wch: 45 }, // Cliente
+            { wch: 25 }, // Período de Compra (Em dias)
+            { wch: 20 }, // Previsão Próxima Compra
+            { wch: 20 }  // Data Última Compra
+        ];
         for (let i = 0; i < gerencial3Meses.length * 2; i++) {
             ws['!cols'].push({ wch: 15 }); // Peso e Valor
         }

@@ -950,24 +950,13 @@ def get_filtros_gerencial(db: Session = Depends(get_db)):
         except Exception:
             pass
 
-    # 4. Rotas - Buscar do Catálogo (tb_municipio_rota) e complementar com clientes
-    rotas_set = set()
+    # 4. Rotas - Buscar do Catálogo (tb_municipio_rota)
+    rotas_geral_set = set()
     try:
         q_rotas_cat = text("SELECT DISTINCT rota FROM public.tb_municipio_rota WHERE rota IS NOT NULL ORDER BY rota")
         for r in db.execute(q_rotas_cat).all():
             if r[0] is not None and str(r[0]).strip():
-                rotas_set.add(str(r[0]).strip())
-    except Exception:
-        pass
-    try:
-        q_rotas_cli = text("""
-            SELECT DISTINCT entrega_rota_principal FROM public.t_cadastro_cliente_v2 WHERE entrega_rota_principal IS NOT NULL AND TRIM(entrega_rota_principal) != ''
-            UNION
-            SELECT DISTINCT entrega_rota_aproximacao FROM public.t_cadastro_cliente_v2 WHERE entrega_rota_aproximacao IS NOT NULL AND TRIM(entrega_rota_aproximacao) != ''
-        """)
-        for r in db.execute(q_rotas_cli).all():
-            if r[0] is not None and str(r[0]).strip():
-                rotas_set.add(str(r[0]).strip())
+                rotas_geral_set.add(str(r[0]).strip())
     except Exception:
         pass
         
@@ -977,7 +966,8 @@ def get_filtros_gerencial(db: Session = Depends(get_db)):
         except ValueError:
             return (1, str(val))
             
-    rotas = sorted(list(rotas_set), key=rota_sort_key)
+    rotas_geral = sorted(list(rotas_geral_set), key=rota_sort_key)
+    rotas_aproximacao = []  # Campo de rota aproximação ainda não existe no catálogo
     
     # 5. Status do Cadastro
     q_status = text("SELECT DISTINCT cadastro_status_cadastro FROM public.t_cadastro_cliente_v2 WHERE cadastro_status_cadastro IS NOT NULL AND TRIM(cadastro_status_cadastro) != '' ORDER BY 1")
@@ -989,7 +979,9 @@ def get_filtros_gerencial(db: Session = Depends(get_db)):
         "municipios": municipios,
         "vendedores": vendedores,
         "filiais": filiais,
-        "rotas": rotas,
+        "rotas": rotas_geral,
+        "rotas_geral": rotas_geral,
+        "rotas_aproximacao": rotas_aproximacao,
         "status_cadastro": status_cadastro
     }
 
@@ -1087,6 +1079,7 @@ def get_relatorio_gerencial3(
         SELECT 
             c.cadastro_codigo_da_empresa AS codigo_cliente,
             c.cadastro_nome_cliente AS cliente,
+            c.cadastro_periodo_de_compra AS periodo_de_compra,
             c.ultimas_compras_previsao_proxima AS previsao_proxima_compra,
             TO_CHAR(DATE_TRUNC('month', p.created_at), 'YYYY-MM') AS mes_ano,
             CAST(SUM(COALESCE(pr.peso, 0) * i.quantidade) AS FLOAT) AS peso,
@@ -1138,16 +1131,34 @@ def get_relatorio_gerencial3(
         query_str += " AND COALESCE(c.faturamento_municipio, c.entrega_municipio) = :municipio"
         params['municipio'] = municipio
 
-    rota_geral_val = rota_principal or rota_geral
+    rota_geral_val = str(rota_principal or rota_geral or '').strip()
     if rota_geral_val:
-        query_str += " AND (c.entrega_rota_principal::text = :rota_geral OR c.entrega_rota_principal ILIKE :rota_geral_like)"
-        params['rota_geral'] = str(rota_geral_val)
-        params['rota_geral_like'] = f"%{rota_geral_val}%"
+        rota_num = rota_geral_val.upper().replace('ROTA', '').strip()
+        query_str += """ AND (
+            TRIM(c.entrega_rota_principal::text) = :rota_geral_val
+            OR TRIM(c.entrega_rota_principal::text) = :rota_num
+            OR TRIM(c.entrega_rota_principal::text) ILIKE :rota_prefixo
+            OR EXISTS (
+                SELECT 1 FROM public.tb_municipio_rota mr 
+                WHERE mr.rota::text = :rota_num 
+                  AND UPPER(REGEXP_REPLACE(mr.municipio, '\\s*\\([A-Z]{2}\\)', '')) = UPPER(TRIM(COALESCE(c.entrega_municipio, c.faturamento_municipio, '')))
+            )
+        )"""
+        params['rota_geral_val'] = rota_geral_val
+        params['rota_num'] = rota_num
+        params['rota_prefixo'] = f"{rota_num} - %"
 
     if rota_aproximacao:
-        query_str += " AND (c.entrega_rota_aproximacao::text = :rota_aproximacao OR c.entrega_rota_aproximacao ILIKE :rota_aproximacao_like)"
-        params['rota_aproximacao'] = str(rota_aproximacao)
-        params['rota_aproximacao_like'] = f"%{rota_aproximacao}%"
+        rota_aprox_val = str(rota_aproximacao).strip()
+        rota_aprox_num = rota_aprox_val.upper().replace('ROTA', '').strip()
+        query_str += """ AND (
+            TRIM(c.entrega_rota_aproximacao::text) = :rota_aprox_val
+            OR TRIM(c.entrega_rota_aproximacao::text) = :rota_aprox_num
+            OR TRIM(c.entrega_rota_aproximacao::text) ILIKE :rota_aprox_prefixo
+        )"""
+        params['rota_aprox_val'] = rota_aprox_val
+        params['rota_aprox_num'] = rota_aprox_num
+        params['rota_aprox_prefixo'] = f"{rota_aprox_num} - %"
 
     if status_cadastro:
         query_str += " AND c.cadastro_status_cadastro = :status_cadastro"
@@ -1158,7 +1169,7 @@ def get_relatorio_gerencial3(
         params['tipo_entrega'] = f"%{tipo_entrega}%"
         
     query_str += '''
-        GROUP BY 1, 2, 3, 4
+        GROUP BY 1, 2, 3, 4, 5
         ORDER BY c.cadastro_nome_cliente, mes_ano
     '''
     
@@ -1175,6 +1186,7 @@ def get_relatorio_gerencial3(
             data[cod] = {
                 'codigo_cliente': cod,
                 'cliente': r['cliente'],
+                'periodo_de_compra': r['periodo_de_compra'],
                 'previsao_proxima_compra': r['previsao_proxima_compra'],
                 'data_ultima_compra_geral': None,
                 'meses': {}
