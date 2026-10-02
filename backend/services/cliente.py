@@ -609,7 +609,7 @@ def atualizar_cliente(cliente_id: int, cliente_data: dict) -> dict:
                     UPDATE tb_pedidos 
                     SET codigo_cliente = :novo_codigo 
                     WHERE (codigo_cliente IS NULL OR codigo_cliente = '' OR LOWER(TRIM(codigo_cliente)) IN ('não cadastrado', 'nao cadastrado')) 
-                      AND LOWER(TRIM(cliente)) = LOWER(TRIM(:nome_antigo))
+                      AND (LOWER(TRIM(cliente)) = LOWER(TRIM(:nome_antigo)) OR LOWER(cliente) LIKE '% - ' || LOWER(TRIM(:nome_antigo)))
                 """), {"novo_codigo": str(novo_codigo).strip(), "nome_antigo": str(nome_antigo).strip()})
                 
                 # Atualizar tb_tabela_preco (inclui 'Não cadastrado' e 'Nao cadastrado')
@@ -617,7 +617,7 @@ def atualizar_cliente(cliente_id: int, cliente_data: dict) -> dict:
                     UPDATE tb_tabela_preco 
                     SET codigo_cliente = :novo_codigo 
                     WHERE (codigo_cliente IS NULL OR codigo_cliente = '' OR LOWER(TRIM(codigo_cliente)) IN ('não cadastrado', 'nao cadastrado')) 
-                      AND LOWER(TRIM(cliente)) = LOWER(TRIM(:nome_antigo))
+                      AND (LOWER(TRIM(cliente)) = LOWER(TRIM(:nome_antigo)) OR LOWER(cliente) LIKE '% - ' || LOWER(TRIM(:nome_antigo)))
                 """), {"novo_codigo": str(novo_codigo).strip(), "nome_antigo": str(nome_antigo).strip()})
                 
                 logger.info(f"Atualização concluída: {res_pedidos.rowcount} pedidos e {res_tabelas.rowcount} tabelas de preços atualizados.")
