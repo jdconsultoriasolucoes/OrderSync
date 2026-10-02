@@ -369,35 +369,122 @@ input[readonly],
 }
 
 /* Search results table in modal */
+#search-modal .custom-modal-dialog {
+  width: min(1280px, 96vw);
+  max-width: 1280px;
+}
+
 .results {
   margin-top: 12px;
-  max-height: 55vh;
-  overflow: auto;
+  max-height: 58vh;
+  overflow-y: auto;
+  overflow-x: hidden;
   border: 1px solid var(--os-border);
   border-radius: var(--os-radius);
 }
 
 .results table {
   width: 100%;
+  table-layout: auto;
   border-collapse: collapse;
 }
 
 .results thead th {
   position: sticky;
   top: 0;
-  background: var(--os-bg);
+  background: #f1f5f9;
   border-bottom: 1px solid var(--os-border);
   text-align: left;
-  font-size: var(--os-text-xs);
-  color: var(--os-text-secondary);
-  padding: 8px;
+  font-size: 11px;
+  font-weight: 700;
+  color: #475569;
+  padding: 10px 8px;
   text-transform: uppercase;
   letter-spacing: 0.04em;
+  white-space: nowrap;
 }
 
 .results tbody td {
-  padding: 10px;
+  padding: 8px 10px;
+  font-size: 13px;
   border-bottom: 1px solid var(--os-border);
+  color: #1e293b;
+}
+
+.results td.col-codigo {
+  white-space: nowrap;
+  font-weight: 600;
+  color: var(--os-primary);
+  width: 80px;
+}
+
+.results td.col-descricao {
+  min-width: 200px;
+  word-break: break-word;
+}
+
+.results td.col-fornecedor {
+  white-space: nowrap;
+  max-width: 140px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.results td.col-preco {
+  text-align: right;
+  white-space: nowrap;
+  font-variant-numeric: tabular-nums;
+  font-weight: 500;
+  width: 90px;
+}
+
+.results td.col-unidade {
+  text-align: center;
+  white-space: nowrap;
+  width: 55px;
+}
+
+.results td.col-status {
+  text-align: center;
+  white-space: nowrap;
+  width: 80px;
+}
+
+.results td.col-estoque-disp {
+  text-align: right;
+  white-space: nowrap;
+  font-weight: 600;
+  color: #059669;
+  font-variant-numeric: tabular-nums;
+  width: 120px;
+}
+
+.results td.col-estoque-fut {
+  text-align: right;
+  white-space: nowrap;
+  font-weight: 600;
+  color: #0284c7;
+  font-variant-numeric: tabular-nums;
+  width: 110px;
+}
+
+.badge-status {
+  display: inline-block;
+  padding: 2px 8px;
+  border-radius: 9999px;
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: uppercase;
+}
+
+.badge-status.status-ativo {
+  background-color: #dcfce7;
+  color: #15803d;
+}
+
+.badge-status.status-inativo {
+  background-color: #fee2e2;
+  color: #b91c1c;
 }
 
 .results tbody tr {

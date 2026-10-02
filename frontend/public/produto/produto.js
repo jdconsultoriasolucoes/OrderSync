@@ -438,12 +438,14 @@ function renderSearchResults(items) {
     .map(
       (p) => `
     <tr data-id="${p.id}">
-      <td>${p.codigo_supra || ""}</td>
-      <td>${p.nome_produto || ""}</td>
-      <td>${p.fornecedor || ""}</td>
-      <td>${p.preco != null ? p.preco.toFixed(2) : ""}</td>
-      <td>${p.unidade || ""}</td>
-      <td>${p.status_produto || ""}</td>
+      <td class="col-codigo">${p.codigo_supra || ""}</td>
+      <td class="col-descricao">${p.nome_produto || ""}</td>
+      <td class="col-fornecedor" title="${p.fornecedor || ""}">${p.fornecedor || ""}</td>
+      <td class="col-preco">${p.preco != null ? Number(p.preco).toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 }) : "-"}</td>
+      <td class="col-unidade">${p.unidade || ""}</td>
+      <td class="col-status"><span class="badge-status ${String(p.status_produto).toUpperCase() === 'ATIVO' ? 'status-ativo' : 'status-inativo'}">${p.status_produto || ""}</span></td>
+      <td class="col-estoque-disp">${p.estoque_disponivel != null ? Number(p.estoque_disponivel).toLocaleString("pt-BR") : 0}</td>
+      <td class="col-estoque-fut">${p.estoque_futuro != null ? Number(p.estoque_futuro).toLocaleString("pt-BR") : 0}</td>
     </tr>
   `
     )
@@ -453,12 +455,14 @@ function renderSearchResults(items) {
     <table>
       <thead>
         <tr>
-          <th>Código</th>
+          <th style="width: 80px;">Código</th>
           <th>Descrição</th>
-          <th>Fornecedor</th>
-          <th>Preço</th>
-          <th>Unid.</th>
-          <th>Status</th>
+          <th style="width: 140px;">Fornecedor</th>
+          <th style="width: 90px; text-align: right;">Preço</th>
+          <th style="width: 55px; text-align: center;">Unid.</th>
+          <th style="width: 80px; text-align: center;">Status</th>
+          <th style="width: 120px; text-align: right;">Estoque Disponível</th>
+          <th style="width: 110px; text-align: right;">Estoque Futuro</th>
         </tr>
       </thead>
       <tbody>${rows}</tbody>
@@ -492,13 +496,8 @@ const doSearch = debounce(async () => {
   const q = inp.value.trim();
   const forn = selForn ? selForn.value : "";
 
-  // Se vazio, limpa
-  if (!q && !forn) {
-    box.innerHTML = `<div class="empty">Digite algo ou selecione fornecedor...</div>`;
-    return;
-  }
-
   try {
+    box.innerHTML = `<div class="empty">Buscando produtos...</div>`;
     const base = await resolveProdutosEndpoint();
     // Monta Query String
     const params = new URLSearchParams();
@@ -516,7 +515,7 @@ const doSearch = debounce(async () => {
     console.error(e);
     box.innerHTML = `<div class="empty">Erro ao buscar produtos.</div>`;
   }
-}, 400);
+}, 300);
 
 async function loadSearchFornecedores() {
   const el = $("search-fornecedor");
@@ -557,7 +556,10 @@ function setupSearchModal() {
       modal.classList.remove("hidden");
       if (modal.showModal) modal.showModal(); // se for dialog
       loadSearchFornecedores();
-      if (inp) inp.focus();
+      if (inp) {
+        inp.focus();
+        doSearch();
+      }
     });
   }
 
