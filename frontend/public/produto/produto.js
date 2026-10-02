@@ -455,14 +455,14 @@ function renderSearchResults(items) {
     <table>
       <thead>
         <tr>
-          <th style="width: 80px;">Código</th>
+          <th style="width: 70px;">Código</th>
           <th>Descrição</th>
-          <th style="width: 140px;">Fornecedor</th>
-          <th style="width: 90px; text-align: right;">Preço</th>
-          <th style="width: 55px; text-align: center;">Unid.</th>
-          <th style="width: 80px; text-align: center;">Status</th>
-          <th style="width: 120px; text-align: right;">Estoque Disponível</th>
-          <th style="width: 110px; text-align: right;">Estoque Futuro</th>
+          <th style="width: 130px;">Fornecedor</th>
+          <th style="width: 85px; text-align: right;">Preço</th>
+          <th style="width: 50px; text-align: center;">Unid.</th>
+          <th style="width: 70px; text-align: center;">Status</th>
+          <th style="width: 90px; text-align: right;">Est. Disp.</th>
+          <th style="width: 90px; text-align: right;">Est. Futuro</th>
         </tr>
       </thead>
       <tbody>${rows}</tbody>

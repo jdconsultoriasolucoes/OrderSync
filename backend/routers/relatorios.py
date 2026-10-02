@@ -23,39 +23,12 @@ router = APIRouter(
 
 @router.post("/cargas", response_model=CargaResponse, status_code=status.HTTP_201_CREATED)
 def create_carga(carga: CargaCreate, db: Session = Depends(get_db)):
-    # Verifica se já existe carga com este número (se não estiver em branco)
-    if carga.numero_carga:
-        db_carga = db.query(CargaModel).filter(CargaModel.numero_carga == carga.numero_carga).first()
+    # Verifica se já existe carga com este número (se informado manualmente)
+    num_carga = carga.numero_carga.strip() if (carga.numero_carga and carga.numero_carga.strip()) else None
+    if num_carga:
+        db_carga = db.query(CargaModel).filter(CargaModel.numero_carga == num_carga).first()
         if db_carga:
             raise HTTPException(status_code=400, detail="Número de carga já existe")
-
-    # Calcula o proximo número sequencial antes de inserir no banco para evitar violacoes UNIQUE
-    num_carga = carga.numero_carga
-    if not num_carga:
-        if carga.is_retirada:
-            last_carga = db.execute(text("""
-                SELECT numero_carga FROM tb_cargas 
-                WHERE is_retirada = TRUE AND numero_carga ~ '^R[0-9]+$' 
-                ORDER BY CAST(SUBSTRING(numero_carga FROM 2) AS INTEGER) DESC 
-                LIMIT 1
-            """)).fetchone()
-            
-            proximo = 1
-            if last_carga and last_carga[0]:
-                proximo = int(last_carga[0][1:]) + 1
-            num_carga = f"R{proximo}"
-        else:
-            last_carga = db.execute(text("""
-                SELECT numero_carga FROM tb_cargas 
-                WHERE (is_retirada = FALSE OR is_retirada IS NULL) AND numero_carga ~ '^[0-9]+$' 
-                ORDER BY CAST(numero_carga AS INTEGER) DESC 
-                LIMIT 1
-            """)).fetchone()
-            
-            proximo = 1
-            if last_carga and last_carga[0]:
-                proximo = int(last_carga[0]) + 1
-            num_carga = str(proximo)
 
     # Criação do Cabeçalho
     new_carga = CargaModel(
@@ -70,6 +43,19 @@ def create_carga(carga: CargaCreate, db: Session = Depends(get_db)):
         retirada_veiculo_temporario_modelo=carga.retirada_veiculo_temporario_modelo
     )
     db.add(new_carga)
+    db.flush()  # Aloca o ID da sequence do banco
+
+    # Se numero_carga não foi informado, sincroniza sempre igual ao ID gerado
+    if not new_carga.numero_carga:
+        if new_carga.is_retirada:
+            new_carga.numero_carga = f"R{new_carga.id}"
+        else:
+            new_carga.numero_carga = str(new_carga.id)
+
+    # Se nome_carga não foi informado, utiliza o numero_carga como identificador padrão
+    if not new_carga.nome_carga:
+        new_carga.nome_carga = new_carga.numero_carga
+
     db.commit()
     db.refresh(new_carga)
 

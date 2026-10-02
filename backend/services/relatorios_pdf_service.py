@@ -128,7 +128,7 @@ def gerar_pdf_formacao_carga(db, carga_id: int) -> bytes:
     c = canvas.Canvas(buffer, pagesize=pagesize)
     width, height = pagesize
 
-    subtitle = f"Carga: {carga.get('numero_carga') or ''} - {carga.get('nome_carga') or ''}"
+    subtitle = f"Carga: {carga.get('numero_carga') or carga.get('id') or ''} - {carga.get('nome_carga') or ''}"
     y = _draw_header(c, width, height, "Manutenção de Pedidos / Formação de Carga", subtitle)
 
     # Totais no cabeçalho — canto direito, acima da tabela
@@ -283,7 +283,7 @@ def gerar_pdf_romaneio(db, carga_id: int) -> bytes:
         y -= 0.6*cm
     else:
         c.drawString(0.7*cm, y, f"Filial: DISPET DISTRIBUIDORA")
-        c.drawString(8.0*cm, y, f"CARGA Nº: {carga.get('numero_carga') or ''}")
+        c.drawString(8.0*cm, y, f"CARGA Nº: {carga.get('numero_carga') or carga.get('id') or ''}")
         c.drawRightString(width - 0.7*cm, y, f"DATA CARREGAMENTO: {data_str}")
         y -= 0.5*cm
 
@@ -521,7 +521,7 @@ def _desenhar_resumo_logic(c, db, carga, produtos, width, height, y_start=None):
         c.setFont("Helvetica-Bold", 10)
         c.setFillColor(colors.black)
         c.drawString(0.7*cm, y, f"Filial: DISPET DISTRIBUIDORA")
-        c.drawString(7.0*cm, y, f"CARGA Nº: {carga.get('numero_carga') or ''}")
+        c.drawString(7.0*cm, y, f"CARGA Nº: {carga.get('numero_carga') or carga.get('id') or ''}")
         
         data_carregamento = carga.get('data_carregamento')
         data_str = data_carregamento.strftime('%d/%m/%Y') if data_carregamento else '____/____/____'
@@ -680,7 +680,7 @@ def _desenhar_romaneio_logic(c, carga, pedidos, width, height):
     c.setFillColor(colors.black)
     c.setFont("Helvetica-Bold", 10)
     c.drawString(0.7*cm, y, f"Filial: DISPET DISTRIBUIDORA")
-    c.drawString(8.0*cm, y, f"CARGA Nº: {carga.get('numero_carga') or ''}")
+    c.drawString(8.0*cm, y, f"CARGA Nº: {carga.get('numero_carga') or carga.get('id') or ''}")
     # Fix missing DATA CARREGAMENTO var definition issue
     data_carregamento = carga.get('data_carregamento')
     data_str = data_carregamento.strftime('%d/%m/%Y') if data_carregamento else '____/____/____'
@@ -1031,7 +1031,7 @@ def gerar_pdf_romaneio_novo(db, carga_id: int) -> bytes:
 
     data_str = carga['data_carregamento'].strftime('%d/%m/%Y') if carga['data_carregamento'] else "___/___/___"
     
-    y = _draw_header(c, width, height, "Rota de Entrega - Em Bloco", f"Carga #{carga['numero_carga']} | Data: {data_str}")
+    y = _draw_header(c, width, height, "Rota de Entrega - Em Bloco", f"Carga #{carga.get('numero_carga') or carga.get('id')} | Data: {data_str}")
     
     # 2. Fetch Orders
     sql_pedidos = text("""
@@ -1048,7 +1048,7 @@ def gerar_pdf_romaneio_novo(db, carga_id: int) -> bytes:
     for p in pedidos:
         if y < 8 * cm:
             c.showPage()
-            y = _draw_header(c, width, height, "Rota de Entrega - Em Bloco", f"Carga #{carga['numero_carga']} | Data: {data_str}")
+            y = _draw_header(c, width, height, "Rota de Entrega - Em Bloco", f"Carga #{carga.get('numero_carga') or carga.get('id')} | Data: {data_str}")
         
         c.setFont("Helvetica-Bold", 10)
         c.setFillColor(SUPRA_TEXT)
@@ -1122,7 +1122,7 @@ def gerar_pdf_resumo_produtos_novo(db, carga_id: int) -> bytes:
     if not carga: return None
 
     data_str = carga['data_carregamento'].strftime('%d/%m/%Y') if carga['data_carregamento'] else "___/___/___"
-    y = _draw_header(c, width, height, "Resumo de Produtos", f"Carga #{carga['numero_carga']} | Data: {data_str}")
+    y = _draw_header(c, width, height, "Resumo de Produtos", f"Carga #{carga.get('numero_carga') or carga.get('id')} | Data: {data_str}")
     
     sql_itens = text("""
         SELECT i.codigo, prod.nome_produto as nome, SUM(i.quantidade) as qtd, prod.unidade,

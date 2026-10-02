@@ -23,26 +23,12 @@ router = APIRouter(
 
 @router.post("", response_model=RetiradaResponse, status_code=status.HTTP_201_CREATED)
 def create_retirada(retirada: RetiradaCreate, db: Session = Depends(get_db)):
-    # Valida se já existe retirada com este número
-    if retirada.numero_retirada:
-        db_ret = db.query(RetiradaModel).filter(RetiradaModel.numero_retirada == retirada.numero_retirada).first()
+    # Valida se já existe retirada com este número (se informado manualmente)
+    num_ret = retirada.numero_retirada.strip() if (retirada.numero_retirada and retirada.numero_retirada.strip()) else None
+    if num_ret:
+        db_ret = db.query(RetiradaModel).filter(RetiradaModel.numero_retirada == num_ret).first()
         if db_ret:
             raise HTTPException(status_code=400, detail="Número de retirada já existe")
-
-    # Calcula próximo número sequencial se não for fornecido
-    num_ret = retirada.numero_retirada
-    if not num_ret:
-        last_ret = db.execute(text("""
-            SELECT numero_retirada FROM tb_retiradas 
-            WHERE numero_retirada ~ '^[0-9]+$' 
-            ORDER BY CAST(numero_retirada AS INTEGER) DESC 
-            LIMIT 1
-        """)).fetchone()
-        
-        proximo = 1
-        if last_ret and last_ret[0]:
-            proximo = int(last_ret[0]) + 1
-        num_ret = str(proximo)
 
     db_ret = RetiradaModel(
         nome_retirada=retirada.nome_retirada,
@@ -50,6 +36,13 @@ def create_retirada(retirada: RetiradaCreate, db: Session = Depends(get_db)):
         data_retirada=retirada.data_retirada
     )
     db.add(db_ret)
+    db.flush()
+
+    if not db_ret.numero_retirada:
+        db_ret.numero_retirada = str(db_ret.id)
+    if not db_ret.nome_retirada:
+        db_ret.nome_retirada = db_ret.numero_retirada
+
     db.commit()
     db.refresh(db_ret)
 
