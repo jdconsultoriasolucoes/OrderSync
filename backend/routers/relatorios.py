@@ -30,7 +30,13 @@ def create_carga(carga: CargaCreate, db: Session = Depends(get_db)):
         if db_carga:
             raise HTTPException(status_code=400, detail="Número de carga já existe")
 
+    import uuid
     # Criação do Cabeçalho
+    temp_num_carga = False
+    if not num_carga:
+        num_carga = f"tmp-{uuid.uuid4().hex[:8]}"
+        temp_num_carga = True
+
     new_carga = CargaModel(
         nome_carga=carga.nome_carga,
         numero_carga=num_carga,
@@ -45,8 +51,8 @@ def create_carga(carga: CargaCreate, db: Session = Depends(get_db)):
     db.add(new_carga)
     db.flush()  # Aloca o ID da sequence do banco
 
-    # Se numero_carga não foi informado, sincroniza sempre igual ao ID gerado
-    if not new_carga.numero_carga:
+    # Se numero_carga foi gerado temporariamente, sincroniza igual ao ID gerado
+    if temp_num_carga:
         if new_carga.is_retirada:
             new_carga.numero_carga = f"R{new_carga.id}"
         else:
@@ -79,7 +85,7 @@ def read_cargas(skip: int = 0, limit: int = 100, db: Session = Depends(get_db)):
     cargas = db.query(CargaModel).filter(
         ((CargaModel.is_historico == False) | (CargaModel.is_historico == None)) &
         ((CargaModel.is_retirada == False) | (CargaModel.is_retirada == None))
-    ).offset(skip).limit(limit).all()
+    ).order_by(CargaModel.id.desc()).offset(skip).limit(limit).all()
     return cargas
 
 @router.get("/cargas/historico", response_model=List[CargaResponse])
@@ -98,7 +104,7 @@ def read_retiradas(skip: int = 0, limit: int = 100, db: Session = Depends(get_db
         ((CargaModel.is_historico == False) | (CargaModel.is_historico == None)) &
         (CargaModel.is_retirada == True) &
         ((CargaModel.data_carregamento >= hoje) | (CargaModel.data_carregamento == None))
-    ).offset(skip).limit(limit).all()
+    ).order_by(CargaModel.id.desc()).offset(skip).limit(limit).all()
     return retiradas
 
 @router.get("/retiradas/historico", response_model=List[CargaResponse])
