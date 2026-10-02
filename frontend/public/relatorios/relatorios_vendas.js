@@ -61,6 +61,8 @@ let sortState = {
     col: null,
     desc: false
 };
+let todosMunicipios = [];
+let rotasMunicipiosMap = {};
 
 // Formatter Helpers
 function fmtMoney(val) {
@@ -137,7 +139,11 @@ document.addEventListener("DOMContentLoaded", async () => {
             e.currentTarget.classList.add("active");
             
             activeReport = e.currentTarget.dataset.report;
-            sortState = { col: null, desc: false }; // reseta ordenação
+            if (activeReport === "gerencial3") {
+                sortState = { col: "previsao_proxima_compra", desc: true };
+            } else {
+                sortState = { col: null, desc: false }; // reseta ordenação
+            }
             
             alternarRelatorioUI();
             
@@ -180,6 +186,12 @@ document.addEventListener("DOMContentLoaded", async () => {
     // 6. Registrar Listeners de Ações
     btnLimpar.addEventListener("click", limparTodosFiltros);
     btnExportar.addEventListener("click", exportarExcel);
+
+    if (selG3RotaG) {
+        selG3RotaG.addEventListener("change", () => {
+            atualizarFiltroMunicipiosG3();
+        });
+    }
 
     // 7. Auto-filtragem nos inputs e selects
     let debounceTimer;
@@ -341,6 +353,57 @@ function alternarRelatorioUI() {
 }
 
 /**
+ * Atualiza as opções do filtro de municípios no Relatório Gerencial 3
+ * limitando aos municípios da rota selecionada conforme catálogo (tb_municipio_rota).
+ * Se nenhuma rota for selecionada, exibe todos os municípios.
+ */
+function atualizarFiltroMunicipiosG3() {
+    if (!selG3Municipio) return;
+    const rotaVal = (selG3RotaG ? selG3RotaG.value : "").trim();
+    const rotaNum = rotaVal.toUpperCase().replace('ROTA', '').trim();
+    const valorAtualMunicipio = selG3Municipio.value;
+    
+    while (selG3Municipio.options.length > 1) {
+        selG3Municipio.remove(1);
+    }
+    
+    let lista = [];
+    if (!rotaNum) {
+        // Nenhuma rota filtrada: traz todos os municípios
+        lista = [...todosMunicipios];
+    } else {
+        // Rota filtrada: limita aos municípios que aquela rota faz parte
+        const cidadesRota = (rotasMunicipiosMap && (rotasMunicipiosMap[rotaNum] || rotasMunicipiosMap[rotaVal])) || [];
+        const norm = (s) => (s || '').toUpperCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/\s*\([A-Z]{2}\)/g, "").trim();
+        const cidadesRotaNorm = new Set(cidadesRota.map(norm));
+        
+        lista = todosMunicipios.filter(m => cidadesRotaNorm.has(norm(m)));
+        
+        // Adiciona municípios do catálogo que possam não estar ainda em todosMunicipios
+        cidadesRota.forEach(c => {
+            const cClean = c.replace(/\s*\([A-Za-z]{2}\)/g, '').trim();
+            if (cClean && !lista.some(m => norm(m) === norm(cClean))) {
+                lista.push(cClean);
+            }
+        });
+        lista.sort((a, b) => a.localeCompare(b, 'pt-BR'));
+    }
+    
+    lista.forEach(m => {
+        const opt = document.createElement("option");
+        opt.value = m;
+        opt.textContent = m;
+        selG3Municipio.appendChild(opt);
+    });
+    
+    if (valorAtualMunicipio && Array.from(selG3Municipio.options).some(o => o.value === valorAtualMunicipio)) {
+        selG3Municipio.value = valorAtualMunicipio;
+    } else {
+        selG3Municipio.value = "";
+    }
+}
+
+/**
  * Busca os valores distintos no banco de dados para popular os seletores de filtros
  */
 async function carregarFiltrosMetadata() {
@@ -413,6 +476,9 @@ async function carregarFiltrosMetadata() {
         });
         if (respGerencial.ok) {
             const dataG = await respGerencial.json();
+            todosMunicipios = dataG.municipios || [];
+            rotasMunicipiosMap = dataG.rotas_municipios || {};
+
             if (dataG.municipios) {
                 dataG.municipios.forEach(m => {
                     if (selGerencialMun) {
@@ -420,12 +486,6 @@ async function carregarFiltrosMetadata() {
                         opt.value = m;
                         opt.textContent = m;
                         selGerencialMun.appendChild(opt);
-                    }
-                    if (selG3Municipio) {
-                        const opt3 = document.createElement("option");
-                        opt3.value = m;
-                        opt3.textContent = m;
-                        selG3Municipio.appendChild(opt3);
                     }
                 });
             }
@@ -495,6 +555,9 @@ async function carregarFiltrosMetadata() {
                     }
                 });
             }
+
+            // Inicializa municípios do Relatório Gerencial 3
+            atualizarFiltroMunicipiosG3();
         }
     } catch (err) {
         console.error("Falha ao carregar metadados dos filtros:", err);
@@ -585,6 +648,10 @@ async function buscarDadosRelatorio() {
 
         if (!resp.ok) throw new Error("Erro na requisição ao servidor");
         listagemVendas = await resp.json();
+
+        if (activeReport === "gerencial3" && !sortState.col) {
+            sortState = { col: "previsao_proxima_compra", desc: true };
+        }
 
         // Se houver ordenação ativa, mantemos o ordenamento atualizado dos novos dados
         if (sortState.col) {
@@ -848,8 +915,12 @@ function ordenarDados(colKey, desc) {
         let va = a[colKey];
         let vb = b[colKey];
 
-        if (va === null || va === undefined) va = "";
-        if (vb === null || vb === undefined) vb = "";
+        const emptyA = (va === null || va === undefined || String(va).trim() === "");
+        const emptyB = (vb === null || vb === undefined || String(vb).trim() === "");
+
+        if (emptyA && emptyB) return 0;
+        if (emptyA) return 1; // Itens vazios vão para o final
+        if (emptyB) return -1;
 
         // Trata ordenação numérica
         if (!isNaN(parseFloat(va)) && isFinite(va)) {
@@ -906,11 +977,12 @@ async function limparTodosFiltros() {
     if (selG3Filial) selG3Filial.value = "";
     if (selG3Categoria) selG3Categoria.value = "";
     if (selG3Vendedor) selG3Vendedor.value = "";
-    if (selG3Municipio) selG3Municipio.value = "";
     if (selG3RotaG) selG3RotaG.value = "";
     if (selG3RotaA) selG3RotaA.value = "";
     if (selG3Status) selG3Status.value = "";
     if (selG3TipoEntrega) selG3TipoEntrega.value = "";
+    atualizarFiltroMunicipiosG3();
+    if (selG3Municipio) selG3Municipio.value = "";
 
     await buscarDadosRelatorio();
 }

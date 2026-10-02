@@ -976,6 +976,28 @@ def get_filtros_gerencial(db: Session = Depends(get_db)):
     municipios = [r[0].strip() for r in db.execute(q_mun).all() if r[0] and r[0].strip()]
     status_cadastro = [r[0].strip() for r in db.execute(q_status).all() if r[0] and r[0].strip()]
     
+    # 6. Mapeamento de Rota -> Municípios do Catálogo (tb_municipio_rota)
+    rotas_municipios = {}
+    try:
+        q_mr = text("SELECT rota, municipio FROM public.tb_municipio_rota WHERE rota IS NOT NULL AND municipio IS NOT NULL ORDER BY rota, municipio")
+        for r in db.execute(q_mr).all():
+            r_rota = str(r[0]).strip()
+            r_mun_raw = str(r[1]).strip()
+            if not r_rota or not r_mun_raw:
+                continue
+            r_num = r_rota.upper().replace('ROTA', '').strip()
+            if r_num not in rotas_municipios:
+                rotas_municipios[r_num] = []
+            
+            # Adiciona município limpo (sem UF) e formato original
+            r_mun_clean = re.sub(r'\s*\([A-Za-z]{2}\)', '', r_mun_raw).strip()
+            if r_mun_clean and r_mun_clean not in rotas_municipios[r_num]:
+                rotas_municipios[r_num].append(r_mun_clean)
+            if r_mun_raw not in rotas_municipios[r_num]:
+                rotas_municipios[r_num].append(r_mun_raw)
+    except Exception:
+        pass
+
     return {
         "municipios": municipios,
         "vendedores": vendedores,
@@ -983,7 +1005,8 @@ def get_filtros_gerencial(db: Session = Depends(get_db)):
         "rotas": rotas_geral,
         "rotas_geral": rotas_geral,
         "rotas_aproximacao": rotas_aproximacao,
-        "status_cadastro": status_cadastro
+        "status_cadastro": status_cadastro,
+        "rotas_municipios": rotas_municipios
     }
 
 @router.get("/gerencial2")
@@ -1059,6 +1082,27 @@ def get_relatorio_gerencial2(
         
     return list(data.values())
 
+def _parse_date(val):
+    if not val:
+        return None
+    if isinstance(val, datetime):
+        return val
+    if isinstance(val, date):
+        return datetime(val.year, val.month, val.day)
+    s = str(val).strip().replace('Z', '')
+    if not s or s.upper() in ('NULL', '\\N', 'NONE', 'NAN'):
+        return None
+    for fmt in ('%Y-%m-%d %H:%M:%S.%f', '%Y-%m-%d %H:%M:%S', '%Y-%m-%d', '%d/%m/%Y'):
+        try:
+            return datetime.strptime(s[:19] if ' ' in fmt else s[:10], fmt)
+        except Exception:
+            pass
+    try:
+        return datetime.fromisoformat(s)
+    except Exception:
+        pass
+    return None
+
 @router.get('/gerencial3')
 def get_relatorio_gerencial3(
     codigo_cliente: Optional[str] = Query(None),
@@ -1078,28 +1122,53 @@ def get_relatorio_gerencial3(
 ):
     query_str = '''
         SELECT 
+            c.id AS cliente_id,
             c.cadastro_codigo_da_empresa AS codigo_cliente,
             c.cadastro_nome_cliente AS cliente,
             c.cadastro_periodo_de_compra AS periodo_de_compra,
-            c.ultimas_compras_previsao_proxima AS previsao_proxima_compra,
-            TO_CHAR(DATE_TRUNC('month', p.created_at), 'YYYY-MM') AS mes_ano,
-            CAST(SUM(COALESCE(pr.peso, 0) * i.quantidade) AS FLOAT) AS peso,
-            CAST(SUM(
-                CASE
-                    WHEN p.usar_valor_com_frete = true THEN COALESCE(i.subtotal_com_f, 0)
-                    ELSE COALESCE(i.subtotal_sem_f, 0)
-                END
-            ) AS FLOAT) AS valor,
-            MAX(p.created_at) AS data_ultima_compra_mes
-        FROM public.tb_pedidos_itens i
-        JOIN public.tb_pedidos p ON p.id_pedido = i.id_pedido
-        JOIN public.t_cadastro_cliente_v2 c ON c.cadastro_codigo_da_empresa::text = p.codigo_cliente::text
-        LEFT JOIN public.t_cadastro_produto_v2 pr ON pr.codigo_supra = i.codigo
-        WHERE p.created_at >= DATE_TRUNC('month', CURRENT_DATE) - INTERVAL '{meses_str} months'
-          AND UPPER(p.status) NOT LIKE '%CANCEL%'
-          AND i.quantidade > 0
+            c.ultimas_compras_previsao_proxima AS previsao_proxima_compra_cad,
+            c.ultimas_compras_emissao AS ultimas_compras_emissao,
+            vendas.mes_ano,
+            COALESCE(vendas.peso, 0) AS peso,
+            COALESCE(vendas.valor, 0) AS valor,
+            vendas.data_ultima_compra_mes,
+            ult_pedido.max_data_pedido
+        FROM public.t_cadastro_cliente_v2 c
+        LEFT JOIN (
+            SELECT 
+                TRIM(p.codigo_cliente::text) AS cod_cli,
+                TO_CHAR(DATE_TRUNC('month', p.created_at), 'YYYY-MM') AS mes_ano,
+                CAST(SUM(COALESCE(pr.peso, 0) * i.quantidade) AS FLOAT) AS peso,
+                CAST(SUM(
+                    CASE
+                        WHEN p.usar_valor_com_frete = true THEN COALESCE(i.subtotal_com_f, 0)
+                        ELSE COALESCE(i.subtotal_sem_f, 0)
+                    END
+                ) AS FLOAT) AS valor,
+                MAX(p.created_at) AS data_ultima_compra_mes
+            FROM public.tb_pedidos_itens i
+            JOIN public.tb_pedidos p ON p.id_pedido = i.id_pedido
+            LEFT JOIN public.t_cadastro_produto_v2 pr ON pr.codigo_supra = i.codigo
+            WHERE p.created_at >= DATE_TRUNC('month', CURRENT_DATE) - INTERVAL '{meses_str} months'
+              AND UPPER(p.status) NOT LIKE '%CANCEL%'
+              AND i.quantidade > 0
+              {itens_filtro}
+            GROUP BY TRIM(p.codigo_cliente::text), TO_CHAR(DATE_TRUNC('month', p.created_at), 'YYYY-MM')
+        ) vendas ON NULLIF(TRIM(c.cadastro_codigo_da_empresa::text), '') IS NOT NULL 
+                AND vendas.cod_cli = TRIM(c.cadastro_codigo_da_empresa::text)
+        LEFT JOIN (
+            SELECT 
+                TRIM(p.codigo_cliente::text) AS cod_cli,
+                MAX(p.created_at) AS max_data_pedido
+            FROM public.tb_pedidos p
+            WHERE UPPER(p.status) NOT LIKE '%CANCEL%'
+            GROUP BY TRIM(p.codigo_cliente::text)
+        ) ult_pedido ON NULLIF(TRIM(c.cadastro_codigo_da_empresa::text), '') IS NOT NULL
+                    AND ult_pedido.cod_cli = TRIM(c.cadastro_codigo_da_empresa::text)
+        WHERE 1=1
     '''
     
+    itens_filtro = ""
     params = {}
     
     if codigo_cliente:
@@ -1120,16 +1189,17 @@ def get_relatorio_gerencial3(
         params['vendedor_exact'] = vendedor
 
     if filial:
-        query_str += " AND (p.fornecedor ILIKE :filial OR c.compras_filial_resposavel ILIKE :filial)"
+        query_str += " AND (c.compras_filial_resposavel ILIKE :filial OR EXISTS (SELECT 1 FROM public.tb_pedidos pf WHERE pf.codigo_cliente::text = c.cadastro_codigo_da_empresa::text AND pf.fornecedor ILIKE :filial))"
+        itens_filtro += " AND p.fornecedor ILIKE :filial"
         params['filial'] = f"%{filial}%"
         
     if categoria:
-        query_str += " AND (UPPER(pr.tipo) = :categoria OR UPPER(COALESCE(pr.tipo, '')) LIKE :categoria_like)"
+        itens_filtro += " AND (UPPER(pr.tipo) = :categoria OR UPPER(COALESCE(pr.tipo, '')) LIKE :categoria_like)"
         params['categoria'] = categoria.upper()
         params['categoria_like'] = f"%{categoria.upper()}%"
 
     if municipio:
-        query_str += " AND COALESCE(c.faturamento_municipio, c.entrega_municipio) = :municipio"
+        query_str += " AND UPPER(TRIM(COALESCE(c.faturamento_municipio, c.entrega_municipio))) = UPPER(TRIM(:municipio))"
         params['municipio'] = municipio
 
     rota_geral_val = str(rota_principal or rota_geral or '').strip()
@@ -1169,67 +1239,75 @@ def get_relatorio_gerencial3(
         query_str += " AND c.entrega_tipo_entrega ILIKE :tipo_entrega"
         params['tipo_entrega'] = f"%{tipo_entrega}%"
         
-    query_str += '''
-        GROUP BY 1, 2, 3, 4, 5
-        ORDER BY c.cadastro_nome_cliente, mes_ano
-    '''
-    
-    query_str = query_str.replace('{meses_str}', str(meses - 1))
+    query_str = query_str.replace('{itens_filtro}', itens_filtro)
+    query_str = query_str.replace('{meses_str}', str(max(1, meses - 1)))
+    query_str += " ORDER BY c.cadastro_nome_cliente, vendas.mes_ano"
     
     rows = db.execute(text(query_str), params).mappings().all()
     
     data = {}
     for r in rows:
-        cod = r['codigo_cliente']
-        if not cod:
-            continue
-        if cod not in data:
-            data[cod] = {
+        cid = r['cliente_id']
+        cod = (r['codigo_cliente'] or '').strip()
+        key = f"CLI_{cid}"
+        
+        if key not in data:
+            data[key] = {
                 'codigo_cliente': cod,
-                'cliente': r['cliente'],
-                'periodo_de_compra': r['periodo_de_compra'],
-                'previsao_proxima_compra': r['previsao_proxima_compra'],
+                'cliente': r['cliente'] or '',
+                'periodo_de_compra': r['periodo_de_compra'] or '',
+                'previsao_proxima_compra': None,
                 'data_ultima_compra_geral': None,
                 'meses': {}
             }
-        data[cod]['meses'][r['mes_ano']] = {
-            'peso': float(r['peso'] or 0),
-            'valor': float(r['valor'] or 0)
-        }
-        dt_mes = r['data_ultima_compra_mes']
-        if dt_mes:
-            current_max = data[cod]['data_ultima_compra_geral']
-            if not current_max or str(dt_mes) > str(current_max):
-                data[cod]['data_ultima_compra_geral'] = dt_mes
+            
+            dt_ped = _parse_date(r['max_data_pedido'])
+            dt_emissao = _parse_date(r['ultimas_compras_emissao'])
+            
+            dt_ult = None
+            if dt_ped and dt_emissao:
+                dt_ult = max(dt_ped, dt_emissao)
+            elif dt_ped:
+                dt_ult = dt_ped
+            elif dt_emissao:
+                dt_ult = dt_emissao
                 
-    # Cálculo dinâmico: Previsão Próxima Compra = Data Última Compra + Período de Compra (em dias)
-    for item in data.values():
-        dt_ult = item['data_ultima_compra_geral']
-        periodo_raw = item.get('periodo_de_compra')
-        
-        dias = 0
-        if periodo_raw:
-            nums = re.findall(r'\d+', str(periodo_raw))
-            if nums:
-                dias = int(nums[0])
+            if dt_ult:
+                data[key]['data_ultima_compra_geral'] = dt_ult.strftime('%Y-%m-%d')
                 
-        if dt_ult and dias > 0:
-            if isinstance(dt_ult, str):
-                try:
-                    dt_obj = datetime.fromisoformat(dt_ult.replace('Z', ''))
-                except Exception:
-                    try:
-                        dt_obj = datetime.strptime(dt_ult[:10], '%Y-%m-%d')
-                    except Exception:
-                        dt_obj = None
-            elif isinstance(dt_ult, datetime):
-                dt_obj = dt_ult
-            elif isinstance(dt_ult, date):
-                dt_obj = datetime(dt_ult.year, dt_ult.month, dt_ult.day)
+            dias = 0
+            if r['periodo_de_compra']:
+                nums = re.findall(r'\d+', str(r['periodo_de_compra']))
+                if nums:
+                    dias = int(nums[0])
+                    
+            if dt_ult and dias > 0:
+                data[key]['previsao_proxima_compra'] = (dt_ult + timedelta(days=dias)).strftime('%Y-%m-%d')
             else:
-                dt_obj = None
-                
-            if dt_obj:
-                item['previsao_proxima_compra'] = (dt_obj + timedelta(days=dias)).strftime('%Y-%m-%d')
-                
-    return list(data.values())
+                dt_prev_fallback = _parse_date(r['previsao_proxima_compra_cad'])
+                if dt_prev_fallback:
+                    data[key]['previsao_proxima_compra'] = dt_prev_fallback.strftime('%Y-%m-%d')
+                    
+        m_ano = r['mes_ano']
+        if m_ano:
+            data[key]['meses'][m_ano] = {
+                'peso': float(r['peso'] or 0),
+                'valor': float(r['valor'] or 0)
+            }
+            
+    items = list(data.values())
+    
+    # 1. Ordenação secundária por nome do cliente ASC
+    items.sort(key=lambda x: (x.get('cliente') or '').upper())
+    
+    # 2. Ordenação primária por previsão de compra DESC (datas futuras primeiro, sem previsão por último)
+    items.sort(
+        key=lambda x: (
+            1 if (x.get('previsao_proxima_compra') and str(x['previsao_proxima_compra']).strip()) else 0,
+            str(x.get('previsao_proxima_compra') or '').strip()[:10]
+        ),
+        reverse=True
+    )
+    
+    return items
+
