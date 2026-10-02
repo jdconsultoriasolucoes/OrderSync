@@ -5,9 +5,11 @@ from database import SessionLocal
 from models.cliente_v2 import ClienteModelV2
 from datetime import datetime, timedelta
 from zoneinfo import ZoneInfo
+from zoneinfo import ZoneInfo
 import logging
+import json
+from models.historico_cliente import HistoricoClienteAlteracoesModel
 
-TZ = ZoneInfo("America/Sao_Paulo")
 
 logger = logging.getLogger("ordersync.services.cliente")
 
@@ -386,6 +388,12 @@ def criar_cliente(cliente_data: dict) -> dict:
     db = SessionLocal()
     try:
         from core.exceptions import BusinessRuleException
+        
+        ctx_auditoria = cliente_data.pop("_contexto_auditoria", {})
+        usuario_id = ctx_auditoria.get("usuario_id")
+        usuario_nome = ctx_auditoria.get("usuario_nome")
+        origem = ctx_auditoria.get("origem", "painel_web")
+
         _c = cliente_data.get("cadastrocliente", {})
         _nome = str(_c.get("nome_cliente") or "").strip()
         if not _nome:
@@ -427,6 +435,22 @@ def criar_cliente(cliente_data: dict) -> dict:
                     
         novo_cliente.data_criacao = datetime.now()
         db.add(novo_cliente)
+        db.flush() # Para obter o ID
+        
+        # Log da criação
+        log_auditoria = HistoricoClienteAlteracoesModel(
+            cliente_id=novo_cliente.id,
+            usuario_id=usuario_id,
+            usuario_nome=usuario_nome,
+            acao='INSERT',
+            campos_alterados=['all'],
+            dados_anteriores={},
+            dados_novos={'id': str(novo_cliente.id), 'nome_cliente': novo_cliente.cadastro_nome_cliente},
+            origem=origem,
+            motivo='Cadastro inicial'
+        )
+        db.add(log_auditoria)
+        
         db.commit()
         db.refresh(novo_cliente)
         return _flat_to_nested(novo_cliente)
@@ -440,6 +464,12 @@ def atualizar_cliente(cliente_id: int, cliente_data: dict) -> dict:
     db = SessionLocal()
     try:
         from core.exceptions import BusinessRuleException
+        
+        ctx_auditoria = cliente_data.pop("_contexto_auditoria", {})
+        usuario_id = ctx_auditoria.get("usuario_id")
+        usuario_nome = ctx_auditoria.get("usuario_nome")
+        origem = ctx_auditoria.get("origem", "painel_web")
+        
         _c = cliente_data.get("cadastrocliente", {})
         _nome = str(_c.get("nome_cliente") or "").strip()
         if not _nome:
@@ -491,20 +521,84 @@ def atualizar_cliente(cliente_id: int, cliente_data: dict) -> dict:
         nome_antigo = cliente.cadastro_nome_cliente
         codigo_antigo = cliente.cadastro_codigo_da_empresa
 
+        estado_anterior = {}
+        estado_novo = {}
+        
         for col in ClienteModelV2.__table__.columns:
             key = col.name
-            if key == 'id' or key == 'data_criacao':
+            if key == 'id' or key == 'data_criacao' or key == 'data_atualizacao':
                 continue
             
             new_val = getattr(novos_dados, key)
+            old_val = getattr(cliente, key)
+            
             if new_val is not None:
+                # Compara os valores
+                if old_val != new_val:
+                    # Trata listas vazias iguais a None
+                    if isinstance(old_val, list) and not old_val and not new_val:
+                        continue
+                    if isinstance(new_val, list) and not new_val and not old_val:
+                        continue
+                    estado_anterior[key] = str(old_val) if old_val is not None else None
+                    estado_novo[key] = str(new_val) if new_val is not None else None
+                
                 if key == "cadastro_ativo" and getattr(cliente, "cadastro_ativo") is True and new_val is False:
                     cliente.data_inativacao = datetime.now()
                 
                 setattr(cliente, key, new_val)
-        
+                
         # Rotina para atualizar código do cliente em pedidos e tabelas de preços órfãos
         novo_codigo = cliente.cadastro_codigo_da_empresa
+        
+        if estado_novo:
+            log_auditoria = HistoricoClienteAlteracoesModel(
+                cliente_id=cliente_id,
+                usuario_id=usuario_id,
+                usuario_nome=usuario_nome,
+                acao='UPDATE',
+                campos_alterados=list(estado_novo.keys()),
+                dados_anteriores=estado_anterior,
+                dados_novos=estado_novo,
+                origem=origem,
+                motivo=cliente_data.get("motivo_alteracao")
+            )
+            db.add(log_auditoria)
+            
+            # Propagar alterações cadastrais APENAS para os pedidos com status editáveis
+            campos_propagacao = {'cadastro_nome_cliente', 'cadastro_codigo_da_empresa', 'compras_nome_responsavel', 'compras_email_resposavel', 'compras_celular_responsavel'}
+            if any(k in estado_novo for k in campos_propagacao):
+                novo_nome = cliente.cadastro_nome_cliente
+                novo_contato_nome = cliente.compras_nome_responsavel
+                novo_contato_email = cliente.compras_email_resposavel
+                novo_contato_fone = cliente.compras_celular_responsavel
+                
+                logger.info(f"Propagando atualizações de cadastro para pedidos abertos do cliente {cliente_id}")
+                
+                query_update_pedidos = text("""
+                    UPDATE tb_pedidos 
+                    SET 
+                        codigo_cliente = COALESCE(:novo_codigo, codigo_cliente),
+                        cliente = COALESCE(:novo_nome, cliente),
+                        contato_nome = COALESCE(:novo_contato_nome, contato_nome),
+                        contato_email = COALESCE(:novo_contato_email, contato_email),
+                        contato_fone = COALESCE(:novo_contato_fone, contato_fone)
+                    WHERE 
+                        LOWER(TRIM(codigo_cliente)) = LOWER(TRIM(:codigo_antigo))
+                        AND LOWER(status) NOT IN ('faturado', 'faturado supra', 'faturado dispet', 'cancelado', 'entregue', 'concluído')
+                """)
+                
+                if codigo_antigo:
+                    res_prop = db.execute(query_update_pedidos, {
+                        "novo_codigo": novo_codigo,
+                        "novo_nome": novo_nome,
+                        "novo_contato_nome": novo_contato_nome,
+                        "novo_contato_email": novo_contato_email,
+                        "novo_contato_fone": novo_contato_fone,
+                        "codigo_antigo": codigo_antigo
+                    })
+                    logger.info(f"Propagação concluída: {res_prop.rowcount} pedidos em aberto atualizados.")
+        
         # Sempre que o cliente possuir um código válido, rodamos o sync para garantir a consistência
         if novo_codigo and str(novo_codigo).strip():
             if nome_antigo and str(nome_antigo).strip():

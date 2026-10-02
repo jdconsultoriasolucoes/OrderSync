@@ -855,6 +855,10 @@ def atualizar_campos_faturamento(request: Request, id_pedido: int, body: PedidoC
     pedido = db.query(PedidoModel).filter(PedidoModel.id == id_pedido).first()
     if not pedido:
         raise HTTPException(status_code=404, detail="Pedido não encontrado")
+        
+    status_str = str(pedido.status).strip().lower()
+    if status_str in ["faturado supra", "faturado dispet", "cancelado", "entregue", "concluído"]:
+        raise HTTPException(status_code=400, detail="Não é permitido alterar pedidos que já foram faturados, cancelados ou entregues.")
     
     if body.pedido_supra is not None:
         dt_ref = pedido.confirmado_em or pedido.created_at or datetime.now()

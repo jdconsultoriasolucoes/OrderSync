@@ -293,6 +293,11 @@ def post_cliente(cliente: ClienteCompleto, current_user: UsuarioModel = Depends(
     data = cliente.model_dump()
     data["criado_por"] = current_user.email
     data["atualizado_por"] = current_user.email
+    data["_contexto_auditoria"] = {
+        "usuario_id": current_user.id,
+        "usuario_nome": current_user.nome,
+        "origem": "painel_web"
+    }
     return criar_cliente(data)
 
 @router.put("/{codigo_da_empresa}", response_model=ClienteCompleto)
@@ -300,6 +305,11 @@ def put_cliente(codigo_da_empresa: str, cliente: ClienteCompleto, current_user: 
     try:
         data = cliente.model_dump()
         data["atualizado_por"] = current_user.email
+        data["_contexto_auditoria"] = {
+            "usuario_id": current_user.id,
+            "usuario_nome": current_user.nome,
+            "origem": "painel_web"
+        }
         
         # O service espera um int, mas a URL manda string.
         try:
