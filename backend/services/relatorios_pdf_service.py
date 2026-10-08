@@ -1102,7 +1102,12 @@ def gerar_pdf_romaneio_novo(db, carga_id: int) -> bytes:
         t.drawOn(c, 1.0*cm, y - th)
         y -= (th + 0.5*cm)
         
-        # Receiver signature line removed
+        # Add visual separator and extra space
+        c.setStrokeColor(colors.lightgrey)
+        c.setDash(2, 2)
+        c.line(1.0*cm, y, width - 1.0*cm, y)
+        c.setDash() # reset
+        y -= 0.5*cm
     
     c.showPage()
     c.save()

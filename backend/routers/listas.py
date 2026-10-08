@@ -17,8 +17,10 @@ def get_situacao():
     return SITUAÇÃO
 
 @router.get("/status_cadastro")
-def get_status_cadastro():
-    return STATUS_CADASTRO
+def get_status_cadastro(db: Session = Depends(get_db)):
+    from sqlalchemy import text
+    rows = db.execute(text("SELECT descricao FROM tb_status_cadastro ORDER BY descricao")).fetchall()
+    return [r[0] for r in rows]
 
 @router.get("/retira")
 def get_retira():

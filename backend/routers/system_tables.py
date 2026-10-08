@@ -270,7 +270,20 @@ def deletar_familia(id: int, db: Session = Depends(get_db)):
     db.commit()
     return {"message": "Inativado com sucesso"}
 
-# ----------------- STATUS CADASTRO -----------------
+@router.get("/system/import_status_cadastro")
+def import_status_cadastro(db: Session = Depends(get_db)):
+    sql = text("""
+        INSERT INTO tb_status_cadastro (descricao)
+        SELECT DISTINCT cadastro_status_cadastro
+        FROM t_cadastro_cliente_v2
+        WHERE cadastro_status_cadastro IS NOT NULL
+          AND cadastro_status_cadastro != ''
+          AND cadastro_status_cadastro NOT IN (SELECT descricao FROM tb_status_cadastro)
+    """)
+    db.execute(sql)
+    db.commit()
+    return {"message": "Status importados com sucesso"}
+
 @router.get("/system/status_cadastro", response_model=List[s.StatusCadastroOut])
 def listar_status_cadastro(db: Session = Depends(get_db)):
     rows = db.execute(text("SELECT id, descricao FROM tb_status_cadastro ORDER BY descricao")).mappings().all()

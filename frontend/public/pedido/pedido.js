@@ -1279,6 +1279,9 @@ function limparFiltros() {
   const fnf = document.getElementById("fNotaFiscal"); if (fnf) fnf.value = "";
   const fs = document.getElementById("fStatus"); if (fs) fs.value = "";
   const fp = document.getElementById("fPeriodoRapido"); if (fp) fp.value = "30";
+  
+  const fFatFrom = document.getElementById("fFaturamentoFrom"); if (fFatFrom) fFatFrom.value = "";
+  const fFatTo = document.getElementById("fFaturamentoTo"); if (fFatTo) fFatTo.value = "";
 
   // reset dates default
   const hoje = new Date();

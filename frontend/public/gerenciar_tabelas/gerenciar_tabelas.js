@@ -437,6 +437,23 @@ const CONFIG = {
             document.getElementById('filial-id').value = '';
             document.getElementById('filial-nome').value = '';
         }
+    },
+    status_cadastro: {
+        apiPath: '/system/status_cadastro',
+        pk: 'id',
+        cols: [
+            { key: 'id', label: 'ID' },
+            { key: 'descricao', label: 'Descrição' }
+        ],
+        modalId: 'modal-status_cadastro',
+        fillForm: (item) => {
+            document.getElementById('status-cad-id').value = item.id;
+            document.getElementById('status-cad-desc').value = item.descricao;
+        },
+        clearForm: () => {
+            if (document.getElementById('status-cad-id')) document.getElementById('status-cad-id').value = '';
+            document.getElementById('status-cad-desc').value = '';
+        }
     }
 };
 
