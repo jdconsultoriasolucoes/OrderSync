@@ -272,15 +272,25 @@ def deletar_familia(id: int, db: Session = Depends(get_db)):
 
 @router.get("/system/import_status_cadastro")
 def import_status_cadastro(db: Session = Depends(get_db)):
-    sql = text("""
+    sql_create = text("""
+        CREATE TABLE IF NOT EXISTS tb_status_cadastro (
+            id SERIAL PRIMARY KEY,
+            descricao VARCHAR UNIQUE
+        )
+    """)
+    db.execute(sql_create)
+    db.commit()
+
+    sql_insert = text("""
         INSERT INTO tb_status_cadastro (descricao)
         SELECT DISTINCT cadastro_status_cadastro
         FROM t_cadastro_cliente_v2
         WHERE cadastro_status_cadastro IS NOT NULL
-          AND cadastro_status_cadastro != ''
+          AND trim(cadastro_status_cadastro) != ''
           AND cadastro_status_cadastro NOT IN (SELECT descricao FROM tb_status_cadastro)
+        ON CONFLICT (descricao) DO NOTHING
     """)
-    db.execute(sql)
+    db.execute(sql_insert)
     db.commit()
     return {"message": "Status importados com sucesso"}
 
