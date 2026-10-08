@@ -136,8 +136,8 @@ function fmtDateOnly(s) {
 function getStatusBadge(status) {
   if (!status) return '<span class="status-badge status-aberto">---</span>';
   
-  // Normalizar: remover acentos e converter para maiúsculo para comparação robusta
-  const normalize = (str) => String(str || '').normalize("NFD").replace(/[\u0300-\u036f]/g, "").toUpperCase();
+  // Normalizar: remover acentos, converter para maiúsculo e trocar espaços por underline
+  const normalize = (str) => String(str || '').normalize("NFD").replace(/[\u0300-\u036f]/g, "").toUpperCase().replace(/\s+/g, '_');
   const s = normalize(status);
   
   if (s === 'ORCAMENTO') {
