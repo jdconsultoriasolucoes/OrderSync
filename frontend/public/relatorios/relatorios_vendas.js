@@ -1076,6 +1076,9 @@ function exportarExcel() {
     let totalPeso = 0;
     let totalSemFrete = 0;
     let totalComFrete = 0;
+    let totalValorNf = 0;
+    let totalValorPedido = 0;
+    let totalDiferenca = 0;
 
     if (activeReport === "cliente") {
         aoa.push(["#", "Nº Pedido Sistema", "Pedido Supra", "Danfe", "Data Faturamento", "Código Cliente", "Cliente", "Nome Fantasia", "Município", "Peso Líquido (kg)", "Valor Sem Frete", "Valor Com Frete"]);
