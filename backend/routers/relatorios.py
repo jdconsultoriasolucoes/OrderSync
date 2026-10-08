@@ -828,6 +828,78 @@ def get_vendas_produtos(
     return [dict(r) for r in rows]
 
 
+@router.get("/validacao_pedidos")
+def get_validacao_pedidos(
+    faturamento_inicio: Optional[str] = Query(None),
+    faturamento_fim: Optional[str] = Query(None),
+    filiais: Optional[List[str]] = Query(None),
+    categoria: Optional[str] = Query(None), # "INSUMOS" ou "PET"
+    tipo_entrega: Optional[str] = Query(None), # "ENTREGA" ou "RETIRADA" ou "AMBOS"
+    db: Session = Depends(get_db)
+):
+    """
+    Retorna os dados para o relatório de Validação de Pedidos.
+    Filtros: Filial, Categoria, Período Faturamento, Entrega/Retirada
+    Campos: Data Faturamento, Codigo Cliente, Cliente, Pedido Supra, Nota Fiscal, 
+            Peso Liquido, Valor Nota, Valor Pedido, Diferença.
+    """
+    if not isinstance(faturamento_inicio, str): faturamento_inicio = None
+    if not isinstance(faturamento_fim, str): faturamento_fim = None
+    if not isinstance(filiais, list): filiais = None
+    if not isinstance(categoria, str): categoria = None
+    if not isinstance(tipo_entrega, str): tipo_entrega = None
+
+    query_str = """
+        SELECT
+            p.id_pedido                             AS numero_pedido,
+            to_char(MAX(p.data_faturamento), 'YYYY-MM-DD') AS data_faturamento,
+            MAX(p.codigo_cliente)                   AS codigo_cliente,
+            MAX(COALESCE(c.cadastro_nome_cliente, p.cliente)) AS cliente,
+            MAX(p.pedido_supra)                     AS pedido_supra,
+            MAX(p.nota_fiscal)                      AS nota_fiscal,
+            CAST(SUM(COALESCE(pr.peso, 0) * i.quantidade) AS FLOAT) AS peso_liquido,
+            CAST(MAX(p.valor_nota) AS FLOAT)        AS valor_nota_fiscal,
+            CAST(MAX(p.total_pedido) AS FLOAT)      AS valor_pedido,
+            CAST(COALESCE(MAX(p.valor_nota), 0) - COALESCE(MAX(p.total_pedido), 0) AS FLOAT) AS diferenca_valores
+        FROM public.tb_pedidos_itens i
+        JOIN public.tb_pedidos p ON p.id_pedido = i.id_pedido
+        LEFT JOIN public.t_cadastro_cliente_v2 c ON c.cadastro_codigo_da_empresa::text = p.codigo_cliente
+        LEFT JOIN public.t_cadastro_produto_v2 pr ON pr.codigo_supra = i.codigo
+        WHERE i.quantidade > 0 AND UPPER(p.status) NOT LIKE '%CANCEL%'
+    """
+    
+    params = {}
+    
+    if faturamento_inicio:
+        query_str += " AND p.data_faturamento::date >= CAST(:faturamento_inicio AS DATE)"
+        params["faturamento_inicio"] = faturamento_inicio
+        
+    if faturamento_fim:
+        query_str += " AND p.data_faturamento::date <= CAST(:faturamento_fim AS DATE)"
+        params["faturamento_fim"] = faturamento_fim
+        
+    if filiais:
+        query_str += " AND p.fornecedor = ANY(:filiais)"
+        params["filiais"] = filiais
+        
+    if categoria:
+        query_str += " AND UPPER(pr.tipo) = :categoria"
+        params["categoria"] = categoria.upper()
+        
+    if tipo_entrega:
+        if tipo_entrega.upper() == "ENTREGA":
+            query_str += " AND p.usar_valor_com_frete = true"
+        elif tipo_entrega.upper() == "RETIRADA" or tipo_entrega.upper() == "RETIRA":
+            query_str += " AND (p.usar_valor_com_frete = false OR p.usar_valor_com_frete IS NULL)"
+            
+    query_str += " GROUP BY p.id_pedido ORDER BY MAX(p.nota_fiscal) ASC NULLS LAST"
+    
+    rows = db.execute(text(query_str), params).mappings().all()
+    
+    return [dict(r) for r in rows]
+
+
+
 @router.get("/gerencial")
 def get_relatorio_gerencial(
     codigo_cliente: Optional[str] = Query(None),

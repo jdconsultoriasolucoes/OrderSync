@@ -16,6 +16,8 @@ const selStatus = document.getElementById("filtro-status");
 const selMunicipio = document.getElementById("filtro-municipio");
 const selGrupo = document.getElementById("filtro-grupo");
 const divFiltroGrupo = document.getElementById("campo-filtro-grupo");
+const selTipoEntrega = document.getElementById("filtro-tipo-entrega");
+const divFiltroTipoEntrega = document.getElementById("campo-filtro-tipo-entrega");
 
 // Elementos Filtro Gerencial
 const inGerencialCodigo = document.getElementById("filtro-gerencial-codigo");
@@ -222,6 +224,8 @@ function alternarRelatorioUI() {
         } else {
             if (f.id === "campo-filtro-grupo") {
                 f.style.display = activeReport === "produto" ? "flex" : "none";
+            } else if (f.id === "campo-filtro-tipo-entrega") {
+                f.style.display = activeReport === "validacao" ? "flex" : "none";
             } else {
                 f.style.display = (activeReport === "gerencial" || activeReport === "gerencial2" || activeReport === "gerencial3") ? "none" : "flex";
             }
@@ -275,6 +279,31 @@ function alternarRelatorioUI() {
                 <td class="tar" id="total-peso" style="font-weight: bold; border-bottom: 2px solid var(--os-border);">0 kg</td>
                 <td class="tar col-money" id="total-valor-sem" style="font-weight: bold; border-bottom: 2px solid var(--os-border);">R$ 0,00</td>
                 <td class="tar col-money" id="total-valor-com" style="font-weight: bold; border-bottom: 2px solid var(--os-border);">R$ 0,00</td>
+            </tr>
+        `;
+    } else if (activeReport === "validacao") {
+        txtTitulo.textContent = "Validação Faturamento";
+        
+        // Cabeçalhos para Validação Faturamento
+        tableHeaders.innerHTML = `
+            <tr>
+                <th>#</th>
+                <th data-sort="data_faturamento">Data Faturamento</th>
+                <th data-sort="codigo_cliente">Código Cliente</th>
+                <th data-sort="cliente">Cliente</th>
+                <th data-sort="pedido_supra" class="col-pedido-supra">Pedido Supra</th>
+                <th data-sort="nota_fiscal">Nota Fiscal</th>
+                <th data-sort="peso_liquido" class="tar">Peso Líquido (kg)</th>
+                <th data-sort="valor_nota_fiscal" class="tar col-money">Valor NF</th>
+                <th data-sort="valor_pedido" class="tar col-money">Valor Pedido</th>
+                <th data-sort="diferenca_valores" class="tar col-money">Diferença</th>
+            </tr>
+            <tr style="background-color: #f1f5f9; font-weight: bold; position: sticky; top: 38px; z-index: 14; box-shadow: 0 1px 2px rgba(0,0,0,0.05);">
+                <td colspan="6" style="text-align: left; padding: 10px 16px; font-weight: bold; border-bottom: 2px solid var(--os-border);">Total Acumulado</td>
+                <td class="tar" id="total-peso" style="font-weight: bold; border-bottom: 2px solid var(--os-border);">0 kg</td>
+                <td class="tar col-money" id="total-valor-nf" style="font-weight: bold; border-bottom: 2px solid var(--os-border);">R$ 0,00</td>
+                <td class="tar col-money" id="total-valor-pedido" style="font-weight: bold; border-bottom: 2px solid var(--os-border);">R$ 0,00</td>
+                <td class="tar col-money" id="total-diferenca" style="font-weight: bold; border-bottom: 2px solid var(--os-border);">R$ 0,00</td>
             </tr>
         `;
     } else if (activeReport === "gerencial") {
@@ -631,11 +660,13 @@ async function buscarDadosRelatorio() {
         if (selStatus.value) queryParams.append("status_list", selStatus.value);
         if (selMunicipio && selMunicipio.value) queryParams.append("municipios", selMunicipio.value);
         if (activeReport === "produto" && selGrupo.value) queryParams.append("grupos", selGrupo.value);
+        if (activeReport === "validacao" && selTipoEntrega && selTipoEntrega.value) queryParams.append("tipo_entrega", selTipoEntrega.value);
     }
 
     // Seleciona endpoint conforme relatório ativo
     let endpoint = "vendas_cliente";
     if (activeReport === "produto") endpoint = "vendas_produtos";
+    else if (activeReport === "validacao") endpoint = "validacao_pedidos";
     else if (activeReport === "gerencial") endpoint = "gerencial";
     else if (activeReport === "gerencial2") endpoint = "gerencial2";
     else if (activeReport === "gerencial3") endpoint = "gerencial3";
@@ -737,6 +768,9 @@ function renderizarTabela() {
     let totalPeso = 0;
     let totalSemFrete = 0;
     let totalComFrete = 0;
+    let totalValorNf = 0;
+    let totalValorPedido = 0;
+    let totalDiferenca = 0;
 
     if (activeReport === "cliente") {
         listagemVendas.forEach((item, index) => {
@@ -781,6 +815,30 @@ function renderizarTabela() {
                     <td class="tar">${fmtPeso(item.peso_liquido_acumulado)}</td>
                     <td class="tar col-money">${fmtMoney(item.valor_sem_frete)}</td>
                     <td class="tar col-money">${fmtMoney(item.valor_com_frete)}</td>
+                </tr>
+            `;
+        });
+
+        tbody.innerHTML = html;
+    } else if (activeReport === "validacao") {
+        listagemVendas.forEach((item, index) => {
+            totalPeso += parseFloat(item.peso_liquido || 0);
+            totalValorNf += parseFloat(item.valor_nota_fiscal || 0);
+            totalValorPedido += parseFloat(item.valor_pedido || 0);
+            totalDiferenca += parseFloat(item.diferenca_valores || 0);
+
+            html += `
+                <tr>
+                    <td>${index + 1}</td>
+                    <td>${fmtData(item.data_faturamento)}</td>
+                    <td>${item.codigo_cliente || "-"}</td>
+                    <td>${limparNomeCliente(item.cliente)}</td>
+                    <td class="col-pedido-supra"><strong>${item.pedido_supra || "-"}</strong></td>
+                    <td>${item.nota_fiscal || "-"}</td>
+                    <td class="tar">${fmtPeso(item.peso_liquido).replace(' kg', '')}</td>
+                    <td class="tar col-money">${fmtMoney(item.valor_nota_fiscal)}</td>
+                    <td class="tar col-money">${fmtMoney(item.valor_pedido)}</td>
+                    <td class="tar col-money" style="color: ${parseFloat(item.diferenca_valores || 0).toFixed(2) != '0.00' ? 'var(--os-error)' : 'inherit'};">${fmtMoney(item.diferenca_valores)}</td>
                 </tr>
             `;
         });
@@ -847,9 +905,19 @@ function renderizarTabela() {
     const elPeso = document.getElementById("total-peso");
     const elSem = document.getElementById("total-valor-sem");
     const elCom = document.getElementById("total-valor-com");
+    const elNf = document.getElementById("total-valor-nf");
+    const elPed = document.getElementById("total-valor-pedido");
+    const elDif = document.getElementById("total-diferenca");
+
     if (elPeso) elPeso.textContent = fmtPeso(totalPeso);
     if (elSem) elSem.textContent = fmtMoney(totalSemFrete);
     if (elCom) elCom.textContent = fmtMoney(totalComFrete);
+    if (elNf) elNf.textContent = fmtMoney(totalValorNf);
+    if (elPed) elPed.textContent = fmtMoney(totalValorPedido);
+    if (elDif) {
+        elDif.textContent = fmtMoney(totalDiferenca);
+        elDif.style.color = totalDiferenca.toFixed(2) != '0.00' ? 'var(--os-error)' : 'inherit';
+    }
     tfoot.innerHTML = "";
     if (activeReport === "gerencial2" || activeReport === "gerencial3") {
         registrarOrdenacaoTabela();
@@ -960,6 +1028,7 @@ async function limparTodosFiltros() {
     selStatus.value = "";
     selMunicipio.value = "";
     selGrupo.value = "";
+    if (selTipoEntrega) selTipoEntrega.value = "";
     
     inGerencialCodigo.value = "";
     inGerencialDoc.value = "";
@@ -1040,6 +1109,26 @@ function exportarExcel() {
         });
 
         aoa.push(["TOTAL ACUMULADO", "", "", "", "", "", Math.round(totalPeso), totalSemFrete, totalComFrete]);
+
+    } else if (activeReport === "validacao") {
+        aoa.push(["#", "Data Faturamento", "Código Cliente", "Cliente", "Pedido Supra", "Nota Fiscal", "Peso Líquido (kg)", "Valor NF", "Valor Pedido", "Diferença"]);
+        filename = "relatorio_validacao_pedidos";
+
+        listagemVendas.forEach((item, index) => {
+            const p = parseFloat(item.peso_liquido || 0);
+            const vnf = parseFloat(item.valor_nota_fiscal || 0);
+            const vp = parseFloat(item.valor_pedido || 0);
+            const dif = parseFloat(item.diferenca_valores || 0);
+
+            totalPeso += p;
+            totalValorNf += vnf;
+            totalValorPedido += vp;
+            totalDiferenca += dif;
+
+            aoa.push([index + 1, fmtData(item.data_faturamento), item.codigo_cliente || "-", limparNomeCliente(item.cliente), item.pedido_supra || "-", item.nota_fiscal || "-", Math.round(p), vnf, vp, dif]);
+        });
+
+        aoa.push(["TOTAL ACUMULADO", "", "", "", "", "", Math.round(totalPeso), totalValorNf, totalValorPedido, totalDiferenca]);
 
     } else if (activeReport === "gerencial") {
         aoa.push(["#", "CNPJ/CPF", "Nome Cliente", "Município", "Vendedor", "Data Última Compra", "Observação"]);

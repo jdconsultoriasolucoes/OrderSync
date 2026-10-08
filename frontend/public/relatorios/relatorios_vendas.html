@@ -177,6 +177,7 @@
                         <li><button data-report="gerencial">Relatório Gerencial</button></li>
                         <li><button data-report="gerencial2">Relatório Gerencial 2</button></li>
                         <li><button data-report="gerencial3">Relatório Gerencial 3</button></li>
+                        <li><button data-report="validacao">Validação Faturamento</button></li>
                     </ul>
                 </div>
             </aside>
@@ -250,6 +251,16 @@
                         <label class="os-label">Grupo (Marca)</label>
                         <select id="filtro-grupo" class="os-select">
                             <option value="">Todos os Grupos</option>
+                        </select>
+                    </div>
+
+                    <!-- 8. Tipo de Entrega (Validacao) -->
+                    <div class="filtro-campo" id="campo-filtro-tipo-entrega" style="display: none;">
+                        <label class="os-label">Tipo de Entrega</label>
+                        <select id="filtro-tipo-entrega" class="os-select">
+                            <option value="">Todos os Tipos</option>
+                            <option value="ENTREGA">Entrega</option>
+                            <option value="RETIRADA">Retirada</option>
                         </select>
                     </div>
 
