@@ -474,7 +474,8 @@ function selectModule(mod) {
         plantel_animais: 'Plantel de animais',
         ramo_atividade: 'Ramo de atividade',
         atividade_principal: 'Atividade principal',
-        filiais: 'Filiais'
+        filiais: 'Filiais',
+        status_cadastro: 'Status Cadastro'
     };
 
     const sectionTitle = document.getElementById('sectionTitle');
@@ -894,9 +895,19 @@ async function saveFilial(e) {
     await saveGeneric(payload, !!currentItem, id);
 }
 
+async function saveStatusCadastro(e) {
+    e.preventDefault();
+    const id = currentItem ? currentItem.id : null;
+    const payload = {
+        descricao: document.getElementById('status-cad-desc').value || null
+    };
+    await saveGeneric(payload, !!currentItem, id);
+}
+
 window.saveRamoAtividade = saveRamoAtividade;
 window.saveAtividadePrincipal = saveAtividadePrincipal;
 window.saveFilial = saveFilial;
+window.saveStatusCadastro = saveStatusCadastro;
 
 // --- Delete Handler ---
 

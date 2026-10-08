@@ -67,3 +67,19 @@ class FamiliaProdutoOut(FamiliaProdutoBase):
 
     class Config:
         from_attributes = True
+
+# ----------------- STATUS CADASTRO -----------------
+class StatusCadastroBase(BaseModel):
+    descricao: str
+
+class StatusCadastroCreate(StatusCadastroBase):
+    pass
+
+class StatusCadastroUpdate(BaseModel):
+    descricao: Optional[str] = None
+
+class StatusCadastroOut(StatusCadastroBase):
+    id: int
+
+    class Config:
+        from_attributes = True

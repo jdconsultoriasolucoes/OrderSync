@@ -75,7 +75,7 @@ def carregar_pedido_pdf(db, pedido_id: int) -> PedidoPdf:
             ON prod.codigo_supra = i.codigo
 
         WHERE p.id_pedido = :pid
-        ORDER BY i.quantidade DESC, i.id_item;
+        ORDER BY i.codigo ASC, i.id_item;
     """)
 
     rows = db.execute(sql, {"pid": pedido_id}).mappings().all()

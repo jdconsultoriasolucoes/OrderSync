@@ -246,6 +246,8 @@ async function loadStatus() {
 function getFilters() {
   const fFrom = document.getElementById("fFrom").value;
   const fTo = document.getElementById("fTo").value;
+  const fFaturamentoFrom = document.getElementById("fFaturamentoFrom")?.value || null;
+  const fFaturamentoTo = document.getElementById("fFaturamentoTo")?.value || null;
   const fTabela = document.getElementById("fTabela").value || null;
   const fCliente = document.getElementById("fCliente").value || null;
   const fFornecedor = document.getElementById("fFornecedor").value || null;
@@ -260,14 +262,14 @@ function getFilters() {
     selStatusEl.selectedOptions
   ).map((o) => o.value) : [];
 
-  return { fFrom, fTo, fTabela, fCliente, fFornecedor, selStatus, fPedido, fPedidoSupra, fNotaFiscal, fCarga };
+  return { fFrom, fTo, fFaturamentoFrom, fFaturamentoTo, fTabela, fCliente, fFornecedor, selStatus, fPedido, fPedidoSupra, fNotaFiscal, fCarga };
 }
 
 async function loadList(page = 1) {
   state.page = page;
   state.pageSize = window.innerWidth <= 768 ? 10 : 25;
 
-  const { fFrom, fTo, fTabela, fCliente, fFornecedor, selStatus, fPedido, fPedidoSupra, fNotaFiscal, fCarga } = getFilters();
+  const { fFrom, fTo, fFaturamentoFrom, fFaturamentoTo, fTabela, fCliente, fFornecedor, selStatus, fPedido, fPedidoSupra, fNotaFiscal, fCarga } = getFilters();
   let fromISO = toISO(fFrom);
   let toISO_ = toISO(fTo);
 
@@ -281,10 +283,13 @@ async function loadList(page = 1) {
   }
 
   const params = new URLSearchParams();
-  params.set("from", fromISO);
-  params.set("to", toISO_);
-  params.set("date_from", fromISO); // compatibilidade
-  params.set("date_to", toISO_);    // compatibilidade
+  if (fromISO) params.set("from", fromISO);
+  if (toISO_) params.set("to", toISO_);
+  if (fromISO) params.set("date_from", fromISO); // compatibilidade
+  if (toISO_) params.set("date_to", toISO_);    // compatibilidade
+  
+  if (fFaturamentoFrom) params.set("faturamento_from", toISO(fFaturamentoFrom));
+  if (fFaturamentoTo) params.set("faturamento_to", toISO(fFaturamentoTo));
 
   // status
   if (selStatus && selStatus.length) {
@@ -889,7 +894,7 @@ async function exportarCSV() {
 
   try {
     const params = new URLSearchParams(); // Simplificado ou usar buildParams
-    const { fFrom, fTo, fTabela, fCliente, fFornecedor, selStatus } = getFilters();
+    const { fFrom, fTo, fFaturamentoFrom, fFaturamentoTo, fTabela, fCliente, fFornecedor, selStatus } = getFilters();
     // ... replica logica de params do loadList ... ou apenas chama loadList com limit huge?
     // Melhor replicar rapido para garantir
     let fromISO = toISO(fFrom);
@@ -905,8 +910,10 @@ async function exportarCSV() {
     // ok vou confiar que o usuario ja tem a funcao getFilters e ela retorna o que precisa.
 
     // REPLICA BUILD PARAMS
-    params.set("from", fromISO);
-    params.set("to", toISO_);
+    if (fromISO) params.set("from", fromISO);
+    if (toISO_) params.set("to", toISO_);
+    if (fFaturamentoFrom) params.set("faturamento_from", toISO(fFaturamentoFrom));
+    if (fFaturamentoTo) params.set("faturamento_to", toISO(fFaturamentoTo));
     if (selStatus && selStatus.length) params.set("status", selStatus.join(","));
     if (fTabela) params.set("tabela_nome", fTabela);
     if (fCliente) params.set("cliente", fCliente);

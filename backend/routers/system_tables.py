@@ -269,3 +269,37 @@ def deletar_familia(id: int, db: Session = Depends(get_db)):
         raise HTTPException(status_code=404, detail="Família não encontrada")
     db.commit()
     return {"message": "Inativado com sucesso"}
+
+# ----------------- STATUS CADASTRO -----------------
+@router.get("/system/status_cadastro", response_model=List[s.StatusCadastroOut])
+def listar_status_cadastro(db: Session = Depends(get_db)):
+    rows = db.execute(text("SELECT id, descricao FROM tb_status_cadastro ORDER BY descricao")).mappings().all()
+    return rows
+
+@router.post("/system/status_cadastro", response_model=s.StatusCadastroOut)
+def criar_status_cadastro(payload: s.StatusCadastroCreate, db: Session = Depends(get_db)):
+    novo_id = db.execute(
+        text("INSERT INTO tb_status_cadastro (descricao) VALUES (:desc) RETURNING id"),
+        {"desc": payload.descricao}
+    ).scalar()
+    db.commit()
+    return {"id": novo_id, "descricao": payload.descricao}
+
+@router.put("/system/status_cadastro/{id}", response_model=s.StatusCadastroOut)
+def atualizar_status_cadastro(id: int, payload: s.StatusCadastroUpdate, db: Session = Depends(get_db)):
+    row = db.execute(text("SELECT id, descricao FROM tb_status_cadastro WHERE id = :id"), {"id": id}).mappings().first()
+    if not row:
+        raise HTTPException(status_code=404, detail="Status não encontrado")
+    
+    nova_desc = payload.descricao if payload.descricao is not None else row["descricao"]
+    db.execute(text("UPDATE tb_status_cadastro SET descricao = :desc WHERE id = :id"), {"desc": nova_desc, "id": id})
+    db.commit()
+    return {"id": id, "descricao": nova_desc}
+
+@router.delete("/system/status_cadastro/{id}")
+def deletar_status_cadastro(id: int, db: Session = Depends(get_db)):
+    row = db.execute(text("DELETE FROM tb_status_cadastro WHERE id = :id RETURNING id"), {"id": id}).scalar()
+    if not row:
+        raise HTTPException(status_code=404, detail="Status não encontrado")
+    db.commit()
+    return {"message": "Deletado com sucesso"}

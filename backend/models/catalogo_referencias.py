@@ -1,4 +1,4 @@
-from sqlalchemy import Column, Integer, String, Float
+﻿from sqlalchemy import Column, Integer, String, Float
 from database import Base
 
 class CanalVendaModel(Base):
@@ -75,4 +75,11 @@ class FilialModel(Base):
     id = Column("id", Integer, primary_key=True, index=True, autoincrement=True)
     filial = Column("filial", String)
 
+
+
+class StatusCadastroModel(Base):
+    __tablename__ = "tb_status_cadastro"
+
+    id = Column("id", Integer, primary_key=True, index=True, autoincrement=True)
+    descricao = Column("descricao", String)
 

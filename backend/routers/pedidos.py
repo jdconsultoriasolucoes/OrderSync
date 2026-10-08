@@ -224,6 +224,8 @@ def to_iso_or_none(v):
 def listar_pedidos(
     from_: Optional[str] = Query(None, alias="from"),  # "YYYY-MM-DD"
     to_:   Optional[str] = Query(None, alias="to"),    # "YYYY-MM-DD"
+    faturamento_from: Optional[str] = None,
+    faturamento_to: Optional[str] = None,
     status: Optional[str] = None,
     exclude_status: Optional[str] = None,
     tabela_nome: Optional[str] = None,
@@ -289,6 +291,21 @@ def listar_pedidos(
             params["to"] = limite_to
         except ValueError:
             pass # Ignora erro de formato de data
+            
+    if faturamento_from:
+        try:
+            fat_from_dt = datetime.strptime(faturamento_from, "%Y-%m-%d").replace(hour=0, minute=0, second=0)
+            filtros_sql.append("a.data_faturamento >= :fat_from")
+            params["fat_from"] = fat_from_dt
+        except ValueError: pass
+
+    if faturamento_to:
+        try:
+            fat_to_dt = datetime.strptime(faturamento_to, "%Y-%m-%d").replace(hour=0, minute=0, second=0) + timedelta(days=1)
+            filtros_sql.append("a.data_faturamento < :fat_to")
+            params["fat_to"] = fat_to_dt
+        except ValueError: pass
+
     elif (from_ and to_) and tem_busca_direta:
         # Se tem busca direta E o usuário passou datas, talvez ele queira filtrar por data TAMBÉM?
         # Por enquanto, se tem busca direta, vamos priorizar a busca global. 

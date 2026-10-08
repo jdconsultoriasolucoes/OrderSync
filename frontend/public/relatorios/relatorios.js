@@ -1855,7 +1855,7 @@ function carregarPedidosParaModal() {
 // BOTÃO EXPORTAR PDF
 // -----------------------------------------------------
 
-btnExport.addEventListener('click', () => {
+function doLegacyExport() {
     let endpoint = "";
     let cargaId = "";
 
@@ -1895,7 +1895,7 @@ btnExport.addEventListener('click', () => {
         const token = window.Auth ? window.Auth.getToken() : '';
         window.open(`${endpoint}?token=${token}`, '_blank');
     }
-});
+}
 
 function exportTableToCSV(filename) {
     const csv = [];
@@ -2194,14 +2194,20 @@ function showPremiumAlert(message, type = "warning") {
 // -----------------------------------------------------
 
 document.addEventListener("DOMContentLoaded", () => {
-    const btnExportNovo = document.getElementById("btn-export-pdf-novo");
+    const btnExport = document.getElementById("btn-export-pdf");
     const modalExportOpcoes = document.getElementById("modal-export-opcoes");
     const modalExportOpcoesClose = document.getElementById("modal-export-opcoes-close");
     const btnExportRomaneio = document.getElementById("btn-export-romaneio-novo");
     const btnExportResumo = document.getElementById("btn-export-resumo-novo");
+    const btnExportFormacaoAntigo = document.getElementById("btn-export-formacao-antigo");
 
-    if (btnExportNovo) {
-        btnExportNovo.addEventListener('click', () => {
+    if (btnExport) {
+        btnExport.addEventListener('click', () => {
+            if (window.activeRelatorio === "captacao") {
+                imprimirCaptacao();
+                return;
+            }
+
             // Check if valid state
             const isListagem = document.getElementById('painel-listagem').style.display !== 'none';
             const isRetTab = window.activeRelatorio === "retiradas" || window.activeRelatorio === "historico-retiradas";
@@ -2224,11 +2230,13 @@ document.addEventListener("DOMContentLoaded", () => {
             
             // Adjust buttons text based on context
             if (isRetTab) {
-                btnExportRomaneio.innerHTML = "📄 Exportar Romaneio em Lote";
+                btnExportRomaneio.innerHTML = "🚚 Exportar Romaneio em Lote";
                 btnExportResumo.innerHTML = "📦 Exportar Resumo em Lote";
+                if (btnExportFormacaoAntigo) btnExportFormacaoAntigo.innerHTML = "📄 Formação de Carga em Lote";
             } else {
-                btnExportRomaneio.innerHTML = "📄 Exportar Romaneio";
+                btnExportRomaneio.innerHTML = "🚚 Conferência Carga e Descarga";
                 btnExportResumo.innerHTML = "📦 Exportar Resumo de Produtos";
+                if (btnExportFormacaoAntigo) btnExportFormacaoAntigo.innerHTML = "📄 Formação de Carga";
             }
 
             modalExportOpcoes.style.display = "flex";
@@ -2299,5 +2307,11 @@ document.addEventListener("DOMContentLoaded", () => {
     }
     if (btnExportResumo) {
         btnExportResumo.addEventListener('click', () => doNovoExport('resumo'));
+    }
+    if (btnExportFormacaoAntigo) {
+        btnExportFormacaoAntigo.addEventListener('click', () => {
+            modalExportOpcoes.style.display = "none";
+            doLegacyExport();
+        });
     }
 });

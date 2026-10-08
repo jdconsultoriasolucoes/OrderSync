@@ -552,6 +552,7 @@
                         <button class="module-nav-btn" onclick="selectModule('ramo_atividade')">Ramo de atividade</button>
                         <button class="module-nav-btn" onclick="selectModule('atividade_principal')">Atividade principal</button>
                         <button class="module-nav-btn" onclick="selectModule('filiais')">Filiais</button>
+                        <button class="module-nav-btn" onclick="selectModule('status_cadastro')">Status Cadastro</button>
                     </div>
                 </div>
 
@@ -615,6 +616,24 @@
             }
         }
     </script>
+
+    <!-- ===== Modal: Status Cadastro ===== -->
+    <div id="modal-status_cadastro" class="custom-modal">
+        <div class="modal-dialog">
+            <h3 id="modal-title-status_cadastro">Novo Status</h3>
+            <form id="form-status_cadastro" onsubmit="saveStatusCadastro(event)">
+                <div class="form-group">
+                    <label>Descrição *</label>
+                    <input type="text" id="status-cad-desc" class="form-control" required />
+                </div>
+                <div class="modal-actions">
+                    <button type="button" class="btn-cancel" onclick="closeModal('modal-status_cadastro')">Cancelar</button>
+                    <button type="submit" class="btn-save">Salvar</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
 
     <!-- ===== Modal: Condições de Pagamento ===== -->
     <div id="modal-condicoes" class="custom-modal">

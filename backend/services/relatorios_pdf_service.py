@@ -1031,7 +1031,7 @@ def gerar_pdf_romaneio_novo(db, carga_id: int) -> bytes:
 
     data_str = carga['data_carregamento'].strftime('%d/%m/%Y') if carga['data_carregamento'] else "___/___/___"
     
-    y = _draw_header(c, width, height, "Rota de Entrega - Em Bloco", f"Carga #{carga.get('numero_carga') or carga.get('id')} | Data: {data_str}")
+    y = _draw_header(c, width, height, "CONFERENCIA CARGA E DESCARGA", f"Carga #{carga.get('numero_carga') or carga.get('id')} | Data: {data_str}")
     
     # 2. Fetch Orders
     sql_pedidos = text("""
@@ -1048,7 +1048,7 @@ def gerar_pdf_romaneio_novo(db, carga_id: int) -> bytes:
     for p in pedidos:
         if y < 8 * cm:
             c.showPage()
-            y = _draw_header(c, width, height, "Rota de Entrega - Em Bloco", f"Carga #{carga.get('numero_carga') or carga.get('id')} | Data: {data_str}")
+            y = _draw_header(c, width, height, "CONFERENCIA CARGA E DESCARGA", f"Carga #{carga.get('numero_carga') or carga.get('id')} | Data: {data_str}")
         
         c.setFont("Helvetica-Bold", 10)
         c.setFillColor(SUPRA_TEXT)
@@ -1102,9 +1102,7 @@ def gerar_pdf_romaneio_novo(db, carga_id: int) -> bytes:
         t.drawOn(c, 1.0*cm, y - th)
         y -= (th + 0.5*cm)
         
-        c.setFont("Helvetica", 8)
-        c.drawString(1.0*cm, y, "Assinatura do Recebedor: _____________________________________________   Data/Hora: ___/___/___ às ___:___")
-        y -= 1.0*cm
+        # Receiver signature line removed
     
     c.showPage()
     c.save()
