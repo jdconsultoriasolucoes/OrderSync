@@ -44,6 +44,14 @@ def create_calendar(
     db: Session = Depends(get_db),
     current_user: UsuarioModel = Depends(get_current_user)
 ):
+    existing = db.query(CalendarModel).filter(
+        CalendarModel.user_id == current_user.id,
+        CalendarModel.name == calendar.name
+    ).first()
+    
+    if existing:
+        raise HTTPException(status_code=400, detail="Você já possui uma agenda com este nome.")
+
     db_calendar = CalendarModel(
         user_id=current_user.id,
         name=calendar.name,

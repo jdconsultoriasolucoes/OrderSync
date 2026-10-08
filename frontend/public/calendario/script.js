@@ -38,14 +38,17 @@ document.addEventListener('DOMContentLoaded', async () => {
     await loadUsers();
 });
 
-// Mock da API para simplificar. Substituir por chamadas reais via axios/fetch usando o token JWT
 async function apiGet(endpoint) {
     const token = localStorage.getItem('ordersync_token');
     const baseUrl = window.API_BASE || '';
     const res = await fetch(`${baseUrl}/api/v1${endpoint}`, {
         headers: { 'Authorization': `Bearer ${token}` }
     });
-    if (!res.ok) throw new Error('API Error');
+    if (!res.ok) {
+        let msg = 'API Error';
+        try { const err = await res.json(); msg = err.detail || msg; } catch(e){}
+        throw new Error(msg);
+    }
     return res.json();
 }
 
@@ -60,7 +63,11 @@ async function apiPost(endpoint, data) {
         },
         body: JSON.stringify(data)
     });
-    if (!res.ok) throw new Error('API Error');
+    if (!res.ok) {
+        let msg = 'API Error';
+        try { const err = await res.json(); msg = err.detail || msg; } catch(e){}
+        throw new Error(msg);
+    }
     return res.json();
 }
 
@@ -75,7 +82,11 @@ async function apiPut(endpoint, data) {
         },
         body: JSON.stringify(data)
     });
-    if (!res.ok) throw new Error('API Error');
+    if (!res.ok) {
+        let msg = 'API Error';
+        try { const err = await res.json(); msg = err.detail || msg; } catch(e){}
+        throw new Error(msg);
+    }
     return res.json();
 }
 
@@ -86,7 +97,11 @@ async function apiDelete(endpoint) {
         method: 'DELETE',
         headers: { 'Authorization': `Bearer ${token}` }
     });
-    if (!res.ok) throw new Error('API Error');
+    if (!res.ok) {
+        let msg = 'API Error';
+        try { const err = await res.json(); msg = err.detail || msg; } catch(e){}
+        throw new Error(msg);
+    }
     return res.json();
 }
 
@@ -304,6 +319,7 @@ async function fetchEvents(info, successCallback, failureCallback) {
                 borderColor: e.calendar_color,
                 extendedProps: {
                     calendar_id: e.calendar_id,
+                    calendar_name: e.calendar_name,
                     description: e.description,
                     location: e.location,
                     permission_level: e.permission_level,
@@ -383,13 +399,26 @@ function handleEventClick(info) {
     document.getElementById('event-modal-title').textContent = 'Editar Evento';
     document.getElementById('event-id').value = e.id;
     document.getElementById('event-title').value = e.title;
-    document.getElementById('event-calendar').value = props.calendar_id;
+    
+    // Configura o combobox de agenda, se o calendário não existir (ex: evento compartilhado isoladamente)
+    const calSelect = document.getElementById('event-calendar');
+    if (!Array.from(calSelect.options).some(opt => opt.value == props.calendar_id)) {
+        const opt = document.createElement('option');
+        opt.value = props.calendar_id;
+        opt.textContent = props.calendar_name || "Agenda Compartilhada";
+        calSelect.appendChild(opt);
+    }
+    calSelect.value = props.calendar_id;
     
     const formatDt = (dt) => {
         if (!dt) return { date: '', time: '' };
-        const tzOffset = (new Date()).getTimezoneOffset() * 60000;
-        const iso = (new Date(dt - tzOffset)).toISOString();
-        return { date: iso.split('T')[0], time: iso.split('T')[1].slice(0,5) };
+        // Evitar manipulação de timezone manual para formatar ISO corretamente no fuso local
+        const year = dt.getFullYear();
+        const month = String(dt.getMonth() + 1).padStart(2, '0');
+        const day = String(dt.getDate()).padStart(2, '0');
+        const hours = String(dt.getHours()).padStart(2, '0');
+        const minutes = String(dt.getMinutes()).padStart(2, '0');
+        return { date: `${year}-${month}-${day}`, time: `${hours}:${minutes}` };
     };
     
     const startParts = formatDt(e.start);
@@ -439,12 +468,14 @@ function handleEventClick(info) {
     document.getElementById('btn-delete-event').style.display = canEdit ? 'block' : 'none';
     
     const btnEditShares = document.getElementById('btn-edit-shares');
-    if (btnEditShares) btnEditShares.style.display = canEdit ? 'block' : 'none';
+    if (btnEditShares) btnEditShares.style.display = 'none';
 
-    if (props.shared_with && props.shared_with.length > 0) {
-        document.getElementById('event-share-group').style.display = 'none';
+    if (canEdit) {
+        document.getElementById('event-share-group').style.display = 'block';
+        document.getElementById('event-shared-info').style.display = 'none';
     } else {
-        document.getElementById('event-share-group').style.display = canEdit ? 'block' : 'none';
+        document.getElementById('event-share-group').style.display = 'none';
+        document.getElementById('event-shared-info').style.display = (props.shared_with && props.shared_with.length > 0) ? 'block' : 'none';
     }
     
     const shareActions = document.getElementById('share-edit-actions');
@@ -529,7 +560,16 @@ function confirmShareEdit() {
 
 function closeModal(id) {
     document.getElementById(id).style.display = 'none';
+    if (id === 'modal-event') {
+        currentEventId = null;
+    }
 }
+
+window.addEventListener('click', function(e) {
+    if (e.target.classList.contains('modal')) {
+        closeModal(e.target.id);
+    }
+});
 
 function openNewCalendarModal() {
     document.getElementById('cal-name').value = '';
@@ -551,7 +591,7 @@ async function createCalendar() {
         closeModal('modal-new-cal');
         await loadCalendars();
     } catch (e) {
-        alert('Erro ao criar agenda');
+        alert('Erro ao criar agenda: ' + e.message);
     }
 }
 
@@ -630,7 +670,7 @@ async function saveEvent() {
         closeModal('modal-event');
         calendarInstance.refetchEvents();
     } catch (e) {
-        alert('Erro ao salvar evento');
+        alert('Erro ao salvar evento: ' + e.message);
     }
 }
 
@@ -641,7 +681,7 @@ async function deleteEvent() {
         closeModal('modal-event');
         calendarInstance.refetchEvents();
     } catch (e) {
-        alert('Erro ao excluir');
+        alert('Erro ao excluir: ' + e.message);
     }
 }
 
@@ -668,7 +708,7 @@ async function shareCalendar() {
         alert('Agenda compartilhada com sucesso!');
         await loadCalendars();
     } catch (e) {
-        alert('Erro ao compartilhar. O usuário existe?');
+        alert('Erro ao compartilhar: ' + e.message);
     }
 }
 
@@ -783,6 +823,6 @@ async function shareEventSubmit() {
         closeModal('modal-share-event');
         alert('Evento compartilhado com sucesso!');
     } catch (e) {
-        alert('Erro ao compartilhar. O usuário existe ou você não tem permissão?');
+        alert('Erro ao compartilhar: ' + e.message);
     }
 }
