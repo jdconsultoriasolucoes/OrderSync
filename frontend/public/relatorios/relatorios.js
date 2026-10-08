@@ -1025,6 +1025,12 @@ async function abrirGerenciadorDeCarga(idCarga, numCarga) {
                         ${(!window.cargaAtivaReadOnly) ? '<button class="os-btn os-btn-primary os-btn-sm" id="btn-save-carga-header">Salvar Tela</button>' : ''}
                     </div>
                 </div>
+                <div class="compact-header-info" style="margin-top: 10px;">
+                    <div class="ch-field" style="flex: 1;">
+                        <label>Observação da Carga</label>
+                        <textarea id="in-header-observacao" class="os-input os-input-sm" style="resize: vertical; min-height: 40px;" ${window.cargaAtivaReadOnly ? 'disabled' : ''}>${carga.observacao || ''}</textarea>
+                    </div>
+                </div>
                 <div id="totais-peso-header" style="margin-top: 10px; font-size: 13px; font-weight: 700; display: none; gap: 20px; padding-left: 165px;">
                     <span style="color: #1e40af;">TOTAL P. LÍQ: <span id="span-total-liq-header">0</span> kg</span>
                     <span style="color: #92400e;">TOTAL P. BRUTO: <span id="span-total-bruto-header">0</span> kg</span>
@@ -1192,8 +1198,10 @@ async function abrirGerenciadorDeCarga(idCarga, numCarga) {
             document.getElementById('btn-save-carga-header').addEventListener('click', async () => {
                 const dtEl = document.getElementById('in-header-data');
                 const trEl = document.getElementById('sel-header-transporte');
+                const obsEl = document.getElementById('in-header-observacao');
                 const dt = dtEl ? dtEl.value : null;
                 const tr = trEl ? trEl.value : null;
+                const obs = obsEl ? obsEl.value : null;
 
                 const btn = document.getElementById('btn-save-carga-header');
                 btn.textContent = "Salvando...";
@@ -1206,6 +1214,9 @@ async function abrirGerenciadorDeCarga(idCarga, numCarga) {
                         : { data_carregamento: dt || null };
                     if (trEl && !isRet) {
                         payload.id_transporte = parseInt(tr) || null;
+                    }
+                    if (obsEl && !isRet) {
+                        payload.observacao = obs;
                     }
 
                     const endpointHeaderPut = isRet
@@ -1467,7 +1478,7 @@ async function carregarPedidosDaCargaAtiva() {
                         <td style="font-size: 12px;">${p.municipio || '-'}</td>
                         <td style="vertical-align: top;"><input type="number" class="os-input os-input-sm in-ordem" value="${p.ordem_carregamento || ''}" data-id="${p.id_carga_pedido}" style="padding: 2px; font-size: 12px; height: 32px; text-align: right; width: 60px;" ${window.cargaAtivaReadOnly ? 'disabled' : ''}></td>
                         <td style="white-space: nowrap; font-size: 12px; vertical-align: top; text-align: right;">${peso} kg</td>
-                        <td style="font-size: 12px; vertical-align: top;">${window.cargaAtivaReadOnly ? badgeStatus : `<textarea class="os-input os-input-sm in-obs" data-id="${p.id_carga_pedido}" style="padding: 4px; font-size: 12px; height: 38px; resize: vertical; width: 100%; min-width: 200px;">${p.observacoes || ''}</textarea>`}</td>
+                        <td style="font-size: 12px; vertical-align: middle;">${badgeStatus}</td>
                         <td style="white-space: nowrap; vertical-align: top; padding-top: 4px; text-align: center;">
                             <button onclick="abrirModalDetalhesPedido('${p.id_pedido}')" class="os-btn os-btn-sm os-btn-secondary" title="Ver Produtos do Pedido">Ver</button>
                             ${(!window.cargaAtivaReadOnly) ? `<button class="os-btn os-btn-sm os-btn-danger btn-remover-pedido-carga" data-id="${p.id_carga_pedido}" title="Remover">&times;</button>` : ''}

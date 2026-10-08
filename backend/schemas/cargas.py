@@ -33,6 +33,7 @@ class CargaBase(BaseModel):
     numero_carga: Optional[str] = None
     id_transporte: Optional[int] = None
     data_carregamento: Optional[datetime] = None
+    observacao: Optional[str] = None
     
     # Campos específicos de Retirada
     is_retirada: Optional[bool] = False
@@ -49,6 +50,7 @@ class CargaUpdate(BaseModel):
     numero_carga: Optional[str] = None
     id_transporte: Optional[int] = None
     data_carregamento: Optional[datetime] = None
+    observacao: Optional[str] = None
     
     # Campos específicos de Retirada
     is_retirada: Optional[bool] = None

@@ -227,7 +227,7 @@ def gerar_pdf_romaneio(db, carga_id: int) -> bytes:
             p.status,
             COALESCE(pw.peso_liquido_total, p.peso_total_kg) as peso_liquido_total,
             COALESCE(pw.peso_bruto_total, pw.peso_liquido_total, p.peso_total_kg) as peso_bruto_total,
-            cp.observacoes as obs_carga,
+            c.entrega_observacao_motorista as obs_carga,
             cp.retirada_tipo,
             cp.retirada_nome_terceiro,
             cp.retirada_veiculo_modelo,
@@ -601,7 +601,7 @@ def gerar_pdf_relatorio_completo(db, carga_id: int) -> bytes:
             p.peso_total_kg,
             COALESCE(pw.peso_liquido_total, p.peso_total_kg) as peso_liquido_total,
             COALESCE(pw.peso_bruto_total, pw.peso_liquido_total, p.peso_total_kg) as peso_bruto_total,
-            cp.observacoes as obs_carga
+            c.entrega_observacao_motorista as obs_carga
         FROM tb_cargas_pedidos cp
         JOIN tb_pedidos p ON cp.numero_pedido = p.id_pedido::text
         LEFT JOIN (
@@ -775,7 +775,7 @@ def gerar_pdf_romaneio_retirada(db, retirada_id: int) -> bytes:
             p.status,
             COALESCE(pw.peso_liquido_total, p.peso_total_kg) as peso_liquido_total,
             COALESCE(pw.peso_bruto_total, pw.peso_liquido_total, p.peso_total_kg) as peso_bruto_total,
-            rp.observacoes as obs_carga,
+            c.entrega_observacao_motorista as obs_carga,
             rp.retirada_tipo,
             rp.retirada_nome_terceiro,
             rp.retirada_veiculo_modelo,

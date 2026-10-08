@@ -14,6 +14,7 @@ class CargaModel(Base):
     is_historico = Column(Boolean, default=False)
     data_faturamento = Column(DateTime, nullable=True)
     faturado_por_id = Column(BigInteger, ForeignKey("t_usuario.id"), nullable=True)
+    observacao = Column(Text, nullable=True)
     
     # Controle de Retiradas
     is_retirada = Column(Boolean, default=False)
