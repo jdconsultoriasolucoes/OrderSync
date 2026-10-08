@@ -560,7 +560,7 @@ def confirmar_entrega_carga(carga_id: int, db: Session = Depends(get_db), curren
         # Atualiza o status do pedido e insere a data de faturamento
         db.execute(text("""
             UPDATE public.tb_pedidos
-            SET status = 'Faturado Supra',
+            SET status = 'FATURADO_SUPRA',
                 atualizado_em = now(),
                 atualizado_por = 'sistema',
                 data_faturamento = now()
@@ -572,7 +572,7 @@ def confirmar_entrega_carga(carga_id: int, db: Session = Depends(get_db), curren
             with db.begin_nested():
                 db.execute(text("""
                     INSERT INTO public.pedido_status_event (id, pedido_id, de_status, para_status, user_id, motivo, metadata, created_at)
-                    VALUES (gen_random_uuid(), :pedido_id, :de_status, 'Faturado Supra', 'sistema', 'Entrega de carga confirmada em lote', '{}'::jsonb, now())
+                    VALUES (gen_random_uuid(), :pedido_id, :de_status, 'FATURADO_SUPRA', 'sistema', 'Entrega de carga confirmada em lote', '{}'::jsonb, now())
                 """), {
                     "pedido_id": id_pedido,
                     "de_status": de_status
@@ -865,7 +865,7 @@ def get_validacao_pedidos(
         JOIN public.tb_pedidos p ON p.id_pedido = i.id_pedido
         LEFT JOIN public.t_cadastro_cliente_v2 c ON c.cadastro_codigo_da_empresa::text = p.codigo_cliente
         LEFT JOIN public.t_cadastro_produto_v2 pr ON pr.codigo_supra = i.codigo
-        WHERE i.quantidade > 0 AND UPPER(p.status) NOT LIKE '%CANCEL%' AND p.status = 'Faturado Supra'
+        WHERE i.quantidade > 0 AND UPPER(p.status) NOT LIKE '%CANCEL%' AND p.status = 'FATURADO_SUPRA'
     """
     
     params = {}

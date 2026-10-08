@@ -367,7 +367,7 @@ def confirmar_retirada(retirada_id: int, db: Session = Depends(get_db), current_
     for id_pedido, de_status in pedidos_db:
         db.execute(text("""
             UPDATE public.tb_pedidos
-            SET status = 'Faturado Supra',
+            SET status = 'FATURADO_SUPRA',
                 atualizado_em = now(),
                 atualizado_por = 'sistema',
                 data_faturamento = now()
@@ -378,7 +378,7 @@ def confirmar_retirada(retirada_id: int, db: Session = Depends(get_db), current_
             with db.begin_nested():
                 db.execute(text("""
                     INSERT INTO public.pedido_status_event (id, pedido_id, de_status, para_status, user_id, motivo, metadata, created_at)
-                    VALUES (gen_random_uuid(), :pedido_id, :de_status, 'Faturado Supra', 'sistema', 'Retirada confirmada', '{}'::jsonb, now())
+                    VALUES (gen_random_uuid(), :pedido_id, :de_status, 'FATURADO_SUPRA', 'sistema', 'Retirada confirmada', '{}'::jsonb, now())
                 """), {
                     "pedido_id": id_pedido,
                     "de_status": de_status

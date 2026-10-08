@@ -606,10 +606,27 @@ def atualizar_pedido(
     pedido.total_com_frete = round(total_com_frete, 2)
     pedido.total_pedido = round(total_pedido, 2)
     
-    # Check rule for "Faturado Supra"
-    if status_atual != "FATURADO SUPRA" and status_atual != "CANCELADO":
+    def normalize_status(s):
+        if not s: return "PEDIDO"
+        s = s.strip().upper()
+        import unicodedata
+        s = ''.join(c for c in unicodedata.normalize('NFD', s) if unicodedata.category(c) != 'Mn')
+        if "FATURADO" in s and "SUPRA" in s: return "FATURADO_SUPRA"
+        if "FATURADO" in s and "DISPET" in s: return "FATURADO_DISPET"
+        if "CARGA" in s: return "CARGA_EM_FORMACAO"
+        if "ORCAMENTO" in s: return "ORCAMENTO"
+        if "CANCELADO" in s: return "CANCELADO"
+        if "PEDIDO" in s: return "PEDIDO"
+        if "ENTREGUE" in s: return "ENTREGUE"
+        if "CONCLUIDO" in s: return "CONCLUIDO"
+        return s.replace(" ", "_")
+
+    status_atual = normalize_status(pedido.status)
+    
+    # Check rule for "FATURADO_SUPRA"
+    if status_atual != "FATURADO_SUPRA" and status_atual != "CANCELADO":
         if (pedido.pedido_supra and pedido.nota_fiscal and pedido.data_faturamento and pedido.valor_nota is not None):
-            pedido.status = "Faturado Supra"
+            pedido.status = "FATURADO_SUPRA"
     pedido.atualizado_em = datetime.now()
     
     db.add(pedido)
@@ -730,7 +747,7 @@ def verificar_e_historico_carga(db: Session, id_pedido: int, user_id: Optional[s
                 FROM tb_cargas_pedidos cp
                 JOIN tb_pedidos p ON TRIM(p.id_pedido::text) = TRIM(cp.numero_pedido)
                 WHERE cp.id_carga = :carga_id
-                  AND LOWER(TRIM(p.status)) NOT IN ('faturado supra', 'faturado dispet', 'cancelado')
+                  AND UPPER(TRIM(p.status)) NOT IN ('FATURADO_SUPRA', 'FATURADO_DISPET', 'CANCELADO')
             """), {"carga_id": carga_id}).scalar()
 
             if todos_faturados == 0:
@@ -763,7 +780,7 @@ def verificar_e_historico_carga(db: Session, id_pedido: int, user_id: Optional[s
                 FROM tb_retiradas_pedidos rp
                 JOIN tb_pedidos p ON TRIM(p.id_pedido::text) = TRIM(rp.numero_pedido)
                 WHERE rp.id_retirada = :retirada_id
-                  AND LOWER(TRIM(p.status)) NOT IN ('faturado supra', 'faturado dispet', 'cancelado')
+                  AND UPPER(TRIM(p.status)) NOT IN ('FATURADO_SUPRA', 'FATURADO_DISPET', 'CANCELADO')
             """), {"retirada_id": retirada_id}).scalar()
 
             if todos_faturados_ret == 0:
@@ -797,10 +814,31 @@ def mudar_status(request: Request, id_pedido: int, body: StatusChangeBody, db: S
         raise HTTPException(status_code=404, detail="Pedido não encontrado")
     de_status = cur[0]
 
+    def normalize_status(s):
+        if not s: return "PEDIDO"
+        s = s.strip().upper()
+        import unicodedata
+        s = ''.join(c for c in unicodedata.normalize('NFD', s) if unicodedata.category(c) != 'Mn')
+        if "FATURADO" in s and "SUPRA" in s: return "FATURADO_SUPRA"
+        if "FATURADO" in s and "DISPET" in s: return "FATURADO_DISPET"
+        if "CARGA" in s: return "CARGA_EM_FORMACAO"
+        if "ORCAMENTO" in s: return "ORCAMENTO"
+        if "CANCELADO" in s: return "CANCELADO"
+        if "PEDIDO" in s: return "PEDIDO"
+        if "ENTREGUE" in s: return "ENTREGUE"
+        if "CONCLUIDO" in s: return "CONCLUIDO"
+        return s.replace(" ", "_")
+
+    para_norm = normalize_status(body.para)
+    de_status_norm = normalize_status(de_status)
+
+    if de_status_norm == para_norm:
+        return {"message": "O pedido já está neste status", "status": de_status}
+
     # VALIDAÇÃO DE FATURAMENTO: Bloqueia se o cliente não tem código da empresa
     # Regra: se o status for = a faturado dispet, o codigo do cliente não é obrigatorio.
-    status_faturamento = {"faturado supra"}
-    if body.para and body.para.lower() in status_faturamento:
+    status_faturamento = {"FATURADO_SUPRA"}
+    if para_norm in status_faturamento:
         resultado = db.execute(
             text("""
                 SELECT c.cadastro_codigo_da_empresa
@@ -819,12 +857,11 @@ def mudar_status(request: Request, id_pedido: int, body: StatusChangeBody, db: S
 
     # Determinar atualizações adicionais de data dependendo do status manual
     extra_set = ""
-    para_lower = str(body.para or "").lower().strip()
-    if para_lower in ("faturado supra", "faturado dispet"):
+    if para_norm in ("FATURADO_SUPRA", "FATURADO_DISPET"):
         extra_set = ", data_faturamento = now()"
-    elif para_lower == "cancelado":
+    elif para_norm == "CANCELADO":
         extra_set = ", cancelado_em = now()"
-    elif para_lower in ("pedido", "confirmado"):
+    elif para_norm in ("PEDIDO", "CONFIRMADO"):
         extra_set = ", confirmado_em = now()"
 
     dynamic_status_update = text(f"""
@@ -838,7 +875,7 @@ def mudar_status(request: Request, id_pedido: int, body: StatusChangeBody, db: S
     """)
 
     upd = db.execute(dynamic_status_update, {
-        "para_status": body.para, 
+        "para_status": para_norm, 
         "id_pedido": id_pedido,
         "user_id": user_id
     }).first()
@@ -851,7 +888,7 @@ def mudar_status(request: Request, id_pedido: int, body: StatusChangeBody, db: S
             db.execute(STATUS_EVENT_INSERT_SQL, {
                 "pedido_id": id_pedido,
                 "de_status": de_status,
-                "para_status": body.para,
+                "para_status": para_norm,
                 "user_id": user_id,
                 "motivo": body.motivo,
                 "metadata": "{}"
@@ -859,7 +896,7 @@ def mudar_status(request: Request, id_pedido: int, body: StatusChangeBody, db: S
     except Exception:
         pass
 
-    if body.para and body.para.lower() in ("faturado supra", "faturado dispet", "cancelado"):
+    if para_norm in ("FATURADO_SUPRA", "FATURADO_DISPET", "CANCELADO"):
         verificar_e_historico_carga(db, id_pedido, user_id)
 
     db.commit()
@@ -873,8 +910,8 @@ def atualizar_campos_faturamento(request: Request, id_pedido: int, body: PedidoC
     if not pedido:
         raise HTTPException(status_code=404, detail="Pedido não encontrado")
         
-    status_str = str(pedido.status).strip().lower()
-    if status_str in ["faturado supra", "faturado dispet", "cancelado", "entregue", "concluído"]:
+    status_str = str(pedido.status).strip().upper()
+    if status_str in ["FATURADO_SUPRA", "FATURADO_DISPET", "CANCELADO", "ENTREGUE", "CONCLUIDO"]:
         raise HTTPException(status_code=400, detail="Não é permitido alterar pedidos que já foram faturados, cancelados ou entregues.")
     
     if body.pedido_supra is not None:
@@ -978,7 +1015,7 @@ def debug_historico_carga(carga_id: int, db: Session = Depends(get_db)):
     
     pendentes = [
         dict(d) for d in detalhes 
-        if (d["status"] or "").lower() not in ('faturado supra', 'faturado dispet', 'cancelado')
+        if (d["status"] or "").upper() not in ('FATURADO_SUPRA', 'FATURADO_DISPET', 'CANCELADO')
     ]
     
     return {

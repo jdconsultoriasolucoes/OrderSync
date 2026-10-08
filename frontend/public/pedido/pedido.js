@@ -144,11 +144,13 @@ function getStatusBadge(status) {
       return `<span class="status-badge" style="background-color: #fef3c7; color: #92400e; border: 1px solid #fcd34d;">Orçamento</span>`;
   }
   if (s === 'PEDIDO') return `<span class="status-badge status-env">Pedido</span>`;
-  if (s === 'FATURADO SUPRA') return `<span class="status-badge status-conf">Faturado Supra</span>`;
-  if (s === 'FATURADO DISPET') {
+  if (s === 'FATURADO_SUPRA') return `<span class="status-badge status-conf">Faturado Supra</span>`;
+  if (s === 'FATURADO_DISPET') {
       return `<span class="status-badge status-conf" style="background-color: #d1fae5; color: #065f46; border: 1px solid #6ee7b7;">Faturado Dispet</span>`;
   }
   if (s === 'CANCELADO') return `<span class="status-badge status-cancel">Cancelado</span>`;
+  if (s === 'ENTREGUE') return `<span class="status-badge" style="background-color: #dbeafe; color: #1e40af; border: 1px solid #93c5fd;">Entregue</span>`;
+  if (s === 'CARGA_EM_FORMACAO') return `<span class="status-badge" style="background-color: #e0e7ff; color: #3730a3; border: 1px solid #a5b4fc;">Carga em formação</span>`;
   
   return `<span class="status-badge status-aberto">${status}</span>`;
 }
