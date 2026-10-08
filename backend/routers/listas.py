@@ -19,8 +19,13 @@ def get_situacao():
 @router.get("/status_cadastro")
 def get_status_cadastro(db: Session = Depends(get_db)):
     from sqlalchemy import text
-    rows = db.execute(text("SELECT descricao FROM tb_status_cadastro ORDER BY descricao")).fetchall()
-    return [r[0] for r in rows]
+    try:
+        rows = db.execute(text("SELECT descricao FROM tb_status_cadastro ORDER BY descricao")).fetchall()
+        return [r[0] for r in rows]
+    except Exception as e:
+        import logging
+        logging.error(f"Erro ao listar status_cadastro: {e}")
+        return []
 
 @router.get("/retira")
 def get_retira():

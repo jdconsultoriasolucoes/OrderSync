@@ -270,34 +270,17 @@ def deletar_familia(id: int, db: Session = Depends(get_db)):
     db.commit()
     return {"message": "Inativado com sucesso"}
 
-@router.get("/system/import_status_cadastro")
-def import_status_cadastro(db: Session = Depends(get_db)):
-    sql_create = text("""
-        CREATE TABLE IF NOT EXISTS tb_status_cadastro (
-            id SERIAL PRIMARY KEY,
-            descricao VARCHAR UNIQUE
-        )
-    """)
-    db.execute(sql_create)
-    db.commit()
 
-    sql_insert = text("""
-        INSERT INTO tb_status_cadastro (descricao)
-        SELECT DISTINCT cadastro_status_cadastro
-        FROM t_cadastro_cliente_v2
-        WHERE cadastro_status_cadastro IS NOT NULL
-          AND trim(cadastro_status_cadastro) != ''
-          AND cadastro_status_cadastro NOT IN (SELECT descricao FROM tb_status_cadastro)
-        ON CONFLICT (descricao) DO NOTHING
-    """)
-    db.execute(sql_insert)
-    db.commit()
-    return {"message": "Status importados com sucesso"}
 
 @router.get("/system/status_cadastro", response_model=List[s.StatusCadastroOut])
 def listar_status_cadastro(db: Session = Depends(get_db)):
-    rows = db.execute(text("SELECT id, descricao FROM tb_status_cadastro ORDER BY descricao")).mappings().all()
-    return rows
+    try:
+        rows = db.execute(text("SELECT id, descricao FROM tb_status_cadastro ORDER BY descricao")).mappings().all()
+        return rows
+    except Exception as e:
+        import logging
+        logging.error(f"Erro no listar_status_cadastro: {e}")
+        return []
 
 @router.post("/system/status_cadastro", response_model=s.StatusCadastroOut)
 def criar_status_cadastro(payload: s.StatusCadastroCreate, db: Session = Depends(get_db)):
