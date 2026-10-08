@@ -222,12 +222,17 @@ function alternarRelatorioUI() {
         } else if (f.classList.contains("filtro-gerencial3")) {
             f.style.display = (activeReport === "gerencial3") ? "flex" : "none";
         } else {
-            if (f.id === "campo-filtro-grupo") {
-                f.style.display = activeReport === "produto" ? "flex" : "none";
-            } else if (f.id === "campo-filtro-tipo-entrega") {
-                f.style.display = activeReport === "validacao" ? "flex" : "none";
+            if (activeReport === "validacao") {
+                const showIds = ["campo-filtro-filial", "campo-filtro-categoria", "campo-filtro-faturamento", "campo-filtro-tipo-entrega"];
+                f.style.display = showIds.includes(f.id) ? "flex" : "none";
             } else {
-                f.style.display = (activeReport === "gerencial" || activeReport === "gerencial2" || activeReport === "gerencial3") ? "none" : "flex";
+                if (f.id === "campo-filtro-grupo") {
+                    f.style.display = activeReport === "produto" ? "flex" : "none";
+                } else if (f.id === "campo-filtro-tipo-entrega") {
+                    f.style.display = "none";
+                } else {
+                    f.style.display = (activeReport === "gerencial" || activeReport === "gerencial2" || activeReport === "gerencial3") ? "none" : "flex";
+                }
             }
         }
     });

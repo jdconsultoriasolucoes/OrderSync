@@ -865,7 +865,7 @@ def get_validacao_pedidos(
         JOIN public.tb_pedidos p ON p.id_pedido = i.id_pedido
         LEFT JOIN public.t_cadastro_cliente_v2 c ON c.cadastro_codigo_da_empresa::text = p.codigo_cliente
         LEFT JOIN public.t_cadastro_produto_v2 pr ON pr.codigo_supra = i.codigo
-        WHERE i.quantidade > 0 AND UPPER(p.status) NOT LIKE '%CANCEL%'
+        WHERE i.quantidade > 0 AND UPPER(p.status) NOT LIKE '%CANCEL%' AND p.status = 'Faturado Supra'
     """
     
     params = {}
