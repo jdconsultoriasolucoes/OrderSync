@@ -293,12 +293,19 @@ def get_resumo_produtos_carga(carga_id: int, db: Session = Depends(get_db)):
             MAX(CAST(prod.peso AS FLOAT)) AS peso_unitario,
             MAX(CAST(COALESCE(prod.peso_bruto, 0) AS FLOAT)) AS peso_bruto_unitario,
             CAST(SUM(i.quantidade * COALESCE(prod.peso, 0)) AS FLOAT) AS peso_liquido_total,
-            CAST(SUM(i.quantidade * COALESCE(prod.peso_bruto, 0)) AS FLOAT) AS peso_bruto_total
+            CAST(SUM(i.quantidade * COALESCE(prod.peso_bruto, 0)) AS FLOAT) AS peso_bruto_total,
+            MAX(COALESCE(NULLIF(prod.fornecedor, ''), NULLIF(p.fornecedor, ''))) AS filial
         FROM tb_cargas_pedidos cp
         JOIN tb_pedidos p ON cp.numero_pedido = p.id_pedido::text
         JOIN tb_pedidos_itens i ON p.id_pedido = i.id_pedido
         LEFT JOIN (
-            SELECT codigo_supra, MAX(CAST(peso AS FLOAT)) as peso, MAX(CAST(peso_bruto AS FLOAT)) as peso_bruto, MAX(unidade) as unidade_medida, MAX(estoque_disponivel) as estoque_disponivel, MAX(estoque_futuro) as estoque_futuro
+            SELECT codigo_supra, 
+                   MAX(CAST(peso AS FLOAT)) as peso, 
+                   MAX(CAST(peso_bruto AS FLOAT)) as peso_bruto, 
+                   MAX(unidade) as unidade_medida, 
+                   MAX(estoque_disponivel) as estoque_disponivel, 
+                   MAX(estoque_futuro) as estoque_futuro,
+                   MAX(fornecedor) as fornecedor
             FROM t_cadastro_produto_v2
             GROUP BY codigo_supra
         ) prod ON prod.codigo_supra = i.codigo

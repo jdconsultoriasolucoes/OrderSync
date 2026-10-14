@@ -98,6 +98,7 @@ def gerar_pdf_formacao_carga(db, carga_id: int) -> bytes:
             c.entrega_municipio as cidade,
             c.entrega_rota_principal as rota_geral,
             c.entrega_rota_aproximacao as rota_aprox,
+            p.fornecedor,
             p.peso_total_kg,
             COALESCE(pb.peso_bruto_total, p.peso_total_kg) as peso_bruto_total,
             p.total_pedido as valor_total
@@ -274,15 +275,22 @@ def gerar_pdf_romaneio(db, carga_id: int) -> bytes:
     total_liq_val = sum(getattr(p, 'peso_liquido_total', 0.0) or getattr(p, 'peso_total_kg', 0.0) or 0.0 for p in pedidos)
     total_bruto_val = sum(getattr(p, 'peso_bruto_total', 0.0) or getattr(p, 'peso_total_kg', 0.0) or 0.0 for p in pedidos)
 
+    filiais = []
+    for p in pedidos:
+        f = (p.get('fornecedor') if hasattr(p, 'get') else None) or getattr(p, 'fornecedor', None)
+        if f and str(f).strip() and str(f).strip() not in filiais:
+            filiais.append(str(f).strip())
+    filial_str = " / ".join(filiais) if filiais else "DISPET DISTRIBUIDORA"
+
     if is_ret:
         # Tudo em uma única linha no topo para economizar espaço
-        c.drawString(0.7*cm, y, f"Filial: DISPET DISTRIBUIDORA")
+        c.drawString(0.7*cm, y, f"Filial: {filial_str}")
         c.drawString(6.0*cm, y, f"RETIRADA Nº: {carga.get('numero_carga') or ''}")
         c.drawString(11.5*cm, y, f"DATA RETIRADA: {data_str}")
         c.drawRightString(width - 0.7*cm, y, f"P. LÍQ: {_br_number(total_liq_val, 0)} kg   |   P. BRUTO: {_br_number(total_bruto_val, 0)} kg")
         y -= 0.6*cm
     else:
-        c.drawString(0.7*cm, y, f"Filial: DISPET DISTRIBUIDORA")
+        c.drawString(0.7*cm, y, f"Filial: {filial_str}")
         c.drawString(8.0*cm, y, f"CARGA Nº: {carga.get('numero_carga') or carga.get('id') or ''}")
         c.drawRightString(width - 0.7*cm, y, f"DATA CARREGAMENTO: {data_str}")
         y -= 0.5*cm
@@ -481,12 +489,18 @@ def gerar_pdf_resumo_produtos(db, carga_id: int) -> bytes:
             MAX(CAST(prod.peso AS FLOAT)) AS peso_unitario,
             MAX(CAST(COALESCE(prod.peso_bruto, prod.peso, 0) AS FLOAT)) AS peso_bruto_unitario,
             CAST(SUM(i.quantidade * COALESCE(prod.peso, 0)) AS FLOAT) AS peso_liquido_total,
-            CAST(SUM(i.quantidade * COALESCE(prod.peso_bruto, prod.peso, 0)) AS FLOAT) AS peso_bruto_total
+            CAST(SUM(i.quantidade * COALESCE(prod.peso_bruto, prod.peso, 0)) AS FLOAT) AS peso_bruto_total,
+            MAX(COALESCE(NULLIF(prod.fornecedor, ''), NULLIF(p.fornecedor, ''))) AS filial
         FROM tb_cargas_pedidos cp
         JOIN tb_pedidos p ON cp.numero_pedido = p.id_pedido::text
         JOIN tb_pedidos_itens i ON i.id_pedido = p.id_pedido
         LEFT JOIN (
-            SELECT codigo_supra, MAX(CAST(peso AS FLOAT)) as peso, MAX(CAST(peso_bruto AS FLOAT)) as peso_bruto, MAX(estoque_disponivel) as estoque_disponivel, MAX(estoque_futuro) as estoque_futuro
+            SELECT codigo_supra, 
+                   MAX(CAST(peso AS FLOAT)) as peso, 
+                   MAX(CAST(peso_bruto AS FLOAT)) as peso_bruto, 
+                   MAX(estoque_disponivel) as estoque_disponivel, 
+                   MAX(estoque_futuro) as estoque_futuro,
+                   MAX(fornecedor) as fornecedor
             FROM t_cadastro_produto_v2
             GROUP BY codigo_supra
         ) prod ON prod.codigo_supra = i.codigo
@@ -515,12 +529,20 @@ def _desenhar_resumo_logic(c, db, carga, produtos, width, height, y_start=None):
     total_liq = sum(getattr(p, 'peso_liquido_total', 0.0) or 0.0 for p in produtos)
     total_bruto = sum(getattr(p, 'peso_bruto_total', 0.0) or 0.0 for p in produtos)
 
+    # Identificar filiais distintas dinamicamente a partir dos produtos
+    filiais = []
+    for p in produtos:
+        f = (p.get('filial') if hasattr(p, 'get') else None) or getattr(p, 'filial', None)
+        if f and str(f).strip() and str(f).strip() not in filiais:
+            filiais.append(str(f).strip())
+    filial_str = " / ".join(filiais) if filiais else "DISPET DISTRIBUIDORA"
+
     if y_start is None:
         y = _draw_header(c, width, height, "RESUMO DE PRODUTOS")
         # Header Info as per drawing 4: Filial | CARGA Nº | DATA
         c.setFont("Helvetica-Bold", 10)
         c.setFillColor(colors.black)
-        c.drawString(0.7*cm, y, f"Filial: DISPET DISTRIBUIDORA")
+        c.drawString(0.7*cm, y, f"Filial: {filial_str}")
         c.drawString(7.0*cm, y, f"CARGA Nº: {carga.get('numero_carga') or carga.get('id') or ''}")
         
         data_carregamento = carga.get('data_carregamento')
@@ -631,12 +653,16 @@ def gerar_pdf_relatorio_completo(db, carga_id: int) -> bytes:
             MAX(CAST(prod.peso AS FLOAT)) AS peso_unitario,
             MAX(CAST(COALESCE(prod.peso_bruto, prod.peso, 0) AS FLOAT)) AS peso_bruto_unitario,
             CAST(SUM(i.quantidade * COALESCE(prod.peso, 0)) AS FLOAT) AS peso_liquido_total,
-            CAST(SUM(i.quantidade * COALESCE(prod.peso_bruto, prod.peso, 0)) AS FLOAT) AS peso_bruto_total
+            CAST(SUM(i.quantidade * COALESCE(prod.peso_bruto, prod.peso, 0)) AS FLOAT) AS peso_bruto_total,
+            MAX(COALESCE(NULLIF(prod.fornecedor, ''), NULLIF(p.fornecedor, ''))) AS filial
         FROM tb_cargas_pedidos cp
         JOIN tb_pedidos p ON cp.numero_pedido = p.id_pedido::text
         JOIN tb_pedidos_itens i ON p.id_pedido = i.id_pedido
         LEFT JOIN (
-            SELECT codigo_supra, MAX(CAST(peso AS FLOAT)) as peso, MAX(CAST(peso_bruto AS FLOAT)) as peso_bruto
+            SELECT codigo_supra, 
+                   MAX(CAST(peso AS FLOAT)) as peso, 
+                   MAX(CAST(peso_bruto AS FLOAT)) as peso_bruto,
+                   MAX(fornecedor) as fornecedor
             FROM t_cadastro_produto_v2
             GROUP BY codigo_supra
         ) prod ON prod.codigo_supra = i.codigo
@@ -676,10 +702,17 @@ def gerar_pdf_relatorio_completo(db, carga_id: int) -> bytes:
 def _desenhar_romaneio_logic(c, carga, pedidos, width, height):
     y = _draw_header(c, width, height, "Romaneio de Entrega")
 
+    filiais = []
+    for p in pedidos:
+        f = (p.get('fornecedor') if hasattr(p, 'get') else None) or getattr(p, 'fornecedor', None)
+        if f and str(f).strip() and str(f).strip() not in filiais:
+            filiais.append(str(f).strip())
+    filial_str = " / ".join(filiais) if filiais else "DISPET DISTRIBUIDORA"
+
     # Header Info: Filial, CARGA Nº, DATA
     c.setFillColor(colors.black)
     c.setFont("Helvetica-Bold", 10)
-    c.drawString(0.7*cm, y, f"Filial: DISPET DISTRIBUIDORA")
+    c.drawString(0.7*cm, y, f"Filial: {filial_str}")
     c.drawString(8.0*cm, y, f"CARGA Nº: {carga.get('numero_carga') or carga.get('id') or ''}")
     # Fix missing DATA CARREGAMENTO var definition issue
     data_carregamento = carga.get('data_carregamento')
@@ -818,7 +851,14 @@ def gerar_pdf_romaneio_retirada(db, retirada_id: int) -> bytes:
     total_liq_val = sum(getattr(p, 'peso_liquido_total', 0.0) or getattr(p, 'peso_total_kg', 0.0) or 0.0 for p in pedidos)
     total_bruto_val = sum(getattr(p, 'peso_bruto_total', 0.0) or getattr(p, 'peso_total_kg', 0.0) or 0.0 for p in pedidos)
 
-    c.drawString(0.7*cm, y, f"Filial: DISPET DISTRIBUIDORA")
+    filiais = []
+    for p in pedidos:
+        f = (p.get('fornecedor') if hasattr(p, 'get') else None) or getattr(p, 'fornecedor', None)
+        if f and str(f).strip() and str(f).strip() not in filiais:
+            filiais.append(str(f).strip())
+    filial_str = " / ".join(filiais) if filiais else "DISPET DISTRIBUIDORA"
+
+    c.drawString(0.7*cm, y, f"Filial: {filial_str}")
     c.drawString(6.0*cm, y, f"RETIRADA Nº: {retirada.get('numero_retirada') or ''}")
     c.drawString(11.5*cm, y, f"DATA RETIRADA: {data_str}")
     c.drawRightString(width - 0.7*cm, y, f"P. LÍQ: {_br_number(total_liq_val, 0)} kg   |   P. BRUTO: {_br_number(total_bruto_val, 0)} kg")
@@ -940,12 +980,18 @@ def gerar_pdf_resumo_produtos_retirada(db, retirada_id: int) -> bytes:
             MAX(CAST(prod.peso AS FLOAT)) AS peso_unitario,
             MAX(CAST(COALESCE(prod.peso_bruto, prod.peso, 0) AS FLOAT)) AS peso_bruto_unitario,
             CAST(SUM(i.quantidade * COALESCE(prod.peso, 0)) AS FLOAT) AS peso_liquido_total,
-            CAST(SUM(i.quantidade * COALESCE(prod.peso_bruto, prod.peso, 0)) AS FLOAT) AS peso_bruto_total
+            CAST(SUM(i.quantidade * COALESCE(prod.peso_bruto, prod.peso, 0)) AS FLOAT) AS peso_bruto_total,
+            MAX(COALESCE(NULLIF(prod.fornecedor, ''), NULLIF(p.fornecedor, ''))) AS filial
         FROM tb_retiradas_pedidos rp
         JOIN tb_pedidos p ON rp.numero_pedido = p.id_pedido::text
         JOIN tb_pedidos_itens i ON i.id_pedido = p.id_pedido
         LEFT JOIN (
-            SELECT codigo_supra, MAX(CAST(peso AS FLOAT)) as peso, MAX(CAST(peso_bruto AS FLOAT)) as peso_bruto, MAX(estoque_disponivel) as estoque_disponivel, MAX(estoque_futuro) as estoque_futuro
+            SELECT codigo_supra, 
+                   MAX(CAST(peso AS FLOAT)) as peso, 
+                   MAX(CAST(peso_bruto AS FLOAT)) as peso_bruto, 
+                   MAX(estoque_disponivel) as estoque_disponivel, 
+                   MAX(estoque_futuro) as estoque_futuro,
+                   MAX(fornecedor) as fornecedor
             FROM t_cadastro_produto_v2
             GROUP BY codigo_supra
         ) prod ON prod.codigo_supra = i.codigo
@@ -965,10 +1011,17 @@ def gerar_pdf_resumo_produtos_retirada(db, retirada_id: int) -> bytes:
     total_liq = sum(p["peso_liquido_total"] or 0.0 for p in produtos)
     total_bruto = sum(p["peso_bruto_total"] or 0.0 for p in produtos)
 
+    filiais = []
+    for p in produtos:
+        f = (p.get('filial') if hasattr(p, 'get') else None) or getattr(p, 'filial', None)
+        if f and str(f).strip() and str(f).strip() not in filiais:
+            filiais.append(str(f).strip())
+    filial_str = " / ".join(filiais) if filiais else "DISPET DISTRIBUIDORA"
+
     y = _draw_header(c, width, height, "RESUMO DE PRODUTOS (RETIRADA)")
     c.setFont("Helvetica-Bold", 10)
     c.setFillColor(colors.black)
-    c.drawString(0.7*cm, y, f"Filial: DISPET DISTRIBUIDORA")
+    c.drawString(0.7*cm, y, f"Filial: {filial_str}")
     c.drawString(7.0*cm, y, f"RETIRADA Nº: {retirada.get('numero_retirada') or ''}")
     
     data_retirada = retirada.get('data_retirada')

@@ -1376,10 +1376,17 @@ async function carregarPedidosDaCargaAtiva() {
             `;
         }
 
-        // Round 3: Atuallizar Filial com o Fornecedor do primeiro pedido (se for Formação de Carga)
-        if (activeRelatorio === "formacao" && ped.length > 0) {
+        // Atualizar Filial com o Fornecedor/Filial dos pedidos da carga
+        if (ped.length > 0) {
             const elFilial = document.getElementById('in-header-filial');
-            if (elFilial) elFilial.value = ped[0].fornecedor || "DISPET DISTRIBUIDORA";
+            if (elFilial) {
+                const filiaisSet = new Set();
+                ped.forEach(p => {
+                    const f = p.fornecedor || p.filial;
+                    if (f && String(f).trim()) filiaisSet.add(String(f).trim());
+                });
+                elFilial.value = filiaisSet.size > 0 ? Array.from(filiaisSet).join(' / ') : (ped[0].fornecedor || "DISPET DISTRIBUIDORA");
+            }
         }
 
         // Também precisamos da data da carga para exibir na coluna "Data"
@@ -1602,6 +1609,21 @@ async function carregarResumoProdutosDaCargaAtiva() {
         }
         
         const prods = await resp.json();
+
+        // Atualizar Filial dinamicamente com base nas informações dos produtos dos pedidos da carga
+        const filiaisSet = new Set();
+        if (Array.isArray(prods)) {
+            prods.forEach(p => {
+                const f = p.filial || p.fornecedor;
+                if (f && String(f).trim()) {
+                    filiaisSet.add(String(f).trim());
+                }
+            });
+        }
+        const elFilial = document.getElementById('in-header-filial');
+        if (elFilial) {
+            elFilial.value = filiaisSet.size > 0 ? Array.from(filiaisSet).join(' / ') : "DISPET DISTRIBUIDORA";
+        }
 
         // Calcular totais
         const totalLiq = prods.reduce((sum, p) => sum + (parseFloat(p.peso_liquido_total) || 0), 0);
