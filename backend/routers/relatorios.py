@@ -536,10 +536,11 @@ def confirmar_entrega_carga(carga_id: int, db: Session = Depends(get_db), curren
             continue
         id_pedido = int(num_ped)
         
-        # Lock e busca o status do pedido e código da empresa do cliente
+        # Lock e busca o status do pedido, código da empresa e campos de faturamento
         resultado = db.execute(
             text("""
-                SELECT p.status, c.cadastro_codigo_da_empresa, p.id_pedido::text as num_pedido_vis
+                SELECT p.status, c.cadastro_codigo_da_empresa, p.id_pedido::text as num_pedido_vis,
+                       p.pedido_supra, p.nota_fiscal, p.data_faturamento, p.valor_nota
                 FROM public.tb_pedidos p
                 LEFT JOIN public.t_cadastro_cliente_v2 c ON c.cadastro_codigo_da_empresa::text = p.codigo_cliente
                 WHERE p.id_pedido = :id
@@ -550,27 +551,39 @@ def confirmar_entrega_carga(carga_id: int, db: Session = Depends(get_db), curren
         if not resultado:
             continue
             
-        de_status, codigo_empresa, num_pedido_vis = resultado
+        de_status, codigo_empresa, num_pedido_vis, ped_supra, nota_fiscal, dt_fat, val_nota = resultado
+        
+        erros_item = []
         if not codigo_empresa or not str(codigo_empresa).strip():
-            pedidos_com_erro.append(f"Pedido {num_pedido_vis} (Cliente sem código da empresa)")
+            erros_item.append("Cliente sem código da empresa")
+        if not ped_supra or not str(ped_supra).strip() or str(ped_supra).lower() == 'nan':
+            erros_item.append("Sem Pedido Supra")
+        if not nota_fiscal or not str(nota_fiscal).strip() or str(nota_fiscal).lower() == 'nan':
+            erros_item.append("Sem Nota Fiscal")
+        if not dt_fat:
+            erros_item.append("Sem Data de Faturamento")
+        if val_nota is None:
+            erros_item.append("Sem Valor da Nota")
+            
+        if erros_item:
+            pedidos_com_erro.append(f"Pedido {num_pedido_vis} ({', '.join(erros_item)})")
         else:
             pedidos_db.append((id_pedido, de_status))
             
     if pedidos_com_erro:
         raise HTTPException(
             status_code=400,
-            detail="Não foi possível confirmar a entrega. Os seguintes pedidos possuem problemas:<br>" + "<br>".join(pedidos_com_erro)
+            detail="Não foi possível confirmar a entrega. A carga possui pedidos não faturados ou com pendências:<br>" + "<br>".join(pedidos_com_erro)
         )
         
-    # 4. Altera o status de todos os pedidos da carga para "Faturado Supra"
+    # 4. Altera o status de todos os pedidos da carga para "Faturado Supra" preservando a data de faturamento existente
     for id_pedido, de_status in pedidos_db:
-        # Atualiza o status do pedido e insere a data de faturamento
         db.execute(text("""
             UPDATE public.tb_pedidos
             SET status = 'FATURADO_SUPRA',
-                atualizado_em = now(),
+                atualizado_em = (now() AT TIME ZONE 'America/Sao_Paulo'),
                 atualizado_por = 'sistema',
-                data_faturamento = now()
+                data_faturamento = COALESCE(data_faturamento, (now() AT TIME ZONE 'America/Sao_Paulo'))
             WHERE id_pedido = :id_pedido
         """), {"id_pedido": id_pedido})
         
@@ -587,10 +600,14 @@ def confirmar_entrega_carga(carga_id: int, db: Session = Depends(get_db), curren
         except Exception:
             pass
             
-    # 5. Move a carga para o histórico
+    # 5. Move a carga para o histórico usando fuso horário de São Paulo
+    from zoneinfo import ZoneInfo
+    tz_sp = ZoneInfo("America/Sao_Paulo")
+    now_sp = datetime.now(tz_sp).replace(tzinfo=None)
+
     db_carga.is_historico = True
-    db_carga.data_faturamento = datetime.now()
-    db_carga.data_carregamento = datetime.now()
+    db_carga.data_faturamento = now_sp
+    db_carga.data_carregamento = now_sp
     
     # Gerar snapshot de auditoria
     gerar_snapshot_carga(db, carga_id, db_carga, carga_pedidos, current_user.email)

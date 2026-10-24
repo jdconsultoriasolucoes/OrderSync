@@ -339,9 +339,11 @@ def confirmar_retirada(retirada_id: int, db: Session = Depends(get_db), current_
             continue
         id_pedido = int(num_ped)
         
+        # Lock e busca o status do pedido, código da empresa e campos de faturamento
         resultado = db.execute(
             text("""
-                SELECT p.status, c.cadastro_codigo_da_empresa, p.id_pedido::text as num_pedido_vis
+                SELECT p.status, c.cadastro_codigo_da_empresa, p.id_pedido::text as num_pedido_vis,
+                       p.pedido_supra, p.nota_fiscal, p.data_faturamento, p.valor_nota
                 FROM public.tb_pedidos p
                 LEFT JOIN public.t_cadastro_cliente_v2 c ON c.cadastro_codigo_da_empresa::text = p.codigo_cliente
                 WHERE p.id_pedido = :id
@@ -352,25 +354,38 @@ def confirmar_retirada(retirada_id: int, db: Session = Depends(get_db), current_
         if not resultado:
             continue
             
-        de_status, codigo_empresa, num_pedido_vis = resultado
+        de_status, codigo_empresa, num_pedido_vis, ped_supra, nota_fiscal, dt_fat, val_nota = resultado
+        
+        erros_item = []
         if not codigo_empresa or not str(codigo_empresa).strip():
-            pedidos_com_erro.append(f"Pedido {num_pedido_vis} (Cliente sem código da empresa)")
+            erros_item.append("Cliente sem código da empresa")
+        if not ped_supra or not str(ped_supra).strip() or str(ped_supra).lower() == 'nan':
+            erros_item.append("Sem Pedido Supra")
+        if not nota_fiscal or not str(nota_fiscal).strip() or str(nota_fiscal).lower() == 'nan':
+            erros_item.append("Sem Nota Fiscal")
+        if not dt_fat:
+            erros_item.append("Sem Data de Faturamento")
+        if val_nota is None:
+            erros_item.append("Sem Valor da Nota")
+            
+        if erros_item:
+            pedidos_com_erro.append(f"Pedido {num_pedido_vis} ({', '.join(erros_item)})")
         else:
             pedidos_db.append((id_pedido, de_status))
             
     if pedidos_com_erro:
         raise HTTPException(
             status_code=400,
-            detail="Não foi possível confirmar a retirada. Os seguintes pedidos possuem problemas:<br>" + "<br>".join(pedidos_com_erro)
+            detail="Não foi possível confirmar a retirada. A retirada possui pedidos não faturados ou com pendências:<br>" + "<br>".join(pedidos_com_erro)
         )
         
     for id_pedido, de_status in pedidos_db:
         db.execute(text("""
             UPDATE public.tb_pedidos
             SET status = 'FATURADO_SUPRA',
-                atualizado_em = now(),
+                atualizado_em = (now() AT TIME ZONE 'America/Sao_Paulo'),
                 atualizado_por = 'sistema',
-                data_faturamento = now()
+                data_faturamento = COALESCE(data_faturamento, (now() AT TIME ZONE 'America/Sao_Paulo'))
             WHERE id_pedido = :id_pedido
         """), {"id_pedido": id_pedido})
         
@@ -386,8 +401,12 @@ def confirmar_retirada(retirada_id: int, db: Session = Depends(get_db), current_
         except Exception:
             pass
 
+    from zoneinfo import ZoneInfo
+    tz_sp = ZoneInfo("America/Sao_Paulo")
+    now_sp = datetime.now(tz_sp).replace(tzinfo=None)
+
     db_ret.is_historico = True
-    db_ret.data_retirada = datetime.now()
+    db_ret.data_retirada = now_sp
     
     # Gerar snapshot de auditoria
     gerar_snapshot_retirada(db, retirada_id, db_ret, retirada_pedidos, current_user.email)

@@ -758,8 +758,8 @@ def verificar_e_historico_carga(db: Session, id_pedido: int, user_id: Optional[s
                 db.execute(text("""
                     UPDATE tb_cargas
                     SET is_historico = TRUE,
-                        data_faturamento = now(),
-                        data_carregamento = now(),
+                        data_faturamento = (now() AT TIME ZONE 'America/Sao_Paulo'),
+                        data_carregamento = (now() AT TIME ZONE 'America/Sao_Paulo'),
                         faturado_por_id = :user_id
                     WHERE id = :carga_id
                 """), {"carga_id": carga_id, "user_id": user_id_int})
@@ -787,7 +787,7 @@ def verificar_e_historico_carga(db: Session, id_pedido: int, user_id: Optional[s
                 db.execute(text("""
                     UPDATE tb_retiradas
                     SET is_historico = TRUE,
-                        data_retirada = now()
+                        data_retirada = (now() AT TIME ZONE 'America/Sao_Paulo')
                     WHERE id = :retirada_id
                 """), {"retirada_id": retirada_id})
 
@@ -835,39 +835,58 @@ def mudar_status(request: Request, id_pedido: int, body: StatusChangeBody, db: S
     if de_status_norm == para_norm:
         return {"message": "O pedido já está neste status", "status": de_status}
 
-    # VALIDAÇÃO DE FATURAMENTO: Bloqueia se o cliente não tem código da empresa
-    # Regra: se o status for = a faturado dispet, o codigo do cliente não é obrigatorio.
-    status_faturamento = {"FATURADO_SUPRA"}
-    if para_norm in status_faturamento:
+    # VALIDAÇÃO DE FATURAMENTO:
+    # Para FATURADO_SUPRA, exige obrigatoriamente: Código da Empresa, Pedido Supra, Nota Fiscal, Data Faturamento e Valor da Nota.
+    if para_norm == "FATURADO_SUPRA":
         resultado = db.execute(
             text("""
-                SELECT c.cadastro_codigo_da_empresa
+                SELECT c.cadastro_codigo_da_empresa,
+                       p.pedido_supra,
+                       p.nota_fiscal,
+                       p.data_faturamento,
+                       p.valor_nota
                 FROM public.tb_pedidos p
                 LEFT JOIN public.t_cadastro_cliente_v2 c ON c.cadastro_codigo_da_empresa::text = p.codigo_cliente
                 WHERE p.id_pedido = :id
             """),
             {"id": id_pedido}
         ).first()
-        codigo_empresa = resultado[0] if resultado else None
+        if not resultado:
+            raise HTTPException(status_code=404, detail="Pedido não encontrado")
+
+        codigo_empresa, ped_supra, nota_fiscal, dt_fat, val_nota = resultado
+        erros_fat = []
         if not codigo_empresa or not str(codigo_empresa).strip():
+            erros_fat.append("Código da empresa (completar no cadastro do cliente)")
+        if not ped_supra or not str(ped_supra).strip() or str(ped_supra).lower() == 'nan':
+            erros_fat.append("Pedido Supra")
+        if not nota_fiscal or not str(nota_fiscal).strip() or str(nota_fiscal).lower() == 'nan':
+            erros_fat.append("Nota Fiscal")
+        if not dt_fat:
+            erros_fat.append("Data de Faturamento")
+        if val_nota is None:
+            erros_fat.append("Valor da Nota")
+
+        if erros_fat:
             raise HTTPException(
                 status_code=400,
-                detail="O código da empresa não está preenchido. Por favor, complete o cadastro antes de faturar."
+                detail=f"Não é permitido mudar o status para Faturado Supra. O pedido precisa estar previamente faturado com os seguintes campos preenchidos: {', '.join(erros_fat)}."
             )
 
     # Determinar atualizações adicionais de data dependendo do status manual
+    # PRESERVAÇÃO: Não substitui data_faturamento já preenchida manualmente; usa timezone de São Paulo
     extra_set = ""
     if para_norm in ("FATURADO_SUPRA", "FATURADO_DISPET"):
-        extra_set = ", data_faturamento = now()"
+        extra_set = ", data_faturamento = COALESCE(data_faturamento, (now() AT TIME ZONE 'America/Sao_Paulo'))"
     elif para_norm == "CANCELADO":
-        extra_set = ", cancelado_em = now()"
+        extra_set = ", cancelado_em = (now() AT TIME ZONE 'America/Sao_Paulo')"
     elif para_norm in ("PEDIDO", "CONFIRMADO"):
-        extra_set = ", confirmado_em = now()"
+        extra_set = ", confirmado_em = (now() AT TIME ZONE 'America/Sao_Paulo')"
 
     dynamic_status_update = text(f"""
         UPDATE public.tb_pedidos
         SET status = :para_status,
-            atualizado_em = now(),
+            atualizado_em = (now() AT TIME ZONE 'America/Sao_Paulo'),
             atualizado_por = :user_id
             {extra_set}
         WHERE id_pedido = :id_pedido
@@ -922,10 +941,14 @@ def atualizar_campos_faturamento(request: Request, id_pedido: int, body: PedidoC
     if body.valor_nota is not None:
         pedido.valor_nota = body.valor_nota
     if body.data_faturamento is not None:
-        try:
-            pedido.data_faturamento = datetime.strptime(body.data_faturamento, "%Y-%m-%d")
-        except (ValueError, TypeError):
-            pass
+        val_str = str(body.data_faturamento).strip()
+        if val_str:
+            try:
+                pedido.data_faturamento = datetime.strptime(val_str[:10], "%Y-%m-%d")
+            except (ValueError, TypeError):
+                pass
+        else:
+            pedido.data_faturamento = None
         
     db.add(pedido)
     db.commit()

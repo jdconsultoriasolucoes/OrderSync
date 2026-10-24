@@ -117,7 +117,7 @@ def gerar_pdf_formacao_carga(db, carga_id: int) -> bytes:
         ) pb ON pb.id_pedido = p.id_pedido
         LEFT JOIN public.t_cadastro_cliente_v2 c ON c.cadastro_codigo_da_empresa::text = p.codigo_cliente
         WHERE cp.id_carga = :cid
-        ORDER BY cp.ordem_carregamento""")
+        ORDER BY cp.ordem_carregamento DESC NULLS LAST, p.id_pedido DESC""")
     pedidos = db.execute(sql_pedidos, {"cid": carga_id}).mappings().all()
 
     # 3. Draw PDF
@@ -139,7 +139,7 @@ def gerar_pdf_formacao_carga(db, carga_id: int) -> bytes:
     y -= 0.8*cm
 
     # Table Data
-    # Columns: Nº CARGA | Nº PEDIDO | PESO LÍQ. ACUM | CÓDIGO | CLIENTE | N. FANTASIA | MUNICÍPIO | ROTA G. | ROTA A.
+    # Columns: ORDEM | Nº CARGA | Nº PEDIDO | PESO LÍQ. ACUM | CÓDIGO | CLIENTE | N. FANTASIA | MUNICÍPIO | ROTA G. | ROTA A.
     styles = getSampleStyleSheet()
     style_wrapped = copy(styles["Normal"])
     style_wrapped.fontSize = 7
@@ -154,7 +154,7 @@ def gerar_pdf_formacao_carga(db, carga_id: int) -> bytes:
     style_header.textColor = colors.white
     style_header.alignment = 0 # Left
 
-    header_labels = ["Nº CARGA", "Nº PEDIDO", "PESO LÍQ. ACUM", "CÓDIGO", "CLIENTE", "N. FANTASIA", "MUNICÍPIO", "ROTA G.", "ROTA A."]
+    header_labels = ["ORDEM", "Nº CARGA", "Nº PEDIDO", "PESO LÍQ. ACUM", "CÓDIGO", "CLIENTE", "N. FANTASIA", "MUNICÍPIO", "ROTA G.", "ROTA A."]
     header_row = [Paragraph(h, style_header) for h in header_labels]
 
     data = [header_row]
@@ -163,8 +163,10 @@ def gerar_pdf_formacao_carga(db, carga_id: int) -> bytes:
         cliente_p = Paragraph(clean_client_name(p.cliente), style_wrapped)
         fantasia_p = Paragraph(str(p.nome_fantasia or ""), style_wrapped)
         cidade_p = Paragraph(str(p.cidade or ""), style_wrapped)
+        ordem_disp = str(p.ordem_carregamento) if p.ordem_carregamento is not None else "-"
 
         data.append([
+            ordem_disp,
             str(carga.get('numero_carga') or ""),
             str(p.id_pedido),
             _br_number(p.peso_total_kg, 0),
@@ -176,14 +178,14 @@ def gerar_pdf_formacao_carga(db, carga_id: int) -> bytes:
             str(p.rota_aprox or "")[:2]
         ])
 
-    # 9 colunas: sem Peso Br. Acum
-    col_widths = [1.4*cm, 1.6*cm, 2.2*cm, 1.6*cm, 8.0*cm, 5.0*cm, 4.3*cm, 1.6*cm, 1.6*cm]
+    col_widths = [1.3*cm, 1.4*cm, 1.6*cm, 2.1*cm, 1.6*cm, 7.5*cm, 4.7*cm, 4.2*cm, 1.4*cm, 1.4*cm]
 
     table = Table(data, colWidths=col_widths, repeatRows=1)
     style = TableStyle([
         ('BACKGROUND', (0, 0), (-1, 0), SUPRA_BAR),
         ('ALIGN', (0, 0), (-1, -1), 'LEFT'),
-        ('ALIGN', (2, 0), (2, -1), 'RIGHT'),  # Peso Líq.
+        ('ALIGN', (0, 0), (0, -1), 'CENTER'), # Ordem
+        ('ALIGN', (3, 0), (3, -1), 'RIGHT'),  # Peso Líq.
         ('VALIGN', (0, 0), (-1, -1), 'MIDDLE'),
         ('FONTSIZE', (0, 0), (-1, -1), 8),
         ('BOTTOMPADDING', (0, 0), (-1, 0), 4),
@@ -1088,13 +1090,14 @@ def gerar_pdf_romaneio_novo(db, carga_id: int) -> bytes:
     
     # 2. Fetch Orders
     sql_pedidos = text("""
-        SELECT p.id_pedido, p.cliente, p.codigo_cliente, c.cadastro_nome_cliente, c.entrega_municipio, c.cadastro_nome_fantasia,
+        SELECT cp.ordem_carregamento, p.id_pedido, p.cliente, p.codigo_cliente, c.cadastro_nome_cliente, c.entrega_municipio, c.cadastro_nome_fantasia,
                c.entrega_endereco, c.entrega_bairro, c.entrega_estado, c.entrega_cep,
                c.recebimento_celular, c.recebimento_nome
         FROM tb_cargas_pedidos cp
         JOIN tb_pedidos p ON cp.numero_pedido = p.id_pedido::text
         LEFT JOIN public.t_cadastro_cliente_v2 c ON c.cadastro_codigo_da_empresa::text = p.codigo_cliente
         WHERE cp.id_carga = :cid
+        ORDER BY cp.ordem_carregamento DESC NULLS LAST, p.id_pedido DESC
     """)
     pedidos = db.execute(sql_pedidos, {"cid": carga_id}).mappings().all()
     
@@ -1110,7 +1113,9 @@ def gerar_pdf_romaneio_novo(db, carga_id: int) -> bytes:
         nome_cliente = p.get('cadastro_nome_cliente') or p['cliente']
         nome_cliente = re.sub(r'\s*-\s*\d{2,3}\.\d{3}\.\d{3}.*$', '', nome_cliente)
         codigo_str = f" [Cód: {p['codigo_cliente']}]" if p.get('codigo_cliente') else ""
-        c.drawString(1.0*cm, y, f"[Pedido #{p['id_pedido']}]{codigo_str} - Cliente: {nome_cliente}{fantasia}")
+        ordem_val = p.get('ordem_carregamento')
+        ordem_str = f"[Ordem: {ordem_val}] " if ordem_val is not None and str(ordem_val).strip() != '' else ""
+        c.drawString(1.0*cm, y, f"{ordem_str}[Pedido #{p['id_pedido']}]{codigo_str} - Cliente: {nome_cliente}{fantasia}")
         y -= 0.5*cm
         c.setFont("Helvetica", 8)
         endereco = f"Endereço: {p['entrega_endereco'] or ''} - {p['entrega_bairro'] or ''}, {p['entrega_municipio'] or ''}/{p['entrega_estado'] or ''} - CEP: {p['entrega_cep'] or ''}"

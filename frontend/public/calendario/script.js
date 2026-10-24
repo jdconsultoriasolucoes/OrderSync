@@ -7,7 +7,53 @@ let currentEventPerm = 'read';
 let currentEventSharedWith = [];
 let allUsers = [];
 
+function populateTimeSelects() {
+    const timeSelect = document.getElementById('event-time');
+    const endTimeSelect = document.getElementById('event-end-time');
+    if (!timeSelect || !endTimeSelect) return;
+    
+    timeSelect.innerHTML = '';
+    endTimeSelect.innerHTML = '';
+    
+    for (let h = 0; h < 24; h++) {
+        for (let m = 0; m < 60; m += 15) {
+            const hh = String(h).padStart(2, '0');
+            const mm = String(m).padStart(2, '0');
+            const val = `${hh}:${mm}`;
+            
+            const opt1 = document.createElement('option');
+            opt1.value = val;
+            opt1.textContent = val;
+            timeSelect.appendChild(opt1);
+            
+            const opt2 = document.createElement('option');
+            opt2.value = val;
+            opt2.textContent = val;
+            endTimeSelect.appendChild(opt2);
+        }
+    }
+}
+
+function setTimeSelectValue(selectEl, value) {
+    if (!selectEl) return;
+    if (!value) {
+        selectEl.value = '09:00';
+        return;
+    }
+    const valFormatted = value.slice(0, 5);
+    let opt = Array.from(selectEl.options).find(o => o.value === valFormatted);
+    if (!opt) {
+        opt = document.createElement('option');
+        opt.value = valFormatted;
+        opt.textContent = valFormatted;
+        selectEl.appendChild(opt);
+    }
+    selectEl.value = valFormatted;
+}
+
 document.addEventListener('DOMContentLoaded', async () => {
+    populateTimeSelects();
+
     // Inicializar FullCalendar
     const calendarEl = document.getElementById('calendar');
     calendarInstance = new FullCalendar.Calendar(calendarEl, {
@@ -26,6 +72,56 @@ document.addEventListener('DOMContentLoaded', async () => {
         locale: 'pt-br',
         editable: true,
         selectable: true,
+        slotLabelFormat: {
+            hour: '2-digit',
+            minute: '2-digit',
+            hour12: false
+        },
+        eventTimeFormat: {
+            hour: '2-digit',
+            minute: '2-digit',
+            meridiem: false,
+            hour12: false
+        },
+        displayEventTime: true,
+        displayEventEnd: true,
+        eventContent: function(arg) {
+            let timeText = arg.timeText;
+            if ((!timeText || timeText.trim() === '') && !arg.event.allDay && arg.event.start) {
+                const sH = String(arg.event.start.getHours()).padStart(2, '0');
+                const sM = String(arg.event.start.getMinutes()).padStart(2, '0');
+                if (arg.event.end) {
+                    const eH = String(arg.event.end.getHours()).padStart(2, '0');
+                    const eM = String(arg.event.end.getMinutes()).padStart(2, '0');
+                    timeText = `${sH}:${sM} - ${eH}:${eM}`;
+                } else {
+                    timeText = `${sH}:${sM}`;
+                }
+            }
+            
+            const mainDiv = document.createElement('div');
+            mainDiv.style.display = 'flex';
+            mainDiv.style.alignItems = 'center';
+            mainDiv.style.gap = '4px';
+            mainDiv.style.overflow = 'hidden';
+            mainDiv.style.fontSize = '0.85em';
+            mainDiv.style.whiteSpace = 'nowrap';
+            mainDiv.style.textOverflow = 'ellipsis';
+            
+            if (timeText && !arg.event.allDay) {
+                const timeSpan = document.createElement('span');
+                timeSpan.style.fontWeight = 'bold';
+                timeSpan.style.opacity = '0.9';
+                timeSpan.textContent = timeText;
+                mainDiv.appendChild(timeSpan);
+            }
+            
+            const titleSpan = document.createElement('span');
+            titleSpan.textContent = arg.event.title || '(Sem título)';
+            mainDiv.appendChild(titleSpan);
+            
+            return { domNodes: [mainDiv] };
+        },
         select: handleDateSelect,
         eventClick: handleEventClick,
         eventDrop: handleEventDrop,
@@ -326,7 +422,10 @@ async function fetchEvents(info, successCallback, failureCallback) {
                     cliente_id: e.cliente_id,
                     cliente_nome: e.cliente_nome,
                     cliente_telefone: e.cliente_telefone,
-                    shared_with: e.shared_with
+                    shared_with: e.shared_with,
+                    ultimo_autor: e.ultimo_autor,
+                    ultima_alteracao_em: e.ultima_alteracao_em,
+                    historico: e.historico
                 },
                 editable: e.permission_level !== 'read'
             }));
@@ -360,12 +459,51 @@ function selectColor(element) {
 }
 
 function handleDateSelect(info) {
+    const selectedDateStr = info.startStr.split('T')[0];
+    
+    // Validar se o dia selecionado já passou
+    const now = new Date();
+    const todayStr = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
+    
+    if (selectedDateStr < todayStr) {
+        alert('Não é permitido agendar eventos em datas ou horários que já passaram.');
+        if (calendarInstance) calendarInstance.unselect();
+        return;
+    }
+    
+    // Se for hoje, verificar se foi clicado em um horário anterior ao atual
+    let startTime = '09:00';
+    let endTime = '10:00';
+    
+    if (info.startStr.includes('T')) {
+        const timePart = info.startStr.split('T')[1].slice(0, 5);
+        if (selectedDateStr === todayStr) {
+            const currentHourMinute = `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`;
+            if (timePart < currentHourMinute) {
+                alert('Não é permitido agendar eventos em datas ou horários que já passaram.');
+                if (calendarInstance) calendarInstance.unselect();
+                return;
+            }
+        }
+        startTime = timePart;
+        const [h, m] = timePart.split(':').map(Number);
+        const endH = Math.min(23, h + 1);
+        endTime = `${String(endH).padStart(2, '0')}:${String(m).padStart(2, '0')}`;
+    } else if (selectedDateStr === todayStr) {
+        const nextH = Math.min(22, now.getHours() + 1);
+        startTime = `${String(nextH).padStart(2, '0')}:00`;
+        endTime = `${String(nextH + 1).padStart(2, '0')}:00`;
+    }
+
     document.getElementById('event-modal-title').textContent = 'Novo Evento';
     document.getElementById('event-id').value = '';
     document.getElementById('event-title').value = '';
-    document.getElementById('event-date').value = info.startStr.split('T')[0];
-    document.getElementById('event-time').value = '09:00';
-    document.getElementById('event-end-time').value = '10:00';
+    document.getElementById('event-date').value = selectedDateStr;
+    document.getElementById('event-date').disabled = false;
+    
+    setTimeSelectValue(document.getElementById('event-time'), startTime);
+    setTimeSelectValue(document.getElementById('event-end-time'), endTime);
+    
     document.getElementById('event-location').value = '';
     document.getElementById('event-desc').value = '';
     
@@ -384,8 +522,16 @@ function handleDateSelect(info) {
     document.getElementById('event-shared-users-container').innerHTML = '';
     if (shareSearchInput) shareSearchInput.value = '';
     
+    // Habilitar todos os campos para novo evento
+    const inputs = document.querySelectorAll('#modal-event input, #modal-event select, #modal-event textarea');
+    inputs.forEach(el => el.disabled = false);
+    
+    // Ocultar auditoria para novo evento
+    const auditBox = document.getElementById('event-audit-box');
+    if (auditBox) auditBox.style.display = 'none';
+    
     currentEventId = null;
-    currentEventPerm = 'admin'; // Assumindo que criará em um dele
+    currentEventPerm = 'admin';
     
     document.getElementById('modal-event').style.display = 'flex';
 }
@@ -395,12 +541,16 @@ function handleEventClick(info) {
     const props = e.extendedProps;
     
     currentEventSharedWith = props.shared_with || [];
-    
-    document.getElementById('event-modal-title').textContent = 'Editar Evento';
+    currentEventId = e.id;
+    currentEventPerm = props.permission_level;
+    const isOwnerOrAdmin = currentEventPerm === 'admin';
+    const canEdit = currentEventPerm !== 'read';
+
+    document.getElementById('event-modal-title').textContent = canEdit ? 'Editar Evento' : 'Visualizar Evento';
     document.getElementById('event-id').value = e.id;
     document.getElementById('event-title').value = e.title;
     
-    // Configura o combobox de agenda, se o calendário não existir (ex: evento compartilhado isoladamente)
+    // Configura o combobox de agenda
     const calSelect = document.getElementById('event-calendar');
     if (!Array.from(calSelect.options).some(opt => opt.value == props.calendar_id)) {
         const opt = document.createElement('option');
@@ -409,10 +559,11 @@ function handleEventClick(info) {
         calSelect.appendChild(opt);
     }
     calSelect.value = props.calendar_id;
+    // Apenas dono/admin pode mover o evento para outra agenda
+    calSelect.disabled = !isOwnerOrAdmin;
     
     const formatDt = (dt) => {
         if (!dt) return { date: '', time: '' };
-        // Evitar manipulação de timezone manual para formatar ISO corretamente no fuso local
         const year = dt.getFullYear();
         const month = String(dt.getMonth() + 1).padStart(2, '0');
         const day = String(dt.getDate()).padStart(2, '0');
@@ -422,10 +573,10 @@ function handleEventClick(info) {
     };
     
     const startParts = formatDt(e.start);
-    const endParts = formatDt(e.end);
+    const endParts = formatDt(e.end || e.start);
     document.getElementById('event-date').value = startParts.date;
-    document.getElementById('event-time').value = startParts.time;
-    document.getElementById('event-end-time').value = endParts.time;
+    setTimeSelectValue(document.getElementById('event-time'), startParts.time);
+    setTimeSelectValue(document.getElementById('event-end-time'), endParts.time);
     document.getElementById('event-location').value = props.location || '';
     document.getElementById('event-desc').value = props.description || '';
     
@@ -460,17 +611,11 @@ function handleEventClick(info) {
         document.getElementById('event-shared-info').style.display = 'none';
     }
     
-    currentEventId = e.id;
-    currentEventPerm = props.permission_level;
-    
-    const canEdit = currentEventPerm !== 'read';
     document.getElementById('btn-save-event').style.display = canEdit ? 'block' : 'none';
     document.getElementById('btn-delete-event').style.display = canEdit ? 'block' : 'none';
     
-    const btnEditShares = document.getElementById('btn-edit-shares');
-    if (btnEditShares) btnEditShares.style.display = 'none';
-
-    if (canEdit) {
+    // Compartilhamento só é gerenciado pelo dono/admin da agenda
+    if (isOwnerOrAdmin) {
         document.getElementById('event-share-group').style.display = 'block';
         document.getElementById('event-shared-info').style.display = 'none';
     } else {
@@ -481,14 +626,72 @@ function handleEventClick(info) {
     const shareActions = document.getElementById('share-edit-actions');
     if (shareActions) shareActions.style.display = 'none';
     
-    // Desabilitar inputs se for read-only
+    // Habilitar/Desabilitar inputs conforme canEdit
     const inputs = document.querySelectorAll('#modal-event input, #modal-event select, #modal-event textarea');
-    inputs.forEach(el => el.disabled = !canEdit);
+    inputs.forEach(el => {
+        if (el.id === 'event-calendar') {
+            el.disabled = !isOwnerOrAdmin;
+        } else {
+            el.disabled = !canEdit;
+        }
+    });
     
-    // Desabilitar botões de remover usuário se read-only
-    document.querySelectorAll('#event-shared-users-container button').forEach(btn => btn.style.display = canEdit ? 'block' : 'none');
+    // Botão de remover vínculo com cliente
+    const btnRemoveCli = document.querySelector('#event-client-info button');
+    if (btnRemoveCli) btnRemoveCli.disabled = !canEdit;
+    
+    // Botões de remover usuários compartilhados
+    document.querySelectorAll('#event-shared-users-container button').forEach(btn => btn.style.display = isOwnerOrAdmin ? 'block' : 'none');
+    
+    // Preencher histórico de auditoria
+    renderEventAudit(props);
     
     document.getElementById('modal-event').style.display = 'flex';
+}
+
+function renderEventAudit(props) {
+    const auditBox = document.getElementById('event-audit-box');
+    const summaryEl = document.getElementById('event-audit-summary');
+    const listEl = document.getElementById('event-audit-history-list');
+    const btnToggle = document.getElementById('btn-toggle-audit-history');
+    
+    if (!auditBox) return;
+    
+    const historico = props.historico || [];
+    if (props.ultimo_autor || historico.length > 0) {
+        auditBox.style.display = 'block';
+        const dataFormatada = historico.length > 0 && historico[0].data_hora ? historico[0].data_hora : '';
+        summaryEl.innerHTML = `<strong>Registro:</strong> Última alteração por <b>${props.ultimo_autor || 'Sistema'}</b>${dataFormatada ? ' em ' + dataFormatada : ''}`;
+        
+        listEl.innerHTML = '';
+        if (historico.length > 0) {
+            btnToggle.style.display = 'inline-block';
+            historico.forEach(h => {
+                const item = document.createElement('div');
+                item.style.padding = '4px 0';
+                item.style.borderBottom = '1px solid #edf2f7';
+                item.innerHTML = `<span style="color: #718096; font-size: 0.75rem;">${h.data_hora || ''}</span> — <b>${h.usuario}</b> (${h.acao}): <span>${h.detalhes || ''}</span>`;
+                listEl.appendChild(item);
+            });
+        } else {
+            btnToggle.style.display = 'none';
+        }
+    } else {
+        auditBox.style.display = 'none';
+    }
+}
+
+function toggleAuditHistory() {
+    const listEl = document.getElementById('event-audit-history-list');
+    const btnToggle = document.getElementById('btn-toggle-audit-history');
+    if (!listEl) return;
+    if (listEl.style.display === 'none' || !listEl.style.display) {
+        listEl.style.display = 'block';
+        btnToggle.textContent = 'Ocultar Histórico';
+    } else {
+        listEl.style.display = 'none';
+        btnToggle.textContent = 'Ver Histórico';
+    }
 }
 
 async function handleEventDrop(info) {
@@ -596,11 +799,15 @@ async function createCalendar() {
 }
 
 async function saveEvent() {
-    const sharedUsers = Array.from(document.getElementById('event-shared-users-container').children).map(div => {
-        const email = div.dataset.email;
-        const perm = div.querySelector('.share-user-perm').value;
-        return { email: email, permission_level: perm };
-    });
+    const isOwnerOrAdmin = currentEventPerm === 'admin';
+    let sharedUsers = null;
+    if (isOwnerOrAdmin) {
+        sharedUsers = Array.from(document.getElementById('event-shared-users-container').children).map(div => {
+            const email = div.dataset.email;
+            const perm = div.querySelector('.share-user-perm').value;
+            return { email: email, permission_level: perm };
+        });
+    }
 
     const titleInput = document.getElementById('event-title');
     const calendarInput = document.getElementById('event-calendar');
@@ -613,6 +820,7 @@ async function saveEvent() {
     calendarInput.style.borderColor = '';
     timeInput.style.borderColor = '';
     endTimeInput.style.borderColor = '';
+    dateInput.style.borderColor = '';
 
     let hasError = false;
 
@@ -620,6 +828,7 @@ async function saveEvent() {
     if (!calendarInput.value) { calendarInput.style.borderColor = 'red'; hasError = true; }
     if (!timeInput.value) { timeInput.style.borderColor = 'red'; hasError = true; }
     if (!endTimeInput.value) { endTimeInput.style.borderColor = 'red'; hasError = true; }
+    if (!dateInput.value) { dateInput.style.borderColor = 'red'; hasError = true; }
 
     if (hasError) {
         return alert('Por favor, preencha todos os campos obrigatórios destacados em vermelho.');
@@ -630,6 +839,12 @@ async function saveEvent() {
     
     if (endDt <= startDt) {
         return alert('A Hora Fim deve ser posterior à Hora Início.');
+    }
+    
+    // Bloquear criação ou reagendamento de evento no passado
+    const now = new Date();
+    if (!currentEventId && startDt < now) {
+        return alert('Não é permitido agendar eventos em datas ou horários que já passaram.');
     }
     
     const currentEvents = calendarInstance.getEvents();
@@ -649,17 +864,21 @@ async function saveEvent() {
         }
     }
 
+    const clientVal = document.getElementById('event-client-id').value;
     const data = {
         title: titleInput.value,
         calendar_id: calendarInput.value,
         start_time: startDt.toISOString(),
         end_time: endDt.toISOString(),
         is_all_day: false,
-        location: document.getElementById('event-location').value,
-        description: document.getElementById('event-desc').value,
-        cliente_id: document.getElementById('event-client-id').value ? parseInt(document.getElementById('event-client-id').value) : null,
-        shared_with_users: sharedUsers
+        location: document.getElementById('event-location').value || '',
+        description: document.getElementById('event-desc').value || '',
+        cliente_id: clientVal ? parseInt(clientVal) : null
     };
+    
+    if (isOwnerOrAdmin && sharedUsers !== null) {
+        data.shared_with_users = sharedUsers;
+    }
     
     try {
         if (currentEventId) {
@@ -752,7 +971,8 @@ function renderAutocomplete(results) {
     results.forEach(cli => {
         const div = document.createElement('div');
         div.className = 'autocomplete-item';
-        div.textContent = `${cli.codigo} - ${cli.nome_fantasia || cli.nome_empresarial}`;
+        const clientDisplayName = cli.nome_empresarial || cli.nome_fantasia || 'Sem Nome';
+        div.textContent = `${cli.codigo} - ${clientDisplayName}`;
         div.onclick = async () => {
             try {
                 // Fetch full client details to get ID and phone

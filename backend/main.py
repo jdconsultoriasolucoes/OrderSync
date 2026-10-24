@@ -1,5 +1,13 @@
 import sys
 import os
+import time
+
+os.environ["TZ"] = "America/Sao_Paulo"
+try:
+    time.tzset()
+except AttributeError:
+    pass
+
 sys.path.append(os.path.dirname(os.path.abspath(__file__)))
 
 # --- VALIDACAO DE AMBIENTE (Senior QA Shield) ---

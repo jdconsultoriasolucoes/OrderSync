@@ -736,11 +736,12 @@ async function openResumo(id) {
   const btnSave = el.querySelector("#btnSaveFaturamento");
   if (btnSave) {
     btnSave.addEventListener("click", async () => {
-      const supra = document.getElementById("editSupra").value;
-      const nf = document.getElementById("editNF").value;
-      const dataFat = document.getElementById("editDataFat")?.value || null;
-      const valorNota = document.getElementById("editValorNota")?.value || null;
-      await saveCamposFaturamento(id, supra, nf, btnSave, dataFat, valorNota ? parseFloat(valorNota) : null);
+      const supra = document.getElementById("editSupra")?.value || "";
+      const nf = document.getElementById("editNF")?.value || "";
+      const dataFat = document.getElementById("editDataFat")?.value || "";
+      const valNotaEl = document.getElementById("editValorNota");
+      const valorNota = (valNotaEl && valNotaEl.value !== "") ? parseFloat(valNotaEl.value) : null;
+      await saveCamposFaturamento(id, supra, nf, btnSave, dataFat, valorNota);
     });
   }
 
@@ -822,9 +823,12 @@ async function saveCamposFaturamento(id, supra, nf, btn, dataFat = null, valorNo
   btn.disabled = true;
 
   try {
-    const body = { pedido_supra: supra, nota_fiscal: nf };
-    if (dataFat) body.data_faturamento = dataFat;
-    if (valorNota !== null) body.valor_nota = valorNota;
+    const body = { 
+      pedido_supra: supra, 
+      nota_fiscal: nf,
+      data_faturamento: dataFat !== null ? dataFat : "",
+      valor_nota: valorNota !== null ? valorNota : null
+    };
 
     const r = await fetch(API.camposFaturamento(id), {
       method: "PATCH",
@@ -841,8 +845,8 @@ async function saveCamposFaturamento(id, supra, nf, btn, dataFat = null, valorNo
       if (row) {
         row.pedido_supra = supra;
         row.nota_fiscal = nf;
-        if (dataFat) row.data_faturamento = dataFat;
-        if (valorNota !== null) row.valor_nota = valorNota;
+        row.data_faturamento = dataFat;
+        row.valor_nota = valorNota;
       }
       
       // Opcional: recarrega a tabela para atualizar a coluna visualmente
@@ -855,13 +859,19 @@ async function saveCamposFaturamento(id, supra, nf, btn, dataFat = null, valorNo
         btn.style.backgroundColor = "";
       }, 2000);
     } else {
-      const txt = await r.text();
-      alert("Erro ao salvar: " + txt);
+      let errMsg = "Erro ao salvar";
+      try {
+        const errJson = await r.json();
+        errMsg = errJson.detail || errMsg;
+      } catch (_) {
+        errMsg = await r.text();
+      }
+      showPremiumAlert(errMsg);
       btn.innerText = originalText;
       btn.disabled = false;
     }
   } catch (e) {
-    alert("Erro de conexão: " + e.message);
+    showPremiumAlert("Erro de conexão: " + e.message);
     btn.innerText = originalText;
     btn.disabled = false;
   }

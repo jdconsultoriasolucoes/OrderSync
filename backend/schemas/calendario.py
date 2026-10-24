@@ -61,7 +61,7 @@ class EventUpdate(BaseModel):
 
 class EventResponse(EventBase):
     id: UUID
-    created_by_user_id: int
+    created_by_user_id: Optional[int] = None
     created_at: datetime
     updated_at: datetime
 
@@ -74,6 +74,9 @@ class EventWithCalendarResponse(EventResponse):
     cliente_nome: Optional[str] = None
     cliente_telefone: Optional[str] = None
     shared_with: Optional[List[dict]] = []
+    ultimo_autor: Optional[str] = None
+    ultima_alteracao_em: Optional[datetime] = None
+    historico: Optional[List[dict]] = []
 
 class EventShareCreate(BaseModel):
     shared_with_email: str

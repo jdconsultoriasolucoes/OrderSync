@@ -58,3 +58,16 @@ class EventShareModel(Base):
     created_at = Column(DateTime(timezone=True), server_default=func.now())
     
     event = relationship("EventModel", back_populates="shares")
+
+class EventAuditoriaModel(Base):
+    __tablename__ = "tb_eventos_auditoria"
+
+    id = Column(BigInteger, primary_key=True, autoincrement=True, index=True)
+    event_id = Column(UUID(as_uuid=True), nullable=False, index=True)
+    usuario_id = Column(BigInteger, nullable=True)
+    usuario_nome = Column(String(255), nullable=True)
+    usuario_email = Column(String(255), nullable=True)
+    acao = Column(String(50), nullable=False)
+    detalhes = Column(Text, nullable=True)
+    criado_em = Column(DateTime(timezone=True), server_default=func.now())
+
