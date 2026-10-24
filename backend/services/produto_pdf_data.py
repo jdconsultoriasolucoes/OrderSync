@@ -9,6 +9,10 @@ from typing import BinaryIO, Optional
 import pdfplumber
 import pandas as pd
 
+from backend.utils.pdf_fix import patch_pdfminer_stream_decode
+
+patch_pdfminer_stream_decode()
+
 
 def normalize_num(s):
     """
