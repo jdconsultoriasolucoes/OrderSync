@@ -111,36 +111,44 @@ def _check_event_access(db: Session, event_id: UUID, user_id: int, required_perm
 
 def _preencher_detalhes_evento(db: Session, res: EventWithCalendarResponse, ev: EventModel):
     # Cliente
-    if ev.cliente_id:
-        cliente = db.query(ClienteModelV2).filter(ClienteModelV2.id == ev.cliente_id).first()
-        if cliente:
-            res.cliente_nome = cliente.cadastro_nome_cliente or cliente.cadastro_nome_fantasia
-            res.cliente_telefone = cliente.compras_celular_responsavel or cliente.legal_celular
+    try:
+        if ev.cliente_id:
+            cliente = db.query(ClienteModelV2).filter(ClienteModelV2.id == ev.cliente_id).first()
+            if cliente:
+                res.cliente_nome = cliente.cadastro_nome_cliente or cliente.cadastro_nome_fantasia
+                res.cliente_telefone = cliente.compras_celular_responsavel or cliente.legal_celular
+    except Exception:
+        pass
 
     # Compartilhados
-    shares_for_ev = db.query(EventShareModel).filter(EventShareModel.event_id == ev.id).all()
-    shared_list = []
-    for s in shares_for_ev:
-        u = db.query(UsuarioModel).filter(UsuarioModel.id == s.shared_with_user_id).first()
-        if u:
-            shared_list.append({"id": str(s.id), "email": u.email, "permission_level": s.permission_level})
-    res.shared_with = shared_list
+    try:
+        shares_for_ev = db.query(EventShareModel).filter(EventShareModel.event_id == ev.id).all()
+        shared_list = []
+        for s in shares_for_ev:
+            u = db.query(UsuarioModel).filter(UsuarioModel.id == s.shared_with_user_id).first()
+            if u:
+                shared_list.append({"id": str(s.id), "email": u.email, "permission_level": s.permission_level})
+        res.shared_with = shared_list
+    except Exception:
+        pass
 
     # Auditoria
-    _garantir_tabela_evento_auditoria(db)
-    auditorias = db.query(EventAuditoriaModel).filter(EventAuditoriaModel.event_id == ev.id).order_by(EventAuditoriaModel.criado_em.desc()).all()
-    if auditorias:
-        res.ultimo_autor = auditorias[0].usuario_nome or auditorias[0].usuario_email
-        res.ultima_alteracao_em = auditorias[0].criado_em
-        res.historico = [
-            {
-                "acao": a.acao,
-                "usuario": a.usuario_nome or a.usuario_email or "Sistema",
-                "detalhes": a.detalhes,
-                "data_hora": _to_sp(a.criado_em).strftime("%d/%m/%Y %H:%M") if a.criado_em else None
-            }
-            for a in auditorias
-        ]
+    try:
+        auditorias = db.query(EventAuditoriaModel).filter(EventAuditoriaModel.event_id == ev.id).order_by(EventAuditoriaModel.criado_em.desc()).all()
+        if auditorias:
+            res.ultimo_autor = auditorias[0].usuario_nome or auditorias[0].usuario_email
+            res.ultima_alteracao_em = auditorias[0].criado_em
+            res.historico = [
+                {
+                    "acao": a.acao,
+                    "usuario": a.usuario_nome or a.usuario_email or "Sistema",
+                    "detalhes": a.detalhes,
+                    "data_hora": _to_sp(a.criado_em).strftime("%d/%m/%Y %H:%M") if a.criado_em else None
+                }
+                for a in auditorias
+            ]
+    except Exception:
+        pass
 
 @router.get("", response_model=List[EventWithCalendarResponse])
 def get_events(
@@ -149,6 +157,7 @@ def get_events(
     db: Session = Depends(get_db),
     current_user: UsuarioModel = Depends(get_current_user)
 ):
+    _garantir_tabela_evento_auditoria(db)
     # Agendas com acesso
     own_calendars_ids = [c.id for c in db.query(CalendarModel).filter(CalendarModel.user_id == current_user.id).all()]
     shared_calendars = db.query(CalendarShareModel).filter(CalendarShareModel.shared_with_user_id == current_user.id).all()

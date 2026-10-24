@@ -126,7 +126,24 @@ def startup_event():
         from models.error_log import ErrorLog
         from models.catalogo_referencias import StatusCadastroModel
         from models.auditoria import LogisticaAuditoriaModel
+        from models.calendario import CalendarModel, EventModel, EventAuditoriaModel
         Base.metadata.create_all(bind=engine)
+        
+        # Garantir tabela de auditoria de eventos
+        with engine.begin() as conn:
+            conn.execute(text("""
+                CREATE TABLE IF NOT EXISTS public.tb_eventos_auditoria (
+                    id BIGSERIAL PRIMARY KEY,
+                    event_id UUID NOT NULL,
+                    usuario_id BIGINT,
+                    usuario_nome VARCHAR(255),
+                    usuario_email VARCHAR(255),
+                    acao VARCHAR(50) NOT NULL,
+                    detalhes TEXT,
+                    criado_em TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+                );
+                CREATE INDEX IF NOT EXISTS ix_tb_eventos_auditoria_event_id ON public.tb_eventos_auditoria (event_id);
+            """))
     except Exception as e:
         logger.error(f"[STARTUP] Falha crítica em Migrações: {e}")
 

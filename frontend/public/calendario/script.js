@@ -85,43 +85,6 @@ document.addEventListener('DOMContentLoaded', async () => {
         },
         displayEventTime: true,
         displayEventEnd: true,
-        eventContent: function(arg) {
-            let timeText = arg.timeText;
-            if ((!timeText || timeText.trim() === '') && !arg.event.allDay && arg.event.start) {
-                const sH = String(arg.event.start.getHours()).padStart(2, '0');
-                const sM = String(arg.event.start.getMinutes()).padStart(2, '0');
-                if (arg.event.end) {
-                    const eH = String(arg.event.end.getHours()).padStart(2, '0');
-                    const eM = String(arg.event.end.getMinutes()).padStart(2, '0');
-                    timeText = `${sH}:${sM} - ${eH}:${eM}`;
-                } else {
-                    timeText = `${sH}:${sM}`;
-                }
-            }
-            
-            const mainDiv = document.createElement('div');
-            mainDiv.style.display = 'flex';
-            mainDiv.style.alignItems = 'center';
-            mainDiv.style.gap = '4px';
-            mainDiv.style.overflow = 'hidden';
-            mainDiv.style.fontSize = '0.85em';
-            mainDiv.style.whiteSpace = 'nowrap';
-            mainDiv.style.textOverflow = 'ellipsis';
-            
-            if (timeText && !arg.event.allDay) {
-                const timeSpan = document.createElement('span');
-                timeSpan.style.fontWeight = 'bold';
-                timeSpan.style.opacity = '0.9';
-                timeSpan.textContent = timeText;
-                mainDiv.appendChild(timeSpan);
-            }
-            
-            const titleSpan = document.createElement('span');
-            titleSpan.textContent = arg.event.title || '(Sem título)';
-            mainDiv.appendChild(titleSpan);
-            
-            return { domNodes: [mainDiv] };
-        },
         select: handleDateSelect,
         eventClick: handleEventClick,
         eventDrop: handleEventDrop,
