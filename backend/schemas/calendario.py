@@ -33,13 +33,13 @@ class CalendarShareResponse(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 
 class EventBase(BaseModel):
-    title: str
+    title: Optional[str] = "(Sem título)"
     description: Optional[str] = None
-    start_time: datetime
-    end_time: datetime
-    is_all_day: bool = False
+    start_time: Optional[datetime] = None
+    end_time: Optional[datetime] = None
+    is_all_day: Optional[bool] = False
     location: Optional[str] = None
-    calendar_id: UUID
+    calendar_id: Optional[UUID] = None
     cliente_id: Optional[int] = None
 
 class EventShareInput(BaseModel):
@@ -47,6 +47,10 @@ class EventShareInput(BaseModel):
     permission_level: str
 
 class EventCreate(EventBase):
+    title: str
+    start_time: datetime
+    end_time: datetime
+    calendar_id: UUID
     shared_with_users: Optional[List[EventShareInput]] = []
 
 class EventUpdate(BaseModel):

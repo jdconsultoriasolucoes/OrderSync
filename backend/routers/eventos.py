@@ -1,10 +1,13 @@
+import logging
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 from typing import List, Optional
-from datetime import datetime, date
+from datetime import datetime, date, time, timedelta
 from uuid import UUID
 from sqlalchemy import or_, text
 from zoneinfo import ZoneInfo
+
+logger = logging.getLogger(__name__)
 
 from core.deps import get_db, get_current_user
 from models.usuario import UsuarioModel
@@ -23,28 +26,8 @@ def _to_sp(dt: Optional[datetime]) -> Optional[datetime]:
         return dt.replace(tzinfo=tz_sp)
     return dt.astimezone(tz_sp)
 
-def _garantir_tabela_evento_auditoria(db: Session):
-    try:
-        with db.begin_nested():
-            db.execute(text("""
-                CREATE TABLE IF NOT EXISTS public.tb_eventos_auditoria (
-                    id BIGSERIAL PRIMARY KEY,
-                    event_id UUID NOT NULL,
-                    usuario_id BIGINT,
-                    usuario_nome VARCHAR(255),
-                    usuario_email VARCHAR(255),
-                    acao VARCHAR(50) NOT NULL,
-                    detalhes TEXT,
-                    criado_em TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
-                );
-                CREATE INDEX IF NOT EXISTS ix_tb_eventos_auditoria_event_id ON public.tb_eventos_auditoria (event_id);
-            """))
-    except Exception:
-        pass
-
 def _registrar_auditoria_evento(db: Session, event_id: UUID, user: UsuarioModel, acao: str, detalhes: str):
     try:
-        _garantir_tabela_evento_auditoria(db)
         log = EventAuditoriaModel(
             event_id=event_id,
             usuario_id=user.id,
@@ -58,6 +41,7 @@ def _registrar_auditoria_evento(db: Session, event_id: UUID, user: UsuarioModel,
         db.commit()
     except Exception:
         db.rollback()
+
 
 def _check_calendar_access(db: Session, calendar_id: UUID, user_id: int, required_permission: str = "read"):
     calendar = db.query(CalendarModel).filter(CalendarModel.id == calendar_id).first()
@@ -132,23 +116,25 @@ def _preencher_detalhes_evento(db: Session, res: EventWithCalendarResponse, ev: 
     except Exception:
         pass
 
-    # Auditoria
+@router.get("/{event_id}/audit")
+def get_event_audit(
+    event_id: UUID,
+    db: Session = Depends(get_db),
+    current_user: UsuarioModel = Depends(get_current_user)
+):
     try:
-        auditorias = db.query(EventAuditoriaModel).filter(EventAuditoriaModel.event_id == ev.id).order_by(EventAuditoriaModel.criado_em.desc()).all()
-        if auditorias:
-            res.ultimo_autor = auditorias[0].usuario_nome or auditorias[0].usuario_email
-            res.ultima_alteracao_em = auditorias[0].criado_em
-            res.historico = [
-                {
-                    "acao": a.acao,
-                    "usuario": a.usuario_nome or a.usuario_email or "Sistema",
-                    "detalhes": a.detalhes,
-                    "data_hora": _to_sp(a.criado_em).strftime("%d/%m/%Y %H:%M") if a.criado_em else None
-                }
-                for a in auditorias
-            ]
+        auditorias = db.query(EventAuditoriaModel).filter(EventAuditoriaModel.event_id == event_id).order_by(EventAuditoriaModel.criado_em.desc()).all()
+        return [
+            {
+                "acao": a.acao,
+                "usuario": a.usuario_nome or a.usuario_email or "Sistema",
+                "detalhes": a.detalhes,
+                "data_hora": _to_sp(a.criado_em).strftime("%d/%m/%Y %H:%M") if a.criado_em else None
+            }
+            for a in auditorias
+        ]
     except Exception:
-        pass
+        return []
 
 @router.get("", response_model=List[EventWithCalendarResponse])
 def get_events(
@@ -157,51 +143,64 @@ def get_events(
     db: Session = Depends(get_db),
     current_user: UsuarioModel = Depends(get_current_user)
 ):
-    _garantir_tabela_evento_auditoria(db)
-    # Agendas com acesso
-    own_calendars_ids = [c.id for c in db.query(CalendarModel).filter(CalendarModel.user_id == current_user.id).all()]
-    shared_calendars = db.query(CalendarShareModel).filter(CalendarShareModel.shared_with_user_id == current_user.id).all()
-    shared_calendars_ids = [c.calendar_id for c in shared_calendars]
-    
-    all_calendar_ids = own_calendars_ids + shared_calendars_ids
-    
-    shared_events = db.query(EventShareModel).filter(EventShareModel.shared_with_user_id == current_user.id).all()
-    shared_events_ids = [s.event_id for s in shared_events]
-    
-    from datetime import timedelta
-    
-    # Busca otimizada por intervalo
-    events = db.query(EventModel).filter(
-        or_(
-            EventModel.calendar_id.in_(all_calendar_ids),
-            EventModel.id.in_(shared_events_ids)
-        ),
-        EventModel.start_time >= start_date,
-        EventModel.start_time < (end_date + timedelta(days=1))
-    ).all()
-    
-    # Formatar resposta
-    results = []
-    for ev in events:
-        res = EventWithCalendarResponse.model_validate(ev)
-        calendar = db.query(CalendarModel).filter(CalendarModel.id == ev.calendar_id).first()
-        res.calendar_color = calendar.color if calendar else "#3182ce"
-        res.calendar_name = calendar.name if calendar else "Compartilhado"
+    try:
+        # Agendas com acesso
+        own_calendars_ids = [c.id for c in db.query(CalendarModel).filter(CalendarModel.user_id == current_user.id).all()]
+        shared_calendars = db.query(CalendarShareModel).filter(CalendarShareModel.shared_with_user_id == current_user.id).all()
+        shared_calendars_ids = [c.calendar_id for c in shared_calendars]
         
-        if calendar and calendar.user_id == current_user.id:
-            res.permission_level = "admin"
-        else:
-            share_cal = next((s for s in shared_calendars if s.calendar_id == ev.calendar_id), None)
-            if share_cal:
-                res.permission_level = share_cal.permission_level
-            else:
-                share_ev = next((s for s in shared_events if s.event_id == ev.id), None)
-                res.permission_level = share_ev.permission_level if share_ev else "read"
+        all_calendar_ids = own_calendars_ids + shared_calendars_ids
+        
+        shared_events = db.query(EventShareModel).filter(EventShareModel.shared_with_user_id == current_user.id).all()
+        shared_events_ids = [s.event_id for s in shared_events]
+        
+        start_dt = datetime.combine(start_date, time.min)
+        end_dt = datetime.combine(end_date + timedelta(days=1), time.max)
+        
+        # Filtros de acesso para o usuário
+        access_conditions = []
+        if all_calendar_ids:
+            access_conditions.append(EventModel.calendar_id.in_(all_calendar_ids))
+        if shared_events_ids:
+            access_conditions.append(EventModel.id.in_(shared_events_ids))
+        access_conditions.append(EventModel.created_by_user_id == current_user.id)
+        
+        events = db.query(EventModel).filter(
+            or_(*access_conditions),
+            EventModel.start_time >= start_dt,
+            EventModel.start_time <= end_dt
+        ).all()
+        
+        # Formatar resposta
+        results = []
+        for ev in events:
+            try:
+                res = EventWithCalendarResponse.model_validate(ev)
+                calendar = None
+                if ev.calendar_id:
+                    calendar = db.query(CalendarModel).filter(CalendarModel.id == ev.calendar_id).first()
+                res.calendar_color = calendar.color if calendar else "#3182ce"
+                res.calendar_name = calendar.name if calendar else "Compartilhado"
                 
-        _preencher_detalhes_evento(db, res, ev)
-        results.append(res)
-        
-    return results
+                if (calendar and calendar.user_id == current_user.id) or ev.created_by_user_id == current_user.id:
+                    res.permission_level = "admin"
+                else:
+                    share_cal = next((s for s in shared_calendars if s.calendar_id == ev.calendar_id), None)
+                    if share_cal:
+                        res.permission_level = share_cal.permission_level
+                    else:
+                        share_ev = next((s for s in shared_events if s.event_id == ev.id), None)
+                        res.permission_level = share_ev.permission_level if share_ev else "read"
+                        
+                _preencher_detalhes_evento(db, res, ev)
+                results.append(res)
+            except Exception as item_err:
+                logger.error(f"[GET /events] Erro ao serializar evento {getattr(ev, 'id', None)}: {item_err}")
+                
+        return results
+    except Exception as e:
+        logger.error(f"[GET /events] Erro ao buscar eventos: {e}")
+        return []
 
 @router.post("", response_model=EventWithCalendarResponse)
 def create_event(

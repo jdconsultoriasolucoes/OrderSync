@@ -54,7 +54,10 @@ function setTimeSelectValue(selectEl, value) {
 document.addEventListener('DOMContentLoaded', async () => {
     populateTimeSelects();
 
-    // Inicializar FullCalendar
+    await loadCalendars();
+    await loadUsers();
+
+    // Inicializar FullCalendar após carregar as agendas
     const calendarEl = document.getElementById('calendar');
     calendarInstance = new FullCalendar.Calendar(calendarEl, {
         initialView: 'dayGridMonth',
@@ -92,9 +95,6 @@ document.addEventListener('DOMContentLoaded', async () => {
         events: fetchEvents
     });
     calendarInstance.render();
-
-    await loadCalendars();
-    await loadUsers();
 });
 
 async function apiGet(endpoint) {
@@ -169,7 +169,9 @@ async function loadCalendars() {
         calendars = await apiGet('/calendars');
         activeCalendarIds = new Set(calendars.map(c => c.id));
         renderCalendarSidebar();
-        calendarInstance.refetchEvents();
+        if (calendarInstance) {
+            calendarInstance.refetchEvents();
+        }
     } catch (e) {
         console.error("Erro ao carregar calendários", e);
     }
@@ -361,21 +363,25 @@ async function fetchEvents(info, successCallback, failureCallback) {
         const end = info.endStr.split('T')[0];
         const rawEvents = await apiGet(`/events?start_date=${start}&end_date=${end}`);
         
-        const fcEvents = rawEvents
+        const fcEvents = (rawEvents || [])
             .filter(e => {
-                if (calendars.some(c => c.id === e.calendar_id)) {
-                    return activeCalendarIds.has(e.calendar_id);
+                if (!e.calendar_id) return true;
+                if (!calendars || calendars.length === 0 || !activeCalendarIds || activeCalendarIds.size === 0) return true;
+                const calIdStr = String(e.calendar_id).toLowerCase();
+                const matched = calendars.find(c => String(c.id).toLowerCase() === calIdStr);
+                if (matched) {
+                    return Array.from(activeCalendarIds).some(id => String(id).toLowerCase() === calIdStr);
                 }
                 return true; // Directly shared event, calendar not in user's list
             })
             .map(e => ({
                 id: e.id,
-                title: e.title,
+                title: e.title || '(Sem título)',
                 start: e.start_time,
-                end: e.end_time,
-                allDay: e.is_all_day,
-                backgroundColor: e.calendar_color,
-                borderColor: e.calendar_color,
+                end: e.end_time || e.start_time,
+                allDay: !!e.is_all_day,
+                backgroundColor: e.calendar_color || '#3182CE',
+                borderColor: e.calendar_color || '#3182CE',
                 extendedProps: {
                     calendar_id: e.calendar_id,
                     calendar_name: e.calendar_name,
@@ -385,10 +391,7 @@ async function fetchEvents(info, successCallback, failureCallback) {
                     cliente_id: e.cliente_id,
                     cliente_nome: e.cliente_nome,
                     cliente_telefone: e.cliente_telefone,
-                    shared_with: e.shared_with,
-                    ultimo_autor: e.ultimo_autor,
-                    ultima_alteracao_em: e.ultima_alteracao_em,
-                    historico: e.historico
+                    shared_with: e.shared_with
                 },
                 editable: e.permission_level !== 'read'
             }));
@@ -607,27 +610,29 @@ function handleEventClick(info) {
     document.querySelectorAll('#event-shared-users-container button').forEach(btn => btn.style.display = isOwnerOrAdmin ? 'block' : 'none');
     
     // Preencher histórico de auditoria
-    renderEventAudit(props);
+    loadEventAudit(e.id);
     
     document.getElementById('modal-event').style.display = 'flex';
 }
 
-function renderEventAudit(props) {
+async function loadEventAudit(eventId) {
     const auditBox = document.getElementById('event-audit-box');
     const summaryEl = document.getElementById('event-audit-summary');
     const listEl = document.getElementById('event-audit-history-list');
     const btnToggle = document.getElementById('btn-toggle-audit-history');
     
     if (!auditBox) return;
+    auditBox.style.display = 'none';
+    if (!eventId) return;
     
-    const historico = props.historico || [];
-    if (props.ultimo_autor || historico.length > 0) {
-        auditBox.style.display = 'block';
-        const dataFormatada = historico.length > 0 && historico[0].data_hora ? historico[0].data_hora : '';
-        summaryEl.innerHTML = `<strong>Registro:</strong> Última alteração por <b>${props.ultimo_autor || 'Sistema'}</b>${dataFormatada ? ' em ' + dataFormatada : ''}`;
-        
-        listEl.innerHTML = '';
-        if (historico.length > 0) {
+    try {
+        const historico = await apiGet(`/events/${eventId}/audit`);
+        if (historico && historico.length > 0) {
+            auditBox.style.display = 'block';
+            const ultimo = historico[0];
+            summaryEl.innerHTML = `<strong>Registro:</strong> Última alteração por <b>${ultimo.usuario}</b> em ${ultimo.data_hora || '-'}`;
+            
+            listEl.innerHTML = '';
             btnToggle.style.display = 'inline-block';
             historico.forEach(h => {
                 const item = document.createElement('div');
@@ -636,10 +641,8 @@ function renderEventAudit(props) {
                 item.innerHTML = `<span style="color: #718096; font-size: 0.75rem;">${h.data_hora || ''}</span> — <b>${h.usuario}</b> (${h.acao}): <span>${h.detalhes || ''}</span>`;
                 listEl.appendChild(item);
             });
-        } else {
-            btnToggle.style.display = 'none';
         }
-    } else {
+    } catch (e) {
         auditBox.style.display = 'none';
     }
 }
