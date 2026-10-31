@@ -45,6 +45,84 @@
         .autocomplete-item { padding: 8px; cursor: pointer; border-bottom: 1px solid #edf2f7; font-size: 0.9rem; }
         .autocomplete-item:hover { background-color: #ebf8ff; }
         
+        /* Mini Datepicker Lateral (Google Calendar Style) */
+        .mini-calendar-box {
+            background: #ffffff;
+            border: 1px solid #e2e8f0;
+            border-radius: 8px;
+            padding: 12px;
+            margin-bottom: 20px;
+            box-shadow: 0 1px 2px rgba(0,0,0,0.04);
+        }
+        .mini-cal-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 10px;
+        }
+        .mini-cal-title {
+            font-size: 0.88rem;
+            font-weight: 600;
+            color: #2d3748;
+            text-transform: capitalize;
+        }
+        .mini-cal-nav {
+            display: flex;
+            gap: 4px;
+        }
+        .mini-cal-btn {
+            background: none;
+            border: 1px solid #e2e8f0;
+            cursor: pointer;
+            width: 24px;
+            height: 24px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 4px;
+            color: #4a5568;
+            font-size: 0.8rem;
+            transition: all 0.15s;
+        }
+        .mini-cal-btn:hover { background: #edf2f7; color: #2d3748; }
+        .mini-cal-grid {
+            display: grid;
+            grid-template-columns: repeat(7, 1fr);
+            gap: 2px;
+            text-align: center;
+        }
+        .mini-cal-day-name {
+            font-size: 0.72rem;
+            font-weight: 600;
+            color: #a0aec0;
+            padding: 4px 0;
+        }
+        .mini-cal-day {
+            font-size: 0.78rem;
+            color: #4a5568;
+            padding: 4px 0;
+            border-radius: 50%;
+            cursor: pointer;
+            aspect-ratio: 1;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: background 0.15s;
+        }
+        .mini-cal-day:hover { background: #edf2f7; }
+        .mini-cal-day.today { font-weight: 700; color: #3182ce; background: #ebf8ff; }
+        .mini-cal-day.selected { background: #3182ce !important; color: #ffffff !important; font-weight: 700; }
+        .mini-cal-day.other-month { color: #cbd5e0; }
+
+        /* FullCalendar Enhancements (Google Calendar look & feel) */
+        .fc-theme-standard th { background: #f8fafc; font-weight: 600; font-size: 0.85rem; color: #4a5568; padding: 8px 0; }
+        .fc-day-today { background: rgba(235, 248, 255, 0.4) !important; }
+        .fc-event { border-radius: 4px; font-size: 0.82rem; font-weight: 500; padding: 2px 4px; box-shadow: 0 1px 2px rgba(0,0,0,0.06); }
+        .fc-timegrid-now-indicator-line { border-color: #e53e3e; border-width: 2px; }
+        .fc-timegrid-now-indicator-arrow { border-color: #e53e3e; }
+        .fc-list-event-dot { border-color: #3182ce; }
+        .fc-list-day-cushion { background: #f1f5f9 !important; }
+
         /* FC Overrides */
         .fc-event { cursor: pointer; }
         .fc-toolbar-title { text-transform: capitalize; }
@@ -190,7 +268,11 @@
 
     <div class="page-container">
         <div class="calendar-sidebar">
-            <button class="os-btn os-btn-primary" style="width: 100%; justify-content: center;" onclick="openNewCalendarModal()">+ Nova Agenda</button>
+            <button class="os-btn os-btn-primary" style="width: 100%; justify-content: center; margin-bottom: 10px; font-weight: 600;" onclick="openNewEventModalDirect()">+ Criar Evento</button>
+            <button class="os-btn os-btn-secondary" style="width: 100%; justify-content: center; margin-bottom: 16px; font-size: 0.85rem;" onclick="openNewCalendarModal()">+ Nova Agenda</button>
+            
+            <!-- Mini-Calendário Mensal Lateral (Estilo Google Calendar) -->
+            <div id="mini-calendar" class="mini-calendar-box"></div>
             
             <div class="section-title">Minhas Agendas</div>
             <div id="own-calendars-list"></div>
@@ -236,8 +318,9 @@
     <!-- Modal Evento -->
     <div id="modal-event" class="modal">
         <div class="modal-content" style="max-width: 800px; padding: 0; overflow: hidden;">
-            <div style="background-color: #1f2937; padding: 16px 24px;">
+            <div style="background-color: #1f2937; padding: 16px 24px; display: flex; justify-content: space-between; align-items: center;">
                 <h3 id="event-modal-title" style="margin: 0; color: white;">Novo Evento</h3>
+                <span id="event-creator-badge" style="display: none; background: #374151; color: #93c5fd; font-size: 0.8rem; padding: 4px 10px; border-radius: 4px; border: 1px solid #4b5563;"></span>
             </div>
             <div style="padding: 24px;">
                 <input type="hidden" id="event-id" />
@@ -246,7 +329,11 @@
                     <div>
                         <div class="form-group">
                             <label>Título</label>
-                            <input type="text" id="event-title" />
+                            <input type="text" id="event-title" placeholder="Adicionar título" />
+                        </div>
+                        <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 14px;">
+                            <input type="checkbox" id="event-is-allday" style="width: 16px; height: 16px; cursor: pointer;" onchange="toggleAllDay(this.checked)" />
+                            <label for="event-is-allday" style="margin: 0; cursor: pointer; font-size: 0.9rem; font-weight: 500;">Dia inteiro</label>
                         </div>
                         <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px;">
                             <div class="form-group">
@@ -258,7 +345,7 @@
                                 <select id="event-calendar"></select>
                             </div>
                         </div>
-                        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px;">
+                        <div id="event-time-row" style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px;">
                             <div class="form-group">
                                 <label>Hora Início</label>
                                 <select id="event-time"></select>
@@ -268,9 +355,32 @@
                                 <select id="event-end-time"></select>
                             </div>
                         </div>
+                        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px;">
+                            <div class="form-group">
+                                <label>Repetição</label>
+                                <select id="event-recurrence">
+                                    <option value="">Não se repete</option>
+                                    <option value="daily">Todos os dias</option>
+                                    <option value="weekly">Semanalmente</option>
+                                    <option value="monthly">Mensalmente</option>
+                                </select>
+                            </div>
+                            <div class="form-group">
+                                <label>Lembrete</label>
+                                <select id="event-reminder">
+                                    <option value="">Sem lembrete</option>
+                                    <option value="0">No horário do evento</option>
+                                    <option value="10">10 minutos antes</option>
+                                    <option value="15">15 minutos antes</option>
+                                    <option value="30">30 minutos antes</option>
+                                    <option value="60">1 hora antes</option>
+                                    <option value="1440">1 dia antes</option>
+                                </select>
+                            </div>
+                        </div>
                         <div class="form-group">
                             <label>Descrição</label>
-                            <textarea id="event-desc" rows="3"></textarea>
+                            <textarea id="event-desc" rows="3" placeholder="Adicionar descrição ou observações"></textarea>
                         </div>
                     </div>
 

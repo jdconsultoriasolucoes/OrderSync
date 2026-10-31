@@ -143,6 +143,8 @@ def startup_event():
                     criado_em TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
                 );
                 CREATE INDEX IF NOT EXISTS ix_tb_eventos_auditoria_event_id ON public.tb_eventos_auditoria (event_id);
+                ALTER TABLE public.events ADD COLUMN IF NOT EXISTS recurrence VARCHAR(50);
+                ALTER TABLE public.events ADD COLUMN IF NOT EXISTS reminder_minutes INTEGER;
             """))
     except Exception as e:
         logger.error(f"[STARTUP] Falha crítica em Migrações: {e}")

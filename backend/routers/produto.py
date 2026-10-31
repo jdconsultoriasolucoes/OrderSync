@@ -411,12 +411,17 @@ async def importar_lista(
                     detail=f"Data de validade inválida: {validade_tabela}. Use o formato AAAA-MM-DD."
                 )
 
+    if getattr(file, "size", None) == 0:
+        raise HTTPException(status_code=400, detail="O arquivo está vazio.")
+
     print(f">>> [IMPORTAR_LISTA] Iniciando parse: arquivo={file.filename}, tipo={tipo}, fornecedor={fornecedor}")
     try:
         df = parse_lista_precos(file.file, tipo_lista=tipo, filename=file.filename, fornecedor_selecionado=fornecedor)
         print(f">>> [IMPORTAR_LISTA] Parse concluído: {len(df)} linhas extraídas")
     except Exception as e:
         print(f">>> [IMPORTAR_LISTA] Exceção no parse: {e}")
+        if "No /Root object" in str(e):
+            raise HTTPException(status_code=400, detail="O arquivo está vazio.")
         raise HTTPException(status_code=400, detail=f"Erro ao ler PDF: {e}")
 
     if df.empty:

@@ -1,3 +1,133 @@
+// ==================== MINI CALENDÁRIO LATERAL ====================
+let miniCalCurrentDate = new Date();
+
+function renderMiniCalendar() {
+    const container = document.getElementById('mini-calendar');
+    if (!container) return;
+    
+    const year = miniCalCurrentDate.getFullYear();
+    const month = miniCalCurrentDate.getMonth();
+    
+    const monthNames = [
+        'Janeiro', 'Fevereiro', 'Março', 'Abril', 'Maio', 'Junho',
+        'Julho', 'Agosto', 'Setembro', 'Outubro', 'Novembro', 'Dezembro'
+    ];
+    
+    const firstDay = new Date(year, month, 1).getDay(); // 0 is Sunday
+    const daysInMonth = new Date(year, month + 1, 0).getDate();
+    const daysInPrevMonth = new Date(year, month, 0).getDate();
+    
+    const today = new Date();
+    const isThisMonth = today.getFullYear() === year && today.getMonth() === month;
+    const todayDate = today.getDate();
+    
+    let html = `
+        <div class="mini-cal-header">
+            <span class="mini-cal-title">${monthNames[month]} ${year}</span>
+            <div class="mini-cal-nav">
+                <button type="button" class="mini-cal-btn" onclick="miniCalPrevMonth()">&lt;</button>
+                <button type="button" class="mini-cal-btn" onclick="miniCalNextMonth()">&gt;</button>
+            </div>
+        </div>
+        <div class="mini-cal-grid">
+            <div class="mini-cal-day-name">D</div>
+            <div class="mini-cal-day-name">S</div>
+            <div class="mini-cal-day-name">T</div>
+            <div class="mini-cal-day-name">Q</div>
+            <div class="mini-cal-day-name">Q</div>
+            <div class="mini-cal-day-name">S</div>
+            <div class="mini-cal-day-name">S</div>
+    `;
+    
+    // Dias do mês anterior
+    for (let i = firstDay - 1; i >= 0; i--) {
+        const d = daysInPrevMonth - i;
+        html += `<div class="mini-cal-day other-month">${d}</div>`;
+    }
+    
+    // Dias do mês atual
+    for (let d = 1; d <= daysInMonth; d++) {
+        const isToday = isThisMonth && d === todayDate;
+        const dateStr = `${year}-${String(month + 1).padStart(2, '0')}-${String(d).padStart(2, '0')}`;
+        html += `<div class="mini-cal-day ${isToday ? 'today' : ''}" onclick="miniCalSelectDate('${dateStr}')">${d}</div>`;
+    }
+    
+    // Completar restante da grade
+    const totalCells = firstDay + daysInMonth;
+    const remaining = (7 - (totalCells % 7)) % 7;
+    for (let i = 1; i <= remaining; i++) {
+        html += `<div class="mini-cal-day other-month">${i}</div>`;
+    }
+    
+    html += `</div>`;
+    container.innerHTML = html;
+}
+
+function miniCalPrevMonth() {
+    miniCalCurrentDate.setMonth(miniCalCurrentDate.getMonth() - 1);
+    renderMiniCalendar();
+}
+
+function miniCalNextMonth() {
+    miniCalCurrentDate.setMonth(miniCalCurrentDate.getMonth() + 1);
+    renderMiniCalendar();
+}
+
+function miniCalSelectDate(dateStr) {
+    if (calendarInstance) {
+        calendarInstance.gotoDate(dateStr);
+    }
+}
+
+function updateMiniCalendarDate(dateObj) {
+    if (!dateObj) return;
+    miniCalCurrentDate = new Date(dateObj);
+    renderMiniCalendar();
+}
+
+function toggleAllDay(checked) {
+    const timeRow = document.getElementById('event-time-row');
+    if (timeRow) {
+        timeRow.style.display = checked ? 'none' : 'grid';
+    }
+}
+
+function openNewEventModalDirect() {
+    const now = new Date();
+    const todayStr = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
+    handleDateSelect({
+        startStr: todayStr,
+        endStr: todayStr,
+        allDay: false
+    });
+}
+
+function checkEventReminders(eventsList) {
+    if (!eventsList || !Array.isArray(eventsList)) return;
+    const now = new Date();
+    eventsList.forEach(ev => {
+        const rem = ev.reminder_minutes;
+        if (rem !== null && rem !== undefined && rem >= 0) {
+            const start = new Date(ev.start_time);
+            const diffMin = (start - now) / 60000;
+            if (diffMin > 0 && diffMin <= rem) {
+                const key = `reminder_shown_${ev.id}_${start.getTime()}`;
+                if (!sessionStorage.getItem(key)) {
+                    sessionStorage.setItem(key, 'true');
+                    const minStr = Math.round(diffMin);
+                    const tempoMsg = minStr <= 1 ? 'em menos de 1 minuto' : `em aproximadamente ${minStr} minutos`;
+                    if (window.ErrorUtils) {
+                        window.ErrorUtils.showError('Lembrete de Compromisso', `"${ev.title}" começa ${tempoMsg}!`);
+                    } else {
+                        alert(`⏰ Lembrete de Compromisso:
+"${ev.title}" começa ${tempoMsg}!`);
+                    }
+                }
+            }
+        }
+    });
+}
+
 let calendarInstance = null;
 let calendars = [];
 let events = [];
@@ -64,17 +194,23 @@ document.addEventListener('DOMContentLoaded', async () => {
         headerToolbar: {
             left: 'prev,next today',
             center: 'title',
-            right: 'dayGridMonth,timeGridWeek,timeGridDay'
+            right: 'dayGridMonth,timeGridWeek,timeGridDay,listWeek'
         },
         buttonText: {
             today: 'Hoje',
             month: 'Mês',
             week: 'Semana',
-            day: 'Dia'
+            day: 'Dia',
+            list: 'Programação'
         },
         locale: 'pt-br',
         editable: true,
         selectable: true,
+        nowIndicator: true,
+        navLinks: true,
+        scrollTime: '08:00:00',
+        slotMinTime: '06:00:00',
+        slotMaxTime: '23:00:00',
         slotLabelFormat: {
             hour: '2-digit',
             minute: '2-digit',
@@ -88,6 +224,9 @@ document.addEventListener('DOMContentLoaded', async () => {
         },
         displayEventTime: true,
         displayEventEnd: true,
+        datesSet: function(info) {
+            updateMiniCalendarDate(info.view.currentStart);
+        },
         select: handleDateSelect,
         eventClick: handleEventClick,
         eventDrop: handleEventDrop,
@@ -95,6 +234,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         events: fetchEvents
     });
     calendarInstance.render();
+    renderMiniCalendar();
 });
 
 async function apiGet(endpoint) {
@@ -391,11 +531,16 @@ async function fetchEvents(info, successCallback, failureCallback) {
                     cliente_id: e.cliente_id,
                     cliente_nome: e.cliente_nome,
                     cliente_telefone: e.cliente_telefone,
-                    shared_with: e.shared_with
+                    shared_with: e.shared_with,
+                    criador_nome: e.criador_nome,
+                    criador_email: e.criador_email,
+                    recurrence: e.recurrence,
+                    reminder_minutes: e.reminder_minutes
                 },
-                editable: e.permission_level !== 'read'
+                editable: e.permission_level === 'admin'
             }));
             
+        checkEventReminders(rawEvents);
         successCallback(fcEvents);
         
         const todayStr = new Date().toISOString().split('T')[0];
@@ -467,6 +612,22 @@ function handleDateSelect(info) {
     document.getElementById('event-date').value = selectedDateStr;
     document.getElementById('event-date').disabled = false;
     
+    const allDayEl = document.getElementById('event-is-allday');
+    if (allDayEl) {
+        allDayEl.checked = !!info.allDay;
+        allDayEl.disabled = false;
+        toggleAllDay(!!info.allDay);
+    }
+    
+    const recEl = document.getElementById('event-recurrence');
+    if (recEl) { recEl.value = ''; recEl.disabled = false; }
+    
+    const remEl = document.getElementById('event-reminder');
+    if (remEl) { remEl.value = '15'; remEl.disabled = false; }
+    
+    const badgeEl = document.getElementById('event-creator-badge');
+    if (badgeEl) badgeEl.style.display = 'none';
+    
     setTimeSelectValue(document.getElementById('event-time'), startTime);
     setTimeSelectValue(document.getElementById('event-end-time'), endTime);
     
@@ -509,10 +670,23 @@ function handleEventClick(info) {
     currentEventSharedWith = props.shared_with || [];
     currentEventId = e.id;
     currentEventPerm = props.permission_level;
-    const isOwnerOrAdmin = currentEventPerm === 'admin';
-    const canEdit = currentEventPerm !== 'read';
+    
+    // Regra estrita: apenas quem criou o evento pode alterar ('admin')
+    const canEdit = currentEventPerm === 'admin';
+    const isOwnerOrAdmin = canEdit;
 
     document.getElementById('event-modal-title').textContent = canEdit ? 'Editar Evento' : 'Visualizar Evento';
+    
+    const badgeEl = document.getElementById('event-creator-badge');
+    if (badgeEl) {
+        if (!canEdit) {
+            const author = props.criador_nome || props.criador_email || 'Outro usuário';
+            badgeEl.textContent = `Criado por: ${author}`;
+            badgeEl.style.display = 'inline-block';
+        } else {
+            badgeEl.style.display = 'none';
+        }
+    }
     document.getElementById('event-id').value = e.id;
     document.getElementById('event-title').value = e.title;
     
@@ -545,6 +719,32 @@ function handleEventClick(info) {
     setTimeSelectValue(document.getElementById('event-end-time'), endParts.time);
     document.getElementById('event-location').value = props.location || '';
     document.getElementById('event-desc').value = props.description || '';
+    
+    const isAllDay = !!e.allDay || !!props.is_all_day;
+    const allDayEl = document.getElementById('event-is-allday');
+    if (allDayEl) {
+        allDayEl.checked = isAllDay;
+        allDayEl.disabled = !canEdit;
+        toggleAllDay(isAllDay);
+    }
+    
+    const recEl = document.getElementById('event-recurrence');
+    if (recEl) {
+        recEl.value = props.recurrence || '';
+        recEl.disabled = !canEdit;
+    }
+    
+    const remEl = document.getElementById('event-reminder');
+    if (remEl) {
+        remEl.value = (props.reminder_minutes !== null && props.reminder_minutes !== undefined) ? String(props.reminder_minutes) : '';
+        remEl.disabled = !canEdit;
+    }
+    
+    // Habilitar ou desabilitar campos dependendo de quem criou o evento
+    ['event-title', 'event-date', 'event-time', 'event-end-time', 'event-location', 'event-desc'].forEach(id => {
+        const el = document.getElementById(id);
+        if (el) el.disabled = !canEdit;
+    });
     
     if (props.cliente_id) {
         document.getElementById('event-client-id').value = props.cliente_id;
@@ -790,10 +990,11 @@ async function saveEvent() {
 
     let hasError = false;
 
+    const isAllDayCheck = document.getElementById('event-is-allday') ? document.getElementById('event-is-allday').checked : false;
     if (!titleInput.value) { titleInput.style.borderColor = 'red'; hasError = true; }
     if (!calendarInput.value) { calendarInput.style.borderColor = 'red'; hasError = true; }
-    if (!timeInput.value) { timeInput.style.borderColor = 'red'; hasError = true; }
-    if (!endTimeInput.value) { endTimeInput.style.borderColor = 'red'; hasError = true; }
+    if (!isAllDayCheck && !timeInput.value) { timeInput.style.borderColor = 'red'; hasError = true; }
+    if (!isAllDayCheck && !endTimeInput.value) { endTimeInput.style.borderColor = 'red'; hasError = true; }
     if (!dateInput.value) { dateInput.style.borderColor = 'red'; hasError = true; }
 
     if (hasError) {
@@ -831,15 +1032,29 @@ async function saveEvent() {
     }
 
     const clientVal = document.getElementById('event-client-id').value;
+    const isAllDayChecked = document.getElementById('event-is-allday') ? document.getElementById('event-is-allday').checked : false;
+    const recurrenceVal = document.getElementById('event-recurrence') ? (document.getElementById('event-recurrence').value || null) : null;
+    const reminderVal = document.getElementById('event-reminder') ? document.getElementById('event-reminder').value : '';
+    const reminderMinutesVal = reminderVal !== '' ? parseInt(reminderVal) : null;
+
+    let finalStart = startDt;
+    let finalEnd = endDt;
+    if (isAllDayChecked) {
+        finalStart = new Date(`${dateInput.value}T00:00:00`);
+        finalEnd = new Date(`${dateInput.value}T23:59:59`);
+    }
+
     const data = {
         title: titleInput.value,
         calendar_id: calendarInput.value,
-        start_time: startDt.toISOString(),
-        end_time: endDt.toISOString(),
-        is_all_day: false,
+        start_time: finalStart.toISOString(),
+        end_time: finalEnd.toISOString(),
+        is_all_day: isAllDayChecked,
         location: document.getElementById('event-location').value || '',
         description: document.getElementById('event-desc').value || '',
-        cliente_id: clientVal ? parseInt(clientVal) : null
+        cliente_id: clientVal ? parseInt(clientVal) : null,
+        recurrence: recurrenceVal,
+        reminder_minutes: reminderMinutesVal
     };
     
     if (isOwnerOrAdmin && sharedUsers !== null) {

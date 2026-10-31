@@ -94,6 +94,13 @@ def _check_event_access(db: Session, event_id: UUID, user_id: int, required_perm
     return event, share.permission_level
 
 def _preencher_detalhes_evento(db: Session, res: EventWithCalendarResponse, ev: EventModel):
+    # Criador do evento
+    if ev.created_by_user_id:
+        criador = db.query(UsuarioModel).filter(UsuarioModel.id == ev.created_by_user_id).first()
+        if criador:
+            res.criador_nome = criador.nome or criador.email
+            res.criador_email = criador.email
+
     # Cliente
     try:
         if ev.cliente_id:
@@ -165,35 +172,100 @@ def get_events(
             access_conditions.append(EventModel.id.in_(shared_events_ids))
         access_conditions.append(EventModel.created_by_user_id == current_user.id)
         
+        # Busca eventos pontuais no período OU eventos recorrentes iniciados antes ou durante o período
         events = db.query(EventModel).filter(
             or_(*access_conditions),
-            EventModel.start_time >= start_dt,
-            EventModel.start_time <= end_dt
+            or_(
+                (EventModel.start_time >= start_dt) & (EventModel.start_time <= end_dt),
+                (EventModel.recurrence.isnot(None) & (EventModel.start_time <= end_dt))
+            )
         ).all()
         
-        # Formatar resposta
         results = []
         for ev in events:
             try:
-                res = EventWithCalendarResponse.model_validate(ev)
                 calendar = None
                 if ev.calendar_id:
                     calendar = db.query(CalendarModel).filter(CalendarModel.id == ev.calendar_id).first()
-                res.calendar_color = calendar.color if calendar else "#3182ce"
-                res.calendar_name = calendar.name if calendar else "Compartilhado"
                 
-                if (calendar and calendar.user_id == current_user.id) or ev.created_by_user_id == current_user.id:
-                    res.permission_level = "admin"
+                # Regra estrita: apenas quem criou o evento tem permissão de alteração ('admin'). Outros têm apenas 'read'.
+                perm_level = "admin" if ev.created_by_user_id == current_user.id else "read"
+                
+                cal_color = calendar.color if calendar else "#3182ce"
+                cal_name = calendar.name if calendar else "Compartilhado"
+
+                # Se o evento tiver recorrência, projeta as repetições dentro do intervalo exibido
+                if ev.recurrence and ev.recurrence in ("daily", "weekly", "monthly"):
+                    duration = ev.end_time - ev.start_time
+                    cur_d = ev.start_time.date()
+                    
+                    if ev.recurrence == "daily":
+                        step_d = max(cur_d, start_date)
+                        while step_d <= end_date:
+                            occ_st = datetime.combine(step_d, ev.start_time.time(), tzinfo=ev.start_time.tzinfo)
+                            occ_et = occ_st + duration
+                            res = EventWithCalendarResponse.model_validate(ev)
+                            res.start_time = occ_st
+                            res.end_time = occ_et
+                            res.calendar_color = cal_color
+                            res.calendar_name = cal_name
+                            res.permission_level = perm_level
+                            _preencher_detalhes_evento(db, res, ev)
+                            results.append(res)
+                            step_d += timedelta(days=1)
+                            
+                    elif ev.recurrence == "weekly":
+                        step_d = cur_d
+                        while step_d < start_date:
+                            step_d += timedelta(days=7)
+                        while step_d <= end_date:
+                            occ_st = datetime.combine(step_d, ev.start_time.time(), tzinfo=ev.start_time.tzinfo)
+                            occ_et = occ_st + duration
+                            res = EventWithCalendarResponse.model_validate(ev)
+                            res.start_time = occ_st
+                            res.end_time = occ_et
+                            res.calendar_color = cal_color
+                            res.calendar_name = cal_name
+                            res.permission_level = perm_level
+                            _preencher_detalhes_evento(db, res, ev)
+                            results.append(res)
+                            step_d += timedelta(days=7)
+                            
+                    elif ev.recurrence == "monthly":
+                        t_day = ev.start_time.day
+                        y = start_date.year
+                        m = start_date.month
+                        while True:
+                            try:
+                                cand_d = date(y, m, t_day)
+                            except ValueError:
+                                cand_d = None
+                            if cand_d and cur_d <= cand_d <= end_date:
+                                occ_st = datetime.combine(cand_d, ev.start_time.time(), tzinfo=ev.start_time.tzinfo)
+                                occ_et = occ_st + duration
+                                res = EventWithCalendarResponse.model_validate(ev)
+                                res.start_time = occ_st
+                                res.end_time = occ_et
+                                res.calendar_color = cal_color
+                                res.calendar_name = cal_name
+                                res.permission_level = perm_level
+                                _preencher_detalhes_evento(db, res, ev)
+                                results.append(res)
+                            if m == 12:
+                                m = 1
+                                y += 1
+                            else:
+                                m += 1
+                            if date(y, m, 1) > end_date:
+                                break
                 else:
-                    share_cal = next((s for s in shared_calendars if s.calendar_id == ev.calendar_id), None)
-                    if share_cal:
-                        res.permission_level = share_cal.permission_level
-                    else:
-                        share_ev = next((s for s in shared_events if s.event_id == ev.id), None)
-                        res.permission_level = share_ev.permission_level if share_ev else "read"
-                        
-                _preencher_detalhes_evento(db, res, ev)
-                results.append(res)
+                    # Evento pontual normal
+                    res = EventWithCalendarResponse.model_validate(ev)
+                    res.calendar_color = cal_color
+                    res.calendar_name = cal_name
+                    res.permission_level = perm_level
+                    _preencher_detalhes_evento(db, res, ev)
+                    results.append(res)
             except Exception as item_err:
                 logger.error(f"[GET /events] Erro ao serializar evento {getattr(ev, 'id', None)}: {item_err}")
                 
@@ -230,7 +302,9 @@ def create_event(
         end_time=event.end_time,
         is_all_day=event.is_all_day,
         location=event.location,
-        cliente_id=event.cliente_id
+        cliente_id=event.cliente_id,
+        recurrence=event.recurrence,
+        reminder_minutes=event.reminder_minutes
     )
     db.add(db_event)
     db.commit()
@@ -272,9 +346,15 @@ def update_event(
     db: Session = Depends(get_db),
     current_user: UsuarioModel = Depends(get_current_user)
 ):
-    db_event, perm = _check_event_access(db, event_id, current_user.id, "write")
+    db_event = db.query(EventModel).filter(EventModel.id == event_id).first()
     if not db_event:
-        raise HTTPException(status_code=403, detail=perm or "Acesso negado")
+        raise HTTPException(status_code=404, detail="Evento não encontrado")
+
+    # Regra estrita: apenas quem criou o evento pode alterar
+    if db_event.created_by_user_id != current_user.id:
+        raise HTTPException(status_code=403, detail="Apenas o criador do evento tem permissão para alterá-lo.")
+    
+    perm = "admin" 
         
     now_sp = datetime.now(tz_sp)
     update_data = event_update.model_dump(exclude_unset=True)
@@ -379,9 +459,15 @@ def delete_event(
     db: Session = Depends(get_db),
     current_user: UsuarioModel = Depends(get_current_user)
 ):
-    db_event, perm = _check_event_access(db, event_id, current_user.id, "write")
+    db_event = db.query(EventModel).filter(EventModel.id == event_id).first()
     if not db_event:
-        raise HTTPException(status_code=403, detail=perm or "Acesso negado")
+        raise HTTPException(status_code=404, detail="Evento não encontrado")
+
+    # Regra estrita: apenas quem criou o evento pode excluir
+    if db_event.created_by_user_id != current_user.id:
+        raise HTTPException(status_code=403, detail="Apenas o criador do evento tem permissão para excluí-lo.")
+    
+    perm = "admin" 
         
     _registrar_auditoria_evento(
         db=db,

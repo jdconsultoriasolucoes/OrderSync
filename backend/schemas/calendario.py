@@ -41,6 +41,8 @@ class EventBase(BaseModel):
     location: Optional[str] = None
     calendar_id: Optional[UUID] = None
     cliente_id: Optional[int] = None
+    recurrence: Optional[str] = None
+    reminder_minutes: Optional[int] = None
 
 class EventShareInput(BaseModel):
     email: str
@@ -61,6 +63,8 @@ class EventUpdate(BaseModel):
     is_all_day: Optional[bool] = None
     location: Optional[str] = None
     cliente_id: Optional[int] = None
+    recurrence: Optional[str] = None
+    reminder_minutes: Optional[int] = None
     shared_with_users: Optional[List[EventShareInput]] = None
 
 class EventResponse(EventBase):
@@ -78,6 +82,8 @@ class EventWithCalendarResponse(EventResponse):
     cliente_nome: Optional[str] = None
     cliente_telefone: Optional[str] = None
     shared_with: Optional[List[dict]] = []
+    criador_nome: Optional[str] = None
+    criador_email: Optional[str] = None
     ultimo_autor: Optional[str] = None
     ultima_alteracao_em: Optional[datetime] = None
     historico: Optional[List[dict]] = []

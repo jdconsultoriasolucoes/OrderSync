@@ -42,6 +42,8 @@ class EventModel(Base):
     is_all_day = Column(Boolean, default=False)
     location = Column(String(255), nullable=True)
     cliente_id = Column(BigInteger, ForeignKey("t_cadastro_cliente_v2.id", ondelete="SET NULL"), nullable=True, index=True)
+    recurrence = Column(String(50), nullable=True) # None, 'daily', 'weekly', 'monthly'
+    reminder_minutes = Column(BigInteger, nullable=True) # minutos antes do evento
     created_at = Column(DateTime(timezone=True), server_default=func.now())
     updated_at = Column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now())
     

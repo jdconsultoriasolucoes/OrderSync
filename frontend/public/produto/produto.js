@@ -699,6 +699,10 @@ async function uploadListaPdf(file) {
     toast("Selecione um arquivo PDF.");
     return;
   }
+  if (file.size === 0) {
+    toast("O arquivo está vazio.");
+    return;
+  }
 
   const tipoEl = $("import_tipo_lista");
   const validadeEl = $("import_validade");
@@ -987,6 +991,11 @@ function setupImportarPdf() {
     }
     if (!file) {
       if ("Selecione um arquivo PDF." !== 'Handled by ErrorUtils') { window.ErrorUtils ? window.ErrorUtils.showError('Aviso', "Selecione um arquivo PDF.") : alert("Selecione um arquivo PDF."); };
+      return;
+    }
+    if (file.size === 0) {
+      const msgVazio = "O arquivo está vazio.";
+      if (msgVazio !== 'Handled by ErrorUtils') { window.ErrorUtils ? window.ErrorUtils.showError('Aviso', msgVazio) : alert(msgVazio); };
       return;
     }
 
