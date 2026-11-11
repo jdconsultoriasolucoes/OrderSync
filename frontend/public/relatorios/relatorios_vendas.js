@@ -700,6 +700,16 @@ async function buscarDadosRelatorio() {
         if (selG3RotaA && selG3RotaA.value) queryParams.append("rota_aproximacao", selG3RotaA.value);
         if (selG3Status && selG3Status.value) queryParams.append("status_cadastro", selG3Status.value);
         if (selG3TipoEntrega && selG3TipoEntrega.value) queryParams.append("tipo_entrega", selG3TipoEntrega.value);
+    } else if (activeReport === "validacao2") {
+        if (inFaturamentoInicio.value) queryParams.append("faturamento_inicio", inFaturamentoInicio.value);
+        if (inFaturamentoFim.value) queryParams.append("faturamento_fim", inFaturamentoFim.value);
+        if (selFilial && selFilial.value) queryParams.append("filiais", selFilial.value);
+        if (selCategoria && selCategoria.value) queryParams.append("categoria", selCategoria.value);
+        if (selTipoEntrega && selTipoEntrega.value) queryParams.append("tipo_entrega", selTipoEntrega.value);
+        if (inVal2Pedido && inVal2Pedido.value) queryParams.append("numero_pedido", inVal2Pedido.value);
+        if (inVal2Carga && inVal2Carga.value) queryParams.append("numero_carga", inVal2Carga.value);
+        if (inVal2CargaInicio && inVal2CargaInicio.value) queryParams.append("data_carga_inicio", inVal2CargaInicio.value);
+        if (inVal2CargaFim && inVal2CargaFim.value) queryParams.append("data_carga_fim", inVal2CargaFim.value);
     } else {
         if (inDataInicio.value) queryParams.append("data_inicio", inDataInicio.value);
         if (inDataFim.value) queryParams.append("data_fim", inDataFim.value);
@@ -711,16 +721,6 @@ async function buscarDadosRelatorio() {
         if (selMunicipio && selMunicipio.value) queryParams.append("municipios", selMunicipio.value);
         if (activeReport === "produto" && selGrupo.value) queryParams.append("grupos", selGrupo.value);
         if (activeReport === "validacao" && selTipoEntrega && selTipoEntrega.value) queryParams.append("tipo_entrega", selTipoEntrega.value);
-    } else if (activeReport === "validacao2") {
-        if (inFaturamentoInicio.value) queryParams.append("faturamento_inicio", inFaturamentoInicio.value);
-        if (inFaturamentoFim.value) queryParams.append("faturamento_fim", inFaturamentoFim.value);
-        if (selFilial && selFilial.value) queryParams.append("filiais", selFilial.value);
-        if (selCategoria && selCategoria.value) queryParams.append("categoria", selCategoria.value);
-        if (selTipoEntrega && selTipoEntrega.value) queryParams.append("tipo_entrega", selTipoEntrega.value);
-        if (inVal2Pedido && inVal2Pedido.value) queryParams.append("numero_pedido", inVal2Pedido.value);
-        if (inVal2Carga && inVal2Carga.value) queryParams.append("numero_carga", inVal2Carga.value);
-        if (inVal2CargaInicio && inVal2CargaInicio.value) queryParams.append("data_carga_inicio", inVal2CargaInicio.value);
-        if (inVal2CargaFim && inVal2CargaFim.value) queryParams.append("data_carga_fim", inVal2CargaFim.value);
     }
 
     // Seleciona endpoint conforme relatório ativo
