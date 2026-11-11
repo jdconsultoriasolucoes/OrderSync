@@ -42,8 +42,9 @@
 
 /* Tabela de Relatório com scroll */
 .report-table-container {
-    max-height: 550px;
+    max-height: 650px;
     overflow-y: auto;
+    overflow-x: auto !important;
     border: 1px solid var(--os-border);
     border-radius: var(--os-radius-lg);
     position: relative;
@@ -204,13 +205,24 @@
 
 .duplo-inputs {
     display: flex;
-    flex-direction: column;
-    gap: 4px;
-    align-items: stretch;
+    flex-direction: row;
+    align-items: center;
+    gap: 8px;
+    width: 100%;
+}
+
+.duplo-inputs .os-input {
+    flex: 1;
+    min-width: 130px;
+    padding: 6px 10px !important;
 }
 
 .duplo-separador {
-    display: none;
+    display: inline-block;
+    color: var(--os-text-muted);
+    font-size: var(--os-text-xs);
+    font-weight: 500;
+    white-space: nowrap;
 }
 
 @media (max-width: 600px) {
@@ -227,43 +239,101 @@
 }
 
 /* =========================================
-   Ajuste Fino - Pedido Supra
+   Ajustes de Colunas e Datas na Tabela
    ========================================= */
 .col-pedido-supra {
     min-width: 120px !important;
     white-space: nowrap !important;
 }
 
+/* Colunas de Data - Evitar quebras de linha */
+.col-date,
+th.col-date,
+td.col-date {
+    white-space: nowrap !important;
+    min-width: 135px !important;
+    text-align: center !important;
+}
+
+.col-id,
+th.col-id,
+td.col-id {
+    white-space: nowrap !important;
+    min-width: 100px !important;
+    text-align: center !important;
+}
+
+.col-carga,
+th.col-carga,
+td.col-carga {
+    white-space: nowrap !important;
+    min-width: 110px !important;
+    text-align: center !important;
+}
+
+.col-codigo,
+th.col-codigo,
+td.col-codigo {
+    white-space: nowrap !important;
+    min-width: 110px !important;
+    text-align: center !important;
+}
+
+.col-nf,
+th.col-nf,
+td.col-nf {
+    white-space: nowrap !important;
+    min-width: 110px !important;
+    text-align: center !important;
+}
+
+.col-peso,
+th.col-peso,
+td.col-peso {
+    white-space: nowrap !important;
+    min-width: 130px !important;
+    text-align: right !important;
+}
+
+.col-cliente,
+th.col-cliente,
+td.col-cliente {
+    min-width: 220px !important;
+}
+
 /* =========================================
-   Layout Filtros em 1 Linha (Desktop)
+   Layout Filtros Responsivo (Desktop)
    ========================================= */
 @media (min-width: 993px) {
     .filtros-grid-panel {
         display: flex !important;
         flex-wrap: wrap !important;
-        align-items: flex-start !important;
+        align-items: flex-end !important;
         justify-content: flex-start;
-        gap: 8px !important;
-        padding-bottom: 4px;
+        gap: 12px 14px !important;
+        padding-bottom: 8px;
     }
     
     .filtros-grid-panel .filtro-campo {
-        flex: 1;
-        min-width: 110px;
+        flex: 1 1 175px;
+        min-width: 150px;
+        max-width: 260px;
     }
     
     .filtros-grid-panel .filtro-duplo {
-        flex: 1;
-        min-width: 130px;
+        flex: 2 1 310px;
+        min-width: 300px;
+        max-width: 440px;
     }
     
     .duplo-inputs .os-input {
-        padding: 6px 4px !important; /* Mais enxuto horizontalmente */
+        padding: 6px 8px !important;
     }
     
     .filtros-actions-container {
         width: 100%;
-        margin-top: 16px;
+        flex: 1 1 100%;
+        margin-top: 12px;
         padding-top: 12px;
     }
 }

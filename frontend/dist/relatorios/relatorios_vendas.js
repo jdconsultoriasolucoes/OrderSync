@@ -309,20 +309,20 @@ function alternarRelatorioUI() {
         // Cabeçalhos para Validação Faturamento
         tableHeaders.innerHTML = `
             <tr>
-                <th>#</th>
-                <th data-sort="data_faturamento">Data Faturamento</th>
-                <th data-sort="codigo_cliente">Código Cliente</th>
-                <th data-sort="cliente">Cliente</th>
+                <th style="width: 45px; text-align: center;">#</th>
+                <th data-sort="data_faturamento" class="col-date">Data Faturamento</th>
+                <th data-sort="codigo_cliente" class="col-codigo">Código Cliente</th>
+                <th data-sort="cliente" class="col-cliente">Cliente</th>
                 <th data-sort="pedido_supra" class="col-pedido-supra">Pedido Supra</th>
-                <th data-sort="nota_fiscal">Nota Fiscal</th>
-                <th data-sort="peso_liquido" class="tar">Peso Líquido (kg)</th>
+                <th data-sort="nota_fiscal" class="col-nf">Nota Fiscal</th>
+                <th data-sort="peso_liquido" class="tar col-peso">Peso Líquido (kg)</th>
                 <th data-sort="valor_nota_fiscal" class="tar col-money">Valor NF</th>
                 <th data-sort="valor_pedido" class="tar col-money">Valor Pedido</th>
                 <th data-sort="diferenca_valores" class="tar col-money">Diferença</th>
             </tr>
             <tr style="background-color: #f1f5f9; font-weight: bold; position: sticky; top: 38px; z-index: 14; box-shadow: 0 1px 2px rgba(0,0,0,0.05);">
                 <td colspan="6" style="text-align: left; padding: 10px 16px; font-weight: bold; border-bottom: 2px solid var(--os-border);">Total Acumulado</td>
-                <td class="tar" id="total-peso" style="font-weight: bold; border-bottom: 2px solid var(--os-border);">0 kg</td>
+                <td class="tar col-peso" id="total-peso" style="font-weight: bold; border-bottom: 2px solid var(--os-border);">0 kg</td>
                 <td class="tar col-money" id="total-valor-nf" style="font-weight: bold; border-bottom: 2px solid var(--os-border);">R$ 0,00</td>
                 <td class="tar col-money" id="total-valor-pedido" style="font-weight: bold; border-bottom: 2px solid var(--os-border);">R$ 0,00</td>
                 <td class="tar col-money" id="total-diferenca" style="font-weight: bold; border-bottom: 2px solid var(--os-border);">R$ 0,00</td>
@@ -334,23 +334,23 @@ function alternarRelatorioUI() {
         // Cabeçalhos para Relatório por Carga (com Nº Pedido, Nº Carga e Data Carga)
         tableHeaders.innerHTML = `
             <tr>
-                <th>#</th>
-                <th data-sort="numero_pedido">Nº Pedido</th>
-                <th data-sort="numero_carga">Nº Carga</th>
-                <th data-sort="data_carga">Data Carga</th>
-                <th data-sort="data_faturamento">Data Faturamento</th>
-                <th data-sort="codigo_cliente">Código Cliente</th>
-                <th data-sort="cliente">Cliente</th>
+                <th style="width: 45px; text-align: center;">#</th>
+                <th data-sort="numero_pedido" class="col-id">Nº Pedido</th>
+                <th data-sort="numero_carga" class="col-carga">Nº Carga</th>
+                <th data-sort="data_carga" class="col-date">Data Carga</th>
+                <th data-sort="data_faturamento" class="col-date">Data Faturamento</th>
+                <th data-sort="codigo_cliente" class="col-codigo">Código Cliente</th>
+                <th data-sort="cliente" class="col-cliente">Cliente</th>
                 <th data-sort="pedido_supra" class="col-pedido-supra">Pedido Supra</th>
-                <th data-sort="nota_fiscal">Nota Fiscal</th>
-                <th data-sort="peso_liquido" class="tar">Peso Líquido (kg)</th>
+                <th data-sort="nota_fiscal" class="col-nf">Nota Fiscal</th>
+                <th data-sort="peso_liquido" class="tar col-peso">Peso Líquido (kg)</th>
                 <th data-sort="valor_nota_fiscal" class="tar col-money">Valor NF</th>
                 <th data-sort="valor_pedido" class="tar col-money">Valor Pedido</th>
                 <th data-sort="diferenca_valores" class="tar col-money">Diferença</th>
             </tr>
             <tr style="background-color: #f1f5f9; font-weight: bold; position: sticky; top: 38px; z-index: 14; box-shadow: 0 1px 2px rgba(0,0,0,0.05);">
                 <td colspan="9" style="text-align: left; padding: 10px 16px; font-weight: bold; border-bottom: 2px solid var(--os-border);">Total Acumulado</td>
-                <td class="tar" id="total-peso" style="font-weight: bold; border-bottom: 2px solid var(--os-border);">0 kg</td>
+                <td class="tar col-peso" id="total-peso" style="font-weight: bold; border-bottom: 2px solid var(--os-border);">0 kg</td>
                 <td class="tar col-money" id="total-valor-nf" style="font-weight: bold; border-bottom: 2px solid var(--os-border);">R$ 0,00</td>
                 <td class="tar col-money" id="total-valor-pedido" style="font-weight: bold; border-bottom: 2px solid var(--os-border);">R$ 0,00</td>
                 <td class="tar col-money" id="total-diferenca" style="font-weight: bold; border-bottom: 2px solid var(--os-border);">R$ 0,00</td>
@@ -890,13 +890,13 @@ function renderizarTabela() {
 
             html += `
                 <tr>
-                    <td>${index + 1}</td>
-                    <td>${fmtData(item.data_faturamento)}</td>
-                    <td>${item.codigo_cliente || "-"}</td>
-                    <td>${limparNomeCliente(item.cliente)}</td>
+                    <td style="text-align: center;">${index + 1}</td>
+                    <td class="col-date">${fmtData(item.data_faturamento)}</td>
+                    <td class="col-codigo">${item.codigo_cliente || "-"}</td>
+                    <td class="col-cliente">${limparNomeCliente(item.cliente)}</td>
                     <td class="col-pedido-supra"><strong>${item.pedido_supra || "-"}</strong></td>
-                    <td>${item.nota_fiscal || "-"}</td>
-                    <td class="tar">${fmtPeso(item.peso_liquido).replace(' kg', '')}</td>
+                    <td class="col-nf">${item.nota_fiscal || "-"}</td>
+                    <td class="tar col-peso">${fmtPeso(item.peso_liquido).replace(' kg', '')}</td>
                     <td class="tar col-money">${fmtMoney(item.valor_nota_fiscal)}</td>
                     <td class="tar col-money">${fmtMoney(item.valor_pedido)}</td>
                     <td class="tar col-money" style="color: ${parseFloat(item.diferenca_valores || 0).toFixed(2) != '0.00' ? 'var(--os-error)' : 'inherit'};">${fmtMoney(item.diferenca_valores)}</td>
@@ -914,16 +914,16 @@ function renderizarTabela() {
 
             html += `
                 <tr>
-                    <td>${index + 1}</td>
-                    <td><strong>${item.numero_pedido || "-"}</strong></td>
-                    <td>${item.numero_carga || "-"}</td>
-                    <td>${fmtData(item.data_carga)}</td>
-                    <td>${fmtData(item.data_faturamento)}</td>
-                    <td>${item.codigo_cliente || "-"}</td>
-                    <td>${limparNomeCliente(item.cliente)}</td>
+                    <td style="text-align: center;">${index + 1}</td>
+                    <td class="col-id"><strong>${item.numero_pedido || "-"}</strong></td>
+                    <td class="col-carga">${item.numero_carga || "-"}</td>
+                    <td class="col-date">${fmtData(item.data_carga)}</td>
+                    <td class="col-date">${fmtData(item.data_faturamento)}</td>
+                    <td class="col-codigo">${item.codigo_cliente || "-"}</td>
+                    <td class="col-cliente">${limparNomeCliente(item.cliente)}</td>
                     <td class="col-pedido-supra"><strong>${item.pedido_supra || "-"}</strong></td>
-                    <td>${item.nota_fiscal || "-"}</td>
-                    <td class="tar">${fmtPeso(item.peso_liquido).replace(' kg', '')}</td>
+                    <td class="col-nf">${item.nota_fiscal || "-"}</td>
+                    <td class="tar col-peso">${fmtPeso(item.peso_liquido).replace(' kg', '')}</td>
                     <td class="tar col-money">${fmtMoney(item.valor_nota_fiscal)}</td>
                     <td class="tar col-money">${fmtMoney(item.valor_pedido)}</td>
                     <td class="tar col-money" style="color: ${parseFloat(item.diferenca_valores || 0).toFixed(2) != '0.00' ? 'var(--os-error)' : 'inherit'};">${fmtMoney(item.diferenca_valores)}</td>
