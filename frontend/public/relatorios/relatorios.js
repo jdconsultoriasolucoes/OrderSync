@@ -1311,6 +1311,18 @@ async function carregarPedidosDaCargaAtiva() {
             });
         }
 
+        // No relatório de romaneio de entrega, classificar a ordem do maior para o menor
+        if (window.activeRelatorio === "romaneio") {
+            ped.sort((a, b) => {
+                const valA = (a.ordem_carregamento !== null && a.ordem_carregamento !== undefined && a.ordem_carregamento !== '') ? Number(a.ordem_carregamento) : -Infinity;
+                const valB = (b.ordem_carregamento !== null && b.ordem_carregamento !== undefined && b.ordem_carregamento !== '') ? Number(b.ordem_carregamento) : -Infinity;
+                if (valA !== valB) {
+                    return valB - valA; // Do maior para o menor
+                }
+                return (Number(b.id_pedido) || 0) - (Number(a.id_pedido) || 0);
+            });
+        }
+
         // Calcular totais para os cabeçalhos
         const totalLiq = ped.reduce((sum, p) => sum + (parseFloat(p.peso_total) || 0), 0);
         const totalLiqStr = totalLiq.toLocaleString('pt-BR', {minimumFractionDigits: 0, maximumFractionDigits: 0});

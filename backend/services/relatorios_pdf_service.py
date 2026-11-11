@@ -252,7 +252,7 @@ def gerar_pdf_romaneio(db, carga_id: int) -> bytes:
         ) pw ON pw.id_pedido = p.id_pedido
         LEFT JOIN public.t_cadastro_cliente_v2 c ON c.cadastro_codigo_da_empresa::text = p.codigo_cliente
         WHERE cp.id_carga = :cid
-        ORDER BY cp.ordem_carregamento
+        ORDER BY cp.ordem_carregamento DESC NULLS LAST, p.id_pedido DESC
     """)
     pedidos = db.execute(sql_pedidos, {"cid": carga_id}).mappings().all()
 
@@ -642,7 +642,7 @@ def gerar_pdf_relatorio_completo(db, carga_id: int) -> bytes:
         ) pw ON pw.id_pedido = p.id_pedido
         LEFT JOIN public.t_cadastro_cliente_v2 c ON c.cadastro_codigo_da_empresa::text = p.codigo_cliente
         WHERE cp.id_carga = :cid
-        ORDER BY cp.ordem_carregamento
+        ORDER BY cp.ordem_carregamento DESC NULLS LAST, p.id_pedido DESC
     """)
     pedidos = db.execute(sql_pedidos, {"cid": carga_id}).mappings().all()
 
