@@ -79,6 +79,27 @@ let state = {
   statusList: [] // Cache de status
 };
 
+let activeLoads = [];
+let activeRetiradas = [];
+
+async function carregarCargasAtivas() {
+  try {
+    const [respCargas, respRetiradas] = await Promise.all([
+        fetch(`${API_BASE}/api/relatorios/cargas`, { headers: { 'Authorization': `Bearer ${window.Auth ? window.Auth.getToken() : ''}` } }),
+        fetch(`${API_BASE}/api/retiradas`, { headers: { 'Authorization': `Bearer ${window.Auth ? window.Auth.getToken() : ''}` } })
+    ]);
+    
+    if (respCargas.ok) {
+      activeLoads = await respCargas.json();
+    }
+    if (respRetiradas.ok) {
+      activeRetiradas = await respRetiradas.json();
+    }
+  } catch(e) {
+    console.error("Erro ao carregar cargas ativas", e);
+  }
+}
+
 // ---------------------- utils ----------------------
 function fmtMoney(v) {
   if (v == null) return "---";
@@ -102,6 +123,12 @@ function fmtDate(s) {
 
 function fmtDateOnly(s) {
   if (!s) return "---";
+  // Extrai manualmente a parte da data para evitar bug de fuso horário
+  const str = String(s);
+  const parts = str.split('T')[0].split(' ')[0].split('-');
+  if (parts.length === 3) {
+      return `${parts[2]}/${parts[1]}/${parts[0]}`;
+  }
   const d = new Date(s);
   return d.toLocaleDateString("pt-BR");
 }
@@ -109,19 +136,21 @@ function fmtDateOnly(s) {
 function getStatusBadge(status) {
   if (!status) return '<span class="status-badge status-aberto">---</span>';
   
-  // Normalizar: remover acentos e converter para maiúsculo para comparação robusta
-  const normalize = (str) => String(str || '').normalize("NFD").replace(/[\u0300-\u036f]/g, "").toUpperCase();
+  // Normalizar: remover acentos, converter para maiúsculo e trocar espaços por underline
+  const normalize = (str) => String(str || '').normalize("NFD").replace(/[\u0300-\u036f]/g, "").toUpperCase().replace(/\s+/g, '_');
   const s = normalize(status);
   
   if (s === 'ORCAMENTO') {
       return `<span class="status-badge" style="background-color: #fef3c7; color: #92400e; border: 1px solid #fcd34d;">Orçamento</span>`;
   }
   if (s === 'PEDIDO') return `<span class="status-badge status-env">Pedido</span>`;
-  if (s === 'FATURADO SUPRA') return `<span class="status-badge status-conf">Faturado Supra</span>`;
-  if (s === 'FATURADO DISPET') {
+  if (s === 'FATURADO_SUPRA') return `<span class="status-badge status-conf">Faturado Supra</span>`;
+  if (s === 'FATURADO_DISPET') {
       return `<span class="status-badge status-conf" style="background-color: #d1fae5; color: #065f46; border: 1px solid #6ee7b7;">Faturado Dispet</span>`;
   }
   if (s === 'CANCELADO') return `<span class="status-badge status-cancel">Cancelado</span>`;
+  if (s === 'ENTREGUE') return `<span class="status-badge" style="background-color: #dbeafe; color: #1e40af; border: 1px solid #93c5fd;">Entregue</span>`;
+  if (s === 'CARGA_EM_FORMACAO') return `<span class="status-badge" style="background-color: #e0e7ff; color: #3730a3; border: 1px solid #a5b4fc;">Carga em formação</span>`;
   
   return `<span class="status-badge status-aberto">${status}</span>`;
 }
@@ -219,7 +248,8 @@ async function loadStatus() {
 function getFilters() {
   const fFrom = document.getElementById("fFrom").value;
   const fTo = document.getElementById("fTo").value;
-  const fTabela = document.getElementById("fTabela").value || null;
+  const fFaturamentoFrom = document.getElementById("fFaturamentoFrom")?.value || null;
+  const fFaturamentoTo = document.getElementById("fFaturamentoTo")?.value || null;
   const fCliente = document.getElementById("fCliente").value || null;
   const fFornecedor = document.getElementById("fFornecedor").value || null;
   const fPedido = document.getElementById("fPedido")?.value || null;
@@ -233,14 +263,14 @@ function getFilters() {
     selStatusEl.selectedOptions
   ).map((o) => o.value) : [];
 
-  return { fFrom, fTo, fTabela, fCliente, fFornecedor, selStatus, fPedido, fPedidoSupra, fNotaFiscal, fCarga };
+  return { fFrom, fTo, fFaturamentoFrom, fFaturamentoTo, fCliente, fFornecedor, selStatus, fPedido, fPedidoSupra, fNotaFiscal, fCarga };
 }
 
 async function loadList(page = 1) {
   state.page = page;
   state.pageSize = window.innerWidth <= 768 ? 10 : 25;
 
-  const { fFrom, fTo, fTabela, fCliente, fFornecedor, selStatus, fPedido, fPedidoSupra, fNotaFiscal, fCarga } = getFilters();
+  const { fFrom, fTo, fFaturamentoFrom, fFaturamentoTo, fCliente, fFornecedor, selStatus, fPedido, fPedidoSupra, fNotaFiscal, fCarga } = getFilters();
   let fromISO = toISO(fFrom);
   let toISO_ = toISO(fTo);
 
@@ -254,10 +284,13 @@ async function loadList(page = 1) {
   }
 
   const params = new URLSearchParams();
-  params.set("from", fromISO);
-  params.set("to", toISO_);
-  params.set("date_from", fromISO); // compatibilidade
-  params.set("date_to", toISO_);    // compatibilidade
+  if (fromISO) params.set("from", fromISO);
+  if (toISO_) params.set("to", toISO_);
+  if (fromISO) params.set("date_from", fromISO); // compatibilidade
+  if (toISO_) params.set("date_to", toISO_);    // compatibilidade
+  
+  if (fFaturamentoFrom) params.set("faturamento_from", toISO(fFaturamentoFrom));
+  if (fFaturamentoTo) params.set("faturamento_to", toISO(fFaturamentoTo));
 
   // status
   if (selStatus && selStatus.length) {
@@ -268,7 +301,6 @@ async function loadList(page = 1) {
     }
   }
 
-  if (fTabela) params.set("tabela_nome", fTabela);
   if (fCliente) params.set("cliente", fCliente);
   if (fFornecedor) params.set("fornecedor", fFornecedor);
   if (fPedido) params.set("id_pedido", fPedido);
@@ -354,6 +386,7 @@ function renderTable(rows) {
       const dataPedido = row.data_pedido || row.created_at || row.data || row.dt;
       const cliente = row.cliente_nome || row.cliente || "---";
       const modalidade = row.modalidade ?? (row.usar_valor_com_frete ? "ENTREGA" : (row.usar_valor_com_frete === false ? "RETIRADA" : "---"));
+      const pesoLiquido = Number(row.peso_total ?? row.peso_liquido_calculado ?? 0);
       const valor = row.valor_total ?? row.total_pedido ?? row.total ?? 0;
       const status = row.status_codigo ?? row.status ?? "---";
       const tabela = row.tabela_preco_nome ?? row.tabela ?? row.tabela_nome ?? "---";
@@ -361,6 +394,25 @@ function renderTable(rows) {
       const link = row.link_url ?? row.link ?? null;
 
       const codigoCliente = row.cliente_codigo || "Não cadastrado";
+
+      // Determina a lista de cargas correta para a modalidade
+      let optionsList = (modalidade === "RETIRADA") ? activeRetiradas : activeLoads;
+
+      let foundLoad = false;
+      let loadOptions = `<option value="">---</option>`;
+      if (typeof optionsList !== 'undefined' && Array.isArray(optionsList)) {
+          optionsList.forEach(c => {
+              const num_option = c.numero_carga || c.numero_retirada;
+              const selected = (String(row.numero_carga) === String(num_option)) ? 'selected' : '';
+              if (selected) foundLoad = true;
+              loadOptions += `<option value="${c.id}" ${selected}>${num_option}</option>`;
+          });
+      }
+      if (row.numero_carga && !foundLoad) {
+          cargaHtml = `<span style="font-size: 0.8rem; color: #475569; font-weight: 600; background: #e2e8f0; padding: 2px 6px; border-radius: 4px; border: 1px solid #cbd5e1; display: inline-block;">${row.numero_carga} <span style="font-size: 0.7rem; font-weight: normal; color: #64748b;">(Finalizada)</span></span>`;
+      } else {
+          cargaHtml = `<select class="form-select form-select-sm" style="min-width: 70px; padding: 2px 4px; font-size: 0.8rem;" data-original-value="${row.numero_carga || ''}" onchange="changeCargaPedido(this, '${id}', '${modalidade}')">${loadOptions}</select>`;
+      }
 
       const tr = document.createElement("tr");
       tr.classList.add("row-click");
@@ -373,14 +425,15 @@ function renderTable(rows) {
           <td>${fmtDateOnly(row.data_faturamento)}</td>
           <td><a href="#" class="lnk-resumo" data-id="${id}">${id}</a></td>
           <td>${row.pedido_supra || '---'}</td>
+          <td>${row.nota_fiscal || '---'}</td>
           <td class="col-codigo">${codigoCliente}</td>
           <td>${cliente}</td>
           <td><span class="badge badge-gray">${modalidade}</span></td>
+          <td class="tar">${parseFloat(pesoLiquido.toFixed(3))} kg</td>
           <td class="tar">${fmtMoney(valor)}</td>
           <td class="td-status" id="td-status-${id}">${statusHtml}</td>
-          <td>${tabela}</td>
           <td>${fornecedor}</td>
-          <td>${row.numero_carga || '---'}</td>
+          <td>${cargaHtml}</td>
           <td class="tar td-actions" id="td-actions-${id}">
             
             <button class="os-btn os-btn-secondary os-btn-sm btn-edit-status" data-id="${id}" data-status="${status}">
@@ -423,6 +476,7 @@ function renderCards(rows) {
       const id = row.numero_pedido ?? row.id_pedido ?? row.pedido_id ?? row.id ?? row.numero;
       const dataPedido = row.data_pedido || row.created_at || row.data || row.dt;
       const cliente = row.cliente_nome || row.cliente || "---";
+      const pesoLiquido = Number(row.peso_total ?? row.peso_liquido_calculado ?? 0);
       const valor = row.valor_total ?? row.total_pedido ?? row.total ?? 0;
       const status = row.status_codigo ?? row.status ?? "---";
       const fornecedor = row.fornecedor ?? row.fornecedor_nome ?? "---";
@@ -444,6 +498,7 @@ function renderCards(rows) {
             <span><b>Ped. Supra:</b> ${row.pedido_supra || '-'}</span>
             <span><b>Nota Fiscal:</b> ${row.nota_fiscal || '-'}</span>
             <span><b>Data Fat:</b> ${fmtDateOnly(row.data_faturamento)}</span>
+            <span><b>Peso Líq:</b> ${parseFloat(pesoLiquido.toFixed(3))} kg</span>
           </div>
         </div>
         <div class="order-card-footer">
@@ -685,11 +740,12 @@ async function openResumo(id) {
   const btnSave = el.querySelector("#btnSaveFaturamento");
   if (btnSave) {
     btnSave.addEventListener("click", async () => {
-      const supra = document.getElementById("editSupra").value;
-      const nf = document.getElementById("editNF").value;
-      const dataFat = document.getElementById("editDataFat")?.value || null;
-      const valorNota = document.getElementById("editValorNota")?.value || null;
-      await saveCamposFaturamento(id, supra, nf, btnSave, dataFat, valorNota ? parseFloat(valorNota) : null);
+      const supra = document.getElementById("editSupra")?.value || "";
+      const nf = document.getElementById("editNF")?.value || "";
+      const dataFat = document.getElementById("editDataFat")?.value || "";
+      const valNotaEl = document.getElementById("editValorNota");
+      const valorNota = (valNotaEl && valNotaEl.value !== "") ? parseFloat(valNotaEl.value) : null;
+      await saveCamposFaturamento(id, supra, nf, btnSave, dataFat, valorNota);
     });
   }
 
@@ -771,9 +827,12 @@ async function saveCamposFaturamento(id, supra, nf, btn, dataFat = null, valorNo
   btn.disabled = true;
 
   try {
-    const body = { pedido_supra: supra, nota_fiscal: nf };
-    if (dataFat) body.data_faturamento = dataFat;
-    if (valorNota !== null) body.valor_nota = valorNota;
+    const body = { 
+      pedido_supra: supra, 
+      nota_fiscal: nf,
+      data_faturamento: dataFat !== null ? dataFat : "",
+      valor_nota: valorNota !== null ? valorNota : null
+    };
 
     const r = await fetch(API.camposFaturamento(id), {
       method: "PATCH",
@@ -790,8 +849,8 @@ async function saveCamposFaturamento(id, supra, nf, btn, dataFat = null, valorNo
       if (row) {
         row.pedido_supra = supra;
         row.nota_fiscal = nf;
-        if (dataFat) row.data_faturamento = dataFat;
-        if (valorNota !== null) row.valor_nota = valorNota;
+        row.data_faturamento = dataFat;
+        row.valor_nota = valorNota;
       }
       
       // Opcional: recarrega a tabela para atualizar a coluna visualmente
@@ -804,13 +863,19 @@ async function saveCamposFaturamento(id, supra, nf, btn, dataFat = null, valorNo
         btn.style.backgroundColor = "";
       }, 2000);
     } else {
-      const txt = await r.text();
-      alert("Erro ao salvar: " + txt);
+      let errMsg = "Erro ao salvar";
+      try {
+        const errJson = await r.json();
+        errMsg = errJson.detail || errMsg;
+      } catch (_) {
+        errMsg = await r.text();
+      }
+      showPremiumAlert(errMsg);
       btn.innerText = originalText;
       btn.disabled = false;
     }
   } catch (e) {
-    alert("Erro de conexão: " + e.message);
+    showPremiumAlert("Erro de conexão: " + e.message);
     btn.innerText = originalText;
     btn.disabled = false;
   }
@@ -843,7 +908,7 @@ async function exportarCSV() {
 
   try {
     const params = new URLSearchParams(); // Simplificado ou usar buildParams
-    const { fFrom, fTo, fTabela, fCliente, fFornecedor, selStatus } = getFilters();
+    const { fFrom, fTo, fFaturamentoFrom, fFaturamentoTo, fCliente, fFornecedor, selStatus } = getFilters();
     // ... replica logica de params do loadList ... ou apenas chama loadList com limit huge?
     // Melhor replicar rapido para garantir
     let fromISO = toISO(fFrom);
@@ -859,10 +924,11 @@ async function exportarCSV() {
     // ok vou confiar que o usuario ja tem a funcao getFilters e ela retorna o que precisa.
 
     // REPLICA BUILD PARAMS
-    params.set("from", fromISO);
-    params.set("to", toISO_);
+    if (fromISO) params.set("from", fromISO);
+    if (toISO_) params.set("to", toISO_);
+    if (fFaturamentoFrom) params.set("faturamento_from", toISO(fFaturamentoFrom));
+    if (fFaturamentoTo) params.set("faturamento_to", toISO(fFaturamentoTo));
     if (selStatus && selStatus.length) params.set("status", selStatus.join(","));
-    if (fTabela) params.set("tabela_nome", fTabela);
     if (fCliente) params.set("cliente", fCliente);
     if (fFornecedor) params.set("fornecedor", fFornecedor);
 
@@ -875,14 +941,15 @@ async function exportarCSV() {
     if (!data.length) { alert("Nadinha para exportar."); return; }
 
     const rows = groupByPedido(data);
-    let csv = "ID;Data Pedido;Data Faturamento;Cliente;Modalidade;Valor Total;Status;Tabela;Fornecedor;Link\n";
+    let csv = "ID;Data Pedido;Data Faturamento;Cliente;Modalidade;Peso Líquido Total (kg);Valor Total;Status;Tabela;Fornecedor;Link\n";
     rows.forEach(row => {
       const id = row.numero_pedido ?? row.id_pedido ?? "";
       const dt = new Date(row.data_pedido || row.created_at).toLocaleDateString();
       const dtFat = row.data_faturamento ? new Date(row.data_faturamento).toLocaleDateString() : "";
       const cli = (row.cliente_nome || "").replace(/;/g, ",");
+      const peso = (row.peso_total ?? row.peso_liquido_calculado ?? 0).toString().replace(".", ",");
       const val = (row.valor_total || 0).toString().replace(".", ",");
-      csv += `${id};${dt};${dtFat};${cli};${row.modalidade || ""};${val};${row.status_codigo || ""};${row.tabela_preco_nome || ""};${row.fornecedor || ""};${row.link_url || ""}\n`;
+      csv += `${id};${dt};${dtFat};${cli};${row.modalidade || ""};${peso};${val};${row.status_codigo || ""};${row.tabela_preco_nome || ""};${row.fornecedor || ""};${row.link_url || ""}\n`;
     });
 
     const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
@@ -1116,7 +1183,7 @@ function bindUI() {
   // Busca dinâmica (Debounced)
   const doSearch = debounce(() => loadList(1), 500);
 
-  const inputs = ["fTabela", "fCliente", "fFornecedor", "fPedido", "fPedidoSupra", "fNotaFiscal"];
+  const inputs = ["fCliente", "fFornecedor", "fPedido", "fPedidoSupra", "fNotaFiscal"];
   inputs.forEach(id => {
     document.getElementById(id)?.addEventListener("input", doSearch);
   });
@@ -1218,7 +1285,6 @@ function bindUI() {
 }
 
 function limparFiltros() {
-  document.getElementById("fTabela").value = "";
   document.getElementById("fCliente").value = "";
   document.getElementById("fFornecedor").value = "";
   const fped = document.getElementById("fPedido"); if (fped) fped.value = "";
@@ -1226,6 +1292,9 @@ function limparFiltros() {
   const fnf = document.getElementById("fNotaFiscal"); if (fnf) fnf.value = "";
   const fs = document.getElementById("fStatus"); if (fs) fs.value = "";
   const fp = document.getElementById("fPeriodoRapido"); if (fp) fp.value = "30";
+  
+  const fFatFrom = document.getElementById("fFaturamentoFrom"); if (fFatFrom) fFatFrom.value = "";
+  const fFatTo = document.getElementById("fFaturamentoTo"); if (fFatTo) fFatTo.value = "";
 
   // reset dates default
   const hoje = new Date();
@@ -1250,6 +1319,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 
   bindUI();
   await loadStatus();
+  await carregarCargasAtivas();
 
   // Initial Load
   const pEl = document.getElementById("fPeriodoRapido");
@@ -1286,3 +1356,46 @@ async function deletarPedido(id) {
     }
 }
 
+async function changeCargaPedido(selectEl, idPedido, modalidade) {
+    const idCarga = selectEl.value;
+    if (idCarga === "closed") return;
+    
+    const originalValue = selectEl.getAttribute('data-original-value') || "";
+    selectEl.disabled = true;
+    try {
+        const r = await fetch(`${API_BASE}/api/pedidos/${idPedido}/carga`, {
+            method: "PUT",
+            headers: { 
+                "Content-Type": "application/json",
+                "Authorization": `Bearer ${window.Auth ? window.Auth.getToken() : ''}`
+            },
+            body: JSON.stringify({ id_carga: idCarga ? parseInt(idCarga) : null, modalidade: modalidade || "ENTREGA" })
+        });
+        if (!r.ok) {
+            throw new Error(await r.text());
+        }
+        
+        // Atualiza a tabela
+        const opt = selectEl.options[selectEl.selectedIndex];
+        selectEl.setAttribute('data-original-value', opt.text === "---" ? "" : opt.text);
+        
+        // Update local state if needed
+        const row = state.rows.find(r => String(r.numero_pedido || r.id_pedido || r.id) === String(idPedido));
+        if (row) {
+             row.numero_carga = opt.text === "---" ? null : opt.text;
+        }
+        
+        showPremiumAlert("Carga atualizada com sucesso!", "success");
+    } catch (e) {
+        showPremiumAlert("Erro ao alterar carga: " + e.message, "error");
+        // Reverter seleção
+        for(let i=0; i<selectEl.options.length; i++) {
+            if(selectEl.options[i].text === originalValue || (originalValue === "" && selectEl.options[i].value === "")) {
+                selectEl.selectedIndex = i;
+                break;
+            }
+        }
+    } finally {
+        selectEl.disabled = false;
+    }
+}

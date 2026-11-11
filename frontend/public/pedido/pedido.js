@@ -386,6 +386,7 @@ function renderTable(rows) {
       const dataPedido = row.data_pedido || row.created_at || row.data || row.dt;
       const cliente = row.cliente_nome || row.cliente || "---";
       const modalidade = row.modalidade ?? (row.usar_valor_com_frete ? "ENTREGA" : (row.usar_valor_com_frete === false ? "RETIRADA" : "---"));
+      const pesoLiquido = Number(row.peso_total ?? row.peso_liquido_calculado ?? 0);
       const valor = row.valor_total ?? row.total_pedido ?? row.total ?? 0;
       const status = row.status_codigo ?? row.status ?? "---";
       const tabela = row.tabela_preco_nome ?? row.tabela ?? row.tabela_nome ?? "---";
@@ -428,6 +429,7 @@ function renderTable(rows) {
           <td class="col-codigo">${codigoCliente}</td>
           <td>${cliente}</td>
           <td><span class="badge badge-gray">${modalidade}</span></td>
+          <td class="tar">${parseFloat(pesoLiquido.toFixed(3))} kg</td>
           <td class="tar">${fmtMoney(valor)}</td>
           <td class="td-status" id="td-status-${id}">${statusHtml}</td>
           <td>${fornecedor}</td>
@@ -474,6 +476,7 @@ function renderCards(rows) {
       const id = row.numero_pedido ?? row.id_pedido ?? row.pedido_id ?? row.id ?? row.numero;
       const dataPedido = row.data_pedido || row.created_at || row.data || row.dt;
       const cliente = row.cliente_nome || row.cliente || "---";
+      const pesoLiquido = Number(row.peso_total ?? row.peso_liquido_calculado ?? 0);
       const valor = row.valor_total ?? row.total_pedido ?? row.total ?? 0;
       const status = row.status_codigo ?? row.status ?? "---";
       const fornecedor = row.fornecedor ?? row.fornecedor_nome ?? "---";
@@ -495,6 +498,7 @@ function renderCards(rows) {
             <span><b>Ped. Supra:</b> ${row.pedido_supra || '-'}</span>
             <span><b>Nota Fiscal:</b> ${row.nota_fiscal || '-'}</span>
             <span><b>Data Fat:</b> ${fmtDateOnly(row.data_faturamento)}</span>
+            <span><b>Peso Líq:</b> ${parseFloat(pesoLiquido.toFixed(3))} kg</span>
           </div>
         </div>
         <div class="order-card-footer">
@@ -937,14 +941,15 @@ async function exportarCSV() {
     if (!data.length) { alert("Nadinha para exportar."); return; }
 
     const rows = groupByPedido(data);
-    let csv = "ID;Data Pedido;Data Faturamento;Cliente;Modalidade;Valor Total;Status;Tabela;Fornecedor;Link\n";
+    let csv = "ID;Data Pedido;Data Faturamento;Cliente;Modalidade;Peso Líquido Total (kg);Valor Total;Status;Tabela;Fornecedor;Link\n";
     rows.forEach(row => {
       const id = row.numero_pedido ?? row.id_pedido ?? "";
       const dt = new Date(row.data_pedido || row.created_at).toLocaleDateString();
       const dtFat = row.data_faturamento ? new Date(row.data_faturamento).toLocaleDateString() : "";
       const cli = (row.cliente_nome || "").replace(/;/g, ",");
+      const peso = (row.peso_total ?? row.peso_liquido_calculado ?? 0).toString().replace(".", ",");
       const val = (row.valor_total || 0).toString().replace(".", ",");
-      csv += `${id};${dt};${dtFat};${cli};${row.modalidade || ""};${val};${row.status_codigo || ""};${row.tabela_preco_nome || ""};${row.fornecedor || ""};${row.link_url || ""}\n`;
+      csv += `${id};${dt};${dtFat};${cli};${row.modalidade || ""};${peso};${val};${row.status_codigo || ""};${row.tabela_preco_nome || ""};${row.fornecedor || ""};${row.link_url || ""}\n`;
     });
 
     const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });

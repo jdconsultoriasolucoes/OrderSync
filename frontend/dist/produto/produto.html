@@ -133,10 +133,11 @@
         </ul>
         <div class="os-sidebar-section">Sistema</div>
         <ul>
-            <li><a href="/config_email/config_email.html">
+            
+            <li><a href="/configuracoes.html">
                     <svg class="os-nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                        <path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z" />
-                    </svg> Configuração E-mail
+                        <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path>
+                    </svg> Configurações
                 </a></li>
             <li><a href="/profile/profile.html">
                     <svg class="os-nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
@@ -144,12 +145,7 @@
                         <circle cx="12" cy="7" r="4" />
                     </svg> Profile
                 </a></li>
-            <li><a href="/usuarios.html">
-                    <svg class="os-nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                        <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" />
-                        <circle cx="12" cy="7" r="4" />
-                    </svg> Usuários
-                </a></li>
+            
             <li><a href="#" onclick="window.Auth.openChangePasswordModal()">
                     <svg class="os-nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                         <rect x="3" y="11" width="18" height="11" rx="2" ry="2" />
@@ -251,7 +247,9 @@
         </div>
         <div class="col-3">
           <label for="fornecedor">Fornecedor</label>
-          <input id="fornecedor" type="text" />
+          <select id="fornecedor">
+            <option value="">Selecione...</option>
+          </select>
         </div>
       </div>
 
@@ -474,6 +472,17 @@
             </tbody>
           </table>
         </div>
+
+        <!-- Controles de Paginação -->
+        <div id="pagination-controls" style="display: none; justify-content: space-between; align-items: center; margin-top: 15px; padding: 10px; background: #f9fafb; border: 1px solid #e5e7eb; border-radius: 4px;">
+          <div id="pagination-info" style="font-size: 14px; color: #6b7280;"></div>
+          <div style="display: flex; gap: 5px; flex-wrap: wrap; justify-content: center;">
+            <button id="btn-prev-page" class="ghost" style="padding: 5px 10px; cursor: pointer;" onclick="window.mudarPaginaEstoque(-1)">Anterior</button>
+            <span id="pagination-pages" style="display: flex; gap: 5px; flex-wrap: wrap; justify-content: center;"></span>
+            <button id="btn-next-page" class="ghost" style="padding: 5px 10px; cursor: pointer;" onclick="window.mudarPaginaEstoque(1)">Próxima</button>
+          </div>
+        </div>
+
       </div>
     </div> <!-- Fim de tab-relatorio -->
 
@@ -513,6 +522,14 @@
           <div class="col-12">
             <label for="import_arquivo">Arquivo PDF</label>
             <input id="import_arquivo" type="file" accept="application/pdf" />
+          </div>
+
+          <div class="col-12">
+            <label for="import_atualizar_tabelas">Atualizar Tabelas?</label>
+            <select id="import_atualizar_tabelas">
+              <option value="sim">Sim</option>
+              <option value="nao">Não</option>
+            </select>
           </div>
         </div>
         <div class="hint">
@@ -657,7 +674,7 @@
 
   <!-- Modal de pesquisa -->
   <div id="search-modal" class="custom-modal hidden">
-    <div class="custom-modal-dialog">
+    <div class="custom-modal-dialog" style="max-width: 1280px; width: min(1280px, 96vw);">
       <div class="custom-modal-header">
         <div class="custom-modal-title">Pesquisar produto</div>
         <button id="search-close" class="icon-btn" title="Fechar">&times;</button>

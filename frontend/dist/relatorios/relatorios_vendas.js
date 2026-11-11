@@ -16,8 +16,26 @@ const selStatus = document.getElementById("filtro-status");
 const selMunicipio = document.getElementById("filtro-municipio");
 const selGrupo = document.getElementById("filtro-grupo");
 const divFiltroGrupo = document.getElementById("campo-filtro-grupo");
+const selTipoEntrega = document.getElementById("filtro-tipo-entrega");
+const divFiltroTipoEntrega = document.getElementById("campo-filtro-tipo-entrega");
 
-const btnFiltrar = document.getElementById("btn-filtrar");
+// Elementos Filtro Validação Faturamento 2
+const inVal2Pedido = document.getElementById("filtro-validacao2-pedido");
+const inVal2Carga = document.getElementById("filtro-validacao2-carga");
+const inVal2CargaInicio = document.getElementById("filtro-validacao2-carga-inicio");
+const inVal2CargaFim = document.getElementById("filtro-validacao2-carga-fim");
+
+// Elementos Filtro Gerencial
+const inGerencialCodigo = document.getElementById("filtro-gerencial-codigo");
+const inGerencialDoc = document.getElementById("filtro-gerencial-documento");
+const inGerencialNome = document.getElementById("filtro-gerencial-nome");
+const selGerencialMun = document.getElementById("filtro-gerencial-municipio");
+const selGerencialVend = document.getElementById("filtro-gerencial-vendedor");
+const inGerencialDataInicio = document.getElementById("filtro-gerencial-data-inicio");
+const inGerencialDataFim = document.getElementById("filtro-gerencial-data-fim");
+const inGerencialObs = document.getElementById("filtro-gerencial-observacao");
+const selGerencialStatus = document.getElementById("filtro-gerencial-status");
+
 const btnLimpar = document.getElementById("btn-limpar-filtros");
 const btnExportar = document.getElementById("btn-exportar-excel");
 
@@ -29,7 +47,20 @@ const emptyStateEl = document.getElementById("empty-state");
 
 const txtTitulo = document.getElementById("titulo-relatorio-principal");
 
-const menuButtons = document.querySelectorAll("#relatorios-menu-vendas button");
+const menuButtons = document.querySelectorAll(".relatorios-menu button");
+
+// Elementos Filtro Gerencial 3
+const inG3Cod = document.getElementById("filtro-gerencial3-codigo");
+const inG3Nome = document.getElementById("filtro-gerencial3-nome");
+const selG3Meses = document.getElementById("filtro-gerencial3-meses");
+const selG3Filial = document.getElementById("filtro-gerencial3-filial");
+const selG3Categoria = document.getElementById("filtro-gerencial3-categoria");
+const selG3Vendedor = document.getElementById("filtro-gerencial3-vendedor");
+const selG3Municipio = document.getElementById("filtro-gerencial3-municipio");
+const selG3RotaG = document.getElementById("filtro-gerencial3-rotag");
+const selG3RotaA = document.getElementById("filtro-gerencial3-rotaa");
+const selG3Status = document.getElementById("filtro-gerencial3-status");
+const selG3TipoEntrega = document.getElementById("filtro-gerencial3-tipo-entrega");
 
 // State
 let activeReport = "cliente"; // "cliente" ou "produto"
@@ -38,6 +69,8 @@ let sortState = {
     col: null,
     desc: false
 };
+let todosMunicipios = [];
+let rotasMunicipiosMap = {};
 
 // Formatter Helpers
 function fmtMoney(val) {
@@ -51,12 +84,45 @@ function fmtPeso(val) {
 }
 
 function fmtData(dateStr) {
-    if (!dateStr) return "-";
-    const parts = dateStr.split('-');
-    if (parts.length === 3) {
-        return `${parts[2]}/${parts[1]}/${parts[0]}`;
+    if (!dateStr || dateStr === "None" || dateStr === "null") return "-";
+    if (typeof dateStr !== "string") {
+        try {
+            dateStr = dateStr.toISOString();
+        } catch(e) {
+            dateStr = String(dateStr);
+        }
     }
-    return dateStr;
+    // Remove qualquer porção de hora (T00:00:00 ou espaço 00:00:00)
+    const clean = dateStr.trim().split('T')[0].split(' ')[0];
+    if (clean.includes('-')) {
+        const parts = clean.split('-');
+        if (parts.length === 3) {
+            const y = parts[0].padStart(4, '0');
+            const m = parts[1].padStart(2, '0');
+            const d = parts[2].padStart(2, '0');
+            if (parts[0].length === 4) {
+                return `${d}/${m}/${y}`;
+            }
+        }
+    } else if (clean.includes('/')) {
+        const parts = clean.split('/');
+        if (parts.length === 3) {
+            return `${parts[0].padStart(2, '0')}/${parts[1].padStart(2, '0')}/${parts[2]}`;
+        }
+    }
+    return clean || "-";
+}
+
+function limparNomeCliente(nome) {
+    if (!nome) return "-";
+    return nome.replace(/\s*-\s*(\d{2,3}\.\d{3}\.\d{3}(\/\d{4})?-\d{2})$/, '').trim();
+}
+
+function fmtDoc(s) {
+    const d = String(s || '').replace(/\D/g, '');
+    if (d.length === 14) return d.replace(/^(\d{2})(\d{3})(\d{3})(\d{4})(\d{2})$/, '$1.$2.$3/$4-$5');
+    if (d.length === 11) return d.replace(/^(\d{3})(\d{3})(\d{3})(\d{2})$/, '$1.$2.$3-$4');
+    return s || '';
 }
 
 document.addEventListener("DOMContentLoaded", async () => {
@@ -81,10 +147,26 @@ document.addEventListener("DOMContentLoaded", async () => {
             e.currentTarget.classList.add("active");
             
             activeReport = e.currentTarget.dataset.report;
-            sortState = { col: null, desc: false }; // reseta ordenação
+            if (activeReport === "gerencial3") {
+                sortState = { col: "previsao_proxima_compra", desc: true };
+            } else {
+                sortState = { col: null, desc: false }; // reseta ordenação
+            }
             
             alternarRelatorioUI();
-            await buscarDadosRelatorio();
+            
+    if (inG3Cod) inG3Cod.value = "";
+    if (inG3Nome) inG3Nome.value = "";
+    if (selG3Filial) selG3Filial.value = "";
+    if (selG3Categoria) selG3Categoria.value = "";
+    if (selG3Vendedor) selG3Vendedor.value = "";
+    if (selG3Municipio) selG3Municipio.value = "";
+    if (selG3RotaG) selG3RotaG.value = "";
+    if (selG3RotaA) selG3RotaA.value = "";
+    if (selG3Status) selG3Status.value = "";
+    if (selG3TipoEntrega) selG3TipoEntrega.value = "";
+
+    await buscarDadosRelatorio();
         });
     });
 
@@ -95,22 +177,85 @@ document.addEventListener("DOMContentLoaded", async () => {
     alternarRelatorioUI();
 
     // 5. Executar primeira busca automática
+    
+    if (inG3Cod) inG3Cod.value = "";
+    if (inG3Nome) inG3Nome.value = "";
+    if (selG3Filial) selG3Filial.value = "";
+    if (selG3Categoria) selG3Categoria.value = "";
+    if (selG3Vendedor) selG3Vendedor.value = "";
+    if (selG3Municipio) selG3Municipio.value = "";
+    if (selG3RotaG) selG3RotaG.value = "";
+    if (selG3RotaA) selG3RotaA.value = "";
+    if (selG3Status) selG3Status.value = "";
+    if (selG3TipoEntrega) selG3TipoEntrega.value = "";
+
     await buscarDadosRelatorio();
 
     // 6. Registrar Listeners de Ações
-    btnFiltrar.addEventListener("click", buscarDadosRelatorio);
     btnLimpar.addEventListener("click", limparTodosFiltros);
     btnExportar.addEventListener("click", exportarExcel);
+
+    if (selG3RotaG) {
+        selG3RotaG.addEventListener("change", () => {
+            atualizarFiltroMunicipiosG3();
+        });
+    }
+
+    // 7. Auto-filtragem nos inputs e selects
+    let debounceTimer;
+    document.querySelectorAll('.filtro-campo .os-input, .filtro-campo .os-select').forEach(el => {
+        const evType = (el.tagName === 'SELECT' || el.type === 'date') ? 'change' : 'input';
+        el.addEventListener(evType, () => {
+            clearTimeout(debounceTimer);
+            debounceTimer = setTimeout(() => {
+                buscarDadosRelatorio();
+            }, 600);
+        });
+    });
 });
 
 /**
  * Altera cabeçalhos, títulos e visibilidade dos filtros conforme relatório ativo
  */
 function alternarRelatorioUI() {
+    // Alterna a visibilidade dos campos de filtro
+    const todosFiltros = document.querySelectorAll(".filtro-campo");
+    todosFiltros.forEach(f => {
+        if (f.classList.contains("filtro-gerencial")) {
+            f.style.display = (activeReport === "gerencial") ? "flex" : "none";
+        } else if (f.classList.contains("filtro-gerencial2")) {
+            f.style.display = (activeReport === "gerencial2") ? "flex" : "none";
+        } else if (f.classList.contains("filtro-gerencial3")) {
+            f.style.display = (activeReport === "gerencial3") ? "flex" : "none";
+        } else {
+            if (activeReport === "validacao") {
+                const showIds = ["campo-filtro-filial", "campo-filtro-categoria", "campo-filtro-faturamento", "campo-filtro-tipo-entrega"];
+                f.style.display = showIds.includes(f.id) ? "flex" : "none";
+            } else if (activeReport === "validacao2") {
+                const showIds = [
+                    "campo-filtro-filial", 
+                    "campo-filtro-categoria", 
+                    "campo-filtro-faturamento", 
+                    "campo-filtro-tipo-entrega",
+                    "campo-filtro-validacao2-pedido",
+                    "campo-filtro-validacao2-carga",
+                    "campo-filtro-validacao2-data-carga"
+                ];
+                f.style.display = showIds.includes(f.id) ? "flex" : "none";
+            } else {
+                if (f.id === "campo-filtro-grupo") {
+                    f.style.display = activeReport === "produto" ? "flex" : "none";
+                } else if (f.id === "campo-filtro-tipo-entrega" || f.id.startsWith("campo-filtro-validacao2-")) {
+                    f.style.display = "none";
+                } else {
+                    f.style.display = (activeReport === "gerencial" || activeReport === "gerencial2" || activeReport === "gerencial3") ? "none" : "flex";
+                }
+            }
+        }
+    });
+
     if (activeReport === "cliente") {
         txtTitulo.textContent = "Relatório de Vendas por Cliente";
-        divFiltroGrupo.style.display = "none";
-        selGrupo.value = ""; // limpa filtro de grupo
         
         // Cabeçalhos para Vendas por Cliente com Linha de Totais no Topo
         tableHeaders.innerHTML = `
@@ -135,9 +280,8 @@ function alternarRelatorioUI() {
                 <td class="tar col-money" id="total-valor-com" style="font-weight: bold; border-bottom: 2px solid var(--os-border);">R$ 0,00</td>
             </tr>
         `;
-    } else {
+    } else if (activeReport === "produto") {
         txtTitulo.textContent = "Relatório de Vendas por Produto";
-        divFiltroGrupo.style.display = "flex";
         
         // Cabeçalhos para Vendas por Produto com Linha de Totais no Topo
         tableHeaders.innerHTML = `
@@ -159,10 +303,183 @@ function alternarRelatorioUI() {
                 <td class="tar col-money" id="total-valor-com" style="font-weight: bold; border-bottom: 2px solid var(--os-border);">R$ 0,00</td>
             </tr>
         `;
+    } else if (activeReport === "validacao") {
+        txtTitulo.textContent = "Validação Faturamento";
+        
+        // Cabeçalhos para Validação Faturamento
+        tableHeaders.innerHTML = `
+            <tr>
+                <th>#</th>
+                <th data-sort="data_faturamento">Data Faturamento</th>
+                <th data-sort="codigo_cliente">Código Cliente</th>
+                <th data-sort="cliente">Cliente</th>
+                <th data-sort="pedido_supra" class="col-pedido-supra">Pedido Supra</th>
+                <th data-sort="nota_fiscal">Nota Fiscal</th>
+                <th data-sort="peso_liquido" class="tar">Peso Líquido (kg)</th>
+                <th data-sort="valor_nota_fiscal" class="tar col-money">Valor NF</th>
+                <th data-sort="valor_pedido" class="tar col-money">Valor Pedido</th>
+                <th data-sort="diferenca_valores" class="tar col-money">Diferença</th>
+            </tr>
+            <tr style="background-color: #f1f5f9; font-weight: bold; position: sticky; top: 38px; z-index: 14; box-shadow: 0 1px 2px rgba(0,0,0,0.05);">
+                <td colspan="6" style="text-align: left; padding: 10px 16px; font-weight: bold; border-bottom: 2px solid var(--os-border);">Total Acumulado</td>
+                <td class="tar" id="total-peso" style="font-weight: bold; border-bottom: 2px solid var(--os-border);">0 kg</td>
+                <td class="tar col-money" id="total-valor-nf" style="font-weight: bold; border-bottom: 2px solid var(--os-border);">R$ 0,00</td>
+                <td class="tar col-money" id="total-valor-pedido" style="font-weight: bold; border-bottom: 2px solid var(--os-border);">R$ 0,00</td>
+                <td class="tar col-money" id="total-diferenca" style="font-weight: bold; border-bottom: 2px solid var(--os-border);">R$ 0,00</td>
+            </tr>
+        `;
+    } else if (activeReport === "validacao2") {
+        txtTitulo.textContent = "Relatório por Carga";
+        
+        // Cabeçalhos para Relatório por Carga (com Nº Pedido, Nº Carga e Data Carga)
+        tableHeaders.innerHTML = `
+            <tr>
+                <th>#</th>
+                <th data-sort="numero_pedido">Nº Pedido</th>
+                <th data-sort="numero_carga">Nº Carga</th>
+                <th data-sort="data_carga">Data Carga</th>
+                <th data-sort="data_faturamento">Data Faturamento</th>
+                <th data-sort="codigo_cliente">Código Cliente</th>
+                <th data-sort="cliente">Cliente</th>
+                <th data-sort="pedido_supra" class="col-pedido-supra">Pedido Supra</th>
+                <th data-sort="nota_fiscal">Nota Fiscal</th>
+                <th data-sort="peso_liquido" class="tar">Peso Líquido (kg)</th>
+                <th data-sort="valor_nota_fiscal" class="tar col-money">Valor NF</th>
+                <th data-sort="valor_pedido" class="tar col-money">Valor Pedido</th>
+                <th data-sort="diferenca_valores" class="tar col-money">Diferença</th>
+            </tr>
+            <tr style="background-color: #f1f5f9; font-weight: bold; position: sticky; top: 38px; z-index: 14; box-shadow: 0 1px 2px rgba(0,0,0,0.05);">
+                <td colspan="9" style="text-align: left; padding: 10px 16px; font-weight: bold; border-bottom: 2px solid var(--os-border);">Total Acumulado</td>
+                <td class="tar" id="total-peso" style="font-weight: bold; border-bottom: 2px solid var(--os-border);">0 kg</td>
+                <td class="tar col-money" id="total-valor-nf" style="font-weight: bold; border-bottom: 2px solid var(--os-border);">R$ 0,00</td>
+                <td class="tar col-money" id="total-valor-pedido" style="font-weight: bold; border-bottom: 2px solid var(--os-border);">R$ 0,00</td>
+                <td class="tar col-money" id="total-diferenca" style="font-weight: bold; border-bottom: 2px solid var(--os-border);">R$ 0,00</td>
+            </tr>
+        `;
+    } else if (activeReport === "gerencial") {
+        txtTitulo.textContent = "Relatório Gerencial";
+        
+        // Cabeçalhos para Relatório Gerencial
+        tableHeaders.innerHTML = `
+            <tr>
+                <th>#</th>
+                <th data-sort="documento" style="white-space: nowrap;">CNPJ/CPF</th>
+                <th data-sort="nome_cliente">Nome Cliente</th>
+                <th data-sort="atividade_principal">Atividade Principal</th>
+                <th data-sort="municipio">Município</th>
+                <th data-sort="vendedor">Vendedor</th>
+                <th data-sort="data_ultima_compra">Data Última Compra</th>
+                <th data-sort="observacao">Observação</th>
+            </tr>
+        `;
+    } else if (activeReport === "gerencial3") {
+        txtTitulo.textContent = "Relatório Gerencial 3";
+        
+        const mesesSel = document.getElementById("filtro-gerencial3-meses");
+        const qtdeMeses = mesesSel ? parseInt(mesesSel.value) : 12;
+        gerencial3Meses = generateLastXMonths(qtdeMeses);
+        
+        let htmlHeader1 = `<tr>
+            <th rowspan="2" style="width: 40px; min-width: 40px; border-right: 1px solid var(--os-border);">#</th>
+            <th rowspan="2" data-sort="codigo_cliente" style="min-width: 100px; border-right: 1px solid var(--os-border);">Cód. Cliente</th>
+            <th rowspan="2" data-sort="cliente" style="min-width: 250px; border-right: 1px solid var(--os-border);">Cliente</th>
+            <th rowspan="2" data-sort="periodo_de_compra" style="min-width: 140px; border-right: 1px solid var(--os-border); text-align: center;">Período de Compra (Em dias)</th>
+            <th rowspan="2" data-sort="previsao_proxima_compra" style="min-width: 150px; border-right: 1px solid var(--os-border); text-align: center;">Previsão Próxima Compra</th>
+            <th rowspan="2" data-sort="data_ultima_compra_geral" style="min-width: 120px; border-right: 1px solid var(--os-border); text-align: center;">Data Última Compra</th>`;
+        let htmlHeader2 = `<tr>`;
+        
+        gerencial3Meses.forEach((m, i) => {
+            const [ano, mes] = m.split('-');
+            const borderLeft = "border-left: 2px solid #cbd5e1;";
+            htmlHeader1 += `<th colspan="2" style="text-align: center; border-bottom: 1px solid var(--os-border); background-color: #f8fafc; ${borderLeft}">${mes}/${ano}</th>`;
+            htmlHeader2 += `<th class="tar" style="${borderLeft}">Peso (kg)</th><th class="tar col-money">Valor (R$)</th>`;
+        });
+        
+        htmlHeader1 += `</tr>`;
+        htmlHeader2 += `</tr>`;
+        
+        tableHeaders.innerHTML = htmlHeader1 + htmlHeader2;
+    }
+
+    if (activeReport === "gerencial2") {
+        txtTitulo.textContent = "Relatório Gerencial 2 - Evolução de Vendas";
+        
+        const mesesSel = document.getElementById("filtro-gerencial2-meses");
+        const qtdeMeses = mesesSel ? parseInt(mesesSel.value) : 12;
+        gerencial2Meses = generateLastXMonths(qtdeMeses);
+        
+        let htmlHeader1 = `<tr>
+            <th rowspan="2" style="width: 40px; min-width: 40px; border-right: 1px solid var(--os-border);">#</th>
+            <th rowspan="2" data-sort="codigo_cliente" style="min-width: 100px; border-right: 1px solid var(--os-border);">Cód. Cliente</th>
+            <th rowspan="2" data-sort="cliente" style="min-width: 250px; border-right: 1px solid var(--os-border);">Cliente</th>`;
+        let htmlHeader2 = `<tr>`;
+        
+        gerencial2Meses.forEach((m, i) => {
+            const [ano, mes] = m.split('-');
+            const borderLeft = "border-left: 2px solid #cbd5e1;";
+            htmlHeader1 += `<th colspan="2" style="text-align: center; border-bottom: 1px solid var(--os-border); background-color: #f8fafc; ${borderLeft}">${mes}/${ano}</th>`;
+            htmlHeader2 += `<th class="tar" style="${borderLeft}">Peso (kg)</th><th class="tar col-money">Valor (R$)</th>`;
+        });
+        
+        htmlHeader1 += `</tr>`;
+        htmlHeader2 += `</tr>`;
+        
+        tableHeaders.innerHTML = htmlHeader1 + htmlHeader2;
     }
 
     // Registrar clique de ordenação interativa nas novas colunas injetadas
     registrarOrdenacaoTabela();
+}
+
+/**
+ * Atualiza as opções do filtro de municípios no Relatório Gerencial 3
+ * limitando aos municípios da rota selecionada conforme catálogo (tb_municipio_rota).
+ * Se nenhuma rota for selecionada, exibe todos os municípios.
+ */
+function atualizarFiltroMunicipiosG3() {
+    if (!selG3Municipio) return;
+    const rotaVal = (selG3RotaG ? selG3RotaG.value : "").trim();
+    const rotaNum = rotaVal.toUpperCase().replace('ROTA', '').trim();
+    const valorAtualMunicipio = selG3Municipio.value;
+    
+    while (selG3Municipio.options.length > 1) {
+        selG3Municipio.remove(1);
+    }
+    
+    let lista = [];
+    if (!rotaNum) {
+        // Nenhuma rota filtrada: traz todos os municípios
+        lista = [...todosMunicipios];
+    } else {
+        // Rota filtrada: limita aos municípios que aquela rota faz parte
+        const cidadesRota = (rotasMunicipiosMap && (rotasMunicipiosMap[rotaNum] || rotasMunicipiosMap[rotaVal])) || [];
+        const norm = (s) => (s || '').toUpperCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/\s*\([A-Z]{2}\)/g, "").trim();
+        const cidadesRotaNorm = new Set(cidadesRota.map(norm));
+        
+        lista = todosMunicipios.filter(m => cidadesRotaNorm.has(norm(m)));
+        
+        // Adiciona municípios do catálogo que possam não estar ainda em todosMunicipios
+        cidadesRota.forEach(c => {
+            const cClean = c.replace(/\s*\([A-Za-z]{2}\)/g, '').trim();
+            if (cClean && !lista.some(m => norm(m) === norm(cClean))) {
+                lista.push(cClean);
+            }
+        });
+        lista.sort((a, b) => a.localeCompare(b, 'pt-BR'));
+    }
+    
+    lista.forEach(m => {
+        const opt = document.createElement("option");
+        opt.value = m;
+        opt.textContent = m;
+        selG3Municipio.appendChild(opt);
+    });
+    
+    if (valorAtualMunicipio && Array.from(selG3Municipio.options).some(o => o.value === valorAtualMunicipio)) {
+        selG3Municipio.value = valorAtualMunicipio;
+    } else {
+        selG3Municipio.value = "";
+    }
 }
 
 /**
@@ -181,41 +498,145 @@ async function carregarFiltrosMetadata() {
         // Popular Filiais
         if (data.filiais) {
             data.filiais.forEach(f => {
-                const opt = document.createElement("option");
-                opt.value = f;
-                opt.textContent = f;
-                selFilial.appendChild(opt);
+                if (selFilial) {
+                    const opt = document.createElement("option");
+                    opt.value = f;
+                    opt.textContent = f;
+                    selFilial.appendChild(opt);
+                }
+                if (selG3Filial) {
+                    const opt3 = document.createElement("option");
+                    opt3.value = f;
+                    opt3.textContent = f;
+                    selG3Filial.appendChild(opt3);
+                }
             });
         }
 
         // Popular Status
         if (data.status) {
             data.status.forEach(s => {
-                const opt = document.createElement("option");
-                opt.value = s;
-                opt.textContent = s;
-                selStatus.appendChild(opt);
+                if (selStatus) {
+                    const opt = document.createElement("option");
+                    opt.value = s;
+                    opt.textContent = s;
+                    selStatus.appendChild(opt);
+                }
             });
         }
 
-        // Popular Municípios
+        // Popular Municípios de Vendas (para relatório de vendas)
         if (data.municipios) {
             data.municipios.forEach(m => {
-                const opt = document.createElement("option");
-                opt.value = m;
-                opt.textContent = m;
-                selMunicipio.appendChild(opt);
+                if (selMunicipio) {
+                    const opt = document.createElement("option");
+                    opt.value = m;
+                    opt.textContent = m;
+                    selMunicipio.appendChild(opt);
+                }
             });
         }
 
         // Popular Grupos
         if (data.grupos) {
             data.grupos.forEach(g => {
-                const opt = document.createElement("option");
-                opt.value = g;
-                opt.textContent = g;
-                selGrupo.appendChild(opt);
+                if (selGrupo) {
+                    const opt = document.createElement("option");
+                    opt.value = g;
+                    opt.textContent = g;
+                    selGrupo.appendChild(opt);
+                }
             });
+        }
+        
+        // Popular Filtros Gerenciais (Municípios de clientes, Vendedores, Filiais, Rotas e Status de Cadastro)
+        const respGerencial = await fetch(`${API_BASE}/api/relatorios/gerencial/filtros`, {
+            headers: { "Authorization": `Bearer ${token}` }
+        });
+        if (respGerencial.ok) {
+            const dataG = await respGerencial.json();
+            todosMunicipios = dataG.municipios || [];
+            rotasMunicipiosMap = dataG.rotas_municipios || {};
+
+            if (dataG.municipios) {
+                dataG.municipios.forEach(m => {
+                    if (selGerencialMun) {
+                        const opt = document.createElement("option");
+                        opt.value = m;
+                        opt.textContent = m;
+                        selGerencialMun.appendChild(opt);
+                    }
+                });
+            }
+            if (dataG.vendedores) {
+                dataG.vendedores.forEach(v => {
+                    if (selGerencialVend) {
+                        const opt = document.createElement("option");
+                        opt.value = v;
+                        opt.textContent = v;
+                        selGerencialVend.appendChild(opt);
+                    }
+                    if (selG3Vendedor) {
+                        const opt3 = document.createElement("option");
+                        opt3.value = v;
+                        opt3.textContent = v;
+                        selG3Vendedor.appendChild(opt3);
+                    }
+                });
+            }
+            if (dataG.filiais) {
+                dataG.filiais.forEach(f => {
+                    if (selG3Filial) {
+                        const opt3 = document.createElement("option");
+                        opt3.value = f;
+                        opt3.textContent = f;
+                        selG3Filial.appendChild(opt3);
+                    }
+                });
+            }
+            const rotasGeral = dataG.rotas_geral || dataG.rotas || [];
+            if (selG3RotaG) {
+                while (selG3RotaG.options.length > 1) {
+                    selG3RotaG.remove(1);
+                }
+                rotasGeral.forEach(r => {
+                    const optG = document.createElement("option");
+                    optG.value = r;
+                    optG.textContent = isNaN(r) ? r : `Rota ${r}`;
+                    selG3RotaG.appendChild(optG);
+                });
+            }
+            if (selG3RotaA) {
+                while (selG3RotaA.options.length > 1) {
+                    selG3RotaA.remove(1);
+                }
+                const rotasAprox = dataG.rotas_aproximacao || [];
+                rotasAprox.forEach(r => {
+                    const optA = document.createElement("option");
+                    optA.value = r;
+                    optA.textContent = isNaN(r) ? r : `Rota ${r}`;
+                    selG3RotaA.appendChild(optA);
+                });
+            }
+            if (dataG.status_cadastro) {
+                dataG.status_cadastro.forEach(s => {
+                    if (selGerencialStatus) {
+                        const opt = document.createElement("option");
+                        opt.value = s;
+                        opt.textContent = s;
+                        selGerencialStatus.appendChild(opt);
+                    }
+                    if (selG3Status) {
+                        const opt3 = document.createElement("option");
+                        opt3.value = s;
+                        opt3.textContent = s;
+                        selG3Status.appendChild(opt3);
+                    }
+                });
+            }
+
+            // Inicializa municípios do Relatório Gerencial 3
+            atualizarFiltroMunicipiosG3();
         }
     } catch (err) {
         console.error("Falha ao carregar metadados dos filtros:", err);
@@ -233,18 +654,83 @@ async function buscarDadosRelatorio() {
 
     // Constroi query string
     const queryParams = new URLSearchParams();
-    if (inDataInicio.value) queryParams.append("data_inicio", inDataInicio.value);
-    if (inDataFim.value) queryParams.append("data_fim", inDataFim.value);
-    if (inFaturamentoInicio.value) queryParams.append("faturamento_inicio", inFaturamentoInicio.value);
-    if (inFaturamentoFim.value) queryParams.append("faturamento_fim", inFaturamentoFim.value);
-    if (selFilial.value) queryParams.append("filiais", selFilial.value);
-    if (selCategoria.value) queryParams.append("categoria", selCategoria.value);
-    if (selStatus.value) queryParams.append("status_list", selStatus.value);
-    if (selMunicipio.value) queryParams.append("municipios", selMunicipio.value);
-    if (activeReport === "produto" && selGrupo.value) queryParams.append("grupos", selGrupo.value);
+    
+    if (activeReport === "gerencial") {
+        if (inGerencialCodigo.value) queryParams.append("codigo_cliente", inGerencialCodigo.value);
+        if (inGerencialDoc.value) queryParams.append("cnpj_cpf", inGerencialDoc.value);
+        if (inGerencialNome.value) queryParams.append("nome_cliente", inGerencialNome.value);
+        if (selGerencialMun.value) queryParams.append("municipio", selGerencialMun.value);
+        if (selGerencialVend.value) queryParams.append("vendedor", selGerencialVend.value);
+        if (inGerencialDataInicio.value) queryParams.append("data_compra_inicio", inGerencialDataInicio.value);
+        if (inGerencialDataFim.value) queryParams.append("data_compra_fim", inGerencialDataFim.value);
+        if (inGerencialObs.value) queryParams.append("observacao", inGerencialObs.value);
+        if (selGerencialStatus && selGerencialStatus.value) queryParams.append("status_cadastro", selGerencialStatus.value);
+    } else if (activeReport === "gerencial2") {
+        const inG2Cod = document.getElementById("filtro-gerencial2-codigo");
+        const inG2Nome = document.getElementById("filtro-gerencial2-nome");
+        const selG2Meses = document.getElementById("filtro-gerencial2-meses");
+        
+        if (inG2Cod && inG2Cod.value) queryParams.append("codigo_cliente", inG2Cod.value);
+        if (inG2Nome && inG2Nome.value) queryParams.append("nome_cliente", inG2Nome.value);
+        if (selG2Meses && selG2Meses.value) queryParams.append("meses", selG2Meses.value);
+    } else if (activeReport === "gerencial3") {
+        txtTitulo.textContent = "Relatório Gerencial 3";
+        tableHeaders.innerHTML = ""; // Será preenchido na renderização, igual ao gerencial2
+
+        const inG3Cod = document.getElementById("filtro-gerencial3-codigo");
+        const inG3Nome = document.getElementById("filtro-gerencial3-nome");
+        const selG3Meses = document.getElementById("filtro-gerencial3-meses");
+        const selG3Filial = document.getElementById("filtro-gerencial3-filial");
+        const selG3Categoria = document.getElementById("filtro-gerencial3-categoria");
+        const selG3Vendedor = document.getElementById("filtro-gerencial3-vendedor");
+        const selG3Municipio = document.getElementById("filtro-gerencial3-municipio");
+        const selG3RotaG = document.getElementById("filtro-gerencial3-rotag");
+        const selG3RotaA = document.getElementById("filtro-gerencial3-rotaa");
+        const selG3Status = document.getElementById("filtro-gerencial3-status");
+        const selG3TipoEntrega = document.getElementById("filtro-gerencial3-tipo-entrega");
+
+        if (inG3Cod && inG3Cod.value) queryParams.append("codigo_cliente", inG3Cod.value);
+        if (inG3Nome && inG3Nome.value) queryParams.append("nome_cliente", inG3Nome.value);
+        if (selG3Meses && selG3Meses.value) queryParams.append("meses", selG3Meses.value);
+        if (selG3Filial && selG3Filial.value) queryParams.append("filial", selG3Filial.value);
+        if (selG3Categoria && selG3Categoria.value) queryParams.append("categoria", selG3Categoria.value);
+        if (selG3Vendedor && selG3Vendedor.value) queryParams.append("vendedor", selG3Vendedor.value);
+        if (selG3Municipio && selG3Municipio.value) queryParams.append("municipio", selG3Municipio.value);
+        if (selG3RotaG && selG3RotaG.value) queryParams.append("rota_principal", selG3RotaG.value);
+        if (selG3RotaA && selG3RotaA.value) queryParams.append("rota_aproximacao", selG3RotaA.value);
+        if (selG3Status && selG3Status.value) queryParams.append("status_cadastro", selG3Status.value);
+        if (selG3TipoEntrega && selG3TipoEntrega.value) queryParams.append("tipo_entrega", selG3TipoEntrega.value);
+    } else {
+        if (inDataInicio.value) queryParams.append("data_inicio", inDataInicio.value);
+        if (inDataFim.value) queryParams.append("data_fim", inDataFim.value);
+        if (inFaturamentoInicio.value) queryParams.append("faturamento_inicio", inFaturamentoInicio.value);
+        if (inFaturamentoFim.value) queryParams.append("faturamento_fim", inFaturamentoFim.value);
+        if (selFilial && selFilial.value) queryParams.append("filiais", selFilial.value);
+        if (selCategoria && selCategoria.value) queryParams.append("categoria", selCategoria.value);
+        if (selStatus.value) queryParams.append("status_list", selStatus.value);
+        if (selMunicipio && selMunicipio.value) queryParams.append("municipios", selMunicipio.value);
+        if (activeReport === "produto" && selGrupo.value) queryParams.append("grupos", selGrupo.value);
+        if (activeReport === "validacao" && selTipoEntrega && selTipoEntrega.value) queryParams.append("tipo_entrega", selTipoEntrega.value);
+    } else if (activeReport === "validacao2") {
+        if (inFaturamentoInicio.value) queryParams.append("faturamento_inicio", inFaturamentoInicio.value);
+        if (inFaturamentoFim.value) queryParams.append("faturamento_fim", inFaturamentoFim.value);
+        if (selFilial && selFilial.value) queryParams.append("filiais", selFilial.value);
+        if (selCategoria && selCategoria.value) queryParams.append("categoria", selCategoria.value);
+        if (selTipoEntrega && selTipoEntrega.value) queryParams.append("tipo_entrega", selTipoEntrega.value);
+        if (inVal2Pedido && inVal2Pedido.value) queryParams.append("numero_pedido", inVal2Pedido.value);
+        if (inVal2Carga && inVal2Carga.value) queryParams.append("numero_carga", inVal2Carga.value);
+        if (inVal2CargaInicio && inVal2CargaInicio.value) queryParams.append("data_carga_inicio", inVal2CargaInicio.value);
+        if (inVal2CargaFim && inVal2CargaFim.value) queryParams.append("data_carga_fim", inVal2CargaFim.value);
+    }
 
     // Seleciona endpoint conforme relatório ativo
-    const endpoint = activeReport === "cliente" ? "vendas_cliente" : "vendas_produtos";
+    let endpoint = "vendas_cliente";
+    if (activeReport === "produto") endpoint = "vendas_produtos";
+    else if (activeReport === "validacao") endpoint = "validacao_pedidos";
+    else if (activeReport === "validacao2") endpoint = "validacao_pedidos_2";
+    else if (activeReport === "gerencial") endpoint = "gerencial";
+    else if (activeReport === "gerencial2") endpoint = "gerencial2";
+    else if (activeReport === "gerencial3") endpoint = "gerencial3";
 
     try {
         const token = window.Auth ? window.Auth.getToken() : '';
@@ -255,13 +741,19 @@ async function buscarDadosRelatorio() {
         if (!resp.ok) throw new Error("Erro na requisição ao servidor");
         listagemVendas = await resp.json();
 
+        if (activeReport === "gerencial3" && !sortState.col) {
+            sortState = { col: "previsao_proxima_compra", desc: true };
+        }
+
         // Se houver ordenação ativa, mantemos o ordenamento atualizado dos novos dados
         if (sortState.col) {
             ordenarDados(sortState.col, sortState.desc);
         }
 
         renderizarTabela();
-    } catch (err) {
+    
+
+        } catch (err) {
         console.error(`Falha ao buscar relatório de ${activeReport}:`, err);
         tbody.innerHTML = `<tr><td colspan="10" style="text-align: center; color: var(--os-error); font-weight: 600;">Falha ao carregar dados do relatório.</td></tr>`;
     } finally {
@@ -273,6 +765,60 @@ async function buscarDadosRelatorio() {
  * Renderiza as linhas na tabela e calcula os totais dinâmicos
  */
 function renderizarTabela() {
+    
+    
+
+    if (activeReport === "gerencial2") {
+        const mesesSel = document.getElementById("filtro-gerencial2-meses");
+        const qtdeMeses = mesesSel ? parseInt(mesesSel.value) : 12;
+        gerencial2Meses = generateLastXMonths(qtdeMeses);
+        
+        let htmlHeader1 = `<tr>
+            <th rowspan="2" style="width: 40px; min-width: 40px; border-right: 1px solid var(--os-border);">#</th>
+            <th rowspan="2" data-sort="codigo_cliente" style="min-width: 100px; border-right: 1px solid var(--os-border);">Cód. Cliente</th>
+            <th rowspan="2" data-sort="cliente" style="min-width: 250px; border-right: 1px solid var(--os-border);">Cliente</th>`;
+        let htmlHeader2 = `<tr>`;
+        
+        gerencial2Meses.forEach((m, i) => {
+            const [ano, mes] = m.split('-');
+            const borderLeft = "border-left: 2px solid #cbd5e1;";
+            htmlHeader1 += `<th colspan="2" style="text-align: center; border-bottom: 1px solid var(--os-border); background-color: #f8fafc; ${borderLeft}">${mes}/${ano}</th>`;
+            htmlHeader2 += `<th class="tar" style="${borderLeft}">Peso (kg)</th><th class="tar col-money">Valor (R$)</th>`;
+        });
+        
+        htmlHeader1 += `</tr>`;
+        htmlHeader2 += `</tr>`;
+        
+        tableHeaders.innerHTML = htmlHeader1 + htmlHeader2;
+    }
+
+    if (activeReport === "gerencial3") {
+        const mesesSel = document.getElementById("filtro-gerencial3-meses");
+        const qtdeMeses = mesesSel ? parseInt(mesesSel.value) : 12;
+        gerencial3Meses = generateLastXMonths(qtdeMeses);
+        
+        let htmlHeader1 = `<tr>
+            <th rowspan="2" style="width: 40px; min-width: 40px; border-right: 1px solid var(--os-border);">#</th>
+            <th rowspan="2" data-sort="codigo_cliente" style="min-width: 100px; border-right: 1px solid var(--os-border);">Cód. Cliente</th>
+            <th rowspan="2" data-sort="cliente" style="min-width: 250px; border-right: 1px solid var(--os-border);">Cliente</th>
+            <th rowspan="2" data-sort="periodo_de_compra" style="min-width: 140px; border-right: 1px solid var(--os-border); text-align: center;">Período de Compra (Em dias)</th>
+            <th rowspan="2" data-sort="previsao_proxima_compra" style="min-width: 150px; border-right: 1px solid var(--os-border); text-align: center;">Previsão Próxima Compra</th>
+            <th rowspan="2" data-sort="data_ultima_compra_geral" style="min-width: 120px; border-right: 1px solid var(--os-border); text-align: center;">Data Última Compra</th>`;
+        let htmlHeader2 = `<tr>`;
+        
+        gerencial3Meses.forEach((m, i) => {
+            const [ano, mes] = m.split('-');
+            const borderLeft = "border-left: 2px solid #cbd5e1;";
+            htmlHeader1 += `<th colspan="2" style="text-align: center; border-bottom: 1px solid var(--os-border); background-color: #f8fafc; ${borderLeft}">${mes}/${ano}</th>`;
+            htmlHeader2 += `<th class="tar" style="${borderLeft}">Peso (kg)</th><th class="tar col-money">Valor (R$)</th>`;
+        });
+        
+        htmlHeader1 += `</tr>`;
+        htmlHeader2 += `</tr>`;
+        
+        tableHeaders.innerHTML = htmlHeader1 + htmlHeader2;
+    }
+
     if (listagemVendas.length === 0) {
         emptyStateEl.style.display = "block";
         tfoot.innerHTML = "";
@@ -283,6 +829,9 @@ function renderizarTabela() {
     let totalPeso = 0;
     let totalSemFrete = 0;
     let totalComFrete = 0;
+    let totalValorNf = 0;
+    let totalValorPedido = 0;
+    let totalDiferenca = 0;
 
     if (activeReport === "cliente") {
         listagemVendas.forEach((item, index) => {
@@ -298,7 +847,7 @@ function renderizarTabela() {
                     <td>${item.danfe || "-"}</td>
                     <td>${fmtData(item.data_faturamento)}</td>
                     <td>${item.codigo_cliente || "-"}</td>
-                    <td>${item.cliente || "-"}</td>
+                    <td>${limparNomeCliente(item.cliente)}</td>
                     <td>${item.nome_fantasia || "-"}</td>
                     <td>${item.municipio || "-"}</td>
                     <td class="tar">${fmtPeso(item.peso_liquido)}</td>
@@ -309,7 +858,7 @@ function renderizarTabela() {
         });
         
         tbody.innerHTML = html;
-    } else {
+    } else if (activeReport === "produto") {
         // Relatório de Vendas por Produto
         listagemVendas.forEach((item, index) => {
             totalPeso += parseFloat(item.peso_liquido_acumulado || 0);
@@ -332,16 +881,135 @@ function renderizarTabela() {
         });
 
         tbody.innerHTML = html;
+    } else if (activeReport === "validacao") {
+        listagemVendas.forEach((item, index) => {
+            totalPeso += parseFloat(item.peso_liquido || 0);
+            totalValorNf += parseFloat(item.valor_nota_fiscal || 0);
+            totalValorPedido += parseFloat(item.valor_pedido || 0);
+            totalDiferenca += parseFloat(item.diferenca_valores || 0);
+
+            html += `
+                <tr>
+                    <td>${index + 1}</td>
+                    <td>${fmtData(item.data_faturamento)}</td>
+                    <td>${item.codigo_cliente || "-"}</td>
+                    <td>${limparNomeCliente(item.cliente)}</td>
+                    <td class="col-pedido-supra"><strong>${item.pedido_supra || "-"}</strong></td>
+                    <td>${item.nota_fiscal || "-"}</td>
+                    <td class="tar">${fmtPeso(item.peso_liquido).replace(' kg', '')}</td>
+                    <td class="tar col-money">${fmtMoney(item.valor_nota_fiscal)}</td>
+                    <td class="tar col-money">${fmtMoney(item.valor_pedido)}</td>
+                    <td class="tar col-money" style="color: ${parseFloat(item.diferenca_valores || 0).toFixed(2) != '0.00' ? 'var(--os-error)' : 'inherit'};">${fmtMoney(item.diferenca_valores)}</td>
+                </tr>
+            `;
+        });
+
+        tbody.innerHTML = html;
+    } else if (activeReport === "validacao2") {
+        listagemVendas.forEach((item, index) => {
+            totalPeso += parseFloat(item.peso_liquido || 0);
+            totalValorNf += parseFloat(item.valor_nota_fiscal || 0);
+            totalValorPedido += parseFloat(item.valor_pedido || 0);
+            totalDiferenca += parseFloat(item.diferenca_valores || 0);
+
+            html += `
+                <tr>
+                    <td>${index + 1}</td>
+                    <td><strong>${item.numero_pedido || "-"}</strong></td>
+                    <td>${item.numero_carga || "-"}</td>
+                    <td>${fmtData(item.data_carga)}</td>
+                    <td>${fmtData(item.data_faturamento)}</td>
+                    <td>${item.codigo_cliente || "-"}</td>
+                    <td>${limparNomeCliente(item.cliente)}</td>
+                    <td class="col-pedido-supra"><strong>${item.pedido_supra || "-"}</strong></td>
+                    <td>${item.nota_fiscal || "-"}</td>
+                    <td class="tar">${fmtPeso(item.peso_liquido).replace(' kg', '')}</td>
+                    <td class="tar col-money">${fmtMoney(item.valor_nota_fiscal)}</td>
+                    <td class="tar col-money">${fmtMoney(item.valor_pedido)}</td>
+                    <td class="tar col-money" style="color: ${parseFloat(item.diferenca_valores || 0).toFixed(2) != '0.00' ? 'var(--os-error)' : 'inherit'};">${fmtMoney(item.diferenca_valores)}</td>
+                </tr>
+            `;
+        });
+
+        tbody.innerHTML = html;
+    } else if (activeReport === "gerencial") {
+        listagemVendas.forEach((item, index) => {
+            html += `
+                <tr>
+                    <td>${index + 1}</td>
+                    <td style="white-space: nowrap;">${fmtDoc(item.documento) || "-"}</td>
+                    <td>${limparNomeCliente(item.nome_cliente)}</td>
+                    <td>${item.municipio || "-"}</td>
+                    <td>${item.vendedor || "-"}</td>
+                    <td>${fmtData(item.data_ultima_compra)}</td>
+                    <td>${item.observacao || "-"}</td>
+                </tr>
+            `;
+        });
+        
+        tbody.innerHTML = html;
+    }
+
+    if (activeReport === "gerencial2") {
+        listagemVendas.forEach((item, index) => {
+            html += `<tr>
+                <td style="border-right: 1px solid var(--os-border);">${index + 1}</td>
+                <td style="border-right: 1px solid var(--os-border);">${item.codigo_cliente || "-"}</td>
+                <td style="border-right: 1px solid var(--os-border);">${limparNomeCliente(item.cliente)}</td>`;
+            
+            gerencial2Meses.forEach(m => {
+                const borderLeft = "border-left: 2px solid #cbd5e1;";
+                const p = item.meses?.[m]?.peso || 0;
+                const v = item.meses?.[m]?.valor || 0;
+                html += `<td class="tar" style="${borderLeft}">${fmtPeso(p).replace(' kg','')}</td><td class="tar col-money">${fmtMoney(v)}</td>`;
+            });
+            html += `</tr>`;
+        });
+        tbody.innerHTML = html;
+    }
+
+    if (activeReport === "gerencial3") {
+        listagemVendas.forEach((item, index) => {
+            html += `<tr>
+                <td style="border-right: 1px solid var(--os-border);">${index + 1}</td>
+                <td style="border-right: 1px solid var(--os-border);">${item.codigo_cliente || "-"}</td>
+                <td style="border-right: 1px solid var(--os-border);">${limparNomeCliente(item.cliente)}</td>
+                <td style="border-right: 1px solid var(--os-border); text-align: center;">${item.periodo_de_compra || "-"}</td>
+                <td style="border-right: 1px solid var(--os-border); text-align: center;">${fmtData(item.previsao_proxima_compra)}</td>
+                <td style="border-right: 1px solid var(--os-border); text-align: center;">${fmtData(item.data_ultima_compra_geral)}</td>`;
+            
+            gerencial3Meses.forEach(m => {
+                const borderLeft = "border-left: 2px solid #cbd5e1;";
+                const p = item.meses?.[m]?.peso || 0;
+                const v = item.meses?.[m]?.valor || 0;
+                html += `<td class="tar" style="${borderLeft}">${fmtPeso(p).replace(' kg','')}</td><td class="tar col-money">${fmtMoney(v)}</td>`;
+            });
+            html += `</tr>`;
+        });
+        tbody.innerHTML = html;
     }
 
     // Atualiza totais na parte superior da tabela (thead)
     const elPeso = document.getElementById("total-peso");
     const elSem = document.getElementById("total-valor-sem");
     const elCom = document.getElementById("total-valor-com");
+    const elNf = document.getElementById("total-valor-nf");
+    const elPed = document.getElementById("total-valor-pedido");
+    const elDif = document.getElementById("total-diferenca");
+
     if (elPeso) elPeso.textContent = fmtPeso(totalPeso);
     if (elSem) elSem.textContent = fmtMoney(totalSemFrete);
     if (elCom) elCom.textContent = fmtMoney(totalComFrete);
+    if (elNf) elNf.textContent = fmtMoney(totalValorNf);
+    if (elPed) elPed.textContent = fmtMoney(totalValorPedido);
+    if (elDif) {
+        elDif.textContent = fmtMoney(totalDiferenca);
+        elDif.style.color = totalDiferenca.toFixed(2) != '0.00' ? 'var(--os-error)' : 'inherit';
+    }
     tfoot.innerHTML = "";
+    if (activeReport === "gerencial2" || activeReport === "gerencial3") {
+        registrarOrdenacaoTabela();
+    }
 }
 
 /**
@@ -403,8 +1071,12 @@ function ordenarDados(colKey, desc) {
         let va = a[colKey];
         let vb = b[colKey];
 
-        if (va === null || va === undefined) va = "";
-        if (vb === null || vb === undefined) vb = "";
+        const emptyA = (va === null || va === undefined || String(va).trim() === "");
+        const emptyB = (vb === null || vb === undefined || String(vb).trim() === "");
+
+        if (emptyA && emptyB) return 0;
+        if (emptyA) return 1; // Itens vazios vão para o final
+        if (emptyB) return -1;
 
         // Trata ordenação numérica
         if (!isNaN(parseFloat(va)) && isFinite(va)) {
@@ -444,6 +1116,35 @@ async function limparTodosFiltros() {
     selStatus.value = "";
     selMunicipio.value = "";
     selGrupo.value = "";
+    if (selTipoEntrega) selTipoEntrega.value = "";
+    
+    if (inVal2Pedido) inVal2Pedido.value = "";
+    if (inVal2Carga) inVal2Carga.value = "";
+    if (inVal2CargaInicio) inVal2CargaInicio.value = "";
+    if (inVal2CargaFim) inVal2CargaFim.value = "";
+    
+    inGerencialCodigo.value = "";
+    inGerencialDoc.value = "";
+    inGerencialNome.value = "";
+    selGerencialMun.value = "";
+    selGerencialVend.value = "";
+    inGerencialDataInicio.value = "";
+    inGerencialDataFim.value = "";
+    inGerencialObs.value = "";
+    if (selGerencialStatus) selGerencialStatus.value = "";
+
+    
+    if (inG3Cod) inG3Cod.value = "";
+    if (inG3Nome) inG3Nome.value = "";
+    if (selG3Filial) selG3Filial.value = "";
+    if (selG3Categoria) selG3Categoria.value = "";
+    if (selG3Vendedor) selG3Vendedor.value = "";
+    if (selG3RotaG) selG3RotaG.value = "";
+    if (selG3RotaA) selG3RotaA.value = "";
+    if (selG3Status) selG3Status.value = "";
+    if (selG3TipoEntrega) selG3TipoEntrega.value = "";
+    atualizarFiltroMunicipiosG3();
+    if (selG3Municipio) selG3Municipio.value = "";
 
     await buscarDadosRelatorio();
 }
@@ -457,17 +1158,18 @@ function exportarExcel() {
         return;
     }
 
-    let csv = "";
+    let aoa = [];
     let filename = "";
     
     let totalPeso = 0;
     let totalSemFrete = 0;
     let totalComFrete = 0;
-
-    const clean = (txt) => txt ? String(txt).replace(/;/g, ",").replace(/"/g, '""').trim() : "-";
+    let totalValorNf = 0;
+    let totalValorPedido = 0;
+    let totalDiferenca = 0;
 
     if (activeReport === "cliente") {
-        csv = "#;Nº Pedido Sistema;Pedido Supra;Danfe;Data Faturamento;Código Cliente;Cliente;Nome Fantasia;Município;Peso Líquido (kg);Valor Sem Frete;Valor Com Frete\n";
+        aoa.push(["#", "Nº Pedido Sistema", "Pedido Supra", "Danfe", "Data Faturamento", "Código Cliente", "Cliente", "Nome Fantasia", "Município", "Peso Líquido (kg)", "Valor Sem Frete", "Valor Com Frete"]);
         filename = "relatorio_vendas_por_cliente";
 
         listagemVendas.forEach((item, index) => {
@@ -479,14 +1181,13 @@ function exportarExcel() {
             totalSemFrete += vs;
             totalComFrete += vc;
 
-            csv += `"${index + 1}";"${clean(item.numero_pedido)}";"${clean(item.pedido_supra)}";"${clean(item.danfe)}";"${fmtData(item.data_faturamento)}";"${clean(item.codigo_cliente)}";"${clean(item.cliente)}";"${clean(item.nome_fantasia)}";"${clean(item.municipio)}";"${Math.round(p)}";"${vs.toFixed(2).replace('.', ',')}";"${vc.toFixed(2).replace('.', ',')}"\n`;
+            aoa.push([index + 1, item.numero_pedido || "-", item.pedido_supra || "-", item.danfe || "-", fmtData(item.data_faturamento), item.codigo_cliente || "-", limparNomeCliente(item.cliente), item.nome_fantasia || "-", item.municipio || "-", Math.round(p), vs, vc]);
         });
 
-        csv += `"TOTAL ACUMULADO";"";"";"";"";"";"";"";"";"${Math.round(totalPeso)}";"${totalSemFrete.toFixed(2).replace('.', ',')}";"${totalComFrete.toFixed(2).replace('.', ',')}"\n`;
+        aoa.push(["TOTAL ACUMULADO", "", "", "", "", "", "", "", "", Math.round(totalPeso), totalSemFrete, totalComFrete]);
 
-    } else {
-        // Vendas por Produto
-        csv = "#;Código Produto;Produto;Embalagem;Peso Líq. Unit. (kg);Quantidade;Peso Líq. Acumulado (kg);Valor Sem Frete;Valor Com Frete\n";
+    } else if (activeReport === "produto") {
+        aoa.push(["#", "Código Produto", "Produto", "Embalagem", "Peso Líq. Unit. (kg)", "Quantidade", "Peso Líq. Acumulado (kg)", "Valor Sem Frete", "Valor Com Frete"]);
         filename = "relatorio_vendas_por_produto";
 
         listagemVendas.forEach((item, index) => {
@@ -500,18 +1201,210 @@ function exportarExcel() {
             totalSemFrete += vs;
             totalComFrete += vc;
 
-            csv += `"${index + 1}";"${clean(item.codigo_produto)}";"${clean(item.produto)}";"${clean(item.embalagem)}";"${Math.round(pu)}";"${q}";"${Math.round(pa)}";"${vs.toFixed(2).replace('.', ',')}";"${vc.toFixed(2).replace('.', ',')}"\n`;
+            aoa.push([index + 1, item.codigo_produto || "-", item.produto || "-", item.embalagem || "-", Math.round(pu), q, Math.round(pa), vs, vc]);
         });
 
-        csv += `"TOTAL ACUMULADO";"";"";"";"";"";"${Math.round(totalPeso)}";"${totalSemFrete.toFixed(2).replace('.', ',')}";"${totalComFrete.toFixed(2).replace('.', ',')}"\n`;
+        aoa.push(["TOTAL ACUMULADO", "", "", "", "", "", Math.round(totalPeso), totalSemFrete, totalComFrete]);
+
+    } else if (activeReport === "validacao") {
+        aoa.push(["#", "Data Faturamento", "Código Cliente", "Cliente", "Pedido Supra", "Nota Fiscal", "Peso Líquido (kg)", "Valor NF", "Valor Pedido", "Diferença"]);
+        filename = "relatorio_validacao_pedidos";
+
+        listagemVendas.forEach((item, index) => {
+            const p = parseFloat(item.peso_liquido || 0);
+            const vnf = parseFloat(item.valor_nota_fiscal || 0);
+            const vp = parseFloat(item.valor_pedido || 0);
+            const dif = parseFloat(item.diferenca_valores || 0);
+
+            totalPeso += p;
+            totalValorNf += vnf;
+            totalValorPedido += vp;
+            totalDiferenca += dif;
+
+            aoa.push([index + 1, fmtData(item.data_faturamento), item.codigo_cliente || "-", limparNomeCliente(item.cliente), item.pedido_supra || "-", item.nota_fiscal || "-", Math.round(p), vnf, vp, dif]);
+        });
+
+        aoa.push(["TOTAL ACUMULADO", "", "", "", "", "", Math.round(totalPeso), totalValorNf, totalValorPedido, totalDiferenca]);
+
+    } else if (activeReport === "validacao2") {
+        aoa.push(["#", "Nº Pedido", "Nº Carga", "Data Carga", "Data Faturamento", "Código Cliente", "Cliente", "Pedido Supra", "Nota Fiscal", "Peso Líquido (kg)", "Valor NF", "Valor Pedido", "Diferença"]);
+        filename = "relatorio_por_carga";
+
+        listagemVendas.forEach((item, index) => {
+            const p = parseFloat(item.peso_liquido || 0);
+            const vnf = parseFloat(item.valor_nota_fiscal || 0);
+            const vp = parseFloat(item.valor_pedido || 0);
+            const dif = parseFloat(item.diferenca_valores || 0);
+
+            totalPeso += p;
+            totalValorNf += vnf;
+            totalValorPedido += vp;
+            totalDiferenca += dif;
+
+            aoa.push([
+                index + 1, 
+                item.numero_pedido || "-", 
+                item.numero_carga || "-", 
+                fmtData(item.data_carga), 
+                fmtData(item.data_faturamento), 
+                item.codigo_cliente || "-", 
+                limparNomeCliente(item.cliente), 
+                item.pedido_supra || "-", 
+                item.nota_fiscal || "-", 
+                Math.round(p), 
+                vnf, 
+                vp, 
+                dif
+            ]);
+        });
+
+        aoa.push(["TOTAL ACUMULADO", "", "", "", "", "", "", "", "", Math.round(totalPeso), totalValorNf, totalValorPedido, totalDiferenca]);
+
+    } else if (activeReport === "gerencial") {
+        aoa.push(["#", "CNPJ/CPF", "Nome Cliente", "Município", "Vendedor", "Data Última Compra", "Observação"]);
+        filename = "relatorio_gerencial";
+
+        listagemVendas.forEach((item, index) => {
+            aoa.push([index + 1, fmtDoc(item.documento) || "-", limparNomeCliente(item.nome_cliente), item.municipio || "-", item.vendedor || "-", fmtData(item.data_ultima_compra), item.observacao || "-"]);
+        });
+    } else if (activeReport === "gerencial2") {
+        let row1 = ["Cód. Cliente", "Cliente"];
+        let row2 = ["", ""];
+        
+        gerencial2Meses.forEach(m => {
+            const [ano, mes] = m.split('-');
+            row1.push(`${mes}/${ano}`, "");
+            row2.push("Peso (kg)", "Valor (R$)");
+        });
+        
+        aoa.push(row1, row2);
+        filename = "relatorio_gerencial2_evolucao";
+        
+        listagemVendas.forEach((item, index) => {
+            let row = [item.codigo_cliente || "-", limparNomeCliente(item.cliente)];
+            gerencial2Meses.forEach(m => {
+                row.push(item.meses?.[m]?.peso || 0);
+                row.push(item.meses?.[m]?.valor || 0);
+            });
+            aoa.push(row);
+        });
+    } else if (activeReport === "gerencial3") {
+        let row1 = ["Cód. Cliente", "Cliente", "Período de Compra (Em dias)", "Previsão Próxima Compra", "Data Última Compra"];
+        let row2 = ["", "", "", "", ""];
+        
+        gerencial3Meses.forEach(m => {
+            const [ano, mes] = m.split('-');
+            row1.push(`${mes}/${ano}`, "");
+            row2.push("Peso (kg)", "Valor (R$)");
+        });
+        
+        aoa.push(row1, row2);
+        filename = "relatorio_gerencial3_evolucao";
+        
+        listagemVendas.forEach((item, index) => {
+            let row = [
+                item.codigo_cliente || "-", 
+                limparNomeCliente(item.cliente), 
+                item.periodo_de_compra || "-",
+                fmtData(item.previsao_proxima_compra), 
+                fmtData(item.data_ultima_compra_geral)
+            ];
+            gerencial3Meses.forEach(m => {
+                row.push(item.meses?.[m]?.peso || 0);
+                row.push(item.meses?.[m]?.valor || 0);
+            });
+            aoa.push(row);
+        });
     }
 
-    // Utiliza BOM (\ufeff) para forçar o Excel a interpretar os caracteres especiais em UTF-8 no Windows
-    const blob = new Blob(["\ufeff" + csv], { type: 'text/csv;charset=utf-8;' });
-    const link = document.createElement("a");
-    link.href = URL.createObjectURL(blob);
-    link.download = `${filename}_${new Date().toISOString().slice(0, 10)}.csv`;
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
+    const ws = XLSX.utils.aoa_to_sheet(aoa);
+
+    // Apply merges for gerencial2
+    if (activeReport === "gerencial2") {
+        ws['!merges'] = [
+            { s: {r:0, c:0}, e: {r:1, c:0} },
+            { s: {r:0, c:1}, e: {r:1, c:1} }
+        ];
+        
+        let cIndex = 2;
+        gerencial2Meses.forEach(m => {
+            ws['!merges'].push({ s: {r:0, c:cIndex}, e: {r:0, c:cIndex+1} });
+            cIndex += 2;
+        });
+        
+        for (let cell in ws) {
+            if (cell[0] === '!') continue;
+            
+            const row = parseInt(cell.replace(/\D/g, ''));
+            if (!ws[cell].s) ws[cell].s = {};
+            
+            if (row === 1 || row === 2) {
+                ws[cell].s = { alignment: { horizontal: "center", vertical: "center" }, font: { bold: true } };
+            } else if (typeof ws[cell].v === 'number') {
+                ws[cell].z = '#,##0.00';
+            }
+        }
+        
+        ws['!cols'] = [{ wch: 15 }, { wch: 45 }]; // Cód Cliente e Cliente
+        for (let i = 0; i < gerencial2Meses.length * 2; i++) {
+            ws['!cols'].push({ wch: 15 }); // Peso e Valor
+        }
+    } else if (activeReport === "gerencial3") {
+        ws['!merges'] = [
+            { s: {r:0, c:0}, e: {r:1, c:0} },
+            { s: {r:0, c:1}, e: {r:1, c:1} },
+            { s: {r:0, c:2}, e: {r:1, c:2} },
+            { s: {r:0, c:3}, e: {r:1, c:3} },
+            { s: {r:0, c:4}, e: {r:1, c:4} }
+        ];
+        
+        let cIndex = 5;
+        gerencial3Meses.forEach(m => {
+            ws['!merges'].push({ s: {r:0, c:cIndex}, e: {r:0, c:cIndex+1} });
+            cIndex += 2;
+        });
+        
+        for (let cell in ws) {
+            if (cell[0] === '!') continue;
+            
+            const row = parseInt(cell.replace(/\D/g, ''));
+            if (!ws[cell].s) ws[cell].s = {};
+            
+            if (row === 1 || row === 2) {
+                ws[cell].s = { alignment: { horizontal: "center", vertical: "center" }, font: { bold: true } };
+            } else if (typeof ws[cell].v === 'number') {
+                ws[cell].z = '#,##0.00';
+            }
+        }
+        
+        ws['!cols'] = [
+            { wch: 15 }, // Cód. Cliente
+            { wch: 45 }, // Cliente
+            { wch: 25 }, // Período de Compra (Em dias)
+            { wch: 20 }, // Previsão Próxima Compra
+            { wch: 20 }  // Data Última Compra
+        ];
+        for (let i = 0; i < gerencial3Meses.length * 2; i++) {
+            ws['!cols'].push({ wch: 15 }); // Peso e Valor
+        }
+    }
+
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, "Relatorio");
+    XLSX.writeFile(wb, `${filename}_${new Date().toISOString().slice(0, 10)}.xlsx`);
+}
+
+let gerencial2Meses = [];
+let gerencial3Meses = [];
+function generateLastXMonths(x) {
+    let months = [];
+    const date = new Date();
+    date.setDate(1);
+    for (let i = 0; i < x; i++) {
+        const d = new Date(date.getFullYear(), date.getMonth() - i, 1);
+        const y = d.getFullYear();
+        const m = String(d.getMonth() + 1).padStart(2, '0');
+        months.push(`${y}-${m}`);
+    }
+    return months;
 }

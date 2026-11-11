@@ -422,7 +422,20 @@ def listar_pedidos(
           a.link_url,
           a.link_status,
           (a.link_enviado_em IS NOT NULL)           AS link_enviado,
-          COALESCE(a.peso_total_kg, 0)              AS peso_total,
+          COALESCE(
+            NULLIF(a.peso_total_kg, 0),
+            (
+              SELECT SUM(i.quantidade * COALESCE(prod.peso, 0))
+              FROM public.tb_pedidos_itens i
+              LEFT JOIN (
+                SELECT codigo_supra, MAX(peso) AS peso
+                FROM public.t_cadastro_produto_v2
+                GROUP BY codigo_supra
+              ) prod ON prod.codigo_supra = i.codigo
+              WHERE i.id_pedido = a.id_pedido
+            ),
+            0
+          )                                         AS peso_total,
           c.entrega_municipio                       AS municipio,
           c.entrega_rota_principal                 AS rota_principal,
           a.pedido_supra,

@@ -309,6 +309,15 @@ function fillForm(p) {
   const set = (id, v) => {
     const el = $(id);
     if (!el) return;
+    if (el.tagName === "SELECT" && v != null && v !== "") {
+      const exists = Array.from(el.options).some(o => o.value == v);
+      if (!exists) {
+        const opt = document.createElement("option");
+        opt.value = v;
+        opt.textContent = v;
+        el.appendChild(opt);
+      }
+    }
     if (el.type === "number" && typeof v === "number") {
       el.value = String(v);
     } else {
@@ -1207,10 +1216,24 @@ async function loadOptions() {
     
     fill("filtro-giro", data.tipo_giro); // Giro no relatório
 
-    // Fornecedor é input type="text" no HTML? Ou Select?
-    // User image shows "Fornecedor" as text input visually (no arrow), but let's check HTML if we can.
-    // Assuming Select for now based on context, or maybe DataList needed.
-    // Step 902 showed status_produto is select.
+    // Carregar fornecedores do catálogo de fornecedores (/api/fornecedores)
+    try {
+      const fornData = await fetchJSON(`${API_BASE}/api/fornecedores`);
+      const selForn = $("fornecedor");
+      if (selForn) {
+        selForn.innerHTML = '<option value="">Selecione...</option>';
+        if (Array.isArray(fornData)) {
+          fornData.forEach(f => {
+            const opt = document.createElement("option");
+            opt.value = f.nome_fornecedor;
+            opt.textContent = f.nome_fornecedor;
+            selForn.appendChild(opt);
+          });
+        }
+      }
+    } catch (eForn) {
+      console.warn("Erro ao carregar catálogo de fornecedores:", eForn);
+    }
 
   } catch (e) {
     console.warn("Erro ao carregar opções:", e);

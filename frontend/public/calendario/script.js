@@ -614,9 +614,9 @@ function handleDateSelect(info) {
     
     const allDayEl = document.getElementById('event-is-allday');
     if (allDayEl) {
-        allDayEl.checked = !!info.allDay;
+        allDayEl.checked = false;
         allDayEl.disabled = false;
-        toggleAllDay(!!info.allDay);
+        toggleAllDay(false);
     }
     
     const recEl = document.getElementById('event-recurrence');

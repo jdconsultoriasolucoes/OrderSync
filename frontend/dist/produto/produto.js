@@ -309,6 +309,15 @@ function fillForm(p) {
   const set = (id, v) => {
     const el = $(id);
     if (!el) return;
+    if (el.tagName === "SELECT" && v != null && v !== "") {
+      const exists = Array.from(el.options).some(o => o.value == v);
+      if (!exists) {
+        const opt = document.createElement("option");
+        opt.value = v;
+        opt.textContent = v;
+        el.appendChild(opt);
+      }
+    }
     if (el.type === "number" && typeof v === "number") {
       el.value = String(v);
     } else {
@@ -438,12 +447,14 @@ function renderSearchResults(items) {
     .map(
       (p) => `
     <tr data-id="${p.id}">
-      <td>${p.codigo_supra || ""}</td>
-      <td>${p.nome_produto || ""}</td>
-      <td>${p.fornecedor || ""}</td>
-      <td>${p.preco != null ? p.preco.toFixed(2) : ""}</td>
-      <td>${p.unidade || ""}</td>
-      <td>${p.status_produto || ""}</td>
+      <td class="col-codigo">${p.codigo_supra || ""}</td>
+      <td class="col-descricao">${p.nome_produto || ""}</td>
+      <td class="col-fornecedor" title="${p.fornecedor || ""}">${p.fornecedor || ""}</td>
+      <td class="col-preco">${p.preco != null ? Number(p.preco).toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 }) : "-"}</td>
+      <td class="col-unidade">${p.unidade || ""}</td>
+      <td class="col-status"><span class="badge-status ${String(p.status_produto).toUpperCase() === 'ATIVO' ? 'status-ativo' : 'status-inativo'}">${p.status_produto || ""}</span></td>
+      <td class="col-estoque-disp">${p.estoque_disponivel != null ? Number(p.estoque_disponivel).toLocaleString("pt-BR") : 0}</td>
+      <td class="col-estoque-fut">${p.estoque_futuro != null ? Number(p.estoque_futuro).toLocaleString("pt-BR") : 0}</td>
     </tr>
   `
     )
@@ -453,12 +464,14 @@ function renderSearchResults(items) {
     <table>
       <thead>
         <tr>
-          <th>Código</th>
+          <th style="width: 70px;">Código</th>
           <th>Descrição</th>
-          <th>Fornecedor</th>
-          <th>Preço</th>
-          <th>Unid.</th>
-          <th>Status</th>
+          <th style="width: 130px;">Fornecedor</th>
+          <th style="width: 85px; text-align: right;">Preço</th>
+          <th style="width: 50px; text-align: center;">Unid.</th>
+          <th style="width: 70px; text-align: center;">Status</th>
+          <th style="width: 90px; text-align: right;">Est. Disp.</th>
+          <th style="width: 90px; text-align: right;">Est. Futuro</th>
         </tr>
       </thead>
       <tbody>${rows}</tbody>
@@ -492,13 +505,8 @@ const doSearch = debounce(async () => {
   const q = inp.value.trim();
   const forn = selForn ? selForn.value : "";
 
-  // Se vazio, limpa
-  if (!q && !forn) {
-    box.innerHTML = `<div class="empty">Digite algo ou selecione fornecedor...</div>`;
-    return;
-  }
-
   try {
+    box.innerHTML = `<div class="empty">Buscando produtos...</div>`;
     const base = await resolveProdutosEndpoint();
     // Monta Query String
     const params = new URLSearchParams();
@@ -516,7 +524,7 @@ const doSearch = debounce(async () => {
     console.error(e);
     box.innerHTML = `<div class="empty">Erro ao buscar produtos.</div>`;
   }
-}, 400);
+}, 300);
 
 async function loadSearchFornecedores() {
   const el = $("search-fornecedor");
@@ -557,7 +565,10 @@ function setupSearchModal() {
       modal.classList.remove("hidden");
       if (modal.showModal) modal.showModal(); // se for dialog
       loadSearchFornecedores();
-      if (inp) inp.focus();
+      if (inp) {
+        inp.focus();
+        doSearch();
+      }
     });
   }
 
@@ -974,7 +985,7 @@ function setupImportarPdf() {
     return parseDateBrToISO(s);
   };
 
-  const doImport = async ({ tipo, validadeISO, file, fornecedor }) => {
+  const doImport = async ({ tipo, validadeISO, file, fornecedor, atualizar_tabelas }) => {
     if (!tipo) {
       if ("Tipo inválido. Use INSUMOS ou PET." !== 'Handled by ErrorUtils') { window.ErrorUtils ? window.ErrorUtils.showError('Aviso', "Tipo inválido. Use INSUMOS ou PET.") : alert("Tipo inválido. Use INSUMOS ou PET."); };
       return;
@@ -1014,6 +1025,7 @@ function setupImportarPdf() {
       formData.append("tipo_lista", tipo);
       formData.append("validade_tabela", validadeISO); // yyyy-mm-dd
       formData.append("fornecedor", fornecedor);
+      formData.append("atualizar_tabelas", atualizar_tabelas || "sim");
       formData.append("file", file);
 
       const resp = await fetch(url, { method: "POST", body: formData });
@@ -1082,6 +1094,7 @@ function setupImportarPdf() {
   const modalTipo = $("import_tipo_lista");
   const modalValidade = $("import_validade");
   const modalArquivo = $("import_arquivo");
+  const modalAtualizar = $("import_atualizar_tabelas");
   const modalConfirm = $("import-confirm");
   const modalCancel = $("import-cancel");
   const modalClose = $("import-close");
@@ -1114,8 +1127,9 @@ function setupImportarPdf() {
         const validadeISO = normalizeValidISO(modalValidade.value);
         const file = modalArquivo.files?.[0];
         const fornecedor = $("import_fornecedor")?.value;
+        const atualizar_tabelas = modalAtualizar?.value;
 
-        const ok = await doImport({ tipo, validadeISO, file, fornecedor });
+        const ok = await doImport({ tipo, validadeISO, file, fornecedor, atualizar_tabelas });
         if (ok) {
           // opcional: fecha e reseta se deu certo
           modalArquivo.value = "";
@@ -1202,10 +1216,24 @@ async function loadOptions() {
     
     fill("filtro-giro", data.tipo_giro); // Giro no relatório
 
-    // Fornecedor é input type="text" no HTML? Ou Select?
-    // User image shows "Fornecedor" as text input visually (no arrow), but let's check HTML if we can.
-    // Assuming Select for now based on context, or maybe DataList needed.
-    // Step 902 showed status_produto is select.
+    // Carregar fornecedores do catálogo de fornecedores (/api/fornecedores)
+    try {
+      const fornData = await fetchJSON(`${API_BASE}/api/fornecedores`);
+      const selForn = $("fornecedor");
+      if (selForn) {
+        selForn.innerHTML = '<option value="">Selecione...</option>';
+        if (Array.isArray(fornData)) {
+          fornData.forEach(f => {
+            const opt = document.createElement("option");
+            opt.value = f.nome_fornecedor;
+            opt.textContent = f.nome_fornecedor;
+            selForn.appendChild(opt);
+          });
+        }
+      }
+    } catch (eForn) {
+      console.warn("Erro ao carregar catálogo de fornecedores:", eForn);
+    }
 
   } catch (e) {
     console.warn("Erro ao carregar opções:", e);
@@ -1686,6 +1714,9 @@ window.switchTabProduto = function(tabId) {
   }
 };
 
+window.currentPageEstoque = 1;
+window.pageSizeEstoque = 50;
+
 window.gerarRelatorioEstoque = async function() {
   const filial = document.getElementById('filtro-filial')?.value || '';
   const linha = document.getElementById('filtro-linha')?.value || '';
@@ -1725,57 +1756,118 @@ window.gerarRelatorioEstoque = async function() {
       dados = dados.filter(p => Number(p.estoque_ideal || 0) > 0);
     }
     
-    // Armazena no window para exportação (PDF/Excel)
+    // Armazena no window para exportação e paginação
     window.dadosRelatorioAtual = dados;
-    
-    if (dados.length === 0) {
-      tbody.innerHTML = `<tr><td colspan="${colspan}" style="text-align:center;">Nenhum produto encontrado com os filtros informados.</td></tr>`;
-      return;
-    }
-
-    tbody.innerHTML = '';
-    dados.forEach(p => {
-      let tdValores = '';
-      if (mostrarValores) {
-        const precoAtual = Number(p.preco || 0);
-        const precoAnterior = Number(p.preco_anterior || 0);
-        let difPerc = 0;
-        let difPercFmt = '-';
-        if (precoAnterior > 0) {
-          difPerc = ((precoAtual - precoAnterior) / precoAnterior) * 100;
-          difPercFmt = (difPerc > 0 ? '+' : '') + difPerc.toFixed(2) + '%';
-        }
-        
-        const precoAtualFmt = precoAtual.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
-        const precoAnteriorFmt = precoAnterior.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
-        tdValores = `
-          <td style="padding: 10px; border: 1px solid #e5e7eb;">R$ ${precoAtualFmt}</td>
-          <td style="padding: 10px; border: 1px solid #e5e7eb;">R$ ${precoAnteriorFmt}</td>
-          <td style="padding: 10px; border: 1px solid #e5e7eb; color: ${difPerc > 0 ? 'green' : (difPerc < 0 && precoAnterior > 0 ? 'red' : 'inherit')};">${difPercFmt}</td>
-        `;
-      }
-
-      const tr = document.createElement('tr');
-      tr.innerHTML = `
-        <td style="padding: 10px; border: 1px solid #e5e7eb;">${p.codigo_supra || ''}</td>
-        <td style="padding: 10px; border: 1px solid #e5e7eb; text-align: left;">${p.nome_produto || ''}</td>
-        <td style="padding: 10px; border: 1px solid #e5e7eb;">${Number(p.peso || 0).toFixed(2)}</td>
-        <td style="padding: 10px; border: 1px solid #e5e7eb;">${p.estoque_disponivel || 0}</td>
-        <td style="padding: 10px; border: 1px solid #e5e7eb;">${p.estoque_futuro || 0}</td>
-        <td style="padding: 10px; border: 1px solid #e5e7eb;">${p.estoque_ideal || 0}</td>
-        ${tdValores}
-      `;
-      // Adicionando hover effect manual via JS para dar "cara" melhor
-      tr.onmouseover = () => tr.style.backgroundColor = '#f3f4f6';
-      tr.onmouseout = () => tr.style.backgroundColor = 'transparent';
-      
-      tbody.appendChild(tr);
-    });
+    window.currentPageEstoque = 1;
+    window.renderTabelaEstoquePaginated();
   } catch (e) {
     console.error(e);
     const colspan = document.getElementById('chk-mostrar-valores')?.checked ? 9 : 6;
     tbody.innerHTML = `<tr><td colspan="${colspan}" style="text-align:center;color:red;">Erro: ${e.message}</td></tr>`;
   }
+};
+
+window.renderTabelaEstoquePaginated = function() {
+  const dados = window.dadosRelatorioAtual || [];
+  const tbody = document.getElementById('tbody-relatorio');
+  if(!tbody) return;
+  const mostrarValores = document.getElementById('chk-mostrar-valores')?.checked;
+  const colspan = mostrarValores ? 9 : 6;
+  
+  if (dados.length === 0) {
+    tbody.innerHTML = `<tr><td colspan="${colspan}" style="text-align:center;">Nenhum produto encontrado com os filtros informados.</td></tr>`;
+    const pagControls = document.getElementById('pagination-controls');
+    if (pagControls) pagControls.style.display = 'none';
+    return;
+  }
+  
+  const pagControls = document.getElementById('pagination-controls');
+  if (pagControls) pagControls.style.display = 'flex';
+  
+  const totalPages = Math.ceil(dados.length / window.pageSizeEstoque) || 1;
+  if (window.currentPageEstoque > totalPages) window.currentPageEstoque = totalPages;
+  if (window.currentPageEstoque < 1) window.currentPageEstoque = 1;
+  
+  const startIdx = (window.currentPageEstoque - 1) * window.pageSizeEstoque;
+  const endIdx = startIdx + window.pageSizeEstoque;
+  const paginatedDados = dados.slice(startIdx, endIdx);
+  
+  tbody.innerHTML = '';
+  paginatedDados.forEach(p => {
+    let tdValores = '';
+    if (mostrarValores) {
+      const precoAtual = Number(p.preco || 0);
+      const precoAnterior = Number(p.preco_anterior || 0);
+      let difPerc = 0;
+      let difPercFmt = '-';
+      if (precoAnterior > 0) {
+        difPerc = ((precoAtual - precoAnterior) / precoAnterior) * 100;
+        difPercFmt = (difPerc > 0 ? '+' : '') + difPerc.toFixed(2) + '%';
+      }
+      
+      const precoAtualFmt = precoAtual.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+      const precoAnteriorFmt = precoAnterior.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+      tdValores = `
+        <td style="padding: 10px; border: 1px solid #e5e7eb;">R$ ${precoAtualFmt}</td>
+        <td style="padding: 10px; border: 1px solid #e5e7eb;">R$ ${precoAnteriorFmt}</td>
+        <td style="padding: 10px; border: 1px solid #e5e7eb; color: ${difPerc > 0 ? 'green' : (difPerc < 0 && precoAnterior > 0 ? 'red' : 'inherit')};">${difPercFmt}</td>
+      `;
+    }
+
+    const tr = document.createElement('tr');
+    tr.innerHTML = `
+      <td style="padding: 10px; border: 1px solid #e5e7eb;">${p.codigo_supra || ''}</td>
+      <td style="padding: 10px; border: 1px solid #e5e7eb; text-align: left;">${p.nome_produto || ''}</td>
+      <td style="padding: 10px; border: 1px solid #e5e7eb;">${Number(p.peso || 0).toFixed(2)}</td>
+      <td style="padding: 10px; border: 1px solid #e5e7eb;">${p.estoque_disponivel || 0}</td>
+      <td style="padding: 10px; border: 1px solid #e5e7eb;">${p.estoque_futuro || 0}</td>
+      <td style="padding: 10px; border: 1px solid #e5e7eb;">${p.estoque_ideal || 0}</td>
+      ${tdValores}
+    `;
+    tr.onmouseover = () => tr.style.backgroundColor = '#f3f4f6';
+    tr.onmouseout = () => tr.style.backgroundColor = 'transparent';
+    
+    tbody.appendChild(tr);
+  });
+  
+  if (pagControls) {
+    const info = document.getElementById('pagination-info');
+    if (info) info.innerText = `Mostrando ${startIdx + 1} até ${Math.min(endIdx, dados.length)} de ${dados.length} produtos`;
+    
+    const btnPrev = document.getElementById('btn-prev-page');
+    const btnNext = document.getElementById('btn-next-page');
+    if (btnPrev) btnPrev.disabled = window.currentPageEstoque === 1;
+    if (btnNext) btnNext.disabled = window.currentPageEstoque === totalPages;
+    
+    const pagesContainer = document.getElementById('pagination-pages');
+    if (pagesContainer) {
+      pagesContainer.innerHTML = '';
+      
+      let startPage = Math.max(1, window.currentPageEstoque - 2);
+      let endPage = Math.min(totalPages, startPage + 4);
+      if (endPage - startPage < 4) {
+          startPage = Math.max(1, endPage - 4);
+      }
+      
+      for (let i = startPage; i <= endPage; i++) {
+          const btn = document.createElement('button');
+          btn.innerText = i;
+          btn.className = i === window.currentPageEstoque ? 'primary' : 'ghost';
+          btn.style.padding = '5px 10px';
+          btn.style.cursor = 'pointer';
+          btn.onclick = () => {
+              window.currentPageEstoque = i;
+              window.renderTabelaEstoquePaginated();
+          };
+          pagesContainer.appendChild(btn);
+      }
+    }
+  }
+};
+
+window.mudarPaginaEstoque = function(delta) {
+  window.currentPageEstoque += delta;
+  window.renderTabelaEstoquePaginated();
 };
 
 window.exportarExcelEstoque = function() {

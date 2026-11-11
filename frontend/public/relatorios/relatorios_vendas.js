@@ -19,6 +19,12 @@ const divFiltroGrupo = document.getElementById("campo-filtro-grupo");
 const selTipoEntrega = document.getElementById("filtro-tipo-entrega");
 const divFiltroTipoEntrega = document.getElementById("campo-filtro-tipo-entrega");
 
+// Elementos Filtro Validação Faturamento 2
+const inVal2Pedido = document.getElementById("filtro-validacao2-pedido");
+const inVal2Carga = document.getElementById("filtro-validacao2-carga");
+const inVal2CargaInicio = document.getElementById("filtro-validacao2-carga-inicio");
+const inVal2CargaFim = document.getElementById("filtro-validacao2-carga-fim");
+
 // Elementos Filtro Gerencial
 const inGerencialCodigo = document.getElementById("filtro-gerencial-codigo");
 const inGerencialDoc = document.getElementById("filtro-gerencial-documento");
@@ -225,10 +231,21 @@ function alternarRelatorioUI() {
             if (activeReport === "validacao") {
                 const showIds = ["campo-filtro-filial", "campo-filtro-categoria", "campo-filtro-faturamento", "campo-filtro-tipo-entrega"];
                 f.style.display = showIds.includes(f.id) ? "flex" : "none";
+            } else if (activeReport === "validacao2") {
+                const showIds = [
+                    "campo-filtro-filial", 
+                    "campo-filtro-categoria", 
+                    "campo-filtro-faturamento", 
+                    "campo-filtro-tipo-entrega",
+                    "campo-filtro-validacao2-pedido",
+                    "campo-filtro-validacao2-carga",
+                    "campo-filtro-validacao2-data-carga"
+                ];
+                f.style.display = showIds.includes(f.id) ? "flex" : "none";
             } else {
                 if (f.id === "campo-filtro-grupo") {
                     f.style.display = activeReport === "produto" ? "flex" : "none";
-                } else if (f.id === "campo-filtro-tipo-entrega") {
+                } else if (f.id === "campo-filtro-tipo-entrega" || f.id.startsWith("campo-filtro-validacao2-")) {
                     f.style.display = "none";
                 } else {
                     f.style.display = (activeReport === "gerencial" || activeReport === "gerencial2" || activeReport === "gerencial3") ? "none" : "flex";
@@ -305,6 +322,34 @@ function alternarRelatorioUI() {
             </tr>
             <tr style="background-color: #f1f5f9; font-weight: bold; position: sticky; top: 38px; z-index: 14; box-shadow: 0 1px 2px rgba(0,0,0,0.05);">
                 <td colspan="6" style="text-align: left; padding: 10px 16px; font-weight: bold; border-bottom: 2px solid var(--os-border);">Total Acumulado</td>
+                <td class="tar" id="total-peso" style="font-weight: bold; border-bottom: 2px solid var(--os-border);">0 kg</td>
+                <td class="tar col-money" id="total-valor-nf" style="font-weight: bold; border-bottom: 2px solid var(--os-border);">R$ 0,00</td>
+                <td class="tar col-money" id="total-valor-pedido" style="font-weight: bold; border-bottom: 2px solid var(--os-border);">R$ 0,00</td>
+                <td class="tar col-money" id="total-diferenca" style="font-weight: bold; border-bottom: 2px solid var(--os-border);">R$ 0,00</td>
+            </tr>
+        `;
+    } else if (activeReport === "validacao2") {
+        txtTitulo.textContent = "Relatório por Carga";
+        
+        // Cabeçalhos para Relatório por Carga (com Nº Pedido, Nº Carga e Data Carga)
+        tableHeaders.innerHTML = `
+            <tr>
+                <th>#</th>
+                <th data-sort="numero_pedido">Nº Pedido</th>
+                <th data-sort="numero_carga">Nº Carga</th>
+                <th data-sort="data_carga">Data Carga</th>
+                <th data-sort="data_faturamento">Data Faturamento</th>
+                <th data-sort="codigo_cliente">Código Cliente</th>
+                <th data-sort="cliente">Cliente</th>
+                <th data-sort="pedido_supra" class="col-pedido-supra">Pedido Supra</th>
+                <th data-sort="nota_fiscal">Nota Fiscal</th>
+                <th data-sort="peso_liquido" class="tar">Peso Líquido (kg)</th>
+                <th data-sort="valor_nota_fiscal" class="tar col-money">Valor NF</th>
+                <th data-sort="valor_pedido" class="tar col-money">Valor Pedido</th>
+                <th data-sort="diferenca_valores" class="tar col-money">Diferença</th>
+            </tr>
+            <tr style="background-color: #f1f5f9; font-weight: bold; position: sticky; top: 38px; z-index: 14; box-shadow: 0 1px 2px rgba(0,0,0,0.05);">
+                <td colspan="9" style="text-align: left; padding: 10px 16px; font-weight: bold; border-bottom: 2px solid var(--os-border);">Total Acumulado</td>
                 <td class="tar" id="total-peso" style="font-weight: bold; border-bottom: 2px solid var(--os-border);">0 kg</td>
                 <td class="tar col-money" id="total-valor-nf" style="font-weight: bold; border-bottom: 2px solid var(--os-border);">R$ 0,00</td>
                 <td class="tar col-money" id="total-valor-pedido" style="font-weight: bold; border-bottom: 2px solid var(--os-border);">R$ 0,00</td>
@@ -666,12 +711,23 @@ async function buscarDadosRelatorio() {
         if (selMunicipio && selMunicipio.value) queryParams.append("municipios", selMunicipio.value);
         if (activeReport === "produto" && selGrupo.value) queryParams.append("grupos", selGrupo.value);
         if (activeReport === "validacao" && selTipoEntrega && selTipoEntrega.value) queryParams.append("tipo_entrega", selTipoEntrega.value);
+    } else if (activeReport === "validacao2") {
+        if (inFaturamentoInicio.value) queryParams.append("faturamento_inicio", inFaturamentoInicio.value);
+        if (inFaturamentoFim.value) queryParams.append("faturamento_fim", inFaturamentoFim.value);
+        if (selFilial && selFilial.value) queryParams.append("filiais", selFilial.value);
+        if (selCategoria && selCategoria.value) queryParams.append("categoria", selCategoria.value);
+        if (selTipoEntrega && selTipoEntrega.value) queryParams.append("tipo_entrega", selTipoEntrega.value);
+        if (inVal2Pedido && inVal2Pedido.value) queryParams.append("numero_pedido", inVal2Pedido.value);
+        if (inVal2Carga && inVal2Carga.value) queryParams.append("numero_carga", inVal2Carga.value);
+        if (inVal2CargaInicio && inVal2CargaInicio.value) queryParams.append("data_carga_inicio", inVal2CargaInicio.value);
+        if (inVal2CargaFim && inVal2CargaFim.value) queryParams.append("data_carga_fim", inVal2CargaFim.value);
     }
 
     // Seleciona endpoint conforme relatório ativo
     let endpoint = "vendas_cliente";
     if (activeReport === "produto") endpoint = "vendas_produtos";
     else if (activeReport === "validacao") endpoint = "validacao_pedidos";
+    else if (activeReport === "validacao2") endpoint = "validacao_pedidos_2";
     else if (activeReport === "gerencial") endpoint = "gerencial";
     else if (activeReport === "gerencial2") endpoint = "gerencial2";
     else if (activeReport === "gerencial3") endpoint = "gerencial3";
@@ -835,6 +891,33 @@ function renderizarTabela() {
             html += `
                 <tr>
                     <td>${index + 1}</td>
+                    <td>${fmtData(item.data_faturamento)}</td>
+                    <td>${item.codigo_cliente || "-"}</td>
+                    <td>${limparNomeCliente(item.cliente)}</td>
+                    <td class="col-pedido-supra"><strong>${item.pedido_supra || "-"}</strong></td>
+                    <td>${item.nota_fiscal || "-"}</td>
+                    <td class="tar">${fmtPeso(item.peso_liquido).replace(' kg', '')}</td>
+                    <td class="tar col-money">${fmtMoney(item.valor_nota_fiscal)}</td>
+                    <td class="tar col-money">${fmtMoney(item.valor_pedido)}</td>
+                    <td class="tar col-money" style="color: ${parseFloat(item.diferenca_valores || 0).toFixed(2) != '0.00' ? 'var(--os-error)' : 'inherit'};">${fmtMoney(item.diferenca_valores)}</td>
+                </tr>
+            `;
+        });
+
+        tbody.innerHTML = html;
+    } else if (activeReport === "validacao2") {
+        listagemVendas.forEach((item, index) => {
+            totalPeso += parseFloat(item.peso_liquido || 0);
+            totalValorNf += parseFloat(item.valor_nota_fiscal || 0);
+            totalValorPedido += parseFloat(item.valor_pedido || 0);
+            totalDiferenca += parseFloat(item.diferenca_valores || 0);
+
+            html += `
+                <tr>
+                    <td>${index + 1}</td>
+                    <td><strong>${item.numero_pedido || "-"}</strong></td>
+                    <td>${item.numero_carga || "-"}</td>
+                    <td>${fmtData(item.data_carga)}</td>
                     <td>${fmtData(item.data_faturamento)}</td>
                     <td>${item.codigo_cliente || "-"}</td>
                     <td>${limparNomeCliente(item.cliente)}</td>
@@ -1035,6 +1118,11 @@ async function limparTodosFiltros() {
     selGrupo.value = "";
     if (selTipoEntrega) selTipoEntrega.value = "";
     
+    if (inVal2Pedido) inVal2Pedido.value = "";
+    if (inVal2Carga) inVal2Carga.value = "";
+    if (inVal2CargaInicio) inVal2CargaInicio.value = "";
+    if (inVal2CargaFim) inVal2CargaFim.value = "";
+    
     inGerencialCodigo.value = "";
     inGerencialDoc.value = "";
     inGerencialNome.value = "";
@@ -1137,6 +1225,40 @@ function exportarExcel() {
         });
 
         aoa.push(["TOTAL ACUMULADO", "", "", "", "", "", Math.round(totalPeso), totalValorNf, totalValorPedido, totalDiferenca]);
+
+    } else if (activeReport === "validacao2") {
+        aoa.push(["#", "Nº Pedido", "Nº Carga", "Data Carga", "Data Faturamento", "Código Cliente", "Cliente", "Pedido Supra", "Nota Fiscal", "Peso Líquido (kg)", "Valor NF", "Valor Pedido", "Diferença"]);
+        filename = "relatorio_por_carga";
+
+        listagemVendas.forEach((item, index) => {
+            const p = parseFloat(item.peso_liquido || 0);
+            const vnf = parseFloat(item.valor_nota_fiscal || 0);
+            const vp = parseFloat(item.valor_pedido || 0);
+            const dif = parseFloat(item.diferenca_valores || 0);
+
+            totalPeso += p;
+            totalValorNf += vnf;
+            totalValorPedido += vp;
+            totalDiferenca += dif;
+
+            aoa.push([
+                index + 1, 
+                item.numero_pedido || "-", 
+                item.numero_carga || "-", 
+                fmtData(item.data_carga), 
+                fmtData(item.data_faturamento), 
+                item.codigo_cliente || "-", 
+                limparNomeCliente(item.cliente), 
+                item.pedido_supra || "-", 
+                item.nota_fiscal || "-", 
+                Math.round(p), 
+                vnf, 
+                vp, 
+                dif
+            ]);
+        });
+
+        aoa.push(["TOTAL ACUMULADO", "", "", "", "", "", "", "", "", Math.round(totalPeso), totalValorNf, totalValorPedido, totalDiferenca]);
 
     } else if (activeReport === "gerencial") {
         aoa.push(["#", "CNPJ/CPF", "Nome Cliente", "Município", "Vendedor", "Data Última Compra", "Observação"]);

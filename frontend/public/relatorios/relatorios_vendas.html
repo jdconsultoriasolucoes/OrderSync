@@ -178,6 +178,7 @@
                         <li><button data-report="gerencial2">Relatório Gerencial 2</button></li>
                         <li><button data-report="gerencial3">Relatório Gerencial 3</button></li>
                         <li><button data-report="validacao">Validação Faturamento</button></li>
+                        <li><button data-report="validacao2">Relatório por Carga</button></li>
                     </ul>
                 </div>
             </aside>
@@ -262,6 +263,26 @@
                             <option value="ENTREGA">Entrega</option>
                             <option value="RETIRADA">Retirada</option>
                         </select>
+                    </div>
+
+                    <!-- Filtros Específicos para Validação Faturamento 2 -->
+                    <div class="filtro-campo" id="campo-filtro-validacao2-pedido" style="display: none;">
+                        <label class="os-label">Nº Pedido</label>
+                        <input type="text" id="filtro-validacao2-pedido" class="os-input" placeholder="Ex: 507">
+                    </div>
+
+                    <div class="filtro-campo" id="campo-filtro-validacao2-carga" style="display: none;">
+                        <label class="os-label">Nº Carga</label>
+                        <input type="text" id="filtro-validacao2-carga" class="os-input" placeholder="Ex: 123 ou Carga 1">
+                    </div>
+
+                    <div class="filtro-campo filtro-duplo" id="campo-filtro-validacao2-data-carga" style="display: none;">
+                        <label class="os-label">Período Data Carga</label>
+                        <div class="duplo-inputs">
+                            <input type="date" id="filtro-validacao2-carga-inicio" class="os-input" title="Data Carga De">
+                            <span class="duplo-separador">até</span>
+                            <input type="date" id="filtro-validacao2-carga-fim" class="os-input" title="Data Carga Até">
+                        </div>
                     </div>
 
                     <!-- Filtros Relatório Gerencial -->

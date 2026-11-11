@@ -123,15 +123,16 @@
                         <line x1="18" y1="20" x2="18" y2="10"></line>
                         <line x1="12" y1="20" x2="12" y2="4"></line>
                         <line x1="6" y1="20" x2="6" y2="14"></line>
-                    </svg> Relatórios de Vendas
+                    </svg> Relatórios
                 </a></li>
         </ul>
         <div class="os-sidebar-section">Sistema</div>
         <ul>
-            <li><a href="/config_email/config_email.html">
+            
+            <li><a href="/configuracoes.html">
                     <svg class="os-nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                        <path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z" />
-                    </svg> Configuração E-mail
+                        <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path>
+                    </svg> Configurações
                 </a></li>
             <li><a href="/profile/profile.html">
                     <svg class="os-nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
@@ -139,12 +140,7 @@
                         <circle cx="12" cy="7" r="4" />
                     </svg> Profile
                 </a></li>
-            <li><a href="/usuarios.html">
-                    <svg class="os-nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                        <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" />
-                        <circle cx="12" cy="7" r="4" />
-                    </svg> Usuários
-                </a></li>
+            
             <li><a href="#" onclick="window.Auth.openChangePasswordModal()">
                     <svg class="os-nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                         <rect x="3" y="11" width="18" height="11" rx="2" ry="2" />
@@ -164,13 +160,27 @@
 
     <!-- ========== MAIN CONTENT ========== -->
     <main class="os-main module-relatorios">
-        <div class="relatorios-container relatorios-top-nav-container">
-            <!-- Sidebar Interna dos Relatórios (agora no topo) -->
+        <div class="relatorios-container">
+            <!-- Sidebar Interna dos Relatórios -->
             <aside class="relatorios-sidebar">
-                <ul class="relatorios-menu" id="relatorios-menu-vendas">
-                    <li><button data-report="cliente" class="active">Vendas por Cliente</button></li>
-                    <li><button data-report="produto">Vendas por Produto</button></li>
-                </ul>
+                <div class="relatorios-sidebar-group">
+                    <h4 class="relatorios-sidebar-group-title">Relatórios de Vendas</h4>
+                    <ul class="relatorios-menu" id="relatorios-menu-vendas">
+                        <li><button data-report="cliente" class="active">Vendas por Cliente</button></li>
+                        <li><button data-report="produto">Vendas por Produto</button></li>
+                    </ul>
+                </div>
+                
+                <div class="relatorios-sidebar-group">
+                    <h4 class="relatorios-sidebar-group-title">Relatórios Gerenciais</h4>
+                    <ul class="relatorios-menu" id="relatorios-menu-gerenciais">
+                        <li><button data-report="gerencial">Relatório Gerencial</button></li>
+                        <li><button data-report="gerencial2">Relatório Gerencial 2</button></li>
+                        <li><button data-report="gerencial3">Relatório Gerencial 3</button></li>
+                        <li><button data-report="validacao">Validação Faturamento</button></li>
+                        <li><button data-report="validacao2">Relatório por Carga</button></li>
+                    </ul>
+                </div>
             </aside>
 
             <!-- Painel Principal de Relatório -->
@@ -184,7 +194,7 @@
                 <!-- PAINEL DE FILTROS AVANÇADOS -->
                 <div class="filtros-grid-panel">
                     <!-- 1. Período Abertura -->
-                    <div class="filtro-campo filtro-duplo">
+                    <div class="filtro-campo filtro-duplo" id="campo-filtro-abertura">
                         <label class="os-label">Período Abertura</label>
                         <div class="duplo-inputs">
                             <input type="date" id="filtro-data-inicio" class="os-input" title="Abertura De">
@@ -192,9 +202,9 @@
                             <input type="date" id="filtro-data-fim" class="os-input" title="Abertura Até">
                         </div>
                     </div>
-                    
+
                     <!-- 2. Filial -->
-                    <div class="filtro-campo">
+                    <div class="filtro-campo" id="campo-filtro-filial">
                         <label class="os-label">Filial (Fornecedor)</label>
                         <select id="filtro-filial" class="os-select">
                             <option value="">Todas as Filiais</option>
@@ -202,7 +212,7 @@
                     </div>
                     
                     <!-- 3. Categoria -->
-                    <div class="filtro-campo">
+                    <div class="filtro-campo" id="campo-filtro-categoria">
                         <label class="os-label">Categoria</label>
                         <select id="filtro-categoria" class="os-select">
                             <option value="">Todas as Categorias</option>
@@ -212,15 +222,15 @@
                     </div>
                     
                     <!-- 4. Município -->
-                    <div class="filtro-campo">
+                    <div class="filtro-campo" id="campo-filtro-municipio">
                         <label class="os-label">Município</label>
                         <select id="filtro-municipio" class="os-select">
                             <option value="">Todos os Municípios</option>
                         </select>
                     </div>
-                    
+
                     <!-- 5. Status do Pedido -->
-                    <div class="filtro-campo">
+                    <div class="filtro-campo" id="campo-filtro-status">
                         <label class="os-label">Status do Pedido</label>
                         <select id="filtro-status" class="os-select">
                             <option value="">Todos os Status</option>
@@ -228,7 +238,7 @@
                     </div>
                     
                     <!-- 6. Período Faturamento -->
-                    <div class="filtro-campo filtro-duplo">
+                    <div class="filtro-campo filtro-duplo" id="campo-filtro-faturamento">
                         <label class="os-label">Período Faturamento</label>
                         <div class="duplo-inputs">
                             <input type="date" id="filtro-faturamento-inicio" class="os-input" title="Faturamento De">
@@ -244,6 +254,188 @@
                             <option value="">Todos os Grupos</option>
                         </select>
                     </div>
+
+                    <!-- 8. Tipo de Entrega (Validacao) -->
+                    <div class="filtro-campo" id="campo-filtro-tipo-entrega" style="display: none;">
+                        <label class="os-label">Tipo de Entrega</label>
+                        <select id="filtro-tipo-entrega" class="os-select">
+                            <option value="">Todos os Tipos</option>
+                            <option value="ENTREGA">Entrega</option>
+                            <option value="RETIRADA">Retirada</option>
+                        </select>
+                    </div>
+
+                    <!-- Filtros Específicos para Validação Faturamento 2 -->
+                    <div class="filtro-campo" id="campo-filtro-validacao2-pedido" style="display: none;">
+                        <label class="os-label">Nº Pedido</label>
+                        <input type="text" id="filtro-validacao2-pedido" class="os-input" placeholder="Ex: 507">
+                    </div>
+
+                    <div class="filtro-campo" id="campo-filtro-validacao2-carga" style="display: none;">
+                        <label class="os-label">Nº Carga</label>
+                        <input type="text" id="filtro-validacao2-carga" class="os-input" placeholder="Ex: 123 ou Carga 1">
+                    </div>
+
+                    <div class="filtro-campo filtro-duplo" id="campo-filtro-validacao2-data-carga" style="display: none;">
+                        <label class="os-label">Período Data Carga</label>
+                        <div class="duplo-inputs">
+                            <input type="date" id="filtro-validacao2-carga-inicio" class="os-input" title="Data Carga De">
+                            <span class="duplo-separador">até</span>
+                            <input type="date" id="filtro-validacao2-carga-fim" class="os-input" title="Data Carga Até">
+                        </div>
+                    </div>
+
+                    <!-- Filtros Relatório Gerencial -->
+                    <div class="filtro-campo filtro-gerencial" style="display: none;">
+                        <label class="os-label">Cód. Cliente</label>
+                        <input type="text" id="filtro-gerencial-codigo" class="os-input" placeholder="Pesquisar código">
+                    </div>
+
+                    <div class="filtro-campo filtro-gerencial" style="display: none;">
+                        <label class="os-label">CNPJ/CPF</label>
+                        <input type="text" id="filtro-gerencial-documento" class="os-input" placeholder="Pesquisar documento">
+                    </div>
+
+                    <div class="filtro-campo filtro-gerencial" style="display: none;">
+                        <label class="os-label">Nome Cliente</label>
+                        <input type="text" id="filtro-gerencial-nome" class="os-input" placeholder="Pesquisar cliente">
+                    </div>
+
+                    <div class="filtro-campo filtro-gerencial" style="display: none;">
+                        <label class="os-label">Município</label>
+                        <select id="filtro-gerencial-municipio" class="os-select">
+                            <option value="">Todos os Municípios</option>
+                        </select>
+                    </div>
+
+                    <div class="filtro-campo filtro-gerencial" style="display: none;">
+                        <label class="os-label">Vendedor</label>
+                        <select id="filtro-gerencial-vendedor" class="os-select">
+                            <option value="">Todos os Vendedores</option>
+                        </select>
+                    </div>
+                    <div class="filtro-campo filtro-gerencial" style="display: none;">
+                        <label class="os-label" for="filtro-gerencial-status">Status do Cadastro</label>
+                        <select id="filtro-gerencial-status" class="os-select">
+                            <option value="">Todos os Status</option>
+                        </select>
+                    </div>
+
+                    <div class="filtro-campo filtro-duplo filtro-gerencial" style="display: none;">
+                        <label class="os-label">Data da Última Compra</label>
+                        <div class="duplo-inputs">
+                            <input type="date" id="filtro-gerencial-data-inicio" class="os-input" title="De">
+                            <span class="duplo-separador">até</span>
+                            <input type="date" id="filtro-gerencial-data-fim" class="os-input" title="Até">
+                        </div>
+                    </div>
+
+                    <div class="filtro-campo filtro-gerencial" style="display: none;">
+                        <label class="os-label">Observação</label>
+                        <input type="text" id="filtro-gerencial-observacao" class="os-input" placeholder="Pesquisar observação">
+                    </div>
+
+                    <!-- Filtros Relatório Gerencial 2 -->
+                    <div class="filtro-campo filtro-gerencial2" style="display: none;">
+                        <label class="os-label">Período de Análise</label>
+                        <select id="filtro-gerencial2-meses" class="os-select">
+                            <option value="12">Últimos 12 Meses</option>
+                            <option value="6">Últimos 6 Meses</option>
+                            <option value="3">Últimos 3 Meses</option>
+                        </select>
+                    </div>
+
+                    <div class="filtro-campo filtro-gerencial2" style="display: none;">
+                        <label class="os-label">Cód. Cliente</label>
+                        <input type="text" id="filtro-gerencial2-codigo" class="os-input" placeholder="Pesquisar código">
+                    </div>
+
+                    <div class="filtro-campo filtro-gerencial2" style="display: none;">
+                        <label class="os-label">Nome Cliente</label>
+                        <input type="text" id="filtro-gerencial2-nome" class="os-input" placeholder="Pesquisar cliente">
+                    </div>
+
+                    <!-- Filtros Relatório Gerencial 3 -->
+                    <div class="filtro-campo filtro-gerencial3" style="display: none;">
+                        <label class="os-label">Período de Análise</label>
+                        <select id="filtro-gerencial3-meses" class="os-select">
+                            <option value="12">Últimos 12 Meses</option>
+                            <option value="6">Últimos 6 Meses</option>
+                            <option value="3">Últimos 3 Meses</option>
+                        </select>
+                    </div>
+
+                    <div class="filtro-campo filtro-gerencial3" style="display: none;">
+                        <label class="os-label">Status do Cadastro</label>
+                        <select id="filtro-gerencial3-status" class="os-select">
+                            <option value="">Todos os Status</option>
+                        </select>
+                    </div>
+                    
+                    <div class="filtro-campo filtro-gerencial3" style="display: none;">
+                        <label class="os-label">Cód. Cliente</label>
+                        <input type="text" id="filtro-gerencial3-codigo" class="os-input" placeholder="Pesquisar código">
+                    </div>
+
+                    <div class="filtro-campo filtro-gerencial3" style="display: none;">
+                        <label class="os-label">Nome Cliente</label>
+                        <input type="text" id="filtro-gerencial3-nome" class="os-input" placeholder="Pesquisar cliente">
+                    </div>
+
+                    <div class="filtro-campo filtro-gerencial3" style="display: none;">
+                        <label class="os-label">Rota Geral</label>
+                        <select id="filtro-gerencial3-rotag" class="os-select">
+                            <option value="">Todas as Rotas</option>
+                        </select>
+                    </div>
+
+                    <div class="filtro-campo filtro-gerencial3" style="display: none;">
+                        <label class="os-label">Rota Aproximação</label>
+                        <select id="filtro-gerencial3-rotaa" class="os-select">
+                            <option value="">Todas as Rotas</option>
+                        </select>
+                    </div>
+
+                    <div class="filtro-campo filtro-gerencial3" style="display: none;">
+                        <label class="os-label">Filial</label>
+                        <select id="filtro-gerencial3-filial" class="os-select">
+                            <option value="">Todas as Filiais</option>
+                        </select>
+                    </div>
+
+                    <div class="filtro-campo filtro-gerencial3" style="display: none;">
+                        <label class="os-label">Categoria</label>
+                        <select id="filtro-gerencial3-categoria" class="os-select">
+                            <option value="">Todas as Categorias</option>
+                            <option value="INSUMOS">Insumos</option>
+                            <option value="PET">Pets</option>
+                        </select>
+                    </div>
+
+                    <div class="filtro-campo filtro-gerencial3" style="display: none;">
+                        <label class="os-label">Vendedor</label>
+                        <select id="filtro-gerencial3-vendedor" class="os-select">
+                            <option value="">Todos os Vendedores</option>
+                        </select>
+                    </div>
+                    
+                    <div class="filtro-campo filtro-gerencial3" style="display: none;">
+                        <label class="os-label">Município</label>
+                        <select id="filtro-gerencial3-municipio" class="os-select">
+                            <option value="">Todos os Municípios</option>
+                        </select>
+                    </div>
+                    
+                    <div class="filtro-campo filtro-gerencial3" style="display: none;">
+                        <label class="os-label">Tipo de Entrega</label>
+                        <select id="filtro-gerencial3-tipo-entrega" class="os-select">
+                            <option value="">Todos os Tipos</option>
+                            <option value="ENTREGA">Entrega</option>
+                            <option value="RETIRA">Retira</option>
+                            <option value="AMBOS">Ambos</option>
+                        </select>
+                    </div>
+
                     
                     <!-- Botões de Ação do Filtro -->
                     <div class="filtros-actions-container">
@@ -256,13 +448,7 @@
                             </svg>
                             Limpar
                         </button>
-                        <button class="os-btn os-btn-primary" id="btn-filtrar">
-                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                                <circle cx="11" cy="11" r="8"></circle>
-                                <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
-                            </svg>
-                            Filtrar
-                        </button>
+
                         <button class="os-btn os-btn-success" id="btn-exportar-excel">
                             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                                 <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
@@ -312,6 +498,7 @@
     </main>
 
     <!-- Scripts de Controle -->
+    <script src="https://cdn.sheetjs.com/xlsx-0.20.1/package/dist/xlsx.full.min.js"></script>
     <script src="/relatorios/relatorios_vendas.js"></script>
 </body>
 
